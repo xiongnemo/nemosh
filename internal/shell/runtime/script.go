@@ -12,19 +12,24 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 }
 
 func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool) int {
+	status, control := r.runScriptResult(ctx, script, runExitTrap)
+	if control != flowNone {
+		return status
+	}
+	return status
+}
+
+func (r Runtime) runScriptResult(ctx context.Context, script string, runExitTrap bool) (int, flowControl) {
 	lines, err := scriptLines(script)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-		return 2
+		return 2, flowNone
 	}
 	status, control := r.runLines(ctx, lines)
 	if runExitTrap && control != flowExec {
 		r.runExitTrap(ctx)
 	}
-	if control != flowNone {
-		return status
-	}
-	return status
+	return status, control
 }
 
 func (r Runtime) runExitTrap(ctx context.Context) {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -21,12 +20,13 @@ type Streams struct {
 }
 
 type Runtime struct {
-	registry applets.Registry
-	streams  Streams
-	vars     map[string]string
-	traps    map[string]string
-	params   *parameters
-	readonly map[string]struct{}
+	registry    applets.Registry
+	streams     Streams
+	vars        map[string]string
+	traps       map[string]string
+	params      *parameters
+	readonly    map[string]struct{}
+	sourceDepth int
 }
 
 func New(registry applets.Registry, streams Streams) Runtime {
@@ -59,6 +59,7 @@ const (
 	flowBreak
 	flowContinue
 	flowExec
+	flowReturn
 )
 
 func (r Runtime) runLine(ctx context.Context, line string) lineResult {
@@ -100,6 +101,14 @@ func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 			}
 			return lineResult{status: status, control: flowExec}
 		}
+		if args[0] == "return" {
+			status = exitStatus(args[1:])
+			if r.sourceDepth == 0 {
+				fmt.Fprintln(r.streams.Stderr, "return: not in a sourced script")
+				continue
+			}
+			return lineResult{status: status, control: flowReturn}
+		}
 		if args[0] == "break" {
 			return lineResult{control: flowBreak}
 		}
@@ -117,7 +126,7 @@ func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
 	}
-	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, readonly: r.readonly}).runCommand(ctx, commandArgs)
+	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, readonly: r.readonly, sourceDepth: r.sourceDepth}).runCommand(ctx, commandArgs)
 	if err := cleanup(); err != nil && status == 0 {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
@@ -171,22 +180,6 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	}
 	fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
 	return 1
-}
-
-func (r Runtime) runExternal(ctx context.Context, args []string) int {
-	cmd := exec.CommandContext(ctx, platformPath(args[0]), args[1:]...)
-	cmd.Stdin = r.streams.Stdin
-	cmd.Stdout = r.streams.Stdout
-	cmd.Stderr = r.streams.Stderr
-	if err := cmd.Run(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			return exitErr.ExitCode()
-		}
-		fmt.Fprintf(r.streams.Stderr, "%s: not found\n", args[0])
-		return 127
-	}
-	return 0
 }
 
 func (r Runtime) export(args []string) int {

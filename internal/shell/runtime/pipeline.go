@@ -25,7 +25,7 @@ func (r Runtime) runPipeline(ctx context.Context, args []string) int {
 		if !last {
 			streams.Stdout = &output
 		}
-		status = (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, readonly: r.readonly}).runCommandWithRedirects(ctx, command)
+		status = (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, readonly: r.readonly, sourceDepth: r.sourceDepth}).runCommandWithRedirects(ctx, command)
 		input = bytes.NewReader(output.Bytes())
 	}
 	return status

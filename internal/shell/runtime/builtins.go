@@ -18,7 +18,13 @@ func (r Runtime) dot(ctx context.Context, args []string) int {
 		fmt.Fprintf(r.streams.Stderr, ".: %s: %v\n", args[0], err)
 		return 1
 	}
-	return r.runScript(ctx, string(data), false)
+	child := r
+	child.sourceDepth++
+	status, control := child.runScriptResult(ctx, string(data), false)
+	if control == flowReturn {
+		return status
+	}
+	return status
 }
 
 func (r Runtime) eval(ctx context.Context, args []string) int {
