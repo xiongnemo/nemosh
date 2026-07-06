@@ -1,0 +1,16 @@
+id = "applet.posix.echo.basic"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox", "posix"]
+command = ["echo", "hello", "world"]
+
+[expect]
+status = 0
+stdout = "hello world\n"
+stderr = ""
+
+[notes]
+standard = "POSIX echo utility basic behavior"
+why = "Basic echo writes arguments separated by spaces and a trailing newline."

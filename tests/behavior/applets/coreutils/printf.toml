@@ -1,0 +1,16 @@
+id = "applet.posix.printf.basic"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox", "posix"]
+command = ["printf", "%s\\n", "hello"]
+
+[expect]
+status = 0
+stdout = "hello\n"
+stderr = ""
+
+[notes]
+standard = "POSIX printf utility"
+why = "printf applies the format string and does not add extra output."

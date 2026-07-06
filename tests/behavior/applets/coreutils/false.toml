@@ -1,0 +1,16 @@
+id = "applet.posix.false.status"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox", "posix"]
+command = ["false"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "POSIX false utility"
+why = "false exits with non-zero status."
