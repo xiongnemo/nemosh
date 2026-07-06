@@ -1,0 +1,19 @@
+id = "path.windows.unc-host-only"
+area = "path"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32-ash"]
+
+script = '''
+cd //example-host
+'''
+
+[expect]
+status = 1
+stdout = ""
+stderr = "cd: //example-host: No such file or directory\nhint: //example-host is not a directory root; use //example-host/share\n"
+
+[notes]
+standard = "Win32 UNC filesystem roots"
+why = "//host/share is a filesystem root; //host is a network enumeration entry, not a cwd."

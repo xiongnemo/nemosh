@@ -1,0 +1,16 @@
+id = "applet.posix.true.status"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox", "posix"]
+command = ["true"]
+
+[expect]
+status = 0
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "POSIX true utility"
+why = "true exits with status 0."
