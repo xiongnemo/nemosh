@@ -18,7 +18,7 @@ func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool)
 		return 2
 	}
 	status, control := r.runLines(ctx, lines)
-	if runExitTrap {
+	if runExitTrap && control != flowExec {
 		r.runExitTrap(ctx)
 	}
 	if control != flowNone {

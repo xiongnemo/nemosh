@@ -58,6 +58,7 @@ const (
 	flowExit
 	flowBreak
 	flowContinue
+	flowExec
 )
 
 func (r Runtime) runLine(ctx context.Context, line string) lineResult {
@@ -91,6 +92,13 @@ func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 		}
 		if args[0] == "exit" {
 			return lineResult{status: exitStatus(args[1:]), control: flowExit}
+		}
+		if args[0] == "exec" {
+			status = r.execBuiltin(ctx, args[1:])
+			if len(args) == 1 {
+				continue
+			}
+			return lineResult{status: status, control: flowExec}
 		}
 		if args[0] == "break" {
 			return lineResult{control: flowBreak}
