@@ -102,7 +102,7 @@ func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 		if args[0] == "exit" {
 			return lineResult{status: exitStatus(args[1:]), stop: true}
 		}
-		status = r.runCommandWithRedirects(ctx, args)
+		status = r.runPipeline(ctx, args)
 	}
 	return lineResult{status: status}
 }

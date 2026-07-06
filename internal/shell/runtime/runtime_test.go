@@ -139,3 +139,37 @@ func TestRuntime_redirectsStdin_whenCommandUsesInputRedirection(t *testing.T) {
 		t.Fatalf("expected stdout %q, got %q", "from-file\n", got)
 	}
 }
+
+func TestRuntime_pipesStdoutIntoNextCommand_whenLineUsesPipe(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo hi | cat\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "hi\n" {
+		t.Fatalf("expected stdout %q, got %q", "hi\n", got)
+	}
+}
+
+func TestRuntime_returnsLastPipelineStatus_whenPipelineContainsFailure(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo hi | false\n")
+
+	// Then
+	if status != 1 {
+		t.Fatalf("expected status 1, got %d", status)
+	}
+	if stdout.String() != "" {
+		t.Fatalf("expected stdout to be empty, got %q", stdout.String())
+	}
+}
