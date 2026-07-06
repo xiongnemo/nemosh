@@ -46,6 +46,15 @@ func (r Runtime) runLines(ctx context.Context, lines []string) (int, bool) {
 			i = next
 			continue
 		}
+		if strings.HasPrefix(line, "for ") {
+			forStatus, next, stop := r.runFor(ctx, lines, i)
+			status = forStatus
+			if stop {
+				return status, true
+			}
+			i = next
+			continue
+		}
 		result := r.runLine(ctx, line)
 		status = result.status
 		if result.stop {
@@ -53,6 +62,53 @@ func (r Runtime) runLines(ctx context.Context, lines []string) (int, bool) {
 		}
 	}
 	return status, false
+}
+
+func (r Runtime) runFor(ctx context.Context, lines []string, start int) (int, int, bool) {
+	doIndex := -1
+	doneIndex := -1
+	for i := start + 1; i < len(lines); i++ {
+		switch lines[i] {
+		case "do":
+			doIndex = i
+		case "done":
+			doneIndex = i
+		}
+		if doneIndex >= 0 {
+			break
+		}
+	}
+	if doIndex < 0 || doneIndex < 0 {
+		fmt.Fprintln(r.streams.Stderr, "for: missing do or done")
+		return 2, len(lines), false
+	}
+	name, values, err := r.forHeader(ctx, lines[start])
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
+		return 2, doneIndex, false
+	}
+	status := 0
+	for _, value := range values {
+		r.vars[name] = value
+		bodyStatus, stop := r.runLines(ctx, lines[doIndex+1:doneIndex])
+		status = bodyStatus
+		if stop {
+			return status, doneIndex, true
+		}
+	}
+	return status, doneIndex, false
+}
+
+func (r Runtime) forHeader(ctx context.Context, line string) (string, []string, error) {
+	args, err := splitWords(strings.TrimSpace(strings.TrimPrefix(line, "for ")))
+	if err != nil {
+		return "", nil, err
+	}
+	args = r.expandArgs(ctx, args)
+	if len(args) < 3 || args[1] != "in" {
+		return "", nil, fmt.Errorf("expected: for name in words")
+	}
+	return args[0], args[2:], nil
 }
 
 func (r Runtime) runIf(ctx context.Context, lines []string, start int) (int, int, bool) {

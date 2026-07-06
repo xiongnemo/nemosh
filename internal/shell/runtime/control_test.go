@@ -55,3 +55,33 @@ func TestRuntime_returnsBranchStatus_whenIfBranchCommandFails(t *testing.T) {
 		t.Fatalf("expected status 1, got %d", status)
 	}
 }
+
+func TestRuntime_runsForBodyForEachWord_whenForLoopHasItems(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "for item in one two\ndo\necho $item\ndone\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "one\ntwo\n" {
+		t.Fatalf("expected loop output %q, got %q", "one\ntwo\n", got)
+	}
+}
+
+func TestRuntime_returnsLastBodyStatus_whenForLoopCommandFails(t *testing.T) {
+	// Given
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{})
+
+	// When
+	status := rt.RunScript(context.Background(), "for item in one\ndo\nfalse\ndone\n")
+
+	// Then
+	if status != 1 {
+		t.Fatalf("expected status 1, got %d", status)
+	}
+}
