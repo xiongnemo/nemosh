@@ -46,6 +46,7 @@ var DefaultRegistry = NewRegistry(
 	newCatApplet(),
 	newPwdApplet(),
 	newHeadApplet(),
+	newTailApplet(),
 	newWcApplet(),
 	newEnvApplet(),
 	newPrintenvApplet(),
