@@ -55,6 +55,15 @@ func (r Runtime) runLines(ctx context.Context, lines []string) (int, bool) {
 			i = next
 			continue
 		}
+		if strings.HasPrefix(line, "while ") {
+			whileStatus, next, stop := r.runWhile(ctx, lines, i)
+			status = whileStatus
+			if stop {
+				return status, true
+			}
+			i = next
+			continue
+		}
 		result := r.runLine(ctx, line)
 		status = result.status
 		if result.stop {
@@ -64,20 +73,32 @@ func (r Runtime) runLines(ctx context.Context, lines []string) (int, bool) {
 	return status, false
 }
 
-func (r Runtime) runFor(ctx context.Context, lines []string, start int) (int, int, bool) {
-	doIndex := -1
-	doneIndex := -1
-	for i := start + 1; i < len(lines); i++ {
-		switch lines[i] {
-		case "do":
-			doIndex = i
-		case "done":
-			doneIndex = i
+func (r Runtime) runWhile(ctx context.Context, lines []string, start int) (int, int, bool) {
+	doIndex, doneIndex := doDoneIndexes(lines, start)
+	if doIndex < 0 || doneIndex < 0 {
+		fmt.Fprintln(r.streams.Stderr, "while: missing do or done")
+		return 2, len(lines), false
+	}
+	condition := strings.TrimSpace(strings.TrimPrefix(lines[start], "while "))
+	status := 0
+	for {
+		conditionResult := r.runLine(ctx, condition)
+		if conditionResult.stop {
+			return conditionResult.status, doneIndex, true
 		}
-		if doneIndex >= 0 {
-			break
+		if conditionResult.status != 0 {
+			return status, doneIndex, false
+		}
+		bodyStatus, stop := r.runLines(ctx, lines[doIndex+1:doneIndex])
+		status = bodyStatus
+		if stop {
+			return status, doneIndex, true
 		}
 	}
+}
+
+func (r Runtime) runFor(ctx context.Context, lines []string, start int) (int, int, bool) {
+	doIndex, doneIndex := doDoneIndexes(lines, start)
 	if doIndex < 0 || doneIndex < 0 {
 		fmt.Fprintln(r.streams.Stderr, "for: missing do or done")
 		return 2, len(lines), false
@@ -109,6 +130,23 @@ func (r Runtime) forHeader(ctx context.Context, line string) (string, []string, 
 		return "", nil, fmt.Errorf("expected: for name in words")
 	}
 	return args[0], args[2:], nil
+}
+
+func doDoneIndexes(lines []string, start int) (int, int) {
+	doIndex := -1
+	doneIndex := -1
+	for i := start + 1; i < len(lines); i++ {
+		switch lines[i] {
+		case "do":
+			doIndex = i
+		case "done":
+			doneIndex = i
+		}
+		if doneIndex >= 0 {
+			break
+		}
+	}
+	return doIndex, doneIndex
 }
 
 func (r Runtime) runIf(ctx context.Context, lines []string, start int) (int, int, bool) {

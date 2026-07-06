@@ -85,3 +85,40 @@ func TestRuntime_returnsLastBodyStatus_whenForLoopCommandFails(t *testing.T) {
 		t.Fatalf("expected status 1, got %d", status)
 	}
 }
+
+func TestRuntime_runsWhileBodyWhileConditionSucceeds(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{
+		Stdin:  bytes.NewBufferString("one\ntwo\n"),
+		Stdout: &stdout,
+	})
+
+	// When
+	status := rt.RunScript(context.Background(), "while read item\ndo\necho $item\ndone\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "one\ntwo\n" {
+		t.Fatalf("expected while output %q, got %q", "one\ntwo\n", got)
+	}
+}
+
+func TestRuntime_skipsWhileBody_whenConditionFails(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "while false\ndo\necho bad\ndone\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if stdout.String() != "" {
+		t.Fatalf("expected no output, got %q", stdout.String())
+	}
+}
