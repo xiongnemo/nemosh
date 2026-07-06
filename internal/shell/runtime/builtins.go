@@ -1,10 +1,32 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
+
+func (r Runtime) dot(ctx context.Context, args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(r.streams.Stderr, ".: missing file")
+		return 2
+	}
+	data, err := os.ReadFile(platformPath(args[0]))
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, ".: %s: %v\n", args[0], err)
+		return 1
+	}
+	return r.runScript(ctx, string(data), false)
+}
+
+func (r Runtime) eval(ctx context.Context, args []string) int {
+	if len(args) == 0 {
+		return 0
+	}
+	return r.runScript(ctx, strings.Join(args, " "), false)
+}
 
 func (r Runtime) read(args []string) int {
 	if len(args) == 0 {

@@ -8,13 +8,19 @@ import (
 )
 
 func (r Runtime) RunScript(ctx context.Context, script string) int {
+	return r.runScript(ctx, script, true)
+}
+
+func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool) int {
 	lines, err := scriptLines(script)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 2
 	}
 	status, control := r.runLines(ctx, lines)
-	r.runExitTrap(ctx)
+	if runExitTrap {
+		r.runExitTrap(ctx)
+	}
 	if control != flowNone {
 		return status
 	}

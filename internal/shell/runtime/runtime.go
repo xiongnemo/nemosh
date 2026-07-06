@@ -118,8 +118,12 @@ func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int
 
 func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	switch args[0] {
+	case ".":
+		return r.dot(ctx, args[1:])
 	case "cd":
 		return r.cd(args[1:])
+	case "eval":
+		return r.eval(ctx, args[1:])
 	case "export":
 		return r.export(args[1:])
 	case "unset":
