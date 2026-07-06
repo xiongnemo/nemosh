@@ -61,4 +61,5 @@ var DefaultRegistry = NewRegistry(
 	newLsApplet(),
 	newCpApplet(),
 	newMvApplet(),
+	newGrepApplet(),
 )
