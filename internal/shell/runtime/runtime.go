@@ -23,10 +23,11 @@ type Streams struct {
 type Runtime struct {
 	registry applets.Registry
 	streams  Streams
+	vars     map[string]string
 }
 
 func New(registry applets.Registry, streams Streams) Runtime {
-	return Runtime{registry: registry, streams: fillStreams(streams)}
+	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}}
 }
 
 func fillStreams(streams Streams) Streams {
@@ -50,22 +51,72 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		args, err := splitWords(line)
-		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-			return 2
+		result := r.runLine(ctx, line)
+		status = result.status
+		if result.stop {
+			return status
 		}
-		if len(args) == 0 {
-			continue
-		}
-		if args[0] == "exit" {
-			return exitStatus(args[1:])
-		}
-		status = r.runCommand(ctx, args)
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 2
+	}
+	return status
+}
+
+type lineResult struct {
+	status int
+	stop   bool
+}
+
+func (r Runtime) runLine(ctx context.Context, line string) lineResult {
+	segments := splitList(line)
+	status := 0
+	operator := ""
+	for _, segment := range segments {
+		if segment.operator != "" {
+			operator = segment.operator
+			continue
+		}
+		if operator == "&&" && status != 0 {
+			continue
+		}
+		if operator == "||" && status == 0 {
+			continue
+		}
+		args, err := splitWords(segment.text)
+		if err != nil {
+			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			return lineResult{status: 2}
+		}
+		args = r.expandArgs(args)
+		if len(args) == 0 {
+			continue
+		}
+		if len(args) == 1 && isAssignment(args[0]) {
+			name, value, _ := strings.Cut(args[0], "=")
+			r.vars[name] = value
+			status = 0
+			continue
+		}
+		if args[0] == "exit" {
+			return lineResult{status: exitStatus(args[1:]), stop: true}
+		}
+		status = r.runCommandWithRedirects(ctx, args)
+	}
+	return lineResult{status: status}
+}
+
+func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int {
+	commandArgs, streams, cleanup, err := r.applyRedirects(args)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		return 1
+	}
+	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars}).runCommand(ctx, commandArgs)
+	if err := cleanup(); err != nil && status == 0 {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		return 1
 	}
 	return status
 }
@@ -129,64 +180,4 @@ func exitStatus(args []string) int {
 
 func normalizeCRLF(script string) string {
 	return strings.ReplaceAll(script, "\r\n", "\n")
-}
-
-func splitWords(line string) ([]string, error) {
-	var args []string
-	var current strings.Builder
-	inSingle := false
-	inDouble := false
-	escaped := false
-	flush := func() {
-		if current.Len() > 0 {
-			args = append(args, current.String())
-			current.Reset()
-		}
-	}
-	for _, r := range line {
-		if escaped {
-			current.WriteRune(r)
-			escaped = false
-			continue
-		}
-		switch {
-		case r == '\\' && !inSingle:
-			escaped = true
-		case r == '\'' && !inDouble:
-			inSingle = !inSingle
-		case r == '"' && !inSingle:
-			inDouble = !inDouble
-		case (r == ' ' || r == '\t') && !inSingle && !inDouble:
-			flush()
-		default:
-			current.WriteRune(r)
-		}
-	}
-	if escaped {
-		current.WriteRune('\\')
-	}
-	if inSingle || inDouble {
-		return nil, errors.New("unterminated quote")
-	}
-	flush()
-	return args, nil
-}
-
-func platformPath(path string) string {
-	if len(path) >= 3 && path[0] == '/' && path[2] == '/' && isDriveLetter(rune(path[1])) {
-		return string(path[1]) + ":/" + path[3:]
-	}
-	return path
-}
-
-func filepathDisplay(path string) string {
-	path = strings.ReplaceAll(path, "\\", "/")
-	if len(path) >= 2 && path[1] == ':' && isDriveLetter(rune(path[0])) {
-		return "/" + strings.ToLower(path[:1]) + path[2:]
-	}
-	return path
-}
-
-func isDriveLetter(r rune) bool {
-	return ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z')
 }
