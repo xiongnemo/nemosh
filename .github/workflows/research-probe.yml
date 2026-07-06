@@ -1,0 +1,126 @@
+name: Research Probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/research-probe.yml'
+      - 'scripts/research/**'
+      - 'docs/research/**'
+  push:
+    paths:
+      - '.github/workflows/research-probe.yml'
+      - 'scripts/research/**'
+      - 'docs/research/**'
+
+jobs:
+  unix-shells:
+    name: ${{ matrix.os }} / ${{ matrix.shell_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            shell_name: sh
+            shell_cmd: sh
+          - os: ubuntu-latest
+            shell_name: bash-posix
+            shell_cmd: bash --posix
+          - os: macos-latest
+            shell_name: sh
+            shell_cmd: sh
+          - os: macos-latest
+            shell_name: bash-posix
+            shell_cmd: bash --posix
+    steps:
+      - uses: actions/checkout@v4
+      - name: Runner info
+        run: |
+          uname -a
+          printf 'PATH=%s\n' "$PATH"
+      - name: POSIX smoke probe
+        run: sh scripts/research/posix-smoke.sh ${{ matrix.shell_cmd }}
+
+  windows-native:
+    name: windows-latest / native inventory
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Runner info
+        shell: pwsh
+        run: |
+          Get-ComputerInfo | Select-Object OsName, OsVersion, WindowsVersion
+          Get-Command bash, sh, wsl, git -ErrorAction SilentlyContinue | Format-Table -AutoSize
+      - name: Git Bash smoke probe
+        shell: pwsh
+        run: |
+          $bash = 'C:\Program Files\Git\bin\bash.exe'
+          if (Test-Path $bash) {
+            & $bash scripts/research/posix-smoke.sh bash --posix
+          } else {
+            Write-Error 'Git Bash was not found on the runner image.'
+          }
+
+  windows-msys2:
+    name: windows-latest / msys2 / ${{ matrix.shell_name }}
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shell_name: sh
+            package: sh
+            shell_cmd: sh
+          - shell_name: bash-posix
+            package: bash
+            shell_cmd: bash --posix
+          - shell_name: zsh-emulate-sh
+            package: zsh
+            shell_cmd: zsh --emulate sh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: ${{ matrix.package }} sed coreutils
+      - name: Runner info
+        run: |
+          uname -a
+          printf 'PATH=%s\n' "$PATH"
+      - name: POSIX smoke probe
+        run: sh scripts/research/posix-smoke.sh ${{ matrix.shell_cmd }}
+
+  windows-cygwin:
+    name: windows-latest / cygwin / ${{ matrix.shell_name }}
+    runs-on: windows-latest
+    env:
+      PATH: 'C:\tools\cygwin\bin;C:\Program Files\Git\bin;C:\Windows\System32;C:\Windows;C:\Windows\System32\WindowsPowerShell\v1.0;C:\ProgramData\Chocolatey\bin'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shell_name: sh
+            package: sh
+            shell_cmd: sh
+          - shell_name: bash-posix
+            package: bash
+            shell_cmd: bash --posix
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Cygwin
+        shell: cmd
+        run: |
+          choco install -y --no-progress cygwin cyg-get
+          cyg-get sed coreutils ${{ matrix.package }}
+      - name: Runner info
+        shell: cmd
+        run: |
+          sh -lc "uname -a && printf 'PATH=%s\n' \"$PATH\""
+      - name: POSIX smoke probe
+        shell: cmd
+        run: sh scripts/research/posix-smoke.sh ${{ matrix.shell_cmd }}
