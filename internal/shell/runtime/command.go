@@ -37,7 +37,7 @@ func (r Runtime) isKnownCommand(name string) bool {
 
 func isRuntimeBuiltin(name string) bool {
 	switch name {
-	case ".", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "jobs", "pwd", "read", "readonly", "set", "shift", "trap", "umask", "unset", "wait":
+	case ".", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "pwd", "read", "readonly", "set", "shift", "trap", "umask", "unset", "wait":
 		return true
 	default:
 		return false
