@@ -66,3 +66,92 @@ func TestRuntime_defersExitTrap_whenEvalRuns(t *testing.T) {
 		t.Fatalf("expected deferred trap output %q, got %q", "hi\nafter\nbye\n", got)
 	}
 }
+
+func TestRuntime_marksAssignedVariable_whenReadonlyRuns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "readonly name=old\necho $name\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "old\n" {
+		t.Fatalf("expected readonly assignment output %q, got %q", "old\n", got)
+	}
+}
+
+func TestRuntime_preservesReadonlyVariable_whenAssignmentRuns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+	if status := rt.RunScript(context.Background(), "readonly name=old\n"); status != 0 {
+		t.Fatalf("expected readonly setup status 0, got %d", status)
+	}
+
+	// When
+	status := rt.RunScript(context.Background(), "name=new\n")
+	finalStatus := rt.RunScript(context.Background(), "echo $name\n")
+
+	// Then
+	if status == 0 {
+		t.Fatalf("expected readonly assignment to fail")
+	}
+	if finalStatus != 0 {
+		t.Fatalf("expected final echo status 0, got %d", finalStatus)
+	}
+	if got := stdout.String(); got != "old\n" {
+		t.Fatalf("expected readonly variable to stay %q, got %q", "old\n", got)
+	}
+}
+
+func TestRuntime_preservesReadonlyVariable_whenExportAssigns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+	if status := rt.RunScript(context.Background(), "readonly name=old\n"); status != 0 {
+		t.Fatalf("expected readonly setup status 0, got %d", status)
+	}
+
+	// When
+	status := rt.RunScript(context.Background(), "export name=new\n")
+	finalStatus := rt.RunScript(context.Background(), "echo $name\n")
+
+	// Then
+	if status == 0 {
+		t.Fatalf("expected readonly export assignment to fail")
+	}
+	if finalStatus != 0 {
+		t.Fatalf("expected final echo status 0, got %d", finalStatus)
+	}
+	if got := stdout.String(); got != "old\n" {
+		t.Fatalf("expected readonly variable to stay %q, got %q", "old\n", got)
+	}
+}
+
+func TestRuntime_preservesReadonlyVariable_whenUnsetRuns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+	if status := rt.RunScript(context.Background(), "readonly name=old\n"); status != 0 {
+		t.Fatalf("expected readonly setup status 0, got %d", status)
+	}
+
+	// When
+	status := rt.RunScript(context.Background(), "unset name\n")
+	finalStatus := rt.RunScript(context.Background(), "echo $name\n")
+
+	// Then
+	if status == 0 {
+		t.Fatalf("expected readonly unset to fail")
+	}
+	if finalStatus != 0 {
+		t.Fatalf("expected final echo status 0, got %d", finalStatus)
+	}
+	if got := stdout.String(); got != "old\n" {
+		t.Fatalf("expected readonly variable to stay %q, got %q", "old\n", got)
+	}
+}

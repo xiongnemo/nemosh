@@ -26,10 +26,11 @@ type Runtime struct {
 	vars     map[string]string
 	traps    map[string]string
 	params   *parameters
+	readonly map[string]struct{}
 }
 
 func New(registry applets.Registry, streams Streams) Runtime {
-	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}, traps: map[string]string{}, params: &parameters{}}
+	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}, traps: map[string]string{}, params: &parameters{}, readonly: map[string]struct{}{}}
 }
 
 func fillStreams(streams Streams) Streams {
@@ -85,8 +86,7 @@ func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 		}
 		if len(args) == 1 && isAssignment(args[0]) {
 			name, value, _ := strings.Cut(args[0], "=")
-			r.vars[name] = value
-			status = 0
+			status = r.assignVar(name, value)
 			continue
 		}
 		if args[0] == "exit" {
@@ -109,7 +109,7 @@ func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
 	}
-	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params}).runCommand(ctx, commandArgs)
+	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, readonly: r.readonly}).runCommand(ctx, commandArgs)
 	if err := cleanup(); err != nil && status == 0 {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
@@ -139,6 +139,8 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 		return 0
 	case "read":
 		return r.read(args[1:])
+	case "readonly":
+		return r.readonlyBuiltin(args[1:])
 	case "set":
 		return r.set(args[1:])
 	case "shift":
@@ -185,6 +187,9 @@ func (r Runtime) export(args []string) int {
 		}
 		if !hasValue {
 			value = r.vars[name]
+		} else if r.isReadonly(name) {
+			fmt.Fprintf(r.streams.Stderr, "export: %s: readonly variable\n", name)
+			return 1
 		}
 		r.vars[name] = value
 		if err := os.Setenv(name, value); err != nil {
@@ -197,6 +202,10 @@ func (r Runtime) export(args []string) int {
 
 func (r Runtime) unset(args []string) int {
 	for _, name := range args {
+		if r.isReadonly(name) {
+			fmt.Fprintf(r.streams.Stderr, "unset: %s: readonly variable\n", name)
+			return 1
+		}
 		delete(r.vars, name)
 		if err := os.Unsetenv(name); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "unset: %s: %v\n", name, err)
