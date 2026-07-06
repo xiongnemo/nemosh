@@ -23,6 +23,15 @@ func (r Runtime) read(args []string) int {
 	return 0
 }
 
+func (r Runtime) trap(args []string) int {
+	if len(args) != 2 || args[1] != "EXIT" {
+		fmt.Fprintln(r.streams.Stderr, "trap: expected: trap command EXIT")
+		return 2
+	}
+	r.traps["EXIT"] = args[0]
+	return 0
+}
+
 func readLine(input io.Reader) (string, error) {
 	var b strings.Builder
 	buf := []byte{0}

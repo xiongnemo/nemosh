@@ -24,10 +24,11 @@ type Runtime struct {
 	registry applets.Registry
 	streams  Streams
 	vars     map[string]string
+	traps    map[string]string
 }
 
 func New(registry applets.Registry, streams Streams) Runtime {
-	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}}
+	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}, traps: map[string]string{}}
 }
 
 func fillStreams(streams Streams) Streams {
@@ -107,7 +108,7 @@ func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
 	}
-	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars}).runCommand(ctx, commandArgs)
+	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps}).runCommand(ctx, commandArgs)
 	if err := cleanup(); err != nil && status == 0 {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
@@ -133,6 +134,8 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 		return 0
 	case "read":
 		return r.read(args[1:])
+	case "trap":
+		return r.trap(args[1:])
 	}
 	applet, ok := r.registry.Lookup(args[0])
 	if !ok {

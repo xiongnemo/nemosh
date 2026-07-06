@@ -14,10 +14,25 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 		return 2
 	}
 	status, control := r.runLines(ctx, lines)
+	r.runExitTrap(ctx)
 	if control != flowNone {
 		return status
 	}
 	return status
+}
+
+func (r Runtime) runExitTrap(ctx context.Context) {
+	command := r.traps["EXIT"]
+	if command == "" {
+		return
+	}
+	delete(r.traps, "EXIT")
+	trapLines, err := scriptLines(command)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "trap EXIT: %v\n", err)
+		return
+	}
+	r.runLines(ctx, trapLines)
 }
 
 func scriptLines(script string) ([]string, error) {
