@@ -169,6 +169,8 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 		return r.trap(args[1:])
 	case "umask":
 		return r.umask(args[1:])
+	case "wait":
+		return r.wait(args[1:])
 	}
 	applet, ok := r.registry.Lookup(args[0])
 	if !ok {
