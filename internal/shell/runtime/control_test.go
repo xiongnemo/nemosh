@@ -122,3 +122,37 @@ func TestRuntime_skipsWhileBody_whenConditionFails(t *testing.T) {
 		t.Fatalf("expected no output, got %q", stdout.String())
 	}
 }
+
+func TestRuntime_breaksOutOfLoop_whenBreakRuns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "for item in one two\ndo\necho $item\nbreak\ndone\necho after\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "one\nafter\n" {
+		t.Fatalf("expected break output %q, got %q", "one\nafter\n", got)
+	}
+}
+
+func TestRuntime_continuesLoop_whenContinueRuns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "for item in one two\ndo\necho $item\ncontinue\necho bad\ndone\necho after\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "one\ntwo\nafter\n" {
+		t.Fatalf("expected continue output %q, got %q", "one\ntwo\nafter\n", got)
+	}
+}

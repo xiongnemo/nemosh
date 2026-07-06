@@ -44,9 +44,18 @@ func fillStreams(streams Streams) Streams {
 }
 
 type lineResult struct {
-	status int
-	stop   bool
+	status  int
+	control flowControl
 }
+
+type flowControl int
+
+const (
+	flowNone flowControl = iota
+	flowExit
+	flowBreak
+	flowContinue
+)
 
 func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 	segments := splitList(line)
@@ -79,7 +88,13 @@ func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 			continue
 		}
 		if args[0] == "exit" {
-			return lineResult{status: exitStatus(args[1:]), stop: true}
+			return lineResult{status: exitStatus(args[1:]), control: flowExit}
+		}
+		if args[0] == "break" {
+			return lineResult{control: flowBreak}
+		}
+		if args[0] == "continue" {
+			return lineResult{control: flowContinue}
 		}
 		status = r.runPipeline(ctx, args)
 	}

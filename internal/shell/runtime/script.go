@@ -13,8 +13,8 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 2
 	}
-	status, stop := r.runLines(ctx, lines)
-	if stop {
+	status, control := r.runLines(ctx, lines)
+	if control != flowNone {
 		return status
 	}
 	return status
@@ -33,91 +33,105 @@ func scriptLines(script string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func (r Runtime) runLines(ctx context.Context, lines []string) (int, bool) {
+func (r Runtime) runLines(ctx context.Context, lines []string) (int, flowControl) {
 	status := 0
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		if strings.HasPrefix(line, "if ") {
-			ifStatus, next, stop := r.runIf(ctx, lines, i)
+			ifStatus, next, control := r.runIf(ctx, lines, i)
 			status = ifStatus
-			if stop {
-				return status, true
+			if control != flowNone {
+				return status, control
 			}
 			i = next
 			continue
 		}
 		if strings.HasPrefix(line, "for ") {
-			forStatus, next, stop := r.runFor(ctx, lines, i)
+			forStatus, next, control := r.runFor(ctx, lines, i)
 			status = forStatus
-			if stop {
-				return status, true
+			if control != flowNone {
+				return status, control
 			}
 			i = next
 			continue
 		}
 		if strings.HasPrefix(line, "while ") {
-			whileStatus, next, stop := r.runWhile(ctx, lines, i)
+			whileStatus, next, control := r.runWhile(ctx, lines, i)
 			status = whileStatus
-			if stop {
-				return status, true
+			if control != flowNone {
+				return status, control
 			}
 			i = next
 			continue
 		}
 		result := r.runLine(ctx, line)
 		status = result.status
-		if result.stop {
-			return status, true
+		if result.control != flowNone {
+			return status, result.control
 		}
 	}
-	return status, false
+	return status, flowNone
 }
 
-func (r Runtime) runWhile(ctx context.Context, lines []string, start int) (int, int, bool) {
+func (r Runtime) runWhile(ctx context.Context, lines []string, start int) (int, int, flowControl) {
 	doIndex, doneIndex := doDoneIndexes(lines, start)
 	if doIndex < 0 || doneIndex < 0 {
 		fmt.Fprintln(r.streams.Stderr, "while: missing do or done")
-		return 2, len(lines), false
+		return 2, len(lines), flowNone
 	}
 	condition := strings.TrimSpace(strings.TrimPrefix(lines[start], "while "))
 	status := 0
 	for {
 		conditionResult := r.runLine(ctx, condition)
-		if conditionResult.stop {
-			return conditionResult.status, doneIndex, true
+		if conditionResult.control != flowNone {
+			return conditionResult.status, doneIndex, conditionResult.control
 		}
 		if conditionResult.status != 0 {
-			return status, doneIndex, false
+			return status, doneIndex, flowNone
 		}
-		bodyStatus, stop := r.runLines(ctx, lines[doIndex+1:doneIndex])
+		bodyStatus, control := r.runLines(ctx, lines[doIndex+1:doneIndex])
 		status = bodyStatus
-		if stop {
-			return status, doneIndex, true
+		if control == flowBreak {
+			return 0, doneIndex, flowNone
+		}
+		if control == flowContinue {
+			status = 0
+			continue
+		}
+		if control != flowNone {
+			return status, doneIndex, control
 		}
 	}
 }
 
-func (r Runtime) runFor(ctx context.Context, lines []string, start int) (int, int, bool) {
+func (r Runtime) runFor(ctx context.Context, lines []string, start int) (int, int, flowControl) {
 	doIndex, doneIndex := doDoneIndexes(lines, start)
 	if doIndex < 0 || doneIndex < 0 {
 		fmt.Fprintln(r.streams.Stderr, "for: missing do or done")
-		return 2, len(lines), false
+		return 2, len(lines), flowNone
 	}
 	name, values, err := r.forHeader(ctx, lines[start])
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
-		return 2, doneIndex, false
+		return 2, doneIndex, flowNone
 	}
 	status := 0
 	for _, value := range values {
 		r.vars[name] = value
-		bodyStatus, stop := r.runLines(ctx, lines[doIndex+1:doneIndex])
+		bodyStatus, control := r.runLines(ctx, lines[doIndex+1:doneIndex])
 		status = bodyStatus
-		if stop {
-			return status, doneIndex, true
+		if control == flowBreak {
+			return 0, doneIndex, flowNone
+		}
+		if control == flowContinue {
+			status = 0
+			continue
+		}
+		if control != flowNone {
+			return status, doneIndex, control
 		}
 	}
-	return status, doneIndex, false
+	return status, doneIndex, flowNone
 }
 
 func (r Runtime) forHeader(ctx context.Context, line string) (string, []string, error) {
@@ -149,7 +163,7 @@ func doDoneIndexes(lines []string, start int) (int, int) {
 	return doIndex, doneIndex
 }
 
-func (r Runtime) runIf(ctx context.Context, lines []string, start int) (int, int, bool) {
+func (r Runtime) runIf(ctx context.Context, lines []string, start int) (int, int, flowControl) {
 	thenIndex := -1
 	elseIndex := -1
 	fiIndex := -1
@@ -168,23 +182,23 @@ func (r Runtime) runIf(ctx context.Context, lines []string, start int) (int, int
 	}
 	if thenIndex < 0 || fiIndex < 0 {
 		fmt.Fprintln(r.streams.Stderr, "if: missing then or fi")
-		return 2, len(lines), false
+		return 2, len(lines), flowNone
 	}
 	condition := strings.TrimSpace(strings.TrimPrefix(lines[start], "if "))
 	conditionResult := r.runLine(ctx, condition)
-	if conditionResult.stop {
-		return conditionResult.status, fiIndex, true
+	if conditionResult.control != flowNone {
+		return conditionResult.status, fiIndex, conditionResult.control
 	}
 	branchStart := thenIndex + 1
 	branchEnd := fiIndex
 	if conditionResult.status != 0 {
 		if elseIndex < 0 {
-			return 0, fiIndex, false
+			return 0, fiIndex, flowNone
 		}
 		branchStart = elseIndex + 1
 	} else if elseIndex >= 0 {
 		branchEnd = elseIndex
 	}
-	status, stop := r.runLines(ctx, lines[branchStart:branchEnd])
-	return status, fiIndex, stop
+	status, control := r.runLines(ctx, lines[branchStart:branchEnd])
+	return status, fiIndex, control
 }
