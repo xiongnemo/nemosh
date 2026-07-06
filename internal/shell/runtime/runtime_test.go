@@ -267,3 +267,37 @@ func TestRuntime_readsConsecutiveLines_whenReadRunsTwice(t *testing.T) {
 		t.Fatalf("expected two read values %q, got %q", "first-second\n", got)
 	}
 }
+
+func TestRuntime_expandsCommandSubstitution_whenWordContainsDollarParen(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo $(echo hi)\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "hi\n" {
+		t.Fatalf("expected command substitution output %q, got %q", "hi\n", got)
+	}
+}
+
+func TestRuntime_trimsTrailingNewlines_whenCommandSubstitutionExpands(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo $(printf 'hi\\n\\n')x\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "hix\n" {
+		t.Fatalf("expected trimmed command substitution output %q, got %q", "hix\n", got)
+	}
+}

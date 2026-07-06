@@ -89,7 +89,7 @@ func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 			return lineResult{status: 2}
 		}
-		args = r.expandArgs(args)
+		args = r.expandArgs(ctx, args)
 		if len(args) == 0 {
 			continue
 		}

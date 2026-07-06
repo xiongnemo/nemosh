@@ -1,20 +1,35 @@
 package runtime
 
-import "strings"
+import (
+	"bytes"
+	"context"
+	"strings"
+)
 
-func (r Runtime) expandArgs(args []string) []string {
+func (r Runtime) expandArgs(ctx context.Context, args []string) []string {
 	expanded := make([]string, 0, len(args))
 	for _, arg := range args {
-		expanded = append(expanded, r.expandArg(arg))
+		expanded = append(expanded, r.expandArg(ctx, arg))
 	}
 	return expanded
 }
 
-func (r Runtime) expandArg(arg string) string {
+func (r Runtime) expandArg(ctx context.Context, arg string) string {
 	var b strings.Builder
 	for i := 0; i < len(arg); i++ {
 		if arg[i] != '$' || i == len(arg)-1 {
 			b.WriteByte(arg[i])
+			continue
+		}
+		if arg[i+1] == '(' {
+			commandEnd := strings.IndexByte(arg[i+2:], ')')
+			if commandEnd < 0 {
+				b.WriteByte(arg[i])
+				continue
+			}
+			command := arg[i+2 : i+2+commandEnd]
+			b.WriteString(r.commandSubstitution(ctx, command))
+			i = i + commandEnd + 2
 			continue
 		}
 		nameStart := i + 1
@@ -30,6 +45,13 @@ func (r Runtime) expandArg(arg string) string {
 		i = nameEnd - 1
 	}
 	return b.String()
+}
+
+func (r Runtime) commandSubstitution(ctx context.Context, command string) string {
+	var stdout bytes.Buffer
+	child := Runtime{registry: r.registry, streams: Streams{Stdin: r.streams.Stdin, Stdout: &stdout, Stderr: r.streams.Stderr}, vars: r.vars}
+	child.RunScript(ctx, command)
+	return strings.TrimRight(stdout.String(), "\n")
 }
 
 func isAssignment(arg string) bool {
