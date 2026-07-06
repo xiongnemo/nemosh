@@ -137,6 +137,8 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 		}
 		fmt.Fprintln(r.streams.Stdout, filepathDisplay(cwd))
 		return 0
+	case "read":
+		return r.read(args[1:])
 	}
 	applet, ok := r.registry.Lookup(args[0])
 	if !ok {

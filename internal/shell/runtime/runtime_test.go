@@ -214,3 +214,56 @@ func TestRuntime_unsetsVariable_whenUnsetRuns(t *testing.T) {
 		t.Fatalf("expected only empty echo output, got %q", got)
 	}
 }
+
+func TestRuntime_readsLineIntoVariable_whenReadRuns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{
+		Stdin:  bytes.NewBufferString("from stdin\n"),
+		Stdout: &stdout,
+	})
+
+	// When
+	status := rt.RunScript(context.Background(), "read value\necho $value\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "from stdin\n" {
+		t.Fatalf("expected read value output %q, got %q", "from stdin\n", got)
+	}
+}
+
+func TestRuntime_returnsFailure_whenReadHitsEOF(t *testing.T) {
+	// Given
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: bytes.NewReader(nil)})
+
+	// When
+	status := rt.RunScript(context.Background(), "read value\n")
+
+	// Then
+	if status != 1 {
+		t.Fatalf("expected EOF read status 1, got %d", status)
+	}
+}
+
+func TestRuntime_readsConsecutiveLines_whenReadRunsTwice(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{
+		Stdin:  bytes.NewBufferString("first\nsecond\n"),
+		Stdout: &stdout,
+	})
+
+	// When
+	status := rt.RunScript(context.Background(), "read one\nread two\necho $one-$two\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "first-second\n" {
+		t.Fatalf("expected two read values %q, got %q", "first-second\n", got)
+	}
+}
