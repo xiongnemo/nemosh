@@ -123,6 +123,8 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 		return r.dot(ctx, args[1:])
 	case "cd":
 		return r.cd(args[1:])
+	case "command":
+		return r.command(ctx, args[1:])
 	case "eval":
 		return r.eval(ctx, args[1:])
 	case "export":
