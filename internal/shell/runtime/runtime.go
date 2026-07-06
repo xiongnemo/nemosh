@@ -145,6 +145,8 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 		return r.command(ctx, args[1:])
 	case "eval":
 		return r.eval(ctx, args[1:])
+	case "jobs":
+		return r.jobs(args[1:])
 	case "export":
 		return r.export(args[1:])
 	case "unset":
