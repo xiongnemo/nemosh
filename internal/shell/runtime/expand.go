@@ -72,7 +72,7 @@ func (r Runtime) expandArg(ctx context.Context, arg string) string {
 
 func (r Runtime) commandSubstitution(ctx context.Context, command string) string {
 	var stdout bytes.Buffer
-	child := Runtime{registry: r.registry, streams: Streams{Stdin: r.streams.Stdin, Stdout: &stdout, Stderr: r.streams.Stderr}, vars: r.vars, traps: map[string]string{}, params: r.params, readonly: r.readonly, sourceDepth: r.sourceDepth}
+	child := Runtime{registry: r.registry, streams: Streams{Stdin: r.streams.Stdin, Stdout: &stdout, Stderr: r.streams.Stderr}, vars: r.vars, traps: map[string]string{}, params: r.params, readonly: r.readonly, mask: r.mask, sourceDepth: r.sourceDepth}
 	child.RunScript(ctx, command)
 	return strings.TrimRight(stdout.String(), "\n")
 }
