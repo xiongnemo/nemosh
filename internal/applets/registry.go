@@ -63,4 +63,5 @@ var DefaultRegistry = NewRegistry(
 	newMvApplet(),
 	newChmodApplet(),
 	newGrepApplet(),
+	newSedApplet(),
 )
