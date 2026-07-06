@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -42,27 +41,6 @@ func fillStreams(streams Streams) Streams {
 		streams.Stderr = io.Discard
 	}
 	return streams
-}
-
-func (r Runtime) RunScript(ctx context.Context, script string) int {
-	status := 0
-	scanner := bufio.NewScanner(strings.NewReader(normalizeCRLF(script)))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		result := r.runLine(ctx, line)
-		status = result.status
-		if result.stop {
-			return status
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-		return 2
-	}
-	return status
 }
 
 type lineResult struct {
