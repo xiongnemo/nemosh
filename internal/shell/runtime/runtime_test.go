@@ -173,3 +173,44 @@ func TestRuntime_returnsLastPipelineStatus_whenPipelineContainsFailure(t *testin
 		t.Fatalf("expected stdout to be empty, got %q", stdout.String())
 	}
 }
+
+func TestRuntime_exportsVariable_whenExportUsesAssignment(t *testing.T) {
+	// Given
+	name := "NEMOSH_TEST_EXPORT_RUNTIME"
+	t.Setenv(name, "")
+	if err := os.Unsetenv(name); err != nil {
+		t.Fatalf("expected env cleanup to succeed, got %v", err)
+	}
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "export "+name+"=ok\nprintenv "+name+"\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "ok\n" {
+		t.Fatalf("expected exported value %q, got %q", "ok\n", got)
+	}
+}
+
+func TestRuntime_unsetsVariable_whenUnsetRuns(t *testing.T) {
+	// Given
+	name := "NEMOSH_TEST_UNSET_RUNTIME"
+	t.Setenv(name, "old")
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "name=local\nunset name "+name+"\necho $name\nprintenv "+name+"\n")
+
+	// Then
+	if status != 1 {
+		t.Fatalf("expected final printenv status 1, got %d", status)
+	}
+	if got := stdout.String(); got != "\n" {
+		t.Fatalf("expected only empty echo output, got %q", got)
+	}
+}

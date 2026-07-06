@@ -125,6 +125,10 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	switch args[0] {
 	case "cd":
 		return r.cd(args[1:])
+	case "export":
+		return r.export(args[1:])
+	case "unset":
+		return r.unset(args[1:])
 	case "pwd":
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -148,6 +152,35 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	}
 	fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
 	return 1
+}
+
+func (r Runtime) export(args []string) int {
+	for _, arg := range args {
+		name, value, hasValue := strings.Cut(arg, "=")
+		if name == "" {
+			return 2
+		}
+		if !hasValue {
+			value = r.vars[name]
+		}
+		r.vars[name] = value
+		if err := os.Setenv(name, value); err != nil {
+			fmt.Fprintf(r.streams.Stderr, "export: %s: %v\n", name, err)
+			return 1
+		}
+	}
+	return 0
+}
+
+func (r Runtime) unset(args []string) int {
+	for _, name := range args {
+		delete(r.vars, name)
+		if err := os.Unsetenv(name); err != nil {
+			fmt.Fprintf(r.streams.Stderr, "unset: %s: %v\n", name, err)
+			return 1
+		}
+	}
+	return 0
 }
 
 func (r Runtime) cd(args []string) int {
