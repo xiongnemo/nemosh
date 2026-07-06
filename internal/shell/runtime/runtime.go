@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -142,8 +143,7 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	}
 	applet, ok := r.registry.Lookup(args[0])
 	if !ok {
-		fmt.Fprintf(r.streams.Stderr, "%s: not found\n", args[0])
-		return 127
+		return r.runExternal(ctx, args)
 	}
 	err := applet.Run(ctx, args[1:], r.streams.Stdin, r.streams.Stdout, r.streams.Stderr)
 	if err == nil {
@@ -154,6 +154,22 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	}
 	fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
 	return 1
+}
+
+func (r Runtime) runExternal(ctx context.Context, args []string) int {
+	cmd := exec.CommandContext(ctx, platformPath(args[0]), args[1:]...)
+	cmd.Stdin = r.streams.Stdin
+	cmd.Stdout = r.streams.Stdout
+	cmd.Stderr = r.streams.Stderr
+	if err := cmd.Run(); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return exitErr.ExitCode()
+		}
+		fmt.Fprintf(r.streams.Stderr, "%s: not found\n", args[0])
+		return 127
+	}
+	return 0
 }
 
 func (r Runtime) export(args []string) int {
