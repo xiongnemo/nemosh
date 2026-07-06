@@ -38,4 +38,20 @@ func InvocationName(args []string) string {
 	return strings.ToLower(base)
 }
 
-var DefaultRegistry = NewRegistry()
+var DefaultRegistry = NewRegistry(
+	newTrueApplet(),
+	newFalseApplet(),
+	newEchoApplet(),
+	newPrintfApplet(),
+	newCatApplet(),
+	newEnvApplet(),
+	newPrintenvApplet(),
+	newTestApplet("test"),
+	newTestApplet("["),
+	newBasenameApplet(),
+	newDirnameApplet(),
+	newTouchApplet(),
+	newRmApplet(),
+	newMkdirApplet(),
+	newRmdirApplet(),
+)
