@@ -3,12 +3,17 @@ package runtime
 import (
 	"bytes"
 	"context"
+	"strconv"
 	"strings"
 )
 
 func (r Runtime) expandArgs(ctx context.Context, args []string) []string {
 	expanded := make([]string, 0, len(args))
 	for _, arg := range args {
+		if arg == "$@" {
+			expanded = append(expanded, r.params.values...)
+			continue
+		}
 		expanded = append(expanded, r.expandArg(ctx, arg))
 	}
 	return expanded
@@ -32,6 +37,24 @@ func (r Runtime) expandArg(ctx context.Context, arg string) string {
 			i = i + commandEnd + 2
 			continue
 		}
+		if arg[i+1] == '#' {
+			b.WriteString(strconv.Itoa(len(r.params.values)))
+			i++
+			continue
+		}
+		if arg[i+1] == '@' {
+			b.WriteString(strings.Join(r.params.values, " "))
+			i++
+			continue
+		}
+		if '1' <= arg[i+1] && arg[i+1] <= '9' {
+			index := int(arg[i+1] - '1')
+			if index < len(r.params.values) {
+				b.WriteString(r.params.values[index])
+			}
+			i++
+			continue
+		}
 		nameStart := i + 1
 		nameEnd := nameStart
 		for nameEnd < len(arg) && isNameByte(arg[nameEnd]) {
@@ -49,7 +72,7 @@ func (r Runtime) expandArg(ctx context.Context, arg string) string {
 
 func (r Runtime) commandSubstitution(ctx context.Context, command string) string {
 	var stdout bytes.Buffer
-	child := Runtime{registry: r.registry, streams: Streams{Stdin: r.streams.Stdin, Stdout: &stdout, Stderr: r.streams.Stderr}, vars: r.vars}
+	child := Runtime{registry: r.registry, streams: Streams{Stdin: r.streams.Stdin, Stdout: &stdout, Stderr: r.streams.Stderr}, vars: r.vars, traps: map[string]string{}, params: r.params}
 	child.RunScript(ctx, command)
 	return strings.TrimRight(stdout.String(), "\n")
 }
