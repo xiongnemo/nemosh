@@ -85,6 +85,15 @@ func (r Runtime) runLines(ctx context.Context, lines []string) (int, flowControl
 			i = next
 			continue
 		}
+		if strings.HasPrefix(line, "until ") {
+			untilStatus, next, control := r.runUntil(ctx, lines, i)
+			status = untilStatus
+			if control != flowNone {
+				return status, control
+			}
+			i = next
+			continue
+		}
 		result := r.runLine(ctx, line)
 		status = result.status
 		if result.control != flowNone {
