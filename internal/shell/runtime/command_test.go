@@ -51,6 +51,7 @@ func TestRuntime_commandVPrintsName_whenCommandIsKnown(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
+		{name: "date"},
 		{name: "echo"},
 		{name: "cd"},
 		{name: "readlink"},
