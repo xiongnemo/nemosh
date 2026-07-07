@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"crypto/rand"
 	"io"
 	"os"
 )
@@ -15,8 +16,11 @@ func (zeroReader) Read(p []byte) (int, error) {
 }
 
 func openInputRedirect(path string) (io.ReadCloser, error) {
-	if path == "/dev/zero" {
+	switch path {
+	case "/dev/zero":
 		return io.NopCloser(zeroReader{}), nil
+	case "/dev/urandom", "/dev/random":
+		return io.NopCloser(rand.Reader), nil
 	}
 	return os.Open(platformPath(path))
 }

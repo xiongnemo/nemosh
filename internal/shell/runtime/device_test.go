@@ -33,6 +33,50 @@ func TestRuntime_readsNulBytes_whenStdinRedirectsFromDevZero(t *testing.T) {
 	}
 }
 
+func TestRuntime_readsRandomBytes_whenStdinRedirectsFromDevURandom(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	registry := applets.NewRegistry(devRandomProbeApplet{})
+	rt := runtime.New(registry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "dev-random-probe < /dev/urandom\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "random-ok\n" {
+		t.Fatalf("expected dev urandom output %q, got %q", "random-ok\n", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+}
+
+func TestRuntime_readsRandomBytes_whenStdinRedirectsFromDevRandom(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	registry := applets.NewRegistry(devRandomProbeApplet{})
+	rt := runtime.New(registry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "dev-random-probe < /dev/random\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "random-ok\n" {
+		t.Fatalf("expected dev random output %q, got %q", "random-ok\n", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+}
+
 type devZeroProbeApplet struct{}
 
 func (devZeroProbeApplet) Name() string {
@@ -48,5 +92,20 @@ func (devZeroProbeApplet) Run(_ context.Context, _ []string, stdin io.Reader, st
 		return fmt.Errorf("expected four NUL bytes, got %v", buf)
 	}
 	_, err := fmt.Fprintln(stdout, "zero-ok")
+	return err
+}
+
+type devRandomProbeApplet struct{}
+
+func (devRandomProbeApplet) Name() string {
+	return "dev-random-probe"
+}
+
+func (devRandomProbeApplet) Run(_ context.Context, _ []string, stdin io.Reader, stdout, _ io.Writer) error {
+	buf := make([]byte, 32)
+	if _, err := io.ReadFull(stdin, buf); err != nil {
+		return err
+	}
+	_, err := fmt.Fprintln(stdout, "random-ok")
 	return err
 }
