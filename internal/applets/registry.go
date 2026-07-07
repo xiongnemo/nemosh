@@ -41,6 +41,7 @@ func InvocationName(args []string) string {
 var DefaultRegistry = NewRegistry(
 	newTrueApplet(),
 	newFalseApplet(),
+	newYesApplet(),
 	newEchoApplet(),
 	newPrintfApplet(),
 	newCatApplet(),
