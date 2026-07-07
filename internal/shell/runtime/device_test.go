@@ -1,0 +1,52 @@
+package runtime_test
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"testing"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
+)
+
+func TestRuntime_readsNulBytes_whenStdinRedirectsFromDevZero(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	registry := applets.NewRegistry(devZeroProbeApplet{})
+	rt := runtime.New(registry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "dev-zero-probe < /dev/zero\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "zero-ok\n" {
+		t.Fatalf("expected dev zero output %q, got %q", "zero-ok\n", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+}
+
+type devZeroProbeApplet struct{}
+
+func (devZeroProbeApplet) Name() string {
+	return "dev-zero-probe"
+}
+
+func (devZeroProbeApplet) Run(_ context.Context, _ []string, stdin io.Reader, stdout, _ io.Writer) error {
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(stdin, buf); err != nil {
+		return err
+	}
+	if !bytes.Equal(buf, []byte{0, 0, 0, 0}) {
+		return fmt.Errorf("expected four NUL bytes, got %v", buf)
+	}
+	_, err := fmt.Fprintln(stdout, "zero-ok")
+	return err
+}
