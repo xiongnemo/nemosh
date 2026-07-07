@@ -120,6 +120,70 @@ func TestRuntime_discardsStdout_whenStdoutRedirectsToDevNull(t *testing.T) {
 	}
 }
 
+func TestRuntime_readsCurrentStdin_whenStdinRedirectsFromDevStdin(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	registry := applets.NewRegistry(devStdinProbeApplet{})
+	rt := runtime.New(registry, runtime.Streams{Stdin: bytes.NewBufferString("stdin-alias"), Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "dev-stdin-probe < /dev/stdin\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "stdin-alias-ok\n" {
+		t.Fatalf("expected dev stdin output %q, got %q", "stdin-alias-ok\n", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+}
+
+func TestRuntime_writesCurrentStdout_whenStdoutRedirectsToDevStdout(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo visible > /dev/stdout\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "visible\n" {
+		t.Fatalf("expected stdout %q, got %q", "visible\n", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+}
+
+func TestRuntime_writesCurrentStderr_whenStdoutRedirectsToDevStderr(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo visible > /dev/stderr\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "" {
+		t.Fatalf("expected empty stdout, got %q", got)
+	}
+	if got := stderr.String(); got != "visible\n" {
+		t.Fatalf("expected stderr %q, got %q", "visible\n", got)
+	}
+}
+
 type devZeroProbeApplet struct{}
 
 func (devZeroProbeApplet) Name() string {
@@ -166,5 +230,23 @@ func (devNullInputProbeApplet) Run(_ context.Context, _ []string, stdin io.Reade
 		return fmt.Errorf("expected EOF with zero bytes, got n=%d err=%v", n, err)
 	}
 	_, err = fmt.Fprintln(stdout, "null-input-ok")
+	return err
+}
+
+type devStdinProbeApplet struct{}
+
+func (devStdinProbeApplet) Name() string {
+	return "dev-stdin-probe"
+}
+
+func (devStdinProbeApplet) Run(_ context.Context, _ []string, stdin io.Reader, stdout, _ io.Writer) error {
+	data, err := io.ReadAll(stdin)
+	if err != nil {
+		return err
+	}
+	if string(data) != "stdin-alias" {
+		return fmt.Errorf("expected stdin alias data, got %q", string(data))
+	}
+	_, err = fmt.Fprintln(stdout, "stdin-alias-ok")
 	return err
 }

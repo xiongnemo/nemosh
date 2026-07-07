@@ -27,7 +27,7 @@ func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error,
 				}
 				return nil, Streams{}, func() error { return nil }, fmt.Errorf(">: missing target")
 			}
-			file, err := openOutputRedirect(args[i+1])
+			file, err := openOutputRedirect(args[i+1], streams)
 			if err != nil {
 				if closeErr := cleanup(); closeErr != nil {
 					return nil, Streams{}, func() error { return nil }, closeErr
@@ -44,7 +44,7 @@ func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error,
 				}
 				return nil, Streams{}, func() error { return nil }, fmt.Errorf("<: missing target")
 			}
-			file, err := openInputRedirect(args[i+1])
+			file, err := openInputRedirect(args[i+1], streams)
 			if err != nil {
 				if closeErr := cleanup(); closeErr != nil {
 					return nil, Streams{}, func() error { return nil }, closeErr
