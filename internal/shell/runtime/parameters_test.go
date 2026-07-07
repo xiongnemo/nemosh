@@ -72,3 +72,37 @@ func TestRuntime_returnsFailure_whenShiftRunsWithoutParameters(t *testing.T) {
 		t.Fatalf("expected empty shift status 1, got %d", status)
 	}
 }
+
+func TestRuntime_expandsColonDefaultParameter_whenVariableIsUnsetOrEmpty(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo ${missing:-fallback}\nempty=\necho ${empty:-fallback}\nname=value\necho ${name:-fallback}\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "fallback\nfallback\nvalue\n" {
+		t.Fatalf("expected colon default output %q, got %q", "fallback\nfallback\nvalue\n", got)
+	}
+}
+
+func TestRuntime_expandsDashDefaultParameter_whenVariableIsUnsetOnly(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo ${missing-fallback}\nempty=\necho ${empty-fallback}:tail\nname=value\necho ${name-fallback}\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d", status)
+	}
+	if got := stdout.String(); got != "fallback\n:tail\nvalue\n" {
+		t.Fatalf("expected dash default output %q, got %q", "fallback\n:tail\nvalue\n", got)
+	}
+}

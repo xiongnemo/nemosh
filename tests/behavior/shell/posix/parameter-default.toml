@@ -1,0 +1,25 @@
+id = "shell.posix.parameter.default"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+echo ${missing:-colon-unset}
+empty=
+echo ${empty:-colon-empty}
+echo ${empty-dash-empty}:dash-empty
+present=present
+echo ${present:-fallback}
+echo ${missing-dash-unset}
+'''
+
+[expect]
+status = 0
+stdout = "colon-unset\ncolon-empty\n:dash-empty\npresent\ndash-unset\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1-2024 Shell Command Language, parameter expansion ${parameter:-word} and ${parameter-word}"
+why = "Default-value parameter expansion distinguishes unset variables from set-empty variables."

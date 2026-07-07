@@ -37,6 +37,23 @@ func (r Runtime) expandArg(ctx context.Context, arg string) string {
 			i = i + commandEnd + 2
 			continue
 		}
+		if arg[i+1] == '{' {
+			bodyEnd := strings.IndexByte(arg[i+2:], '}')
+			if bodyEnd < 0 {
+				b.WriteByte(arg[i])
+				continue
+			}
+			body := arg[i+2 : i+2+bodyEnd]
+			if expanded, ok := r.expandDefaultParameter(ctx, body); ok {
+				b.WriteString(expanded)
+			} else {
+				b.WriteString("${")
+				b.WriteString(body)
+				b.WriteByte('}')
+			}
+			i = i + bodyEnd + 2
+			continue
+		}
 		if arg[i+1] == '#' {
 			b.WriteString(strconv.Itoa(len(r.params.values)))
 			i++
