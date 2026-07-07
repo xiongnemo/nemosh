@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.date.reject-set-time"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["date", "-s", "@0"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "date: unsupported option: -s\n"
+
+[notes]
+standard = "BusyBox-w32 date utility"
+why = "Setting the system clock is intentionally unsupported in the safe first Nemosh date slice."

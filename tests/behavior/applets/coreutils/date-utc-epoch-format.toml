@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.date.utc-epoch-format"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["date", "-u", "-d", "@0", "+%Y-%m-%dT%H:%M:%SZ"]
+
+[expect]
+status = 0
+stdout = "1970-01-01T00:00:00Z\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 date utility"
+why = "The first date slice supports deterministic UTC @seconds_since_1970 input and an explicit strftime subset."

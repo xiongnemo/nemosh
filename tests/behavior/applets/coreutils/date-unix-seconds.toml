@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.date.unix-seconds"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["date", "-u", "-d", "@1", "+%s"]
+
+[expect]
+status = 0
+stdout = "1\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 date utility"
+why = "Unix seconds formatting is deterministic and avoids wall-clock assertions."
