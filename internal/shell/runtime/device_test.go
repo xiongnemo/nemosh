@@ -77,6 +77,49 @@ func TestRuntime_readsRandomBytes_whenStdinRedirectsFromDevRandom(t *testing.T) 
 	}
 }
 
+func TestRuntime_readsEOF_whenStdinRedirectsFromDevNull(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	registry := applets.NewRegistry(devNullInputProbeApplet{})
+	rt := runtime.New(registry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "dev-null-input-probe < /dev/null\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "null-input-ok\n" {
+		t.Fatalf("expected dev null input output %q, got %q", "null-input-ok\n", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+}
+
+func TestRuntime_discardsStdout_whenStdoutRedirectsToDevNull(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+
+	// When
+	status := rt.RunScript(context.Background(), "echo hidden > /dev/null\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("expected status 0, got %d with stderr %q", status, stderr.String())
+	}
+	if got := stdout.String(); got != "" {
+		t.Fatalf("expected empty stdout, got %q", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+}
+
 type devZeroProbeApplet struct{}
 
 func (devZeroProbeApplet) Name() string {
@@ -107,5 +150,21 @@ func (devRandomProbeApplet) Run(_ context.Context, _ []string, stdin io.Reader, 
 		return err
 	}
 	_, err := fmt.Fprintln(stdout, "random-ok")
+	return err
+}
+
+type devNullInputProbeApplet struct{}
+
+func (devNullInputProbeApplet) Name() string {
+	return "dev-null-input-probe"
+}
+
+func (devNullInputProbeApplet) Run(_ context.Context, _ []string, stdin io.Reader, stdout, _ io.Writer) error {
+	buf := make([]byte, 1)
+	n, err := stdin.Read(buf)
+	if n != 0 || err != io.EOF {
+		return fmt.Errorf("expected EOF with zero bytes, got n=%d err=%v", n, err)
+	}
+	_, err = fmt.Fprintln(stdout, "null-input-ok")
 	return err
 }

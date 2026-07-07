@@ -3,7 +3,6 @@ package runtime
 import (
 	"fmt"
 	"io"
-	"os"
 )
 
 func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error, error) {
@@ -28,7 +27,7 @@ func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error,
 				}
 				return nil, Streams{}, func() error { return nil }, fmt.Errorf(">: missing target")
 			}
-			file, err := os.Create(platformPath(args[i+1]))
+			file, err := openOutputRedirect(args[i+1])
 			if err != nil {
 				if closeErr := cleanup(); closeErr != nil {
 					return nil, Streams{}, func() error { return nil }, closeErr
