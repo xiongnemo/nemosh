@@ -10,6 +10,10 @@ type parameters struct {
 }
 
 func (r Runtime) set(args []string) int {
+	if len(args) == 2 && args[0] == "-o" && args[1] == "pipefail" {
+		r.options.pipefail = true
+		return 0
+	}
 	if len(args) > 0 && args[0] == "--" {
 		r.params.values = append(r.params.values[:0], args[1:]...)
 	}

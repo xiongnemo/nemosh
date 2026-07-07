@@ -25,13 +25,14 @@ type Runtime struct {
 	vars        map[string]string
 	traps       map[string]string
 	params      *parameters
+	options     *shellOptions
 	readonly    map[string]struct{}
 	mask        *fileModeMask
 	sourceDepth int
 }
 
 func New(registry applets.Registry, streams Streams) Runtime {
-	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}, traps: map[string]string{}, params: &parameters{}, readonly: map[string]struct{}{}, mask: newFileModeMask()}
+	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}, traps: map[string]string{}, params: &parameters{}, options: &shellOptions{}, readonly: map[string]struct{}{}, mask: newFileModeMask()}
 }
 
 func fillStreams(streams Streams) Streams {
@@ -127,7 +128,7 @@ func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
 	}
-	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, readonly: r.readonly, mask: r.mask, sourceDepth: r.sourceDepth}).runCommand(ctx, commandArgs)
+	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, options: r.options, readonly: r.readonly, mask: r.mask, sourceDepth: r.sourceDepth}).runCommand(ctx, commandArgs)
 	if err := cleanup(); err != nil && status == 0 {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1

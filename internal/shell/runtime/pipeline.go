@@ -17,6 +17,7 @@ func (r Runtime) runPipeline(ctx context.Context, args []string) int {
 	}
 	input := r.streams.Stdin
 	status := 0
+	pipefailStatus := 0
 	for i, command := range commands {
 		last := i == len(commands)-1
 		streams := r.streams
@@ -25,8 +26,14 @@ func (r Runtime) runPipeline(ctx context.Context, args []string) int {
 		if !last {
 			streams.Stdout = &output
 		}
-		status = (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, readonly: r.readonly, mask: r.mask, sourceDepth: r.sourceDepth}).runCommandWithRedirects(ctx, command)
+		status = (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, options: r.options, readonly: r.readonly, mask: r.mask, sourceDepth: r.sourceDepth}).runCommandWithRedirects(ctx, command)
+		if status != 0 {
+			pipefailStatus = status
+		}
 		input = bytes.NewReader(output.Bytes())
+	}
+	if r.options.pipefail {
+		return pipefailStatus
 	}
 	return status
 }
