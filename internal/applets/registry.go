@@ -62,6 +62,7 @@ var DefaultRegistry = NewRegistry(
 	newRmdirApplet(),
 	newLsApplet(),
 	newLnApplet(),
+	newReadlinkApplet(),
 	newCpApplet(),
 	newMvApplet(),
 	newChmodApplet(),

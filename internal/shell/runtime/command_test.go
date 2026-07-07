@@ -53,6 +53,7 @@ func TestRuntime_commandVPrintsName_whenCommandIsKnown(t *testing.T) {
 	}{
 		{name: "echo"},
 		{name: "cd"},
+		{name: "readlink"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
