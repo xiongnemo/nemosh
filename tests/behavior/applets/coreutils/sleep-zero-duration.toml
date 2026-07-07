@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.sleep.zero-duration"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["sleep", "0"]
+
+[expect]
+status = 0
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 sleep utility"
+why = "sleep 0 is a stable no-delay success case; longer durations and invalid operands are covered by Go tests."

@@ -13,8 +13,6 @@ const maxSleepDuration = time.Duration(1<<63 - 1)
 
 var errInvalidSleepDuration = errors.New("invalid sleep duration")
 
-var _ = newSleepApplet
-
 func newSleepApplet() Applet {
 	return sleepApplet{}
 }
