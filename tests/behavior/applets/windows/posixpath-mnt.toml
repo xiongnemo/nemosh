@@ -1,0 +1,16 @@
+id = "applet.nemosh.posixpath.mnt"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["posixpath", "/mnt/c/Users/nemo"]
+
+[expect]
+status = 0
+stdout = "/c/Users/nemo\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "posixpath applies the default /mnt/c mount-prefix alias to canonical Nemosh spelling."

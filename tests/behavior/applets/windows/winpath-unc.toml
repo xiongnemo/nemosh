@@ -1,0 +1,16 @@
+id = "applet.nemosh.winpath.unc"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["winpath", "//server/share/dir"]
+
+[expect]
+status = 0
+stdout = "//server/share/dir\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "winpath keeps the busybox-w32-compatible forward-slash UNC spelling."

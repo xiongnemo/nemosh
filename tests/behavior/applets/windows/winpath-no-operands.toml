@@ -1,0 +1,16 @@
+id = "applet.nemosh.winpath.no-operands"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["winpath"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "winpath fails when no operand is provided."

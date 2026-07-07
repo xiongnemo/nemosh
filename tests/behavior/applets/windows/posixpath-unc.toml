@@ -1,0 +1,16 @@
+id = "applet.nemosh.posixpath.unc"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["posixpath", "//server/share/dir"]
+
+[expect]
+status = 0
+stdout = "//server/share/dir\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "posixpath preserves valid UNC share paths in canonical Nemosh spelling."

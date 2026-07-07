@@ -1,0 +1,16 @@
+id = "applet.nemosh.posixpath.invalid"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["posixpath", "//server"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "//server is not a directory root; use //server/share\n"
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "posixpath rejects host-only UNC paths because they are not filesystem roots."

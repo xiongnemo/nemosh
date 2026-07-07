@@ -1,0 +1,16 @@
+id = "applet.nemosh.winpath.mnt"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["winpath", "/mnt/c/Users/nemo"]
+
+[expect]
+status = 0
+stdout = "C:/Users/nemo\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "winpath applies the default /mnt/c mount-prefix alias before Windows spelling conversion."

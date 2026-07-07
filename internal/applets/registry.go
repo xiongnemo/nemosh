@@ -54,6 +54,8 @@ var DefaultRegistry = NewRegistry(
 	newTestApplet("["),
 	newBasenameApplet(),
 	newDirnameApplet(),
+	newWinpathApplet(),
+	newPosixpathApplet(),
 	newTouchApplet(),
 	newRmApplet(),
 	newMkdirApplet(),

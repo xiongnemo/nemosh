@@ -23,6 +23,8 @@ type Model struct {
 
 var ErrCygdriveDisabled = errors.New("cygdrive paths are disabled")
 
+var ErrNoWindowsPath = errors.New("path has no Windows spelling")
+
 type HostOnlyUNCError struct {
 	Host string
 }
@@ -37,6 +39,25 @@ func DefaultConfig() Config {
 
 func New(config Config, cwd Path) Model {
 	return Model{config: config, cwd: clean(cwd)}
+}
+
+func WindowsPath(path Path) (string, error) {
+	s := string(path)
+	if strings.HasPrefix(s, "//") {
+		parts := strings.Split(strings.Trim(s, "/"), "/")
+		if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
+			return "", ErrNoWindowsPath
+		}
+		return string(clean(path)), nil
+	}
+	drive, rest, ok := driveShort(s)
+	if !ok {
+		return "", ErrNoWindowsPath
+	}
+	if rest == "" || rest == "/" {
+		return strings.ToUpper(drive) + ":/", nil
+	}
+	return strings.ToUpper(drive) + ":" + rest, nil
 }
 
 func (m Model) Resolve(input string) (Path, error) {

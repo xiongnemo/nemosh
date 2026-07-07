@@ -1,0 +1,16 @@
+id = "applet.nemosh.posixpath.backslash"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["posixpath", "C:\\Users\\nemo"]
+
+[expect]
+status = 0
+stdout = "/c/Users/nemo\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "posixpath accepts quoted/backslash Windows spelling at the applet boundary."

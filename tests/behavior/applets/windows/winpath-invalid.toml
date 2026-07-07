@@ -1,0 +1,16 @@
+id = "applet.nemosh.winpath.invalid"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "nemosh"]
+command = ["winpath", "/tmp/file"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "path has no Windows spelling\n"
+
+[notes]
+standard = "Nemosh Windows-native helper extension"
+why = "winpath reports virtual roots that have no Windows spelling in this slice."

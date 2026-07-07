@@ -52,6 +52,23 @@ func TestRun_writesEchoOutput_whenDispatchingEchoApplet(t *testing.T) {
 	}
 }
 
+func TestRun_writesWindowsPathOutput_whenDispatchingWinpathApplet(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	cmd := command{stdin: &bytes.Buffer{}, stdout: &stdout, stderr: &bytes.Buffer{}}
+
+	// When
+	err := cmd.run(context.Background(), []string{"nemosh", "winpath", "/c/tmp/a.txt"})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected winpath applet to succeed, got %v", err)
+	}
+	if got := stdout.String(); got != "C:/tmp/a.txt\n" {
+		t.Fatalf("expected stdout %q, got %q", "C:/tmp/a.txt\n", got)
+	}
+}
+
 func TestRun_executesScript_whenCommandFlagProvided(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer

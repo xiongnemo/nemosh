@@ -132,3 +132,52 @@ func TestModel_rejectsCygdrive_whenDefaultConfigUsed(t *testing.T) {
 		t.Fatalf("expected ErrCygdriveDisabled, got %v", err)
 	}
 }
+
+func TestWindowsPath_returnsWindowsSpelling_whenCanonicalPathHasWindowsForm(t *testing.T) {
+	// Given
+	tests := []struct {
+		name string
+		path pathmodel.Path
+		want string
+	}{
+		{name: "drive path", path: "/c/Users/nemo", want: "C:/Users/nemo"},
+		{name: "drive root", path: "/c", want: "C:/"},
+		{name: "UNC share path", path: "//server/share/dir", want: "//server/share/dir"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// When
+			got, err := pathmodel.WindowsPath(tt.path)
+
+			// Then
+			if err != nil {
+				t.Fatalf("expected WindowsPath to succeed, got %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestWindowsPath_returnsNoWindowsPath_whenPathUsesVirtualRoot(t *testing.T) {
+	// Given
+	tests := []struct {
+		name string
+		path pathmodel.Path
+	}{
+		{name: "tmp", path: "/tmp/file"},
+		{name: "dev", path: "/dev/null"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// When
+			_, err := pathmodel.WindowsPath(tt.path)
+
+			// Then
+			if !errors.Is(err, pathmodel.ErrNoWindowsPath) {
+				t.Fatalf("expected ErrNoWindowsPath, got %v", err)
+			}
+		})
+	}
+}
