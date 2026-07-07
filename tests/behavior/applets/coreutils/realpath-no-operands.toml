@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.realpath.no-operands"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["realpath"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 realpath utility"
+why = "realpath requires at least one FILE operand; fixture-dependent path canonicalization cases are covered by Go tests."
