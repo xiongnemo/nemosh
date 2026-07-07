@@ -88,9 +88,9 @@ func (r Runtime) runLine(ctx context.Context, line string) lineResult {
 		if len(args) == 0 {
 			continue
 		}
-		if len(args) == 1 && isAssignment(args[0]) {
-			name, value, _ := strings.Cut(args[0], "=")
-			status = r.assignVar(name, value)
+		assignments, commandArgs := leadingAssignments(args)
+		if len(assignments) > 0 && len(commandArgs) == 0 {
+			status = r.assignVars(assignments)
 			continue
 		}
 		if args[0] == "exit" {
