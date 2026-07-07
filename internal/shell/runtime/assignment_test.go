@@ -70,3 +70,25 @@ func TestRuntime_doesNotPersistLeadingAssignment_whenCommandFinishes(t *testing.
 		t.Fatalf("expected scoped assignment output %q, got %q", "temporary\n\n", got)
 	}
 }
+
+func TestRuntime_EnvAppletDoesNotPersistAssignment_whenEnvRunsCommand(t *testing.T) {
+	// Given
+	name := "NEMOSH_TEST_ENV_APPLET_RUNTIME_ASSIGNMENT"
+	t.Setenv(name, "")
+	if err := os.Unsetenv(name); err != nil {
+		t.Fatalf("expected env setup to succeed, got %v", err)
+	}
+	var stdout bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "env "+name+"=temporary printenv "+name+"\necho $"+name+"\nprintenv "+name+"\n")
+
+	// Then
+	if status != 1 {
+		t.Fatalf("expected final printenv status 1, got %d", status)
+	}
+	if got := stdout.String(); got != "temporary\n\n" {
+		t.Fatalf("expected env applet assignment output %q, got %q", "temporary\n\n", got)
+	}
+}
