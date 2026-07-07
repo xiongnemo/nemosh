@@ -8,6 +8,9 @@ import (
 
 func newEnvApplet() Applet {
 	return simpleApplet{name: "env", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
+		if len(args) == 1 && args[0] == "-i" {
+			return nil
+		}
 		if len(args) != 0 {
 			return fmt.Errorf("env command execution is not implemented")
 		}
