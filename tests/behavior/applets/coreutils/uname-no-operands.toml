@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.uname.no-operands"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32"]
+command = ["uname"]
+
+[expect]
+status = 0
+stdout = "Windows_NT\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 uname utility"
+why = "BusyBox-w32 uname without options prints the kernel name; cross-platform runtime mapping is covered by Go tests."
