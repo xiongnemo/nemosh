@@ -38,6 +38,112 @@ func TestDefaultRegistry_listsDirectoryEntries_whenLsRuns(t *testing.T) {
 	}
 }
 
+func TestDefaultRegistry_hidesDotEntries_whenLsRunsWithoutAllFlag(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "visible.txt"), []byte("v"), 0o600); err != nil {
+		t.Fatalf("expected fixture write to succeed, got %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".hidden"), []byte("h"), 0o600); err != nil {
+		t.Fatalf("expected fixture write to succeed, got %v", err)
+	}
+	applet, ok := applets.DefaultRegistry.Lookup("ls")
+	if !ok {
+		t.Fatal("expected ls applet to be registered")
+	}
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{dir}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected ls to succeed, got %v", err)
+	}
+	if got := stdout.String(); got != "visible.txt\n" {
+		t.Fatalf("expected ls output %q, got %q", "visible.txt\n", got)
+	}
+}
+
+func TestDefaultRegistry_listsDotEntries_whenLsRunsWithClusteredAllLongHumanFlags(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "visible.txt"), []byte("v"), 0o600); err != nil {
+		t.Fatalf("expected fixture write to succeed, got %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".hidden"), []byte("h"), 0o600); err != nil {
+		t.Fatalf("expected fixture write to succeed, got %v", err)
+	}
+	applet, ok := applets.DefaultRegistry.Lookup("ls")
+	if !ok {
+		t.Fatal("expected ls applet to be registered")
+	}
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{"-alh", dir}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected ls -alh to succeed, got %v", err)
+	}
+	got := stdout.String()
+	if !strings.Contains(got, ".hidden") {
+		t.Fatalf("expected ls -alh output to include hidden file, got %q", got)
+	}
+	if !strings.Contains(got, "visible.txt") {
+		t.Fatalf("expected ls -alh output to include visible file, got %q", got)
+	}
+	if strings.Contains(got, "-alh") {
+		t.Fatalf("expected ls -alh not to treat flag as path, got %q", got)
+	}
+}
+
+func TestDefaultRegistry_printsHumanReadableSize_whenLsRunsWithLongHumanFlags(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	path := filepath.Join(dir, "large.bin")
+	if err := os.WriteFile(path, bytes.Repeat([]byte("x"), 1536), 0o600); err != nil {
+		t.Fatalf("expected fixture write to succeed, got %v", err)
+	}
+	applet, ok := applets.DefaultRegistry.Lookup("ls")
+	if !ok {
+		t.Fatal("expected ls applet to be registered")
+	}
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{"-lh", dir}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected ls -lh to succeed, got %v", err)
+	}
+	got := stdout.String()
+	if !strings.Contains(got, "1.5K") {
+		t.Fatalf("expected human-readable size in output, got %q", got)
+	}
+	if !strings.Contains(got, "large.bin") {
+		t.Fatalf("expected file name in output, got %q", got)
+	}
+}
+
+func TestDefaultRegistry_returnsError_whenLsRunsWithUnsupportedFlag(t *testing.T) {
+	// Given
+	applet, ok := applets.DefaultRegistry.Lookup("ls")
+	if !ok {
+		t.Fatal("expected ls applet to be registered")
+	}
+
+	// When
+	err := applet.Run(context.Background(), []string{"-z"}, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
+
+	// Then
+	if err == nil || err.Error() != "unsupported ls option: -z" {
+		t.Fatalf("expected unsupported option error, got %v", err)
+	}
+}
+
 func TestDefaultRegistry_copiesFile_whenCpRuns(t *testing.T) {
 	// Given
 	dir := t.TempDir()
