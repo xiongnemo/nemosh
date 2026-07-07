@@ -61,6 +61,7 @@ var DefaultRegistry = NewRegistry(
 	newMkdirApplet(),
 	newRmdirApplet(),
 	newLsApplet(),
+	newLnApplet(),
 	newCpApplet(),
 	newMvApplet(),
 	newChmodApplet(),
