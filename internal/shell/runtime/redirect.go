@@ -55,6 +55,8 @@ func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error,
 			streams.Stdin = file
 			files = append(files, file)
 			i++
+		case "2>&1":
+			streams.Stderr = streams.Stdout
 		default:
 			commandArgs = append(commandArgs, args[i])
 		}
