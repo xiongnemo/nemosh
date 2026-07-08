@@ -185,6 +185,9 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	if err == nil {
 		return 0
 	}
+	if status, ok := applets.StatusCode(err); ok {
+		return status
+	}
 	if errors.Is(err, applets.ErrExitFalse) {
 		return 1
 	}
