@@ -30,9 +30,9 @@ Current derived counts:
 | Set | Count |
 | --- | ---: |
 | BusyBox-w32 declared applet names | 449 |
-| Nemosh registry applet names | 33 |
-| Name-present overlap | 31 |
-| BusyBox-w32 names missing from Nemosh | 418 |
+| Nemosh registry applet names | 37 |
+| Name-present overlap | 35 |
+| BusyBox-w32 names missing from Nemosh | 414 |
 | Nemosh-only helper names | 2 |
 
 ## Name-Present In Nemosh
@@ -44,7 +44,7 @@ release milestone can call it complete.
 
 | Applets |
 | --- |
-| `[`, `basename`, `cat`, `chmod`, `cp`, `dirname`, `echo`, `env`, `false`, `find`, `grep`, `head`, `ln`, `ls`, `mkdir`, `mv`, `printenv`, `printf`, `pwd`, `readlink`, `realpath`, `rm`, `rmdir`, `sed`, `tail`, `test`, `touch`, `true`, `wc`, `xargs`, `yes` |
+| `[`, `basename`, `cat`, `chmod`, `cp`, `date`, `dirname`, `echo`, `env`, `false`, `find`, `grep`, `head`, `ln`, `ls`, `mkdir`, `mv`, `printenv`, `printf`, `pwd`, `readlink`, `realpath`, `rm`, `rmdir`, `sed`, `sleep`, `sort`, `tail`, `test`, `touch`, `true`, `uname`, `wc`, `xargs`, `yes` |
 
 ## Known Partial Parity Notes
 
@@ -53,10 +53,14 @@ docs. They are not an exhaustive parity audit.
 
 | Applet | Current note |
 | --- | --- |
+| `date` | Supports current time output, `-u`, deterministic `-d @SECONDS`, and a small explicit `+FORMAT` subset including `%s`; system time setting, broad date parsing, RFC/ISO modes, file timestamp mode, and long options remain out of scope. |
 | `ls` | Supports a small `-a`/`-l`/`-h` subset; columns, color, recursion, symlink arrows, owner/group/timestamp parity, totals, and broader Windows attribute behavior remain out of scope for that slice. |
 | `ln` | Supports hard links and `-s`; options such as `-f`, `-n`, `-T`, backup modes, verbose output, directory handling, and target rewriting remain missing. |
 | `readlink` | Supports `FILE` and `-n FILE`; canonicalization and many BusyBox options remain missing. |
 | `realpath` | Supports `realpath FILE...` with missing-final-component behavior; option parsing and broader canonicalization parity still need later audit. |
+| `sleep` | Supports BusyBox-style duration operands with `s`, `m`, `h`, and `d` suffixes; broader option compatibility and signal/interruption parity remain out of scope. |
+| `sort` | Supports stdin/files, whole-line lexical sort, integer `-n`, `-r`, clustered short options for that subset, CRLF normalization, and status-2 option/open diagnostics; key fields, unique/stable/NUL/output-file/check modes, locale, month, human, and version sorting remain out of scope. |
+| `uname` | Supports BusyBox-w32-style default/system output, clustered short options, and explicit unknown processor/platform fields; broader kernel/hardware parity is intentionally limited by the native Windows host. |
 | `xargs` | Present, but `-0` is currently rejected in tests; broader POSIX/BusyBox option coverage is incomplete. |
 
 ## Nemosh-Only Helpers
@@ -128,7 +132,6 @@ crontab
 cryptpw
 cttyhack
 cut
-date
 dc
 dd
 deallocvt
@@ -396,10 +399,8 @@ showkey
 shred
 shuf
 slattach
-sleep
 smemcap
 softlimit
-sort
 split
 ssl_client
 ssl_server
@@ -457,7 +458,6 @@ udhcpd
 udpsvd
 uevent
 umount
-uname
 uncompress
 unexpand
 uniq
@@ -502,7 +502,7 @@ Prefer small script-critical coreutils next, especially missing names already
 called out by earlier review as common shell-script dependencies:
 
 ```text
-date sleep uname sort uniq cut tr tee du df seq expr od hexdump
+uniq cut tr tee du df seq expr od hexdump
 ```
 
 Each slice should start from busybox-w32 source/tests, add focused failing tests,
