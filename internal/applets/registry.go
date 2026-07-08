@@ -51,6 +51,7 @@ var DefaultRegistry = NewRegistry(
 	newWcApplet(),
 	newDateApplet(),
 	newSortApplet(),
+	newUniqApplet(),
 	newEnvApplet(),
 	newPrintenvApplet(),
 	newTestApplet("test"),

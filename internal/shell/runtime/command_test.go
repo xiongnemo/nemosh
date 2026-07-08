@@ -59,6 +59,7 @@ func TestRuntime_commandVPrintsName_whenCommandIsKnown(t *testing.T) {
 		{name: "sleep"},
 		{name: "sort"},
 		{name: "uname"},
+		{name: "uniq"},
 		{name: "yes"},
 	}
 	for _, tt := range tests {

@@ -257,3 +257,23 @@ func TestDefaultRegistry_sortsLines_whenSortRuns(t *testing.T) {
 		t.Fatalf("expected sort output %q, got %q", want, got)
 	}
 }
+
+func TestDefaultRegistry_collapsesAdjacentDuplicates_whenUniqRuns(t *testing.T) {
+	// Given
+	applet, ok := applets.DefaultRegistry.Lookup("uniq")
+	if !ok {
+		t.Fatal("expected uniq applet to be registered")
+	}
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), nil, strings.NewReader("one\ntwo\ntwo\n"), &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected uniq to succeed, got %v", err)
+	}
+	if got, want := stdout.String(), "one\ntwo\n"; got != want {
+		t.Fatalf("expected uniq output %q, got %q", want, got)
+	}
+}
