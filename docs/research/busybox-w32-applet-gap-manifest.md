@@ -30,9 +30,9 @@ Current derived counts:
 | Set | Count |
 | --- | ---: |
 | BusyBox-w32 declared applet names | 449 |
-| Nemosh registry applet names | 37 |
-| Name-present overlap | 35 |
-| BusyBox-w32 names missing from Nemosh | 414 |
+| Nemosh registry applet names | 38 |
+| Name-present overlap | 36 |
+| BusyBox-w32 names missing from Nemosh | 413 |
 | Nemosh-only helper names | 2 |
 
 ## Name-Present In Nemosh
@@ -44,7 +44,7 @@ release milestone can call it complete.
 
 | Applets |
 | --- |
-| `[`, `basename`, `cat`, `chmod`, `cp`, `date`, `dirname`, `echo`, `env`, `false`, `find`, `grep`, `head`, `ln`, `ls`, `mkdir`, `mv`, `printenv`, `printf`, `pwd`, `readlink`, `realpath`, `rm`, `rmdir`, `sed`, `sleep`, `sort`, `tail`, `test`, `touch`, `true`, `uname`, `wc`, `xargs`, `yes` |
+| `[`, `basename`, `cat`, `chmod`, `cp`, `date`, `dirname`, `echo`, `env`, `false`, `find`, `grep`, `head`, `ln`, `ls`, `mkdir`, `mv`, `printenv`, `printf`, `pwd`, `readlink`, `realpath`, `rm`, `rmdir`, `sed`, `sleep`, `sort`, `tail`, `test`, `touch`, `true`, `uname`, `uniq`, `wc`, `xargs`, `yes` |
 
 ## Known Partial Parity Notes
 
@@ -61,6 +61,7 @@ docs. They are not an exhaustive parity audit.
 | `sleep` | Supports BusyBox-style duration operands with `s`, `m`, `h`, and `d` suffixes; broader option compatibility and signal/interruption parity remain out of scope. |
 | `sort` | Supports stdin/files, whole-line lexical sort, integer `-n`, `-r`, clustered short options for that subset, CRLF normalization, and status-2 option/open diagnostics; key fields, unique/stable/NUL/output-file/check modes, locale, month, human, and version sorting remain out of scope. |
 | `uname` | Supports BusyBox-w32-style default/system output, clustered short options, and explicit unknown processor/platform fields; broader kernel/hardware parity is intentionally limited by the native Windows host. |
+| `uniq` | Supports default adjacent duplicate collapse from stdin, `-`, and one input file, CRLF normalization, and status-2 diagnostics for invalid options, missing input files, and extra operands; count/duplicate/unique-only/case-insensitive/NUL/field-skip/char-skip/width modes and `[OUTFILE]` remain out of scope. |
 | `xargs` | Present, but `-0` is currently rejected in tests; broader POSIX/BusyBox option coverage is incomplete. |
 
 ## Nemosh-Only Helpers
@@ -460,7 +461,6 @@ uevent
 umount
 uncompress
 unexpand
-uniq
 unit
 unix2dos
 unlink
@@ -502,7 +502,7 @@ Prefer small script-critical coreutils next, especially missing names already
 called out by earlier review as common shell-script dependencies:
 
 ```text
-uniq cut tr tee du df seq expr od hexdump
+cut tr tee du df seq expr od hexdump
 ```
 
 Each slice should start from busybox-w32 source/tests, add focused failing tests,
