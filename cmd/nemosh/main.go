@@ -16,6 +16,9 @@ import (
 func main() {
 	cmd := command{stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr}
 	if err := cmd.run(context.Background(), os.Args); err != nil {
+		if status, ok := applets.StatusCode(err); ok {
+			os.Exit(status)
+		}
 		if errors.Is(err, applets.ErrExitFalse) {
 			os.Exit(1)
 		}

@@ -52,6 +52,31 @@ func TestRun_writesEchoOutput_whenDispatchingEchoApplet(t *testing.T) {
 	}
 }
 
+func TestRun_returnsAppletStatus_whenDirectSortDispatchRejectsOption(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd := command{stdin: &bytes.Buffer{}, stdout: &stdout, stderr: &stderr}
+
+	// When
+	err := cmd.run(context.Background(), []string{"nemosh", "sort", "-z"})
+
+	// Then
+	status, ok := applets.StatusCode(err)
+	if !ok {
+		t.Fatalf("expected applet status error, got %v", err)
+	}
+	if status != 2 {
+		t.Fatalf("expected applet status 2, got %d", status)
+	}
+	if got := stdout.String(); got != "" {
+		t.Fatalf("expected empty stdout, got %q", got)
+	}
+	if got := stderr.String(); got != "sort: invalid option -- z\n" {
+		t.Fatalf("expected invalid option stderr, got %q", got)
+	}
+}
+
 func TestRun_writesWindowsPathOutput_whenDispatchingWinpathApplet(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer
