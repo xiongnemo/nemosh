@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.sort.reject-invalid-option"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["sort", "-x"]
+
+[expect]
+status = 2
+stdout = ""
+stderr = "sort: invalid option -- x\n"
+
+[notes]
+standard = "BusyBox-w32 sort utility"
+why = "BusyBox-w32 sort uses status 2 for option parsing failures."

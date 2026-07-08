@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.sort.empty-stdin"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["sort"]
+
+[expect]
+status = 0
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 sort utility"
+why = "The first sort slice supports reading from stdin; empty stdin is the stable smoke case for behavior runner coverage."
