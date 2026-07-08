@@ -47,3 +47,23 @@ func TestRunner_returnsCommandNotFound_whenAppletMissing(t *testing.T) {
 		t.Fatalf("expected not found stderr, got %q", result.Stderr)
 	}
 }
+
+func TestRunner_returnsAppletStatus_whenAppletReportsStatusCode(t *testing.T) {
+	// Given
+	caseData := behavior.Case{Command: []string{"sort", "-z"}}
+	runner := behavior.NewRunner(applets.DefaultRegistry)
+
+	// When
+	result := runner.Run(context.Background(), caseData)
+
+	// Then
+	if result.Status != 2 {
+		t.Fatalf("expected status 2, got %d", result.Status)
+	}
+	if result.Stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", result.Stdout)
+	}
+	if result.Stderr != "sort: invalid option -- z\n" {
+		t.Fatalf("expected invalid option stderr, got %q", result.Stderr)
+	}
+}
