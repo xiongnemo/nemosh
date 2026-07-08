@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.uniq.invalid-option"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["uniq", "-x"]
+
+[expect]
+status = 2
+stdout = ""
+stderr = "uniq: invalid option -- x\n"
+
+[notes]
+standard = "BusyBox-w32 uniq utility"
+why = "The first uniq slice rejects unsupported or unknown short options with status 2."
