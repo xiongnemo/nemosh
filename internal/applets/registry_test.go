@@ -237,3 +237,23 @@ func TestDefaultRegistry_writesEchoOutput_whenEchoRuns(t *testing.T) {
 		t.Fatalf("expected echo output %q, got %q", "hello world\n", got)
 	}
 }
+
+func TestDefaultRegistry_sortsLines_whenSortRuns(t *testing.T) {
+	// Given
+	applet, ok := applets.DefaultRegistry.Lookup("sort")
+	if !ok {
+		t.Fatal("expected sort applet to be registered")
+	}
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), nil, strings.NewReader("c\na\nb\n"), &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected sort to succeed, got %v", err)
+	}
+	if got, want := stdout.String(), "a\nb\nc\n"; got != want {
+		t.Fatalf("expected sort output %q, got %q", want, got)
+	}
+}

@@ -57,6 +57,7 @@ func TestRuntime_commandVPrintsName_whenCommandIsKnown(t *testing.T) {
 		{name: "readlink"},
 		{name: "realpath"},
 		{name: "sleep"},
+		{name: "sort"},
 		{name: "uname"},
 		{name: "yes"},
 	}
