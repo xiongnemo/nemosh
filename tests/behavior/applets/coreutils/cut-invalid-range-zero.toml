@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.cut.invalid-range-zero"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["cut", "-c", "0"]
+
+[expect]
+status = 2
+stdout = ""
+stderr = "cut: invalid range 0\n"
+
+[notes]
+standard = "BusyBox-w32 cut utility"
+why = "BusyBox-w32 cut rejects zero as a character range endpoint."

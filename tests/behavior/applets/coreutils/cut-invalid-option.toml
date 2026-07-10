@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.cut.invalid-option"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["cut", "-x"]
+
+[expect]
+status = 2
+stdout = ""
+stderr = "cut: invalid option -- x\n"
+
+[notes]
+standard = "BusyBox-w32 cut utility"
+why = "The first cut slice rejects unsupported short options with status 2."

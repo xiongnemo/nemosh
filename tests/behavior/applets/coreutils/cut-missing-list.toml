@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.cut.missing-list"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["cut"]
+
+[expect]
+status = 2
+stdout = ""
+stderr = "cut: expected a list of bytes, characters, or fields\n"
+
+[notes]
+standard = "BusyBox-w32 cut utility"
+why = "BusyBox-w32 cut requires one byte, character, or field list before processing input."
