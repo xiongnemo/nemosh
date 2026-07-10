@@ -30,9 +30,9 @@ Current derived counts:
 | Set | Count |
 | --- | ---: |
 | BusyBox-w32 declared applet names | 449 |
-| Nemosh registry applet names | 38 |
-| Name-present overlap | 36 |
-| BusyBox-w32 names missing from Nemosh | 413 |
+| Nemosh registry applet names | 39 |
+| Name-present overlap | 37 |
+| BusyBox-w32 names missing from Nemosh | 412 |
 | Nemosh-only helper names | 2 |
 
 ## Name-Present In Nemosh
@@ -44,7 +44,7 @@ release milestone can call it complete.
 
 | Applets |
 | --- |
-| `[`, `basename`, `cat`, `chmod`, `cp`, `date`, `dirname`, `echo`, `env`, `false`, `find`, `grep`, `head`, `ln`, `ls`, `mkdir`, `mv`, `printenv`, `printf`, `pwd`, `readlink`, `realpath`, `rm`, `rmdir`, `sed`, `sleep`, `sort`, `tail`, `test`, `touch`, `true`, `uname`, `uniq`, `wc`, `xargs`, `yes` |
+| `[`, `basename`, `cat`, `chmod`, `cp`, `cut`, `date`, `dirname`, `echo`, `env`, `false`, `find`, `grep`, `head`, `ln`, `ls`, `mkdir`, `mv`, `printenv`, `printf`, `pwd`, `readlink`, `realpath`, `rm`, `rmdir`, `sed`, `sleep`, `sort`, `tail`, `test`, `touch`, `true`, `uname`, `uniq`, `wc`, `xargs`, `yes` |
 
 ## Known Partial Parity Notes
 
@@ -53,6 +53,7 @@ docs. They are not an exhaustive parity audit.
 
 | Applet | Current note |
 | --- | --- |
+| `cut` | Supports one of `-b LIST`, `-c LIST`, or `-f LIST`, comma/range position lists, stdin/`-`/file operands, `-d` and `-s` for field mode, ignored `-n`, CRLF normalization, and status-2 diagnostics; output delimiters, `-F`, `-D`, `-O`, NUL/binary behavior, and broader multibyte parity remain out of scope. |
 | `date` | Supports current time output, `-u`, deterministic `-d @SECONDS`, and a small explicit `+FORMAT` subset including `%s`; system time setting, broad date parsing, RFC/ISO modes, file timestamp mode, and long options remain out of scope. |
 | `ls` | Supports a small `-a`/`-l`/`-h` subset; columns, color, recursion, symlink arrows, owner/group/timestamp parity, totals, and broader Windows attribute behavior remain out of scope for that slice. |
 | `ln` | Supports hard links and `-s`; options such as `-f`, `-n`, `-T`, backup modes, verbose output, directory handling, and target rewriting remain missing. |
@@ -132,7 +133,6 @@ crond
 crontab
 cryptpw
 cttyhack
-cut
 dc
 dd
 deallocvt
@@ -502,7 +502,7 @@ Prefer small script-critical coreutils next, especially missing names already
 called out by earlier review as common shell-script dependencies:
 
 ```text
-cut tr tee du df seq expr od hexdump
+tr tee du df seq expr od hexdump
 ```
 
 Each slice should start from busybox-w32 source/tests, add focused failing tests,
