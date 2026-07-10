@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.cut.empty-stdin-field"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+command = ["cut", "-f", "1"]
+
+[expect]
+status = 0
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 cut utility"
+why = "The first cut slice accepts a field list and produces no output for empty stdin."
