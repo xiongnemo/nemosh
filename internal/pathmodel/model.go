@@ -19,11 +19,14 @@ type Config struct {
 type Model struct {
 	config Config
 	cwd    Path
+	root   Path
 }
 
 var ErrCygdriveDisabled = errors.New("cygdrive paths are disabled")
 
 var ErrNoWindowsPath = errors.New("path has no Windows spelling")
+
+var ErrDriveRelativePath = errors.New("drive-relative Windows paths are not supported")
 
 type HostOnlyUNCError struct {
 	Host string
@@ -38,7 +41,21 @@ func DefaultConfig() Config {
 }
 
 func New(config Config, cwd Path) Model {
-	return Model{config: config, cwd: clean(cwd)}
+	canonical := clean(cwd)
+	root, _ := currentRoot(canonical)
+	return Model{config: config, cwd: canonical, root: root}
+}
+
+func (m Model) CWD() Path {
+	return m.cwd
+}
+
+func (m Model) WithCWD(cwd Path) Model {
+	m.cwd = clean(cwd)
+	if root, err := currentRoot(m.cwd); err == nil {
+		m.root = root
+	}
+	return m
 }
 
 func WindowsPath(path Path) (string, error) {
@@ -65,20 +82,38 @@ func (m Model) Resolve(input string) (Path, error) {
 	if path == "" {
 		return m.cwd, nil
 	}
+	if isWindowsDriveRelativePath(path) {
+		return "", ErrDriveRelativePath
+	}
 	if isWindowsDrivePath(path) {
 		return clean(Path("/" + strings.ToLower(path[:1]) + path[2:])), nil
 	}
 	if strings.HasPrefix(path, "//") {
 		return normalizeUNC(path)
 	}
+	virtualRoot := ""
 	if m.config.EnableDev && (path == "/dev" || strings.HasPrefix(path, "/dev/")) {
-		return clean(Path(path)), nil
+		virtualRoot = "/dev"
 	}
 	if m.config.EnableTmp && (path == "/tmp" || strings.HasPrefix(path, "/tmp/")) {
-		return clean(Path(path)), nil
+		virtualRoot = "/tmp"
 	}
-	if strings.HasPrefix(path, "/cygdrive/") && !m.config.AcceptCygdrive {
-		return "", ErrCygdriveDisabled
+	if virtualRoot != "" {
+		canonical := clean(Path(path))
+		if canonical == Path(virtualRoot) || strings.HasPrefix(string(canonical), virtualRoot+"/") {
+			return canonical, nil
+		}
+		path = string(canonical)
+	}
+	if strings.HasPrefix(path, "/cygdrive/") {
+		if !m.config.AcceptCygdrive {
+			return "", ErrCygdriveDisabled
+		}
+		candidate := strings.TrimPrefix(path, "/cygdrive")
+		if drive, rest, ok := driveShort(candidate); ok {
+			return clean(Path("/" + drive + rest)), nil
+		}
+		return "", fmt.Errorf("malformed cygdrive path %q", input)
 	}
 	if drive, rest, ok := driveShort(path); ok {
 		return clean(Path("/" + drive + rest)), nil
@@ -96,20 +131,33 @@ func (m Model) Resolve(input string) (Path, error) {
 		}
 	}
 	if strings.HasPrefix(path, "/") {
-		root, err := currentRoot(m.cwd)
-		if err != nil {
-			return "", err
+		if m.root == "" {
+			return "", errors.New("current root is not a drive or UNC path")
 		}
 		if path == "/" {
-			return root, nil
+			return m.root, nil
 		}
-		return clean(Path(string(root) + path)), nil
+		return clean(Path(string(m.root) + path)), nil
 	}
-	return clean(Path(string(m.cwd) + "/" + path)), nil
+	return m.Resolve(string(clean(Path(string(m.cwd) + "/" + path))))
+}
+
+func (m Model) ResolveWindowsSpelling(input string) (Path, bool, error) {
+	path := strings.ReplaceAll(input, "\\", "/")
+	_, _, shortDrive := driveShort(path)
+	if !isWindowsDrivePath(path) && !isWindowsDriveRelativePath(path) && !strings.HasPrefix(path, "//") && !shortDrive {
+		return "", false, nil
+	}
+	resolved, err := m.Resolve(input)
+	return resolved, true, err
 }
 
 func isWindowsDrivePath(path string) bool {
-	return len(path) >= 2 && isDriveLetter(rune(path[0])) && path[1] == ':'
+	return len(path) >= 3 && isDriveLetter(rune(path[0])) && path[1] == ':' && path[2] == '/'
+}
+
+func isWindowsDriveRelativePath(path string) bool {
+	return len(path) >= 2 && isDriveLetter(rune(path[0])) && path[1] == ':' && (len(path) == 2 || path[2] != '/')
 }
 
 func driveShort(path string) (string, string, bool) {
