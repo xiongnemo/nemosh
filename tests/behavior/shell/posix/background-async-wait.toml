@@ -1,0 +1,22 @@
+id = "shell.posix.background.async-wait"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-w32-ash"]
+
+script = '''
+false &
+echo $?
+wait %1
+echo $?
+'''
+
+[expect]
+status = 0
+stdout = "0\n1\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - Asynchronous Lists"
+why = "The launch reports 0 before targeted wait exposes the cached false status; synchronous execution reports 1 at the first echo."

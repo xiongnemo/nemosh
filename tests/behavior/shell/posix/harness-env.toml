@@ -1,0 +1,14 @@
+id = "harness.env"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+script = "printf '<%s>' \"$HARNESS_VALUE\""
+
+[env]
+HARNESS_VALUE = ""
+
+[expect]
+status = 0
+stdout = "<>"
+stderr = ""

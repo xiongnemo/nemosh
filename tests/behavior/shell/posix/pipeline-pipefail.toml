@@ -1,0 +1,20 @@
+id = "shell.posix.pipeline.pipefail-rightmost"
+area = "shell"
+kind = "golden"
+semantics = "busybox-ash"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-ash", "bash"]
+
+script = '''
+set -o pipefail
+false | true | false | true
+'''
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox ash pipefail option"
+why = "With pipefail, a pipeline returns the rightmost nonzero stage status."

@@ -1,0 +1,19 @@
+id = "shell.posix.brace-group.joined-closer-not-reserved"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+{ echo ok; }suffix
+'''
+
+[expect]
+status = 2
+stdout = ""
+stderr = "nemosh: incomplete script: missing }\n"
+
+[notes]
+standard = "POSIX.1 shell command language, reserved words"
+why = "A closing brace joined to suffix text is not the brace-group closing reserved word."

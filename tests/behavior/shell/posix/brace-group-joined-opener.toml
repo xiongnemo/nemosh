@@ -1,0 +1,19 @@
+id = "shell.posix.brace-group.joined-opener-rejected"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+{echo bad;}
+'''
+
+[expect]
+status = 2
+stdout = ""
+stderr = "nemosh: syntax error: unexpected }\n"
+
+[notes]
+standard = "POSIX.1 shell command language, reserved words"
+why = "A brace joined to command text is not an opening brace-group reserved word."

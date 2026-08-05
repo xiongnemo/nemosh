@@ -1,0 +1,22 @@
+id = "shell.posix.heredoc.unquoted"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+VALUE='two words'
+cat <<EOF
+$VALUE $(printf nested)
+EOF
+'''
+
+[expect]
+status = 0
+stdout = "two words nested\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, here-documents"
+why = "An unquoted delimiter enables parameter and command substitution without field splitting."

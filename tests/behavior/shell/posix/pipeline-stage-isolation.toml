@@ -1,0 +1,21 @@
+id = "shell.posix.pipeline.stage-isolation"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+VALUE=parent
+VALUE=stage true | true
+echo $VALUE
+'''
+
+[expect]
+status = 0
+stdout = "parent\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, subshell environments for pipelines"
+why = "Pipeline stage assignments do not mutate the parent shell environment."

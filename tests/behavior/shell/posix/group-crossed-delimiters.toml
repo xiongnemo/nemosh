@@ -1,0 +1,20 @@
+id = "shell.posix.group.crossed-delimiters-rejected"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+echo prefix
+( { echo mixed; ) echo leaked; }
+'''
+
+[expect]
+status = 2
+stdout = ""
+stderr = "nemosh: syntax error: unexpected ), expected }\n"
+
+[notes]
+standard = "POSIX.1 shell command language, compound commands"
+why = "Crossed group delimiters are malformed during parse and cannot execute a valid prefix."

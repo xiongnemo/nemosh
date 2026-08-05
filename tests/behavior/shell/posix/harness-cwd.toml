@@ -1,0 +1,15 @@
+id = "harness.cwd"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+script = "cat cwd.txt"
+cwd = "work"
+
+[files]
+"work/cwd.txt" = "from cwd\n"
+
+[expect]
+status = 0
+stdout = "from cwd\n"
+stderr = ""

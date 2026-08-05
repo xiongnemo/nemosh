@@ -1,0 +1,17 @@
+id = "shell.posix.heredoc.strip-tabs"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = "cat <<-EOF\n\ttab\n space\n\tEOF\n"
+
+[expect]
+status = 0
+stdout = "tab\n space\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, <<- here-documents"
+why = "The <<- form removes leading TAB bytes from body and delimiter lines, never spaces."

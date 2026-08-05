@@ -1,0 +1,22 @@
+id = "shell.posix.heredoc.quoted"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+VALUE=changed
+cat <<E'OF'
+$VALUE $(printf nested)
+EOF
+'''
+
+[expect]
+status = 0
+stdout = "$VALUE $(printf nested)\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, here-documents"
+why = "Any quoting in the delimiter suppresses body expansion after quote removal."

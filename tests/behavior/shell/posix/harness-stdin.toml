@@ -1,0 +1,12 @@
+id = "harness.stdin"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+script = "cat"
+stdin = "from stdin\n"
+
+[expect]
+status = 0
+stdout = "from stdin\n"
+stderr = ""

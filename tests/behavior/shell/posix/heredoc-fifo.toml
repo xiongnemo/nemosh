@@ -1,0 +1,23 @@
+id = "shell.posix.heredoc.fifo"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+cat 3<<FIRST 0<&3 4<<SECOND
+one
+FIRST
+two
+SECOND
+'''
+
+[expect]
+status = 0
+stdout = "one\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, here-document ordering"
+why = "Bodies associate FIFO with redirects in lexical order; descriptor duplication captures the first body."

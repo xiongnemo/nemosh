@@ -1,0 +1,22 @@
+id = "applet.busybox-w32.ls.basic"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "ls"
+cwd = "work"
+
+[files]
+"work/b.txt" = ""
+"work/a.txt" = ""
+"work/.hidden" = ""
+
+[expect]
+status = 0
+stdout = "a.txt\nb.txt\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 ls.c and testsuite/ls.tests"
+why = "Basic ls sorts visible entries and omits dot-prefixed names without -a."

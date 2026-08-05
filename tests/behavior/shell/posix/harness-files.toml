@@ -1,0 +1,14 @@
+id = "harness.files"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+script = "cat fixture.txt"
+
+[files]
+"fixture.txt" = "from fixture\n"
+
+[expect]
+status = 0
+stdout = "from fixture\n"
+stderr = ""

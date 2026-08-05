@@ -1,0 +1,19 @@
+id = "shell.posix.pipeline.default-status"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+false | true
+'''
+
+[expect]
+status = 0
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, pipeline exit status"
+why = "Without pipefail, a pipeline returns the status of its last command."

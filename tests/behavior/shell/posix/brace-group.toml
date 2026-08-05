@@ -1,0 +1,22 @@
+id = "shell.posix.brace-group.state-and-redirection"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+VALUE=parent
+{ VALUE=group; echo grouped; } > group.txt
+cat group.txt
+echo $VALUE
+'''
+
+[expect]
+status = 0
+stdout = "grouped\ngroup\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, grouping commands"
+why = "A brace group runs in the current shell and redirects the complete compound command."

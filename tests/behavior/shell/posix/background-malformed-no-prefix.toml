@@ -1,0 +1,21 @@
+id = "shell.posix.background.malformed-no-prefix"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-w32-ash"]
+
+script = '''
+echo prefix
+echo created > created.txt
+echo valid &; echo invalid
+'''
+
+[expect]
+status = 2
+stdout = ""
+stderr = "nemosh: unsupported syntax: ;\n"
+
+[notes]
+standard = "POSIX Shell Command Language - Lists"
+why = "A malformed ampersand suffix rejects the complete script before output or redirection effects."

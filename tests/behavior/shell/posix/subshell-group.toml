@@ -1,0 +1,23 @@
+id = "shell.posix.subshell.state-exit-and-pipeline"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+VALUE=parent
+(VALUE=child; exit 7)
+echo $VALUE
+set -o pipefail
+(echo piped; false) | cat
+'''
+
+[expect]
+status = 1
+stdout = "parent\npiped\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, subshell environment"
+why = "A parenthesized command isolates state and exit control while retaining status in pipelines."

@@ -1,0 +1,19 @@
+id = "shell.posix.brace-group.reserved-word-boundary"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+{ echo ok; }
+'''
+
+[expect]
+status = 0
+stdout = "ok\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, reserved words"
+why = "Brace group delimiters are recognized as reserved words only at token boundaries."

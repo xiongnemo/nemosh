@@ -1,0 +1,23 @@
+id = "shell.posix.function.snapshot-and-pipeline"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+show() { echo parent; }
+(show; show() { echo child; }; show)
+show
+show | cat
+show
+'''
+
+[expect]
+status = 0
+stdout = "parent\nchild\nparent\nparent\nparent\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell execution environment and pipelines"
+why = "Functions are visible in child snapshots while child redefinition and pipeline execution remain isolated."

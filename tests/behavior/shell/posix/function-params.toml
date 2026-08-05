@@ -1,0 +1,22 @@
+id = "shell.posix.function.positional-parameters"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+set -- caller
+show() { printf '<%s><%s><%s>' "$#" "$1" "$2"; printf '<%s><%s>' "$@"; }
+show one 'two words'
+printf '<%s><%s>' "$#" "$1"
+'''
+
+[expect]
+status = 0
+stdout = "<2><one><two words><one><two words><1><caller>"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, special parameters and functions"
+why = "A call installs its arguments, quoted $@ preserves fields, and caller parameters are restored."

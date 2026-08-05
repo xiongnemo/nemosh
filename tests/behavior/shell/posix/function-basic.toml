@@ -1,0 +1,21 @@
+id = "shell.posix.function.basic-and-redefinition"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+show() { echo old; }
+show() { echo new; }
+show
+'''
+
+[expect]
+status = 0
+stdout = "new\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, function definition command"
+why = "Definitions register without running their bodies and a later definition replaces the earlier function."

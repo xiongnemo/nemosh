@@ -1,0 +1,21 @@
+id = "shell.posix.function.return"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+stop() { echo before; return 7; echo unreachable; }
+stop || echo returned
+echo after
+'''
+
+[expect]
+status = 0
+stdout = "before\nreturned\nafter\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 return utility"
+why = "Return exits the nearest function with its requested status and outer execution continues."

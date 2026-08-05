@@ -1,0 +1,21 @@
+id = "shell.posix.heredoc.pipeline"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+printf pipe | cat <<EOF
+heredoc
+EOF
+'''
+
+[expect]
+status = 0
+stdout = "heredoc\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, pipeline and redirection ordering"
+why = "A command-level heredoc replaces the pipeline-provided standard input for that stage."

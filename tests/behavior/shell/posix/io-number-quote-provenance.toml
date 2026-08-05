@@ -1,0 +1,24 @@
+id = "shell.posix.redirection.io-number-quote-provenance"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+echo 2>plain.txt
+echo "2">double.txt
+echo '2'>single.txt
+echo \2>escaped.txt
+echo 2''>empty.txt
+cat plain.txt double.txt single.txt escaped.txt empty.txt
+'''
+
+[expect]
+status = 0
+stdout = "\n2\n2\n2\n2\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.7 Redirection and 2.10.1 Shell Grammar Lexical Conventions"
+why = "An IO_NUMBER is only recognized for unquoted, unescaped digits adjacent to the operator. The plain form redirects descriptor 2 and leaves an empty file while echo still writes its newline to stdout; every quoted or escaped spelling stays an argument, so descriptor 1 is redirected and the file receives the digit. BusyBox ash, dash, and bash --posix were each measured to produce this exact stdout. Multi-digit spellings are deliberately excluded here: dash folds single-digit IO numbers only, so 23> and 02> would diverge from ash and Nemosh by design."

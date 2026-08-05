@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.ls.invalid-option"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "ls -z"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "ls: unsupported ls option: -z\n"
+
+[notes]
+standard = "BusyBox-w32 ls.c and testsuite/ls.tests"
+why = "An unsupported option fails without producing listing output."
