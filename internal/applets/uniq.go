@@ -31,8 +31,11 @@ func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 	if err != nil {
 		return writeUniqDiagnostic(stderr, err.Error())
 	}
-	lines, err := readUniqInput(input, stdin)
+	lines, err := readUniqInput(ctx, ProcessViewFromContext(ctx), input, stdin)
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
 		return writeUniqDiagnostic(stderr, uniqInputError(err))
 	}
 	return writeUniqLines(stdout, collapseAdjacentLines(lines))
@@ -45,7 +48,7 @@ type uniqInput struct {
 
 func parseUniqArgs(args []string) (uniqInput, error) {
 	var operands []string
-	for index := 0; index < len(args); index++ {
+	for index := range len(args) {
 		arg := args[index]
 		if arg == "--" {
 			operands = append(operands, args[index+1:]...)
@@ -69,12 +72,17 @@ func parseUniqArgs(args []string) (uniqInput, error) {
 	return uniqInput{path: operands[0], hasPath: true}, nil
 }
 
-func readUniqInput(input uniqInput, stdin io.Reader) ([]string, error) {
+func readUniqInput(ctx context.Context, view ProcessView, input uniqInput, stdin io.Reader) ([]string, error) {
 	if !input.hasPath {
 		return readUniqLines(stdin)
 	}
-	lines, err := readUniqFile(input.path)
+	reader, err := OpenProcessInput(ctx, view, input.path)
 	if err != nil {
+		return nil, uniqReadError{path: input.path, err: err}
+	}
+	lines, readErr := readUniqLines(reader)
+	closeErr := reader.Close()
+	if err := errors.Join(readErr, closeErr); err != nil {
 		return nil, uniqReadError{path: input.path, err: err}
 	}
 	return lines, nil
@@ -91,17 +99,6 @@ func (e uniqReadError) Error() string {
 
 func (e uniqReadError) Unwrap() error {
 	return e.err
-}
-
-func readUniqFile(path string) (lines []string, err error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-	}()
-	return readUniqLines(file)
 }
 
 func readUniqLines(input io.Reader) ([]string, error) {
@@ -150,9 +147,8 @@ func writeUniqLines(stdout io.Writer, lines []string) error {
 }
 
 func uniqInputError(err error) string {
-	var readErr uniqReadError
 	path := ""
-	if errors.As(err, &readErr) {
+	if readErr, ok := errors.AsType[uniqReadError](err); ok {
 		path = readErr.path
 	}
 	if errors.Is(err, os.ErrNotExist) {

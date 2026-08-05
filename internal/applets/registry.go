@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -19,9 +20,17 @@ type Registry struct {
 func NewRegistry(items ...Applet) Registry {
 	r := Registry{applets: make(map[string]Applet, len(items))}
 	for _, item := range items {
-		r.applets[item.Name()] = item
+		r.applets[item.Name()] = contextApplet{Applet: item}
 	}
 	return r
+}
+
+type contextApplet struct {
+	Applet
+}
+
+func (a contextApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	return a.Applet.Run(ctx, args, contextReader{ctx: ctx, reader: stdin}, stdout, stderr)
 }
 
 func (r Registry) Lookup(name string) (Applet, bool) {
@@ -34,7 +43,9 @@ func InvocationName(args []string) string {
 		return ""
 	}
 	base := filepath.Base(args[0])
-	base = strings.TrimSuffix(base, filepath.Ext(base))
+	if runtime.GOOS == "windows" && strings.EqualFold(filepath.Ext(base), ".exe") {
+		base = base[:len(base)-len(".exe")]
+	}
 	return strings.ToLower(base)
 }
 

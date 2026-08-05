@@ -2,14 +2,15 @@ package applets
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 )
 
 func newGrepApplet() Applet {
-	return simpleApplet{name: "grep", run: func(args []string, stdin io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "grep", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
 		options, pattern, paths, err := grepArgs(args)
 		if err != nil {
 			return err
@@ -29,18 +30,16 @@ func newGrepApplet() Applet {
 			}
 			return nil
 		}
+		view := ProcessViewFromContext(ctx)
 		for _, path := range paths {
-			file, err := os.Open(path)
+			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
 				return err
 			}
 			fileMatched, grepErr := grepReader(stdout, expr, options, file)
 			closeErr := file.Close()
-			if grepErr != nil {
-				return grepErr
-			}
-			if closeErr != nil {
-				return closeErr
+			if err := errors.Join(grepErr, closeErr); err != nil {
+				return err
 			}
 			matched = matched || fileMatched
 		}

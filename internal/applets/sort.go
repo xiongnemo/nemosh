@@ -34,8 +34,11 @@ func (sortApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 	if err != nil {
 		return writeSortDiagnostic(stderr, err.Error())
 	}
-	lines, err := readSortInputs(options, stdin)
+	lines, err := readSortInputs(ctx, ProcessViewFromContext(ctx), options, stdin)
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
 		return writeSortDiagnostic(stderr, sortInputError(err))
 	}
 	sortTextLines(lines, options)
@@ -50,7 +53,7 @@ type sortOptions struct {
 
 func parseSortArgs(args []string) (sortOptions, error) {
 	var options sortOptions
-	for index := 0; index < len(args); index++ {
+	for index := range len(args) {
 		arg := args[index]
 		if arg == "--" {
 			options.paths = append(options.paths, args[index+1:]...)
@@ -74,14 +77,19 @@ func parseSortArgs(args []string) (sortOptions, error) {
 	return options, nil
 }
 
-func readSortInputs(options sortOptions, stdin io.Reader) ([]string, error) {
+func readSortInputs(ctx context.Context, view ProcessView, options sortOptions, stdin io.Reader) ([]string, error) {
 	if len(options.paths) == 0 {
 		return readSortLines(stdin)
 	}
 	var lines []string
 	for _, path := range options.paths {
-		fileLines, err := readSortFile(path)
+		input, err := OpenProcessInput(ctx, view, path)
 		if err != nil {
+			return nil, sortReadError{path: path, err: err}
+		}
+		fileLines, readErr := readSortLines(input)
+		closeErr := input.Close()
+		if err := errors.Join(readErr, closeErr); err != nil {
 			return nil, sortReadError{path: path, err: err}
 		}
 		lines = append(lines, fileLines...)
@@ -100,17 +108,6 @@ func (e sortReadError) Error() string {
 
 func (e sortReadError) Unwrap() error {
 	return e.err
-}
-
-func readSortFile(path string) (lines []string, err error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-	}()
-	return readSortLines(file)
 }
 
 func readSortLines(input io.Reader) ([]string, error) {
@@ -189,9 +186,8 @@ func writeSortLines(stdout io.Writer, lines []string) error {
 }
 
 func sortInputError(err error) string {
-	var readErr sortReadError
 	path := ""
-	if errors.As(err, &readErr) {
+	if readErr, ok := errors.AsType[sortReadError](err); ok {
 		path = readErr.path
 	}
 	if errors.Is(err, os.ErrNotExist) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -21,29 +20,24 @@ type envInvocation struct {
 	command           []string
 }
 
-func newEnvApplet() Applet {
-	return envApplet{}
-}
-
-func (envApplet) Name() string {
-	return "env"
-}
+func newEnvApplet() Applet     { return envApplet{} }
+func (envApplet) Name() string { return "env" }
 
 func (envApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	invocation, err := parseEnvInvocation(args)
 	if err != nil {
 		return err
 	}
-	return withEnvScope(invocation, func() error {
-		if len(invocation.command) == 0 {
-			return printEnvironment(stdout)
-		}
-		applet, ok := DefaultRegistry.Lookup(invocation.command[0])
-		if !ok {
-			return fmt.Errorf("%s: not found", invocation.command[0])
-		}
-		return applet.Run(ctx, invocation.command[1:], stdin, stdout, stderr)
-	})
+	view := deriveProcessView(ProcessViewFromContext(ctx), invocation)
+	ctx = WithProcessView(ctx, view)
+	if len(invocation.command) == 0 {
+		return printEnvironment(stdout, view.Environ())
+	}
+	applet, ok := DefaultRegistry.Lookup(invocation.command[0])
+	if !ok {
+		return fmt.Errorf("%s: not found", invocation.command[0])
+	}
+	return applet.Run(ctx, invocation.command[1:], stdin, stdout, stderr)
 }
 
 func parseEnvInvocation(args []string) (envInvocation, error) {
@@ -58,6 +52,9 @@ func parseEnvInvocation(args []string) (envInvocation, error) {
 	}
 	for len(remaining) > 0 && strings.Contains(remaining[0], "=") {
 		name, value, _ := strings.Cut(remaining[0], "=")
+		if name == "" {
+			return invocation, fmt.Errorf("invalid variable name: empty")
+		}
 		invocation.assignments = append(invocation.assignments, envAssignment{name: name, value: value})
 		remaining = remaining[1:]
 	}
@@ -65,44 +62,20 @@ func parseEnvInvocation(args []string) (envInvocation, error) {
 	return invocation, nil
 }
 
-func withEnvScope(invocation envInvocation, run func() error) error {
-	original := os.Environ()
-	restore := func() error { return restoreEnv(original) }
+func deriveProcessView(parent ProcessView, invocation envInvocation) staticProcessView {
+	items := parent.Environ()
 	if invocation.ignoreEnvironment {
-		os.Clearenv()
+		items = nil
 	}
+	view := newStaticProcessView(parent, items)
 	for _, assignment := range invocation.assignments {
-		if err := os.Setenv(assignment.name, assignment.value); err != nil {
-			if restoreErr := restore(); restoreErr != nil {
-				return fmt.Errorf("env: %s: %w; restore environment: %w", assignment.name, err, restoreErr)
-			}
-			return fmt.Errorf("env: %s: %w", assignment.name, err)
-		}
+		view.set(assignment.name, assignment.value)
 	}
-	err := run()
-	restoreErr := restore()
-	if err != nil && restoreErr != nil {
-		return fmt.Errorf("env: %w; restore environment: %w", err, restoreErr)
-	}
-	if err != nil {
-		return err
-	}
-	return restoreErr
+	return view
 }
 
-func restoreEnv(items []string) error {
-	os.Clearenv()
+func printEnvironment(stdout io.Writer, items []string) error {
 	for _, item := range items {
-		name, value, _ := strings.Cut(item, "=")
-		if err := os.Setenv(name, value); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func printEnvironment(stdout io.Writer) error {
-	for _, item := range os.Environ() {
 		if _, err := fmt.Fprintln(stdout, item); err != nil {
 			return err
 		}
@@ -111,22 +84,25 @@ func printEnvironment(stdout io.Writer) error {
 }
 
 func newPrintenvApplet() Applet {
-	return simpleApplet{name: "printenv", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if len(args) == 0 {
-			for _, item := range os.Environ() {
-				fmt.Fprintln(stdout, item)
-			}
-			return nil
+	return printenvApplet{}
+}
+
+type printenvApplet struct{}
+
+func (printenvApplet) Name() string { return "printenv" }
+func (printenvApplet) Run(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+	view := ProcessViewFromContext(ctx)
+	if len(args) == 0 {
+		return printEnvironment(stdout, view.Environ())
+	}
+	var status error
+	for _, name := range args {
+		value, ok := view.LookupEnv(name)
+		if !ok {
+			status = ErrExitFalse
+			continue
 		}
-		status := error(nil)
-		for _, name := range args {
-			value, ok := os.LookupEnv(name)
-			if !ok {
-				status = ErrExitFalse
-				continue
-			}
-			fmt.Fprintln(stdout, value)
-		}
-		return status
-	}}
+		fmt.Fprintln(stdout, value)
+	}
+	return status
 }

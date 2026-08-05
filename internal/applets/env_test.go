@@ -105,6 +105,127 @@ func TestDefaultRegistry_EnvRunsAppletWithCleanEnvironment_whenIgnoreEnvironment
 	}
 }
 
+func TestDefaultRegistry_EnvPreservesDistinctExactCaseNames_whenRunStandalone(t *testing.T) {
+	// Given
+	applet := lookupEnvApplet(t)
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{"-i", "foo=lower", "FOO=upper", "printenv", "foo", "FOO"}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected case-sensitive env lookup to succeed, got %v", err)
+	}
+	if got := stdout.String(); got != "lower\nupper\n" {
+		t.Fatalf("expected distinct case-sensitive values, got %q", got)
+	}
+}
+
+func TestDefaultRegistry_EnvAcceptsUtilityAssignmentNames_outsideShellIdentifierGrammar(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "1BAD", value: "digit"},
+		{name: "A-B", value: "dash"},
+		{name: "A.B", value: "dot"},
+		{name: "变量", value: "unicode"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// Given
+			applet := lookupEnvApplet(t)
+			var stdout bytes.Buffer
+
+			// When
+			err := applet.Run(context.Background(), []string{"-i", test.name + "=" + test.value, "printenv", test.name}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+			// Then
+			if err != nil {
+				t.Fatalf("expected utility assignment name %q to succeed, got %v", test.name, err)
+			}
+			if got := stdout.String(); got != test.value+"\n" {
+				t.Fatalf("expected exact lookup for %q, got %q", test.name, got)
+			}
+		})
+	}
+}
+
+func TestDefaultRegistry_EnvRejectsEmptyAssignmentName_beforeDispatch(t *testing.T) {
+	// Given
+	applet := lookupEnvApplet(t)
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{"-i", "=value"}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err == nil || err.Error() != "invalid variable name: empty" {
+		t.Fatalf("expected empty variable name error, got %v", err)
+	}
+	if got := stdout.String(); got != "" {
+		t.Fatalf("expected no misleading success output, got %q", got)
+	}
+}
+
+func TestDefaultRegistry_EnvPreservesEmptyDuplicateAndCaseVariantAssignments(t *testing.T) {
+	// Given
+	applet := lookupEnvApplet(t)
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{"-i", "EMPTY=", "Path=title", "PATH=upper", "Path=latest", "printenv", "EMPTY", "Path", "PATH"}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected assignment overlay to succeed, got %v", err)
+	}
+	if got := stdout.String(); got != "\nlatest\nupper\n" {
+		t.Fatalf("expected empty, duplicate, and case-variant values, got %q", got)
+	}
+}
+
+func TestDefaultRegistry_EnvDoesNotReclassifyCommandOperandsContainingEquals(t *testing.T) {
+	// Given
+	applet := lookupEnvApplet(t)
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{"-i", "A=value", "echo", "A=B"}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected command operand to remain an argument, got %v", err)
+	}
+	if got := stdout.String(); got != "A=B\n" {
+		t.Fatalf("expected command operand output, got %q", got)
+	}
+}
+
+func TestDefaultRegistry_EnvDerivedViewPreservesParentResolvePath(t *testing.T) {
+	// Given
+	resolved := t.TempDir() + string(os.PathSeparator) + "parent-resolved.txt"
+	if err := os.WriteFile(resolved, []byte("parent-resolved\n"), 0o600); err != nil {
+		t.Fatalf("expected resolver fixture write to succeed, got %v", err)
+	}
+	view := delegatedPathView{resolved: resolved}
+	ctx := applets.WithProcessView(context.Background(), view)
+	applet := lookupEnvApplet(t)
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(ctx, []string{"CHILD=value", "cat", "fixture"}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected child applet to use parent resolver, got %v", err)
+	}
+	if got := stdout.String(); got != "parent-resolved\n" {
+		t.Fatalf("expected delegated path %q, got %q", "parent-resolved\n", got)
+	}
+}
+
 func TestDefaultRegistry_EnvRestoresEnvironment_whenChildAppletReturnsError(t *testing.T) {
 	// Given
 	name := "NEMOSH_TEST_ENV_ERROR_RESTORE"
@@ -152,3 +273,10 @@ func lookupEnvApplet(t *testing.T) applets.Applet {
 	}
 	return applet
 }
+
+type delegatedPathView struct{ resolved string }
+
+func (v delegatedPathView) WorkingDirectory() string        { return "generic-cwd" }
+func (v delegatedPathView) Environ() []string               { return nil }
+func (v delegatedPathView) LookupEnv(string) (string, bool) { return "", false }
+func (v delegatedPathView) ResolvePath(string) string       { return v.resolved }

@@ -1,18 +1,16 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"os"
 )
 
-func newPwdApplet() Applet {
-	return simpleApplet{name: "pwd", run: func(_ []string, _ io.Reader, stdout, _ io.Writer) error {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		_, err = fmt.Fprintln(stdout, cwd)
-		return err
-	}}
+type pwdApplet struct{}
+
+func newPwdApplet() Applet     { return pwdApplet{} }
+func (pwdApplet) Name() string { return "pwd" }
+func (pwdApplet) Run(ctx context.Context, _ []string, _ io.Reader, stdout, _ io.Writer) error {
+	_, err := fmt.Fprintln(stdout, ProcessViewFromContext(ctx).WorkingDirectory())
+	return err
 }

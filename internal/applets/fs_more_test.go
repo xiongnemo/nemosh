@@ -128,6 +128,42 @@ func TestDefaultRegistry_printsHumanReadableSize_whenLsRunsWithLongHumanFlags(t 
 	}
 }
 
+func TestDefaultRegistry_alignsNames_whenLsRunsWithLongHumanFlags(t *testing.T) {
+	// Given
+	dir := t.TempDir()
+	files := map[string][]byte{
+		"small.bin": {0},
+		"large.bin": bytes.Repeat([]byte("x"), 1536),
+	}
+	for name, contents := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), contents, 0o600); err != nil {
+			t.Fatalf("write %s fixture: %v", name, err)
+		}
+	}
+	applet, ok := applets.DefaultRegistry.Lookup("ls")
+	if !ok {
+		t.Fatal("expected ls applet to be registered")
+	}
+	var stdout bytes.Buffer
+
+	// When
+	err := applet.Run(context.Background(), []string{"-alh", dir}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+
+	// Then
+	if err != nil {
+		t.Fatalf("ls -alh: %v", err)
+	}
+	lines := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("lines = %q, want two entries", lines)
+	}
+	largeColumn := strings.Index(lines[0], "large.bin")
+	smallColumn := strings.Index(lines[1], "small.bin")
+	if largeColumn < 0 || smallColumn < 0 || largeColumn != smallColumn {
+		t.Fatalf("name columns = (%d, %d) in %q, want equal", largeColumn, smallColumn, lines)
+	}
+}
+
 func TestDefaultRegistry_returnsError_whenLsRunsWithUnsupportedFlag(t *testing.T) {
 	// Given
 	applet, ok := applets.DefaultRegistry.Lookup("ls")

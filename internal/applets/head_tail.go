@@ -2,14 +2,15 @@ package applets
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 )
 
 func newHeadApplet() Applet {
-	return simpleApplet{name: "head", run: func(args []string, stdin io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "head", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
 		count, paths, err := lineCountArgs(args, 10)
 		if err != nil {
 			return err
@@ -17,18 +18,16 @@ func newHeadApplet() Applet {
 		if len(paths) == 0 {
 			return copyHead(stdout, stdin, count)
 		}
+		view := ProcessViewFromContext(ctx)
 		for _, path := range paths {
-			file, err := os.Open(path)
+			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
 				return err
 			}
 			copyErr := copyHead(stdout, file, count)
 			closeErr := file.Close()
-			if copyErr != nil {
-				return copyErr
-			}
-			if closeErr != nil {
-				return closeErr
+			if err := errors.Join(copyErr, closeErr); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -46,7 +45,7 @@ func copyHead(stdout io.Writer, input io.Reader, count int) error {
 }
 
 func newTailApplet() Applet {
-	return simpleApplet{name: "tail", run: func(args []string, stdin io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "tail", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
 		count, paths, err := lineCountArgs(args, 10)
 		if err != nil {
 			return err
@@ -54,18 +53,16 @@ func newTailApplet() Applet {
 		if len(paths) == 0 {
 			return copyTail(stdout, stdin, count)
 		}
+		view := ProcessViewFromContext(ctx)
 		for _, path := range paths {
-			file, err := os.Open(path)
+			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
 				return err
 			}
 			copyErr := copyTail(stdout, file, count)
 			closeErr := file.Close()
-			if copyErr != nil {
-				return copyErr
-			}
-			if closeErr != nil {
-				return closeErr
+			if err := errors.Join(copyErr, closeErr); err != nil {
+				return err
 			}
 		}
 		return nil

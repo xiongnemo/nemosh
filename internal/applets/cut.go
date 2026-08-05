@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -31,7 +30,10 @@ func (cutApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 	if err != nil {
 		return writeCutDiagnostic(stderr, err.Error())
 	}
-	if err := runCutInputs(options, stdin, stdout); err != nil {
+	if err := runCutInputs(ctx, ProcessViewFromContext(ctx), options, stdin, stdout); err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
 		return writeCutDiagnostic(stderr, cutInputError(err))
 	}
 	return nil
@@ -152,35 +154,6 @@ func setCutMode(options *cutOptions, flag byte, list string) error {
 	return nil
 }
 
-func runCutInputs(options cutOptions, stdin io.Reader, stdout io.Writer) error {
-	if len(options.operands) == 0 {
-		return cutReader(stdin, stdout, options)
-	}
-	for _, operand := range options.operands {
-		if operand == "-" {
-			if err := cutReader(stdin, stdout, options); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := cutFile(operand, stdout, options); err != nil {
-			return cutReadError{path: operand, err: err}
-		}
-	}
-	return nil
-}
-
-func cutFile(path string, stdout io.Writer, options cutOptions) (err error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-	}()
-	return cutReader(file, stdout, options)
-}
-
 func cutReader(input io.Reader, stdout io.Writer, options cutOptions) error {
 	reader := bufio.NewReader(input)
 	for {
@@ -240,30 +213,6 @@ func selectCutFields(line string, options cutOptions) (string, bool) {
 		}
 	}
 	return strings.Join(selected, delim), true
-}
-
-type cutReadError struct {
-	path string
-	err  error
-}
-
-func (e cutReadError) Error() string {
-	return e.err.Error()
-}
-
-func (e cutReadError) Unwrap() error {
-	return e.err
-}
-
-func cutInputError(err error) string {
-	path := ""
-	if readErr, ok := errors.AsType[cutReadError](err); ok {
-		path = readErr.path
-	}
-	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Sprintf("cut: %s: No such file or directory", path)
-	}
-	return fmt.Sprintf("cut: %s: %v", path, err)
 }
 
 func writeCutDiagnostic(stderr io.Writer, message string) error {

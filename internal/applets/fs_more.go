@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,7 +11,7 @@ import (
 )
 
 func newLsApplet() Applet {
-	return simpleApplet{name: "ls", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "ls", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
 		options, paths, err := lsArgs(args)
 		if err != nil {
 			return err
@@ -18,8 +19,13 @@ func newLsApplet() Applet {
 		if len(paths) == 0 {
 			paths = []string{"."}
 		}
+		view := ProcessViewFromContext(ctx)
 		for _, target := range paths {
-			if err := listPath(stdout, target, options); err != nil {
+			native, err := resolveHostPath(view, target)
+			if err != nil {
+				return err
+			}
+			if err := listPath(stdout, native, target, options); err != nil {
 				return err
 			}
 		}
@@ -28,9 +34,10 @@ func newLsApplet() Applet {
 }
 
 type lsOptions struct {
-	all   bool
-	long  bool
-	human bool
+	all       bool
+	long      bool
+	human     bool
+	sizeWidth int
 }
 
 func lsArgs(args []string) (lsOptions, []string, error) {
@@ -62,13 +69,15 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 	return options, args[index:], nil
 }
 
-func listPath(stdout io.Writer, target string, options lsOptions) error {
+func listPath(stdout io.Writer, target, display string, options lsOptions) error {
 	info, err := os.Stat(target)
 	if err != nil {
 		return err
 	}
 	if !info.IsDir() {
-		return printLsEntry(stdout, lsEntry{name: target, info: info}, options)
+		item := lsEntry{name: display, info: info}
+		options.sizeWidth = lsEntrySizeWidth([]lsEntry{item}, options)
+		return printLsEntry(stdout, item, options)
 	}
 	entries, err := os.ReadDir(target)
 	if err != nil {
@@ -89,6 +98,7 @@ func listPath(stdout io.Writer, target string, options lsOptions) error {
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].name < items[j].name
 	})
+	options.sizeWidth = lsEntrySizeWidth(items, options)
 	for _, item := range items {
 		if err := printLsEntry(stdout, item, options); err != nil {
 			return err
@@ -104,11 +114,22 @@ type lsEntry struct {
 
 func printLsEntry(stdout io.Writer, entry lsEntry, options lsOptions) error {
 	if options.long {
-		_, err := fmt.Fprintf(stdout, "%s %s %s\n", entry.info.Mode().String(), lsSize(entry.info.Size(), options), entry.name)
+		_, err := fmt.Fprintf(stdout, "%s %*s %s\n", entry.info.Mode().String(), options.sizeWidth, lsSize(entry.info.Size(), options), entry.name)
 		return err
 	}
 	_, err := fmt.Fprintln(stdout, entry.name)
 	return err
+}
+
+func lsEntrySizeWidth(entries []lsEntry, options lsOptions) int {
+	width := 0
+	if options.human {
+		width = 7
+	}
+	for _, entry := range entries {
+		width = max(width, len(lsSize(entry.info.Size(), options)))
+	}
+	return width
 }
 
 func lsSize(size int64, options lsOptions) string {
@@ -132,11 +153,20 @@ func lsSize(size int64, options lsOptions) string {
 }
 
 func newCpApplet() Applet {
-	return simpleApplet{name: "cp", run: func(args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
+	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
 		if len(args) != 2 {
 			return ErrExitFalse
 		}
-		return copyFile(args[0], destinationPath(args[0], args[1]))
+		view := ProcessViewFromContext(ctx)
+		source, err := resolveHostPath(view, args[0])
+		if err != nil {
+			return err
+		}
+		destination, err := resolveHostPath(view, args[1])
+		if err != nil {
+			return err
+		}
+		return copyFile(source, destinationPath(source, destination))
 	}}
 }
 
@@ -165,18 +195,27 @@ func copyFile(sourcePath, destPath string) error {
 }
 
 func newMvApplet() Applet {
-	return simpleApplet{name: "mv", run: func(args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
+	return simpleApplet{name: "mv", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
 		if len(args) != 2 {
 			return ErrExitFalse
 		}
-		destPath := destinationPath(args[0], args[1])
-		if err := os.Rename(args[0], destPath); err == nil {
-			return nil
-		}
-		if err := copyFile(args[0], destPath); err != nil {
+		view := ProcessViewFromContext(ctx)
+		sourcePath, err := resolveHostPath(view, args[0])
+		if err != nil {
 			return err
 		}
-		return os.Remove(args[0])
+		destination, err := resolveHostPath(view, args[1])
+		if err != nil {
+			return err
+		}
+		destPath := destinationPath(sourcePath, destination)
+		if err := os.Rename(sourcePath, destPath); err == nil {
+			return nil
+		}
+		if err := copyFile(sourcePath, destPath); err != nil {
+			return err
+		}
+		return os.Remove(sourcePath)
 	}}
 }
 

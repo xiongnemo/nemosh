@@ -1,15 +1,16 @@
 package applets
 
 import (
-	"bytes"
+	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"io"
-	"os"
 	"unicode"
 )
 
 func newWcApplet() Applet {
-	return simpleApplet{name: "wc", run: func(args []string, stdin io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "wc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
 		flags, paths := wcArgs(args)
 		if len(paths) == 0 {
 			counts, err := countBytes(stdin)
@@ -19,18 +20,16 @@ func newWcApplet() Applet {
 			err = printWcCounts(stdout, flags, counts, "")
 			return err
 		}
+		view := ProcessViewFromContext(ctx)
 		for _, path := range paths {
-			file, err := os.Open(path)
+			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
 				return err
 			}
 			counts, countErr := countBytes(file)
 			closeErr := file.Close()
-			if countErr != nil {
-				return countErr
-			}
-			if closeErr != nil {
-				return closeErr
+			if err := errors.Join(countErr, closeErr); err != nil {
+				return err
 			}
 			if err := printWcCounts(stdout, flags, counts, path); err != nil {
 				return err
@@ -107,25 +106,26 @@ func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string
 }
 
 func countBytes(input io.Reader) (wcCounts, error) {
-	data, err := io.ReadAll(input)
-	if err != nil {
-		return wcCounts{}, err
-	}
-	return wcCounts{lines: bytes.Count(data, []byte("\n")), words: countWords(data), bytes: len(data)}, nil
-}
-
-func countWords(data []byte) int {
-	words := 0
+	reader := bufio.NewReader(input)
+	counts := wcCounts{}
 	inWord := false
-	for _, r := range string(data) {
-		if unicode.IsSpace(r) {
-			inWord = false
-			continue
+	for {
+		r, size, err := reader.ReadRune()
+		counts.bytes += size
+		if r == '\n' {
+			counts.lines++
 		}
-		if !inWord {
-			words++
+		if size > 0 && unicode.IsSpace(r) {
+			inWord = false
+		} else if size > 0 && !inWord {
+			counts.words++
 			inWord = true
 		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return counts, nil
+			}
+			return wcCounts{}, err
+		}
 	}
-	return words
 }

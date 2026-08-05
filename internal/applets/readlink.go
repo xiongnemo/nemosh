@@ -1,13 +1,14 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 )
 
 func newReadlinkApplet() Applet {
-	return simpleApplet{name: "readlink", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "readlink", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
 		newline := true
 		paths := args
 		if len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
@@ -20,7 +21,11 @@ func newReadlinkApplet() Applet {
 		if len(paths) != 1 {
 			return ErrExitFalse
 		}
-		target, err := os.Readlink(paths[0])
+		linkName, err := resolveHostPath(ProcessViewFromContext(ctx), paths[0])
+		if err != nil {
+			return err
+		}
+		target, err := os.Readlink(linkName)
 		if err != nil {
 			return ErrExitFalse
 		}

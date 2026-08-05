@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,14 +10,22 @@ import (
 )
 
 func newRealpathApplet() Applet {
-	return simpleApplet{name: "realpath", run: func(args []string, _ io.Reader, stdout, stderr io.Writer) error {
+	return simpleApplet{name: "realpath", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
 		if len(args) == 0 {
 			return ErrExitFalse
 		}
 
 		failed := false
+		view := ProcessViewFromContext(ctx)
 		for _, arg := range args {
-			resolved, err := realpath(arg)
+			resolved, err := ResolveProcessPath(view, arg)
+			if err == nil && resolved.Device {
+				err = fmt.Errorf("%s is not a host path", resolved.Canonical)
+			}
+			native := resolved.Native
+			if err == nil {
+				native, err = realpath(native)
+			}
 			if err != nil {
 				failed = true
 				if _, writeErr := fmt.Fprintf(stderr, "realpath: %s: %v\n", filepath.ToSlash(arg), err); writeErr != nil {
@@ -24,7 +33,7 @@ func newRealpathApplet() Applet {
 				}
 				continue
 			}
-			if _, err := fmt.Fprintln(stdout, resolved); err != nil {
+			if _, err := fmt.Fprintln(stdout, canonicalizeGeneratedPath(view, resolved.Canonical, native)); err != nil {
 				return err
 			}
 		}
@@ -36,11 +45,7 @@ func newRealpathApplet() Applet {
 }
 
 func realpath(path string) (string, error) {
-	abs, err := absoluteRealpathOperand(path)
-	if err != nil {
-		return "", fmt.Errorf("absolute path: %w", err)
-	}
-	return realpathAbs(abs)
+	return realpathAbs(path)
 }
 
 func realpathAbs(path string) (string, error) {
@@ -66,17 +71,6 @@ func realpathAbs(path string) (string, error) {
 		return "", parentErr
 	}
 	return filepath.ToSlash(filepath.Clean(filepath.Join(resolvedParent, leaf))), nil
-}
-
-func absoluteRealpathOperand(path string) (string, error) {
-	if filepath.IsAbs(path) {
-		return path, nil
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	return appendPath(cwd, path), nil
 }
 
 func splitFinalPathElement(path string) (string, string) {

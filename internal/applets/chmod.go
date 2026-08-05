@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -8,7 +9,7 @@ import (
 )
 
 func newChmodApplet() Applet {
-	return simpleApplet{name: "chmod", run: func(args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
+	return simpleApplet{name: "chmod", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
 		if len(args) < 2 {
 			return ErrExitFalse
 		}
@@ -16,8 +17,13 @@ func newChmodApplet() Applet {
 		if err != nil {
 			return fmt.Errorf("%s: invalid mode", args[0])
 		}
+		view := ProcessViewFromContext(ctx)
 		for _, path := range args[1:] {
-			if err := os.Chmod(path, mode); err != nil {
+			native, err := resolveHostPath(view, path)
+			if err != nil {
+				return err
+			}
+			if err := os.Chmod(native, mode); err != nil {
 				return err
 			}
 		}

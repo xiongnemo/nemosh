@@ -22,14 +22,6 @@ func TestDefaultRegistry_findPrintsTree_whenNoPathProvided(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "sub", "b.txt"), []byte("b"), 0o600); err != nil {
 		t.Fatalf("expected nested find fixture write to succeed, got %v", err)
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("expected cwd lookup to succeed, got %v", err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("expected cwd change to succeed, got %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(cwd) })
 	applet, ok := applets.DefaultRegistry.Lookup("find")
 	if !ok {
 		t.Fatal("expected find applet to be registered")
@@ -38,7 +30,8 @@ func TestDefaultRegistry_findPrintsTree_whenNoPathProvided(t *testing.T) {
 	var stderr bytes.Buffer
 
 	// When
-	err = applet.Run(context.Background(), nil, &bytes.Buffer{}, &stdout, &stderr)
+	ctx := applets.WithProcessView(context.Background(), findTestProcessView{cwd: dir})
+	err := applet.Run(ctx, nil, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
 	if err != nil {
@@ -51,3 +44,10 @@ func TestDefaultRegistry_findPrintsTree_whenNoPathProvided(t *testing.T) {
 		t.Fatalf("expected empty stderr, got %q", got)
 	}
 }
+
+type findTestProcessView struct{ cwd string }
+
+func (v findTestProcessView) WorkingDirectory() string        { return v.cwd }
+func (v findTestProcessView) Environ() []string               { return nil }
+func (v findTestProcessView) LookupEnv(string) (string, bool) { return "", false }
+func (v findTestProcessView) ResolvePath(path string) string  { return filepath.Join(v.cwd, path) }
