@@ -50,6 +50,52 @@ func TestRuntime_sourcesScriptInCurrentRuntime_whenDotRuns(t *testing.T) {
 	}
 }
 
+func TestRuntime_sourcesScriptInCurrentRuntime_whenSourceRuns(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	dir := t.TempDir()
+	scriptPath := filepath.ToSlash(filepath.Join(dir, "library.sh"))
+	if err := os.WriteFile(scriptPath, []byte("name=sourced\n"), 0o600); err != nil {
+		t.Fatalf("write source fixture: %v", err)
+	}
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
+
+	// When
+	status := rt.RunScript(context.Background(), "source "+scriptPath+"\necho $name\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("status = %d, want 0", status)
+	}
+	if got := stdout.String(); got != "sourced\n" {
+		t.Fatalf("stdout = %q, want %q", got, "sourced\n")
+	}
+}
+
+func TestRuntime_sourcesHomeRelativeScript_whenSourceUsesTilde(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	home := t.TempDir()
+	if err := os.WriteFile(filepath.Join(home, ".profile"), []byte("name=profile\n"), 0o600); err != nil {
+		t.Fatalf("write profile fixture: %v", err)
+	}
+	rt := runtime.NewWithState(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout}, runtime.State{
+		Cwd: runtime.WorkingDirectory(t.TempDir()),
+		Env: runtime.NewEnvironment([]string{"HOME=" + home}),
+	})
+
+	// When
+	status := rt.RunScript(context.Background(), "source ~/.profile\necho $name\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("status = %d, want 0", status)
+	}
+	if got := stdout.String(); got != "profile\n" {
+		t.Fatalf("stdout = %q, want %q", got, "profile\n")
+	}
+}
+
 func TestRuntime_defersExitTrap_whenEvalRuns(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer

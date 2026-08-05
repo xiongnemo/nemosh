@@ -7,57 +7,186 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
 var windowsExecutableSuffixes = [...]string{".com", ".exe", ".sh", ".bat", ".cmd"}
 
+var errExternalNotFound = errors.New("external command not found")
+
+var errExternalPathNotAbsolute = errors.New("external native path is not absolute")
+
+var errExternalNotExecutable = errors.New("external command is not executable")
+
 func (r Runtime) runExternal(ctx context.Context, args []string) int {
-	executable := externalCommandPath(args[0])
+	workingDirectory, err := r.nativeWorkingDirectory()
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		return 1
+	}
+	workingDirectory, err = requireAbsoluteNativePath("working directory", workingDirectory)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		return 1
+	}
+	executable, err := r.externalCommandPath(args[0])
+	if err != nil {
+		if errors.Is(err, errExternalNotFound) {
+			fmt.Fprintf(r.streams.Stderr, "%s: not found\n", args[0])
+			return 127
+		}
+		if errors.Is(err, errExternalNotExecutable) {
+			fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+			return 126
+		}
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		return 1
+	}
+	executable, err = requireAbsoluteNativePath("executable", executable)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		return 1
+	}
 	cmd := exec.CommandContext(ctx, executable, args[1:]...)
-	cmd.Stdin = r.streams.Stdin
+	cmd.Dir = workingDirectory
+	cmd.Env = r.env.childEnviron(hostEnvironmentPlatform())
+	stdin, err := r.fds.reader(0)
+	if err != nil {
+		if !errors.Is(err, errDescriptorAbsent) && !errors.Is(err, errDescriptorClosed) {
+			fmt.Fprintf(r.streams.Stderr, "%s: stdin: %v\n", args[0], err)
+			return 1
+		}
+	} else {
+		leasedStdin, releaseStdin := externalStdin(ctx, stdin)
+		cmd.Stdin = leasedStdin
+		defer releaseStdin()
+	}
 	cmd.Stdout = r.streams.Stdout
 	cmd.Stderr = r.streams.Stderr
 	if err := cmd.Run(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return exitErr.ExitCode()
 		}
-		fmt.Fprintf(r.streams.Stderr, "%s: not found\n", args[0])
-		return 127
+		if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
+			return 0
+		}
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		return 126
 	}
 	return 0
 }
 
-func externalCommandPath(name string) string {
-	path := platformPath(name)
-	if filepath.Ext(path) != "" {
-		return path
+func (r Runtime) externalCommandPath(name string) (string, error) {
+	if hasPathSeparator(name) {
+		resolved, err := r.ResolveNemoshPath(name)
+		if err != nil {
+			return "", err
+		}
+		if resolved.Device {
+			return "", fmt.Errorf("%s is not executable: %w", resolved.Canonical, errExternalNotExecutable)
+		}
+		return executableCandidate(resolved.Native)
 	}
-	if hasPathSeparator(path) {
-		return firstExecutableCandidate(filepath.Dir(path), filepath.Base(path), path)
+	pathValue, present := r.vars["PATH"]
+	if !present || pathValue == "" {
+		return "", errExternalNotFound
 	}
-	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+	var firstCandidateErr error
+	for _, dir := range filepath.SplitList(pathValue) {
 		if dir == "" {
 			dir = "."
 		}
-		if candidate := firstExecutableCandidate(dir, path, ""); candidate != "" {
-			return candidate
+		resolved, err := r.ResolveNemoshPath(dir)
+		if err != nil {
+			if firstCandidateErr == nil {
+				firstCandidateErr = err
+			}
+			continue
+		}
+		if resolved.Device {
+			continue
+		}
+		candidate := filepath.Join(resolved.Native, name)
+		found, candidateErr := executableCandidate(candidate)
+		if candidateErr == nil {
+			return found, nil
+		}
+		if !errors.Is(candidateErr, errExternalNotFound) {
+			if firstCandidateErr == nil {
+				firstCandidateErr = candidateErr
+			}
 		}
 	}
-	return path
+	if firstCandidateErr != nil {
+		return "", firstCandidateErr
+	}
+	return "", errExternalNotFound
 }
 
-func firstExecutableCandidate(dir string, base string, fallback string) string {
+func executableCandidate(candidate string) (string, error) {
+	absolute, err := requireAbsoluteNativePath("executable", candidate)
+	if err != nil {
+		return "", err
+	}
+	if filepath.Ext(absolute) != "" || runtime.GOOS != "windows" {
+		executable, err := isExecutableFile(absolute)
+		if err != nil {
+			return "", err
+		}
+		if executable {
+			return absolute, nil
+		}
+		return "", errExternalNotFound
+	}
+	var firstSuffixErr error
 	for _, suffix := range windowsExecutableSuffixes {
-		candidate := filepath.Join(dir, base+suffix)
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			return candidate
+		withSuffix := absolute + suffix
+		executable, err := isExecutableFile(withSuffix)
+		if err != nil {
+			if firstSuffixErr == nil {
+				firstSuffixErr = err
+			}
+			continue
+		}
+		if executable {
+			return withSuffix, nil
 		}
 	}
-	return fallback
+	if firstSuffixErr != nil {
+		return "", firstSuffixErr
+	}
+	return "", errExternalNotFound
+}
+
+func requireAbsoluteNativePath(kind, path string) (string, error) {
+	cleaned := filepath.Clean(path)
+	if !filepath.IsAbs(cleaned) {
+		return "", fmt.Errorf("%s %q: %w", kind, path, errExternalPathNotAbsolute)
+	}
+	return cleaned, nil
+}
+
+func isExecutableFile(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("stat executable %q: %w", path, err)
+	}
+	if info.IsDir() {
+		return false, fmt.Errorf("executable %q is a directory: %w", path, errExternalNotExecutable)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
+		return false, fmt.Errorf("executable %q: %w", path, errExternalNotExecutable)
+	}
+	return true, nil
 }
 
 func hasPathSeparator(path string) bool {
-	return strings.ContainsAny(path, `/\\`) || filepath.VolumeName(path) != ""
+	if strings.ContainsRune(path, '/') {
+		return true
+	}
+	return runtime.GOOS == "windows" && (strings.ContainsRune(path, '\\') || filepath.VolumeName(path) != "")
 }

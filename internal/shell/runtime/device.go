@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"crypto/rand"
+	"fmt"
 	"io"
 	"os"
 )
@@ -59,14 +60,22 @@ func openInputRedirect(path string, streams Streams) (io.ReadCloser, error) {
 	return os.Open(platformPath(path))
 }
 
-func openOutputRedirect(path string, streams Streams) (io.WriteCloser, error) {
+func openInputDevice(path string) (io.ReadCloser, error) {
 	switch path {
 	case "/dev/null":
 		return nullDevice{}, nil
-	case "/dev/stdout":
-		return writeNoopCloser{Writer: streams.Stdout}, nil
-	case "/dev/stderr":
-		return writeNoopCloser{Writer: streams.Stderr}, nil
+	case "/dev/zero":
+		return io.NopCloser(zeroReader{}), nil
+	case "/dev/urandom", "/dev/random":
+		return io.NopCloser(rand.Reader), nil
+	default:
+		return nil, fmt.Errorf("%s: %w", path, errUnsupportedDevice)
 	}
-	return os.Create(platformPath(path))
+}
+
+func openOutputDevice(path string) (io.WriteCloser, error) {
+	if path == "/dev/null" {
+		return nullDevice{}, nil
+	}
+	return nil, fmt.Errorf("%s: %w", path, errUnsupportedDevice)
 }

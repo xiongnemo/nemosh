@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
-	"strings"
+	"sync"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -20,19 +19,45 @@ type Streams struct {
 }
 
 type Runtime struct {
-	registry    applets.Registry
-	streams     Streams
-	vars        map[string]string
-	traps       map[string]string
-	params      *parameters
-	options     *shellOptions
-	readonly    map[string]struct{}
-	mask        *fileModeMask
-	sourceDepth int
+	initErr       error
+	registry      applets.Registry
+	functions     map[functionName]functionDefinition
+	streams       Streams
+	fds           *fdTable
+	vars          map[string]string
+	traps         map[trapName]string
+	trapRunning   map[trapName]bool
+	params        *parameters
+	options       *shellOptions
+	readonly      map[string]struct{}
+	mutatedVars   map[string]struct{}
+	mask          *fileModeMask
+	sourceDepth   int
+	functionDepth int
+	interactive   interactiveState
+	paths         *pathState
+	env           Environment
+	jobScope      *jobScope
+	lifecycle     *shellLifecycle
 }
 
+type shellLifecycle struct {
+	exitSuppressed bool
+}
+
+type trapName string
+
+const (
+	trapExit trapName = "EXIT"
+	trapINT  trapName = "INT"
+)
+
 func New(registry applets.Registry, streams Streams) Runtime {
-	return Runtime{registry: registry, streams: fillStreams(streams), vars: map[string]string{}, traps: map[string]string{}, params: &parameters{}, options: &shellOptions{}, readonly: map[string]struct{}{}, mask: newFileModeMask()}
+	return NewWithState(registry, streams, hostState())
+}
+
+func NewRuntime(registry applets.Registry, streams Streams) (Runtime, error) {
+	return NewRuntimeWithState(registry, streams, hostState())
 }
 
 func fillStreams(streams Streams) Streams {
@@ -45,7 +70,21 @@ func fillStreams(streams Streams) Streams {
 	if streams.Stderr == nil {
 		streams.Stderr = io.Discard
 	}
+	mutex := &sync.Mutex{}
+	streams.Stdout = synchronizedWriter{mutex: mutex, writer: streams.Stdout}
+	streams.Stderr = synchronizedWriter{mutex: mutex, writer: streams.Stderr}
 	return streams
+}
+
+type synchronizedWriter struct {
+	mutex  *sync.Mutex
+	writer io.Writer
+}
+
+func (w synchronizedWriter) Write(buffer []byte) (int, error) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	return w.writer.Write(buffer)
 }
 
 type lineResult struct {
@@ -64,81 +103,56 @@ const (
 	flowReturn
 )
 
-func (r Runtime) runLine(ctx context.Context, line string) lineResult {
-	segments := splitList(line)
-	status := 0
-	operator := ""
-	for _, segment := range segments {
-		if segment.operator != "" {
-			operator = segment.operator
-			continue
-		}
-		if operator == "&&" && status != 0 {
-			continue
-		}
-		if operator == "||" && status == 0 {
-			continue
-		}
-		args, err := splitWords(segment.text)
-		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-			return lineResult{status: 2}
-		}
-		args = r.expandArgs(ctx, args)
-		if len(args) == 0 {
-			continue
-		}
-		assignments, commandArgs := leadingAssignments(args)
-		if len(assignments) > 0 && len(commandArgs) == 0 {
-			status = r.assignVars(assignments)
-			continue
-		}
-		if args[0] == "exit" {
-			return lineResult{status: exitStatus(args[1:]), control: flowExit}
-		}
-		if args[0] == "exec" {
-			status = r.execBuiltin(ctx, args[1:])
-			if len(args) == 1 {
-				continue
-			}
-			return lineResult{status: status, control: flowExec}
-		}
-		if args[0] == "return" {
-			status = exitStatus(args[1:])
-			if r.sourceDepth == 0 {
-				fmt.Fprintln(r.streams.Stderr, "return: not in a sourced script")
-				continue
-			}
-			return lineResult{status: status, control: flowReturn}
-		}
-		if args[0] == "break" {
-			return lineResult{control: flowBreak}
-		}
-		if args[0] == "continue" {
-			return lineResult{control: flowContinue}
-		}
-		status = r.runPipeline(ctx, args)
-	}
-	return lineResult{status: status}
-}
-
 func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int {
 	commandArgs, streams, cleanup, err := r.applyRedirects(args)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 1
 	}
-	status := (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, options: r.options, readonly: r.readonly, mask: r.mask, sourceDepth: r.sourceDepth}).runCommand(ctx, commandArgs)
+	commandRuntime, err := r.snapshotShared()
+	if err != nil {
+		cleanupErr := cleanup()
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, cleanupErr))
+		return 1
+	}
+	commandRuntime, err = commandRuntime.withStreams(streams)
+	if err != nil {
+		cleanupErr := cleanup()
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, cleanupErr))
+		return 1
+	}
+	status := commandRuntime.runCommand(ctx, commandArgs)
+	commandRuntime.jobScope.drain()
+	closeErr := commandRuntime.fds.closeAll()
 	if err := cleanup(); err != nil && status == 0 {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		return 1
+	}
+	if closeErr != nil && status == 0 {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", closeErr)
 		return 1
 	}
 	return status
 }
 
 func (r Runtime) runCommand(ctx context.Context, args []string) int {
+	status := r.runCommandResolved(ctx, args, true)
+	if ctx.Err() != nil {
+		return contextStatus(ctx)
+	}
+	return status
+}
+
+func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFunctions bool) int {
+	if allowFunctions && !isSpecialBuiltin(args[0]) {
+		if name, ok := newFunctionName(args[0]); ok {
+			if definition, found := r.functions[name]; found {
+				return r.callFunction(ctx, definition, args[1:])
+			}
+		}
+	}
 	switch args[0] {
-	case ".":
+	case ".", "source":
 		return r.dot(ctx, args[1:])
 	case "cd":
 		return r.cd(args[1:])
@@ -155,15 +169,9 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	case "unset":
 		return r.unset(args[1:])
 	case "pwd":
-		cwd, err := os.Getwd()
-		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "pwd: %v\n", err)
-			return 1
-		}
-		fmt.Fprintln(r.streams.Stdout, filepathDisplay(cwd))
-		return 0
+		return r.pwd()
 	case "read":
-		return r.read(args[1:])
+		return r.read(ctx, args[1:])
 	case "readonly":
 		return r.readonlyBuiltin(args[1:])
 	case "set":
@@ -175,14 +183,20 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	case "umask":
 		return r.umask(args[1:])
 	case "wait":
-		return r.wait(args[1:])
+		return r.wait(ctx, args[1:])
 	}
 	applet, ok := r.registry.Lookup(args[0])
 	if !ok {
 		return r.runExternal(ctx, args)
 	}
-	err := applet.Run(ctx, args[1:], r.streams.Stdin, r.streams.Stdout, r.streams.Stderr)
+	err := applet.Run(applets.WithProcessView(ctx, r), args[1:], r.streams.Stdin, r.streams.Stdout, r.streams.Stderr)
 	if err == nil {
+		return 0
+	}
+	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+		return contextStatus(ctx)
+	}
+	if errors.Is(err, errPipelineDownstreamClosed) {
 		return 0
 	}
 	if status, ok := applets.StatusCode(err); ok {
@@ -195,70 +209,13 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 	return 1
 }
 
-func (r Runtime) export(args []string) int {
-	for _, arg := range args {
-		name, value, hasValue := strings.Cut(arg, "=")
-		if name == "" {
-			return 2
-		}
-		if !hasValue {
-			value = r.vars[name]
-		} else if r.isReadonly(name) {
-			fmt.Fprintf(r.streams.Stderr, "export: %s: readonly variable\n", name)
-			return 1
-		}
-		r.vars[name] = value
-		if err := os.Setenv(name, value); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "export: %s: %v\n", name, err)
-			return 1
-		}
-	}
-	return 0
-}
-
-func (r Runtime) unset(args []string) int {
-	for _, name := range args {
-		if r.isReadonly(name) {
-			fmt.Fprintf(r.streams.Stderr, "unset: %s: readonly variable\n", name)
-			return 1
-		}
-		delete(r.vars, name)
-		if err := os.Unsetenv(name); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "unset: %s: %v\n", name, err)
-			return 1
-		}
-	}
-	return 0
-}
-
-func (r Runtime) cd(args []string) int {
-	target := "."
-	if len(args) > 0 {
-		target = args[0]
-	}
-	if target == "//" || (strings.HasPrefix(target, "//") && strings.Count(strings.Trim(target, "/"), "/") == 0) {
-		fmt.Fprintf(r.streams.Stderr, "cd: %s: No such file or directory\n", target)
-		fmt.Fprintf(r.streams.Stderr, "hint: %s is not a directory root; use %s/share\n", target, strings.TrimRight(target, "/"))
-		return 1
-	}
-	if err := os.Chdir(platformPath(target)); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "cd: %s: %v\n", target, err)
-		return 1
-	}
-	return 0
-}
-
-func exitStatus(args []string) int {
+func exitStatus(args []string, savedStatus int) int {
 	if len(args) == 0 {
-		return 0
+		return savedStatus
 	}
 	status, err := strconv.Atoi(args[0])
 	if err != nil {
 		return 2
 	}
 	return status & 0xff
-}
-
-func normalizeCRLF(script string) string {
-	return strings.ReplaceAll(script, "\r\n", "\n")
 }

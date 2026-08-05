@@ -78,5 +78,5 @@ func slashRuntimeAbs(t *testing.T, path string) string {
 	if err != nil {
 		t.Fatalf("expected absolute path for %q, got %v", path, err)
 	}
-	return filepath.ToSlash(filepath.Clean(abs))
+	return displayPath(filepath.Clean(abs))
 }

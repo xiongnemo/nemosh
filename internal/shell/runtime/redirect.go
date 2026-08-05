@@ -1,70 +1,50 @@
 package runtime
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"io"
 )
 
 func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error, error) {
-	streams := r.streams
-	var files []io.Closer
-	cleanup := func() error {
-		var closeErr error
-		for i := len(files) - 1; i >= 0; i-- {
-			if err := files[i].Close(); err != nil && closeErr == nil {
-				closeErr = err
-			}
+	tokens := make([]shellToken, len(args))
+	for index, arg := range args {
+		kind := tokenWord
+		if isRedirectToken(arg) {
+			kind = tokenRedirect
 		}
-		return closeErr
+		parsed := &word{parts: []wordPart{{kind: wordPartLiteral, text: arg}}}
+		tokens[index] = shellToken{kind: kind, value: arg, parsed: parsed}
 	}
-	commandArgs := make([]string, 0, len(args))
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case ">":
-			if i+1 >= len(args) {
-				if err := cleanup(); err != nil {
-					return nil, Streams{}, func() error { return nil }, err
-				}
-				return nil, Streams{}, func() error { return nil }, fmt.Errorf(">: missing target")
-			}
-			file, err := openOutputRedirect(args[i+1], streams)
-			if err != nil {
-				if closeErr := cleanup(); closeErr != nil {
-					return nil, Streams{}, func() error { return nil }, closeErr
-				}
-				return nil, Streams{}, func() error { return nil }, fmt.Errorf("%s: %w", args[i+1], err)
-			}
-			streams.Stdout = file
-			files = append(files, file)
-			i++
-		case "<":
-			if i+1 >= len(args) {
-				if err := cleanup(); err != nil {
-					return nil, Streams{}, func() error { return nil }, err
-				}
-				return nil, Streams{}, func() error { return nil }, fmt.Errorf("<: missing target")
-			}
-			file, err := openInputRedirect(args[i+1], streams)
-			if err != nil {
-				if closeErr := cleanup(); closeErr != nil {
-					return nil, Streams{}, func() error { return nil }, closeErr
-				}
-				return nil, Streams{}, func() error { return nil }, fmt.Errorf("%s: %w", args[i+1], err)
-			}
-			streams.Stdin = file
-			files = append(files, file)
-			i++
-		case "2>&1":
-			streams.Stderr = streams.Stdout
-		default:
-			commandArgs = append(commandArgs, args[i])
-		}
+	command, operations, err := parseRedirects(tokens)
+	if err != nil {
+		return nil, Streams{}, func() error { return nil }, err
 	}
-	if len(commandArgs) == 0 {
-		if err := cleanup(); err != nil {
-			return nil, Streams{}, func() error { return nil }, err
-		}
-		return nil, Streams{}, func() error { return nil }, fmt.Errorf("empty command after redirection")
+	table, err := r.fds.clone()
+	if err != nil {
+		return nil, Streams{}, func() error { return nil }, err
 	}
-	return commandArgs, streams, cleanup, nil
+	if err := r.applyRedirectOperations(table, operations); err != nil {
+		return nil, Streams{}, func() error { return nil }, errors.Join(err, table.closeAll())
+	}
+	return tokenValues(command), table.streams(), table.closeAll, nil
+}
+
+func (r Runtime) runCommandWithRedirectOperations(ctx context.Context, command []shellToken, operations []redirectOperation) int {
+	table, err := r.fds.clone()
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		return 1
+	}
+	if err := r.applyRedirectOperations(table, operations); err != nil {
+		cleanupErr := table.closeAll()
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, cleanupErr))
+		return 1
+	}
+	status := r.withFDTable(table).runCommand(ctx, tokenValues(command))
+	if err := table.closeAll(); err != nil && status == 0 {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		return 1
+	}
+	return status
 }

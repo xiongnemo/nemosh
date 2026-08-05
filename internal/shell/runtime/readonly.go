@@ -19,6 +19,7 @@ func (r Runtime) readonlyBuiltin(args []string) int {
 			r.vars[name] = ""
 		}
 		r.readonly[name] = struct{}{}
+		r.markVarMutation(name)
 	}
 	return 0
 }
@@ -29,10 +30,20 @@ func (r Runtime) assignVar(name string, value string) int {
 		return 1
 	}
 	r.vars[name] = value
+	if _, exported := r.env.LookupEnv(name); exported {
+		r.env.Set(name, value)
+	}
+	r.markVarMutation(name)
 	return 0
 }
 
 func (r Runtime) isReadonly(name string) bool {
 	_, ok := r.readonly[name]
 	return ok
+}
+
+func (r Runtime) markVarMutation(name string) {
+	if r.mutatedVars != nil {
+		r.mutatedVars[name] = struct{}{}
+	}
 }

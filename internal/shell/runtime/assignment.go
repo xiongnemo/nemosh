@@ -2,20 +2,13 @@ package runtime
 
 import (
 	"context"
-	"fmt"
-	"os"
+	"maps"
 	"strings"
 )
 
 type assignment struct {
 	name  string
 	value string
-}
-
-type envRestore struct {
-	name    string
-	value   string
-	present bool
 }
 
 func leadingAssignments(args []string) ([]assignment, []string) {
@@ -47,6 +40,12 @@ func (r Runtime) runCommandWithLeadingAssignments(ctx context.Context, args []st
 	if len(assignments) == 0 {
 		return r.runCommandWithRedirects(ctx, commandArgs)
 	}
+	if isSpecialBuiltin(commandArgs[0]) {
+		if status := r.assignVars(assignments); status != 0 {
+			return status
+		}
+		return r.runCommandWithRedirects(ctx, commandArgs)
+	}
 	return r.runCommandWithTemporaryAssignments(ctx, commandArgs, assignments)
 }
 
@@ -55,60 +54,41 @@ func (r Runtime) runCommandWithTemporaryAssignments(ctx context.Context, args []
 	if commandRuntime == nil {
 		return 1
 	}
-	restore, status := r.applyTemporaryEnvironment(assignments)
-	if status != 0 {
-		return status
-	}
-	commandStatus := commandRuntime.runCommandWithRedirects(ctx, args)
-	if err := restore(); err != nil && commandStatus == 0 {
-		fmt.Fprintf(r.streams.Stderr, "assignment: %v\n", err)
-		return 1
-	}
-	return commandStatus
+	status := commandRuntime.runCommandWithRedirects(ctx, args)
+	r.mergeBuiltinMutations(*commandRuntime)
+	return status
 }
 
 func (r Runtime) withLocalAssignments(assignments []assignment) *Runtime {
 	commandRuntime := r
 	commandRuntime.vars = make(map[string]string, len(r.vars)+len(assignments))
-	for name, value := range r.vars {
-		commandRuntime.vars[name] = value
-	}
+	commandRuntime.env = r.env.clone()
+	maps.Copy(commandRuntime.vars, r.vars)
 	for _, assignment := range assignments {
 		if status := commandRuntime.assignVar(assignment.name, assignment.value); status != 0 {
 			return nil
 		}
+		commandRuntime.env.Set(assignment.name, assignment.value)
 	}
+	commandRuntime.mutatedVars = make(map[string]struct{})
 	return &commandRuntime
 }
 
-func (r Runtime) applyTemporaryEnvironment(assignments []assignment) (func() error, int) {
-	restores := make([]envRestore, 0, len(assignments))
-	for _, assignment := range assignments {
-		value, present := os.LookupEnv(assignment.name)
-		restores = append(restores, envRestore{name: assignment.name, value: value, present: present})
-		if err := os.Setenv(assignment.name, assignment.value); err != nil {
-			if restoreErr := restoreEnvironment(restores); restoreErr != nil {
-				fmt.Fprintf(r.streams.Stderr, "assignment: %v\n", restoreErr)
-			}
-			fmt.Fprintf(r.streams.Stderr, "assignment: %s: %v\n", assignment.name, err)
-			return func() error { return nil }, 1
+func (r Runtime) mergeBuiltinMutations(commandRuntime Runtime) {
+	for name := range commandRuntime.mutatedVars {
+		value, exists := commandRuntime.vars[name]
+		if exists {
+			r.vars[name] = value
+		} else {
+			delete(r.vars, name)
+		}
+		if value, exported := commandRuntime.env.LookupEnv(name); exported {
+			r.env.Set(name, value)
+		} else {
+			r.env.Unset(name)
+		}
+		if commandRuntime.isReadonly(name) {
+			r.readonly[name] = struct{}{}
 		}
 	}
-	return func() error { return restoreEnvironment(restores) }, 0
-}
-
-func restoreEnvironment(restores []envRestore) error {
-	for i := len(restores) - 1; i >= 0; i-- {
-		restore := restores[i]
-		if restore.present {
-			if err := os.Setenv(restore.name, restore.value); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := os.Unsetenv(restore.name); err != nil {
-			return err
-		}
-	}
-	return nil
 }

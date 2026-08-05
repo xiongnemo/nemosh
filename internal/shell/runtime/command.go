@@ -12,7 +12,7 @@ func (r Runtime) command(ctx context.Context, args []string) int {
 	if args[0] == "-v" {
 		return r.commandV(args[1:])
 	}
-	return r.runCommand(ctx, args)
+	return r.runCommandResolved(ctx, args, false)
 }
 
 func (r Runtime) commandV(args []string) int {
@@ -31,13 +31,27 @@ func (r Runtime) isKnownCommand(name string) bool {
 	if isRuntimeBuiltin(name) {
 		return true
 	}
+	if parsed, ok := newFunctionName(name); ok {
+		if _, found := r.functions[parsed]; found {
+			return true
+		}
+	}
 	_, ok := r.registry.Lookup(name)
 	return ok
 }
 
 func isRuntimeBuiltin(name string) bool {
 	switch name {
-	case ".", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "pwd", "read", "readonly", "set", "shift", "trap", "umask", "unset", "wait":
+	case ".", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "pwd", "read", "readonly", "set", "shift", "source", "trap", "umask", "unset", "wait":
+		return true
+	default:
+		return false
+	}
+}
+
+func isSpecialBuiltin(name string) bool {
+	switch name {
+	case ".", "break", "continue", "eval", "exec", "exit", "export", "readonly", "return", "set", "shift", "source", "trap", "unset":
 		return true
 	default:
 		return false

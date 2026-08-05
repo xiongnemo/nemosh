@@ -26,7 +26,22 @@ func (r Runtime) runPipeline(ctx context.Context, args []string) int {
 		if !last {
 			streams.Stdout = &output
 		}
-		status = (Runtime{registry: r.registry, streams: streams, vars: r.vars, traps: r.traps, params: r.params, options: r.options, readonly: r.readonly, mask: r.mask, sourceDepth: r.sourceDepth}).runCommandWithLeadingAssignments(ctx, command)
+		stage, err := r.snapshot(ctx)
+		if err != nil {
+			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			return 1
+		}
+		stage, err = stage.withStreams(streams)
+		if err != nil {
+			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			return 1
+		}
+		status = stage.runCommandWithLeadingAssignments(ctx, command)
+		stage.jobScope.cancelAndDrain()
+		if err := stage.fds.closeAll(); err != nil && status == 0 {
+			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			return 1
+		}
 		if status != 0 {
 			pipefailStatus = status
 		}

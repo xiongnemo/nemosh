@@ -1,0 +1,87 @@
+package runtime
+
+import (
+	"fmt"
+	"strings"
+)
+
+func parseFunctionDefinition(line string, budget *parseBudget, depth int) (functionDefinition, bool, error) {
+	nameEnd := strings.IndexByte(line, '(')
+	if nameEnd < 0 {
+		return functionDefinition{}, false, nil
+	}
+	rawName := strings.TrimSpace(line[:nameEnd])
+	name, ok := newFunctionName(rawName)
+	if !ok {
+		return functionDefinition{}, false, nil
+	}
+	index := nameEnd + 1
+	for index < len(line) && (line[index] == ' ' || line[index] == '\t') {
+		index++
+	}
+	if index >= len(line) || line[index] != ')' {
+		return functionDefinition{}, true, fmt.Errorf("%w: missing ) in function definition", ErrIncompleteScript)
+	}
+	remainder := strings.TrimSpace(line[index+1:])
+	if remainder == "" {
+		return functionDefinition{}, true, fmt.Errorf("%w: missing function body", ErrIncompleteScript)
+	}
+	body, err := parseFunctionBody(remainder, budget, depth)
+	if err != nil {
+		return functionDefinition{}, true, err
+	}
+	return functionDefinition{name: name, body: body}, true, nil
+}
+
+func standaloneFunctionHeader(line string) bool {
+	rawName, remainder, found := strings.Cut(line, "(")
+	if !found {
+		return false
+	}
+	if _, ok := newFunctionName(strings.TrimSpace(rawName)); !ok {
+		return false
+	}
+	return strings.TrimSpace(remainder) == ")"
+}
+
+func newFunctionName(value string) (functionName, bool) {
+	if value == "" || !isPortableNameStart(value[0]) {
+		return functionName{}, false
+	}
+	for index := 1; index < len(value); index++ {
+		if !isNameByte(value[index]) {
+			return functionName{}, false
+		}
+	}
+	return functionName{value: value}, true
+}
+
+func isPortableNameStart(value byte) bool {
+	return value == '_' || 'a' <= value && value <= 'z' || 'A' <= value && value <= 'Z'
+}
+
+func parseFunctionBody(source string, budget *parseBudget, depth int) (commandNode, error) {
+	masked, groups, err := extractGroupCommands(source, budget, depth+1)
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := scanExtractedGroups(masked, groups, budget, depth+1)
+	if err != nil {
+		return nil, err
+	}
+	if len(tokens) > 0 && isAndOrOperator(tokens[len(tokens)-1].kind) {
+		return nil, fmt.Errorf("%w: missing command after %s", ErrIncompleteScript, tokens[len(tokens)-1].value)
+	}
+	command, redirects, err := parseRedirectsWithBudget(tokens, budget)
+	if err != nil {
+		return nil, classifyCommandError(err)
+	}
+	if len(command) != 1 {
+		return nil, fmt.Errorf("syntax error: function body must be a compound command")
+	}
+	group := command[0].group
+	if group == nil {
+		return nil, fmt.Errorf("syntax error: function body must be a compound command")
+	}
+	return group.withRedirects(redirects), nil
+}

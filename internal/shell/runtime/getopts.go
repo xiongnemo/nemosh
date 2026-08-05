@@ -35,6 +35,7 @@ func (r Runtime) getopts(args []string) int {
 		index += 2
 	} else {
 		delete(r.vars, "OPTARG")
+		r.markVarMutation("OPTARG")
 		index++
 	}
 	if status := r.assignVar(name, option); status != 0 {

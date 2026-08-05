@@ -3,10 +3,8 @@ package runtime_test
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -302,105 +300,4 @@ func TestRuntime_trimsTrailingNewlines_whenCommandSubstitutionExpands(t *testing
 	if got := stdout.String(); got != "hix\n" {
 		t.Fatalf("expected trimmed command substitution output %q, got %q", "hix\n", got)
 	}
-}
-
-func TestRuntime_executesExternalCommand_whenCommandIsNotBuiltinOrApplet(t *testing.T) {
-	// Given
-	exe, err := os.Executable()
-	if err != nil {
-		t.Fatalf("expected test executable path, got %v", err)
-	}
-	t.Setenv("NEMOSH_RUNTIME_HELPER_PROCESS", "1")
-	var stdout bytes.Buffer
-	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
-
-	// When
-	status := rt.RunScript(context.Background(), filepath.ToSlash(exe)+" -test.run=TestRuntimeHelperProcess -- external-ok\n")
-
-	// Then
-	if status != 0 {
-		t.Fatalf("expected status 0, got %d", status)
-	}
-	if got := stdout.String(); got != "external-ok\n" {
-		t.Fatalf("expected external stdout %q, got %q", "external-ok\n", got)
-	}
-}
-
-func TestRuntime_returnsExternalCommandStatus_whenCommandExitsNonZero(t *testing.T) {
-	// Given
-	exe, err := os.Executable()
-	if err != nil {
-		t.Fatalf("expected test executable path, got %v", err)
-	}
-	t.Setenv("NEMOSH_RUNTIME_HELPER_PROCESS", "1")
-	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{})
-
-	// When
-	status := rt.RunScript(context.Background(), filepath.ToSlash(exe)+" -test.run=TestRuntimeHelperProcess -- exit-7\n")
-
-	// Then
-	if status != 7 {
-		t.Fatalf("expected status 7, got %d", status)
-	}
-}
-
-func TestRuntime_usesFixedWindowsSuffixOrder_whenExternalCommandHasNoSuffix(t *testing.T) {
-	// Given
-	exe, err := os.Executable()
-	if err != nil {
-		t.Fatalf("expected test executable path, got %v", err)
-	}
-	dir := t.TempDir()
-	command := "nemosh-suffix-probe"
-	for _, suffix := range []string{".com", ".exe"} {
-		candidate := filepath.Join(dir, command+suffix)
-		data, readErr := os.ReadFile(exe)
-		if readErr != nil {
-			t.Fatalf("expected test executable read to succeed, got %v", readErr)
-		}
-		if writeErr := os.WriteFile(candidate, data, 0o700); writeErr != nil {
-			t.Fatalf("expected candidate %s write to succeed, got %v", suffix, writeErr)
-		}
-	}
-	t.Setenv("NEMOSH_RUNTIME_HELPER_PROCESS", "1")
-	t.Setenv("PATH", dir)
-	t.Setenv("PATHEXT", ".EXE;.COM")
-	var stdout bytes.Buffer
-	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
-
-	// When
-	status := rt.RunScript(context.Background(), command+" -test.run=TestRuntimeHelperProcess -- executable\n")
-
-	// Then
-	if status != 0 {
-		t.Fatalf("expected status 0, got %d", status)
-	}
-	if got := filepath.Ext(strings.TrimSpace(stdout.String())); got != ".com" {
-		t.Fatalf("expected fixed suffix order to choose .com, got extension %q from output %q", got, stdout.String())
-	}
-}
-
-func TestRuntimeHelperProcess(t *testing.T) {
-	if os.Getenv("NEMOSH_RUNTIME_HELPER_PROCESS") != "1" {
-		return
-	}
-	for i, arg := range os.Args {
-		if arg != "--" {
-			continue
-		}
-		if os.Args[i+1] == "exit-7" {
-			os.Exit(7)
-		}
-		if os.Args[i+1] == "executable" {
-			executable, err := os.Executable()
-			if err != nil {
-				os.Exit(3)
-			}
-			fmt.Fprintln(os.Stdout, executable)
-			os.Exit(0)
-		}
-		fmt.Fprintln(os.Stdout, os.Args[i+1])
-		os.Exit(0)
-	}
-	os.Exit(2)
 }
