@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 func TestRun_returnsNil_whenDispatchingTrueApplet(t *testing.T) {
@@ -20,6 +23,41 @@ func TestRun_returnsNil_whenDispatchingTrueApplet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected true applet to succeed, got %v", err)
 	}
+}
+
+func TestRun_rejectsOversizedStdinBeforeReadingUnboundedInput(t *testing.T) {
+	// Given
+	limit := parserInputLimit(t)
+	var stderr bytes.Buffer
+	cmd := command{stdin: io.LimitReader(strings.NewReader(strings.Repeat("x", limit+1)), int64(limit+1)), stdout: &bytes.Buffer{}, stderr: &stderr}
+
+	// When
+	err := cmd.run(context.Background(), []string{"nemosh"})
+
+	// Then
+	if status := interactiveStatus(t, err); status != 2 {
+		t.Fatalf("status = %d, want 2", status)
+	}
+	if !strings.Contains(stderr.String(), "input too large") {
+		t.Fatalf("stderr = %q, want input-too-large diagnostic", stderr.String())
+	}
+}
+
+func parserInputLimit(t *testing.T) int {
+	t.Helper()
+	low, high := 0, 1
+	for runtime.InputSizeAllowed(high) {
+		low, high = high, high*2
+	}
+	for low+1 < high {
+		middle := low + (high-low)/2
+		if runtime.InputSizeAllowed(middle) {
+			low = middle
+		} else {
+			high = middle
+		}
+	}
+	return low
 }
 
 func TestRun_returnsFalseSentinel_whenDispatchingFalseApplet(t *testing.T) {
@@ -97,7 +135,12 @@ func TestRun_writesWindowsPathOutput_whenDispatchingWinpathApplet(t *testing.T) 
 func TestRun_executesScript_whenCommandFlagProvided(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer
-	cmd := command{stdin: &bytes.Buffer{}, stdout: &stdout, stderr: &bytes.Buffer{}}
+	cmd := command{
+		stdin:           &bytes.Buffer{},
+		stdout:          &stdout,
+		stderr:          &bytes.Buffer{},
+		stdinIsTerminal: true,
+	}
 
 	// When
 	err := cmd.run(context.Background(), []string{"nemosh", "-c", "echo hi"})
@@ -128,19 +171,76 @@ func TestRun_executesStdinScript_whenNoAppletProvided(t *testing.T) {
 	}
 }
 
-func TestRun_executesInteractiveInput_whenInteractiveFlagProvided(t *testing.T) {
+func TestRun_entersInteractiveMode_whenNoArgumentsAndStdinIsTerminal(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer
-	cmd := command{stdin: bytes.NewBufferString("echo interactive\nexit 0\n"), stdout: &stdout, stderr: &bytes.Buffer{}}
+	var stderr bytes.Buffer
+	cmd := command{
+		stdin:           bytes.NewBufferString("exit 0\n"),
+		stdout:          &stdout,
+		stderr:          &stderr,
+		stdinIsTerminal: true,
+	}
+
+	// When
+	err := cmd.run(context.Background(), []string{"nemosh"})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected no-argument terminal invocation to exit cleanly, got %v", err)
+	}
+	if got := stdout.String(); got != "" {
+		t.Fatalf("expected no stdout, got %q", got)
+	}
+	if got := stderr.String(); !strings.HasPrefix(got, "# ") || !strings.HasSuffix(got, "\n"+promptSymbol()+" ") {
+		t.Fatalf("expected informative default prompt, got %q", got)
+	}
+}
+
+func TestRun_keepsBatchMode_whenNoArgumentsAndStdinIsRedirected(t *testing.T) {
+	// Given
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd := command{
+		stdin:           bytes.NewBufferString("echo redirected\n"),
+		stdout:          &stdout,
+		stderr:          &stderr,
+		stdinIsTerminal: false,
+	}
+
+	// When
+	err := cmd.run(context.Background(), []string{"nemosh"})
+
+	// Then
+	if err != nil {
+		t.Fatalf("expected redirected script to succeed, got %v", err)
+	}
+	if got := stdout.String(); got != "redirected\n" {
+		t.Fatalf("expected batch output %q, got %q", "redirected\n", got)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("expected no prompt on redirected stdin, got %q", got)
+	}
+}
+
+func TestRun_forcesInteractiveMode_whenFlagProvidedAndStdinIsRedirected(t *testing.T) {
+	// Given
+	var stderr bytes.Buffer
+	cmd := command{
+		stdin:           bytes.NewBufferString("exit 0\n"),
+		stdout:          &bytes.Buffer{},
+		stderr:          &stderr,
+		stdinIsTerminal: false,
+	}
 
 	// When
 	err := cmd.run(context.Background(), []string{"nemosh", "-i"})
 
 	// Then
 	if err != nil {
-		t.Fatalf("expected interactive input to succeed, got %v", err)
+		t.Fatalf("expected -i to force interactive mode, got %v", err)
 	}
-	if got := stdout.String(); got != "$ interactive\n$ " {
-		t.Fatalf("expected REPL transcript %q, got %q", "$ interactive\n$ ", got)
+	if got := stderr.String(); !strings.HasPrefix(got, "# ") || !strings.HasSuffix(got, "\n"+promptSymbol()+" ") {
+		t.Fatalf("expected informative default prompt, got %q", got)
 	}
 }
