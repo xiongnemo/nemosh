@@ -144,10 +144,22 @@ commands and waiting without promising full POSIX terminal job control:
 Trap/signal support should be useful but honest on Windows:
 
 - Implement `trap ... EXIT`.
-- Map console Ctrl-C to shell-level `INT` where possible.
-- Support `TERM` for Nemosh-managed child termination paths where meaningful.
-- Report unsupported signal names clearly rather than pretending POSIX signal
-  semantics exist for all native Windows processes.
+- Map console Ctrl-C to shell-level `INT` for the current Nemosh foreground
+  execution or `wait`, then create a fresh context for the next interactive entry.
+- Go on Windows cannot direct `os.Interrupt` to one child or process group.
+  Foreground external cancellation therefore uses `exec.CommandContext` process
+  termination after the shell context is canceled; it is not targeted Ctrl-C.
+- Windows `CTRL_BREAK_EVENT` can target an isolated process group. On the tested
+  Windows/Go toolchain it reaches Go's `os.Interrupt` notification channel.
+  Automated acceptance uses this only as a production `signal.Notify` boundary
+  test; it is not a promise of POSIX SIGINT delivery to one external child.
+- Ctrl-C while Nemosh is idle in prompt/input reading is not a P0.4 guarantee;
+  active foreground execution and `wait` are the supported interruption points.
+- P0.4 supports exactly `EXIT` and `INT` traps. It does not promise `TERM`, POSIX
+  signal delivery, process groups, Job Objects, or ConPTY terminal job control.
+- Shell close seals new root-job launches but does not implicitly wait for, cancel,
+  or kill existing root jobs. Process exit still ends in-process job supervision,
+  so post-process-exit survival is not promised.
 
 ## Fd Table And Shell State
 

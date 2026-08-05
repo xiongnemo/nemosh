@@ -32,8 +32,10 @@ help later design work answer four questions:
    and design pass.
 9. `research-findings.md` records facts already verified in the first research
    pass and near-term follow-up tasks.
-10. `open-questions.md` records decisions that should wait until after the
-   research phase.
+10. `autocomplete-feasibility.md` evaluates post-v0 autocomplete prerequisites,
+    architecture, Windows constraints, editor options, and staged experiments.
+11. `open-questions.md` records decisions that should wait until after the
+    research phase.
 
 ## Research Workspace Convention
 
@@ -67,6 +69,8 @@ it to `open-questions.md` or create a small experiment for it.
 ## Design Drafts
 
 - `../design/v0-scope.md` records the current implementation scope for v0.
+- `../design/v0-readiness.md` maps that authoritative scope to current
+  implementation and test evidence, blockers, and ordered acceptance waves.
 - `../design/pre-implementation-plan.md` records the checklist and milestones to
   complete before production Go runtime code starts.
 - `../design/windows-path-model.md` records the current Windows path model draft.

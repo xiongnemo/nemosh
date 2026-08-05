@@ -36,7 +36,7 @@ No applet should be marked done without at least Smoke and Negative tests.
 | `cat` | POSIX | stdin, one file, multiple files, missing file, binary data, `/dev/null`. |
 | `head` | POSIX/common | default 10 lines, `-n`, stdin, short files, missing file. |
 | `tail` | POSIX/common | default 10 lines, `-n`, stdin, short files, follow deferred unless implemented. |
-| `wc` | POSIX | `-l`, `-w`, `-c`, stdin and files, multibyte policy documented. |
+| `wc` | POSIX | `-l`, `-w`, `-c`, stdin and files, [multibyte policy](#wc-multibyte-policy). |
 | `basename` | POSIX | simple paths, trailing slashes, suffix removal. |
 | `dirname` | POSIX | simple paths, root paths, no-slash paths, Windows forward paths. |
 | `ls` | POSIX/BusyBox + Windows | files/dirs, `-a`, `-l` if supported, Unicode names, case-aware glob inputs, UNC share root. |
@@ -44,6 +44,12 @@ No applet should be marked done without at least Smoke and Negative tests.
 | `rmdir` | POSIX | remove empty dir, non-empty failure, missing dir. |
 | `rm` | POSIX/common | remove file, `-r`, `-f`, missing path, readonly/ACL behavior documented. |
 | `touch` | POSIX | create file, update mtime, `-c`, path aliases, permission failure. |
+
+### `wc` Multibyte Policy
+
+- `wc -c` counts raw input bytes, not Unicode code points.
+- `wc -w` incrementally decodes UTF-8 and counts maximal runs of non-whitespace Unicode code points, using Unicode whitespace classification. Input chunk boundaries do not affect line, word, or byte counts.
+- Invalid UTF-8 consumes one input byte as a replacement rune. That byte contributes to `-c`, and the replacement rune is non-whitespace for `-w`.
 
 ## Milestone C: Core Mutation/Search Applets
 

@@ -21,14 +21,14 @@ dash and BusyBox ash where possible.
 | `shell.posix.command-substitution.basic` | `$(...)` captures stdout and strips trailing newlines per POSIX rules. | Include quoted and unquoted use. |
 | `shell.posix.redirection.output` | `>` creates/truncates and redirects stdout. | File effect expected. |
 | `shell.posix.redirection.input` | `<` feeds stdin to a command. | Use `cat` or builtin test helper. |
-| `shell.posix.redirection.dup` | `2>&1` duplicates stderr to stdout. | Requires fd table. |
+| `shell.posix.redirection.dup` | `2>&1` duplicates stderr to stdout. | FD table implemented; add the corpus case. |
 | `shell.posix.heredoc.quoted` | Quoted here-doc delimiters suppress expansion. | Already covered by smoke probe. |
 | `shell.posix.pipeline.status` | Pipeline status is the last command by default. | `false | true` returns 0. |
 | `shell.posix.pipeline.pipefail` | `set -o pipefail` changes status as Nemosh extension. | Tag as `nemosh`, not strict POSIX. |
 | `shell.posix.and-or` | `&&` and `||` short-circuit. | From existing smoke. |
 | `shell.posix.subshell.isolation` | `( x=inner )` does not mutate parent `x`. | Uses state snapshot. |
 | `shell.posix.loop.while-read` | `while IFS= read -r line` handles pipeline input. | Tests read, pipeline, loop. |
-| `shell.posix.special-builtins.export` | `export` marks variables for child environment. | Add child env probe. |
+| `shell.posix.special-builtins.export` | `export` marks variables for child environment. | Runtime and native-child probes exist; add the corpus case. |
 | `shell.posix.special-builtins.readonly` | readonly variables reject reassignment. | Include error status. |
 | `shell.posix.trap.exit` | `trap '...' EXIT` runs on shell exit. | Windows-supported v0 trap. |
 
@@ -78,6 +78,6 @@ These are explicit Nemosh extensions or policy choices.
 | `dev.nemosh.random` | `/dev/random` and `/dev/urandom` produce bytes and do not block. | CSPRNG source. |
 | `dev.nemosh.zero` | `/dev/zero` produces NUL bytes. | Applet/read tests. |
 | `dev.nemosh.clipboard.text` | `/dev/clipboard` reads/writes UTF-8 text when available. | Platform-gated, may be skipped in headless CI. |
-| `dev.nemosh.fd` | `/dev/fd/N` maps to shell fd table once implemented. | Conditional gate. |
+| `dev.nemosh.fd` | `/dev/fd/N` maps to the shell fd table. | Runtime coverage exists; add the corpus case. |
 | `diag.nemosh.posix-first-hint` | Errors show POSIX-style first line and optional hint. | Debug details behind flag. |
 | `net.nemosh.shares-applet` | `shares //host` enumerates shares if extension is enabled. | Post-v0 or optional applet. |

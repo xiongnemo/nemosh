@@ -45,6 +45,16 @@ references = ["posix", "busybox-ash", "dash", "bash-posix"]
 script = '''
 echo ok
 '''
+stdin = ""
+cwd = "work"
+requires = []
+
+[env]
+EXAMPLE = "value"
+EMPTY = ""
+
+[files]
+"work/input.txt" = "fixture contents\n"
 
 [expect]
 status = 0
@@ -65,9 +75,11 @@ Required:
 - `kind`: `golden`, `differential`, `probe`, or `xfail`.
 - `semantics`: `posix`, `busybox-w32`, `nemosh`, or `platform`.
 - `platforms`: allowed platforms.
-- `script` or `command`.
+- Exactly one of `script` or `command`. `command` is an array whose first item
+  is an applet name; `script` is passed to a freshly built `nemosh -c` process.
 - `expect.status`.
-- `expect.stdout` and `expect.stderr`, unless intentionally unspecified.
+- `expect.stdout` and `expect.stderr`. All three expectation fields must be
+  present, including when their values are zero or empty.
 
 Optional:
 
@@ -77,8 +89,25 @@ Optional:
 - `files`: input fixture files to create.
 - `env`: environment variables for the case.
 - `cwd`: initial cwd.
+- `stdin`: exact standard input, defaulting to empty.
 - `known_differences`: reference-specific notes.
 - `standard`: POSIX section or reference source.
+
+Unknown fields are errors. `cwd` and every `files` key must be a non-empty,
+safe relative path: absolute paths, volume-qualified paths, and paths that
+escape through `..` are rejected. Fixture files and `cwd` are prepared under a
+new temporary root for each script case. The parent process cwd and environment
+are never changed.
+
+Script subprocesses receive only the variables listed in `env`; values are
+passed exactly, including explicit empty values. This makes the environment
+deterministic instead of inheriting the developer or CI environment.
+
+Platform and requirement gates are evaluated before sandbox setup. A platform
+that does not match the host, or a requirement the harness does not support,
+produces an explicit skip. A completed process reports status, stdout, and
+stderr. Failure to prepare or launch the case is a harness error, never a
+synthetic shell status code.
 
 ## Test Semantics Tags
 
