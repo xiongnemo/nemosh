@@ -6,7 +6,16 @@ import (
 )
 
 type parameters struct {
+	name   string
 	values []string
+}
+
+// SetArguments seeds $0 and the positional parameters. POSIX gives the name and
+// the arguments separate lives: set -- and a function call replace $1... while
+// $0 keeps naming the script for the whole run.
+func (r Runtime) SetArguments(name string, positional []string) {
+	r.params.name = name
+	r.params.values = append(r.params.values[:0], positional...)
 }
 
 func (r Runtime) set(args []string) int {
