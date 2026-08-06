@@ -13,25 +13,46 @@ import (
 //
 // The shell prints "<applet>: <error>", so none of these carry the applet name.
 //
-// busybox uses two shapes and is not consistent about which, so neither are we:
-// applets that open through open_or_warn (libbb/xfuncs_printf.c:169) say
-// "can't open '<operand>'", and applets that go through fopen_or_warn ->
-// bb_simple_perror_msg (libbb/wfopen.c:11) say only "<operand>".
+// busybox uses three shapes and is not consistent about which, so neither are
+// we. Quoted behind a verb: open_or_warn (libbb/xfuncs_printf.c:169),
+// remove_file (libbb/remove_file.c:23), bb_make_directory
+// (libbb/make_directory.c:150). Quoted with no verb: rmdir, which says its
+// format matches GNU's (coreutils/rmdir.c:78). Bare: everything reaching
+// bb_simple_perror_msg, such as fopen_or_warn (libbb/wfopen.c:11), touch
+// (coreutils/touch.c:188), chmod (coreutils/chmod.c:102) and the recursive walk
+// find is built on (libbb/recursive_action.c:158).
 
-type openError struct {
+type quotedError struct {
+	action  string
 	operand string
 	err     error
 }
 
 func cannotOpen(operand string, err error) error {
-	return openError{operand: operand, err: err}
+	return quotedError{action: "open", operand: operand, err: err}
 }
 
-func (e openError) Error() string {
-	return fmt.Sprintf("can't open '%s': %s", e.operand, causeText(e.err))
+func cannotRemove(operand string, err error) error {
+	return quotedError{action: "remove", operand: operand, err: err}
 }
 
-func (e openError) Unwrap() error { return e.err }
+func cannotCreateDirectory(operand string, err error) error {
+	return quotedError{action: "create directory", operand: operand, err: err}
+}
+
+// quotedFailure is the verbless form GNU rmdir uses.
+func quotedFailure(operand string, err error) error {
+	return quotedError{operand: operand, err: err}
+}
+
+func (e quotedError) Error() string {
+	if e.action == "" {
+		return fmt.Sprintf("'%s': %s", e.operand, causeText(e.err))
+	}
+	return fmt.Sprintf("can't %s '%s': %s", e.action, e.operand, causeText(e.err))
+}
+
+func (e quotedError) Unwrap() error { return e.err }
 
 type operandError struct {
 	operand string
@@ -52,6 +73,9 @@ func (e operandError) Unwrap() error { return e.err }
 // *fs.PathError rather than printing it, because its own Error() repeats the
 // host path this whole file exists to keep out of diagnostics.
 func causeText(err error) string {
+	if text, ok := platformCauseText(err); ok {
+		return text
+	}
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return "No such file or directory"

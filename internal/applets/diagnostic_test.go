@@ -53,6 +53,102 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheFileIsMissing(t *testi
 	}
 }
 
+// The mutating applets leak the same way the readers did. busybox spells each of
+// these differently -- quoted behind a verb, quoted bare, or unquoted -- so we
+// follow it applet by applet instead of inventing one uniform message.
+func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheOperationFails(t *testing.T) {
+	tests := []struct {
+		name   string
+		setup  func(t *testing.T, dir string)
+		applet string
+		args   []string
+		want   string
+	}{
+		{
+			name:   "rm on a missing file", // libbb/remove_file.c:23
+			applet: "rm", args: []string{"nope.txt"},
+			want: "can't remove 'nope.txt': No such file or directory",
+		},
+		{
+			name:   "mkdir over an existing directory", // libbb/make_directory.c:150
+			setup:  func(t *testing.T, dir string) { makeFixtureDir(t, dir, "taken") },
+			applet: "mkdir", args: []string{"taken"},
+			want: "can't create directory 'taken': File exists",
+		},
+		{
+			name:   "rmdir on a missing directory", // coreutils/rmdir.c:78, "Match gnu rmdir msg"
+			applet: "rmdir", args: []string{"nope"},
+			want: "'nope': No such file or directory",
+		},
+		{
+			// Go folds ERROR_DIR_NOT_EMPTY into fs.ErrExist, so the portable
+			// sentinels alone would call this "File exists".
+			name: "rmdir on a directory that still has children",
+			setup: func(t *testing.T, dir string) {
+				makeFixtureDir(t, dir, "full")
+				makeFixtureFile(t, dir, filepath.Join("full", "child.txt"))
+			},
+			applet: "rmdir", args: []string{"full"},
+			want: "'full': Directory not empty",
+		},
+		{
+			name:   "touch below a missing directory", // coreutils/touch.c:188
+			applet: "touch", args: []string{"nope/x.txt"},
+			want: "nope/x.txt: No such file or directory",
+		},
+		{
+			name:   "chmod on a missing file", // coreutils/chmod.c:102
+			applet: "chmod", args: []string{"644", "nope.txt"},
+			want: "nope.txt: No such file or directory",
+		},
+		{
+			name:   "find on a missing root", // libbb/recursive_action.c:158
+			applet: "find", args: []string{"nope"},
+			want: "nope: No such file or directory",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Given
+			dir := t.TempDir()
+			if tt.setup != nil {
+				tt.setup(t, dir)
+			}
+			applet, ok := applets.DefaultRegistry.Lookup(tt.applet)
+			if !ok {
+				t.Fatalf("expected %s applet to be registered", tt.applet)
+			}
+			ctx := applets.WithProcessView(context.Background(), diagnosticTestView{cwd: dir})
+			var stdout, stderr bytes.Buffer
+
+			// When
+			err := applet.Run(ctx, tt.args, &bytes.Buffer{}, &stdout, &stderr)
+
+			// Then
+			if err == nil {
+				t.Fatalf("expected %s %v to fail", tt.applet, tt.args)
+			}
+			if got := err.Error(); got != tt.want {
+				t.Fatalf("expected %s diagnostic %q, got %q", tt.applet, tt.want, got)
+			}
+		})
+	}
+}
+
+func makeFixtureDir(t *testing.T, dir, name string) {
+	t.Helper()
+	if err := os.Mkdir(filepath.Join(dir, name), 0o700); err != nil {
+		t.Fatalf("expected fixture directory %s to be created, got %v", name, err)
+	}
+}
+
+func makeFixtureFile(t *testing.T, dir, name string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("x\n"), 0o600); err != nil {
+		t.Fatalf("expected fixture file %s to be created, got %v", name, err)
+	}
+}
+
 // The operand is echoed verbatim, so a relative operand stays relative. This is
 // what makes a diagnostic reproducible: the resolved host path names a machine.
 func TestAppletDiagnostics_keepARelativeOperandRelative(t *testing.T) {

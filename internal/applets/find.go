@@ -29,19 +29,28 @@ func newFindApplet() Applet {
 }
 
 func walkFindPath(stdout io.Writer, displayRoot, hostRoot string) error {
-	return filepath.WalkDir(hostRoot, func(path string, _ fs.DirEntry, err error) error {
+	return filepath.WalkDir(hostRoot, func(path string, _ fs.DirEntry, walkErr error) error {
+		display, err := findDisplayPath(displayRoot, hostRoot, path)
 		if err != nil {
 			return err
 		}
-		relative, relErr := filepath.Rel(hostRoot, path)
-		if relErr != nil {
-			return relErr
+		// An unreadable entry is reported against the name the walk was asked
+		// for, not the host path the walk happens to be standing on.
+		if walkErr != nil {
+			return operandFailure(display, walkErr)
 		}
-		display := displayRoot
-		if relative != "." {
-			display = filepath.Join(displayRoot, relative)
-		}
-		_, printErr := fmt.Fprintln(stdout, filepath.ToSlash(display))
+		_, printErr := fmt.Fprintln(stdout, display)
 		return printErr
 	})
+}
+
+func findDisplayPath(displayRoot, hostRoot, path string) (string, error) {
+	relative, err := filepath.Rel(hostRoot, path)
+	if err != nil {
+		return "", err
+	}
+	if relative == "." {
+		return filepath.ToSlash(displayRoot), nil
+	}
+	return filepath.ToSlash(filepath.Join(displayRoot, relative)), nil
 }
