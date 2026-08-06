@@ -1,0 +1,22 @@
+id = "shell.windows.launch.shebang-applet-interpreter"
+area = "shell"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32"]
+
+script = '''
+./show
+'''
+
+[files]
+"show" = "#!/bin/cat\nhello from the script\n"
+
+[expect]
+status = 0
+stdout = "#!/bin/cat\nhello from the script\n"
+stderr = ""
+
+[notes]
+standard = "Shebang interpreter dispatch as implemented by busybox-w32"
+why = "The file has no suffix at all, so it is only findable once lookup sniffs #! the way add_win32_extension does. busybox then maps an interpreter under /bin, /usr/bin, /sbin or /usr/sbin to an applet of the same name (win32/process.c:325 with unix_path at win32/mingw.c:2569), and hands it the absolute script path. Here that means the cat applet prints the script, shebang line included, which is exactly what /bin/cat would do on Linux."
