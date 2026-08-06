@@ -342,6 +342,39 @@ paths such as `//host/share/...`. When Windows APIs require an extended-length o
 NT-style prefix, Nemosh should add it at the platform boundary rather than
 exposing `\\?\` syntax as the normal shell path form.
 
+As implemented, most of that comes for free. Nemosh's cwd is a value in
+`pathState` rather than the process's own, so it is not bound by
+`SetCurrentDirectory`'s MAX_PATH — which is exactly what stops busybox-w32 from
+reaching a directory this deep at all (`win32/mingw.c:1703`). Everything past
+the shell goes through Go's `os` package, which applies the extended-length
+prefix itself, so applets, redirection, and `cd`/`pwd` all work well past
+MAX_PATH without Nemosh writing a prefix anywhere.
+
+One Win32 boundary the prefix cannot widen is a child process's working
+directory. `CreateProcess` takes `lpCurrentDirectory` as an ordinary MAX_PATH
+buffer; measured on Windows 10 19045, 258 characters launch and 259 fails with
+`The directory name is invalid`, and prefixing the directory with `\\?\` fails
+identically. The one spelling it does accept past that point is the 8.3 short
+name, so a directory over the limit is retried as its short form and only then
+given up on, with a diagnostic naming the length rather than Windows' opaque
+message. 8.3 generation can be disabled per volume, and that case is what the
+diagnostic is for. The short name is queried with the extended-length prefix,
+because the query is itself MAX_PATH-bound without it, and the prefix is
+stripped from the answer so the child does not inherit — and report from
+`getcwd` — a `\\?\` working directory.
+
+The limit is spent in UTF-16 code units, not in the UTF-8 bytes Nemosh holds: a
+642-byte directory of 258 CJK characters launches, so counting bytes would
+reject paths Windows accepts.
+
+As implemented: `internal/shell/runtime/external_directory.go` and
+`external_launch_windows.go`, with `long_path_windows_test.go` pinning the
+filesystem side and `external_directory_windows_test.go` the launch side.
+Non-ASCII operands are covered by
+`tests/behavior/shell/posix/utf8-non-ascii-operands.toml` for the filesystem
+round trip and `external_encoding_test.go` for argv and the child environment
+block, which is built separately from argv.
+
 ## Error Diagnostics
 
 Default errors should be concise and shell-like, with optional hints when Nemosh
