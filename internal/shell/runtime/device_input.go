@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"sync/atomic"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 type descriptionReadLease struct {
@@ -61,7 +62,7 @@ func (r Runtime) OpenProcessInput(path string) (io.ReadCloser, error) {
 		return nil, err
 	}
 	if !resolved.Device {
-		return os.Open(resolved.Native)
+		return applets.OpenHostInput(resolved.Native)
 	}
 	device := string(resolved.Canonical)
 	if source, alias, err := deviceAlias(device); err != nil {

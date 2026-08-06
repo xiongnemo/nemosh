@@ -34,7 +34,7 @@ func (cutApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return err
 		}
-		return writeCutDiagnostic(stderr, cutInputError(err))
+		return writeCutDiagnostic(stderr, inputDiagnostic("cut", err))
 	}
 	return nil
 }

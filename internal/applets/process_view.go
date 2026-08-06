@@ -2,14 +2,17 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
 )
@@ -64,7 +67,32 @@ func openProcessInput(view ProcessView, path string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return os.Open(native)
+	return OpenHostInput(native)
+}
+
+// OpenHostInput opens a resolved host path for reading. It is exported because
+// the runtime resolves device paths itself and would otherwise reach os.Open
+// directly, skipping the check below.
+//
+// Unlike POSIX open(2), Windows lets Go open a directory; the failure only
+// surfaces at the first Read, as ERROR_INVALID_FUNCTION ("Incorrect function"),
+// naming the host path. busybox-w32 reports EISDIR wherever it can tell a
+// directory apart (win32/mingw.c:316), and having opened the handle we always
+// can, so every reader refuses a directory up front and with one wording.
+func OpenHostInput(native string) (io.ReadCloser, error) {
+	file, err := os.Open(native)
+	if err != nil {
+		return nil, err
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return nil, errors.Join(err, file.Close())
+	}
+	if info.IsDir() {
+		isDir := &fs.PathError{Op: "open", Path: native, Err: syscall.EISDIR}
+		return nil, errors.Join(isDir, file.Close())
+	}
+	return file, nil
 }
 
 type contextReadCloser struct {
