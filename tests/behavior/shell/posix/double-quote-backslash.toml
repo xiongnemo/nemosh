@@ -1,0 +1,24 @@
+id = "shell.posix.quoting.double-quote-backslash"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+printf '[%s]\n' "a\Ub"
+printf '[%s]\n' "a\1b"
+printf '[%s]\n' "a\\b"
+printf '[%s]\n' "a\$b"
+printf '[%s]\n' "a\"b"
+printf '[%s]\n' "C:\Users\nemo\file.txt"
+'''
+
+[expect]
+status = 0
+stdout = "[a\\Ub]\n[a\\1b]\n[a\\b]\n[a$b]\n[a\"b]\n[C:\\Users\\nemo\\file.txt]\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.2.3 Double-Quotes"
+why = "Inside double quotes the backslash keeps its special meaning only before $, backquote, double quote, backslash, and newline; before any other character it is literal and both bytes survive. BusyBox ash implements exactly that list in case CBACK (shell/ash.c), and dash and bash --posix agree. This is also what makes the quoted Windows path form in docs/design/windows-path-model.md usable: C:\\Users\\nemo is a path, not a string carrying two escapes. Nemosh previously treated backslash as an unconditional escape inside double quotes, so that path arrived as C:Usersnemo."
