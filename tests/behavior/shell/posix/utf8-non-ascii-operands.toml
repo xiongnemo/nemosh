@@ -1,0 +1,24 @@
+id = "shell.posix.encoding.utf8-non-ascii-operands"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+
+script = '''
+cat 文件-🌏.txt
+ls
+echo 参数 🌏
+'''
+
+[files]
+"文件-🌏.txt" = "非 ASCII\n"
+
+[expect]
+status = 0
+stdout = "非 ASCII\n文件-🌏.txt\n参数 🌏\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh encoding decision, docs/design/windows-execution-model.md:328"
+why = "UTF-8 is Nemosh's script, operand, and diagnostic encoding, and a non-ASCII name has to survive the round trip through the platform's filesystem API unchanged -- on Windows that is a UTF-8 to UTF-16 conversion on the way in and back on the way out, including for a name outside the BMP such as U+1F30F. The word is spelled the same in the script source, in the operand handed to an applet, in the directory entry `ls` reads back, and on stdout. busybox-w32 does the same conversion in its own wrappers (win32/mingw.c), which is why this is filed against it as a reference rather than against POSIX, which mandates no encoding."
