@@ -182,10 +182,15 @@ Shell script input should follow busybox-w32's tolerant CRLF behavior:
 - Accept both LF and CRLF in script files and parser input.
 - Normalize CRLF pairs to LF before shell grammar processing.
 - Remove `\r` only when it is part of a `\r\n` pair; preserve lone `\r` as data
-  unless a more specific rule applies. Pair normalization is in place
-  (`internal/shell/runtime/syntax_scan.go`), but a lone `\r` at the start or end
-  of a logical line is still dropped by `strings.TrimSpace` there, and a trailing
-  one still defeats line-continuation detection in `syntax_continuation.go`. Open.
+  unless a more specific rule applies. Normalization runs exactly once, at the
+  entry to parsing (`normalizeLineEndings`, `internal/shell/runtime/syntax_scan.go`),
+  because `strings.ReplaceAll` is not idempotent over a run of carriage returns:
+  `one\r\r\n` collapses to `one\r\n` on a first pass and loses the surviving `\r`
+  on a second. Trimming a logical line uses the cutset `" \t\n"` rather than
+  `strings.TrimSpace`, whose cutset would eat a leading or trailing lone `\r`.
+  A trailing lone `\r` does end line-continuation detection in
+  `syntax_continuation.go`, and that is correct — bash treats `\r` as an ordinary
+  word character, so `echo a &&\r` is not a continued line there either.
 - Do not enable global Windows text mode for all file and applet I/O. Applets
   remain byte-oriented by default and implement text behavior individually.
 

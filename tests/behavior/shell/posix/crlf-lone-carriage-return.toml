@@ -1,0 +1,17 @@
+id = "shell.posix.crlf.lone-carriage-return"
+area = "shell"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+
+script = "echo one\r\r\necho two\r\n"
+
+[expect]
+status = 0
+stdout = "one\r\ntwo\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.2 Quoting and 2.3 Token Recognition"
+why = "A carriage return is only a line ending as the first half of a CRLF pair. The first line here ends with \\r\\r\\n, so one \\r closes the line and the other stays inside the word, which is what busybox-w32 gets from opening the script in text mode and what bash does with the same bytes. The second line is an ordinary CRLF line and loses its \\r entirely."

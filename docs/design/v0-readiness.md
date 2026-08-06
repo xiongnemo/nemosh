@@ -329,7 +329,7 @@ encoding boundaries depend on it:
 | Sub-wave | Content | Status |
 | --- | --- | --- |
 | Wave A | Route shell-owned filesystem and lookup operations through `internal/pathmodel`. | **Complete.** `Runtime.ResolveNemoshPath` is the single seam; see the runtime-integration note above. Remaining native Windows test breadth is tracked there, not here. |
-| Wave B | `/dev/clipboard`, fixed suffix lookup, `ComSpec` batch launch, `.sh`/shebang/CRLF dispatch, applet override configuration. | **Partial.** Suffix lookup, batch launch through `ComSpec`, and `.sh`/shebang dispatch are complete; see the three Windows launch rows above. `/dev/clipboard`, applet override configuration, and lone-`\r` preservation remain. |
+| Wave B | `/dev/clipboard`, fixed suffix lookup, `ComSpec` batch launch, `.sh`/shebang/CRLF dispatch, applet override configuration. | **Partial.** Suffix lookup, batch launch through `ComSpec`, `.sh`/shebang dispatch, and CRLF handling down to a preserved lone `\r` are complete; see the three Windows launch rows above. `/dev/clipboard` and applet override configuration remain. |
 | Wave C | UTF-8/wide API boundaries and internal long-path handling. | **Not started.** |
 
 Explicitly outside P0.5: general argv path conversion, user mount namespaces,

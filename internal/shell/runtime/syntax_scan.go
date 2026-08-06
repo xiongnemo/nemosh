@@ -16,16 +16,16 @@ type syntaxScanner struct {
 	continued     bool
 }
 
-func logicalLines(source string) ([]string, error) {
-	lines, err := partialLogicalLines(source)
-	if err != nil {
-		return nil, err
-	}
-	return lines, nil
+// Line endings are normalized exactly once, on the way into parsing. ReplaceAll
+// is not idempotent over a run of carriage returns — "one\r\r\n" becomes
+// "one\r\n" and then "one\n" — so a second pass would eat a \r that is data.
+func normalizeLineEndings(source string) string {
+	return strings.ReplaceAll(source, "\r\n", "\n")
 }
 
-func partialLogicalLines(source string) ([]string, error) {
-	physical := strings.Split(strings.ReplaceAll(source, "\r\n", "\n"), "\n")
+// The source must already have been through normalizeLineEndings.
+func logicalLines(source string) ([]string, error) {
+	physical := strings.Split(source, "\n")
 	if len(physical) > 0 && physical[len(physical)-1] == "" {
 		physical = physical[:len(physical)-1]
 	}
@@ -148,8 +148,14 @@ func (scanner *syntaxScanner) finishPhysicalLine(line string) {
 	scanner.flushLogicalLine()
 }
 
+// The cutset is deliberately not unicode.IsSpace: POSIX blanks are space and
+// tab, a newline only ever joins physical lines here, and \r\n pairs are already
+// gone by this point. Whatever \r survives is data, and trimming it would edit
+// the user's word (docs/design/windows-execution-model.md).
+const logicalLineCutset = " \t\n"
+
 func (scanner *syntaxScanner) flushLogicalLine() {
-	if normalized := strings.TrimSpace(scanner.logical.String()); normalized != "" {
+	if normalized := strings.Trim(scanner.logical.String(), logicalLineCutset); normalized != "" {
 		scanner.lines = append(scanner.lines, normalized)
 	}
 	scanner.logical.Reset()
