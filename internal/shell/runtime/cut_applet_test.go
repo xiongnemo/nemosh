@@ -30,7 +30,7 @@ func TestRuntime_cutCutsInputAndIsDiscoverable_whenRunFromScript(t *testing.T) {
 	}
 }
 
-func TestRuntime_cutReturnsStatusTwo_whenRunWithInvalidOption(t *testing.T) {
+func TestRuntime_cutReturnsStatusOne_whenRunWithInvalidOption(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -40,8 +40,8 @@ func TestRuntime_cutReturnsStatusTwo_whenRunWithInvalidOption(t *testing.T) {
 	status := rt.RunScript(context.Background(), "cut -x\n")
 
 	// Then
-	if status != 2 {
-		t.Fatalf("expected status 2, got %d", status)
+	if status != 1 {
+		t.Fatalf("expected status 1, got %d", status)
 	}
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)

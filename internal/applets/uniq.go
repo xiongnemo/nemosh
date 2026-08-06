@@ -77,7 +77,7 @@ func readUniqInput(ctx context.Context, view ProcessView, input uniqInput, stdin
 	}
 	reader, err := OpenProcessInput(ctx, view, input.path)
 	if err != nil {
-		return nil, inputFailure(input.path, err)
+		return nil, quotedInputFailure(input.path, err)
 	}
 	lines, readErr := readUniqLines(reader)
 	closeErr := reader.Close()
@@ -132,9 +132,11 @@ func writeUniqLines(stdout io.Writer, lines []string) error {
 	return nil
 }
 
+// Like cut, uniq leaves xfunc_error_retval alone, so its xopen death and its
+// bb_show_usage both exit 1 (coreutils/uniq.c:76 and :81).
 func writeUniqDiagnostic(stderr io.Writer, message string) error {
 	if _, err := fmt.Fprintln(stderr, message); err != nil {
 		return err
 	}
-	return ExitStatus(2)
+	return ExitStatus(1)
 }

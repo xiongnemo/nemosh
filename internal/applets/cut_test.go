@@ -194,7 +194,7 @@ func TestCutApplet_normalizesCRLF_whenRunWithWindowsLineEndings(t *testing.T) {
 	}
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithInvalidOption(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidOption(t *testing.T) {
 	// Given
 	args := []string{"-x"}
 
@@ -205,7 +205,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithInvalidOption(t *tes
 	assertCutFailure(t, result, "cut: invalid option -- x\n")
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithUnsupportedOption(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithUnsupportedOption(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       []string
@@ -230,7 +230,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithUnsupportedOption(t 
 	}
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithoutMode(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithoutMode(t *testing.T) {
 	// Given
 	args := []string{"--"}
 
@@ -241,7 +241,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithoutMode(t *testing.T
 	assertCutFailure(t, result, "cut: expected a list of bytes, characters, or fields\n")
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithMultipleModes(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithMultipleModes(t *testing.T) {
 	// Given
 	args := []string{"-b", "1", "-c", "1"}
 
@@ -252,7 +252,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithMultipleModes(t *tes
 	assertCutFailure(t, result, "cut: options -b, -c, and -f are mutually exclusive\n")
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithInvalidRanges(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidRanges(t *testing.T) {
 	tests := []struct {
 		name       string
 		list       string
@@ -282,7 +282,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithInvalidRanges(t *tes
 	}
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithMissingFile(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithMissingFile(t *testing.T) {
 	// Given
 	path := filepath.Join(t.TempDir(), "missing.txt")
 	args := []string{"-c", "1", path}
@@ -294,7 +294,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithMissingFile(t *testi
 	assertCutFailure(t, result, "cut: "+path+": No such file or directory\n")
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithEmptyFileOperand(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithEmptyFileOperand(t *testing.T) {
 	// Given
 	args := []string{"-c", "1", ""}
 
@@ -321,7 +321,7 @@ func runCutFailure(args []string) cutFailureResult {
 
 func assertCutFailure(t *testing.T, result cutFailureResult, wantStderr string) {
 	t.Helper()
-	assertCutStatus(t, result.err, 2)
+	assertCutStatus(t, result.err, 1)
 	if result.stdout != "" {
 		t.Fatalf("expected empty stdout, got %q", result.stdout)
 	}

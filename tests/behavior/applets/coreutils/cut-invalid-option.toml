@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 command = ["cut", "-x"]
 
 [expect]
-status = 2
+status = 1
 stdout = ""
 stderr = "cut: invalid option -- x\n"
 
 [notes]
 standard = "BusyBox-w32 cut utility"
-why = "The first cut slice rejects unsupported short options with status 2."
+why = "BusyBox-w32 cut leaves xfunc_error_retval at the EXIT_FAILURE default, so its bb_show_usage death exits 1. Nemosh prints a one-line diagnostic in place of the usage text."

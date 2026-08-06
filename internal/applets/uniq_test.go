@@ -159,7 +159,7 @@ func TestUniqApplet_returnsEmptyOutput_whenRunWithEmptyStdin(t *testing.T) {
 	}
 }
 
-func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithInvalidOption(t *testing.T) {
+func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidOption(t *testing.T) {
 	// Given
 	applet := newUniqApplet()
 	var stdout bytes.Buffer
@@ -169,7 +169,7 @@ func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithInvalidOption(t *te
 	err := applet.Run(context.Background(), []string{"-x"}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	assertUniqStatus(t, err, 2)
+	assertUniqStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
@@ -189,7 +189,7 @@ func TestUniqApplet_returnsInvalidOptionBeforeOperandCount_whenRunWithInvalidOpt
 	err := applet.Run(context.Background(), []string{"-x", path}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	assertUniqStatus(t, err, 2)
+	assertUniqStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
@@ -198,7 +198,7 @@ func TestUniqApplet_returnsInvalidOptionBeforeOperandCount_whenRunWithInvalidOpt
 	}
 }
 
-func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithMissingFile(t *testing.T) {
+func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithMissingFile(t *testing.T) {
 	// Given
 	applet := newUniqApplet()
 	path := filepath.Join(t.TempDir(), "missing.txt")
@@ -209,17 +209,17 @@ func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithMissingFile(t *test
 	err := applet.Run(context.Background(), []string{path}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	assertUniqStatus(t, err, 2)
+	assertUniqStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	want := "uniq: " + path + ": No such file or directory\n"
+	want := "uniq: can't open '" + path + "': No such file or directory\n"
 	if got := stderr.String(); got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
 
-func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithEmptyFileOperand(t *testing.T) {
+func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithEmptyFileOperand(t *testing.T) {
 	// Given
 	applet := newUniqApplet()
 	var stdout bytes.Buffer
@@ -229,16 +229,16 @@ func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithEmptyFileOperand(t 
 	err := applet.Run(context.Background(), []string{""}, bytes.NewBufferString("stdin\n"), &stdout, &stderr)
 
 	// Then
-	assertUniqStatus(t, err, 2)
+	assertUniqStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: : No such file or directory\n"; got != want {
+	if got, want := stderr.String(), "uniq: can't open '': No such file or directory\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
 
-func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithOptionTerminatedEmptyFileOperand(t *testing.T) {
+func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithOptionTerminatedEmptyFileOperand(t *testing.T) {
 	// Given
 	applet := newUniqApplet()
 	var stdout bytes.Buffer
@@ -248,16 +248,16 @@ func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithOptionTerminatedEmp
 	err := applet.Run(context.Background(), []string{"--", ""}, bytes.NewBufferString("stdin\n"), &stdout, &stderr)
 
 	// Then
-	assertUniqStatus(t, err, 2)
+	assertUniqStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: : No such file or directory\n"; got != want {
+	if got, want := stderr.String(), "uniq: can't open '': No such file or directory\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
 
-func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithExtraOperand(t *testing.T) {
+func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithExtraOperand(t *testing.T) {
 	// Given
 	applet := newUniqApplet()
 	first := writeUniqFixture(t, "a\n")
@@ -269,7 +269,7 @@ func TestUniqApplet_returnsStatusTwoAndDiagnostic_whenRunWithExtraOperand(t *tes
 	err := applet.Run(context.Background(), []string{first, second}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	assertUniqStatus(t, err, 2)
+	assertUniqStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}

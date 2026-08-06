@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 command = ["uniq", "missing-uniq-input.txt"]
 
 [expect]
-status = 2
+status = 1
 stdout = ""
-stderr = "uniq: missing-uniq-input.txt: No such file or directory\n"
+stderr = "uniq: can't open 'missing-uniq-input.txt': No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 uniq utility"
-why = "BusyBox-w32 uniq reports input open failures with non-zero status; Nemosh uses status 2 like the first sort slice."
+why = "BusyBox-w32 uniq opens its input with xopen, which quotes the operand behind a verb (libbb/xfuncs_printf.c:151) and dies on the EXIT_FAILURE default. cut and sort use fopen_or_warn_stdin instead and print the operand bare."

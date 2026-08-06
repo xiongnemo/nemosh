@@ -30,13 +30,9 @@ func (cutApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 	if err != nil {
 		return writeCutDiagnostic(stderr, err.Error())
 	}
-	if err := runCutInputs(ctx, ProcessViewFromContext(ctx), options, stdin, stdout); err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return err
-		}
-		return writeCutDiagnostic(stderr, inputDiagnostic("cut", err))
-	}
-	return nil
+	// runCutInputs reports each unreadable operand as it goes, so what comes
+	// back is already either a context error or the final exit status.
+	return runCutInputs(ctx, ProcessViewFromContext(ctx), options, stdin, stdout, stderr)
 }
 
 type cutMode int
@@ -215,9 +211,12 @@ func selectCutFields(line string, options cutOptions) (string, bool) {
 	return strings.Join(selected, delim), true
 }
 
+// cut never raises xfunc_error_retval, so both its usage deaths and its
+// per-operand `retval = EXIT_FAILURE` land on the libbb default of 1
+// (libbb/default_error_retval.c:16). Only sort asks for 2.
 func writeCutDiagnostic(stderr io.Writer, message string) error {
 	if _, err := fmt.Fprintln(stderr, message); err != nil {
 		return err
 	}
-	return ExitStatus(2)
+	return ExitStatus(1)
 }

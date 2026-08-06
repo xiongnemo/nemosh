@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 command = ["uniq", "-x"]
 
 [expect]
-status = 2
+status = 1
 stdout = ""
 stderr = "uniq: invalid option -- x\n"
 
 [notes]
 standard = "BusyBox-w32 uniq utility"
-why = "The first uniq slice rejects unsupported or unknown short options with status 2."
+why = "BusyBox-w32 uniq never raises xfunc_error_retval, so its bb_show_usage death exits 1. Nemosh prints a one-line diagnostic in place of the usage text."

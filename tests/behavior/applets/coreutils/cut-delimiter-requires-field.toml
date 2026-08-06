@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 command = ["cut", "-d", ":", "-c", "1"]
 
 [expect]
-status = 2
+status = 1
 stdout = ""
 stderr = "cut: -d DELIM requires -f\n"
 
 [notes]
 standard = "BusyBox-w32 cut utility"
-why = "BusyBox-w32 only accepts a delimiter when field selection is active."
+why = "BusyBox-w32 only accepts a delimiter when field selection is active, and reports it with bb_error_msg_and_die (coreutils/cut.c:341), which exits 1."

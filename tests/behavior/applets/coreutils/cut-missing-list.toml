@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 command = ["cut"]
 
 [expect]
-status = 2
+status = 1
 stdout = ""
 stderr = "cut: expected a list of bytes, characters, or fields\n"
 
 [notes]
 standard = "BusyBox-w32 cut utility"
-why = "BusyBox-w32 cut requires one byte, character, or field list before processing input."
+why = "BusyBox-w32 cut requires one of -bcfF; getopt32 enforces it via bb_show_usage, which exits 1. Nemosh prints a one-line diagnostic in place of the usage text."

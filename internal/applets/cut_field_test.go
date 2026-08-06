@@ -125,7 +125,7 @@ func TestCutApplet_preservesEmptyFieldSeparator_whenRangeIncludesEmptyField(t *t
 	}
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithDelimiterWithoutFieldMode(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithDelimiterWithoutFieldMode(t *testing.T) {
 	// Given
 	applet := newCutApplet()
 	var stdout bytes.Buffer
@@ -135,7 +135,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithDelimiterWithoutFiel
 	err := applet.Run(context.Background(), []string{"-d", ":", "-b", "1"}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	assertCutStatus(t, err, 2)
+	assertCutStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
@@ -144,7 +144,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithDelimiterWithoutFiel
 	}
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithSuppressWithoutFieldMode(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithSuppressWithoutFieldMode(t *testing.T) {
 	// Given
 	applet := newCutApplet()
 	var stdout bytes.Buffer
@@ -154,7 +154,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithSuppressWithoutField
 	err := applet.Run(context.Background(), []string{"-s", "-c", "1"}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	assertCutStatus(t, err, 2)
+	assertCutStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
@@ -163,7 +163,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithSuppressWithoutField
 	}
 }
 
-func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithEmptyDelimiter(t *testing.T) {
+func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithEmptyDelimiter(t *testing.T) {
 	// Given
 	applet := newCutApplet()
 	var stdout bytes.Buffer
@@ -173,7 +173,7 @@ func TestCutApplet_returnsStatusTwoAndDiagnostic_whenRunWithEmptyDelimiter(t *te
 	err := applet.Run(context.Background(), []string{"-f", "1", "-d", ""}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	assertCutStatus(t, err, 2)
+	assertCutStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}

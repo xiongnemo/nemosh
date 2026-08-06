@@ -171,6 +171,9 @@ func writeSortLines(stdout io.Writer, lines []string) error {
 	return nil
 }
 
+// sort is the one reader entitled to 2: sort_main sets `xfunc_error_retval = 2`
+// before parsing options (coreutils/sort.c:468), so every bb_show_usage and
+// every xfopen_stdin death after it carries that status.
 func writeSortDiagnostic(stderr io.Writer, message string) error {
 	if _, err := fmt.Fprintln(stderr, message); err != nil {
 		return err
