@@ -48,7 +48,11 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
 		return 1
 	}
-	cmd := exec.CommandContext(ctx, executable, args[1:]...)
+	cmd, err := r.externalCommand(ctx, executable, args[1:])
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		return 126
+	}
 	cmd.Dir = workingDirectory
 	cmd.Env = r.env.childEnviron(hostEnvironmentPlatform())
 	stdin, err := r.fds.reader(0)
