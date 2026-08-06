@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.rmdir.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "mkdir gone\nrmdir gone\nls\n"
+
+[files]
+"a.txt" = ""
+
+[expect]
+status = 0
+stdout = "a.txt\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/rmdir.c"
+why = "rmdir removes an empty directory silently (coreutils/rmdir.c:70-80). The [files] table can only seed files, so the script creates the empty directory itself."

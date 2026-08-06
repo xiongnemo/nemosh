@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.find.missing-path"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "find nope\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "find: nope: No such file or directory\n"
+
+[notes]
+standard = "BusyBox-w32 findutils/find.c"
+why = "An unreadable root is reported bare through bb_simple_perror_msg and OR-ed into the exit status as EXIT_FAILURE (findutils/find.c:1760). Nemosh matches."

@@ -1,0 +1,20 @@
+id = "applet.busybox-w32.printenv.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "printenv GREETING\n"
+
+[env]
+"GREETING" = "hello"
+"OTHER" = "x"
+
+[expect]
+status = 0
+stdout = "hello\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/printenv.c"
+why = "Named printenv prints the value alone, without the NAME= prefix that bare printenv uses (coreutils/printenv.c:44-56)."

@@ -1,0 +1,17 @@
+id = "applet.busybox-w32.pwd.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32"]
+script = "cd /c/Windows\npwd\n"
+cwd = "work"
+
+[expect]
+status = 0
+stdout = "/c/Windows\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/pwd.c"
+why = "A script resolves `pwd` to the shell builtin (internal/shell/runtime/runtime.go:171) rather than the applet; the applet itself is covered by internal/applets/more_core_test.go. Both print the logical working directory in Nemosh's POSIX form, so `cd /c/Windows` gives a machine-independent answer. Windows-only because the path is."

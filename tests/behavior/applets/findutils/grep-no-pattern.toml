@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.grep.no-pattern"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "grep\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "grep: missing pattern\n"
+
+[notes]
+standard = "BusyBox-w32 findutils/grep.c"
+why = "grep_main sets xfunc_error_retval = 2 before parsing so that 1 stays reserved for `no match` (findutils/grep.c:718-719); a missing PATTERN therefore reaches bb_show_usage and exits 2. Nemosh prints a one-line diagnostic and exits 1. The status divergence is recorded in docs/design/v0-readiness.md."

@@ -1,0 +1,17 @@
+id = "applet.busybox-w32.sed.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "sed 's/one/1/'\n"
+stdin = "one\ntwo\n"
+
+[expect]
+status = 0
+stdout = "1\ntwo\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 editors/sed.c"
+why = "A bare `s///` command rewrites the first match on each line and passes every other line through unchanged."

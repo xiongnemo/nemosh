@@ -1,0 +1,17 @@
+id = "applet.busybox-w32.xargs.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "xargs echo\n"
+stdin = "a\nb\nc\n"
+
+[expect]
+status = 0
+stdout = "a b c\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 findutils/xargs.c"
+why = "xargs splits stdin on whitespace and appends the words to the command, so three input lines become one echo invocation with three arguments."

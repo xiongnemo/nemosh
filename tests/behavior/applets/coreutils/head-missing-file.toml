@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.head.missing-file"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "head nope.txt\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "head: nope.txt: No such file or directory\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/head.c"
+why = "head opens through fopen_or_warn_stdin, which reports the operand bare via bb_simple_perror_msg (libbb/wfopen_input.c:16) and sets retval = EXIT_FAILURE (coreutils/head.c:243). Nemosh matches, so head and cat deliberately disagree on the diagnostic shape."

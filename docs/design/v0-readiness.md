@@ -107,20 +107,26 @@ Implementations are distributed across `internal/applets/core.go`, `files.go`,
 `chmod.go`, `grep.go`, `sed.go`, `find.go`, and `xargs.go`.
 
 That is **complete by registered name only** and **partial for release readiness**.
-Direct `_test.go` coverage exists for many implementations, but the checked-in
-TOML corpus under `tests/behavior/applets/` covers only a minority. `ls` is the
-one initial v0 candidate that now carries checked-in smoke and negative cases,
-`tests/behavior/applets/coreutils/ls-basic.toml` and `ls-invalid-option.toml`;
+Every initial v0 candidate now carries at least one checked-in smoke case and one
+checked-in negative case under `tests/behavior/applets/`, laid out to mirror the
+reference tree — `coreutils/`, `findutils/` (`find`, `grep`, `xargs`), and
+`editors/` (`sed`).
 `TestBehaviorAppletScriptCases_executeAgainstFreshNemosh` in
-`internal/testutil/behavior/case_test.go` executes both against a freshly built
-product binary. That evidence covers exactly those two cases and does not make
-`ls`, the applet corpus, the differential runner, or product CI complete. The
-initial v0 candidates still missing checked-in applet behavior cases
-include `[`, `test`, `pwd`, `env`, `printenv`, `cat`, `head`, `tail`, `wc`,
-`basename`, `dirname`, `mkdir`, `rmdir`, `rm`, `cp`, `mv`, `touch`,
-`chmod`, `grep`, `sed`, `find`, and `xargs`. Registration must not be used as a
-substitute for the smoke-plus-negative release rule in
-`docs/testing/applet-test-inventory.md`.
+`internal/testutil/behavior/case_test.go` executes the `script` cases against a
+freshly built product binary, so the expectations below were measured, not assumed.
+
+That satisfies the smoke-plus-negative rule in
+`docs/testing/applet-test-inventory.md` and nothing more. Two lines carried in the
+`script` cases:
+
+- `pwd` and `pwd -`-style operands are resolved by the shell's `pwd` builtin
+  (`internal/shell/runtime/runtime.go:171`), not by the applet, so the two `pwd`
+  fixtures pin the builtin; the applet is covered by
+  `internal/applets/more_core_test.go`.
+- The per-applet option matrices in `docs/testing/applet-test-inventory.md`
+  (`ls -l`, `head -c`, `grep -r`, `find -name`, `xargs -0`, …) are still
+  uncovered. Two cases per applet is the floor, not the target, and it does not
+  make the applet corpus, the differential runner, or product CI complete.
 
 #### Applet failure statuses and diagnostic shapes
 
@@ -152,13 +158,43 @@ the corpus for full parity:
   `head`/`wc` agree, but `mingw_open` skips the conversion for `O_RDONLY`
   (`win32/mingw.c:265`) so its `cat` says `Permission denied`. Nemosh uses one
   wording for every reader.
+- **Every failing applet that is not `cut`, `sort` or `uniq` exits 1**, because
+  those three are the only ones that print their own diagnostic. The shell reads a
+  status-carrying error and returns before it prints
+  (`internal/shell/runtime/runtime.go:202-208`), so an applet today gets either a
+  shell-printed message *or* a chosen status, never both. Four applets want the
+  other status: `grep` should exit 2 on any error, reserving 1 for `no match`
+  (`findutils/grep.c:718-719`); `env` and `xargs` should exit 127 for a command
+  that is not found and 126 for one that cannot run (`libbb/executable.c:117-122`,
+  `findutils/xargs.c:385-390`); `[` should exit 2 on a missing `]`
+  (`coreutils/test.c:899-901`). Fixing this is one change to the dispatch seam
+  plus four call sites, not four independent fixes.
+- `env` and `xargs` dispatch registered applets only. BusyBox falls back to
+  `execvp`, so `env python3 …` works there and reports `not found` here.
+- `[` with a missing `]` fails silently. BusyBox prints `[: missing ]`.
+- `test` and `[` are a string-only stub (`internal/applets/test.go`): one- and
+  two-argument string tests plus `=` and `!=`. No file tests (`-f`, `-e`, `-d`),
+  no integer comparisons (`-gt` and friends), no `!`, `-a` or `-o`. Those all
+  evaluate false and exit 1 rather than being rejected as unknown operands
+  (`coreutils/test.c:1020`).
+- `sed` reads stdin only; it has no file-operand path, so `sed 's/a/b/' f.txt`
+  exits 1 without a diagnostic.
+- `chmod` reports a bad mode operand-first and unquoted (`chmod: zzz: invalid
+  mode`). BusyBox is message-first and quotes it (`chmod: invalid mode 'zzz'`,
+  `coreutils/chmod.c:87`).
+- Missing required operands fail silently — no diagnostic at all — in `basename`,
+  `dirname`, `chmod`, `cp`, `mv`, `mkdir`, `rmdir`, `rm`, `touch` and `sed`. The
+  status is right; BusyBox would print usage.
+- Some unknown options are swallowed rather than rejected: `wc -z FILE` selects no
+  counts and exits **0**, `touch -z` treats `-z` as a filename operand, and
+  `basename -z /a/b` prints `-z`.
 
 ### Behavior corpus and CI
 
 | Capability | Status | Evidence | Gap |
 | --- | --- | --- | --- |
 | Behavior case format/parser | **Partial but substantial** | `docs/testing/behavior-test-format.md`, `internal/testutil/behavior/case.go`, `parse.go`, `runner.go`, `runner_test.go`, `case_test.go` | Checked-in tests discover and validate all behavior TOMLs and execute both shell cases and applet script cases against a fresh Nemosh binary. Differential reference fan-out and product CI remain absent. |
-| Golden corpus | **Partial** | `tests/behavior/applets/` and `tests/behavior/shell/`; shell cases and applet script cases run against a freshly built `nemosh -c` product binary | Sparse applet coverage; applet cases that declare `command` rather than `script` still run in-process against the registry, so full-corpus product execution remains incomplete. |
+| Golden corpus | **Partial** | `tests/behavior/applets/` and `tests/behavior/shell/`; shell cases and applet script cases run against a freshly built `nemosh -c` product binary | Every v0 applet has a smoke and a negative case, but only those two per applet — the option matrices in `docs/testing/applet-test-inventory.md` are uncovered. Applet cases that declare `command` rather than `script` still run in-process against the registry, so full-corpus product execution remains incomplete. |
 | Differential runner | **Missing** | Planning exists in `docs/research/behavior-matrix.md`; case metadata can name references. | No executable fan-out, equivalent sandboxing, comparison, normalization policy, or divergence report against BusyBox-w32/ash/dash. |
 | Product CI | **Missing** | `.github/workflows/research-probe.yml` runs `scripts/research/posix-smoke.sh`. | The workflow probes reference shells only. No workflow builds Nemosh, runs `go test ./...`, executes the corpus/differential runner, validates manifests, or tests native Windows plus Unix product behavior. |
 

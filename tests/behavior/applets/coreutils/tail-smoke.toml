@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.tail.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "tail -n 1 a.txt\n"
+
+[files]
+"a.txt" = "1\n2\n3\n"
+
+[expect]
+status = 0
+stdout = "3\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/tail.c"
+why = "`-n COUNT` keeps the last COUNT lines; with a single operand tail prints no header (coreutils/tail.c:175-230)."

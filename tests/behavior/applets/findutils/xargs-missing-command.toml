@@ -1,0 +1,17 @@
+id = "applet.busybox-w32.xargs.missing-command"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "xargs nosuchcommand\n"
+stdin = "a\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "xargs: nosuchcommand: not found\n"
+
+[notes]
+standard = "BusyBox-w32 findutils/xargs.c"
+why = "BusyBox follows the POSIX table and exits 127 when the command is not found, 126 when it cannot be run (findutils/xargs.c:385-390). Nemosh's xargs dispatches registered applets only and exits 1 with `not found`. Recorded in docs/design/v0-readiness.md."

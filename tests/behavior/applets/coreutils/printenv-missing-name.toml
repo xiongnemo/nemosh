@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.printenv.missing-name"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "printenv NOSUCHVAR\n"
+
+[env]
+"GREETING" = "hello"
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/printenv.c"
+why = "A name that is not in the environment sets exit_code = EXIT_FAILURE and prints nothing at all (coreutils/printenv.c:52-57). Nemosh matches."

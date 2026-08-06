@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.env.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "env -i ALPHA=1 BETA=2\n"
+
+[expect]
+status = 0
+stdout = "ALPHA=1\nBETA=2\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/env.c"
+why = "`-i` starts from an empty environment, the NAME=VALUE operands are applied to it, and with no COMMAND left env walks environ printing one entry per line (coreutils/env.c:75-102). Starting empty is what makes the listing assertable: os/exec injects SYSTEMROOT into any non-nil child environment on Windows, so a bare `env` would print that too."

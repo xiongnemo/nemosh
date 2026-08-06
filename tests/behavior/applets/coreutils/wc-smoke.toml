@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.wc.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "wc -l a.txt\n"
+
+[files]
+"a.txt" = "1\n2\n3\n"
+
+[expect]
+status = 0
+stdout = "3 a.txt\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/wc.c"
+why = "With exactly one filename and exactly one selected count BusyBox wc drops the column padding (coreutils/wc.c:130-137), so the line is `3 a.txt` and not a width-aligned field."

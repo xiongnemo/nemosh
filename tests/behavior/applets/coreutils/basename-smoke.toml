@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.basename.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "basename /a/b/c.txt\nbasename /a/b/c.txt .txt\n"
+
+[expect]
+status = 0
+stdout = "c.txt\nc\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/basename.c"
+why = "basename strips the directory part, and a second operand is a SUFFIX to remove (coreutils/basename.c:64-80)."
