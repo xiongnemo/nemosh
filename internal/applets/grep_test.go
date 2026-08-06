@@ -131,3 +131,26 @@ func TestDefaultRegistry_readsFiles_whenGrepRunsWithPath(t *testing.T) {
 		t.Fatalf("expected grep output %q, got %q", "two\n", got)
 	}
 }
+
+// The shell prefixes "<applet>: " onto whatever an applet returns, so an applet
+// that returns a self-prefixed error gets its name printed twice. grep's other
+// diagnostics are unprefixed; the missing-pattern one was not, and printed as
+// "grep: grep: missing pattern".
+func TestDefaultRegistry_doesNotRepeatTheAppletName_whenGrepRunsWithoutAPattern(t *testing.T) {
+	// Given
+	applet, ok := applets.DefaultRegistry.Lookup("grep")
+	if !ok {
+		t.Fatal("expected grep applet to be registered")
+	}
+
+	// When
+	err := applet.Run(context.Background(), nil, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
+
+	// Then
+	if err == nil {
+		t.Fatal("expected grep to fail without a pattern")
+	}
+	if got, want := err.Error(), "missing pattern"; got != want {
+		t.Fatalf("expected grep error %q, got %q", want, got)
+	}
+}

@@ -82,7 +82,8 @@ func grepArgs(args []string) (grepOptions, string, []string, error) {
 		index++
 	}
 	if index >= len(args) {
-		return grepOptions{}, "", nil, fmt.Errorf("grep: missing pattern")
+		// The shell prefixes the applet name; grep must not add its own.
+		return grepOptions{}, "", nil, errors.New("missing pattern")
 	}
 	return options, args[index], args[index+1:], nil
 }
