@@ -240,6 +240,33 @@ v0 required:
   `/dev/urandom`; do not promise Linux entropy-blocking semantics.
 - `/dev/clipboard`, text-only, UTF-8 at the shell/applet boundary.
 
+`/dev/clipboard` is a Nemosh extension, not a busybox-w32 device: busybox knows
+only `stdin`, `stdout`, `stderr`, `null`, `tty`, `zero` and `urandom`
+(`win32/mingw.c:195-203`), so behavior cases for it use `semantics = "nemosh"`.
+Its contract:
+
+- Backed by `CF_UNICODETEXT`. The clipboard is UTF-16 and the boundary hides
+  that; text with an interior NUL is refused rather than truncated.
+- A read is a snapshot taken when the device is opened, not a live stream. A
+  clipboard that holds no text at all reads as empty, the same shape an empty
+  file has, rather than as a failure.
+- A write is one atomic replacement of the whole slot, published when the
+  device is closed — setting it per `Write` would publish half a line. A
+  failure surfaces from that close, so the command's status reflects it.
+- `>>` seeds itself with the current contents first, which is the only way
+  append can mean what it says against a slot that cannot be seeked.
+- Line endings translate in both directions: CRLF on the clipboard, LF in the
+  shell. A lone CR stays data, matching the rule in
+  `windows-execution-model.md`.
+- The clipboard is owned by the thread that opens it, so the whole
+  open-use-close sequence is pinned to one OS thread. Only one process may hold
+  it at a time and Windows offers no way to wait, so an open retries.
+
+Off Windows the path still resolves as a device — the path model is
+platform-independent — and then reports that there is nothing behind it, rather
+than shelling out to `xclip` or `pbcopy` and pretending the promise is
+portable.
+
 `/dev/fd/N` should be supported once the shell-owned fd table is stable. It maps
 to Nemosh fd entries, not to a Windows filesystem path, and is only promised for
 shell operations, builtins, and bundled applets.

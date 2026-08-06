@@ -56,6 +56,8 @@ func openInputRedirect(path string, streams Streams) (io.ReadCloser, error) {
 		return io.NopCloser(zeroReader{}), nil
 	case "/dev/urandom", "/dev/random":
 		return io.NopCloser(rand.Reader), nil
+	case "/dev/clipboard":
+		return openClipboardReader()
 	}
 	return os.Open(platformPath(path))
 }
@@ -68,14 +70,22 @@ func openInputDevice(path string) (io.ReadCloser, error) {
 		return io.NopCloser(zeroReader{}), nil
 	case "/dev/urandom", "/dev/random":
 		return io.NopCloser(rand.Reader), nil
+	case "/dev/clipboard":
+		return openClipboardReader()
 	default:
 		return nil, fmt.Errorf("%s: %w", path, errUnsupportedDevice)
 	}
 }
 
-func openOutputDevice(path string) (io.WriteCloser, error) {
-	if path == "/dev/null" {
+// appendMode reaches this far because /dev/clipboard is the one device where
+// `>>` differs from `>`; the others hold nothing to append to.
+func openOutputDevice(path string, appendMode bool) (io.WriteCloser, error) {
+	switch path {
+	case "/dev/null":
 		return nullDevice{}, nil
+	case "/dev/clipboard":
+		return openClipboardWriter(appendMode)
+	default:
+		return nil, fmt.Errorf("%s: %w", path, errUnsupportedDevice)
 	}
-	return nil, fmt.Errorf("%s: %w", path, errUnsupportedDevice)
 }
