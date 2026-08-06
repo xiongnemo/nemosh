@@ -36,7 +36,7 @@ func deviceAlias(path string) (int, bool, error) {
 
 func isVirtualDevice(path string) bool {
 	switch path {
-	case "/dev/null", "/dev/zero", "/dev/random", "/dev/urandom":
+	case "/dev/null", "/dev/zero", "/dev/random", "/dev/urandom", "/dev/clipboard":
 		return true
 	default:
 		return false

@@ -77,7 +77,7 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 	} else if alias {
 		return table.alias(operation.target, source, writable)
 	}
-	resource, err := openOutputDevice(path)
+	resource, err := openOutputDevice(path, operation.kind == redirectAppend)
 	if err != nil {
 		return err
 	}
