@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -72,7 +71,7 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 func listPath(stdout io.Writer, target, display string, options lsOptions) error {
 	info, err := os.Stat(target)
 	if err != nil {
-		return err
+		return operandFailure(display, err)
 	}
 	if !info.IsDir() {
 		item := lsEntry{name: display, info: info}
@@ -81,7 +80,7 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 	}
 	entries, err := os.ReadDir(target)
 	if err != nil {
-		return err
+		return operandFailure(display, err)
 	}
 	items := make([]lsEntry, 0, len(entries))
 	for _, entry := range entries {
@@ -150,79 +149,4 @@ func lsSize(size int64, options lsOptions) string {
 		return fmt.Sprintf("%.0f%s", value, unit)
 	}
 	return fmt.Sprintf("%.1f%s", value, unit)
-}
-
-func newCpApplet() Applet {
-	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		if len(args) != 2 {
-			return ErrExitFalse
-		}
-		view := ProcessViewFromContext(ctx)
-		source, err := resolveHostPath(view, args[0])
-		if err != nil {
-			return err
-		}
-		destination, err := resolveHostPath(view, args[1])
-		if err != nil {
-			return err
-		}
-		return copyFile(source, destinationPath(source, destination))
-	}}
-}
-
-func copyFile(sourcePath, destPath string) error {
-	source, err := os.Open(sourcePath)
-	if err != nil {
-		return err
-	}
-	dest, err := os.Create(destPath)
-	if err != nil {
-		if closeErr := source.Close(); closeErr != nil {
-			return closeErr
-		}
-		return err
-	}
-	_, copyErr := io.Copy(dest, source)
-	sourceCloseErr := source.Close()
-	closeErr := dest.Close()
-	if copyErr != nil {
-		return copyErr
-	}
-	if sourceCloseErr != nil {
-		return sourceCloseErr
-	}
-	return closeErr
-}
-
-func newMvApplet() Applet {
-	return simpleApplet{name: "mv", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		if len(args) != 2 {
-			return ErrExitFalse
-		}
-		view := ProcessViewFromContext(ctx)
-		sourcePath, err := resolveHostPath(view, args[0])
-		if err != nil {
-			return err
-		}
-		destination, err := resolveHostPath(view, args[1])
-		if err != nil {
-			return err
-		}
-		destPath := destinationPath(sourcePath, destination)
-		if err := os.Rename(sourcePath, destPath); err == nil {
-			return nil
-		}
-		if err := copyFile(sourcePath, destPath); err != nil {
-			return err
-		}
-		return os.Remove(sourcePath)
-	}}
-}
-
-func destinationPath(sourcePath, destPath string) string {
-	info, err := os.Stat(destPath)
-	if err == nil && info.IsDir() {
-		return filepath.Join(destPath, filepath.Base(sourcePath))
-	}
-	return destPath
 }

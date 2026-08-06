@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
+	"syscall"
 )
 
 // Applet diagnostics name the operand exactly as the user wrote it. The
@@ -38,6 +40,18 @@ func cannotRemove(operand string, err error) error {
 
 func cannotCreateDirectory(operand string, err error) error {
 	return quotedError{action: "create directory", operand: operand, err: err}
+}
+
+func cannotCreate(operand string, err error) error {
+	return quotedError{action: "create", operand: operand, err: err}
+}
+
+func cannotStat(operand string, err error) error {
+	return quotedError{action: "stat", operand: operand, err: err}
+}
+
+func cannotRename(operand string, err error) error {
+	return quotedError{action: "rename", operand: operand, err: err}
 }
 
 // quotedFailure is the verbless form GNU rmdir uses.
@@ -83,9 +97,16 @@ func causeText(err error) string {
 		return "Permission denied"
 	case errors.Is(err, fs.ErrExist):
 		return "File exists"
+	// Go spells this one "is a directory"; strerror capitalizes it.
+	case errors.Is(err, syscall.EISDIR):
+		return "Is a directory"
 	}
 	if pathErr, ok := errors.AsType[*fs.PathError](err); ok {
 		return pathErr.Err.Error()
+	}
+	// os.Rename fails with a *os.LinkError, which names both host paths.
+	if linkErr, ok := errors.AsType[*os.LinkError](err); ok {
+		return linkErr.Err.Error()
 	}
 	return err.Error()
 }

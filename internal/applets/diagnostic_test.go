@@ -106,6 +106,39 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheOperationFails(t *test
 			applet: "find", args: []string{"nope"},
 			want: "nope: No such file or directory",
 		},
+		{
+			name:   "ls on a missing operand", // coreutils/ls.c:819
+			applet: "ls", args: []string{"nope"},
+			want: "nope: No such file or directory",
+		},
+		{
+			name:   "cp from a missing source", // libbb/copy_file.c:98
+			applet: "cp", args: []string{"nope.txt", "out.txt"},
+			want: "can't stat 'nope.txt': No such file or directory",
+		},
+		{
+			name:   "cp into a missing directory", // libbb/copy_file.c:64
+			setup:  func(t *testing.T, dir string) { makeFixtureFile(t, dir, "a.txt") },
+			applet: "cp", args: []string{"a.txt", "nope/out.txt"},
+			want: "can't create 'nope/out.txt': No such file or directory",
+		},
+		{
+			// cp a.txt d writes d/a.txt, and the diagnostic names that joined
+			// path, not the bare destination operand.
+			name: "cp onto a name already taken by a directory",
+			setup: func(t *testing.T, dir string) {
+				makeFixtureFile(t, dir, "a.txt")
+				makeFixtureDir(t, dir, "d")
+				makeFixtureDir(t, dir, filepath.Join("d", "a.txt"))
+			},
+			applet: "cp", args: []string{"a.txt", "d"},
+			want: "can't create 'd/a.txt': Is a directory",
+		},
+		{
+			name:   "mv from a missing source", // coreutils/mv.c:143
+			applet: "mv", args: []string{"nope.txt", "out.txt"},
+			want: "can't rename 'nope.txt': No such file or directory",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
