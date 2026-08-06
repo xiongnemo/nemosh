@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 script = "[ -n x\n"
 
 [expect]
-status = 1
+status = 2
 stdout = ""
-stderr = ""
+stderr = "[: missing ]\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/test.c"
-why = "BusyBox prints `[: missing ]` and returns 2 when the last argument is not `]` (coreutils/test.c:899-901). Nemosh's stub fails silently with 1. Both the diagnostic and the status diverge; see docs/design/v0-readiness.md."
+why = "test_main2 strips argv[0] and demands the last remaining word be a lone `]`, printing `missing ]` and returning 2 when it is not (coreutils/test.c:897-901, NOT_LONE_CHAR at include/libbb.h:1154). Nemosh matches. The expression grammar behind the bracket is still a stub; see docs/design/v0-readiness.md."

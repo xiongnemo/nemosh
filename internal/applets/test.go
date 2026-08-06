@@ -1,12 +1,19 @@
 package applets
 
-import "io"
+import (
+	"errors"
+	"io"
+)
 
 func newTestApplet(name string) Applet {
 	return simpleApplet{name: name, run: func(args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
 		if name == "[" {
-			if len(args) == 0 || args[len(args)-1] != "]" {
-				return ErrExitFalse
+			if !closedBracket(args) {
+				// test_main2 strips argv[0] and then demands the last remaining
+				// word be a lone "]", printing "missing ]" and returning 2 when
+				// it is not (coreutils/test.c:897-901). With no operands the
+				// check still runs and argv[0] itself is what fails it.
+				return ExitStatusMessage(2, errors.New("missing ]"))
 			}
 			args = args[:len(args)-1]
 		}
@@ -15,6 +22,10 @@ func newTestApplet(name string) Applet {
 		}
 		return ErrExitFalse
 	}}
+}
+
+func closedBracket(args []string) bool {
+	return len(args) > 0 && args[len(args)-1] == "]"
 }
 
 func evalTest(args []string) bool {
