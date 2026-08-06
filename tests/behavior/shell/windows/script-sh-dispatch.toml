@@ -1,0 +1,22 @@
+id = "shell.windows.launch.script-sh-dispatch"
+area = "shell"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32"]
+
+script = '''
+./hello.sh a b
+'''
+
+[files]
+"hello.sh" = "echo args $1 $2 count $#\n"
+
+[expect]
+status = 0
+stdout = "args a b count 2\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.1 Simple Commands"
+why = "Windows CreateProcess cannot launch a .sh file, so without interpreter dispatch this fails with a Win32 error rather than running. busybox-w32 parse_interpreter (win32/process.c:66) falls back to /bin/sh for a .sh file that carries no shebang, and Nemosh answers /bin/sh with itself in a child process, which is where POSIX says a script run as a command executes."

@@ -48,7 +48,15 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
 		return 1
 	}
-	cmd, err := r.externalCommand(ctx, executable, args[1:])
+	executable, launchArgs, err := r.externalLaunchTarget(executable, args[1:])
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		if errors.Is(err, errExternalNotFound) {
+			return 127
+		}
+		return 126
+	}
+	cmd, err := r.externalCommand(ctx, executable, launchArgs)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
 		return 126
