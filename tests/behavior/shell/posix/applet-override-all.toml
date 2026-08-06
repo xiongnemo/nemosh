@@ -1,0 +1,23 @@
+id = "shell.posix.lookup.applet-override-all"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+
+script = '''
+NEMOSH_OVERRIDE_APPLETS=-
+pwd > /dev/null
+cat /dev/null
+NEMOSH_OVERRIDE_APPLETS=
+echo back
+'''
+
+[expect]
+status = 0
+stdout = "back\n"
+stderr = "cat: not found\n"
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.1 Simple Commands"
+why = "A lone `-` disables every applet at once (busybox libbb/appletlib.c:302), leaving only functions and builtins ahead of PATH. `pwd` is a shell builtin and keeps working; `cat` is an applet and no longer does. Restoring the variable to an empty value brings the applets back, because Nemosh reads it on each lookup rather than caching a command table the way busybox has to invalidate through change_override_applets (shell/ash.c:2552)."

@@ -1,0 +1,21 @@
+id = "shell.posix.lookup.applet-override-named"
+area = "shell"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+
+script = '''
+NEMOSH_OVERRIDE_APPLETS=echo
+printf 'printf still runs\n'
+echo hi
+'''
+
+[expect]
+status = 127
+stdout = "printf still runs\n"
+stderr = "echo: not found\n"
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.1 Simple Commands"
+why = "NEMOSH_OVERRIDE_APPLETS is Nemosh's spelling of busybox-w32's BB_OVERRIDE_APPLETS (README.md:41): a listed applet stops winning command lookup so an external of the same name can. The list form is what this case pins -- `echo` is named and yields, `printf` is not and still runs. Nemosh reads the value as an ordinary shell variable, so no export is needed, unlike busybox where prefer_applet reads the process environment. Nothing supplies an external `echo` here, so the lookup falls through to PATH and reports the ordinary not-found; the `+` form, which yields only where an external exists, needs a real program on PATH and is covered by internal/shell/runtime/applet_override_lookup_test.go instead."

@@ -21,8 +21,37 @@ Default lookup order should be BusyBox-style but configurable:
 4. External programs found through `PATH`.
 
 Users must be able to override selected bundled applets with external programs,
-similar in spirit to busybox-w32 `BB_OVERRIDE_APPLETS`. The final config syntax is
-still open.
+similar in spirit to busybox-w32 `BB_OVERRIDE_APPLETS`. Nemosh spells it
+`NEMOSH_OVERRIDE_APPLETS` and reproduces busybox's grammar
+(`libbb/appletlib.c:296`) exactly:
+
+| Value | Meaning |
+| --- | --- |
+| unset or empty | Bundled applets win, the default. |
+| `-` | Every applet loses; only functions, builtins, and `PATH` remain. |
+| `+` | An applet loses wherever an external program of that name exists. |
+| a list | Names before the first `;` lose outright; names after it lose only where an external program of that name exists. |
+
+List separators are space, comma, and semicolon — not tab — and a name matches
+only when both of its ends land on a separator or the end of the value, so
+`concat` in the list does not disable `cat`.
+
+Two deliberate differences from busybox:
+
+- The value is read from the shell's own variable table, the way `PATH` already
+  is, so a plain assignment takes effect. busybox has to read the process
+  environment because `prefer_applet` lives in libbb rather than in ash, and ash
+  mirrors the variable into the environment on export (`shell/ash.c:2976`) to
+  bridge the gap — which means an unexported assignment silently does nothing
+  there.
+- The override is scoped to shell lookup. `nemosh <applet>` and applet-name
+  shims stay unconditional, because a shim has no external counterpart to fall
+  back to and would simply stop working. busybox routes even its multi-call
+  entry through the check (`libbb/appletlib.c:279`).
+
+An applet that loses is reported as absent, so lookup falls through to `PATH` on
+its own and `command -v` keeps telling the truth about what would run. If
+nothing on `PATH` answers, the shell reports the ordinary `not found`.
 
 ## Applet Dispatch And Distribution
 
