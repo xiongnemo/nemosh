@@ -11,43 +11,60 @@ import (
 
 func newGrepApplet() Applet {
 	return simpleApplet{name: "grep", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, pattern, paths, err := grepArgs(args)
+		return grepStatus(runGrep(ctx, args, stdin, stdout))
+	}}
+}
+
+// grep_main raises xfunc_error_retval to 2 before it parses anything, so that 1
+// stays reserved for "no match" (findutils/grep.c:718). Every other failure --
+// usage, a bad pattern, an unreadable operand -- carries 2 out with it.
+func grepStatus(err error) error {
+	if err == nil || errors.Is(err, ErrExitFalse) {
+		return err
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	return ExitStatusMessage(2, err)
+}
+
+func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) error {
+	options, pattern, paths, err := grepArgs(args)
+	if err != nil {
+		return err
+	}
+	expr, err := regexp.Compile(options.patternPrefix() + pattern)
+	if err != nil {
+		return err
+	}
+	matched := false
+	if len(paths) == 0 {
+		matched, err = grepReader(stdout, expr, options, stdin)
 		if err != nil {
 			return err
-		}
-		expr, err := regexp.Compile(options.patternPrefix() + pattern)
-		if err != nil {
-			return err
-		}
-		matched := false
-		if len(paths) == 0 {
-			matched, err = grepReader(stdout, expr, options, stdin)
-			if err != nil {
-				return err
-			}
-			if !matched {
-				return ErrExitFalse
-			}
-			return nil
-		}
-		view := ProcessViewFromContext(ctx)
-		for _, path := range paths {
-			file, err := OpenProcessInput(ctx, view, path)
-			if err != nil {
-				return operandFailure(path, err)
-			}
-			fileMatched, grepErr := grepReader(stdout, expr, options, file)
-			closeErr := file.Close()
-			if err := errors.Join(grepErr, closeErr); err != nil {
-				return err
-			}
-			matched = matched || fileMatched
 		}
 		if !matched {
 			return ErrExitFalse
 		}
 		return nil
-	}}
+	}
+	view := ProcessViewFromContext(ctx)
+	for _, path := range paths {
+		file, err := OpenProcessInput(ctx, view, path)
+		if err != nil {
+			return operandFailure(path, err)
+		}
+		fileMatched, grepErr := grepReader(stdout, expr, options, file)
+		closeErr := file.Close()
+		if err := errors.Join(grepErr, closeErr); err != nil {
+			return err
+		}
+		matched = matched || fileMatched
+	}
+	if !matched {
+		return ErrExitFalse
+	}
+	return nil
 }
 
 type grepOptions struct {
