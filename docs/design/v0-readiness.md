@@ -139,6 +139,18 @@ the `libbb/default_error_retval.c:16` default. `cut` also holds its status acros
 an unreadable operand and continues to the next, where `sort` aborts on the first
 by design (`coreutils/sort.c:566`).
 
+An applet names a non-default status by returning `applets.ExitStatusMessage`,
+which carries the status *and* the diagnostic; the dispatch seam
+(`internal/shell/runtime/runtime.go:202-209`) prints the message under the applet
+name and then returns the status. A bare `applets.ExitStatus` carries no
+diagnostic and so stays silent. Before that seam existed an applet
+got either a shell-printed message or a chosen status, never both, so anything
+that did not print for itself was pinned to 1. Four applets take a status other
+than the default today: `grep` exits 2 on any error so that 1 stays reserved for
+`no match` (`findutils/grep.c:718-719`), `env` and `xargs` exit 127 for a command
+that is not found (`libbb/executable.c:117-122`, `findutils/xargs.c:385-390`), and
+`[` exits 2 on a missing `]` (`coreutils/test.c:897-901`).
+
 Known divergences that are **deliberate and unfixed**, so a reader does not mistake
 the corpus for full parity:
 
@@ -158,20 +170,12 @@ the corpus for full parity:
   `head`/`wc` agree, but `mingw_open` skips the conversion for `O_RDONLY`
   (`win32/mingw.c:265`) so its `cat` says `Permission denied`. Nemosh uses one
   wording for every reader.
-- **Every failing applet that is not `cut`, `sort` or `uniq` exits 1**, because
-  those three are the only ones that print their own diagnostic. The shell reads a
-  status-carrying error and returns before it prints
-  (`internal/shell/runtime/runtime.go:202-208`), so an applet today gets either a
-  shell-printed message *or* a chosen status, never both. Four applets want the
-  other status: `grep` should exit 2 on any error, reserving 1 for `no match`
-  (`findutils/grep.c:718-719`); `env` and `xargs` should exit 127 for a command
-  that is not found and 126 for one that cannot run (`libbb/executable.c:117-122`,
-  `findutils/xargs.c:385-390`); `[` should exit 2 on a missing `]`
-  (`coreutils/test.c:899-901`). Fixing this is one change to the dispatch seam
-  plus four call sites, not four independent fixes.
 - `env` and `xargs` dispatch registered applets only. BusyBox falls back to
-  `execvp`, so `env python3 …` works there and reports `not found` here.
-- `[` with a missing `]` fails silently. BusyBox prints `[: missing ]`.
+  `execvp`, so `env python3 …` works there and reports `not found` here. Two
+  consequences: the wording stays `not found` rather than BusyBox's `can't execute
+  'NAME': No such file or directory`, because no `execvp` ran and claiming `ENOENT`
+  would misdescribe the mechanism; and the 126 half of the SUSv3 table — a command
+  found but not runnable — is unreachable, so only the 127 half is implemented.
 - `test` and `[` are a string-only stub (`internal/applets/test.go`): one- and
   two-argument string tests plus `=` and `!=`. No file tests (`-f`, `-e`, `-d`),
   no integer comparisons (`-gt` and friends), no `!`, `-a` or `-o`. Those all
