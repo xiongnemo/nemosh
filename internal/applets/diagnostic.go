@@ -83,6 +83,31 @@ func (e operandError) Error() string {
 
 func (e operandError) Unwrap() error { return e.err }
 
+// cut, sort and uniq assemble and print their own diagnostic instead of
+// returning one, so a read failure has to carry the operand back out to the
+// print site. Everything else returns a quotedError or an operandError and
+// lets the shell prefix the applet name.
+type inputError struct {
+	operand string
+	err     error
+}
+
+func inputFailure(operand string, err error) error {
+	return inputError{operand: operand, err: err}
+}
+
+func (e inputError) Error() string { return e.err.Error() }
+
+func (e inputError) Unwrap() error { return e.err }
+
+func inputDiagnostic(applet string, err error) string {
+	operand := ""
+	if inputErr, ok := errors.AsType[inputError](err); ok {
+		operand = inputErr.operand
+	}
+	return fmt.Sprintf("%s: %s: %s", applet, operand, causeText(err))
+}
+
 // causeText spells a cause the way strerror does. The fallback unwraps
 // *fs.PathError rather than printing it, because its own Error() repeats the
 // host path this whole file exists to keep out of diagnostics.

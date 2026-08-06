@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -36,7 +35,7 @@ func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return err
 		}
-		return writeUniqDiagnostic(stderr, uniqInputError(err))
+		return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", err))
 	}
 	return writeUniqLines(stdout, collapseAdjacentLines(lines))
 }
@@ -78,27 +77,14 @@ func readUniqInput(ctx context.Context, view ProcessView, input uniqInput, stdin
 	}
 	reader, err := OpenProcessInput(ctx, view, input.path)
 	if err != nil {
-		return nil, uniqReadError{path: input.path, err: err}
+		return nil, inputFailure(input.path, err)
 	}
 	lines, readErr := readUniqLines(reader)
 	closeErr := reader.Close()
 	if err := errors.Join(readErr, closeErr); err != nil {
-		return nil, uniqReadError{path: input.path, err: err}
+		return nil, inputFailure(input.path, err)
 	}
 	return lines, nil
-}
-
-type uniqReadError struct {
-	path string
-	err  error
-}
-
-func (e uniqReadError) Error() string {
-	return e.err.Error()
-}
-
-func (e uniqReadError) Unwrap() error {
-	return e.err
 }
 
 func readUniqLines(input io.Reader) ([]string, error) {
@@ -144,17 +130,6 @@ func writeUniqLines(stdout io.Writer, lines []string) error {
 		}
 	}
 	return nil
-}
-
-func uniqInputError(err error) string {
-	path := ""
-	if readErr, ok := errors.AsType[uniqReadError](err); ok {
-		path = readErr.path
-	}
-	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Sprintf("uniq: %s: No such file or directory", path)
-	}
-	return fmt.Sprintf("uniq: %s: %v", path, err)
 }
 
 func writeUniqDiagnostic(stderr io.Writer, message string) error {

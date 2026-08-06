@@ -168,6 +168,98 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheOperationFails(t *test
 	}
 }
 
+// Windows lets Go open a directory and only fails at the first Read, with
+// ERROR_INVALID_FUNCTION, so a reader handed a directory used to print
+// "read <host path>: Incorrect function." busybox-w32 reports EISDIR whenever
+// it can tell one (win32/mingw.c:316), and here we always can.
+func TestAppletDiagnostics_rejectADirectoryOperandAsEISDIR(t *testing.T) {
+	tests := []struct {
+		applet string
+		args   []string
+		want   string
+	}{
+		{applet: "cat", want: "can't open 'd': Is a directory"},
+		{applet: "tail", want: "can't open 'd': Is a directory"},
+		{applet: "head", want: "d: Is a directory"},
+		{applet: "wc", want: "d: Is a directory"},
+		{applet: "grep", args: []string{"pattern"}, want: "d: Is a directory"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.applet, func(t *testing.T) {
+			// Given
+			dir := t.TempDir()
+			makeFixtureDir(t, dir, "d")
+			applet, ok := applets.DefaultRegistry.Lookup(tt.applet)
+			if !ok {
+				t.Fatalf("expected %s applet to be registered", tt.applet)
+			}
+			ctx := applets.WithProcessView(context.Background(), diagnosticTestView{cwd: dir})
+			var stdout, stderr bytes.Buffer
+
+			// When
+			err := applet.Run(ctx, append(tt.args, "d"), &bytes.Buffer{}, &stdout, &stderr)
+
+			// Then
+			if err == nil {
+				t.Fatalf("expected %s to refuse a directory operand", tt.applet)
+			}
+			if got := err.Error(); got != tt.want {
+				t.Fatalf("expected %s diagnostic %q, got %q", tt.applet, tt.want, got)
+			}
+		})
+	}
+}
+
+// cut, sort and uniq assemble their own diagnostic, print it, and return only a
+// status, so what they write to stderr is the thing under test. Each carried a
+// private copy of the same wrapper; the missing-file rows pin down the behavior
+// those copies already had correct.
+func TestAppletDiagnostics_selfPrintingAppletsNameTheOperand(t *testing.T) {
+	tests := []struct {
+		name   string
+		applet string
+		args   []string
+		want   string
+	}{
+		{name: "cut on a missing file", applet: "cut", args: []string{"-f1", "nope.txt"},
+			want: "cut: nope.txt: No such file or directory\n"},
+		{name: "sort on a missing file", applet: "sort", args: []string{"nope.txt"},
+			want: "sort: nope.txt: No such file or directory\n"},
+		{name: "uniq on a missing file", applet: "uniq", args: []string{"nope.txt"},
+			want: "uniq: nope.txt: No such file or directory\n"},
+		{name: "cut on a directory", applet: "cut", args: []string{"-f1", "d"},
+			want: "cut: d: Is a directory\n"},
+		{name: "sort on a directory", applet: "sort", args: []string{"d"},
+			want: "sort: d: Is a directory\n"},
+		{name: "uniq on a directory", applet: "uniq", args: []string{"d"},
+			want: "uniq: d: Is a directory\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Given
+			dir := t.TempDir()
+			makeFixtureDir(t, dir, "d")
+			applet, ok := applets.DefaultRegistry.Lookup(tt.applet)
+			if !ok {
+				t.Fatalf("expected %s applet to be registered", tt.applet)
+			}
+			ctx := applets.WithProcessView(context.Background(), diagnosticTestView{cwd: dir})
+			var stdout, stderr bytes.Buffer
+
+			// When
+			err := applet.Run(ctx, tt.args, &bytes.Buffer{}, &stdout, &stderr)
+
+			// Then
+			if err == nil {
+				t.Fatalf("expected %s %v to fail", tt.applet, tt.args)
+			}
+			if got := stderr.String(); got != tt.want {
+				t.Fatalf("expected %s to write %q to stderr, got %q", tt.applet, tt.want, got)
+			}
+		})
+	}
+}
+
 func makeFixtureDir(t *testing.T, dir, name string) {
 	t.Helper()
 	if err := os.Mkdir(filepath.Join(dir, name), 0o700); err != nil {
