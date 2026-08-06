@@ -29,7 +29,7 @@ draft, not final implementation code.
 | Virtual roots | `/tmp`, `/dev`, and similar Nemosh virtual roots are enabled by default and resolved before current-root expansion. They must be configurable. |
 | Mount table | Do not implement a Nemosh-owned mount table in v0. Follow busybox-w32 by using Windows-provided roots, drive letters, UNC shares, volume mount points, junctions, mapped/subst drives, and configured path aliases. |
 | Links/reparse points | Mimic busybox-w32 where practical: recognize and use Windows-native symlinks, junctions, and reparse points; do not invent a POSIX symlink facade or treat `.lnk` shortcuts as shell symlinks in v0. |
-| Backslash syntax | Preserve POSIX shell lexer semantics: unquoted backslash is an escape. Windows paths should use forward slashes such as `C:/Users/nemo` or be quoted. |
+| Backslash syntax | Preserve POSIX shell lexer semantics: unquoted backslash is an escape. Windows paths should use forward slashes such as `C:/Users/nemo` or be quoted — either quote works, because inside double quotes a backslash is an escape only before `$`, a backquote, a double quote, another backslash, or a newline, so `"C:\Users\nemo"` is the path itself. |
 
 ## Path Forms
 

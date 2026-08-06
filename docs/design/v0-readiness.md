@@ -26,7 +26,7 @@ there is no product CI.
 | --- | --- | --- | --- |
 | Product Target | **Partial** | Native Go CLI and multicall dispatch exist in `cmd/nemosh/main.go`; bundled applets are registered by `internal/applets/registry.go`; P0.4 implements the bounded Windows jobs/INT model. | Windows-first behavior is integrated across the path, launch, clipboard, encoding, and long-path boundaries (P0.5 Waves A, B, and C). Layered diagnostics (P1.1) are not. Expansion and broader ash-like behavior remain incomplete. |
 | V0 Must Have | **Partial** | `-c` and redirected-stdin execution are tested in `cmd/nemosh/main_test.go`; P0.1 owns the FD table and snapshots, P0.2 owns concurrent `os.Pipe` pipelines, P0.3 owns typed groups/subshells/heredocs/functions, and P0.4 owns asynchronous background execution, retained job lifecycle, `jobs`/`wait`, and bounded Windows INT behavior under `internal/shell/runtime/`; the applet registry is substantial. | Complete selected expansion semantics and corpus-wide differential/product CI remain absent or incomplete. |
-| Windows Path Gates | **Partial (P0.5 Wave A integrated)** | `internal/pathmodel/model.go` and `pathmodel_test.go` cover drive, mount-alias, UNC, current-root, and virtual-root forms. `internal/shell/runtime/path_state.go` exposes them as `Runtime.ResolveNemoshPath`, which `cd`, `.`/`source`, redirection, device input, external lookup, and the applet `ProcessView` all call; `runtime/path.go` is now a thin adapter over that seam rather than a separate model. | Native Windows integration-test breadth is thin, notably UNC cwd/root. Extended-length paths landed in Wave C, deliberately without a shared prefix layer; see the UTF-8/long-path row. No general argv conversion was found, which correctly preserves that non-goal. |
+| Windows Path Gates | **Partial (P0.5 integrated; case resolution missing)** | `internal/pathmodel/model.go` and `pathmodel_test.go` cover drive, mount-alias, UNC, current-root, and virtual-root forms. `internal/shell/runtime/path_state.go` exposes them as `Runtime.ResolveNemoshPath`, which `cd`, `.`/`source`, redirection, device input, external lookup, and the applet `ProcessView` all call; `runtime/path.go` is now a thin adapter over that seam rather than a separate model. Native Windows integration tests now cover UNC current roots, the alias and virtual-root switches, the host-only UNC hint, and argv non-conversion. | Filesystem case resolution is missing. `windows-path-model.md` says shell-generated display paths should try the real on-disk case and only fall back to the spelling as typed; measured, `cd /c/users/NEMO/documents` then `pwd` echoes that back unchanged, and only the drive letter is normalised. So the fallback half holds and the primary half does not. Extended-length paths landed in Wave C, deliberately without a shared prefix layer; see the UTF-8/long-path row. |
 | V0 Device Paths | **Complete for the v0 required set** | `internal/shell/runtime/device.go`, `device_fd.go`, `device_clipboard.go` and its `_windows.go`/`_other.go` backends; `device_test.go`, `device_fd_test.go`, `device_clipboard_test.go`, `device_clipboard_windows_test.go` cover `/dev/null`, descriptor-backed standard streams and `/dev/fd/N`, zero, random, urandom, and UTF-8 text `/dev/clipboard`. | The clipboard is Windows-only by design; off Windows the path resolves as a device and then reports that plainly. `/dev/tty` and PTY paths stay deferred, as the model says. |
 | Execution Gates | **Complete** | Lookup order is implemented across `internal/shell/runtime/runtime.go`, `internal/shell/runtime/command.go`, `internal/shell/runtime/applet_override.go`, and `internal/shell/runtime/external.go`; fixed Windows suffix ordering, `NEMOSH_OVERRIDE_APPLETS`, `ComSpec` batch launch, `.sh`/shebang dispatch, exact runtime `PATH`, scoped Windows child-environment collapse, and runtime cwd/env propagation have focused tests. | Long paths landed in Wave C: a child launched from a directory over 258 UTF-16 characters falls back to its 8.3 short name, or is refused by length. |
 | Job, Signal, And Error Gates | **Partial (P0.4 jobs/signals complete)** | Typed background nodes launch asynchronously into a session-owned bounded supervisor; `jobs` observes retained local records; `wait`/`wait %N` claim, retain on cancellation, and consume exact statuses. EXIT/INT traps, direct applet and foreground cancellation, production Windows Ctrl-Break acceptance, private-scope reaping, and honest root-close limitations have focused tests. | Layered diagnostic hints and `NEMOSH_DEBUG=path,exec,fd` remain P1.1 work. Full `fg`/`bg`, stopped jobs, process groups, Job Objects, ConPTY, and idle-input Ctrl-C remain explicitly outside P0.4. |
@@ -56,23 +56,32 @@ Isolated pathmodel completeness must not be confused with runtime integration:
 - **Isolated model: partial but substantial.** `internal/pathmodel/model.go` and
   `internal/pathmodel/pathmodel_test.go` cover drive forms, `/c`, `/mnt/c`, UNC
   shares, drive/UNC current roots, virtual-root preservation, host-only UNC
-  rejection, and default-off Cygdrive behavior. Extended-length paths and more
-  malformed forms remain.
+  rejection, and default-off Cygdrive behavior. Malformed forms beyond host-only
+  UNC remain, as does resolving a path's real filesystem case. Extended-length
+  paths are deliberately not modelled here at all; see the UTF-8/long-path row.
 - **Runtime integration: connected through one seam.** `internal/shell/runtime/path_state.go`
   resolves through `internal/pathmodel` and is the single seam shell-owned
-  operations use: `cd` at `state_builtins.go:60`, `.`/`source` at `builtins.go:15`,
-  redirection at `redirect_apply.go:38,63`, device input at `device_input.go:59`,
-  executable lookup and child working directory at `external.go:82,100`, and the
-  applet `ProcessView` at `internal/applets/process_view.go:25,34`.
+  operations use: `cd` at `state_builtins.go:58`, `.`/`source` at `builtins.go:15`,
+  redirection at `redirect_apply.go:38,63`, device input at `device_input.go:60`,
+  executable lookup at `external.go:99,117`, the child working directory at
+  `external.go:23`, and the applet `ProcessView` at
+  `internal/applets/process_view.go:28,37`.
   `runtime/path.go` delegates to that seam instead of carrying its own rules.
   Opt-in `/tmp` backing and Cygdrive conversion are implemented as policy in
-  `path_state_windows.go` and `path_state_other.go`; `cd` emits the host-only UNC
-  hint, covered by `path_shell_io_test.go`. What remains is native Windows
-  integration-test breadth rather than a missing connection.
+  `path_state_windows.go` and `path_state_other.go`. The host-only UNC hint now
+  comes from `pathmodel.HostOnlyUNCError` instead of a copy inside `cd`, so `cd`,
+  redirection, and `.` word it identically and a hostless `//` is reported as
+  malformed rather than advised to grow a share
+  (`path_shell_io_test.go`, `path_state_unc_windows_test.go`).
+  Native Windows breadth landed with it: UNC current roots
+  (`path_state_unc_windows_test.go`), the cygdrive, mount-prefix, `/tmp`, and
+  `/dev` switches (`path_settings_windows_test.go`), and argv non-conversion
+  (`external_argv_test.go`). What remains is real-case resolution, which is a
+  missing capability rather than missing coverage.
 
 | Boundary | Status | Evidence | Required acceptance remainder |
 | --- | --- | --- | --- |
-| Accepted Windows spellings/current root/UNC | **Partial** | `internal/pathmodel/model.go`, `internal/pathmodel/pathmodel_test.go`, `internal/shell/runtime/path_state.go` and its `path_state*_test.go` family, `internal/shell/runtime/path_shell_io_test.go`, `internal/applets/path_test.go` | Shell-owned operations now share one model. Remaining work is native Windows integration-test breadth for UNC cwd/root and virtual roots; extended-length paths landed in Wave C. |
+| Accepted Windows spellings/current root/UNC | **Partial** | `internal/pathmodel/model.go`, `internal/pathmodel/pathmodel_test.go`, `internal/shell/runtime/path_state.go` and its `path_state*_test.go` family, `internal/shell/runtime/path_shell_io_test.go`, `path_state_unc_windows_test.go`, `path_settings_windows_test.go`, `external_argv_test.go`, `internal/applets/path_test.go` | Shell-owned operations share one model, and the native Windows tests now reach it: a UNC share is the current root and `pwd` keeps that spelling instead of falling back to the drive, cygdrive and a moved mount prefix change what is an alias, a disabled scheme degrades to an ordinary path rather than an error, `/tmp` is backed by the host temporary directory, and path-shaped argv is handed to a child unconverted. The quoted input form `"C:\Users\nemo"` works as well, which it did not until the double-quote backslash rule was fixed in the lexer. Remaining work is resolving a path's real filesystem case; extended-length paths landed in Wave C. |
 | Device set | **Complete for the v0 required set** | `internal/shell/runtime/device.go`, `device_clipboard.go`, `device_clipboard_windows.go`, `device_clipboard_other.go`, `redirect_apply.go`, `fd_table.go`; `device_test.go`, `device_fd_test.go`, `device_clipboard_test.go`, `device_clipboard_windows_test.go` | `/dev/std*` and `/dev/fd/N` are descriptor-backed. `/dev/clipboard` is UTF-8 text over `CF_UNICODETEXT`: a read is a snapshot taken at open, a write replaces the whole slot at close, `>>` seeds itself with what is already there, and line endings translate both ways (CRLF on the clipboard, LF in the shell, a lone CR left as data). No corpus fixture: the clipboard is one machine-wide slot, so a fixture would clobber whatever the user had copied and could not put it back. The Go tests borrow and restore it byte for byte, and skip when it holds a format they cannot reproduce. |
 | Native executable lookup | **Complete** | `internal/shell/runtime/external.go`, `external_format.go`; `external_format_test.go`, `external_suffix_windows_test.go`, `runtime_external_test.go` | Lookup follows busybox-w32 `add_win32_extension` (`win32/mingw.c:2237`): the bare name is tried first and accepted when it carries an executable suffix or sniffs executable, and only a name with neither suffix nor trailing dot gets `.com .exe .sh .bat .cmd` appended in that order. Sniffing is the pragmatic subset of busybox's PE walk — `#!` or `MZ`, `.dll` excluded. |
 | Applet override | **Complete** | `internal/shell/runtime/applet_override.go`, `runtime.go`, `command.go`, `external_script.go`; `applet_override_test.go`, `applet_override_lookup_test.go`, `tests/behavior/shell/posix/applet-override-named.toml`, `tests/behavior/shell/posix/applet-override-all.toml` | `NEMOSH_OVERRIDE_APPLETS` reproduces busybox's `prefer_applet_internal` grammar (`libbb/appletlib.c:296`): `-` disables every applet, `+` disables one wherever an external exists, and a list disables names before the first `;` outright and names after it conditionally, separated by space, comma, or semicolon. One gated lookup answers dispatch, `command -v`, and shebang applet interpreters, so an overridden applet is reported absent and lookup falls through to `PATH`. Two deliberate differences from busybox, both recorded in `windows-execution-model.md`: the value is an ordinary shell variable rather than a process-environment read, so no `export` is needed; and the override is scoped to shell lookup, leaving `nemosh <applet>` and applet shims unconditional. `PATH` is searched only for the two forms whose answer depends on it. |
@@ -380,8 +389,8 @@ LSP diagnostics, and the 250-pure-LOC production-file gate passed. Two independe
 fresh-binary six-scenario QA runs passed with hard process deadlines and complete
 binary/helper teardown. Final post-fix reviews returned goal `bg_bfe492ad` PASS,
 quality `bg_31bfa68a` PASS, resource `bg_a2118929` PASS, QA
-`bg_53e10134` PASS, and context `bg_84b6d198` PASS. This closes P0.4 only; P0.5
-remains the next ordered v0 wave.
+`bg_53e10134` PASS, and context `bg_84b6d198` PASS. That closed P0.4 only. P0.5
+has since closed as well, so P1.1 is the next ordered v0 wave.
 
 ### P0.5 - Windows boundaries
 
@@ -395,17 +404,35 @@ hints, no general argv conversion, `/dev/clipboard` UTF-8 text I/O, fixed suffix
 order, batch quoting/status, shebang/CRLF scripts, non-ASCII argv/env/path, and
 long filesystem/process paths.
 
-All three sub-waves have landed, but the pass criteria are not all met: native
-Windows breadth for UNC current roots, configurable aliases, virtual roots, and
-host-only UNC hints is still thin, which is why the Windows Path Gates row above
-stays **Partial**. That breadth is the remaining P0.5 work.
+**Complete.** All three sub-waves landed, and the breadth the pass criteria ask
+for is now on native Windows: UNC current roots and the drive-versus-share
+question `pwd` answers (`path_state_unc_windows_test.go`), the cygdrive,
+mount-prefix, `/tmp`, and `/dev` switches (`path_settings_windows_test.go`), the
+host-only UNC hint across `cd`, redirection, and `.`, and argv non-conversion,
+which had only ever been recorded as an absence (`external_argv_test.go`). The
+launch, encoding, and long-path halves are covered by the rows above.
+
+Checking "all required input path forms" against a fresh binary rather than
+against the test suite found one of them broken: the lexer treated backslash as
+an unconditional escape inside double quotes, so `cat "C:\Users\nemo\file.txt"`
+— the quoted form `windows-path-model.md:32` offers as the alternative to
+forward slashes — reached the path model as `C:Usersnemofile.txt`. The path
+model was never at fault and no path test could have caught it. Fixed to the
+POSIX and busybox-w32 rule, where the backslash stays special only before `$`,
+a backquote, a double quote, another backslash, and a newline
+(`lexer_double_quote_test.go`,
+`tests/behavior/shell/posix/double-quote-backslash.toml`).
+
+The Windows Path Gates row stays **Partial**, but no longer because of P0.5: what
+is missing there is real-case resolution, a capability `windows-path-model.md`
+asks for and nothing implements. It is not on this section's pass criteria.
 
 P0.5 is ordered as three sub-waves so path integration lands before launch and
 encoding boundaries depend on it:
 
 | Sub-wave | Content | Status |
 | --- | --- | --- |
-| Wave A | Route shell-owned filesystem and lookup operations through `internal/pathmodel`. | **Complete.** `Runtime.ResolveNemoshPath` is the single seam; see the runtime-integration note above. Remaining native Windows test breadth is tracked there, not here. |
+| Wave A | Route shell-owned filesystem and lookup operations through `internal/pathmodel`. | **Complete.** `Runtime.ResolveNemoshPath` is the single seam, and the native Windows tests for UNC current roots, the alias and virtual-root switches, the host-only hint, and argv non-conversion landed after the other two waves; see the runtime-integration note above. |
 | Wave B | `/dev/clipboard`, fixed suffix lookup, `ComSpec` batch launch, `.sh`/shebang/CRLF dispatch, applet override configuration. | **Complete.** Suffix lookup, batch launch through `ComSpec`, `.sh`/shebang dispatch, CRLF handling down to a preserved lone `\r`, `/dev/clipboard`, and `NEMOSH_OVERRIDE_APPLETS` all landed; see the Windows launch rows, the device-set row, and the applet-override row above. |
 | Wave C | UTF-8/wide API boundaries and internal long-path handling. | **Complete.** Measurement found one genuine gap — a child could not be launched from a working directory over 258 UTF-16 characters — now carried by `external_directory.go`. The rest already held through Go's `os` layer and Nemosh's virtual cwd, and is now pinned rather than assumed; see the UTF-8/long-path row above. |
 
