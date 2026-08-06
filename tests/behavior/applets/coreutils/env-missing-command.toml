@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 script = "env nosuchcommand\n"
 
 [expect]
-status = 1
+status = 127
 stdout = ""
 stderr = "env: nosuchcommand: not found\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/env.c and libbb/executable.c"
-why = "BusyBox hands COMMAND to BB_EXECVP_or_die, which exits 127 with `can't execute 'NAME': No such file or directory` (libbb/executable.c:117-122). Nemosh's env dispatches registered applets only, so it says `not found` and exits 1. Wording and status both diverge; see docs/design/v0-readiness.md."
+why = "BusyBox hands COMMAND to BB_EXECVP_or_die, which raises xfunc_error_retval to 127 for ENOENT before it dies (libbb/executable.c:117-122). Nemosh matches the status. The wording stays `not found` rather than BusyBox's `can't execute 'NAME': No such file or directory` because nemosh's env dispatches registered applets only, so no execvp ran and claiming ENOENT would misdescribe the mechanism; see docs/design/v0-readiness.md."
