@@ -25,7 +25,7 @@ func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 		}
 		file, err := os.OpenFile(native, os.O_CREATE|os.O_WRONLY, 0o666)
 		if err != nil {
-			return err
+			return operandFailure(path, err)
 		}
 		if err := file.Close(); err != nil {
 			return err
@@ -46,7 +46,7 @@ func newRmApplet() Applet {
 				return err
 			}
 			if err := os.Remove(native); err != nil {
-				return err
+				return cannotRemove(path, err)
 			}
 		}
 		return nil
@@ -65,7 +65,7 @@ func newMkdirApplet() Applet {
 				return err
 			}
 			if err := os.Mkdir(native, 0o777); err != nil {
-				return err
+				return cannotCreateDirectory(path, err)
 			}
 		}
 		return nil
@@ -84,7 +84,7 @@ func newRmdirApplet() Applet {
 				return err
 			}
 			if err := os.Remove(native); err != nil {
-				return err
+				return quotedFailure(path, err)
 			}
 		}
 		return nil

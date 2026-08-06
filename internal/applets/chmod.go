@@ -24,7 +24,7 @@ func newChmodApplet() Applet {
 				return err
 			}
 			if err := os.Chmod(native, mode); err != nil {
-				return err
+				return operandFailure(path, err)
 			}
 		}
 		return nil
