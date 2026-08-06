@@ -1,9 +1,12 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/pathmodel"
 )
 
 func (r Runtime) pwd() int {
@@ -52,13 +55,21 @@ func (r Runtime) cd(args []string) int {
 	if len(args) > 0 {
 		target = args[0]
 	}
-	if target == "//" || (strings.HasPrefix(target, "//") && strings.Count(strings.Trim(target, "/"), "/") == 0) {
-		fmt.Fprintf(r.streams.Stderr, "cd: %s: No such file or directory\n", target)
-		fmt.Fprintf(r.streams.Stderr, "hint: %s is not a directory root; use %s/share\n", target, strings.TrimRight(target, "/"))
-		return 1
-	}
 	resolved, err := r.ResolveNemoshPath(target)
 	if err != nil {
+		// A host-only UNC path is not a missing directory, it is not a
+		// directory at all, so the failure reads as one line of the ordinary
+		// shape plus a line naming what to type instead. The hint comes from
+		// the path model rather than from the operand, so `//server/` advises
+		// `//server/share` and not `//server//share`, and a hostless `//` --
+		// which the model calls malformed, not host-only -- gets no share
+		// suggestion it cannot complete.
+		var hostOnly pathmodel.HostOnlyUNCError
+		if errors.As(err, &hostOnly) {
+			fmt.Fprintf(r.streams.Stderr, "cd: %s: No such file or directory\n", target)
+			fmt.Fprintf(r.streams.Stderr, "hint: %v\n", hostOnly)
+			return 1
+		}
 		fmt.Fprintf(r.streams.Stderr, "cd: %s: %v\n", target, err)
 		return 1
 	}

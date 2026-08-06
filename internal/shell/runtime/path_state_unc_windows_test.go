@@ -106,6 +106,74 @@ func TestP05WaveA_ShellIO_resolvesAbsolutePathsUnderTheUNCCurrentRoot(t *testing
 	assertPathFileText(t, filepath.Join(native, "absolute.txt"), "absolute\n")
 }
 
+// The host-only hint is documented for `cd`
+// (docs/design/windows-path-model.md:76), but it comes out of the path model,
+// so every shell operation that resolves a path carries it rather than falling
+// back to whatever Win32 says about `\\server`. It names the host it parsed,
+// not the operand as typed, so a trailing slash reads the same as none: the
+// share to append goes after `//server`, and `//server//share` is not the
+// advice to give.
+func TestP05WaveA_ShellIO_reportsTheHostOnlyUNCHintFromEveryPathOperation(t *testing.T) {
+	tests := []struct {
+		name   string
+		script string
+	}{
+		{name: "cd", script: "cd //server\n"},
+		{name: "cd with a trailing slash", script: "cd //server/\n"},
+		{name: "redirect", script: "echo should-not-run > //server\n"},
+		{name: "source", script: ". //server\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Given
+			var stdout, stderr bytes.Buffer
+			rt := NewWithState(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr}, State{
+				Cwd: WorkingDirectory(t.TempDir()),
+			})
+
+			// When
+			status := rt.RunScript(context.Background(), tt.script)
+
+			// Then
+			if status == 0 {
+				t.Fatal("expected the host-only UNC path to fail")
+			}
+			want := "//server is not a directory root; use //server/share"
+			if output := stderr.String(); !strings.Contains(output, want) {
+				t.Fatalf("expected the targeted UNC hint %q, got %q", want, output)
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("expected nothing to run, got stdout %q", stdout.String())
+			}
+		})
+	}
+}
+
+// `//` names no host, so there is no share to suggest appending to one. It is
+// malformed rather than host-only, and the diagnostic has to say so instead of
+// advising `//share`.
+func TestP05WaveA_ShellIO_refusesBareDoubleSlashWithoutInventingAHost(t *testing.T) {
+	// Given
+	var stderr bytes.Buffer
+	rt := NewWithState(applets.DefaultRegistry, Streams{Stderr: &stderr}, State{
+		Cwd: WorkingDirectory(t.TempDir()),
+	})
+
+	// When
+	status := rt.RunScript(context.Background(), "cd //\n")
+
+	// Then
+	if status == 0 {
+		t.Fatal("expected a bare // to fail")
+	}
+	if output := stderr.String(); !strings.Contains(output, "malformed UNC path") {
+		t.Fatalf("expected a malformed-path diagnostic, got %q", output)
+	}
+	if output := stderr.String(); strings.Contains(output, "/share") {
+		t.Fatalf("expected no share suggestion for a hostless path, got %q", output)
+	}
+}
+
 func shareOf(t *testing.T, unc string) string {
 	t.Helper()
 	fields := strings.Split(filepath.ToSlash(strings.TrimPrefix(unc, `\\`)), "/")
