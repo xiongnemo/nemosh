@@ -13,4 +13,4 @@ stderr = "sort: invalid option -- x\n"
 
 [notes]
 standard = "BusyBox-w32 sort utility"
-why = "BusyBox-w32 sort uses status 2 for option parsing failures."
+why = "sort_main sets xfunc_error_retval = 2 before parsing options (coreutils/sort.c:468), so its bb_show_usage death exits 2 where cut and uniq exit 1. Nemosh prints a one-line diagnostic in place of the usage text."

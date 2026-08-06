@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 command = ["uniq", "first.txt", "second.txt"]
 
 [expect]
-status = 2
+status = 1
 stdout = ""
 stderr = "uniq: too many operands\n"
 
 [notes]
 standard = "BusyBox-w32 uniq utility"
-why = "BusyBox-w32 supports an OUTFILE operand, but output-file support is intentionally deferred in the first Nemosh uniq slice."
+why = "BusyBox-w32 reads OUTFILE as the second operand (coreutils/uniq.c:78) and only shows usage on a third; Nemosh defers output-file support, so it rejects the second. Status 1 matches the bb_show_usage default either way."

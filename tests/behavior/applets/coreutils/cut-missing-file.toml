@@ -7,10 +7,10 @@ references = ["busybox-w32"]
 command = ["cut", "-c", "1", "missing-cut-input.txt"]
 
 [expect]
-status = 2
+status = 1
 stdout = ""
 stderr = "cut: missing-cut-input.txt: No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 cut utility"
-why = "BusyBox-w32 cut reports missing input files with status 2."
+why = "BusyBox-w32 cut sets retval to EXIT_FAILURE and continues to the next operand, so a missing input file exits 1 (coreutils/cut.c, after fopen_or_warn_stdin)."

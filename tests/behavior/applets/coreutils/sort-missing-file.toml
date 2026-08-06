@@ -13,4 +13,4 @@ stderr = "sort: missing-sort-input.txt: No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 sort utility"
-why = "BusyBox-w32 sort aborts on the first input file open error with status 2."
+why = "BusyBox-w32 sort aborts on the first open error by design -- coreutils 6.9 compat (coreutils/sort.c:566) -- and exits 2 because sort_main raised xfunc_error_retval. cut, by contrast, continues to the next operand and exits 1."

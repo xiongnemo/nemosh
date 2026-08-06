@@ -87,8 +87,14 @@ func (e operandError) Unwrap() error { return e.err }
 // returning one, so a read failure has to carry the operand back out to the
 // print site. Everything else returns a quotedError or an operandError and
 // lets the shell prefix the applet name.
+//
+// The three do not agree on a shape either. cut and sort open through
+// fopen_or_warn_stdin, whose bb_simple_perror_msg prints the operand bare
+// (libbb/wfopen_input.c:16). uniq opens through xopen, which quotes it behind a
+// verb (libbb/xfuncs_printf.c:151).
 type inputError struct {
 	operand string
+	quoted  bool
 	err     error
 }
 
@@ -96,16 +102,25 @@ func inputFailure(operand string, err error) error {
 	return inputError{operand: operand, err: err}
 }
 
+func quotedInputFailure(operand string, err error) error {
+	return inputError{operand: operand, quoted: true, err: err}
+}
+
 func (e inputError) Error() string { return e.err.Error() }
 
 func (e inputError) Unwrap() error { return e.err }
 
+// A failure that never named an operand -- a read off stdin, say -- prints as
+// "<applet>: <cause>" rather than growing an empty operand field.
 func inputDiagnostic(applet string, err error) string {
-	operand := ""
-	if inputErr, ok := errors.AsType[inputError](err); ok {
-		operand = inputErr.operand
+	inputErr, ok := errors.AsType[inputError](err)
+	if !ok {
+		return fmt.Sprintf("%s: %s", applet, causeText(err))
 	}
-	return fmt.Sprintf("%s: %s: %s", applet, operand, causeText(err))
+	if inputErr.quoted {
+		return applet + ": " + cannotOpen(inputErr.operand, inputErr.err).Error()
+	}
+	return applet + ": " + operandFailure(inputErr.operand, inputErr.err).Error()
 }
 
 // causeText spells a cause the way strerror does. The fallback unwraps

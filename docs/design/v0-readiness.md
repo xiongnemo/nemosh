@@ -122,6 +122,37 @@ include `[`, `test`, `pwd`, `env`, `printenv`, `cat`, `head`, `tail`, `wc`,
 substitute for the smoke-plus-negative release rule in
 `docs/testing/applet-test-inventory.md`.
 
+#### Applet failure statuses and diagnostic shapes
+
+Applet diagnostics name the operand as the user wrote it, never the resolved host
+path; `internal/applets/diagnostic.go` carries the three BusyBox shapes and cites
+the reference line for each. Failure statuses follow the reference rather than one
+house rule: `sort` exits 2 because `sort_main` sets `xfunc_error_retval = 2`
+(`coreutils/sort.c:468`), while `cut` and `uniq` never touch it and so exit 1 on
+the `libbb/default_error_retval.c:16` default. `cut` also holds its status across
+an unreadable operand and continues to the next, where `sort` aborts on the first
+by design (`coreutils/sort.c:566`).
+
+Known divergences that are **deliberate and unfixed**, so a reader does not mistake
+the corpus for full parity:
+
+- Nemosh has no usage text. Where BusyBox reaches `bb_show_usage`, Nemosh prints a
+  one-line diagnostic instead. The status matches; the output does not.
+- `cut`'s range diagnostics differ beyond wording. BusyBox routes `-c -`, `-c ''`
+  and `-c 1,,2` to usage output and `-c a` to `invalid number`, and spells a bad
+  range as a pair (`invalid range 0-0`, `coreutils/cut.c:386`). Nemosh reports all
+  of them as `invalid range <part as written>`.
+- `sort -z` (NUL-terminated lines) is accepted by BusyBox and rejected by Nemosh.
+- `uniq OUTFILE` (`coreutils/uniq.c:78`) is unimplemented; Nemosh rejects a second
+  operand that BusyBox would write to.
+- `cp` of a directory copies nothing rather than saying `omitting directory`, and
+  `rm` removes an empty directory that BusyBox would refuse without `-r`.
+- `cat` on a directory says `Is a directory`. BusyBox-w32 is self-inconsistent
+  here: `mingw_fopen` converts `EACCES` to `EISDIR` (`win32/mingw.c:313`) so its
+  `head`/`wc` agree, but `mingw_open` skips the conversion for `O_RDONLY`
+  (`win32/mingw.c:265`) so its `cat` says `Permission denied`. Nemosh uses one
+  wording for every reader.
+
 ### Behavior corpus and CI
 
 | Capability | Status | Evidence | Gap |

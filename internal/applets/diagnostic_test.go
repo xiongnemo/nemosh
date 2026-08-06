@@ -212,8 +212,11 @@ func TestAppletDiagnostics_rejectADirectoryOperandAsEISDIR(t *testing.T) {
 
 // cut, sort and uniq assemble their own diagnostic, print it, and return only a
 // status, so what they write to stderr is the thing under test. Each carried a
-// private copy of the same wrapper; the missing-file rows pin down the behavior
-// those copies already had correct.
+// private copy of the same wrapper.
+//
+// uniq is the odd one out on shape: it opens with xopen, which quotes behind a
+// verb (libbb/xfuncs_printf.c:151), while cut and sort use fopen_or_warn_stdin,
+// whose bb_simple_perror_msg prints the operand bare (libbb/wfopen_input.c:16).
 func TestAppletDiagnostics_selfPrintingAppletsNameTheOperand(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -226,13 +229,13 @@ func TestAppletDiagnostics_selfPrintingAppletsNameTheOperand(t *testing.T) {
 		{name: "sort on a missing file", applet: "sort", args: []string{"nope.txt"},
 			want: "sort: nope.txt: No such file or directory\n"},
 		{name: "uniq on a missing file", applet: "uniq", args: []string{"nope.txt"},
-			want: "uniq: nope.txt: No such file or directory\n"},
+			want: "uniq: can't open 'nope.txt': No such file or directory\n"},
 		{name: "cut on a directory", applet: "cut", args: []string{"-f1", "d"},
 			want: "cut: d: Is a directory\n"},
 		{name: "sort on a directory", applet: "sort", args: []string{"d"},
 			want: "sort: d: Is a directory\n"},
 		{name: "uniq on a directory", applet: "uniq", args: []string{"d"},
-			want: "uniq: d: Is a directory\n"},
+			want: "uniq: can't open 'd': Is a directory\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
