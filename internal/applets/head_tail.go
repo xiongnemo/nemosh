@@ -22,7 +22,7 @@ func newHeadApplet() Applet {
 		for _, path := range paths {
 			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
-				return err
+				return operandFailure(path, err)
 			}
 			copyErr := copyHead(stdout, file, count)
 			closeErr := file.Close()
@@ -57,7 +57,7 @@ func newTailApplet() Applet {
 		for _, path := range paths {
 			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
-				return err
+				return cannotOpen(path, err)
 			}
 			copyErr := copyTail(stdout, file, count)
 			closeErr := file.Close()

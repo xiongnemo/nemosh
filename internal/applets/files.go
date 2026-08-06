@@ -48,7 +48,7 @@ func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 	for _, path := range args {
 		file, err := OpenProcessInput(ctx, view, path)
 		if err != nil {
-			return err
+			return cannotOpen(path, err)
 		}
 		_, copyErr := copyWithContext(ctx, stdout, file)
 		closeErr := file.Close()
