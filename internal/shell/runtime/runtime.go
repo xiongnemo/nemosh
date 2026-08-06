@@ -200,6 +200,11 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return 0
 	}
 	if status, ok := applets.StatusCode(err); ok {
+		// A status that travels with a diagnostic still gets printed; only a
+		// bare ExitStatus is silent.
+		if message, ok := applets.StatusMessage(err); ok {
+			fmt.Fprintf(r.streams.Stderr, "%s: %s\n", args[0], message)
+		}
 		return status
 	}
 	if errors.Is(err, applets.ErrExitFalse) {
