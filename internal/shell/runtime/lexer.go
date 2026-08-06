@@ -85,7 +85,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 				literalDollarAt[buffer.Len()] = struct{}{}
 			}
 			buffer.WriteByte(char)
-			parts = append(parts, wordPart{kind: wordPartEscaped, text: string(char), quote: quoteFor(inSingle, inDouble)})
+			parts = append(parts, wordPart{kind: wordPartEscaped, text: line[index : index+1], quote: quoteFor(inSingle, inDouble)})
 			wordPresent = true
 			escaped = false
 			continue
@@ -169,7 +169,11 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			}
 		}
 		buffer.WriteByte(char)
-		appendLiteralPart(&parts, string(char), quoteFor(inSingle, inDouble))
+		// The one-byte slice, not string(char): converting a byte to a string
+		// goes through rune, so every byte above 0x7F would come out as its own
+		// two-byte UTF-8 sequence and a multi-byte character would be shredded.
+		// Consecutive literal parts concatenate, so the sequence reassembles.
+		appendLiteralPart(&parts, line[index:index+1], quoteFor(inSingle, inDouble))
 		wordPresent = true
 	}
 	if escaped {
