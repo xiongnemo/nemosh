@@ -54,6 +54,22 @@ busybox-w32 suffix order rather than arbitrary `PATHEXT` order:
 This makes command lookup deterministic across Windows machines while preserving
 the main busybox-w32 behavior.
 
+The suffix list alone is not the whole rule. busybox `add_win32_extension`
+(`win32/mingw.c:2237`) tries the **bare name first** and appends suffixes only
+when the name has neither an executable suffix nor a trailing dot — the dot
+matters because Windows drops a trailing one when opening, so appending to it
+would name a different file. A name like `notes.txt` is therefore still eligible
+for `notes.txt.exe`, while `run.` is not.
+
+Since Windows has no execute bit, a bare name is accepted when it carries an
+executable suffix or when its first bytes say it is runnable (`win32/mingw.c:779`
+with `has_exec_format` at `win32/mingw.c:487`). Nemosh implements the pragmatic
+subset of that sniff — at least four bytes, then `#!` or `MZ`, with `.dll`
+excluded by name — and deliberately does not walk the PE header. This is what
+makes an extensionless shebang script findable at all.
+
+As implemented: `internal/shell/runtime/external.go` and `external_format.go`.
+
 ## Batch Files
 
 `.bat` and `.cmd` files are supported as external Windows commands by default.
@@ -63,27 +79,113 @@ Execution should cross an explicit `cmd.exe`/`ComSpec` boundary, so batch file
 syntax, variable expansion, quoting, and control operators are documented as cmd
 semantics, not Nemosh semantics.
 
+The boundary is spelled:
+
+```text
+"<ComSpec>" /d /s /c "<script> <arg> <arg>…"
+```
+
+`/d` suppresses AutoRun, and `/s` makes cmd strip exactly the outer quote pair
+and take the remainder verbatim. Each of the script path and the arguments is
+wrapped in `"` with any embedded `"` doubled, which is cmd's own convention.
+`ComSpec` comes from the runtime environment table, falling back to
+`%SystemRoot%\System32\cmd.exe`.
+
+The whole line is handed to Windows through `syscall.SysProcAttr.CmdLine` rather
+than through `exec.Cmd.Args`, because Go's `syscall.EscapeArg` emits `\"` and cmd
+does not understand that escape. Go's own documentation names this case
+(`os/exec`: "Notable exceptions are msiexec.exe and cmd.exe (and thus, all batch
+files), which have a different unquoting algorithm").
+
+Note that this boundary is not what makes a batch file *launch* — `CreateProcess`
+already routes `.bat`/`.cmd` through the command processor implicitly, and that
+implicit path reports exit status correctly. What it fixes is argument fidelity:
+measured against a batch that reports `%~1` and `%*`, the implicit path lets an
+argument containing `&` split the command line (the injection shape of
+CVE-2024-24576), leaks Go's `\"` into `%~1` verbatim, and leaves AutoRun in play.
+
+busybox-w32 cannot be copied here: it never reads `%COMSPEC%` for launch, relying
+instead on MSVCRT `spawnve`, which Go has no equivalent for.
+
+Two operand shapes cannot be carried across this boundary at all and are refused
+with a diagnostic and status 126, before anything runs:
+
+- a line break, `\r` or `\n`, which cmd has no way to represent in one command;
+- two or more `%`, because a `%NAME%` pair naming a *defined* variable expands
+  and then splits across argv. A lone `%` is provably literal and passes through;
+  whether a name is defined is not knowable from the operand alone, so the second
+  `%` is the deterministic tripwire.
+
+There is no behavior-corpus fixture for batch: the corpus executor replaces the
+child environment wholesale (`internal/testutil/behavior/sandbox.go:42-47`), so a
+fixture would have to hardcode `COMSPEC` for one machine. Coverage is in
+`internal/shell/runtime/external_batch_windows_test.go` instead.
+
+As implemented: `internal/shell/runtime/external_batch.go` and
+`external_launch_windows.go`.
+
 Nemosh may adjust the executable path / `argv[0]` at the Windows process-launch
 boundary when required by Windows APIs. It must not perform general path
 auto-conversion on ordinary argv elements.
 
 ## Shell Scripts
 
-`.sh` files and shebang scripts should be handled separately from batch files.
-The default `.sh` behavior should execute through Nemosh or the requested
-interpreter after the parser/runtime strategy is finalized.
+`.sh` files and shebang scripts are handled separately from batch files. A `.sh`
+file executes through Nemosh, and a shebang script through the interpreter it
+names.
 
 Shebang handling should follow busybox-w32's pragmatic behavior: parse `#!`, map
 Unix-style interpreter names such as `/bin/sh` through Nemosh's applet/interpreter
 lookup where appropriate, and run `.sh` files without shebang through Nemosh by
 default.
 
+The grammar is `parse_interpreter` (`win32/process.c:66`), reproduced exactly:
+
+- The first 99 bytes are the whole window (busybox's `interp->buf[100]` less the
+  NUL). A first line that does not end inside it is not a shebang.
+- At least four bytes, then a literal `#!`, then a `\n` within the window.
+- The interpreter is the first `" \t\r\n"`-delimited token, and its basename must
+  be non-empty.
+- At most **one** option follows, taken as a single argument up to `\r` or the
+  newline and trimmed; `#!/bin/sh -x -y` passes `-x -y` as one word, as on Linux.
+- A `.sh` file (case-insensitive) with no usable shebang falls back to `/bin/sh`.
+
+Mapping is `mingw_spawn_interpreter` (`win32/process.c:301`) with `unix_path`
+(`win32/mingw.c:2569`). An interpreter whose dirname is `/bin`, `/usr/bin`,
+`/sbin`, or `/usr/sbin` names the Unix world rather than the filesystem, so it is
+answered without touching disk:
+
+- `sh` or `nemosh` re-enters this binary against the script. POSIX says a script
+  run as a command executes in a new shell, and since Windows has no `fork`, that
+  is a child process — which is why ordinary `nemosh script.sh [args]` dispatch is
+  a prerequisite for this whole section.
+- Any other registered applet name is handed to this binary as that applet.
+
+Anything else resolves through ordinary lookup: the path as written first, then,
+for a Unix path, a `PATH` search by basename. argv is rebuilt busybox-style as
+`[option?, absolute script path, arguments…]` with the caller's `argv[0]` dropped,
+and a chain of interpreters gives up at the fifth (busybox's `++level > 4` ELOOP
+guard), reported as status 126. An interpreter that cannot be found is 127.
+
+Known limitation: `#!/usr/bin/env python3` resolves to the `env` applet, because
+`/usr/bin` is a Unix path and `env` is registered. Nemosh's `env` runs applets
+only (`internal/applets/env.go`), so that shebang reports `python3: not found`.
+This is busybox-faithful in its dispatch and simply inherits `env`'s current
+scope; widening `env` to external programs is separate work.
+
+As implemented: `internal/shell/runtime/external_script.go`, with end-to-end
+coverage in `tests/behavior/shell/windows/script-sh-dispatch.toml` and
+`shebang-applet-interpreter.toml`.
+
 Shell script input should follow busybox-w32's tolerant CRLF behavior:
 
 - Accept both LF and CRLF in script files and parser input.
 - Normalize CRLF pairs to LF before shell grammar processing.
 - Remove `\r` only when it is part of a `\r\n` pair; preserve lone `\r` as data
-  unless a more specific rule applies.
+  unless a more specific rule applies. Pair normalization is in place
+  (`internal/shell/runtime/syntax_scan.go`), but a lone `\r` at the start or end
+  of a logical line is still dropped by `strings.TrimSpace` there, and a trailing
+  one still defeats line-continuation detection in `syntax_continuation.go`. Open.
 - Do not enable global Windows text mode for all file and applet I/O. Applets
   remain byte-oriented by default and implement text behavior individually.
 
