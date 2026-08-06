@@ -51,7 +51,7 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 		return Script{}, fmt.Errorf("command substitution depth: %w", errParseLimit)
 	}
 	if !budget.heredocsScanned {
-		cleaned, heredocs, err := collectHeredocs(source)
+		cleaned, heredocs, err := collectHeredocs(normalizeLineEndings(source))
 		if err != nil {
 			return Script{}, err
 		}

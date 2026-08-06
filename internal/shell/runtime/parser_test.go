@@ -1,9 +1,13 @@
 package runtime
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 func TestParseScript_normalizesLogicalLines(t *testing.T) {
@@ -15,6 +19,11 @@ func TestParseScript_normalizesLogicalLines(t *testing.T) {
 		{name: "empty input", source: "", want: nil},
 		{name: "blank and comment input", source: " \r\n\t\r\n # comment\r\n", want: nil},
 		{name: "CRLF without final newline", source: "echo one\r\necho two", want: []string{"echo one", "echo two"}},
+		// Only the \r of a \r\n pair is a line ending. A \r left over after that
+		// pair is removed is data, so it stays in the word the way bash keeps it.
+		{name: "trailing lone carriage return", source: "echo one\r\r\necho two\n", want: []string{"echo one\r", "echo two"}},
+		{name: "leading lone carriage return", source: "\recho one\n", want: []string{"\recho one"}},
+		{name: "a line of nothing but a carriage return", source: "\r\r\n", want: []string{"\r"}},
 		{name: "comment boundary", source: "echo '# kept' # removed\necho foo#bar\n", want: []string{"echo '# kept'", "echo foo#bar"}},
 		{name: "continued line", source: "echo one\\\ntwo\n", want: []string{"echo onetwo"}},
 		{name: "single quoted backslash", source: "echo 'one\\two'\n", want: []string{"echo 'one\\two'"}},
@@ -26,7 +35,7 @@ func TestParseScript_normalizesLogicalLines(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// When
-			lines, err := logicalLines(tt.source)
+			lines, err := logicalLines(normalizeLineEndings(tt.source))
 
 			// Then
 			if err != nil {
@@ -164,5 +173,23 @@ func TestParseScript_rejectsUnexpectedOrMisorderedClosers(t *testing.T) {
 				t.Fatalf("ParseScript() error = %v, want non-incomplete syntax error", err)
 			}
 		})
+	}
+}
+
+// The scanner keeps a lone carriage return, but the heredoc pre-scan used to
+// normalize line endings too, and strings.ReplaceAll is not idempotent over a
+// run of them: "one\r\r\n" becomes "one\r\n" on the first pass and loses the
+// last \r on the second. Normalization happens exactly once now.
+func TestRunScript_keepsALoneCarriageReturnInAWord(t *testing.T) {
+	var stdout bytes.Buffer
+	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout})
+
+	status := rt.RunScript(context.Background(), "echo one\r\r\necho two\r\n")
+
+	if status != 0 {
+		t.Fatalf("RunScript() = %d, want 0", status)
+	}
+	if got := stdout.String(); got != "one\r\ntwo\n" {
+		t.Fatalf("RunScript() wrote %q, want %q", got, "one\r\ntwo\n")
 	}
 }

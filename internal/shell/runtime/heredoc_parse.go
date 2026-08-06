@@ -18,9 +18,9 @@ type pendingHeredoc struct {
 	operandEnd    int
 }
 
+// The source must already have been through normalizeLineEndings.
 func collectHeredocs(source string) (string, []pendingHeredoc, error) {
-	normalized := strings.ReplaceAll(source, "\r\n", "\n")
-	lines := strings.Split(normalized, "\n")
+	lines := strings.Split(source, "\n")
 	var output strings.Builder
 	var records []pendingHeredoc
 	for index := 0; index < len(lines); index++ {
