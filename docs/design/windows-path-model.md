@@ -179,6 +179,34 @@ cd /; pwd` prints `//192.168.1.200/Media`.
 Cygwin-style prefix with the default set to off. It is not a v0 compatibility
 goal.
 
+## Path Length
+
+Nemosh never writes an extended-length prefix into a canonical path. `\\?\` is a
+Win32 API spelling, not a path form users type, and Nemosh's canonical forms
+above have no length ceiling of their own.
+
+The prefix is nevertheless what makes long paths work, and Nemosh mostly does not
+have to apply it: Go's `os` package applies it for every filesystem call, and
+Nemosh's cwd is a value in `pathState` rather than the process's own, so it is
+not bound by `SetCurrentDirectory`'s MAX_PATH either. Reading, writing, and `cd`
+past MAX_PATH therefore work without the model changing at all.
+
+Measured on Windows 10 19045, two boundaries do not follow that rule:
+
+| Boundary | Widened by `\\?\`? | Nemosh's answer |
+| --- | --- | --- |
+| `CreateProcess` `lpCurrentDirectory` | **No** — 258 characters launch, 259 fails identically with or without the prefix | Retry as the 8.3 short name, then report the length (`internal/shell/runtime/external_directory.go`) |
+| `GetShortPathName` query | Yes — the query is MAX_PATH-bound without it | Prefix on the way in, strip on the way out so the child does not inherit a `\\?\` cwd |
+
+Lengths at these boundaries are counted in UTF-16 code units rather than in the
+UTF-8 bytes Nemosh holds: a 642-byte directory of 258 CJK characters launches, so
+counting bytes would reject paths Windows accepts.
+
+busybox-w32 has nothing to copy here. It is MAX_PATH-bound throughout —
+`char pattern[MAX_PATH]` in `win32/dirent.c:29`, `_fullpath(buffer, path,
+MAX_PATH)` in `win32/mingw.c:1703` — and its cwd is the process's, so it cannot
+reach these directories in the first place.
+
 ## Configuration Shape
 
 The final sample configuration must document each path scheme separately because
