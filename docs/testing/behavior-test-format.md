@@ -72,7 +72,11 @@ Required:
 
 - `id`: stable dotted identifier.
 - `area`: `shell`, `path`, `exec`, `env`, `fd`, `applet`, or `platform`.
-- `kind`: `golden`, `differential`, `probe`, or `xfail`.
+- `kind`: `golden`, `differential`, `probe`, or `xfail`. Today the runner only
+  records this value; it does not act on it. In particular `xfail` does **not**
+  invert or tolerate a failure, so a checked-in case must state what Nemosh
+  actually does. Behavior that a reference requires but Nemosh does not implement
+  belongs in the readiness ledger as a gap, not in the corpus as a red case.
 - `semantics`: `posix`, `busybox-w32`, `nemosh`, or `platform`.
 - `platforms`: allowed platforms.
 - Exactly one of `script` or `command`. `command` is an array whose first item
@@ -90,8 +94,13 @@ Optional:
 - `env`: environment variables for the case.
 - `cwd`: initial cwd.
 - `stdin`: exact standard input, defaulting to empty.
-- `known_differences`: reference-specific notes.
-- `standard`: POSIX section or reference source.
+- `notes.standard`: POSIX section or reference source.
+- `notes.why`: what the case proves, including any recorded difference from a
+  reference. `[notes]` accepts these two keys and no others.
+
+There is deliberately no top-level `known_differences` key and no top-level
+`standard` key: unknown fields are rejected by `internal/testutil/behavior/case.go`,
+so reference differences belong in `notes.why`.
 
 Unknown fields are errors. `cwd` and every `files` key must be a non-empty,
 safe relative path: absolute paths, volume-qualified paths, and paths that

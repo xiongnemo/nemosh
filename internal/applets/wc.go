@@ -24,7 +24,7 @@ func newWcApplet() Applet {
 		for _, path := range paths {
 			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
-				return err
+				return operandFailure(path, err)
 			}
 			counts, countErr := countBytes(file)
 			closeErr := file.Close()
