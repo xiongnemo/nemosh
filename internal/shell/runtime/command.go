@@ -36,7 +36,7 @@ func (r Runtime) isKnownCommand(name string) bool {
 			return true
 		}
 	}
-	_, ok := r.registry.Lookup(name)
+	_, ok := r.lookupApplet(name)
 	return ok
 }
 

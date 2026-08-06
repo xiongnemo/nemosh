@@ -199,7 +199,7 @@ func (r Runtime) interpreterExecutable(interp interpreter) (string, string, erro
 		if interp.name == defaultInterpreterName || interp.name == shellExecutableName {
 			return "", "", nil
 		}
-		if _, ok := r.registry.Lookup(interp.name); ok {
+		if _, ok := r.lookupApplet(interp.name); ok {
 			return "", interp.name, nil
 		}
 	}

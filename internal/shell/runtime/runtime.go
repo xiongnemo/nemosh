@@ -185,7 +185,7 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	case "wait":
 		return r.wait(ctx, args[1:])
 	}
-	applet, ok := r.registry.Lookup(args[0])
+	applet, ok := r.lookupApplet(args[0])
 	if !ok {
 		return r.runExternal(ctx, args)
 	}
