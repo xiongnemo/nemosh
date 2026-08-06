@@ -35,7 +35,7 @@ func (envApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 	}
 	applet, ok := DefaultRegistry.Lookup(invocation.command[0])
 	if !ok {
-		return fmt.Errorf("%s: not found", invocation.command[0])
+		return commandNotFound(invocation.command[0])
 	}
 	return applet.Run(ctx, invocation.command[1:], stdin, stdout, stderr)
 }

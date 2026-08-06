@@ -83,6 +83,16 @@ func (e operandError) Error() string {
 
 func (e operandError) Unwrap() error { return e.err }
 
+// env and xargs both launch a COMMAND, and both follow the SUSv3 table busybox
+// cites: BB_EXECVP_or_die raises xfunc_error_retval to 127 for ENOENT and 126
+// otherwise before it dies (libbb/executable.c:117-122), and xargs names the
+// same two statuses (findutils/xargs.c:385-390). Nemosh dispatches registered
+// applets only, so only the not-found branch is reachable, and the wording says
+// "not found" rather than busybox's "can't execute '%s'" because no execvp ran.
+func commandNotFound(name string) error {
+	return ExitStatusMessage(127, operandFailure(name, errors.New("not found")))
+}
+
 // cut, sort and uniq assemble and print their own diagnostic instead of
 // returning one, so a read failure has to carry the operand back out to the
 // print site. Everything else returns a quotedError or an operandError and

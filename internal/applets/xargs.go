@@ -26,7 +26,7 @@ func (xargsApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdo
 	}
 	applet, ok := DefaultRegistry.Lookup(commandArgs[0])
 	if !ok {
-		return fmt.Errorf("%s: not found", commandArgs[0])
+		return commandNotFound(commandArgs[0])
 	}
 	return applet.Run(ctx, commandArgs[1:], bytes.NewReader(nil), stdout, stderr)
 }
