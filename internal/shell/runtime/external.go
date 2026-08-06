@@ -133,14 +133,14 @@ func executableCandidate(candidate string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if filepath.Ext(absolute) != "" || runtime.GOOS != "windows" {
-		executable, err := isExecutableFile(absolute)
-		if err != nil {
-			return "", err
-		}
-		if executable {
-			return absolute, nil
-		}
+	executable, err := isExecutableFile(absolute)
+	if err != nil {
+		return "", err
+	}
+	if executable {
+		return absolute, nil
+	}
+	if runtime.GOOS != "windows" || hasWindowsExecutableSuffixOrDot(absolute) {
 		return "", errExternalNotFound
 	}
 	var firstSuffixErr error
@@ -182,10 +182,19 @@ func isExecutableFile(path string) (bool, error) {
 	if info.IsDir() {
 		return false, fmt.Errorf("executable %q is a directory: %w", path, errExternalNotExecutable)
 	}
-	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
-		return false, fmt.Errorf("executable %q: %w", path, errExternalNotExecutable)
+	if runtime.GOOS != "windows" {
+		if info.Mode().Perm()&0o111 == 0 {
+			return false, fmt.Errorf("executable %q: %w", path, errExternalNotExecutable)
+		}
+		return true, nil
 	}
-	return true, nil
+	// Windows has no execute bit, so busybox synthesises one from the suffix and,
+	// failing that, the file's first bytes (win32/mingw.c:779). Without the sniff
+	// a plain notes.txt would be handed to CreateProcess and fail there instead.
+	if hasWindowsExecutableSuffix(path) {
+		return true, nil
+	}
+	return hasExecutableFormat(path)
 }
 
 func hasPathSeparator(path string) bool {
