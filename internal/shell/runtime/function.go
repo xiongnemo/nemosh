@@ -16,7 +16,7 @@ func (r Runtime) callFunction(ctx context.Context, definition functionDefinition
 		fmt.Fprintf(r.streams.Stderr, "nemosh: function call depth exceeds %d\n", maxFunctionCallDepth)
 		return 1
 	}
-	r.params = &parameters{values: append([]string(nil), args...)}
+	r.params = &parameters{name: r.params.name, values: append([]string(nil), args...)}
 	r.functionDepth++
 	result := r.executeCommandNode(ctx, definition.body, 0)
 	if result.control == flowExec {

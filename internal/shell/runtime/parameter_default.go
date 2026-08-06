@@ -27,6 +27,8 @@ func (r Runtime) expandScalarParameterText(text string, savedStatus int) string 
 		return text
 	}
 	switch text {
+	case "$0":
+		return r.params.name
 	case "$?":
 		return strconv.Itoa(savedStatus)
 	case "$#":

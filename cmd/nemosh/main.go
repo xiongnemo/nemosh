@@ -84,8 +84,12 @@ func (c command) run(ctx context.Context, args []string) error {
 		return c.runDirectApplet(ctx, controller, applet, args[1:])
 	}
 
-	if len(args) > 2 && args[1] == "-c" {
-		return c.runScript(ctx, controller, args[2])
+	if len(args) > 1 && args[1] == "-c" {
+		if len(args) < 3 {
+			fmt.Fprintln(c.stderr, "nemosh: -c requires an argument")
+			return exitStatus(2)
+		}
+		return c.runScriptAs(ctx, controller, args[2], commandStringInvocation(args[3:]))
 	}
 	if len(args) > 1 && args[1] == "-i" {
 		return c.runInteractive(ctx, controller)
@@ -97,6 +101,14 @@ func (c command) run(ctx context.Context, args []string) error {
 		}
 		if applet, ok := applets.DefaultRegistry.Lookup(args[1]); ok {
 			return c.runDirectApplet(ctx, controller, applet, args[2:])
+		}
+		if !strings.HasPrefix(args[1], "-") {
+			return c.runScriptFile(ctx, controller, args[1], args[2:])
+		}
+		// A bare "-" is the POSIX spelling of "read the script from stdin".
+		if args[1] != "-" {
+			fmt.Fprintf(c.stderr, "nemosh: invalid option %s\n", args[1])
+			return exitStatus(2)
 		}
 	}
 	if len(args) == 1 && c.stdinIsTerminal {
@@ -177,15 +189,7 @@ func interactiveStatusError(status int) error {
 }
 
 func (c command) runScript(ctx context.Context, controller *interruptController, script string) error {
-	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: c.stdin, Stdout: c.stdout, Stderr: c.stderr})
-	executionCtx, clear := controller.context(ctx)
-	status := rt.RunScript(executionCtx, script)
-	clear()
-	rt.CloseBatch(status)
-	if status == 0 {
-		return nil
-	}
-	return exitStatus(status)
+	return c.runScriptAs(ctx, controller, script, scriptInvocation{name: defaultScriptName})
 }
 
 type exitStatus int

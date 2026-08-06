@@ -64,6 +64,8 @@ func (r Runtime) expandHomeTilde(value string) string {
 func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
 	text := part.text
 	switch text {
+	case "$0":
+		return []string{r.params.name}
 	case "$?":
 		return []string{strconv.Itoa(savedStatus)}
 	case "$#":
