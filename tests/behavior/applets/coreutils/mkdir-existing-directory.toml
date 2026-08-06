@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.mkdir.existing-directory"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "mkdir taken\n"
+
+[files]
+"taken/keep" = ""
+
+[expect]
+status = 1
+stdout = ""
+stderr = "mkdir: can't create directory 'taken': File exists\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/mkdir.c"
+why = "bb_make_directory reports a failure as `can't %s directory '%s'` with the verb `create` (libbb/make_directory.c:150) and mkdir_main turns it into EXIT_FAILURE (coreutils/mkdir.c:97-99). Nemosh matches."

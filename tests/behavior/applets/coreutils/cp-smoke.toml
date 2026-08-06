@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.cp.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "cp a.txt b.txt\ncat b.txt\n"
+
+[files]
+"a.txt" = "payload\n"
+
+[expect]
+status = 0
+stdout = "payload\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/cp.c"
+why = "cp SOURCE DEST copies the contents to a new name and says nothing on success."

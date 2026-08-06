@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.sed.no-script"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "sed\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 editors/sed.c"
+why = "With no -e, no -f and no operand BusyBox sed reaches bb_show_usage (editors/sed.c:1620-1622), which exits 1 because sed_main has not raised xfunc_error_retval at that point. The status matches; Nemosh prints no usage text. Nemosh's sed also reads stdin only -- it has no file-operand path -- which is recorded in docs/design/v0-readiness.md."

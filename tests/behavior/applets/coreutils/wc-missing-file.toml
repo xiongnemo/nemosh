@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.wc.missing-file"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "wc nope.txt\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "wc: nope.txt: No such file or directory\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/wc.c"
+why = "wc opens through fopen_or_warn_stdin, so the operand is reported bare and status becomes EXIT_FAILURE (coreutils/wc.c:152-154). Nemosh matches."

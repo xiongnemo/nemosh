@@ -1,0 +1,20 @@
+id = "applet.busybox-w32.find.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "find .\n"
+
+[files]
+"a.txt" = ""
+"d/inner.txt" = ""
+
+[expect]
+status = 0
+stdout = ".\na.txt\nd\nd/inner.txt\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 findutils/find.c"
+why = "find with no expression prints every visited path, starting with the root operand itself. Nemosh emits POSIX separators, so `d/inner.txt` reads the same on Windows as elsewhere."

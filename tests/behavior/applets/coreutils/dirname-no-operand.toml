@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.dirname.no-operand"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "dirname\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/dirname.c"
+why = "dirname takes exactly one operand through single_argv, which calls bb_show_usage otherwise (coreutils/dirname.c:41). The status matches; Nemosh prints no usage text."

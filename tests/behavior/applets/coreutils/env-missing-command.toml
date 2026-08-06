@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.env.missing-command"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "env nosuchcommand\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "env: nosuchcommand: not found\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/env.c and libbb/executable.c"
+why = "BusyBox hands COMMAND to BB_EXECVP_or_die, which exits 127 with `can't execute 'NAME': No such file or directory` (libbb/executable.c:117-122). Nemosh's env dispatches registered applets only, so it says `not found` and exits 1. Wording and status both diverge; see docs/design/v0-readiness.md."

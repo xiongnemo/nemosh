@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.test.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "test -n x && echo nonempty\ntest a != b && echo differ\n"
+
+[expect]
+status = 0
+stdout = "nonempty\ndiffer\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/test.c"
+why = "`-n STRING` and `STRING1 != STRING2` are the two primaries Nemosh's test stub supports beyond a bare non-empty operand; success is status 0 with no output."

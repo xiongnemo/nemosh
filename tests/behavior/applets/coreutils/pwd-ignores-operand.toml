@@ -1,0 +1,17 @@
+id = "applet.busybox-w32.pwd.ignores-operand"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32"]
+script = "cd /c/Windows\npwd extra\n"
+cwd = "work"
+
+[expect]
+status = 0
+stdout = "/c/Windows\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/pwd.c"
+why = "BusyBox pwd declares argv UNUSED_PARAM unless ENABLE_DESKTOP is set (coreutils/pwd.c:69-70), so a stray operand is ignored rather than rejected. Nemosh does the same."

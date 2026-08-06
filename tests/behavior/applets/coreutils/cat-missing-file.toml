@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.cat.missing-file"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "cat nope.txt\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "cat: can't open 'nope.txt': No such file or directory\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/cat.c"
+why = "cat opens through open_or_warn_stdin, whose warning quotes the operand behind a verb -- `can't open '%s'` (libbb/xfuncs_printf.c:169) -- and sets retval = EXIT_FAILURE (coreutils/cat.c:133-135). Nemosh matches both."

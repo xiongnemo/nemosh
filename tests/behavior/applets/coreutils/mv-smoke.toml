@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.mv.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "mv a.txt b.txt\nls\ncat b.txt\n"
+
+[files]
+"a.txt" = "payload\n"
+
+[expect]
+status = 0
+stdout = "b.txt\npayload\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/mv.c"
+why = "mv SOURCE DEST renames in place: the source disappears from the listing and the contents follow the new name."

@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.mkdir.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "mkdir made\nls\n"
+
+[files]
+"a.txt" = ""
+
+[expect]
+status = 0
+stdout = "a.txt\nmade\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/mkdir.c"
+why = "mkdir creates the named directory and says nothing on success (coreutils/mkdir.c:96-101); ls then shows it alongside the seeded file."

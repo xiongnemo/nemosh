@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.dirname.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "dirname /a/b/c.txt\n"
+
+[expect]
+status = 0
+stdout = "/a/b\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/dirname.c"
+why = "dirname prints the operand with its last path component removed (coreutils/dirname.c:41)."

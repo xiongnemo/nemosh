@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.grep.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "grep two a.txt\n"
+
+[files]
+"a.txt" = "one\ntwo\nthree\n"
+
+[expect]
+status = 0
+stdout = "two\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 findutils/grep.c"
+why = "A matching line is printed and the exit status is 0; grep reserves 1 for `no match` (findutils/grep.c:718, 880)."

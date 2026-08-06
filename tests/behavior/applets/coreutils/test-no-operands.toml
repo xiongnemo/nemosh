@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.test.no-operands"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "test\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/test.c"
+why = "With no operands BusyBox test evaluates to false and returns 1 without a diagnostic, which is what Nemosh does. Nemosh's stub has no file tests (`-f`, `-e`, `-d`) and no integer comparisons (`-gt` and friends), so those also return 1; the gap is recorded in docs/design/v0-readiness.md."

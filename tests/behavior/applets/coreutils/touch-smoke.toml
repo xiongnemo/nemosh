@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.touch.smoke"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "touch made.txt\nls\n"
+
+[files]
+"a.txt" = ""
+
+[expect]
+status = 0
+stdout = "a.txt\nmade.txt\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/touch.c"
+why = "touch creates a missing file through open(O_CREAT) when utimensat reports ENOENT (coreutils/touch.c:169-181)."

@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.bracket.missing-bracket"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "[ -n x\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/test.c"
+why = "BusyBox prints `[: missing ]` and returns 2 when the last argument is not `]` (coreutils/test.c:899-901). Nemosh's stub fails silently with 1. Both the diagnostic and the status diverge; see docs/design/v0-readiness.md."

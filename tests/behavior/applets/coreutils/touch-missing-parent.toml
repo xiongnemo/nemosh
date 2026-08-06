@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.touch.missing-parent"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "touch nope/made.txt\n"
+
+[expect]
+status = 1
+stdout = ""
+stderr = "touch: nope/made.txt: No such file or directory\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/touch.c"
+why = "A missing parent directory makes the open(O_CREAT) fallback fail too, and the operand is reported bare via bb_simple_perror_msg with status EXIT_FAILURE (coreutils/touch.c:184-186). Nemosh matches."

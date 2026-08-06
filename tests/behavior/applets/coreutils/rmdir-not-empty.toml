@@ -1,0 +1,19 @@
+id = "applet.busybox-w32.rmdir.not-empty"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "rmdir full\n"
+
+[files]
+"full/keep" = ""
+
+[expect]
+status = 1
+stdout = ""
+stderr = "rmdir: 'full': Directory not empty\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/rmdir.c"
+why = "rmdir prints the operand quoted with no verb -- `bb_perror_msg(\"'%s'\", path)`, commented `Match gnu rmdir msg.` (coreutils/rmdir.c:78) -- and returns 1. Nemosh matches."
