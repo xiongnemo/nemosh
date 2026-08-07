@@ -35,6 +35,9 @@ func (r Runtime) describeCommand(name string) (string, bool) {
 	if isRuntimeBuiltin(name) {
 		return name + " is a shell builtin", true
 	}
+	if _, ok := unimplementedBuiltins[name]; ok {
+		return name + " is a shell builtin this shell does not implement", true
+	}
 	if parsed, ok := newFunctionName(name); ok {
 		if _, found := r.functions[parsed]; found {
 			return name + " is a function", true

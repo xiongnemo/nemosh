@@ -2,9 +2,12 @@ package runtime
 
 import "strings"
 
-// The two-character operators, longest first so `<<` is not read as two `<`.
+// Longest first, so `<<=` is not read as `<<` then `=`, and `<<` is not read as
+// two `<`.
 var arithmeticOperators = []string{
+	"<<=", ">>=",
 	"<<", ">>", "<=", ">=", "==", "!=", "&&", "||",
+	"+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=",
 	"+", "-", "*", "/", "%", "(", ")", "<", ">", "&", "^", "|", "!", "~", "?", ":", "=",
 }
 

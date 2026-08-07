@@ -57,13 +57,13 @@ func (o *shellOptions) byLetter(letter byte) (*bool, bool) {
 	return nil, false
 }
 
-func (o *shellOptions) byName(name string) (*bool, bool) {
+func shellOptionSpecByName(name string) (shellOptionSpec, bool) {
 	for _, spec := range shellOptionSpecs {
 		if spec.name == name {
-			return spec.field(o), true
+			return spec, true
 		}
 	}
-	return nil, false
+	return shellOptionSpec{}, false
 }
 
 // letters spells the enabled options the way `$-` reports them: the short

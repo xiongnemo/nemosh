@@ -81,7 +81,11 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	}
 	cmd.Stdout = r.streams.Stdout
 	cmd.Stderr = r.streams.Stderr
-	if err := cmd.Run(); err != nil {
+	runErr := cmd.Run()
+	// Recorded whether the child succeeded or failed: the CPU it used is spent
+	// either way, and this is the one moment Go reports it.
+	r.recordChildCPU(cmd)
+	if err := runErr; err != nil {
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return exitErr.ExitCode()
 		}
