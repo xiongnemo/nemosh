@@ -1,0 +1,29 @@
+id = "shell.posix.cd.home-dash-and-pwd"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+mkdir sub
+start=$(pwd)
+test "$PWD" = "$start" && echo seeded
+cd sub
+test "$PWD" = "$(pwd)" && echo tracked
+test "$OLDPWD" = "$start" && echo remembered
+cd - > /dev/null
+test "$(pwd)" = "$start" && echo returned
+HOME=$start/sub
+cd
+test "$(pwd)" = "$HOME" && echo home
+'''
+
+[expect]
+status = 0
+stdout = "seeded\ntracked\nremembered\nreturned\nhome\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.14 cd"
+why = "cd with no operand goes to HOME and a lone dash goes back to OLDPWD, printing where it landed; both were treated as directory names before. PWD and OLDPWD are maintained and exported, following busybox's setpwd (shell/ash.c:3571,3591). PWD is also seeded at startup, because Nemosh's working directory is a value it owns rather than the process's, so an inherited PWD can be wrong before any cd happens."
