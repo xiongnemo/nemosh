@@ -35,12 +35,29 @@ func commandStringInvocation(operands []string) scriptInvocation {
 // exactly as the user wrote it, which is what a script echoing its own name in a
 // usage message should print.
 func (c command) runScriptFile(ctx context.Context, controller *interruptController, path string, args []string) error {
-	script, err := os.ReadFile(path)
+	rt := c.newRuntime()
+	script, err := readScriptFile(rt, path)
 	if err != nil {
 		fmt.Fprintf(c.stderr, "nemosh: can't open '%s': %v\n", path, openFailureReason(err))
 		return exitStatus(127)
 	}
-	return c.runScriptAs(ctx, controller, string(script), scriptInvocation{name: path, args: args})
+	return c.runScriptWith(ctx, controller, rt, string(script), scriptInvocation{name: path, args: args})
+}
+
+// readScriptFile takes the operand through the shell's own path model, so every
+// spelling the shell prints is one it accepts back: `pwd` answers
+// /c/Users/nemo/work and `nemosh /c/Users/nemo/work/build.sh` has to run. It
+// used to reach os.ReadFile unconverted, so that form failed with 127 while the
+// shell went on printing it.
+func readScriptFile(rt runtime.Runtime, path string) ([]byte, error) {
+	resolved, err := rt.ResolveNemoshPath(path)
+	if err != nil {
+		return nil, err
+	}
+	if resolved.Device {
+		return nil, errors.New("not a regular file")
+	}
+	return os.ReadFile(resolved.Native)
 }
 
 // openFailureReason drops the operation and path that fs.PathError repeats, so
@@ -52,8 +69,17 @@ func openFailureReason(err error) error {
 	return err
 }
 
+func (c command) newRuntime() runtime.Runtime {
+	return runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: c.stdin, Stdout: c.stdout, Stderr: c.stderr})
+}
+
 func (c command) runScriptAs(ctx context.Context, controller *interruptController, script string, invocation scriptInvocation) error {
-	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: c.stdin, Stdout: c.stdout, Stderr: c.stderr})
+	return c.runScriptWith(ctx, controller, c.newRuntime(), script, invocation)
+}
+
+// runScriptWith takes the runtime as a parameter because a script file has to
+// resolve its own operand through one before there is anything to run.
+func (c command) runScriptWith(ctx context.Context, controller *interruptController, rt runtime.Runtime, script string, invocation scriptInvocation) error {
 	rt.SetArguments(invocation.name, invocation.args)
 	executionCtx, clear := controller.context(ctx)
 	status := rt.RunScript(executionCtx, script)
