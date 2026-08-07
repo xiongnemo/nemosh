@@ -5,6 +5,7 @@ import (
 	"io"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -36,6 +37,18 @@ func (a contextApplet) Run(ctx context.Context, args []string, stdin io.Reader, 
 func (r Registry) Lookup(name string) (Applet, bool) {
 	applet, ok := r.applets[name]
 	return applet, ok
+}
+
+// Names lists every registered applet, sorted, as a fresh slice. It backs
+// `nemosh --list`, whose output generates Scoop shims, so the order has to be
+// stable across runs rather than a map's.
+func (r Registry) Names() []string {
+	names := make([]string, 0, len(r.applets))
+	for name := range r.applets {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func InvocationName(args []string) string {

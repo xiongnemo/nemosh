@@ -108,6 +108,9 @@ func (c command) run(ctx context.Context, args []string) error {
 		if !strings.HasPrefix(args[1], "-") {
 			return c.runScriptFile(ctx, controller, args[1], args[2:])
 		}
+		if handled, err := c.infoFlag(args[1]); handled {
+			return err
+		}
 		// A bare "-" is the POSIX spelling of "read the script from stdin".
 		if args[1] != "-" {
 			fmt.Fprintf(c.stderr, "nemosh: invalid option %s\n", args[1])
