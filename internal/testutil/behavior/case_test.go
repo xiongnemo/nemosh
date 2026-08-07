@@ -115,6 +115,16 @@ func TestBehaviorCommandCases_executeAgainstAppletRegistry(t *testing.T) {
 				t.Skip("not a command case")
 			}
 			result := runner.Run(t.Context(), c)
+			// The other two executors honour this; this one did not, so a case
+			// scoped to `platforms = ["windows"]` was compared anyway and its
+			// empty result read as a mismatch. Invisible until the suite ran on
+			// a platform other than Windows for the first time.
+			if result.SkipReason != "" {
+				t.Skip(result.SkipReason)
+			}
+			if result.HarnessError != nil {
+				t.Fatal(result.HarnessError)
+			}
 			if result.Status != c.Expect.Status {
 				t.Fatalf("expected status %d, got %d", c.Expect.Status, result.Status)
 			}
