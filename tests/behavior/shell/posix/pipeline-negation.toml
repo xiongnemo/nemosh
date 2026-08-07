@@ -1,0 +1,28 @@
+id = "shell.posix.pipeline.negation"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+! false
+echo [$?]
+! true
+echo [$?]
+! echo ran
+echo [$?]
+if ! false; then echo yes; else echo no; fi
+! false && echo reached
+true && ! false
+echo [$?]
+'''
+
+[expect]
+status = 0
+stdout = "[0]\n[1]\nran\n[1]\nyes\nreached\n[0]\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.2 Pipelines"
+why = "`!` is a reserved word that gives the logical NOT of the whole pipeline's exit status, not the first command's, and the command still runs. Without it `! false` was a lookup for a program named `!` and exited 127, which made `if ! cmd` take the wrong branch silently."

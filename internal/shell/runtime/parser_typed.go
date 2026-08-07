@@ -101,14 +101,18 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 			}
 			continue
 		}
-		commands, err := splitTokenPipeline(segment.tokens)
+		segmentTokens, negated := stripPipelineNegation(segment.tokens)
+		if len(segmentTokens) == 0 {
+			return andOr{}, fmt.Errorf("syntax error: missing command after !")
+		}
+		commands, err := splitTokenPipeline(segmentTokens)
 		if err != nil {
 			if errors.Is(err, errPipelineMissingCommand) {
 				return andOr{}, fmt.Errorf("%w: %v", ErrIncompleteScript, err)
 			}
 			return andOr{}, err
 		}
-		parsed := pipeline{}
+		parsed := pipeline{negated: negated}
 		for _, commandTokens := range commands {
 			command, redirects, err := parseRedirectsWithBudget(commandTokens, budget)
 			if err != nil {
@@ -134,6 +138,31 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 
 func isAndOrOperator(kind tokenKind) bool {
 	return kind == tokenAndIf || kind == tokenOrIf
+}
+
+// stripPipelineNegation takes the `!` reserved word off the front of a pipeline.
+// POSIX 2.9.2 gives it the whole pipeline, not the first command, so it comes
+// off before the stages are split. Only one is recognised; a second `!` is an
+// ordinary word, which is how dash reads it.
+func stripPipelineNegation(tokens []shellToken) ([]shellToken, bool) {
+	if len(tokens) == 0 || !isPipelineNegationToken(tokens[0]) {
+		return tokens, false
+	}
+	return tokens[1:], true
+}
+
+// Quoting takes the reserved-word meaning away, so `"!" false` is a lookup for a
+// command named `!` and has to reach command lookup unchanged.
+func isPipelineNegationToken(token shellToken) bool {
+	if token.kind != tokenWord || token.value != "!" || token.parsed == nil {
+		return false
+	}
+	for _, part := range token.parsed.parts {
+		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {
+			return false
+		}
+	}
+	return true
 }
 
 func classifyCommandError(err error) error {

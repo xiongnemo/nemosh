@@ -79,6 +79,7 @@ type andOr struct {
 
 type pipeline struct {
 	commands []commandNode
+	negated  bool
 }
 
 type commandNode interface{ commandNode() }
