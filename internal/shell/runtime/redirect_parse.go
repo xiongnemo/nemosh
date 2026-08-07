@@ -18,6 +18,12 @@ type redirectKind uint8
 const (
 	redirectInput redirectKind = iota
 	redirectOutput
+	// redirectClobber is `>|`: truncate even under `set -C`, which is the only
+	// thing that tells it apart from `>`.
+	redirectClobber
+	// redirectReadWrite is `<>`: open for both without truncating, and create
+	// the file if it is not there.
+	redirectReadWrite
 	redirectAppend
 	redirectHeredoc
 	redirectDup
@@ -78,7 +84,7 @@ func parseRedirectsWithBudget(tokens []shellToken, budget *parseBudget) ([]shell
 				operation.body = record.body
 				operation.line = record.line
 				operation.order = record.order
-			case redirectInput, redirectOutput, redirectAppend:
+			case redirectInput, redirectOutput, redirectClobber, redirectReadWrite, redirectAppend:
 				operation.path = operand
 				operation.operand = parseTypedWord(*tokens[index].parsed)
 			case redirectDup, redirectClose:
@@ -105,9 +111,6 @@ func parseRedirectToken(value string) (redirectOperation, bool, error) {
 		return redirectOperation{}, false, fmt.Errorf("%q: %w", value, errMalformedRedirect)
 	}
 	operator := value[digits:]
-	if operator == "<>" || operator == ">|" {
-		return redirectOperation{}, false, fmt.Errorf("%q: %w", value, errUnsupportedRedirect)
-	}
 	defaultFD := 1
 	if operator[0] == '<' {
 		defaultFD = 0
@@ -130,6 +133,12 @@ func parseRedirectToken(value string) (redirectOperation, bool, error) {
 	}
 	if operator == ">>" {
 		return redirectOperation{kind: redirectAppend, target: target}, true, nil
+	}
+	if operator == ">|" {
+		return redirectOperation{kind: redirectClobber, target: target}, true, nil
+	}
+	if operator == "<>" {
+		return redirectOperation{kind: redirectReadWrite, target: target}, true, nil
 	}
 	return redirectOperation{}, false, fmt.Errorf("%q: %w", value, errMalformedRedirect)
 }
@@ -160,4 +169,14 @@ func parseDescriptor(text string, defaultValue int) (int, error) {
 		return 0, fmt.Errorf("descriptor %q: %w", text, errInvalidDescriptor)
 	}
 	return value, nil
+}
+
+// takesPath reports whether a redirection's operand is a pathname that has to
+// be expanded, as opposed to a descriptor number or a heredoc body.
+func (k redirectKind) takesPath() bool {
+	switch k {
+	case redirectInput, redirectOutput, redirectClobber, redirectReadWrite, redirectAppend:
+		return true
+	}
+	return false
 }

@@ -1,0 +1,31 @@
+id = "shell.posix.redirect.clobber-and-readwrite"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+printf 'kept\n' > f.txt
+set -C
+echo new > f.txt
+echo [$?]
+cat f.txt
+echo forced >| f.txt
+cat f.txt
+echo appended >> f.txt
+cat f.txt
+set +C
+printf 'keep\n' > g.txt
+echo x 1<> g.txt
+cat g.txt
+'''
+
+[expect]
+status = 0
+stdout = "[1]\nkept\nforced\nforced\nappended\nx\nep\n"
+stderr = "nemosh: redirect descriptor 1: f.txt: cannot overwrite existing file\n"
+
+[notes]
+standard = "POSIX Shell Command Language - 2.7 Redirection, 2.14 set -C"
+why = "`>|` and `<>` were refused as unsupported. `>|` exists only to override noclobber, and `set -C` -- which decides whether it is needed -- was one of the options this shell stored and never read. `<>` opens for both directions without truncating, so writing two bytes over a five-byte file leaves the tail; it defaults to descriptor 0 like every other `<` form, which is why writing through it names 1. Neither `>>` nor `<>` truncates, so neither is what -C guards against."

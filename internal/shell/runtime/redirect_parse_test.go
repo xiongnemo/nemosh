@@ -56,8 +56,6 @@ func TestParseRedirects_rejectsUnsupportedMalformedAndOutOfRangeForms(t *testing
 		input string
 		want  error
 	}{
-		{"echo <>out", errUnsupportedRedirect},
-		{"echo >|out", errUnsupportedRedirect},
 		{"echo >", errMissingRedirectTarget},
 		{"echo 256>out", errInvalidDescriptor},
 		{"echo 2>&+1", errMalformedRedirect},

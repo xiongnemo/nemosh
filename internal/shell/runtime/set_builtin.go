@@ -121,7 +121,17 @@ func (r Runtime) refuseInertOption(letter byte, enable bool) int {
 var inertShellOptions = map[byte]string{
 	'b': "asynchronous job completion is reported when `wait` or `jobs` asks, " +
 		"not the moment it happens; there is no notification channel to switch on",
+	'n': "a script is parsed in full before any of it runs, so by the time this " +
+		"option is set there is no unread input left to withhold; a syntax check " +
+		"would have to be a command-line option instead",
+	'v': "a script is parsed in full before any of it runs, so by the time this " +
+		"option is set there are no lines left to echo as they are read",
 }
+
+// Every other option acts: -a exports what is assigned (readonly.go), -C
+// refuses to truncate (redirect_apply.go), -e leaves on failure and -u on an
+// unset parameter (execute_pipeline.go, expansion_state.go), -f turns pathname
+// expansion off (pathname_expansion.go), and -x traces commands (trace.go).
 
 func optionSign(enable bool) byte {
 	if enable {

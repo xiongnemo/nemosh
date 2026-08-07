@@ -16,9 +16,7 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 		switch operation.kind {
 		case redirectInput:
 			err = r.bindInputRedirect(table, operation)
-		case redirectOutput:
-			err = r.bindOutputRedirect(table, operation)
-		case redirectAppend:
+		case redirectOutput, redirectClobber, redirectReadWrite, redirectAppend:
 			err = r.bindOutputRedirect(table, operation)
 		case redirectHeredoc:
 			err = table.bindOwnedReader(operation.target, io.NopCloser(bytes.NewReader([]byte(operation.body))))
@@ -65,7 +63,10 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 		return err
 	}
 	if !resolved.Device {
-		resource, openErr := openHostOutput(resolved, operation.kind == redirectAppend)
+		if err := r.refuseClobber(resolved, operation); err != nil {
+			return err
+		}
+		resource, openErr := openHostOutput(resolved, operation.kind)
 		if openErr != nil {
 			return fmt.Errorf("open %s: %w", operation.path, openErr)
 		}
@@ -84,12 +85,35 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 	return table.bindOwnedWriter(operation.target, resource)
 }
 
-func openHostOutput(resolved pathmodel.ResolvedPath, appendMode bool) (*os.File, error) {
+func openHostOutput(resolved pathmodel.ResolvedPath, kind redirectKind) (*os.File, error) {
 	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-	if appendMode {
+	switch kind {
+	case redirectAppend:
 		flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
+	case redirectReadWrite:
+		// `<>` opens for both and truncates nothing, which is what makes it
+		// usable on a file you mean to overwrite in place.
+		flags = os.O_RDWR | os.O_CREATE
 	}
 	return os.OpenFile(resolved.Native, flags, 0o666)
+}
+
+// refuseClobber is `set -C`: a plain `>` must not truncate a file that is
+// already there. `>|` says to do it anyway, which is the only reason that
+// operator exists, and `>>` and `<>` never truncate so neither is affected.
+//
+// The check is a stat a moment before the open rather than part of it, which is
+// a race Go's portable API leaves no way to close. What it buys is the ordinary
+// case: a typo in a redirect target cannot destroy the file it names.
+func (r Runtime) refuseClobber(resolved pathmodel.ResolvedPath, operation redirectOperation) error {
+	if !r.options.noClobber || operation.kind != redirectOutput {
+		return nil
+	}
+	info, err := os.Lstat(resolved.Native)
+	if err != nil || !info.Mode().IsRegular() {
+		return nil
+	}
+	return fmt.Errorf("%s: cannot overwrite existing file", operation.path)
 }
 
 func (t *fdTable) bindOwnedReader(fd int, resource io.ReadCloser) error {
