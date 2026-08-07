@@ -67,13 +67,26 @@ func comSpecCommandLine(comspec, script string, args []string) (string, error) {
 	return builder.String(), nil
 }
 
-// quoteBatchOperand quotes one operand for cmd. Wrapping in quotes and doubling
-// an embedded quote is cmd's own convention, and it delivers metacharacters such
-// as & | > to the script whole. Two operands are refused instead: a line break
-// cannot be carried on a command line at all, and a second percent sign closes a
-// variable reference that cmd expands before the script ever starts. Whether the
-// name between them is defined is not knowable from the operand, so the second
-// percent is the tripwire; a lone percent is always literal and passes through.
+// quoteBatchOperand quotes one operand for cmd, and only when it has to.
+//
+// Quoting every operand was the defect: `%1` arrived as `"arg1"` rather than
+// arg1, so `if "%1"=="foo"` -- the commonest thing a batch file does with its
+// arguments -- compared `""foo""` against `"foo"` and never matched. cmd.exe
+// itself puts quotes in `%1` only when the caller typed them, and busybox's
+// quote_arg holds the same line on the CommandLineToArgvW side of the boundary:
+// `int quoted = !*arg;` and then only a space or tab sets it
+// (win32/process.c:123-128). Nemosh diverged from both.
+//
+// What forces quotes here is cmd's parsing rather than argv's: a space or tab
+// would split the operand, and & | < > ^ ( ) would be read as command syntax
+// before the script saw them. An embedded quote is doubled, which is cmd's
+// convention and not argv's \".
+//
+// Two operands are refused rather than quoted: a line break cannot be carried
+// on a command line at all, and a second percent sign closes a variable
+// reference that cmd expands before the script starts. Whether the name between
+// them is defined is not knowable from the operand, so the second percent is
+// the tripwire; a lone percent is always literal and passes through.
 func quoteBatchOperand(operand string) (string, error) {
 	if strings.ContainsAny(operand, "\r\n") {
 		return "", fmt.Errorf("cmd.exe cannot carry the line break in %q: %w", operand, errBatchOperandUnsupported)
@@ -81,8 +94,13 @@ func quoteBatchOperand(operand string) (string, error) {
 	if strings.Count(operand, "%") > 1 {
 		return "", fmt.Errorf("cmd.exe would expand the variable reference in %q: %w", operand, errBatchOperandUnsupported)
 	}
+	if operand != "" && !strings.ContainsAny(operand, cmdQuotingTriggers) {
+		return operand, nil
+	}
 	return `"` + strings.ReplaceAll(operand, `"`, `""`) + `"`, nil
 }
+
+const cmdQuotingTriggers = " \t\"&|<>^()"
 
 // externalCommand builds the child process for an already-resolved executable.
 // Windows launches a batch file through the command processor on its own, but it

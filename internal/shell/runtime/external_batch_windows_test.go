@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -92,5 +93,48 @@ func TestRuntime_batchVariableReferenceArgumentsFailBeforeLaunch(t *testing.T) {
 	}
 	if !bytes.Contains([]byte(stderr), []byte("%PATH%")) {
 		t.Fatalf("stderr = %q, want it to name the rejected operand", stderr)
+	}
+}
+
+// reportRawArgumentsBatch prints %1 without the ~ that strips quotes. The
+// existing coverage all used %~1, which hid the defect this pins: every
+// operand was quoted on the way in, so %1 was `"release"` and the commonest
+// batch idiom there is -- if "%1"=="release" -- compared ""release"" against
+// "release" and never matched.
+const reportRawArgumentsBatch = "@echo off\r\n" +
+	"echo raw=[%1]\r\n" +
+	"if \"%1\"==\"release\" echo matched\r\n"
+
+func TestRuntime_batchArgumentsArriveUnquoted_whenTheyNeedNoQuoting(t *testing.T) {
+	script := writeBatchFile(t, "raw.bat", reportRawArgumentsBatch)
+
+	stdout, stderr, status := runBatchScript(t, "'"+script+"' release\n")
+
+	if status != 0 {
+		t.Fatalf("status = %d, stderr = %q", status, stderr)
+	}
+	if !strings.Contains(stdout, "raw=[release]") {
+		t.Fatalf("stdout = %q, want %%1 to arrive as release rather than \"release\"", stdout)
+	}
+	if !strings.Contains(stdout, "matched") {
+		t.Fatalf("stdout = %q, want the if \"%%1\"==\"release\" comparison to match", stdout)
+	}
+}
+
+// echoRawArgumentBatch has no `if` in it, because a quoted operand carrying a
+// space would break the comparison line itself -- cmd's problem with its own
+// syntax, not the launch boundary's.
+const echoRawArgumentBatch = "@echo off\r\necho raw=[%1]\r\n"
+
+func TestRuntime_batchArgumentsStayQuoted_whenTheyContainASpace(t *testing.T) {
+	script := writeBatchFile(t, "spaced.bat", echoRawArgumentBatch)
+
+	stdout, stderr, status := runBatchScript(t, "'"+script+"' 'two words'\n")
+
+	if status != 0 {
+		t.Fatalf("status = %d, stderr = %q", status, stderr)
+	}
+	if !strings.Contains(stdout, `raw=["two words"]`) {
+		t.Fatalf("stdout = %q, want the spaced operand to arrive as one quoted field", stdout)
 	}
 }
