@@ -93,6 +93,23 @@ func commandNotFound(name string) error {
 	return ExitStatusMessage(127, operandFailure(name, errors.New("not found")))
 }
 
+// busybox prints usage and exits 1 when a required operand is missing
+// (bb_show_usage). Nemosh has no usage text -- the divergence recorded in
+// docs/design/v0-readiness.md -- so it says what is missing in one line. The
+// applets that need this used to print nothing at all, which left the reader
+// with a bare non-zero status and no idea which operand was wanted.
+func missingOperand() error {
+	return errors.New("missing operand")
+}
+
+// errNotADirectory carries its own wording rather than reaching for
+// syscall.ENOTDIR, because that route is not reversible on Windows: Errno.Is
+// folds ENOTDIR, ERROR_PATH_NOT_FOUND and ERROR_FILE_NOT_FOUND together into
+// fs.ErrNotExist, so a path whose parent is missing and a path that is a file
+// arrive here indistinguishable. rmdir is the one caller that knows which it
+// has, because it looked.
+var errNotADirectory = errors.New("Not a directory")
+
 // cut, sort and uniq assemble and print their own diagnostic instead of
 // returning one, so a read failure has to carry the operand back out to the
 // print site. Everything else returns a quotedError or an operandError and

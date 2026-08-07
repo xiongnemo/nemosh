@@ -1,0 +1,29 @@
+id = "applets.coreutils.rmdir.refuses-a-file"
+area = "applets"
+kind = "golden"
+semantics = "busybox"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "posix"]
+script = '''
+rmdir victim.txt
+echo [$?]
+cat victim.txt
+mkdir -p a/b/c
+echo [$?]
+rmdir a/b/c
+echo [$?]
+rmdir a/b
+echo [$?]
+'''
+
+[files]
+"victim.txt" = "keep me\n"
+
+[expect]
+status = 0
+stdout = "[1]\nkeep me\n[0]\n[0]\n[0]\n"
+stderr = "rmdir: 'victim.txt': Not a directory\n"
+
+[notes]
+standard = "POSIX Shell and Utilities - rmdir, mkdir"
+why = "rmdir removes directories and nothing else. Nemosh called os.Remove, which removes files too, so `rmdir victim.txt` deleted the file and reported success -- silent data loss against rmdir(3), which fails with ENOTDIR (coreutils/rmdir.c:73). The cat afterwards is what proves the file survived. mkdir took -p as an operand, so it created a directory literally named -p and then failed on the real path for want of parents; here the whole a/b/c chain has to exist for the two rmdirs to succeed."

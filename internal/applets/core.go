@@ -2,9 +2,7 @@ package applets
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"strings"
 )
 
 type simpleApplet struct {
@@ -38,12 +36,5 @@ func newTrueApplet() Applet {
 func newFalseApplet() Applet {
 	return simpleApplet{name: "false", run: func(_ []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
 		return ErrExitFalse
-	}}
-}
-
-func newEchoApplet() Applet {
-	return simpleApplet{name: "echo", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		_, err := fmt.Fprintln(stdout, strings.Join(args, " "))
-		return err
 	}}
 }
