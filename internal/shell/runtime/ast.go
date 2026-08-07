@@ -59,8 +59,8 @@ type caseNode struct {
 func (caseNode) programNode() {}
 
 type caseArmNode struct {
-	pattern word
-	body    []programNode
+	patterns []word
+	body     []programNode
 }
 
 type list struct {

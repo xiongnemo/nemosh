@@ -1,0 +1,29 @@
+id = "shell.posix.case.one-line-and-patterns"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+case b in a) echo A;; b) echo B;; esac
+case zz in a) echo A;; *) echo other;; esac
+case b in a|b|c) echo alternation;; esac
+case notes.txt in *.txt) echo suffix;; esac
+case abc in a?c) echo single;; esac
+case d in [a-f]) echo range;; esac
+case g in [!a-f]) echo negated;; esac
+case /a/b/c in /a/*) echo crosses;; esac
+case a in a) echo one; echo two;; esac
+case a in a) if true; then echo nested; fi;; esac
+case a in a) case y in y) echo inner;; esac;; esac
+'''
+
+[expect]
+status = 0
+stdout = "B\nother\nalternation\nsuffix\nsingle\nrange\nnegated\ncrosses\none\ntwo\nnested\ninner\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.4.3 Case Conditional Construct"
+why = "A case written on one line has to be split at its own boundaries -- the reserved word `in` and the `)` that ends a pattern -- because `;` does not appear between the header, the pattern, and the body. Arms accept `|`-separated alternatives, and each is a pattern in the sense of 2.13.1 rather than a literal, so `*` crosses a `/` the way it does not in a pathname match."

@@ -129,15 +129,27 @@ func parseTypedCase(lines []string, spans []compoundSpan, byStart map[int]int, s
 	node := caseNode{word: parseTypedWord(*tokens[1].parsed)}
 	for _, arm := range span.caseArms {
 		pattern, _ := casePattern(lines[arm.patternIndex])
-		patternTokens, err := scanShellTokensWithBudget(pattern, budget, depth)
-		if err != nil || len(patternTokens) != 1 {
-			return nil, fmt.Errorf("case: invalid pattern %q", pattern)
+		patterns, err := parseCaseAlternatives(pattern, budget, depth)
+		if err != nil {
+			return nil, err
 		}
 		body, err := parseTypedProgram(lines, spans, byStart, arm.bodyStart, arm.bodyEnd, budget, depth)
 		if err != nil {
 			return nil, err
 		}
-		node.arms = append(node.arms, caseArmNode{pattern: parseTypedWord(*patternTokens[0].parsed), body: body})
+		node.arms = append(node.arms, caseArmNode{patterns: patterns, body: body})
 	}
 	return node, nil
+}
+
+func parseCaseAlternatives(pattern string, budget *parseBudget, depth int) ([]word, error) {
+	var patterns []word
+	for _, alternative := range splitCaseAlternatives(pattern) {
+		tokens, err := scanShellTokensWithBudget(alternative, budget, depth)
+		if err != nil || len(tokens) != 1 {
+			return nil, fmt.Errorf("case: invalid pattern %q", pattern)
+		}
+		patterns = append(patterns, parseTypedWord(*tokens[0].parsed))
+	}
+	return patterns, nil
 }
