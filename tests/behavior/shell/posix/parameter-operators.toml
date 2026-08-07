@@ -33,7 +33,3 @@ stderr = ""
 [notes]
 standard = "POSIX Shell Command Language - 2.6.2 Parameter Expansion"
 why = "Only ${x-word} and ${x:-word} were implemented. Every other operator fell through to the caller, which handed back the expansion's own literal text -- so `${x%.txt}` expanded to the six characters `${x%.txt}` and exited 0. The trims match against the pattern language of 2.13.1 rather than comparing literally, which is what makes ${x%.*} mean anything. An operator this shell does not implement is a bad substitution now instead of quietly becoming data. ${#@} is deliberately not pinned here: POSIX leaves it unspecified and the references disagree, dash reporting the length of the joined parameters where bash reports their count."
-
-[differential]
-diverges = ["dash", "posix"]
-why = "dash resolves `${assigned=written}` differently from bash and busybox in this sequence. POSIX specifies the operator; the disagreement is over what a later expansion sees, and Nemosh follows bash and busybox."
