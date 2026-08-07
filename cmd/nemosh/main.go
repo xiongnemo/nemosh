@@ -35,6 +35,9 @@ func main() {
 		if errors.As(err, &status) {
 			os.Exit(int(status))
 		}
+		if _, reported := errors.AsType[reportedError](err); reported {
+			os.Exit(1)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -141,12 +144,33 @@ func (c command) runDirectApplet(ctx context.Context, controller *interruptContr
 		return fmt.Errorf("nemosh: initialize direct applet state: %w", err)
 	}
 	err = applet.Run(applets.WithProcessView(executionCtx, view), args, c.stdin, c.stdout, c.stderr)
-	interrupted := runtime.IsShellInterrupt(executionCtx)
-	if interrupted {
+	if runtime.IsShellInterrupt(executionCtx) {
 		return exitStatus(130)
+	}
+	if err == nil {
+		return nil
+	}
+	// The same mapping the shell uses, so a direct invocation and the same
+	// command inside the shell fail identically. The error itself travels on
+	// unchanged, because a caller testing it for a sentinel has to keep finding
+	// one; only the reporting is added here.
+	if _, message := runtime.AppletFailure(applet.Name(), err); message != "" {
+		fmt.Fprintln(c.stderr, message)
+		if _, carriesStatus := applets.StatusCode(err); !carriesStatus {
+			return reportedError{err: err}
+		}
 	}
 	return err
 }
+
+// reportedError marks an error whose diagnostic has already been written, so
+// the top level exits with it rather than printing a second, unprefixed copy.
+// It keeps wrapping the original, so errors.Is and errors.As still reach it.
+type reportedError struct{ err error }
+
+func (e reportedError) Error() string { return e.err.Error() }
+
+func (e reportedError) Unwrap() error { return e.err }
 
 var errInputTooLarge = errors.New("input too large")
 

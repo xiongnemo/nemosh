@@ -67,8 +67,13 @@ func TestDirectApplet_disabledCygdriveFailsBeforeTouchEffect_whenSelectedExplici
 		if !errors.Is(err, pathmodel.ErrCygdriveDisabled) {
 			t.Fatalf("run(%v): error=%v, want ErrCygdriveDisabled", invocation, err)
 		}
-		if stdout != "" || stderr != "" {
-			t.Fatalf("run(%v): stdout=%q stderr=%q, want empty", invocation, stdout, stderr)
+		if stdout != "" {
+			t.Fatalf("run(%v): stdout=%q, want nothing", invocation, stdout)
+		}
+		// Reported under the applet's name rather than silently, which is what
+		// direct dispatch used to do with every failure.
+		if !strings.Contains(stderr, "touch: ") || !strings.Contains(stderr, "cygdrive") {
+			t.Fatalf("run(%v): stderr=%q, want a touch-prefixed cygdrive diagnostic", invocation, stderr)
 		}
 		if _, statErr := os.Stat(effect); !os.IsNotExist(statErr) {
 			t.Fatalf("effect exists after typed path error: %v", statErr)

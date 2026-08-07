@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 type runResult struct {
@@ -26,12 +29,33 @@ func runArgs(t *testing.T, dir string, args ...string) runResult {
 	cmd := command{stdin: &bytes.Buffer{}, stdout: &stdout, stderr: &stderr}
 	err := cmd.run(context.Background(), args)
 	result := runResult{stdout: stdout.String(), stderr: stderr.String(), err: err}
-	if status, ok := err.(exitStatus); ok {
-		result.status = int(status)
-	} else if err != nil {
-		result.status = -1
-	}
+	result.status = processExitStatus(err)
 	return result
+}
+
+// processExitStatus mirrors the mapping main applies before os.Exit, so a test
+// reads the status the process would really leave behind rather than guessing
+// from the error's type.
+func processExitStatus(err error) int {
+	switch {
+	case err == nil:
+		return 0
+	case hasAppletStatus(err):
+		status, _ := applets.StatusCode(err)
+		return status
+	case errors.Is(err, applets.ErrExitFalse):
+		return 1
+	}
+	var status exitStatus
+	if errors.As(err, &status) {
+		return int(status)
+	}
+	return 1
+}
+
+func hasAppletStatus(err error) bool {
+	_, ok := applets.StatusCode(err)
+	return ok
 }
 
 func writeScript(t *testing.T, name, body string) string {
