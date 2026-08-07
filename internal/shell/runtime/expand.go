@@ -11,10 +11,16 @@ import (
 
 func (r Runtime) expandWord(ctx context.Context, item word, savedStatus int) []string {
 	fields := []string{""}
+	// contributed tracks whether anything at all put a field on the word. An
+	// unquoted expansion that splits to nothing puts nothing, and a word made
+	// only of those disappears rather than becoming one empty field -- which is
+	// what makes `set -- $empty` leave no positional parameters.
+	contributed := false
 	for _, part := range item.parts {
 		switch part.kind {
 		case wordPartLiteral, wordPartEscaped:
 			fields[len(fields)-1] += part.text
+			contributed = true
 		case wordPartParameter:
 			values := r.expandParameterPart(part, savedStatus)
 			if part.text == "$@" && part.quote != quoteSingle {
@@ -26,20 +32,92 @@ func (r Runtime) expandWord(ctx context.Context, item word, savedStatus int) []s
 				}
 				fields[len(fields)-1] += values[0]
 				fields = append(fields, values[1:]...)
+				contributed = true
 				continue
 			}
-			fields[len(fields)-1] += values[0]
+			var produced bool
+			fields, produced = r.appendExpansion(fields, values[0], part.quote)
+			contributed = contributed || produced
 		case wordPartCommandSubstitution:
 			if part.script != nil {
-				fields[len(fields)-1] += r.commandSubstitutionScript(ctx, *part.script)
+				var produced bool
+				fields, produced = r.appendExpansion(fields, r.commandSubstitutionScript(ctx, *part.script), part.quote)
+				contributed = contributed || produced
 			}
 		}
 	}
 	if len(item.parts) == 0 && !item.quotedEmpty {
 		return nil
 	}
+	if !contributed && !item.quotedEmpty {
+		return nil
+	}
 	if item.expandTilde && len(fields) > 0 {
 		fields[0] = r.expandHomeTilde(fields[0])
+	}
+	return fields
+}
+
+// appendExpansion adds what an expansion produced to the word being built. An
+// unquoted result is split into fields on IFS (POSIX 2.6.5) and a quoted one is
+// appended whole. Nothing split before, so `set -- $(echo a b)` left one
+// positional parameter holding both words, and `for f in $list` looped once
+// over the whole list.
+// The second result reports whether a field was contributed: a quoted
+// expansion always contributes one even when it is empty, and an unquoted one
+// contributes nothing when it splits to nothing.
+func (r Runtime) appendExpansion(fields []string, value string, quote quoteContext) ([]string, bool) {
+	separators := r.fieldSeparators()
+	if quote != quoteUnquoted || separators == "" {
+		fields[len(fields)-1] += value
+		return fields, true
+	}
+	pieces := splitOnFieldSeparators(value, separators)
+	if len(pieces) == 0 {
+		return fields, false
+	}
+	fields[len(fields)-1] += pieces[0]
+	return append(fields, pieces[1:]...), true
+}
+
+// IFS unset means space, tab, and newline. IFS set to the empty string is a
+// different thing: it turns field splitting off.
+func (r Runtime) fieldSeparators() string {
+	if value, set := r.vars["IFS"]; set {
+		return value
+	}
+	return " \t\n"
+}
+
+// A run of IFS whitespace is one delimiter and a leading or trailing run makes
+// no empty field, while a non-whitespace separator delimits one field each --
+// which is why `IFS=:` over `a::b` gives three fields and the middle one is
+// empty.
+func splitOnFieldSeparators(value, separators string) []string {
+	var fields []string
+	var current strings.Builder
+	started := false
+	for index := 0; index < len(value); index++ {
+		char := value[index]
+		if strings.IndexByte(separators, char) < 0 {
+			current.WriteByte(char)
+			started = true
+			continue
+		}
+		if char == ' ' || char == '\t' || char == '\n' {
+			if started {
+				fields = append(fields, current.String())
+				current.Reset()
+				started = false
+			}
+			continue
+		}
+		fields = append(fields, current.String())
+		current.Reset()
+		started = false
+	}
+	if started {
+		fields = append(fields, current.String())
 	}
 	return fields
 }
