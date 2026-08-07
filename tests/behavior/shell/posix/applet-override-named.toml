@@ -14,7 +14,7 @@ echo hi
 [expect]
 status = 127
 stdout = "printf still runs\n"
-stderr = "echo: not found\n"
+stderr = "echo: not found\nhint: PATH is empty, so no directory was searched\n"
 
 [notes]
 standard = "POSIX Shell Command Language - 2.9.1 Simple Commands"

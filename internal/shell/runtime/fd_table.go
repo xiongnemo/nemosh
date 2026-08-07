@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -226,4 +228,21 @@ func validateDescriptor(fd int) error {
 		return fmt.Errorf("descriptor %d: %w", fd, errInvalidDescriptor)
 	}
 	return nil
+}
+
+// describe lists the descriptors the table currently holds, for the `fd` debug
+// channel. Sorted, so two runs of the same script produce the same line.
+func (t *fdTable) describe() string {
+	t.mu.Lock()
+	descriptors := make([]int, 0, len(t.entries))
+	for fd := range t.entries {
+		descriptors = append(descriptors, fd)
+	}
+	t.mu.Unlock()
+	slices.Sort(descriptors)
+	names := make([]string, len(descriptors))
+	for index, fd := range descriptors {
+		names[index] = strconv.Itoa(fd)
+	}
+	return strings.Join(names, " ")
 }

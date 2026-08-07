@@ -440,3 +440,42 @@ The applet roadmap should start broader than shell builtins: include coreutils
 and script-critical utilities early enough that Nemosh behaves like a real
 BusyBox-style bundle. The exact v0 cut still needs a milestone list, but the
 direction is broader coreutils coverage rather than shell-only.
+
+## Error Diagnostics: Layers And NEMOSH_DEBUG
+
+A failure is reported in up to three layers, because the three have different
+readers.
+
+```text
+nemosh: <first line>
+hint: <what to do instead>
+debug: <channel>: <detail>
+```
+
+The **first line** is what a script greps. It is prefixed with the command's
+name where a command failed and with `nemosh` where the shell itself is
+speaking, and its wording does not change once published.
+
+The **hint** is for a person, and appears by default. It is written only where
+there is something useful to say — "try again" is not a hint — so its absence
+carries information too. A hint is targeted at the actual cause: a name with a
+path separator in it was never a `PATH` lookup, so it is told that rather than
+being sent to look at `PATH`; a refusal under `set -C` names `>|`.
+
+The **debug** lines are for whoever is debugging the shell, and stay off until
+asked for. `NEMOSH_DEBUG` is a comma-separated list of channels:
+
+| Channel | Answers |
+| --- | --- |
+| `path` | how an operand became a host path: the working directory, the canonical form, the native spelling |
+| `exec` | what lookup did: the `PATH` entries searched in order, the suffixes appended |
+| `fd` | the descriptor table: which descriptors are open when a redirection failed |
+| `all` | every channel |
+
+An unrecognised channel name is reported once, because a misspelling that
+silently produced nothing would look exactly like a shell with nothing to say.
+
+Debug output is off by default for two reasons beyond noise. It names host
+paths, which the applet diagnostics deliberately keep out of anything a script
+compares; and the behavior corpus compares stderr byte for byte, so detail that
+varied with the machine would make every case machine-specific.
