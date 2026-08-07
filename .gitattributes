@@ -1,1 +1,26 @@
+# Every text file in this repository is LF in the working tree, on every
+# platform. This is not a style preference; two things break without it.
+#
+# gofmt insists on LF, so a Windows checkout under git's default
+# core.autocrlf=true reports every .go file as unformatted. That is exactly what
+# the first CI run on windows-latest did.
+#
+# A behavior case embeds its script inside a TOML multi-line string, so the
+# file's line endings become the script's. Nemosh normalizes CRLF and dash
+# treats a lone CR as data, which means one fixture describes different
+# behaviour depending on how it was checked out. The differential runner did
+# catch that, and reported it as a difference between shells rather than as the
+# artifact it was.
+#
+# text=auto still uses content detection, so anything genuinely binary is left
+# alone. No .bat or .cmd files are tracked here; if any are added they want
+# eol=crlf, because cmd.exe is particular about it.
+* text=auto eol=lf
+
+*.go text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
 *.sh text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
