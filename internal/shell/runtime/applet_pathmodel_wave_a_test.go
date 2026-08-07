@@ -14,7 +14,7 @@ import (
 
 func TestP05WaveA_FilesystemApplets_useTmpBackingAndCanonicalDisplay(t *testing.T) {
 	// Given
-	tmpRoot := t.TempDir()
+	tmpRoot := canonicalTempDir(t)
 	if err := os.WriteFile(filepath.Join(tmpRoot, "input.txt"), []byte("alpha\nbeta\n"), 0o600); err != nil {
 		t.Fatalf("write input fixture: %v", err)
 	}
@@ -22,7 +22,7 @@ func TestP05WaveA_FilesystemApplets_useTmpBackingAndCanonicalDisplay(t *testing.
 	settings.TmpRoot = runtime.WorkingDirectory(tmpRoot)
 	var stdout, stderr bytes.Buffer
 	rt := runtime.NewWithState(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr}, runtime.State{
-		Cwd:   runtime.WorkingDirectory(t.TempDir()),
+		Cwd:   runtime.WorkingDirectory(canonicalTempDir(t)),
 		Paths: &settings,
 	})
 
@@ -52,7 +52,7 @@ func TestP05WaveA_FilesystemApplets_propagatePathmodelErrors(t *testing.T) {
 	for _, command := range commands {
 		t.Run(strings.Fields(command)[0], func(t *testing.T) {
 			var stderr bytes.Buffer
-			rt := runtime.NewWithState(applets.DefaultRegistry, runtime.Streams{Stderr: &stderr}, runtime.State{Cwd: runtime.WorkingDirectory(t.TempDir())})
+			rt := runtime.NewWithState(applets.DefaultRegistry, runtime.Streams{Stderr: &stderr}, runtime.State{Cwd: runtime.WorkingDirectory(canonicalTempDir(t))})
 
 			// When
 			status := rt.RunScript(context.Background(), command+"\n")
@@ -74,7 +74,7 @@ func TestP05WaveA_LnSymbolic_preservesTargetPayload(t *testing.T) {
 	}
 
 	// Given
-	tmpRoot := t.TempDir()
+	tmpRoot := canonicalTempDir(t)
 	if err := os.Mkdir(filepath.Join(tmpRoot, "dir"), 0o700); err != nil {
 		t.Fatalf("create link directory: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestP05WaveA_LnSymbolic_preservesTargetPayload(t *testing.T) {
 	settings.TmpRoot = runtime.WorkingDirectory(tmpRoot)
 	var stdout, stderr bytes.Buffer
 	rt := runtime.NewWithState(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr}, runtime.State{
-		Cwd:   runtime.WorkingDirectory(t.TempDir()),
+		Cwd:   runtime.WorkingDirectory(canonicalTempDir(t)),
 		Paths: &settings,
 	})
 

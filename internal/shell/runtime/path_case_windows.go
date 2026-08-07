@@ -34,8 +34,8 @@ func realCaseNativePath(native string) string {
 	}
 	built := volume
 	for _, component := range strings.Split(rest, `\`) {
-		actual, ok := storedComponentName(built+`\`+component, component)
-		if !ok {
+		actual, asked := storedComponentName(built+`\`+component, component)
+		if !asked {
 			// Nothing below this point can be asked about either, so the rest
 			// keeps the spelling it arrived with.
 			return built + `\` + strings.Join(remainingComponents(rest, component), `\`)
@@ -67,6 +67,19 @@ func splitNativeVolume(native string) (string, string, bool) {
 	return strings.ToUpper(normalized[:1]) + ":", strings.Trim(normalized[2:], `\`), true
 }
 
+// storedComponentName answers what the filesystem calls one component. The
+// second result says only whether the question could be asked; a component that
+// could be asked about but should not be replaced comes back as the fallback
+// with asked=true, so the walk carries on into the components below it.
+//
+// Only a difference of case is adopted. An 8.3 short name such as `RUNNER~1`
+// resolves to `runneradmin`, which is a *different* name rather than a
+// differently-cased one, and adopting it would rewrite the path the user typed
+// instead of correcting it. windows-path-model.md asks for the real case and
+// says to preserve the spelling otherwise, and this is the line between the two.
+// It is not a hypothetical: GitHub's Windows runners hand out a TEMP under an
+// 8.3 alias, because the profile directory name is longer than eight
+// characters.
 func storedComponentName(path, fallback string) (string, bool) {
 	// The extended-length prefix keeps the query off the MAX_PATH ceiling,
 	// which matters because Nemosh's working directory is not bound by it.
@@ -81,8 +94,8 @@ func storedComponentName(path, fallback string) (string, bool) {
 	}
 	_ = syscall.FindClose(handle)
 	name := syscall.UTF16ToString(data.FileName[:])
-	if name == "" {
-		return fallback, false
+	if name == "" || !strings.EqualFold(name, fallback) {
+		return fallback, true
 	}
 	return name, true
 }

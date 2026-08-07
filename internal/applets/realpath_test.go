@@ -207,13 +207,35 @@ func writeRealpathFixture(t *testing.T, dir string, name string) string {
 	return path
 }
 
+// slashAbs is the canonical spelling realpath is expected to print, which means
+// resolving the path the way realpath does rather than only making it absolute.
+//
+// The difference shows on a machine whose TEMP sits under an 8.3 alias --
+// GitHub's Windows runners hand out `C:\Users\RUNNER~1\AppData\Local\Temp`,
+// because the profile directory name is longer than eight characters. There
+// `t.TempDir()` is the short spelling and realpath answers with the long one,
+// so an expectation built from the raw string compares a canonical path against
+// a short one and fails for a reason that has nothing to do with realpath.
+//
+// EvalSymlinks is what does the expansion, and it is the same call realpath
+// itself reaches; a path whose leaf does not exist yet cannot be resolved, so
+// the parent is resolved instead and the leaf joined back on.
 func slashAbs(t *testing.T, path string) string {
 	t.Helper()
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		t.Fatalf("expected absolute path for %q, got %v", path, err)
 	}
-	return filepath.ToSlash(filepath.Clean(abs))
+	abs = filepath.Clean(abs)
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		return filepath.ToSlash(resolved)
+	}
+	parent, leaf := filepath.Split(abs)
+	resolvedParent, err := filepath.EvalSymlinks(filepath.Clean(parent))
+	if err != nil {
+		return filepath.ToSlash(abs)
+	}
+	return filepath.ToSlash(filepath.Join(resolvedParent, leaf))
 }
 
 func assertRealpathDiagnostic(t *testing.T, stderr string, path string) {

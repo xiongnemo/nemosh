@@ -16,7 +16,7 @@ func TestRuntime_realpathPrintsAbsolutePath_whenOperandExists(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	path := writeRuntimeRealpathFixture(t, t.TempDir(), "file.txt")
+	path := writeRuntimeRealpathFixture(t, canonicalTempDir(t), "file.txt")
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
 
 	// When
@@ -38,7 +38,7 @@ func TestRuntime_realpathFailsAndContinues_whenOneOperandParentIsMissing(t *test
 	// Given
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	dir := t.TempDir()
+	dir := canonicalTempDir(t)
 	first := writeRuntimeRealpathFixture(t, dir, "first.txt")
 	missing := filepath.Join(dir, "missing-parent", "file.txt")
 	second := writeRuntimeRealpathFixture(t, dir, "second.txt")
@@ -79,4 +79,23 @@ func slashRuntimeAbs(t *testing.T, path string) string {
 		t.Fatalf("expected absolute path for %q, got %v", path, err)
 	}
 	return displayPath(filepath.Clean(abs))
+}
+
+// canonicalTempDir is t.TempDir() resolved the way the path model and realpath
+// resolve it, so a test can use the same spelling for the file it creates and
+// for the answer it expects.
+//
+// They differ on a machine whose TEMP sits under an 8.3 alias: GitHub's Windows
+// runners hand out `C:\Users\RUNNER~1\AppData\Local\Temp`, because the profile
+// directory name is longer than eight characters. There t.TempDir() is the short
+// spelling while realpath answers with the long one, and a test comparing the
+// two fails for a reason that has nothing to do with what it is testing.
+func canonicalTempDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return dir
+	}
+	return resolved
 }
