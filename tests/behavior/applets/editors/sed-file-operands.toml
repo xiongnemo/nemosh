@@ -1,0 +1,27 @@
+id = "applets.editors.sed.file-operands"
+area = "applets"
+kind = "golden"
+semantics = "busybox"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "posix"]
+script = '''
+sed 's/a/A/' first.txt second.txt
+sed 's/a/b/g' first.txt
+sed 's/a/b/2' first.txt
+printf 'from-stdin\n' | sed 's/from/via/'
+sed 's/x/y/' absent.txt
+echo [$?]
+'''
+
+[files]
+"first.txt" = "alpha\nbeta\n"
+"second.txt" = "gamma\n"
+
+[expect]
+status = 0
+stdout = "Alpha\nbetA\ngAmma\nblphb\nbetb\nalphb\nbeta\nvia-stdin\n[1]\n"
+stderr = "sed: can't open 'absent.txt': No such file or directory\n"
+
+[notes]
+standard = "POSIX Shell and Utilities - sed"
+why = "sed read stdin and nothing else, so `sed 's/a/b/' notes.txt` exited 1 with no diagnostic -- the operand was neither used nor refused. It reads its operands now and falls back to stdin only when there are none, and an unreadable operand is warned about and skipped with status 1, which is what busybox does through fopen_or_warn and G.exitcode (editors/sed.c:1061-1063). The s/// flags work too: g replaces every match and a number picks the Nth, where before only the first was ever replaced and any flag at all was rejected as malformed."
