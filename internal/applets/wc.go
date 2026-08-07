@@ -11,7 +11,10 @@ import (
 
 func newWcApplet() Applet {
 	return simpleApplet{name: "wc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		flags, paths := wcArgs(args)
+		flags, paths, err := wcArgs(args)
+		if err != nil {
+			return err
+		}
 		if len(paths) == 0 {
 			counts, err := countBytes(stdin)
 			if err != nil {
@@ -51,28 +54,19 @@ type wcCounts struct {
 	bytes int
 }
 
-func wcArgs(args []string) (wcFlags, []string) {
-	flags := wcFlags{lines: true, words: true, bytes: true}
-	pathsStart := 0
-	seenFlag := false
-	for pathsStart < len(args) && len(args[pathsStart]) > 1 && args[pathsStart][0] == '-' {
-		for _, r := range args[pathsStart][1:] {
-			if !seenFlag {
-				flags = wcFlags{}
-				seenFlag = true
-			}
-			switch r {
-			case 'l':
-				flags.lines = true
-			case 'w':
-				flags.words = true
-			case 'c':
-				flags.bytes = true
-			}
-		}
-		pathsStart++
+// An unknown letter used to be dropped on the floor after clearing the
+// defaults, so `wc -z FILE` selected no counts at all and still exited 0 --
+// printing a line with nothing on it but the filename.
+func wcArgs(args []string) (wcFlags, []string, error) {
+	options, paths, err := parseAppletOptions(args, "lwc", "")
+	if err != nil {
+		return wcFlags{}, nil, err
 	}
-	return flags, args[pathsStart:]
+	selected := wcFlags{lines: options.has('l'), words: options.has('w'), bytes: options.has('c')}
+	if !selected.lines && !selected.words && !selected.bytes {
+		selected = wcFlags{lines: true, words: true, bytes: true}
+	}
+	return selected, paths, nil
 }
 
 func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string) error {

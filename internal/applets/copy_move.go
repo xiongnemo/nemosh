@@ -16,10 +16,11 @@ type pathOperand struct {
 
 func newCpApplet() Applet {
 	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		if len(args) != 2 {
-			return ErrExitFalse
+		operands, err := twoOperands(args)
+		if err != nil {
+			return err
 		}
-		source, dest, err := copyOperands(ctx, args)
+		source, dest, err := copyOperands(ctx, operands)
 		if err != nil {
 			return err
 		}
@@ -29,10 +30,11 @@ func newCpApplet() Applet {
 
 func newMvApplet() Applet {
 	return simpleApplet{name: "mv", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		if len(args) != 2 {
-			return ErrExitFalse
+		operands, err := twoOperands(args)
+		if err != nil {
+			return err
 		}
-		source, dest, err := copyOperands(ctx, args)
+		source, dest, err := copyOperands(ctx, operands)
 		if err != nil {
 			return err
 		}

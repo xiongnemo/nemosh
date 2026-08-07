@@ -74,6 +74,23 @@ func invalidOption(letter byte) error {
 	return fmt.Errorf("invalid option -- '%c'", letter)
 }
 
+// twoOperands is the source-and-destination shape cp and mv take. A count that
+// is not two used to fail silently, so `cp one.txt` and `cp a b c` both exited
+// 1 with nothing said about which of them was wrong.
+func twoOperands(args []string) ([]string, error) {
+	_, operands, err := parseAppletOptions(args, "", "")
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case len(operands) < 2:
+		return nil, missingOperand()
+	case len(operands) > 2:
+		return nil, fmt.Errorf("extra operand '%s'", operands[2])
+	}
+	return operands, nil
+}
+
 func containsByte(set string, letter byte) bool {
 	for index := 0; index < len(set); index++ {
 		if set[index] == letter {

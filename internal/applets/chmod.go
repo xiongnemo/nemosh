@@ -10,12 +10,17 @@ import (
 
 func newChmodApplet() Applet {
 	return simpleApplet{name: "chmod", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		if len(args) < 2 {
-			return ErrExitFalse
+		if len(args) == 0 {
+			return missingOperand()
 		}
+		if len(args) < 2 {
+			return missingOperand()
+		}
+		// busybox is message-first and quotes the operand
+		// (coreutils/chmod.c:87); this used to be operand-first and unquoted.
 		mode, err := parseChmodMode(args[0])
 		if err != nil {
-			return fmt.Errorf("%s: invalid mode", args[0])
+			return fmt.Errorf("invalid mode '%s'", args[0])
 		}
 		view := ProcessViewFromContext(ctx)
 		for _, path := range args[1:] {
