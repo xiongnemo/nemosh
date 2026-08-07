@@ -74,9 +74,15 @@ func TestParseScript_classifiesGroupClosers(t *testing.T) {
 	}{
 		{name: "missing brace", source: "{ echo value;", incomplete: true},
 		{name: "missing parenthesis", source: "(echo value", incomplete: true},
-		{name: "unexpected brace", source: "echo value }", incomplete: false},
+		// `echo value }` is not here because it is not an error at all: the `}`
+		// follows a word, so bash and dash both print `value }` and exit 0, and
+		// so does Nemosh. A `}` needs command position to be the closer.
+		{name: "unexpected brace", source: "echo value; }", incomplete: false},
 		{name: "unexpected parenthesis", source: "echo value )", incomplete: false},
-		{name: "brace lacks separator", source: "{ echo value }", incomplete: false},
+		// The `}` here is text, so the group is still open at end of input --
+		// which is what bash ("unexpected end of file") and dash ("end of file
+		// unexpected (expecting \"}\")") both report.
+		{name: "brace lacks separator", source: "{ echo value }", incomplete: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

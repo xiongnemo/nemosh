@@ -1,0 +1,24 @@
+id = "shell.posix.brace-group.literal-brace-is-not-reserved"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+echo a}b
+echo }
+echo }x
+echo a{b
+echo {}
+echo x{1}y
+'''
+
+[expect]
+status = 0
+stdout = "a}b\n}\n}x\na{b\n{}\nx{1}y\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, 2.4 Reserved Words"
+why = "`{` and `}` are reserved only where a command name could start. Inside or after a word they are ordinary characters, so every line here is an argument rather than a group delimiter. `{}` is the form `find -exec rm {} \\;` relies on. busybox ash, dash, and bash all print each line unchanged and exit 0."

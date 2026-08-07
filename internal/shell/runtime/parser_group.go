@@ -85,7 +85,9 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		}
 		start, opener, ok := groupOpenerAt(line, index)
 		if !ok {
-			if char == '}' || char == ')' {
+			// A brace outside command position is an ordinary character, so
+			// only one that really is the reserved word is unmatched here.
+			if char == ')' || braceDelimiterAt(line, index, '}') {
 				return "", nil, fmt.Errorf("syntax error: unexpected %c", char)
 			}
 			output.WriteByte(char)
@@ -143,14 +145,52 @@ func isCommandBoundary(char byte) bool {
 	return char == ' ' || char == '\t' || char == '\n' || char == '|' || char == '&' || char == '(' || char == '{' || char == ';'
 }
 
+// braceDelimiterAt reports whether the brace at index is the reserved word
+// rather than an ordinary character. POSIX 2.4 makes `{` and `}` reserved only
+// where a command name could start, which is why `echo a}b` prints `a}b` and
+// `find . -exec rm {} \;` passes `{}` through untouched.
+//
+// The previous byte alone cannot decide that, because blanks separate a brace
+// from whatever put it in command position. What matters is the previous
+// non-blank, and the two directions do not want the same set:
+//
+//   - `{` opens a group after a separator, after the `(` of a subshell or the
+//     `{` of an enclosing group, or after the `)` that ends a function
+//     definition's parameter list, so `f(){ echo a; }` is a definition.
+//   - `}` closes one only after a separator. After the `))` of an arithmetic
+//     expansion the scan is still inside a word, so the first `}` in
+//     `{ echo $((1+2))}; }` is text and only the second one closes.
+//
+// bash, dash, and busybox ash agree on every case above.
 func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	if line[index] != delimiter {
 		return false
 	}
-	if index > 0 && !isCommandBoundary(line[index-1]) {
+	if index+1 != len(line) && !isCommandBoundary(line[index+1]) {
 		return false
 	}
-	return index+1 == len(line) || isCommandBoundary(line[index+1])
+	previous, found := previousNonBlank(line, index)
+	if !found || isCommandSeparator(previous) {
+		return true
+	}
+	return delimiter == '{' && (previous == ')' || previous == '(' || previous == '{')
+}
+
+// previousNonBlank reports the last character before index that is not a blank,
+// and whether the scan found one before running off the front of the line.
+func previousNonBlank(line string, index int) (byte, bool) {
+	for back := index - 1; back >= 0; back-- {
+		if line[back] != ' ' && line[back] != '\t' {
+			return line[back], true
+		}
+	}
+	return 0, false
+}
+
+// isCommandSeparator reports whether a character ends one command and so leaves
+// the next byte in command position.
+func isCommandSeparator(char byte) bool {
+	return char == ';' || char == '&' || char == '|' || char == '\n'
 }
 
 func matchingGroupEnd(line string, start int, opener byte) (int, error) {

@@ -90,6 +90,18 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteByte(char)
 			continue
 		}
+		// An arithmetic expansion is stepped over whole, before the command
+		// substitution branch below can claim its first `(`. Otherwise the `))`
+		// that closes it is counted as one substitution close and one group
+		// close, and the group close is matched against whatever is really
+		// open: `{ echo $((1+2)); }` fails with `unexpected ), expected }`.
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && scanner.quote() != '\'' {
+			if end, ok := arithmeticExpansionEnd(line, index+3); ok {
+				scanner.logical.WriteString(line[index : end+1])
+				index = end
+				continue
+			}
+		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' && scanner.quote() != '\'' {
 			scanner.substitutions++
 			scanner.quotes = append(scanner.quotes, 0)

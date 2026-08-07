@@ -12,8 +12,8 @@ script = '''
 [expect]
 status = 2
 stdout = ""
-stderr = "nemosh: unsupported syntax: {\n"
+stderr = "nemosh: syntax error: unexpected }\n"
 
 [notes]
 standard = "POSIX.1 shell command language, reserved words"
-why = "A brace joined to command text is not an opening brace-group reserved word. The rejection now names the brace rather than the closer, because the `;` splits this into two lines before either is parsed and the offending `{` is on the first of them. dash and bash instead treat `{echo` as an ordinary command word and only fail at the `}`; Nemosh refuses the whole script, which keeps the no-prefix-effects guarantee this case exists to pin."
+why = "A brace joined to command text is not an opening brace-group reserved word, so `{echo` is an ordinary command word and the `}` that follows has nothing to close. The rejection names the closer, which is what bash (\"syntax error near unexpected token `}'\") and dash (\"Syntax error: \\\"}\\\" unexpected\") both name too. Nemosh still refuses the whole script before running `{echo`, which is the no-prefix-effects guarantee this case exists to pin; bash and dash would reach it."
