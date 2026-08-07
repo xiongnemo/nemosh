@@ -1,0 +1,26 @@
+id = "applets.coreutils.echo.options"
+area = "applets"
+kind = "golden"
+semantics = "busybox"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "posix"]
+
+script = '''
+echo -n abc
+echo
+echo -e 'a\tb'
+echo 'a\tb'
+echo -ne 'x\ny'
+echo
+echo -z rest
+echo -
+'''
+
+[expect]
+status = 0
+stdout = "abc\na\tb\na\\tb\nx\ny\n-z rest\n-\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell and Utilities - echo; BusyBox FEATURE_FANCY_ECHO"
+why = "Leading arguments made only of n, e and E after the dash are options; anything else -- including a lone dash and a cluster with one unknown letter in it -- ends option parsing and is echoed as written (coreutils/echo.c). echo used to print its own flags back, so `echo -n abc` said `-n abc`."
