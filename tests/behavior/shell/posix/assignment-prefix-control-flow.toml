@@ -1,0 +1,24 @@
+id = "shell.posix.assignment.prefix-control-flow"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+for i in 1 2 3; do V=kept break; done
+echo [$V]
+for i in 1 2; do W=x continue; echo body; done
+echo after
+while true; do Z=x break; done
+echo ended
+'''
+
+[expect]
+status = 0
+stdout = "[kept]\nafter\nended\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.1 Simple Commands"
+why = "A leading assignment does not change which command runs. Dispatching on the first word instead of on the command turned `V=x break` into a lookup for a program named break, which printed `break: not found` and let the loop keep going -- unbounded in a `while true`. break, continue, exit, return, and exec are special builtins, so the assignment persists after the transfer, which is what the [$V] line reads back."
