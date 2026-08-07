@@ -1,0 +1,25 @@
+id = "shell.posix.trap.arm-and-reset"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+trap
+trap 'echo bye' EXIT
+trap
+trap - EXIT
+trap
+trap 'echo second' EXIT
+echo body
+'''
+
+[expect]
+status = 0
+stdout = "trap -- 'echo bye' EXIT\nbody\nsecond\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.14 trap"
+why = "A bare `trap` lists the armed handlers in a form that reads back in, and does not fail. A lone `-` as the action resets the condition instead of being stored as a command named `-`, which is what busybox ash does with LONE_DASH; storing it left the handler armed and printed `-: not found` on the way out. The listing after the reset is empty, and arming again takes effect."

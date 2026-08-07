@@ -41,17 +41,3 @@ func (r Runtime) eval(ctx context.Context, args []string) int {
 	}
 	return r.runScript(ctx, strings.Join(args, " "), false)
 }
-
-func (r Runtime) trap(args []string) int {
-	if len(args) != 2 {
-		fmt.Fprintln(r.streams.Stderr, "trap: expected: trap command EXIT|INT")
-		return 2
-	}
-	name := trapName(args[1])
-	if name != trapExit && name != trapINT {
-		fmt.Fprintln(r.streams.Stderr, "trap: expected: trap command EXIT|INT")
-		return 2
-	}
-	r.traps[name] = args[0]
-	return 0
-}
