@@ -147,7 +147,10 @@ func TestTypedParameterExpansion_preservesQuotedAtCardinality(t *testing.T) {
 	if status != 0 {
 		t.Fatalf("RunScript() status = %d, want 0", status)
 	}
-	if got := stdout.String(); got != "[one]\n%!(EXTRA string=two words)" {
+	// Two fields, so printf reuses its format once per operand. The expectation
+	// used to be Go's `%!(EXTRA string=...)`, which was an artifact of handing
+	// the whole thing to fmt.Fprintf rather than implementing the utility.
+	if got := stdout.String(); got != "[one]\n[two words]\n" {
 		t.Fatalf("stdout = %q, want distinct quoted positional arguments", got)
 	}
 }
@@ -164,7 +167,9 @@ func TestTypedParameterExpansion_omitsQuotedAtWhenNoParametersExist(t *testing.T
 	if status != 0 {
 		t.Fatalf("RunScript() status = %d, want 0", status)
 	}
-	if got := stdout.String(); got != "<%!s(MISSING)>\n" {
+	// No parameters means no fields, so the format runs once with nothing to
+	// substitute and %s is empty -- not Go's `%!s(MISSING)`.
+	if got := stdout.String(); got != "<>\n" {
 		t.Fatalf("stdout = %q, want no positional argument", got)
 	}
 }

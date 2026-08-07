@@ -7,21 +7,6 @@ import (
 	"strings"
 )
 
-func newPrintfApplet() Applet {
-	return simpleApplet{name: "printf", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if len(args) == 0 {
-			return nil
-		}
-		format := strings.ReplaceAll(args[0], "\\n", "\n")
-		values := make([]any, 0, len(args)-1)
-		for _, arg := range args[1:] {
-			values = append(values, arg)
-		}
-		_, err := fmt.Fprintf(stdout, format, values...)
-		return err
-	}}
-}
-
 // `basename -z /a/b` printed `-z`: the flag was taken as the operand, so the
 // applet answered a question nobody asked and reported success.
 func newBasenameApplet() Applet {

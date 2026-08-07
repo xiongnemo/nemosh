@@ -1,0 +1,32 @@
+id = "applets.coreutils.printf.conversions"
+area = "applets"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-w32"]
+script = '''
+printf '%s\n' hello
+printf '%d\n' 42
+printf '[%5d]\n' 42
+printf '[%-5d]\n' 42
+printf '[%05d]\n' 42
+printf '%5.2f\n' 3.14159
+printf '%x %X\n' 255 255
+printf '%o\n' 8
+printf '100%%\n'
+printf 'a\tb\n'
+printf '%b\n' 'x\ty'
+printf '%s\n' a b c
+printf '[%s][%d]\n'
+printf '%s' no-newline
+printf '\n'
+'''
+
+[expect]
+status = 0
+stdout = "hello\n42\n[   42]\n[42   ]\n[00042]\n 3.14\nff FF\n10\n100%\na\tb\nx\ty\na\nb\nc\n[][0]\nno-newline\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell and Utilities - printf"
+why = "printf handed its format and every operand straight to Go's Fprintf, so an operand always arrived as a string: `printf '%d\\n' 42` printed `%!d(string=42)` and `printf '%5.2f\\n' 3.14159` printed `%!f(string=   3.)` -- garbage, quietly, with status 0. Only \\\\n was translated in the format, so \\\\t stayed two characters. The conversions POSIX lists now work, the format is reused from the start while operands remain, a missing operand is the empty string or zero, and a non-numeric operand to an integer conversion is refused rather than printed as a Go diagnostic."
