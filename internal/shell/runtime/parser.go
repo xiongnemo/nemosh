@@ -76,7 +76,7 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 }
 
 func prepareScript(lines []string, budget *parseBudget, depth int) (Script, error) {
-	lines = expandCaseArmLines(lines)
+	lines = expandElifLines(expandCaseArmLines(lines))
 	spans, err := compoundSpans(lines)
 	if err != nil {
 		return Script{}, err

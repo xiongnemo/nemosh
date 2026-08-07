@@ -1,0 +1,32 @@
+id = "shell.posix.if.elif-chain"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+if true; then echo first; elif true; then echo second; else echo third; fi
+if false; then echo first; elif true; then echo second; else echo third; fi
+if false; then echo first; elif false; then echo second; else echo third; fi
+if false; then echo a; elif false; then echo b; elif true; then echo c; else echo d; fi
+if false; then echo a; elif false; then echo b; fi
+echo none-taken
+for i in 1 2; do if test $i = 1; then echo one; elif test $i = 2; then echo two; fi; done
+if false
+then
+echo a
+elif true
+then
+echo b
+fi
+'''
+
+[expect]
+status = 0
+stdout = "first\nsecond\nthird\nc\nnone-taken\none\ntwo\nb\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.4.1 The if Conditional Construct"
+why = "elif was not implemented: `if c; then a; elif d; then b; fi` failed to parse with `duplicate then`. POSIX defines the chain as a nested if inside the else branch, so that is what it is rewritten to before spans are computed, and each rewrite owes one extra fi that the real one pays."

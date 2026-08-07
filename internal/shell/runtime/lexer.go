@@ -157,6 +157,14 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			}
 			literalDollarAt[buffer.Len()] = struct{}{}
 		}
+		// A `${` with no `}` after it used to fall through to the literal
+		// branch, so `echo ${x` printed `${x` and exited 0 -- a typo the shell
+		// carried out instead of reporting. dash calls it a syntax error and so
+		// does this.
+		if char == '$' && !inSingle && index+1 < len(line) && line[index+1] == '{' &&
+			!strings.ContainsRune(line[index+1:], '}') {
+			return nil, nil, errors.New("syntax error: missing '}'")
+		}
 		if char == '$' && !inSingle {
 			end := parameterEnd(line, index+1)
 			if end > index+1 {
