@@ -118,31 +118,50 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	if len(assignments) > 0 && len(commandArgs) == 0 {
 		return lineResult{status: r.assignVars(assignments)}
 	}
-	if args[0] == "exit" {
-		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}
+	// Dispatch on the command, not on args[0]: with a leading assignment those
+	// are different words, and reading the first one turned `V=x break` into a
+	// lookup for a command named `break`. In a `while true` loop that never
+	// ended.
+	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, savedStatus); handled {
+		return result
 	}
-	if args[0] == "exec" {
+	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
+}
+
+// controlFlowBuiltin runs the builtins that answer with a control transfer
+// rather than only a status. Each of them is a POSIX special builtin, so its
+// leading assignments persist after it completes (2.9.1) and are applied here
+// before the transfer leaves.
+func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignments []assignment, savedStatus int) (lineResult, bool) {
+	switch args[0] {
+	case "exit", "exec", "return", "break", "continue":
+	default:
+		return lineResult{}, false
+	}
+	if status := r.assignVars(assignments); status != 0 {
+		return lineResult{status: status}, true
+	}
+	switch args[0] {
+	case "exit":
+		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}, true
+	case "exec":
 		status := r.execBuiltin(ctx, args[1:])
 		if len(args) == 1 {
-			return lineResult{status: status}
+			return lineResult{status: status}, true
 		}
-		return lineResult{status: status, control: flowExec}
-	}
-	if args[0] == "return" {
+		return lineResult{status: status, control: flowExec}, true
+	case "return":
 		status := exitStatus(args[1:], savedStatus)
 		if r.sourceDepth == 0 && r.functionDepth == 0 {
 			fmt.Fprintln(r.streams.Stderr, "return: not in a sourced script")
-			return lineResult{status: status}
+			return lineResult{status: status}, true
 		}
-		return lineResult{status: status, control: flowReturn}
+		return lineResult{status: status, control: flowReturn}, true
+	case "break":
+		return lineResult{control: flowBreak}, true
+	default:
+		return lineResult{control: flowContinue}, true
 	}
-	if args[0] == "break" {
-		return lineResult{control: flowBreak}
-	}
-	if args[0] == "continue" {
-		return lineResult{control: flowContinue}
-	}
-	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
 }
 
 func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redirectOperation, savedStatus int) ([]redirectOperation, bool) {
