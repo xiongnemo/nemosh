@@ -12,8 +12,8 @@ script = "chmod zzz a.txt\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "chmod: zzz: invalid mode\n"
+stderr = "chmod: invalid mode 'zzz'\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/chmod.c"
-why = "BusyBox rejects an unparsable mode with `bb_error_msg_and_die(\"invalid mode '%s'\", smode)` (coreutils/chmod.c:87), i.e. `chmod: invalid mode 'zzz'`. Nemosh reports the same failure operand-first and unquoted. The status matches, the wording does not; see docs/design/v0-readiness.md."
+why = "BusyBox rejects an unparsable mode with `bb_error_msg_and_die(\"invalid mode '%s'\", smode)` (coreutils/chmod.c:87). Nemosh used to report the same failure operand-first and unquoted; it now matches, message-first and quoted."

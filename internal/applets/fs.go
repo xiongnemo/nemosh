@@ -2,8 +2,10 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -16,11 +18,16 @@ func newTouchApplet() Applet {
 
 func (touchApplet) Name() string { return "touch" }
 func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-	if len(args) == 0 {
-		return ErrExitFalse
+	// `touch -z` used to create a file called -z.
+	_, operands, err := parseAppletOptions(args, "c", "")
+	if err != nil {
+		return err
+	}
+	if len(operands) == 0 {
+		return missingOperand()
 	}
 	view := ProcessViewFromContext(ctx)
-	for _, path := range args {
+	for _, path := range operands {
 		native, err := resolveHostPath(view, path)
 		if err != nil {
 			return err
@@ -38,21 +45,47 @@ func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 
 func newRmApplet() Applet {
 	return simpleApplet{name: "rm", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		if len(args) == 0 {
-			return ErrExitFalse
+		options, operands, err := parseAppletOptions(args, "fr", "")
+		if err != nil {
+			return err
+		}
+		if len(operands) == 0 {
+			// -f makes a missing operand acceptable, which is the whole point
+			// of `rm -f` in a cleanup script.
+			if options.has('f') {
+				return nil
+			}
+			return missingOperand()
 		}
 		view := ProcessViewFromContext(ctx)
-		for _, path := range args {
+		for _, path := range operands {
 			native, err := resolveHostPath(view, path)
 			if err != nil {
 				return err
 			}
-			if err := os.Remove(native); err != nil {
+			if err := removeOperand(native, options.has('r')); err != nil {
+				// -f is silent about what was not there to begin with, which is
+				// what makes `rm -f build.out` usable in a cleanup script.
+				if options.has('f') && errors.Is(err, fs.ErrNotExist) {
+					continue
+				}
 				return cannotRemove(path, err)
 			}
 		}
 		return nil
 	}}
+}
+
+func removeOperand(native string, recursive bool) error {
+	if !recursive {
+		return os.Remove(native)
+	}
+	// RemoveAll treats a missing path as success, so the existence check that
+	// -f would otherwise make redundant has to happen first for the plain form.
+	if _, err := os.Lstat(native); err != nil {
+		return err
+	}
+	return os.RemoveAll(native)
 }
 
 // mkdir takes -p and -m, the two options busybox's getopt32long string carries

@@ -9,8 +9,8 @@ script = "basename\n"
 [expect]
 status = 1
 stdout = ""
-stderr = ""
+stderr = "basename: missing operand\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/basename.c"
-why = "BusyBox requires at least one argument through getopt32's `-1` spec and otherwise reaches bb_show_usage (coreutils/basename.c:57-61), which exits 1 on the libbb default (libbb/default_error_retval.c:16). Nemosh exits 1 too but prints nothing: it has no usage text. Recorded in docs/design/v0-readiness.md."
+why = "BusyBox requires at least one argument through getopt32's `-1` spec and otherwise reaches bb_show_usage (coreutils/basename.c:57-61), which exits 1 on the libbb default (libbb/default_error_retval.c:16). Nemosh has no usage text and says in one line what is missing instead, which is more than the nothing it used to print."

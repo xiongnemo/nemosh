@@ -9,8 +9,8 @@ script = "dirname\n"
 [expect]
 status = 1
 stdout = ""
-stderr = ""
+stderr = "dirname: missing operand\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/dirname.c"
-why = "dirname takes exactly one operand through single_argv, which calls bb_show_usage otherwise (coreutils/dirname.c:41). The status matches; Nemosh prints no usage text."
+why = "dirname takes exactly one operand through single_argv, which calls bb_show_usage otherwise (coreutils/dirname.c:41). Nemosh has no usage text and says in one line what is missing instead, which is more than the nothing it used to print."

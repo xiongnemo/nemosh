@@ -22,14 +22,20 @@ func newPrintfApplet() Applet {
 	}}
 }
 
+// `basename -z /a/b` printed `-z`: the flag was taken as the operand, so the
+// applet answered a question nobody asked and reported success.
 func newBasenameApplet() Applet {
 	return simpleApplet{name: "basename", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if len(args) == 0 {
-			return ErrExitFalse
+		_, operands, err := parseAppletOptions(args, "", "")
+		if err != nil {
+			return err
 		}
-		name := path.Base(strings.ReplaceAll(args[0], "\\", "/"))
-		if len(args) > 1 {
-			name = strings.TrimSuffix(name, args[1])
+		if len(operands) == 0 {
+			return missingOperand()
+		}
+		name := path.Base(strings.ReplaceAll(operands[0], "\\", "/"))
+		if len(operands) > 1 {
+			name = strings.TrimSuffix(name, operands[1])
 		}
 		fmt.Fprintln(stdout, name)
 		return nil
@@ -38,10 +44,14 @@ func newBasenameApplet() Applet {
 
 func newDirnameApplet() Applet {
 	return simpleApplet{name: "dirname", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if len(args) == 0 {
-			return ErrExitFalse
+		_, operands, err := parseAppletOptions(args, "", "")
+		if err != nil {
+			return err
 		}
-		dir := path.Dir(strings.ReplaceAll(args[0], "\\", "/"))
+		if len(operands) == 0 {
+			return missingOperand()
+		}
+		dir := path.Dir(strings.ReplaceAll(operands[0], "\\", "/"))
 		fmt.Fprintln(stdout, dir)
 		return nil
 	}}
