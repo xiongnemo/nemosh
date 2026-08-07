@@ -1,0 +1,39 @@
+id = "applets.coreutils.test.expressions"
+area = "applets"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-w32", "dash", "bash-posix"]
+script = '''
+mkdir adir
+test -f afile.txt && echo file
+test -d adir && echo dir
+test -e afile.txt && echo exists
+test -s afile.txt && echo nonempty
+test -s empty.txt || echo empty
+test -f nosuch.txt || echo absent
+test 3 -lt 5 && echo lt
+test 5 -ge 5 && echo ge
+test 3 -eq 3 && echo eq
+[ -f afile.txt -a -d adir ] && echo both
+[ -f nosuch.txt -o -d adir ] && echo either
+[ ! -f nosuch.txt ] && echo negated
+[ "a" = "a" ] && echo streq
+[ "a" != "b" ] && echo strne
+if test -d adir; then echo branch; fi
+test x -eq 3
+echo [$?]
+'''
+
+[files]
+"afile.txt" = "content\n"
+"empty.txt" = ""
+
+[expect]
+status = 0
+stdout = "file\ndir\nexists\nnonempty\nempty\nabsent\nlt\nge\neq\nboth\neither\nnegated\nstreq\nstrne\nbranch\n[2]\n"
+stderr = "test: x: bad number\n"
+
+[notes]
+standard = "POSIX Shell and Utilities - test"
+why = "test was a string-only stub: one- and two-argument string forms plus = and !=, with everything else evaluating false. So `test -f x`, `test 1 -lt 2`, `!`, `-a` and `-o` all quietly reported failure rather than being rejected as unimplemented, which is the shape of bug that makes an if-guard take the wrong branch in silence. The grammar is the oexpr/aexpr/nexpr/primary one busybox builds in coreutils/test.c, and a non-numeric operand to an integer comparison is `bad number` with status 2, as busybox's getn has it."
