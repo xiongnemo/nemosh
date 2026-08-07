@@ -115,10 +115,23 @@ The boundary is spelled:
 ```
 
 `/d` suppresses AutoRun, and `/s` makes cmd strip exactly the outer quote pair
-and take the remainder verbatim. Each of the script path and the arguments is
-wrapped in `"` with any embedded `"` doubled, which is cmd's own convention.
-`ComSpec` comes from the runtime environment table, falling back to
-`%SystemRoot%\System32\cmd.exe`.
+and take the remainder verbatim. `ComSpec` comes from the runtime environment
+table, falling back to `%SystemRoot%\System32\cmd.exe`.
+
+The script path and each argument are quoted **only when cmd's own parsing would
+otherwise take them apart** — when the operand is empty, or contains a space, a
+tab, or one of `& | < > ^ ( )`. An embedded `"` is doubled, which is cmd's
+convention and not argv's `\"`.
+
+Quoting unconditionally was the first implementation and it was wrong. `%1`
+arrived as `"release"` rather than `release`, so `if "%1"=="release"` compared
+`""release""` against `"release"` and never matched — and that comparison is the
+commonest thing a batch file does with its arguments. cmd.exe puts quotes in
+`%1` only when the caller typed them, and busybox holds the same line on the
+CommandLineToArgvW side of its own boundary: `int quoted = !*arg;` and then only
+a space or tab sets it (`win32/process.c:123-128`). The original coverage all
+read `%~1`, whose whole purpose is to strip quotes, which is why it could not
+have caught this; the cases that pin it now read `%1`.
 
 The whole line is handed to Windows through `syscall.SysProcAttr.CmdLine` rather
 than through `exec.Cmd.Args`, because Go's `syscall.EscapeArg` emits `\"` and cmd
