@@ -61,7 +61,9 @@ func TestRuntime_listsAndRemovesAliases(t *testing.T) {
 	if status != 0 {
 		t.Fatalf("status = %d, want 0", status)
 	}
-	if want := "alias a='echo one'\nalias b='echo two'\nalias b='echo two'\n"; stdout != want {
+	// `name='value'` with no `alias ` in front is the format POSIX specifies,
+	// and what dash, bash --posix and busybox ash all print.
+	if want := "a='echo one'\nb='echo two'\nb='echo two'\n"; stdout != want {
 		t.Fatalf("stdout = %q, want %q", stdout, want)
 	}
 }
@@ -159,7 +161,7 @@ func TestRuntime_describesHowANameResolves(t *testing.T) {
 		fragment string
 	}{
 		{name: "builtin", script: "type cd\n", fragment: "cd is a shell builtin"},
-		{name: "applet", script: "type grep\n", fragment: "grep is a bundled applet"},
+		{name: "applet", script: "type grep\n", fragment: "grep is a builtin applet"},
 		{name: "function", script: "f() { :; }\ntype f\n", fragment: "f is a function"},
 		{name: "alias", script: "alias e='echo hi'\ntype e\n", fragment: "e is an alias for echo hi"},
 	}

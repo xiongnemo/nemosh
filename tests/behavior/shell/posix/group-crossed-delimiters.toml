@@ -18,3 +18,7 @@ stderr = "nemosh: syntax error: unexpected ), expected }\n"
 [notes]
 standard = "POSIX.1 shell command language, compound commands"
 why = "Crossed group delimiters are malformed during parse and cannot execute a valid prefix."
+
+[differential]
+diverges = ["dash", "bash-posix", "posix", "busybox-ash"]
+why = "The references run the prefix of the script and only then fail on the malformed grouping. Nemosh refuses the whole script before any effect, which is the no-prefix-effects guarantee P0.3 pins and this case exists to state."

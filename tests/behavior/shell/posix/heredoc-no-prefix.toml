@@ -19,3 +19,7 @@ stderr = "nemosh: incomplete script: missing heredoc delimiter \"EOF\"\n"
 [notes]
 standard = "POSIX.1 shell command language, incomplete here-documents"
 why = "The complete script is parsed and all heredoc bodies are collected before any prefix executes."
+
+[differential]
+diverges = ["dash", "bash-posix", "posix", "busybox-ash"]
+why = "The references run the prefix and treat the unterminated heredoc as ending at end of input. Nemosh refuses the whole script, which is the no-prefix-effects guarantee."

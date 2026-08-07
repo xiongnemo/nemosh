@@ -21,6 +21,32 @@ type Case struct {
 	Requires   []string          `toml:"requires"`
 	Expect     Expect            `toml:"expect"`
 	Notes      Notes             `toml:"notes"`
+	// Differential records where a reference shell is expected to disagree, so
+	// the comparison can be strict everywhere else.
+	Differential Differential `toml:"differential"`
+}
+
+// Differential names the references whose answer to this case is expected to
+// differ from Nemosh's, and why.
+//
+// A declared divergence is checked in both directions: the runner does not fail
+// on it, and it *does* fail when the divergence stops happening. Otherwise the
+// list rots into a set of exemptions nobody revisits, which is how a
+// known-failures file becomes a place bugs hide.
+type Differential struct {
+	Diverges []string `toml:"diverges"`
+	Why      string   `toml:"why"`
+}
+
+// DivergenceDeclared reports whether this case expects the named reference to
+// disagree.
+func (c Case) DivergenceDeclared(reference string) bool {
+	for _, name := range c.Differential.Diverges {
+		if name == reference {
+			return true
+		}
+	}
+	return false
 }
 
 type Expect struct {
@@ -61,6 +87,9 @@ func (c Case) Validate() []string {
 		if !safeRelativePath(path) {
 			problems = append(problems, fmt.Sprintf("unsafe file path %q", path))
 		}
+	}
+	if len(c.Differential.Diverges) > 0 && c.Differential.Why == "" {
+		problems = append(problems, "differential.diverges requires differential.why")
 	}
 	return problems
 }

@@ -35,3 +35,7 @@ stderr = ""
 [notes]
 standard = "POSIX Shell Command Language - 2.14 set"
 why = "`${name}` with no operator is the commonest brace form and used to expand to the literal `${name}`. `set a b c` sets the positional parameters and `set -f` alone must not clear them; only operands or a bare `--` replace them. `$-` reports the enabled letters, and an option can be turned off again -- pipefail was previously a one-way latch."
+
+[differential]
+diverges = ["dash", "bash-posix", "posix", "busybox-ash"]
+why = "`$-` reports each shell's own option set, so bash adds h and B and busybox adds c; there is nothing to agree on. dash additionally has no pipefail and exits 2 when asked to clear it."
