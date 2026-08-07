@@ -22,7 +22,7 @@ Go 1.26, `CGO_ENABLED=0`, single binary, no runtime sidecars.
 
 ## Shell
 
-Implemented and covered by the behavior corpus (143 cases) and the differential
+Implemented and covered by the behavior corpus (145 cases) and the differential
 suite: sequential lists, pipelines with `!` negation, `&&`/`||`, brace groups,
 subshells, functions, `if`/`elif`, `for`, `while`/`until`, `case` including the
 one-line forms, heredocs, redirections including `>|` and `<>`, background jobs
@@ -61,7 +61,7 @@ column that matters is the third one.
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `basename` | none; the `basename PATH [SUFFIX]` form works | refused by name |
-| `cat` | none | **misleading** — reported as a missing file |
+| `cat` | none | refused by name |
 | `chmod` | numeric mode | refused by name |
 | `cp` | none | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
@@ -69,9 +69,9 @@ column that matters is the third one.
 | `dirname` | none needed | refused by name |
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
-| `find` | **none** | **silently wrong — see below** |
+| `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
 | `grep` | `-i -n -v` | refused by name |
-| `head` | `-n` | **misleading** — reported as a missing file |
+| `head` | `-n` | refused by name |
 | `ln` | `-s` | refused by name |
 | `ls` | `-a -h -l` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
@@ -87,7 +87,7 @@ column that matters is the third one.
 | `sed` | `s///` substitution | refused by name |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sort` | `-n -r` | refused by name |
-| `tail` | `-n` | **misleading** — reported as a missing file |
+| `tail` | `-n` | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `touch` | `-c` | refused by name |
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
@@ -101,29 +101,38 @@ column that matters is the third one.
 ### Options a script is most likely to reach for and not find
 
 `cat -n`, `cp -r`, `mv -f`, `head -c`, `uniq -c`, `basename -a`, `xargs -0`,
-`xargs -n`, `sort -k`, `grep -r`, `ls -l` beyond the basic long form, and every
-`find` expression. Filling these in is v1.1; see `docs/design/v1-scope.md` and
-the per-applet tables in `docs/testing/applet-test-inventory.md`.
+`xargs -n`, `sort -k`, `grep -r`, and `ls -l` beyond the basic long form. Every
+one of them is refused by name, so a script asking for it fails rather than
+quietly getting something else. Filling them in is v1.1; see
+`docs/design/v1-scope.md` and the per-applet tables in
+`docs/testing/applet-test-inventory.md`.
 
-### `find` does not honour its expressions
+### `find`
 
-Measured, and worse than a missing option:
+`-name`, `-type`, and `-print` are implemented, combining with the implicit AND
+POSIX specifies. `-name` matches the basename, not the path, because busybox
+uses `fnmatch` without `FNM_PATHNAME` and a basename carries no separator for
+`*` to cross. `-type` classifies `f`, `d`, and `l`; busybox also accepts `b`,
+`c`, `s`, and `p`, which are refused by name here rather than answered as though
+a block device could never match.
+
+Every other predicate — `-mtime`, `-size`, `-perm`, `-exec`, `-prune`, `-regex`,
+`-maxdepth`, and the rest — is **refused before the first directory is read**:
 
 ```console
-$ find . -name m.txt
-.
-f.txt
-m.txt
-find: -name: No such file or directory
+$ find . -mtime 1
+find: unrecognized: -mtime
 $ echo $?
 1
 ```
 
-`find` walks and prints the **whole tree**, then treats `-name` as a path
-operand and fails. The exit status is non-zero, but the wrong output has already
-been written. A pipeline such as `find . -name '*.tmp' | xargs rm` would
-therefore receive every file rather than the matching ones.
+That ordering is the fix, not a detail. Until 2026-08-07 `find` honoured no
+expression at all: it walked the whole tree, printed every path, and only then
+reported the predicate as a missing file. `find . -name '*.tmp' | xargs rm`
+therefore received every file. Both halves were measured, and twelve forms —
+`.`, `./`, `sub`, `sub/`, and each predicate combination — now match busybox-w32
+byte for byte.
 
-Until `find` implements expressions or refuses them before walking, treat it as
-**equivalent to `find PATH` with no predicates** and do not pipe it into a
-command with effects.
+Output follows POSIX rather than being cleaned: the path operand is written
+exactly as given, then a slash, then the rest. `find .` yields `./a.txt`, not
+`a.txt`.

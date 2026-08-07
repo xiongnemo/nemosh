@@ -1,0 +1,27 @@
+id = "applet.busybox-w32.find.name-and-type"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = '''
+find . -name '*.txt'
+echo ---
+find . -type d
+echo ---
+find . -type f -name 'a.*'
+'''
+
+[files]
+"a.txt" = ""
+"notes.md" = ""
+"d/inner.txt" = ""
+
+[expect]
+status = 0
+stdout = "./a.txt\n./d/inner.txt\n---\n.\n./d\n---\n./a.txt\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 findutils/find.c, POSIX find"
+why = "`-name` matches the basename rather than the path, because busybox uses fnmatch without FNM_PATHNAME and a basename carries no separator for `*` to cross. `-type d` includes the root operand itself. Predicates combine with an implicit AND. Measured against busybox-w32 on 2026-08-07: all three forms match byte for byte."

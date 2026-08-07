@@ -37,8 +37,11 @@ func TestDefaultRegistry_findPrintsTree_whenNoPathProvided(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected find to succeed, got %v", err)
 	}
-	if got := stdout.String(); got != ".\na.txt\nsub\nsub/b.txt\n" {
-		t.Fatalf("expected find output %q, got %q", ".\na.txt\nsub\nsub/b.txt\n", got)
+	// The path operand defaults to `.`, and POSIX writes it verbatim followed by
+	// a slash and the rest, so children carry the `./` prefix that busybox,
+	// GNU find, and every script that strips it also expect.
+	if want := ".\n./a.txt\n./sub\n./sub/b.txt\n"; stdout.String() != want {
+		t.Fatalf("expected find output %q, got %q", want, stdout.String())
 	}
 	if got := stderr.String(); got != "" {
 		t.Fatalf("expected empty stderr, got %q", got)

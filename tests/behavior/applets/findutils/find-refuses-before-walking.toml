@@ -1,0 +1,20 @@
+id = "applet.nemosh.find.refuses-before-walking"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = "find . -mtime 1\n"
+
+[files]
+"a.txt" = ""
+"d/inner.txt" = ""
+
+[expect]
+status = 1
+stdout = ""
+stderr = "find: unrecognized: -mtime\n"
+
+[notes]
+standard = "BusyBox-w32 findutils/find.c"
+why = "An expression find cannot evaluate is refused before the first directory is read, so no path is ever written. This case exists because the opposite used to happen: find walked the whole tree, printed every path, and only then reported the predicate as a missing file, which made `find . -name '*.tmp' | xargs rm` receive every file rather than the matching ones. busybox also refuses without walking, though it follows the message with its usage text, which Nemosh does not carry."

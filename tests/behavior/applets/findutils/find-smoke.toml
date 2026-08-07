@@ -12,9 +12,9 @@ script = "find .\n"
 
 [expect]
 status = 0
-stdout = ".\na.txt\nd\nd/inner.txt\n"
+stdout = ".\n./a.txt\n./d\n./d/inner.txt\n"
 stderr = ""
 
 [notes]
 standard = "BusyBox-w32 findutils/find.c"
-why = "find with no expression prints every visited path, starting with the root operand itself. Nemosh emits POSIX separators, so `d/inner.txt` reads the same on Windows as elsewhere."
+why = "find with no expression prints every visited path, starting with the root operand itself. POSIX writes each result as the path operand exactly as given, a slash, and the rest, so a `.` operand yields `./a.txt` rather than `a.txt`. This case previously expected the cleaned form, which no other find produces: busybox-w32 was measured on 2026-08-07 and matches this output byte for byte across `.`, `./`, `sub`, and `sub/` roots. Nemosh emits POSIX separators, so `./d/inner.txt` reads the same on Windows as elsewhere."
