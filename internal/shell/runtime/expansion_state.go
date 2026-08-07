@@ -14,6 +14,19 @@ type expansionState struct {
 	unsetParameter bool
 }
 
+// reportExpansionError is the path for a substitution that cannot be carried
+// out at all -- an operator this shell does not implement, or a `${x:?message}`
+// whose parameter is unset. POSIX makes both fatal to a non-interactive shell,
+// and the alternative this replaces was worse than fatal: an unrecognised
+// `${x%.txt}` used to expand to its own six characters and exit 0.
+func (r Runtime) reportExpansionError(err error) {
+	if r.expansion.unsetParameter {
+		return
+	}
+	r.expansion.unsetParameter = true
+	fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+}
+
 // reportUnsetParameter is the `set -u` path. POSIX says expanding an unset
 // parameter writes a message and exits a non-interactive shell. busybox ash
 // words it `NAME: parameter not set` (varunset, shell/ash.c:8269) and leaves

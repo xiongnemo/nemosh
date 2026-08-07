@@ -1,35 +1,189 @@
 package runtime
 
-import "strings"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
-import "strconv"
-
-type defaultParameterExpansion struct {
-	name               string
-	word               string
-	useDefaultForEmpty bool
-}
-
-func (r Runtime) expandDefaultParameter(body string, savedStatus int) (string, bool) {
-	// `${name}` with no operator is the commonest brace form there is -- the
-	// braces are only there to end the name early, as in ${x}bc. It used to
-	// fall through to the caller, which handed back the literal `${x}`.
-	if isVariableName(body) {
-		value, set := r.vars[body]
+// expandBracedParameter answers a `${...}` expansion. The operators are the ones
+// POSIX 2.6.2 lists, plus the `${#name}` length form of 2.6.3.
+//
+// Only `-` and `:-` were implemented, and an unrecognised body fell through to
+// the caller, which handed back the literal text: `${x%.txt}` expanded to the
+// six characters `${x%.txt}` and exited 0. An operator that is not implemented
+// has to say so rather than quietly become data, which is why the default case
+// is an error now instead of a fallthrough.
+func (r Runtime) expandBracedParameter(body string, savedStatus int) (string, error) {
+	if body == "" {
+		return "", fmt.Errorf("bad substitution: ${}")
+	}
+	if length, ok := strings.CutPrefix(body, "#"); ok && length != "" {
+		return r.expandParameterLength(length, savedStatus)
+	}
+	// A body that is a parameter reference and nothing else: a name, a
+	// positional number, or one of the special symbols. `${2}` and `${?}` are
+	// the commonest, and reaching the operator split with them would find the
+	// `?` and call it an operator with no name in front of it.
+	if isBareParameterReference(body) {
+		value, set := r.lookupParameter(body, savedStatus)
 		if !set {
 			r.reportUnsetParameter(body)
 		}
-		return value, true
+		return value, nil
 	}
-	expansion, ok := parseDefaultParameterExpansion(body)
+	name, operator, word, ok := splitParameterOperator(body)
 	if !ok {
+		return "", fmt.Errorf("bad substitution: ${%s}", body)
+	}
+	value, set := r.lookupParameter(name, savedStatus)
+	switch operator {
+	case "-", ":-", "=", ":=", "+", ":+", "?", ":?":
+		return r.applyDefaultOperator(name, operator, word, value, set, savedStatus)
+	default:
+		return trimParameter(operator, value, r.expandScalarParameterText(word, savedStatus)), nil
+	}
+}
+
+// The colon forms treat an empty value as absent; the bare forms only care
+// whether the parameter is set at all.
+func (r Runtime) applyDefaultOperator(name, operator, word, value string, set bool, savedStatus int) (string, error) {
+	missing := !set
+	if strings.HasPrefix(operator, ":") {
+		missing = !set || value == ""
+	}
+	switch strings.TrimPrefix(operator, ":") {
+	case "+":
+		if missing {
+			return "", nil
+		}
+		return r.expandScalarParameterText(word, savedStatus), nil
+	case "?":
+		if !missing {
+			return value, nil
+		}
+		message := r.expandScalarParameterText(word, savedStatus)
+		if message == "" {
+			message = "parameter not set"
+		}
+		return "", fmt.Errorf("%s: %s", name, message)
+	case "=":
+		if !missing {
+			return value, nil
+		}
+		// `=` assigns as well as substitutes, which is the only expansion that
+		// changes the shell's state.
+		assigned := r.expandScalarParameterText(word, savedStatus)
+		if !isVariableName(name) {
+			return "", fmt.Errorf("%s: cannot assign in this way", name)
+		}
+		r.vars[name] = assigned
+		r.markVarMutation(name)
+		return assigned, nil
+	default:
+		if missing {
+			return r.expandScalarParameterText(word, savedStatus), nil
+		}
+		return value, nil
+	}
+}
+
+// trimParameter is the #, ##, % and %% family: strip the shortest or longest
+// matching prefix or suffix, where "matching" is the pattern language of 2.13.1
+// rather than a literal comparison.
+func trimParameter(operator, value, pattern string) string {
+	switch operator {
+	case "#":
+		return trimPatternPrefix(value, pattern, false)
+	case "##":
+		return trimPatternPrefix(value, pattern, true)
+	case "%":
+		return trimPatternSuffix(value, pattern, false)
+	default:
+		return trimPatternSuffix(value, pattern, true)
+	}
+}
+
+func trimPatternPrefix(value, pattern string, longest bool) string {
+	best := -1
+	for end := 0; end <= len(value); end++ {
+		if !matchShellPattern(pattern, value[:end]) {
+			continue
+		}
+		best = end
+		if !longest {
+			break
+		}
+	}
+	if best < 0 {
+		return value
+	}
+	return value[best:]
+}
+
+func trimPatternSuffix(value, pattern string, longest bool) string {
+	best := -1
+	for start := len(value); start >= 0; start-- {
+		if !matchShellPattern(pattern, value[start:]) {
+			continue
+		}
+		best = start
+		if !longest {
+			break
+		}
+	}
+	if best < 0 {
+		return value
+	}
+	return value[:best]
+}
+
+func (r Runtime) expandParameterLength(name string, savedStatus int) (string, error) {
+	if !isVariableName(name) && name != "@" && name != "*" {
+		return "", fmt.Errorf("bad substitution: ${#%s}", name)
+	}
+	if name == "@" || name == "*" {
+		return strconv.Itoa(len(r.params.values)), nil
+	}
+	value, _ := r.lookupParameter(name, savedStatus)
+	return strconv.Itoa(len([]rune(value))), nil
+}
+
+// splitParameterOperator finds the operator that separates the parameter name
+// from the word after it. The two-character forms are tried first so `:-` is not
+// read as a name ending in `:` followed by `-`.
+func splitParameterOperator(body string) (string, string, string, bool) {
+	for index := range len(body) {
+		for _, operator := range [...]string{":-", ":=", ":+", ":?", "##", "%%", "-", "=", "+", "?", "#", "%"} {
+			if !strings.HasPrefix(body[index:], operator) {
+				continue
+			}
+			name := body[:index]
+			if name == "" {
+				return "", "", "", false
+			}
+			return name, operator, body[index+len(operator):], true
+		}
+	}
+	return "", "", "", false
+}
+
+// lookupParameter reads a name the way an expansion sees it: a positional
+// parameter by number, a special parameter by symbol, and anything else from
+// the shell variables.
+func (r Runtime) lookupParameter(name string, savedStatus int) (string, bool) {
+	if number, err := strconv.Atoi(name); err == nil && number > 0 {
+		if number <= len(r.params.values) {
+			return r.params.values[number-1], true
+		}
 		return "", false
 	}
-	value, set := r.vars[expansion.name]
-	if !set || expansion.useDefaultForEmpty && value == "" {
-		return r.expandScalarParameterText(expansion.word, savedStatus), true
+	switch name {
+	case "0", "?", "#", "@", "*", "-":
+		return r.expandScalarParameterText("$"+name, savedStatus), true
 	}
-	return value, true
+	value, set := r.vars[name]
+	return value, set
 }
 
 func (r Runtime) expandScalarParameterText(text string, savedStatus int) string {
@@ -45,6 +199,8 @@ func (r Runtime) expandScalarParameterText(text string, savedStatus int) string 
 		return strconv.Itoa(len(r.params.values))
 	case "$@", "$*":
 		return strings.Join(r.params.values, " ")
+	case "$-":
+		return r.options.letters()
 	}
 	if len(text) == 2 && text[1] >= '1' && text[1] <= '9' {
 		index := int(text[1] - '1')
@@ -56,14 +212,18 @@ func (r Runtime) expandScalarParameterText(text string, savedStatus int) string 
 	return r.vars[strings.TrimPrefix(text, "$")]
 }
 
-func parseDefaultParameterExpansion(body string) (defaultParameterExpansion, bool) {
-	if name, word, ok := strings.Cut(body, ":-"); ok && isVariableName(name) {
-		return defaultParameterExpansion{name: name, word: word, useDefaultForEmpty: true}, true
+func isBareParameterReference(body string) bool {
+	if isVariableName(body) {
+		return true
 	}
-	if name, word, ok := strings.Cut(body, "-"); ok && isVariableName(name) {
-		return defaultParameterExpansion{name: name, word: word}, true
+	if number, err := strconv.Atoi(body); err == nil && number >= 0 {
+		return true
 	}
-	return defaultParameterExpansion{}, false
+	switch body {
+	case "?", "#", "@", "*", "-", "$", "!":
+		return true
+	}
+	return false
 }
 
 func isVariableName(name string) bool {
