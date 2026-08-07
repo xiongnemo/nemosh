@@ -24,6 +24,18 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 	escaped := false
 	for index := 0; index < len(line); {
 		char := line[index]
+		// `$((` before `$(`: the command substitution rule counts one closing
+		// paren and would stop at the first of the two that end an arithmetic
+		// expansion, leaving the second to be reported as unexpected.
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' {
+			end, ok := arithmeticExpansionEnd(line, index+3)
+			if !ok {
+				return "", nil, fmt.Errorf("%w: unterminated arithmetic expansion", ErrIncompleteScript)
+			}
+			output.WriteString(line[index : end+1])
+			index = end + 1
+			continue
+		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' && quote != '\'' {
 			end, ok := commandSubstitutionEnd(line, index+2)
 			if !ok {
@@ -147,6 +159,14 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 	escaped := false
 	for index := start + 1; index < len(line); index++ {
 		char := line[index]
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' {
+			end, ok := arithmeticExpansionEnd(line, index+3)
+			if !ok {
+				return 0, fmt.Errorf("%w: unterminated arithmetic expansion", ErrIncompleteScript)
+			}
+			index = end
+			continue
+		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' && quote != '\'' {
 			end, ok := commandSubstitutionEnd(line, index+2)
 			if !ok {
@@ -201,57 +221,4 @@ func closerFor(opener byte) byte {
 		return '}'
 	}
 	return ')'
-}
-
-func hasBraceSeparator(body string) bool {
-	trimmed := strings.TrimRight(body, " \t")
-	if strings.HasSuffix(trimmed, "\n") {
-		return true
-	}
-	if !strings.HasSuffix(trimmed, ";") {
-		return false
-	}
-	return separatorPositions(trimmed)[len(trimmed)-1]
-}
-
-func normalizeGroupSeparators(body string) string {
-	separators := separatorPositions(body)
-	var normalized strings.Builder
-	for index := range len(body) {
-		if separators[index] {
-			normalized.WriteByte('\n')
-		} else {
-			normalized.WriteByte(body[index])
-		}
-	}
-	return strings.TrimSpace(normalized.String())
-}
-
-func separatorPositions(body string) map[int]bool {
-	positions := make(map[int]bool)
-	quote := byte(0)
-	escaped := false
-	for index := range len(body) {
-		char := body[index]
-		if escaped {
-			escaped = false
-			continue
-		}
-		if char == '\\' && quote != '\'' {
-			escaped = true
-			continue
-		}
-		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {
-			if quote == char {
-				quote = 0
-			} else if quote == 0 {
-				quote = char
-			}
-			continue
-		}
-		if char == ';' && quote == 0 {
-			positions[index] = true
-		}
-	}
-	return positions
 }

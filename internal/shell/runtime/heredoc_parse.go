@@ -87,6 +87,14 @@ func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHere
 			}
 			continue
 		}
+		// An arithmetic expansion is stepped over whole, because `$((1<<4))`
+		// carries a `<<` that is a shift and not a heredoc.
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' {
+			if end, ok := arithmeticExpansionEnd(line, index+3); ok {
+				index = end
+				continue
+			}
+		}
 		if quote != 0 || char != '<' || index+1 >= len(line) || line[index+1] != '<' {
 			if char == '#' && quote == 0 && commentStarts(line, index) {
 				break

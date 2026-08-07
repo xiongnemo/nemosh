@@ -1,0 +1,39 @@
+id = "shell.posix.expansion.arithmetic"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+echo $((1+2))
+echo $((2+3*4))
+echo $(((2+3)*4))
+echo $(( (1+2) * (3+4) ))
+echo $((7/2)) $((7%3))
+echo $((1<<4)) $((32>>2))
+echo $((3<4)) $((3==3)) $((1&&0)) $((1||0)) $((!0))
+echo $((6&3)) $((6|3)) $((6^3)) $((~0))
+echo $((1?10:20)) $((0?10:20))
+n=7
+echo $((n*3))
+echo $((nosuch+5))
+echo $((0x10))
+i=0
+i=$((i+1))
+i=$((i+1))
+echo $i
+while test $i != 4; do i=$((i+1)); done
+echo $i
+echo "[$((2*3))]"
+echo '$((2*3))'
+'''
+
+[expect]
+status = 0
+stdout = "3\n14\n20\n21\n3 1\n16 8\n1 1 0 1 1\n2 7 5 -1\n10 20\n21\n5\n16\n2\n4\n[6]\n$((2*3))\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.6.4 Arithmetic Expansion"
+why = "$(( )) was a syntax error: the leading $( was read as a command substitution and the inner parenthesis as a subshell. Signed integer arithmetic over the C operator set now works, with a bare name standing for that variable's value and an unset one for zero, and && and || stopping early so the right side of `x && 1/x` is not evaluated when x is zero. Every scan that runs before the lexer -- the heredoc collector, the group extractor, the separator splitter, the deferred-syntax check -- had to learn to step over the expansion whole, because `$((1<<4))` carries a `<<` that is a shift and not a heredoc. Assignment inside the expansion is refused by name rather than mis-parsed; `i=$((i+1))` is the form that needs none."

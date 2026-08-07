@@ -105,6 +105,18 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			inDouble = !inDouble
 			continue
 		}
+		// Before the command substitution branch, because `$((` starts with
+		// `$(` and would otherwise be parsed as a subshell inside one.
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && !inSingle {
+			if end, ok := arithmeticExpansionEnd(line, index+3); ok {
+				text := line[index : end+1]
+				buffer.WriteString(text)
+				parts = append(parts, wordPart{kind: wordPartArithmetic, text: line[index+3 : end-1], quote: quoteFor(inSingle, inDouble)})
+				wordPresent = true
+				index = end
+				continue
+			}
+		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' && !inSingle {
 			if end, ok := commandSubstitutionEnd(line, index+2); ok {
 				buffer.WriteString(line[index : end+1])
