@@ -14,13 +14,16 @@ const maxAliasSubstitutions = 16
 
 var errAliasValueNotWords = fmt.Errorf("an alias value must be a list of words")
 
-// alias implements the POSIX `alias` builtin: no operands lists every alias in
-// a form that reads back in, a bare name reports that one, and `name=value`
-// defines one.
+// alias implements the POSIX `alias` builtin: no operands lists every alias, a
+// bare name reports that one, and `name=value` defines one.
+//
+// The listing is `name='value'` with no `alias ` in front, which is the format
+// POSIX XCU specifies for it and what dash, bash --posix and busybox ash all
+// print. The differential runner caught the prefix on its first run.
 func (r Runtime) alias(args []string) int {
 	if len(args) == 0 {
 		for _, name := range slices.Sorted(maps.Keys(r.aliases)) {
-			fmt.Fprintf(r.streams.Stdout, "alias %s=%s\n", name, singleQuoteForReuse(r.aliases[name]))
+			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, singleQuoteForReuse(r.aliases[name]))
 		}
 		return 0
 	}
@@ -34,7 +37,7 @@ func (r Runtime) alias(args []string) int {
 				status = 1
 				continue
 			}
-			fmt.Fprintf(r.streams.Stdout, "alias %s=%s\n", name, singleQuoteForReuse(existing))
+			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, singleQuoteForReuse(existing))
 			continue
 		}
 		if !isVariableName(name) {

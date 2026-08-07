@@ -44,7 +44,9 @@ func (r Runtime) describeCommand(name string) (string, bool) {
 		}
 	}
 	if _, ok := r.lookupApplet(name); ok {
-		return name + " is a bundled applet", true
+		// busybox's own words for the same thing, and it is the primary
+		// reference (AGENTS.md).
+		return name + " is a builtin applet", true
 	}
 	resolved, err := r.externalCommandPath(name)
 	if err != nil {

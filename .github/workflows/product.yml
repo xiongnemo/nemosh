@@ -1,0 +1,99 @@
+name: Product
+
+# This is the gate the readiness ledger means by "product CI": it builds Nemosh,
+# runs its tests, executes the behavior corpus against a freshly built binary,
+# and holds the repository's own rules -- formatting, vet on three platforms, and
+# the 250-pure-LOC ceiling per production file.
+#
+# The research probe workflow next to this one exercises reference shells only
+# and is not evidence about Nemosh.
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Windows is the first-class target, so its own reference shell is what
+      # the differential runner should have. Ubuntu already ships dash and bash.
+      - name: Install busybox (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: choco install busybox --no-progress -y || echo "busybox unavailable; the differential runner will skip it"
+
+      - name: Install dash (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y dash busybox
+
+      - name: gofmt
+        shell: bash
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt would change these files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      # Nemosh is Windows-first but must keep compiling for the two Unix targets,
+      # because the platform splits are what would rot silently otherwise.
+      - name: go vet (cross-platform)
+        shell: bash
+        run: |
+          GOOS=linux go vet ./...
+          GOOS=darwin go build ./...
+          GOOS=windows go build ./...
+
+      - name: go test
+        run: go test -race -shuffle=on -count=1 ./...
+
+      # Strict mode turns a divergence from a reference shell into a failure.
+      # CI has a known toolbox, which is the condition that makes that fair; on a
+      # developer's machine the same test reports and does not fail.
+      - name: differential against reference shells
+        shell: bash
+        env:
+          NEMOSH_DIFFERENTIAL: strict
+        run: go test ./internal/testutil/behavior/ -run Differential -count=1 -v
+
+      - name: applet manifest freshness
+        run: go test ./internal/appletmanifest/ -count=1
+
+      - name: production file size ceiling
+        shell: bash
+        run: |
+          status=0
+          for file in $(git ls-files '*.go' | grep -v _test.go); do
+            lines=$(grep -v '^[[:space:]]*$' "$file" | grep -v '^[[:space:]]*//' | wc -l)
+            if [ "$lines" -gt 250 ]; then
+              echo "$file has $lines pure lines, over the 250 ceiling"
+              status=1
+            fi
+          done
+          exit $status

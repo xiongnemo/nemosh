@@ -29,3 +29,7 @@ stderr = "nemosh: redirect descriptor 1: f.txt: cannot overwrite existing file\n
 [notes]
 standard = "POSIX Shell Command Language - 2.7 Redirection, 2.14 set -C"
 why = "`>|` and `<>` were refused as unsupported. `>|` exists only to override noclobber, and `set -C` -- which decides whether it is needed -- was one of the options this shell stored and never read. `<>` opens for both directions without truncating, so writing two bytes over a five-byte file leaves the tail; it defaults to descriptor 0 like every other `<` form, which is why writing through it names 1. Neither `>>` nor `<>` truncates, so neither is what -C guards against."
+
+[differential]
+diverges = ["dash", "posix"]
+why = "dash exits 2 from a noclobber refusal where bash, busybox and Nemosh exit 1. POSIX requires only that the status be non-zero."

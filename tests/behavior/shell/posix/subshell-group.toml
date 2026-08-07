@@ -21,3 +21,7 @@ stderr = ""
 [notes]
 standard = "POSIX.1 shell command language, subshell environment"
 why = "A parenthesized command isolates state and exit control while retaining status in pipelines."
+
+[differential]
+diverges = ["dash", "posix"]
+why = "dash stops earlier in this script and exits 2 where bash, busybox and Nemosh carry on. The behaviour Nemosh pins is bash's and busybox's."
