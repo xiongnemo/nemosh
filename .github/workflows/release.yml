@@ -1,0 +1,193 @@
+name: Release
+
+# Every push to master publishes a prerelease, and the tag for it is created by
+# the publish step rather than by hand. That is the pattern xiongnemo/Saki and
+# xiongnemo/nermius already use, and it fits the versioning rule in AGENTS.md
+# exactly: the automatic tag carries a branch and a commit
+# (`v0.0.178-master-57b96893ed4d`), so `scripts/version.sh --exclude='*-*'`
+# refuses it as a base and only a hand-made exact tag such as `v0.1.0` moves the
+# version line.
+#
+# Pushing an exact `vMAJOR.MINOR.PATCH` tag publishes a full release instead.
+#
+# The Product workflow is the gate. This one builds what that workflow already
+# proved, so it runs the tests once more and then packages, rather than
+# re-litigating formatting and the corpus.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  GOPROXY: https://goproxy.cn,direct
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # windows/amd64 is the supported target, and the only one shipped.
+          # Linux and darwin are build-and-test checks rather than support
+          # commitments (docs/support-matrix.md), so publishing a binary for
+          # them would promise more than the project is willing to keep.
+          # Adding one here is a single entry when that changes.
+          - goos: windows
+            goarch: amd64
+            runner: windows-latest
+            extension: .exe
+
+    steps:
+      # fetch-depth: 0 because the version is derived from tags. A shallow
+      # clone has none and would silently publish the v0.0.1 fallback.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Test
+        run: go test -count=1 ./...
+
+      - id: meta
+        name: Compute version
+        shell: bash
+        run: |
+          set -euo pipefail
+          # One implementation of the derivation, shared with local release
+          # builds, so CI and a developer cannot compute different versions.
+          version=$(bash scripts/version.sh --version)
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "ldflags=$(bash scripts/version.sh --ldflags)" >> "$GITHUB_OUTPUT"
+          echo "artifact=nemosh-${version}-${{ matrix.goos }}-${{ matrix.goarch }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          staging="dist/${{ steps.meta.outputs.artifact }}"
+          mkdir -p "$staging"
+          go build -trimpath \
+            -ldflags "-s -w ${{ steps.meta.outputs.ldflags }}" \
+            -o "$staging/nemosh${{ matrix.extension }}" ./cmd/nemosh
+          cp LICENSE NOTICE THIRD-PARTY-NOTICES.md README.md "$staging/"
+
+      # The published binary must be the one that answered here, so this runs
+      # against the staged artifact rather than rebuilding.
+      - name: Verify the artifact
+        if: matrix.goos == 'windows' && runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="dist/${{ steps.meta.outputs.artifact }}/nemosh${{ matrix.extension }}"
+          reported=$("$binary" --version)
+          echo "$reported"
+          case "$reported" in
+            "nemosh ${{ steps.meta.outputs.version }} "*) ;;
+            *) echo "artifact reports a version the build did not compute"; exit 1 ;;
+          esac
+          applets=$("$binary" --list | wc -l)
+          [ "$applets" -gt 0 ] || { echo "--list reported nothing"; exit 1; }
+          echo "$applets applets"
+
+      - name: Archive and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          archive="${{ steps.meta.outputs.artifact }}.zip"
+          if command -v 7z >/dev/null 2>&1; then
+            7z a -tzip "$archive" "${{ steps.meta.outputs.artifact }}" >/dev/null
+          else
+            zip -r "$archive" "${{ steps.meta.outputs.artifact }}" >/dev/null
+          fi
+          sha256sum "$archive" > "$archive.sha256"
+          cat "$archive.sha256"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.meta.outputs.artifact }}
+          path: |
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - id: meta
+        name: Compute release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(bash scripts/version.sh --version)
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            # An exact semver tag already exists; publish under it as a full
+            # release rather than inventing a second name for the same commit.
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "name=nemosh ${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${version}" >> "$GITHUB_OUTPUT"
+            echo "name=Dev prerelease ${version}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.name }}
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            dist/*.zip
+            dist/*.sha256
+          body: |
+            Nemosh ${{ steps.meta.outputs.version }}
+
+            **Pre-release.** `windows/amd64` is the supported target; see
+            [`docs/support-matrix.md`](https://github.com/xiongnemo/nemosh/blob/master/docs/support-matrix.md)
+            for what is implemented and what is refused, measured rather than
+            claimed.
+
+            Verify the download against the `.sha256` beside it.
+
+            Commit: `${{ github.sha }}`
