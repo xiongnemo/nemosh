@@ -205,19 +205,36 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	if errors.Is(err, errPipelineDownstreamClosed) {
 		return 0
 	}
+	status, message := AppletFailure(args[0], err)
+	if message != "" {
+		fmt.Fprintln(r.streams.Stderr, message)
+	}
+	return status
+}
+
+// AppletFailure turns an applet's error into the status and the one-line
+// diagnostic that go with it. Exported because `nemosh cat missing` has to fail
+// exactly the way `cat missing` inside the shell does, and the CLI cannot reach
+// the shell's copy of this. It used to have no copy at all: direct dispatch
+// dropped the applet-name prefix, and printed nothing whatever when the failure
+// carried its own status, so `nemosh env python3` exited 127 in silence.
+//
+// An empty message means there is nothing to print: a bare applets.ExitStatus
+// carries a status without a diagnostic, and so does ErrExitFalse.
+func AppletFailure(name string, err error) (int, string) {
+	if err == nil {
+		return 0, ""
+	}
 	if status, ok := applets.StatusCode(err); ok {
-		// A status that travels with a diagnostic still gets printed; only a
-		// bare ExitStatus is silent.
 		if message, ok := applets.StatusMessage(err); ok {
-			fmt.Fprintf(r.streams.Stderr, "%s: %s\n", args[0], message)
+			return status, name + ": " + message
 		}
-		return status
+		return status, ""
 	}
 	if errors.Is(err, applets.ErrExitFalse) {
-		return 1
+		return 1, ""
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
-	return 1
+	return 1, fmt.Sprintf("%s: %v", name, err)
 }
 
 func exitStatus(args []string, savedStatus int) int {
