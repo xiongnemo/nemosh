@@ -1,191 +1,229 @@
 # V1 Scope
 
-This document turns what v0 deliberately left undone into an implementation
-scope. Like `docs/design/v0-scope.md` it is allowed to change, but code should
-not start by ignoring these boundaries.
+**V1.0 does not add shell semantics. It turns the finished v0 into something a
+person can install, trust, and report bugs against.**
 
-**Where this comes from.** Nothing here is invented. Every item traces to one of
-four places, and the trace is given so a reader can check it rather than trust
-it:
+## Where This Came From, Including One Correction
 
+This document had to be rewritten once, and the reason belongs at the top.
+
+A first draft was derived bottom-up from v0's own remainder columns, and made
+the applet option matrices, `~user`, and completion stages M0–M2 the v1
+must-have. That draft was wrong about intent, not about facts. The original
+roadmap already existed — not in the repository, but in the oh-my-opencode
+session that built v0 (`ses_0c8d3d890ffe3aHXZ0MIUfV3O1`, 2026-07-06 to
+2026-08-01). On **2026-07-18** the question "到 v1 的完整计划是啥" was answered
+there with a full route, and its conclusion was the opposite of that draft:
+
+> v1.0 不新增大型 shell 语义，而是把完成的 v0 变成可信赖产品。
+
+That answer also froze the v0 route as `P0.4 → P0.5 → P1.1 → P1.2 → v0 全 scope
+审计`, which is now complete, and flagged exactly one product fork — whether
+v1.0 includes the full interactive REPL and completion — as needing a decision.
+**That fork was never answered at the time.** It was resolved on **2026-08-07**
+in favour of a merge: the release route as written, plus the two correctness
+debts that should not cross a release boundary.
+
+So the sources are:
+
+- the 2026-07-18 roadmap above, for the shape of V1-A/B/C/RC;
+- the **Remaining debt** of `.omo/plans/input-cancellation-io-number-fixes.md:101-117`,
+  for the two debts folded in;
 - the six **Deferred Non-Goals** of `docs/design/v0-scope.md:151-158`;
-- the **remainder columns** of `docs/design/v0-readiness.md`, which are measured
-  against a built binary rather than against the test suite;
-- the **Remaining debt** section of the closure record at
-  `.omo/plans/input-cancellation-io-number-fixes.md:101-117`;
-- the staged plan in `docs/research/autocomplete-feasibility.md:299-327` and the
-  per-applet matrices in `docs/testing/applet-test-inventory.md`.
+- the remainder columns of `docs/design/v0-readiness.md`, which supply the
+  v1.1 backlog rather than the v1.0 scope.
 
-There was no prior v1 plan. `.omo` holds exactly one file and it is a closure
-record for a shipped v0 slice, not a forward plan.
+## What V0 Established That V1 Must Not Regress
 
-## What v0 Established That V1 Must Not Regress
-
-These are load-bearing properties, not achievements to restate. Each one
-constrains how v1 work may be written.
+Load-bearing properties, not achievements to restate. Each constrains how v1
+work may be written.
 
 - **A capability that is absent must fail loudly.** This is the rule the v0
   readiness audit was corrected under, and it is why `hash`, `ulimit`, `fg`,
-  `bg`, and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status
-  instead of doing something approximate. Any v1 feature that lands partially
-  refuses the part it cannot do; it does not guess.
+  `bg`, and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather
+  than approximating. A release does not get to soften this into silence.
 - **Parse before effects.** A script is parsed in full before any of it runs.
-  This is why `set -n` and `set -v` are unimplementable as specified, why alias
-  substitution happens at dispatch rather than during tokenization, and why a
-  malformed line late in a script produces no output from the lines before it.
-  V1 must not introduce a construct that requires executing as it parses.
 - **busybox-w32 is the primary behavior reference**, then BusyBox ash, then dash
-  and POSIX. Claims are verified against the clone at
-  `references/windows-compat/busybox-w32`, never against memory.
+  and POSIX, verified against `references/windows-compat/busybox-w32`.
 - **Green tests do not imply completion.** Both defects found on 2026-08-07 —
-  `times` reporting 215 years, and a brace being reserved outside command
-  position — passed the whole suite. Shape assertions in particular hide wrong
-  values; bound the value too.
+  `times` reporting 215 years, and a brace treated as reserved outside command
+  position — passed the entire suite. Shape assertions hide wrong values.
 - **The 250 pure-LOC ceiling** per production `.go` file, and the differential
   corpus against busybox-w32/ash, dash, and bash.
 
-## V1 Must Have
+## V1.0 Must Have
 
-The four items below are the ones v0's own remainder columns name. They are
-ordered by how much they cost a user who hits them.
+### V1-A — Freeze the release contract
 
-### 1. Applet option matrices
+Measured 2026-08-07: **`README.md`, `LICENSE`, `CHANGELOG.md`, `SECURITY.md`,
+and any install document are all absent**, and both `nemosh --version` and
+`nemosh --list` answer `invalid option`. A public repository without a licence
+is the most consequential gap in this document; it is not a documentation
+nicety, it decides whether anyone may legally use the thing.
 
-**Status: the largest uncovered surface.** 39 applets are registered
-(`internal/applets/registry.go:52-92`) and every initial candidate name resolves,
-but *name presence is not semantic parity*. The per-applet required-test tables
-in `docs/testing/applet-test-inventory.md` — Milestones A through D — are the
-specification, and the options they list (`ls -l`, `head -c`, `grep -r`,
-`find -name`, `xargs -0`, `sort -k`, `cut -f`, `tr` ranges) are largely
-uncovered.
+- Supported OS and architecture matrix, and the initial applet manifest, both
+  stated as a contract rather than inferred from the registry.
+- Compatibility statement and the known-divergence list. v0 already records
+  divergences per behavior case; this surfaces them as a user-facing table.
+- SemVer policy, release candidates, tagging, and rollback/yank rules.
+- A single source of version truth, surfaced by `nemosh --version`, and
+  `nemosh --list` over the same manifest the applet-freshness gate already
+  checks.
+- `README.md`, install documentation, `CHANGELOG.md`, `LICENSE`, third-party
+  notices, `SECURITY.md`.
 
-v0 already made the failure mode safe: an option an applet does not implement is
-refused rather than swallowed, so a script asking for one fails instead of
-silently getting something else. V1 turns refusals into implementations, matrix
-by matrix, in the milestone order that document already sets.
+### V1-B — Product CI, security, and performance
 
-Acceptance: each applet's row in the inventory has a checked-in test file per
-the "Per-Applet Test File Rule", and every option the row names either works or
-refuses by name.
+Product CI already exists (`.github/workflows/product.yml`, both lanes green)
+and is the one item of this section that v0 delivered. The rest is new:
 
-### 2. `~user` tilde expansion
+- `govulncheck` and a dependency audit in the same workflow.
+- Fuzzing where the parser actually is: shell word parsing, path resolution, and
+  quoting. The brace defect found on 2026-08-07 is the shape of bug fuzzing
+  finds.
+- Resource-leak and long-running stress coverage for goroutines, handles, and
+  the job supervisor.
+- **Pin GitHub Actions to commit SHAs.** Currently `actions/checkout@v4`,
+  `actions/setup-go@v5`, and `msys2/setup-msys2@v2` are tags, which are mutable.
+  Apply least-privilege permissions in the same pass.
+- Performance baselines with regression thresholds: startup, `-c`, a pipeline, a
+  representative applet, memory/handle/goroutine counts, and binary size.
 
-**Status: left as written.** `echo ~root` prints `~root` (measured). Bare `~`
-and `~/path` work. `~user` requires resolving another account's profile
-directory, which on Windows means `SHGetKnownFolderPath` per SID or reading
-`ProfileImagePath`, and has no portable equivalent.
+### V1-C — Reproducible packaging and distribution
 
-Acceptance: `~user` resolves for a local account that exists, and refuses by
-name for one that does not — not silently passed through.
+- A single multicall binary.
+- Windows Scoop-first: generate the manifest, generate shims from the
+  authoritative applet list, and test clean install, shim invocation, upgrade,
+  and uninstall.
+- Archives or packages for the supported Unix platforms.
+- `-trimpath` reproducible builds, checksums, SBOM, signing, provenance.
+- **The published artifact must be the same binary CI verified.** No rebuild at
+  release time.
 
-### 3. Windows real-console cancellation acceptance
+### V1-RC — Clean-machine acceptance
 
-**Status: debt item 1 of the closure record.** Current interrupt coverage
-exercises anonymous pipes and regular files. A test that allocates a real child
-console and opens `CONIN$` would exercise `ReadConsole` plus
-`CancelSynchronousIo` directly, which is the path a user actually hits. A one-off
-`GenerateConsoleCtrlEvent` probe passed during the v0 review for both `cat`
-forms but was never checked in.
+On a fresh Windows install and a supported Unix host: install, upgrade,
+downgrade/rollback, uninstall; multicall and every shim; the behavior corpus;
+Unicode, long paths, CRLF, environment-variable case collision; the job and
+signal limits and the known compatibility divergences; package checksum and
+signature; and every command in the documentation, executed as written.
 
-This is also where the three interactive interrupt tests skipped on non-Windows
-(`cmd/nemosh/interactive_interrupt_platform_test.go`) would gain a native
-counterpart.
+Passing all of that freezes the compatibility table, generates release notes,
+and ships `v1.0.0`.
 
-### 4. Cancellation ownership
+### Folded in: two correctness debts
 
-**Status: debt item 2 of the closure record.** `copyWithContext` in
-`internal/applets/files.go` is redundant: `contextApplet` in `registry.go`
-already wraps every applet's stdin, so `cat` carries two prechecking wrappers.
-Reverting it to plain `io.Copy` keeps the suite green. No wrong behavior today,
-but which layer owns cancellation is ambiguous. Either collapse it or pin it
-with a test that constructs `catApplet{}` directly.
+These are the merge half of the 2026-08-07 decision. Both are cheap, both are
+correctness rather than features, and neither should cross a release boundary.
 
-## Job Control: What Is Reachable On Windows
+1. **Windows real-console cancellation acceptance.** Interrupt coverage today
+   exercises anonymous pipes and regular files. A test that allocates a real
+   child console and opens `CONIN$` would exercise `ReadConsole` plus
+   `CancelSynchronousIo` — the path a user actually hits. A one-off
+   `GenerateConsoleCtrlEvent` probe passed during the v0 review for both `cat`
+   forms but was never checked in. This is also where the three interactive
+   interrupt tests skipped on non-Windows
+   (`cmd/nemosh/interactive_interrupt_platform_test.go`) gain a native
+   counterpart.
+2. **Cancellation ownership.** `copyWithContext` in `internal/applets/files.go`
+   is redundant: `contextApplet` in `registry.go` already wraps every applet's
+   stdin, so `cat` carries two prechecking wrappers. Reverting it to plain
+   `io.Copy` keeps the suite green. No wrong behavior today, but the ambiguity
+   about which layer owns cancellation is exactly the kind of thing a release
+   should not inherit. Collapse it, or pin it with a test that constructs
+   `catApplet{}` directly.
 
-`fg` and `bg` refuse today, and the refusal names why: job control needs a
-terminal process group, which Windows does not have. busybox-w32 does not
-implement them either — their builtin-table entries sit under `#if JOBS`
-(`shell/ash.c:12050` and `:12081`), and `JOBS` is 0 under
-`ENABLE_PLATFORM_MINGW32` (`shell/ash.c:247-253`), so they are compiled out.
+## Deferred, With The Release They Belong To
 
-**The reference draws the line somewhere useful, though.** busybox-w32 defines a
-second macro, `JOBS_WIN32`, whose own comment says it "doesn't enable job
-control, just some job-related features" (`shell/ash.c:244-245`). `jobs` and
-`kill` are gated on `JOBS || JOBS_WIN32` (`shell/ash.c:12094-12097`) and so do
-survive on Windows — which is the same line Nemosh's P0.4 already drew by
-implementing `jobs` and `wait` but not `fg`/`bg`.
+Deferring these is what makes v1.0 shippable. Each has a home.
 
-V1 does not adopt "full native Windows POSIX job control"; that stays a
-non-goal. What is reachable, and what a v1 proposal would have to argue for
-separately, is a bounded subset above `JOBS_WIN32` and below POSIX: bringing a
-retained background job's output to the foreground and waiting on it, over Job
-Objects and ConPTY, without stopped jobs, without `SIGTSTP`, and without process
-groups. Anything less than that subset should keep refusing rather than pretend.
+**v1.1 — applet option matrices and `~user`.**
+39 applets are registered (`internal/applets/registry.go:52-92`) and every
+initial candidate name resolves, but *name presence is not semantic parity*. The
+per-applet tables in `docs/testing/applet-test-inventory.md` are the
+specification, and the options they name (`ls -l`, `head -c`, `grep -r`,
+`find -name`, `xargs -0`, `sort -k`, `cut -f`) are largely uncovered. v0 already
+made the failure mode safe — an unimplemented option is refused rather than
+swallowed — which is precisely why this can ship as-is and be filled in after.
+`~user` joins it: `echo ~root` prints `~root` today (measured), and resolving
+another account's profile directory needs `SHGetKnownFolderPath` per SID or
+`ProfileImagePath`, with no portable equivalent.
 
-`hash` stays refused on a different ground: command lookup is not cached, so
-there is nothing to remember or forget. busybox-w32 does implement it, over a
-hash table this shell does not have. Implementing `hash` means first adding a
-lookup cache, which is a performance decision, not a compatibility one.
+**v1.2 — completion M0 through M2.**
+`docs/research/autocomplete-feasibility.md:299-327` holds the staged plan and
+its conclusion stands: a Nemosh-owned semantic engine behind an editor adapter.
+M0 freezes contracts, M1 builds read-only seams so completion can query what
+execution would resolve *without executing*, and M2 is a synchronous engine
+behind a noninteractive harness. M2's exit criterion is that the core matrix
+passes with no terminal editor at all, which is why it stops there.
 
-`ulimit` stays refused: Windows has no `getrlimit`, and busybox-w32 does not
-implement it either — it keeps the name and returns 1 with no message
-(`shell/shell_common.c`, the `#else` of `#if !ENABLE_PLATFORM_MINGW32`). Nemosh
-saying so is strictly better than returning 1 silently.
-
-## Interactive Shell And Completion
-
-**Status: v0 non-goal, feasibility already researched, no code written.**
-`docs/research/autocomplete-feasibility.md` is a complete plan and its
-conclusion stands: a Nemosh-owned semantic completion engine behind an editor
-adapter, with the engine owning parsing, replacement ranges, Windows path and
-command semantics, providers, ranking, cancellation, and caching.
-
-V1 adopts stages **M0 through M2** of that document's staged plan and no
-further:
-
-- **M0** — freeze the request, candidate, insertion, offset, visibility, and
-  budget contracts; build fixtures; measure current input behavior. No
-  dependency decision.
-- **M1** — reusable read-only seams: applet and command enumeration, resolver
-  reuse, immutable shell state, one path policy. Exit criterion is that
-  completion can query exactly what execution would resolve *without executing*.
-- **M2** — a synchronous semantic engine behind a noninteractive harness:
-  cursor analysis, path/command/variable providers, quoting and insertion,
-  ranking, caps, Unicode conversion.
-
-M2's exit criterion is the reason to stop there: the core matrix passes with no
-terminal editor at all. **M3, the editor bakeoff between `go-readline-ny` and
-`reeflective/readline`, adds the project's first runtime dependency and must be
-its own decision with its own written justification.** M4 through M6 follow that
-decision, not this document.
+**v2 — the interactive tier.**
+M3 is the editor bakeoff between `go-readline-ny` and `reeflective/readline`,
+and it would add **this project's first runtime dependency**; that is its own
+decision with its own written justification, not a line item here. M4–M6, the
+full raw-terminal REPL, ConPTY and PTY, `/dev/tty`, history suggestions, and
+plugins follow it.
 
 ## Explicitly Still Non-Goals
 
-Carried forward from `v0-scope.md:151-158`, unchanged, and not usable to defer
-anything above:
+Carried from `v0-scope.md:151-158`, unchanged, and not usable to defer anything
+above:
 
 - MSYS2/Cygwin argv conversion. v0 confirmed by measurement that argv reaches a
-  child unconverted, and that is the intended behavior.
-- WSL-like mount namespace. `nmount` remains a Milestone D sketch, not a v1
-  commitment.
+  child unconverted, and that is intended.
+- WSL-like mount namespace; `shares`/`nmount` remain Milestone D sketches.
 - Full POSIX certification claims.
 - Full BusyBox applet parity. The "Later BusyBox-Style Roadmap"
   (`applet-test-inventory.md:76-89`) — checksums, archiving, `awk`, `vi`, `bc`,
-  networking — stays out. `awk` and `vi` in particular are standalone projects.
-- Full native Windows POSIX job control, as qualified above.
-- Plugins, and zsh-level interaction beyond M2.
+  networking — stays out; `awk` and `vi` are standalone projects.
+- Windows ACL tooling.
 
-Two more that v0 measured and deliberately left:
+### Job control, and where the reference draws its line
+
+`fg` and `bg` refuse, and the refusal names why: job control needs a terminal
+process group, which Windows does not have. busybox-w32 does not implement them
+either — their builtin-table entries sit under `#if JOBS`
+(`shell/ash.c:12050` and `:12081`) and `JOBS` is 0 under
+`ENABLE_PLATFORM_MINGW32` (`shell/ash.c:247-253`), so they are compiled out.
+
+The reference does draw a useful line, though. It defines a second macro,
+`JOBS_WIN32`, whose comment says it "doesn't enable job control, just some
+job-related features" (`shell/ash.c:244-245`), and gates `jobs` and `kill` on
+`JOBS || JOBS_WIN32` (`shell/ash.c:12094-12097`) so they survive on Windows.
+That is the same line P0.4 already drew here by shipping `jobs` and `wait` but
+not `fg`/`bg`.
+
+A bounded subset above `JOBS_WIN32` and below POSIX — foregrounding a retained
+background job over Job Objects and ConPTY, without stopped jobs, `SIGTSTP`, or
+process groups — is reachable, and belongs with the v2 interactive tier because
+it needs the same terminal ownership. Anything less than that subset keeps
+refusing rather than pretending.
+
+### Also measured and deliberately left
 
 - `/dev/tty` and PTY device paths, deferred by the device model itself.
 - A shared extended-length path prefix layer. Wave C landed long paths without
   one; a child launched from a directory over 258 UTF-16 characters falls back
   to its 8.3 short name or is refused by length. Making that uniform is a
-  reasonable v1 candidate but was not required by v0.
+  reasonable v1.1 candidate but was not required by v0.
 
-## Open Question For Prioritization
+## Critical Path
 
-Items 1 through 4 of **V1 Must Have** are independent and can land in any order.
-Item 1 is by far the largest and is the one a user is most likely to hit; the
-completion work is the largest overall and the only part that risks a
-dependency. Which of those leads is a product call, not a technical one.
+```text
+V1-A  release contract, licence, --version/--list
+  +   two folded correctness debts
+  ↓
+V1-B  CI hardening, govulncheck, fuzz, pinned actions, baselines
+  ↓
+V1-C  reproducible build, Scoop manifest, SBOM, signing
+  ↓
+V1-RC clean-machine acceptance
+  ↓
+v1.0.0
+  ↓
+v1.1  applet option matrices, ~user
+  ↓
+v1.2  completion M0–M2
+  ↓
+v2    editor bakeoff, full REPL, PTY, bounded job control
+```
