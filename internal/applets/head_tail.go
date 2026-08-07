@@ -11,7 +11,7 @@ import (
 
 func newHeadApplet() Applet {
 	return simpleApplet{name: "head", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		count, paths, err := lineCountArgs(args, 10)
+		count, paths, err := lineCountArgs("head", args, 10)
 		if err != nil {
 			return err
 		}
@@ -46,7 +46,7 @@ func copyHead(stdout io.Writer, input io.Reader, count int) error {
 
 func newTailApplet() Applet {
 	return simpleApplet{name: "tail", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		count, paths, err := lineCountArgs(args, 10)
+		count, paths, err := lineCountArgs("tail", args, 10)
 		if err != nil {
 			return err
 		}
@@ -89,13 +89,25 @@ func copyTail(stdout io.Writer, input io.Reader, count int) error {
 	return nil
 }
 
-func lineCountArgs(args []string, defaultCount int) (int, []string, error) {
-	if len(args) < 2 || args[0] != "-n" {
-		return defaultCount, args, nil
+// lineCountArgs consumes `-n COUNT` and then refuses anything else that looks
+// like an option, rather than letting it reach the file opener and be reported
+// as a missing file.
+func lineCountArgs(applet string, args []string, defaultCount int) (int, []string, error) {
+	count := defaultCount
+	if len(args) > 0 && args[0] == "-n" {
+		if len(args) < 2 {
+			return 0, nil, fmt.Errorf("-n: requires a line count")
+		}
+		parsed, err := strconv.Atoi(args[1])
+		if err != nil || parsed < 0 {
+			return 0, nil, fmt.Errorf("invalid line count: %s", args[1])
+		}
+		count = parsed
+		args = args[2:]
 	}
-	count, err := strconv.Atoi(args[1])
-	if err != nil || count < 0 {
-		return 0, nil, fmt.Errorf("invalid line count: %s", args[1])
+	paths, err := streamOperands(applet, args, "-n")
+	if err != nil {
+		return 0, nil, err
 	}
-	return count, args[2:], nil
+	return count, paths, nil
 }

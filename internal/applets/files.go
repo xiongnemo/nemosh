@@ -40,12 +40,18 @@ func copyWithContext(ctx context.Context, stdout io.Writer, stdin io.Reader) (in
 func newCatApplet() Applet     { return catApplet{} }
 func (catApplet) Name() string { return "cat" }
 func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-	if len(args) == 0 {
+	// cat implements no options here, so any operand that looks like one is
+	// refused by name instead of being opened as a file and reported missing.
+	paths, err := streamOperands("cat", args)
+	if err != nil {
+		return err
+	}
+	if len(paths) == 0 {
 		_, err := copyWithContext(ctx, stdout, stdin)
 		return err
 	}
 	view := ProcessViewFromContext(ctx)
-	for _, path := range args {
+	for _, path := range paths {
 		file, err := OpenProcessInput(ctx, view, path)
 		if err != nil {
 			return cannotOpen(path, err)
