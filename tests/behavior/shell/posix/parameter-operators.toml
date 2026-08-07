@@ -1,0 +1,35 @@
+id = "shell.posix.expansion.parameter-operators"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+x=a.b.c
+echo [${#x}]
+echo [${x%.*}]
+echo [${x%%.*}]
+echo [${x#*.}]
+echo [${x##*.}]
+echo [${x%nomatch}]
+echo [${nope-fallback}]
+empty=
+echo [${empty-fallback}]
+echo [${empty:-fallback}]
+echo [${x+alt}]
+echo [${nope+alt}]
+echo [${assigned=written}]
+echo [$assigned]
+set one two three
+echo [${2}] [${#@}]
+'''
+
+[expect]
+status = 0
+stdout = "[5]\n[a.b]\n[a]\n[b.c]\n[c]\n[a.b.c]\n[fallback]\n[]\n[fallback]\n[alt]\n[]\n[written]\n[written]\n[two] [3]\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.6.2 Parameter Expansion"
+why = "Only ${x-word} and ${x:-word} were implemented. Every other operator fell through to the caller, which handed back the expansion's own literal text -- so `${x%.txt}` expanded to the six characters `${x%.txt}` and exited 0. The trims match against the pattern language of 2.13.1 rather than comparing literally, which is what makes ${x%.*} mean anything. An operator this shell does not implement is a bad substitution now instead of quietly becoming data."

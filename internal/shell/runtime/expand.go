@@ -86,11 +86,12 @@ func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
 		return []string{""}
 	}
 	if strings.HasPrefix(text, "${") && strings.HasSuffix(text, "}") {
-		body := text[2 : len(text)-1]
-		if expanded, ok := r.expandDefaultParameter(body, savedStatus); ok {
-			return []string{expanded}
+		expanded, err := r.expandBracedParameter(text[2:len(text)-1], savedStatus)
+		if err != nil {
+			r.reportExpansionError(err)
+			return []string{""}
 		}
-		return []string{text}
+		return []string{expanded}
 	}
 	name := strings.TrimPrefix(text, "$")
 	value, set := r.vars[name]
