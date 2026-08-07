@@ -54,11 +54,12 @@ func loadShellCases(t *testing.T) []behavior.Case {
 //
 // Status and stdout only; see CompareWithReference for why stderr is left out.
 func TestBehaviorDifferential_comparesGoldenCasesWithLocalReferences(t *testing.T) {
-	strict := os.Getenv("NEMOSH_DIFFERENTIAL") == "strict"
+	mode := os.Getenv("NEMOSH_DIFFERENTIAL")
+	strict := mode == "strict" || mode == "audit"
 	executors := map[string]behavior.ScriptExecutor{}
 	unavailable := map[string]string{}
 	compared, skipped := 0, 0
-	var report []string
+	var report, stale []string
 
 	for _, testCase := range loadShellCases(t) {
 		// A case that pins a Nemosh extension has no reference to disagree with.
@@ -96,10 +97,8 @@ func TestBehaviorDifferential_comparesGoldenCasesWithLocalReferences(t *testing.
 			divergences := behavior.CompareWithReference(name, testCase.Expect,
 				behavior.ProcessResult{Status: result.Status, Stdout: result.Stdout, Stderr: result.Stderr})
 			if testCase.DivergenceDeclared(name) {
-				// Checked in both directions: a declared divergence that stopped
-				// happening is a stale exemption, and those are where bugs hide.
 				if len(divergences) == 0 {
-					t.Errorf("%s: %s no longer diverges; drop it from differential.diverges", testCase.ID, name)
+					stale = append(stale, testCase.ID+": "+name)
 				}
 				continue
 			}
@@ -120,6 +119,24 @@ func TestBehaviorDifferential_comparesGoldenCasesWithLocalReferences(t *testing.
 			continue
 		}
 		t.Logf("divergence: %s", line)
+	}
+
+	// A declared divergence that stopped happening is reported, and fails only
+	// under `audit`. It cannot be a cross-platform gate: whether a reference
+	// disagrees depends on which build of it is installed, and the first CI run
+	// proved it -- Ubuntu's dash agrees with Nemosh on two cases where the dash
+	// shipped with Git for Windows does not. Failing on that would mean the
+	// declarations could only ever be right for one machine.
+	//
+	// `audit` is for a developer checking the list on a known toolbox, which is
+	// the condition that makes the check meaningful.
+	sort.Strings(stale)
+	for _, line := range stale {
+		if mode == "audit" {
+			t.Errorf("declared divergence no longer happens, drop it from differential.diverges: %s", line)
+			continue
+		}
+		t.Logf("declared divergence did not happen here (reference build differs?): %s", line)
 	}
 	if compared == 0 {
 		t.Skip("no reference shell available on this machine")

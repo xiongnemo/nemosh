@@ -103,12 +103,16 @@ func TestPlanScriptLaunch_stopsResolvingAnAppletInterpreter_whenItIsOverridden(t
 	// Given
 	dir := t.TempDir()
 	script := filepath.Join(dir, "show")
-	if err := os.WriteFile(script, []byte("#!/bin/cat\nhello\n"), 0o700); err != nil {
+	// winpath rather than cat: the interpreter has to be an applet with no host
+	// counterpart anywhere, and on Linux /bin/cat is a real file that resolves
+	// by absolute path no matter what PATH says. winpath is Nemosh's own, so
+	// there is nothing on either platform for the override to fall back to.
+	// The first CI run on ubuntu-latest is what surfaced that.
+	if err := os.WriteFile(script, []byte("#!/bin/winpath\nhello\n"), 0o700); err != nil {
 		t.Fatalf("write script: %v", err)
 	}
-	// An empty PATH so that a cat the host happens to ship cannot stand in.
 	t.Setenv("PATH", t.TempDir())
-	t.Setenv(overrideAppletsVariable, "cat")
+	t.Setenv(overrideAppletsVariable, "winpath")
 	rt := New(applets.DefaultRegistry, Streams{})
 
 	// When
@@ -118,7 +122,7 @@ func TestPlanScriptLaunch_stopsResolvingAnAppletInterpreter_whenItIsOverridden(t
 	if err == nil {
 		t.Fatalf("expected the overridden applet interpreter to be unresolvable")
 	}
-	if got := err.Error(); got != "/bin/cat: external command not found" {
+	if got := err.Error(); got != "/bin/winpath: external command not found" {
 		t.Fatalf("expected an external-not-found diagnostic, got %q", got)
 	}
 }
