@@ -39,6 +39,9 @@ func logicalLines(source string) ([]string, error) {
 		return scanner.lines, err
 	}
 	scanner.flushLogicalLine()
+	if scanner.syntaxErr != nil {
+		return scanner.lines, scanner.syntaxErr
+	}
 	return scanner.lines, nil
 }
 
@@ -155,10 +158,20 @@ func (scanner *syntaxScanner) finishPhysicalLine(line string) {
 const logicalLineCutset = " \t\n"
 
 func (scanner *syntaxScanner) flushLogicalLine() {
-	if normalized := strings.Trim(scanner.logical.String(), logicalLineCutset); normalized != "" {
-		scanner.lines = append(scanner.lines, normalized)
+	if scanner.syntaxErr != nil {
+		return
 	}
+	segments, err := splitSequentialSegments(scanner.logical.String())
 	scanner.logical.Reset()
+	if err != nil {
+		scanner.syntaxErr = err
+		return
+	}
+	for _, segment := range segments {
+		if normalized := strings.Trim(segment, logicalLineCutset); normalized != "" {
+			scanner.lines = append(scanner.lines, splitLeadingReservedWord(normalized)...)
+		}
+	}
 }
 
 func (scanner *syntaxScanner) incompleteError() error {

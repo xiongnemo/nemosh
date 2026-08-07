@@ -14,8 +14,8 @@ echo valid &; echo invalid
 [expect]
 status = 2
 stdout = ""
-stderr = "nemosh: unsupported syntax: ;\n"
+stderr = "nemosh: syntax error: unexpected ;\n"
 
 [notes]
 standard = "POSIX Shell Command Language - Lists"
-why = "A malformed ampersand suffix rejects the complete script before output or redirection effects."
+why = "A malformed ampersand suffix rejects the complete script before output or redirection effects. The diagnostic names the separator rather than calling it unsupported: `;` is an ordinary separator now, and what is wrong here is that `&` already terminated the list, which is also how dash and bash word it."

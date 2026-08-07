@@ -60,7 +60,10 @@ func rejectDeferredSyntax(line string) error {
 		if char == '(' || char == ')' {
 			return fmt.Errorf("unsupported syntax: grouping")
 		}
-		if char == '{' || char == '}' || char == ';' {
+		// `;` is absent from this set: splitSequentialSegments cut the line at
+		// every top-level separator before the line reached here, so one that
+		// survives belongs to a construct this scan already stepped over.
+		if char == '{' || char == '}' {
 			return fmt.Errorf("unsupported syntax: %c", char)
 		}
 	}
