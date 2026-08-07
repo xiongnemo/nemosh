@@ -1,0 +1,24 @@
+id = "shell.posix.function.definition-joined-brace"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+f(){ echo joined; }
+g() { echo spaced; }
+f
+g
+{ echo $((1+2)); }
+{ echo $((1+2))}; }
+'''
+
+[expect]
+status = 0
+stdout = "joined\nspaced\n3\n3}\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 shell command language, 2.9.5 Function Definition Command"
+why = "The `)` closing a function definition's parameter list leaves the next word in command position, so `f(){` opens the body with no blank needed. The same `)` does not delimit a closing brace: after the `))` of an arithmetic expansion the scan is still inside a word, so the first `}` of `{ echo $((1+2))}; }` is text and only the second closes the group. busybox ash, dash, and bash agree on both."

@@ -72,7 +72,10 @@ func rejectDeferredSyntax(line string) error {
 		// `;` is absent from this set: splitSequentialSegments cut the line at
 		// every top-level separator before the line reached here, so one that
 		// survives belongs to a construct this scan already stepped over.
-		if char == '{' || char == '}' {
+		// Only a brace in command position is the reserved word. One inside or
+		// after a word is an ordinary character and belongs to the operand:
+		// `echo a}b`, `echo {}`, `echo x{1}y`.
+		if (char == '{' || char == '}') && braceDelimiterAt(line, index, char) {
 			return fmt.Errorf("unsupported syntax: %c", char)
 		}
 	}
