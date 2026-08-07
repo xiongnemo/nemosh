@@ -9,53 +9,112 @@ import (
 	"strings"
 )
 
+// expandCommandWord is expandWord followed by the pathname expansion of POSIX
+// 2.6.6. It is separate because that step applies to a command's words, its
+// redirect operands, and a for-loop's word list, but never to a case pattern --
+// there the pattern is the whole point, and globbing `*)` against the
+// filesystem would take the default arm away.
+func (r Runtime) expandCommandWord(ctx context.Context, item word, savedStatus int) []string {
+	fields, globbable := r.expandWordFields(ctx, item, savedStatus)
+	var expanded []string
+	for index, field := range fields {
+		if !globbable[index] {
+			expanded = append(expanded, field)
+			continue
+		}
+		matches := r.expandPathnames(field)
+		if len(matches) == 0 {
+			// A pattern matching nothing stays exactly as written.
+			expanded = append(expanded, field)
+			continue
+		}
+		expanded = append(expanded, matches...)
+	}
+	return expanded
+}
+
 func (r Runtime) expandWord(ctx context.Context, item word, savedStatus int) []string {
+	fields, _ := r.expandWordFields(ctx, item, savedStatus)
+	return fields
+}
+
+// expandWordFields returns the fields and, for each of them, whether an
+// unquoted part contributed a pathname metacharacter to it. Quoting is what
+// decides: `echo "*"` prints a star and `echo *` lists the directory, and the
+// only thing that tells them apart is where the star came from.
+func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus int) ([]string, []bool) {
 	fields := []string{""}
+	globbable := []bool{false}
+	// mark records that an unquoted contribution carrying a metacharacter
+	// landed on every field from `from` onwards -- a split expansion can add
+	// several at once.
+	mark := func(text string, quote quoteContext, from int) {
+		if quote != quoteUnquoted || !containsGlobMeta(text) {
+			return
+		}
+		for len(globbable) < len(fields) {
+			globbable = append(globbable, false)
+		}
+		for index := from; index < len(globbable); index++ {
+			globbable[index] = true
+		}
+	}
 	// contributed tracks whether anything at all put a field on the word. An
 	// unquoted expansion that splits to nothing puts nothing, and a word made
 	// only of those disappears rather than becoming one empty field -- which is
 	// what makes `set -- $empty` leave no positional parameters.
 	contributed := false
 	for _, part := range item.parts {
+		start := len(fields) - 1
 		switch part.kind {
 		case wordPartLiteral, wordPartEscaped:
 			fields[len(fields)-1] += part.text
 			contributed = true
+			// An escaped part had its backslash removed by the lexer, so its
+			// metacharacter is data no matter where it sits.
+			if part.kind == wordPartLiteral {
+				mark(part.text, part.quote, start)
+			}
 		case wordPartParameter:
 			values := r.expandParameterPart(part, savedStatus)
 			if part.text == "$@" && part.quote != quoteSingle {
 				if len(values) == 0 {
 					if len(item.parts) == 1 {
-						return nil
+						return nil, nil
 					}
 					continue
 				}
 				fields[len(fields)-1] += values[0]
 				fields = append(fields, values[1:]...)
 				contributed = true
+				mark(strings.Join(values, ""), part.quote, start)
 				continue
 			}
 			var produced bool
 			fields, produced = r.appendExpansion(fields, values[0], part.quote)
 			contributed = contributed || produced
+			mark(values[0], part.quote, start)
 		case wordPartCommandSubstitution:
 			if part.script != nil {
+				output := r.commandSubstitutionScript(ctx, *part.script)
 				var produced bool
-				fields, produced = r.appendExpansion(fields, r.commandSubstitutionScript(ctx, *part.script), part.quote)
+				fields, produced = r.appendExpansion(fields, output, part.quote)
 				contributed = contributed || produced
+				mark(output, part.quote, start)
 			}
 		}
 	}
+	globbable = append(globbable, make([]bool, len(fields)-len(globbable))...)
 	if len(item.parts) == 0 && !item.quotedEmpty {
-		return nil
+		return nil, nil
 	}
 	if !contributed && !item.quotedEmpty {
-		return nil
+		return nil, nil
 	}
 	if item.expandTilde && len(fields) > 0 {
 		fields[0] = r.expandHomeTilde(fields[0])
 	}
-	return fields
+	return fields, globbable
 }
 
 // appendExpansion adds what an expansion produced to the word being built. An

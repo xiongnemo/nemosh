@@ -53,7 +53,7 @@ func (r Runtime) isKnownCommand(name string) bool {
 
 func isRuntimeBuiltin(name string) bool {
 	switch name {
-	case ".", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "pwd", "read", "readonly", "set", "shift", "source", "trap", "umask", "unset", "wait":
+	case ":", ".", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "pwd", "read", "readonly", "set", "shift", "source", "trap", "umask", "unset", "wait":
 		return true
 	default:
 		return false
@@ -62,7 +62,7 @@ func isRuntimeBuiltin(name string) bool {
 
 func isSpecialBuiltin(name string) bool {
 	switch name {
-	case ".", "break", "continue", "eval", "exec", "exit", "export", "readonly", "return", "set", "shift", "source", "trap", "unset":
+	case ":", ".", "break", "continue", "eval", "exec", "exit", "export", "readonly", "return", "set", "shift", "source", "trap", "unset":
 		return true
 	default:
 		return false
