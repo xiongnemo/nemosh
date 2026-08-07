@@ -1,0 +1,26 @@
+id = "shell.posix.list.sequential-separator"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+echo a ; echo b
+false; echo reached
+if true; then echo yes; else echo no; fi
+for i in 1 2; do echo $i; done
+while false; do echo never; done; echo after
+{ echo in; echo group; } ; echo out
+echo 'q;1' "q;2" q\;3
+echo done;
+'''
+
+[expect]
+status = 0
+stdout = "a\nb\nreached\nyes\n1\n2\nafter\nin\ngroup\nout\nq;1 q;2 q;3\ndone\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.3 Lists"
+why = "`;` separates two commands and runs them in sequence regardless of the first one's status, which is what makes the one-line forms of if, for, and while writable at all. A separator inside quotes, behind a backslash, or inside a brace group belongs to that construct instead, and a trailing separator ends the list without introducing an empty command."
