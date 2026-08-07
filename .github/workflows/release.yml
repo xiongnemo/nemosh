@@ -16,6 +16,12 @@ name: Release
 
 on:
   workflow_dispatch:
+  # A pull request builds, verifies, and uploads without publishing, because the
+  # publish job is gated on a push event. That is deliberate: the release path
+  # is the one thing that cannot be tried out after the fact -- a broken step is
+  # otherwise discovered by a red run on master, or by a wrong artifact already
+  # attached to a release.
+  pull_request:
   push:
     branches:
       - master
