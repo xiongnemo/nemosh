@@ -1,0 +1,38 @@
+id = "shell.posix.expansion.field-splitting"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+x='a b'
+set -- $x
+echo [$#]
+set -- "$x"
+echo [$#]
+set -- $(echo one; echo two)
+echo [$#] [$1] [$2]
+spaced='  p   q  '
+set -- $spaced
+echo [$#] [$1] [$2]
+empty=
+set -- $empty
+echo [$#]
+set -- [$x]
+echo [$1] [$2]
+for item in $x; do echo item=$item; done
+IFS=:
+colons=a::b
+set -- $colons
+echo [$#] [$2]
+'''
+
+[expect]
+status = 0
+stdout = "[2]\n[1]\n[2] [one] [two]\n[2] [p] [q]\n[0]\n[[a] [b]]\nitem=a\nitem=b\n[3] []\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.6.5 Field Splitting"
+why = "Nothing split, so a variable holding two words stayed one field: `set -- $x` left one positional parameter with a space in it, and `for f in $list` looped once over the whole list. A run of IFS whitespace is one delimiter and a leading or trailing run makes no empty field, while a non-whitespace separator delimits one field each -- which is why IFS=: over a::b gives three. An unquoted expansion that splits to nothing removes the word instead of leaving an empty field behind, and quoting suppresses splitting entirely."
