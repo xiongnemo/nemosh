@@ -96,7 +96,10 @@ func (r Runtime) cd(args []string) int {
 		return 1
 	}
 	previous := r.WorkingDirectory()
-	r.paths.setWorkingDirectory(resolved)
+	// The directory is stored under the spelling on disk, so `pwd` and every
+	// diagnostic below it answer with the real case rather than with whatever
+	// this operand happened to be typed as (windows-path-model.md, "Path case").
+	r.paths.setWorkingDirectory(r.withRealCase(resolved))
 	r.setDirectoryVariable("OLDPWD", previous)
 	r.setDirectoryVariable("PWD", r.WorkingDirectory())
 	if printResult {
