@@ -16,22 +16,39 @@ The ratings are deliberately bounded:
 
 Passing tests are evidence only for behavior those tests exercise. The current
 `go test ./...` result is green, but **green tests do not imply v0 completion**:
-major must-haves have no implementation or acceptance test, Windows-only paths
-are incompletely exercised, differential references are not run end to end, and
-there is no product CI.
+Windows-only paths are incompletely exercised, differential references are not
+run end to end, and there is no product CI.
+
+**How this ledger was corrected (2026-08-07).** A thirteen-agent audit found 25
+defects, 18 of them rows in this file claiming more than the code did. Every one
+was re-measured against a freshly built binary rather than against the test
+suite, and every confirmed one was fixed; the rows below were then rewritten
+from a second measurement of the fixed binary rather than from the old text.
+Two audit findings did not survive re-measurement and are recorded as such: an
+executable path past MAX_PATH launches (804 characters, measured), and the
+clipboard round-trip failure did not reproduce in 25 runs.
+
+The rule the corrections followed, and the one this ledger is now held to:
+**a capability that is absent must fail loudly.** Most of what was found was not
+missing so much as silently wrong -- `test -f x` answered false instead of
+saying it had no file predicates, `${x%.txt}` expanded to its own six
+characters, `wc -z FILE` selected no counts and exited 0, `printf '%d' 42`
+printed `%!d(string=42)`, and `rmdir notes.txt` deleted the file. A green suite
+cannot see any of that, which is why the remainder columns below name behaviour
+measured against a binary and cite the command that measured it.
 
 ## Executive Status
 
 | `v0-scope.md` section | Status | Current evidence | Blocking remainder |
 | --- | --- | --- | --- |
-| Product Target | **Partial** | Native Go CLI and multicall dispatch exist in `cmd/nemosh/main.go`; bundled applets are registered by `internal/applets/registry.go`; P0.4 implements the bounded Windows jobs/INT model. | Windows-first behavior is integrated across the path, launch, clipboard, encoding, and long-path boundaries (P0.5 Waves A, B, and C). Layered diagnostics (P1.1) are not. Expansion and broader ash-like behavior remain incomplete. |
-| V0 Must Have | **Partial** | `-c` and redirected-stdin execution are tested in `cmd/nemosh/main_test.go`; P0.1 owns the FD table and snapshots, P0.2 owns concurrent `os.Pipe` pipelines, P0.3 owns typed groups/subshells/heredocs/functions, and P0.4 owns asynchronous background execution, retained job lifecycle, `jobs`/`wait`, and bounded Windows INT behavior under `internal/shell/runtime/`; the applet registry is substantial. | Complete selected expansion semantics and corpus-wide differential/product CI remain absent or incomplete. |
+| Product Target | **Partial** | Native Go CLI and multicall dispatch exist in `cmd/nemosh/main.go`; bundled applets are registered by `internal/applets/registry.go`; P0.4 implements the bounded Windows jobs/INT model; P0.5 integrates the path, launch, clipboard, encoding, and long-path boundaries. A direct `nemosh cat missing` and `cat missing` inside the shell now fail identically, through one shared mapping. | Layered diagnostics (P1.1's second half) have not started. `alias`, `type`, `hash`, `ulimit`, `local`, `fg` and `bg` are absent. Filesystem case resolution is unimplemented. |
+| V0 Must Have | **Partial** | `-c`, a script operand, and redirected-stdin execution are tested in `cmd/nemosh/main_test.go` and `script_file_path_test.go`; P0.1 owns the FD table and snapshots, P0.2 concurrent `os.Pipe` pipelines, P0.3 typed groups/subshells/heredocs/functions, P0.4 background execution and the bounded Windows INT model, P0.5 the Windows boundaries, and the P1.1 expansion half is now in. 139 behavior cases, 1060 Go test functions, 87.1% statement coverage. | The P1.1 diagnostics half — layered first line, targeted hint, `NEMOSH_DEBUG=path,exec,fd` — has not started. The differential runner and product CI (P1.2) do not exist. Filesystem case resolution is unimplemented. Seven builtins are absent and report `not found`. |
 | Windows Path Gates | **Partial (P0.5 integrated; case resolution missing)** | `internal/pathmodel/model.go` and `pathmodel_test.go` cover drive, mount-alias, UNC, current-root, and virtual-root forms. `internal/shell/runtime/path_state.go` exposes them as `Runtime.ResolveNemoshPath`, which `cd`, `.`/`source`, redirection, device input, external lookup, and the applet `ProcessView` all call; `runtime/path.go` is now a thin adapter over that seam rather than a separate model. Native Windows integration tests now cover UNC current roots, the alias and virtual-root switches, the host-only UNC hint, and argv non-conversion. | Filesystem case resolution is missing. `windows-path-model.md` says shell-generated display paths should try the real on-disk case and only fall back to the spelling as typed; measured, `cd /c/users/NEMO/documents` then `pwd` echoes that back unchanged, and only the drive letter is normalised. So the fallback half holds and the primary half does not. Extended-length paths landed in Wave C, deliberately without a shared prefix layer; see the UTF-8/long-path row. |
 | V0 Device Paths | **Complete for the v0 required set** | `internal/shell/runtime/device.go`, `device_fd.go`, `device_clipboard.go` and its `_windows.go`/`_other.go` backends; `device_test.go`, `device_fd_test.go`, `device_clipboard_test.go`, `device_clipboard_windows_test.go` cover `/dev/null`, descriptor-backed standard streams and `/dev/fd/N`, zero, random, urandom, and UTF-8 text `/dev/clipboard`. | The clipboard is Windows-only by design; off Windows the path resolves as a device and then reports that plainly. `/dev/tty` and PTY paths stay deferred, as the model says. |
 | Execution Gates | **Complete** | Lookup order is implemented across `internal/shell/runtime/runtime.go`, `internal/shell/runtime/command.go`, `internal/shell/runtime/applet_override.go`, and `internal/shell/runtime/external.go`; fixed Windows suffix ordering, `NEMOSH_OVERRIDE_APPLETS`, `ComSpec` batch launch, `.sh`/shebang dispatch, exact runtime `PATH`, scoped Windows child-environment collapse, and runtime cwd/env propagation have focused tests. | Long paths landed in Wave C: a child launched from a directory over 258 UTF-16 characters falls back to its 8.3 short name, or is refused by length. |
 | Job, Signal, And Error Gates | **Partial (P0.4 jobs/signals complete)** | Typed background nodes launch asynchronously into a session-owned bounded supervisor; `jobs` observes retained local records; `wait`/`wait %N` claim, retain on cancellation, and consume exact statuses. EXIT/INT traps, direct applet and foreground cancellation, production Windows Ctrl-Break acceptance, private-scope reaping, and honest root-close limitations have focused tests. | Layered diagnostic hints and `NEMOSH_DEBUG=path,exec,fd` remain P1.1 work. Full `fg`/`bg`, stopped jobs, process groups, Job Objects, ConPTY, and idle-input Ctrl-C remain explicitly outside P0.4. |
-| Parser And Shell Semantic Gates | **Partial** | `parser.go`, `syntax_scan.go`, `parser_typed.go`, `parser_compound_typed.go`, `parser_group.go`, `parser_function.go`, and `ast.go` build a typed program before execution; typed words preserve quote, escape, parameter, command-substitution, redirect, and background-list structure. Brace groups, parenthesized subshells, heredocs, portable functions, and background-marked lists and compounds are typed and pipeline-aware. Parser limits and malformed/incomplete syntax are tested. | Expansion and redirection remain narrow, and exact grammar/runtime acceptance remains incomplete. Asynchronous background semantics remain a P0.4 job-runtime concern, not a parser gap. |
-| Applet Scope Direction | **Partial** | Every initial candidate name is registered in `internal/applets/registry.go`, with implementations under `internal/applets/`; direct Go tests cover many applets. | Name presence is not semantic parity. Most initial candidates lack checked-in smoke and negative behavior cases required by `docs/testing/applet-test-inventory.md`. |
+| Parser And Shell Semantic Gates | **Partial** | `parser.go`, `syntax_scan.go`, `parser_typed.go`, `parser_compound_typed.go`, `parser_group.go`, `parser_function.go`, and `ast.go` build a typed program before execution. Sequential lists (`;`), the one-line forms of `if`, `for`, `while` and `case`, `elif` chains, `!` pipeline negation, backquote command substitution, and `$(( ))` all parse; see the grammar row below for what each of those used to do instead. | `>|`, `<>`, and `>&-`-style close forms are refused as unsupported redirections (measured: `nemosh -c 'echo a >\| f'` → status 2). `alias`, `type`, `hash`, `ulimit`, `local`, `fg` and `bg` are absent and report `not found` with 127. `~user` is left as written. |
+| Applet Scope Direction | **Partial** | Every initial candidate name is registered in `internal/applets/registry.go`, with implementations under `internal/applets/`. 88 applet behavior cases and 1060 Go test functions across the tree; 86.2% statement coverage in `internal/applets`. | Name presence is not semantic parity. The per-applet option matrices in `docs/testing/applet-test-inventory.md` (`ls -l`, `head -c`, `grep -r`, `find -name`, `xargs -0`, …) are still uncovered, and the options those applets do not implement are now refused rather than swallowed, so a script asking for one fails instead of getting something else. |
 | Deferred Non-Goals | **Complete as a boundary observation** | No evidence was found that v0 completion depends on full REPL polish, native POSIX job control, MSYS/Cygwin argv conversion, WSL mounts, certification, or full BusyBox parity. | These remain non-goals; they must not be used to defer any existing must-have above. |
 
 ## Detailed Evidence Ledger
@@ -40,11 +57,11 @@ there is no product CI.
 
 | Capability | Status | Exact implementation/test evidence | Readiness boundary |
 | --- | --- | --- | --- |
-| Non-interactive runner | **Complete** | `cmd/nemosh/main.go`, `cmd/nemosh/script_file.go`; `cmd/nemosh/main_test.go`, `cmd/nemosh/script_file_test.go` | `-c`, stdin, and `nemosh script.sh [args]` all dispatch. A script file seeds `$0` from the operand as written and `$1…` from the rest; an unreadable one is status 127. Applet names still win over same-named files, matching `busybox cat`. An operand starting with `-` that is not `-c`, `-i`, or a bare `-` is an invalid option with status 2. |
+| Non-interactive runner | **Complete** | `cmd/nemosh/main.go`, `cmd/nemosh/script_file.go`; `cmd/nemosh/main_test.go`, `cmd/nemosh/script_file_test.go`, `cmd/nemosh/script_file_path_test.go`, `cmd/nemosh/direct_applet_diagnostic_test.go` | `-c`, stdin, and `nemosh script.sh [args]` all dispatch, and the script operand goes through the shell's own path model, so every spelling the shell prints is one it takes back. A script file seeds `$0` from the operand as written and `$1…` from the rest; an unreadable one is status 127. Applet names still win over same-named files, matching `busybox cat`. An operand starting with `-` that is not `-c`, `-i`, or a bare `-` is an invalid option with status 2. |
 | Runtime-owned cwd | **Complete for implemented operations** | `internal/shell/runtime/execution_state.go`, `path.go`, `external.go`; `execution_state_test.go`, `runtime_relative_io_test.go`, `runtime_external_test.go`, `applet_process_view_test.go` | This just-landed state no longer relies on process-global cwd, but broader pathmodel integration remains separate. |
 | Runtime-owned environment | **Complete for isolation, child propagation, and the scoped Windows child block** | `internal/shell/runtime/execution_state.go`, `environment_child.go`, `assignment.go`, `external.go`; `environment_test.go`, `execution_state_test.go`, `assignment_test.go`, `runtime_external_test.go` | Shell/export state preserves exact-case names and empty values. Windows child serialization alone performs deterministic case-insensitive, latest-mutation-wins deduplication. Batch launch now reads `COMSPEC` from this table (`internal/shell/runtime/external_batch.go`). |
 | Environment case/path fixes | **Complete for P0.1** | `Environment` stores exact names and mutation order; `environment_child.go` serializes Unix entries exactly and Windows entries by case-insensitive latest mutation; executable lookup still uses exact `PATH`. | Canonical `COMSPEC` handling and `.bat`/`.cmd` launch landed in P0.5 Wave B and read this table by its canonical name. |
-| Unix runtime `PATH` | **Complete, platform-test limited** | `internal/shell/runtime/external.go`; non-Windows case in `internal/shell/runtime/runtime_external_test.go` | Relative and empty entries use runtime cwd. The focused test is skipped on Windows and does not prove Windows lookup/launch semantics. |
+| Unix runtime `PATH` | **Complete, platform-test limited** | `internal/shell/runtime/external.go`; non-Windows case in `internal/shell/runtime/runtime_external_test.go` | Relative and empty entries use runtime cwd. The focused test is skipped on Windows. Windows lookup and launch are proved separately by `external_suffix_windows_test.go`, `external_batch_windows_test.go` and `long_path_windows_test.go`. |
 | Special-builtin assignments | **Complete for implemented special builtins; partial POSIX edge coverage** | `internal/shell/runtime/assignment.go`, `command.go`; `assignment_test.go`, `special_builtin_test.go` | Leading assignments persist for special builtins and remain temporary for regular commands. Fatal-error, redirect-only, and complete expansion-order semantics still need corpus gates. |
 | Explicit snapshots | **Partial but strengthened** | `internal/shell/runtime/snapshot.go`, `fd_table.go`, `token_pipeline.go`, `execute_group.go`, `execute_ast.go`; `snapshot_fd_test.go`, `command_substitution_snapshot_test.go`, `group_execution_test.go`, `token_pipeline_concurrent_test.go`, `token_pipeline_fd_test.go`, `job_isolation_test.go`, `job_owner_cancellation_test.go` | Every active pipeline stage, parenthesized subshell, command substitution, and background worker is snapshotted. State, control flow, descriptor mappings, and private nested-job ownership are isolated while shared open descriptions retain exact-once ownership. Broader Windows path/launch integration remains separate. |
 | Shell-owned FD table | **Complete for the portable P0.1 substrate and P0.2 applet/builtin pipeline use** | `internal/shell/runtime/fd_table.go`, `fd_description.go`, `redirect_parse.go`, `redirect_apply.go`, `token_pipeline.go`; `fd_table_test.go`, `fd_lifecycle_test.go`, `numbered_redirect_test.go`, `device_fd_test.go`, `snapshot_fd_test.go`, `token_pipeline_fd_test.go` | Numbered open/dup/close, left-to-right ordering, `/dev/fd/N`, applet/builtin stdio, snapshots, command substitution, pipeline endpoints, inherited shell FD 3, and external FD 0/1/2 are covered. Stage-local close/rebind of FD 3 does not mutate sibling or parent mappings. Arbitrary native-child inheritance above FD 2 is not portably promised. |
@@ -95,16 +112,18 @@ Isolated pathmodel completeness must not be confused with runtime integration:
 
 | Capability | Status | Evidence | Gap |
 | --- | --- | --- | --- |
-| Parser representation | **Complete for P0.3; partial for broader v0 grammar** | `internal/shell/runtime/ast.go`, `ast_word.go`, `parser.go`, `parser_typed.go`, `parser_compound_typed.go`, `parser_group.go`, `parser_function.go`, `parser_background.go`, `heredoc_parse.go`, and `lexer.go`; `ast_parser_test.go`, `background_parser_test.go`, `background_construct_test.go`, `group_parser_test.go`, `heredoc_test.go`, `function_test.go`, `parser_limits_test.go`, `parse_no_prefix_test.go`, and `typed_word_execution_test.go` | Typed program, list, pipeline, executable command, brace group, subshell, function definition, background wrapper, word, redirect/heredoc, if, loop, and case nodes are the sole execution source. Broader v0 expansion and command grammar remain partial. |
-| Expansions | **Partial** | `internal/shell/runtime/expand.go`, `parameter_default.go`, `parameters.go`, `command_substitution.go`; `parameters_test.go`, `runtime_test.go` | Expansion phases, quoting/field splitting, parameter operators, arithmetic, status/special parameters, globbing, and diagnostics are incomplete. |
-| Redirections/heredocs | **Partial** | `internal/shell/runtime/redirect_parse.go`, `redirect_apply.go`, `heredoc_parse.go`, `heredoc_expand.go`, `fd_table.go`; `redirect_parse_test.go`, `numbered_redirect_test.go`, `heredoc_test.go`, `runtime_relative_io_test.go` | Numbered `<`, `>`, `<&`, `>&`, close forms, `<<`, and `<<-` execute left to right. Append/read-write/clobber-control and redirect-only commands remain absent. |
-| Pipelines | **Complete for bounded P0.2; partial for full v0 grammar and acceptance** | Active typed dispatch runs from `executeTypedScript` through `executeTypedPipeline` in `internal/shell/runtime/execute_pipeline.go`, then through shared `preparePipeline` and `executeTokenPipeline` in `token_pipeline.go`; `token_execution.go` retains legacy token infrastructure. Focused tests are `pipeline_test.go`, `token_pipeline_concurrent_test.go`, `token_pipeline_fd_test.go`, `token_pipeline_compatibility_test.go`, `token_pipeline_cancellation_test.go`, and `stream_serialization_test.go`. | Concurrent `os.Pipe` stages stream beyond pipe capacity, close writers for EOF, preserve explicit redirect precedence, isolate stage state/control/FD mappings, serialize shared writers, normalize expected early downstream closure, and select lexical default/`pipefail` status. Native child portable FD inheritance remains 0/1/2. Full corpus/differential and live cross-platform CI remain P1.2. |
-| Command substitution | **Partial but meaningful** | `internal/shell/runtime/expand.go`, `snapshot.go`; `command_substitution_snapshot_test.go`, `typed_word_execution_test.go`, `execution_state_test.go` | Parsed nested `Script` nodes execute directly in isolated snapshots with newline trimming. Broader grammar, status, NUL, quoting, and FD behavior remain. |
-| Control flow | **Partial** | `internal/shell/runtime/execute_ast.go`, `execute_compound.go`, `execute_group.go`, `function.go`; `control_test.go`, `case_test.go`, `compound_span_execution_test.go`, `group_execution_test.go`, `function_test.go` | Brace groups and function calls propagate control in the current runtime; functions consume return at the nearest function boundary, sourced files consume return at their own boundary, and subshells isolate escaping control. Case matching remains limited. |
-| Special/stateful builtins | **Partial (jobs/wait complete for P0.4)** | Implementations under `internal/shell/runtime/`; tests include `special_builtin_test.go`, `exec_test.go`, `return_test.go`, `job_registry_test.go`, `job_scope_claim_test.go`, `job_interrupt_test.go`, and `job_failure_test.go`. | `jobs` and `wait` meet the frozen P0.4 contract. Full function/source/eval/getopts/read/umask breadth and POSIX error behavior remain broader v0 work. |
+| Parser representation | **Complete for P0.3; partial for broader v0 grammar** | `internal/shell/runtime/ast.go`, `ast_word.go`, `parser.go`, `parser_typed.go`, `parser_compound_typed.go`, `parser_group.go`, `parser_function.go`, `parser_background.go`, `heredoc_parse.go`, and `lexer.go`; `ast_parser_test.go`, `background_parser_test.go`, `background_construct_test.go`, `group_parser_test.go`, `heredoc_test.go`, `function_test.go`, `parser_limits_test.go`, `parse_no_prefix_test.go`, and `typed_word_execution_test.go` | Typed program, list, pipeline, executable command, brace group, subshell, function definition, background wrapper, word, redirect/heredoc, if, loop, and case nodes are the sole execution source. Sequential lists, one-line compounds, `elif`, `!`, backquotes and `$(( ))` were added on 2026-08-07; five scans that run before the lexer each had to learn to step over an arithmetic expansion whole, because `$((1<<4))` carries a `<<` the heredoc collector read as a redirect. |
+| Expansions | **Complete for the selected v0 set** | `internal/shell/runtime/expand.go`, `parameter_default.go`, `pathname_expansion.go`, `pattern.go`, `arithmetic.go`, `arithmetic_lex.go`, `backquote.go`, `expansion_state.go`; `parameter_operator_test.go`, `field_splitting_test.go`, `pathname_expansion_test.go`, `arithmetic_test.go`, `backquote_test.go`, `pattern_test.go`, and five `tests/behavior/shell/posix/` cases | Parameter expansion covers the 2.6.2 operators and `${#name}`; field splitting follows 2.6.5 including a custom and an empty IFS; pathname expansion follows 2.6.6 with quote provenance deciding what globs; arithmetic follows 2.6.4 over the C operator set; command substitution takes both spellings. What each of those did before is in the wave note below. Absent and refused rather than silent: `${x/a/b}` and the other operators outside 2.6.2 are a `bad substitution` with status 2, arithmetic assignment is refused by name, and `~user` is left as written. |
+| Redirections/heredocs | **Partial** | `internal/shell/runtime/redirect_parse.go`, `redirect_apply.go`, `heredoc_parse.go`, `heredoc_expand.go`, `fd_table.go`; `redirect_parse_test.go`, `numbered_redirect_test.go`, `heredoc_test.go`, `runtime_relative_io_test.go` | Numbered `<`, `>`, `>>`, `<&`, `>&`, close forms, `<<`, and `<<-` execute left to right, and a redirect-only `exec` rebinds the shell's own descriptors for the rest of the script (`exec_redirect_test.go`) — it used to report success, create nothing, and leave output where it was. `>|` and `<>` are refused as unsupported, with status 2. |
+| Pipelines | **Complete for bounded P0.2; partial for full v0 grammar and acceptance** | Active typed dispatch runs from `executeTypedScript` through `executeTypedPipeline` in `internal/shell/runtime/execute_pipeline.go`, then through shared `preparePipeline` and `executeTokenPipeline` in `token_pipeline.go`; `token_execution.go` holds the shared expansion and dispatch path both routes
+reach, not legacy code: `runParsedWords` is where every simple command is
+expanded and dispatched. Focused tests are `pipeline_test.go`, `token_pipeline_concurrent_test.go`, `token_pipeline_fd_test.go`, `token_pipeline_compatibility_test.go`, `token_pipeline_cancellation_test.go`, and `stream_serialization_test.go`. | Concurrent `os.Pipe` stages stream beyond pipe capacity, close writers for EOF, preserve explicit redirect precedence, isolate stage state/control/FD mappings, serialize shared writers, normalize expected early downstream closure, and select lexical default/`pipefail` status. Native child portable FD inheritance remains 0/1/2. Full corpus/differential and live cross-platform CI remain P1.2. |
+| Command substitution | **Partial but meaningful** | `internal/shell/runtime/expand.go`, `snapshot.go`; `command_substitution_snapshot_test.go`, `typed_word_execution_test.go`, `execution_state_test.go` | Parsed nested `Script` nodes execute directly in isolated snapshots with newline trimming, in both the `$( )` and the backquote spelling (`backquote.go`, `backquote_test.go`) — the older spelling was not implemented at all and reached the command line as its own literal text. An unquoted result is field-split. NUL handling and the substitution's own status remain. |
+| Control flow | **Complete for the selected v0 grammar** | `internal/shell/runtime/execute_ast.go`, `execute_compound.go`, `execute_group.go`, `function.go`, `parser_case_lines.go`, `parser_elif.go`, `pattern.go`; `control_test.go`, `case_test.go`, `case_one_line_test.go`, `elif_test.go`, `sequential_list_test.go`, `pipeline_negation_test.go`, `assignment_prefix_test.go` | Brace groups and function calls propagate control; functions consume return at the nearest function boundary, sourced files at their own, and subshells isolate escaping control. Case arms match by POSIX 2.13.1 pattern with `\|` alternatives, not by string equality with a special case for a lone `*`. A leading assignment no longer hides `break`, `continue`, `exit`, `return` or `exec` from dispatch -- `while true; do V=x break; done` used to run forever. | Loop `break n` and `continue n` counts are not implemented; the operand is ignored. |
+| Special/stateful builtins | **Partial** | Implementations under `internal/shell/runtime/`; tests include `special_builtin_test.go`, `exec_test.go`, `exec_redirect_test.go`, `set_builtin_test.go`, `errexit_nounset_test.go`, `trap_builtin_test.go`, `cd_builtin_test.go`, `command_v_test.go`, `return_test.go`, and the P0.4 job tests. | `set` parses the POSIX options and refuses an unknown one; `-e` and `-u` act, and `$-` and `set -o` report the rest. `trap` lists, arms and resets. `cd` honours HOME, `-`, PWD and OLDPWD. A redirect-only `exec` rebinds the shell. `command -v` reaches PATH. `:` exists. **Absent:** `alias`, `type`, `hash`, `ulimit`, `local`, `fg`, `bg` — each reports `not found` with 127. **Stored but inert:** the `-a`, `-b`, `-C`, `-n`, `-v` and `-x` options are remembered and reported by `$-` and `set -o` but nothing reads them; `-f` and `-e` and `-u` do act. |
 | Background jobs and wait | **Complete for P0.4** | `internal/shell/runtime/execute_ast.go`, `job_scope.go`, `job_supervisor.go`, `jobs.go`, `wait.go`, `snapshot.go`; `background_jobs_test.go`, `job_registry_test.go`, `job_supervisor_test.go`, `job_scope_claim_test.go`, `job_isolation_test.go`, `job_owner_cancellation_test.go`, `job_failure_test.go`, and `private_scope_cat_teardown_test.go`. | Complete typed units launch without waiting; one session-wide budget retains at most 64 unconsumed records across root/private scopes while IDs, claims, and visibility stay owner-local. `jobs` is observational; waits consume exact records only after success. Full terminal job control remains deferred. |
-| Traps/signals | **Complete for P0.4** | `internal/shell/runtime/interrupt.go`, `trap.go`, `script.go`, `interactive.go`; `cmd/nemosh/signal.go`, `main.go`, `session.go`; focused trap, interrupt, direct-applet, external-helper, and Windows acceptance tests. | P0.4 supports exactly shell-level EXIT and INT for active execution/wait. TERM, targeted POSIX child SIGINT, process groups, Job Objects, ConPTY, and idle-input handling are not promised. |
-| Errors and diagnostics | **Partial** | `internal/shell/runtime/script.go`, `external.go`, and focused runtime tests | Launch failures collapse to “not found”; required first-line/hint/debug layering and path/exec/fd details are absent. Parse-prefix execution also needs a parse-before-execute differential gate. |
+| Traps/signals | **Complete for P0.4** | `internal/shell/runtime/interrupt.go`, `trap_builtin.go`, `builtins.go`, `script.go`, `interactive.go`; `cmd/nemosh/signal.go`, `main.go`, `session.go`; `trap_builtin_test.go` plus focused interrupt, direct-applet, external-helper, and Windows acceptance tests. | Exactly shell-level EXIT and INT. A `trap` operand naming a real signal this shell cannot deliver, such as TERM, says so rather than calling the name invalid; one that is not a signal at all keeps bash's `invalid signal specification`. TERM delivery, targeted POSIX child SIGINT, process groups, Job Objects, ConPTY, and idle-input handling are not promised. |
+| Errors and diagnostics | **Partial** | `internal/shell/runtime/script.go`, `external.go`, `runtime.go` (`AppletFailure`), `internal/applets/diagnostic.go`; focused runtime tests plus `cmd/nemosh/direct_applet_diagnostic_test.go` | An applet's failure is reported identically whether it ran inside the shell or was invoked directly, through one shared mapping; direct dispatch used to drop the applet-name prefix and print nothing at all for a failure carrying its own status. A capability that is absent now fails loudly rather than answering false — the rule the 2026-08-07 corrections followed. **Absent:** launch failures still collapse to “not found” with no hint, and the layered first-line/hint/debug contract and `NEMOSH_DEBUG=path,exec,fd` have not started. |
 
 ### Applets
 
@@ -147,19 +166,24 @@ house rule: `sort` exits 2 because `sort_main` sets `xfunc_error_retval = 2`
 (`coreutils/sort.c:468`), while `cut` and `uniq` never touch it and so exit 1 on
 the `libbb/default_error_retval.c:16` default. `cut` also holds its status across
 an unreadable operand and continues to the next, where `sort` aborts on the first
-by design (`coreutils/sort.c:566`).
+by design -- the comment saying so is at `coreutils/sort.c:568-570`, above the
+`xfopen_stdin` at 571.
 
 An applet names a non-default status by returning `applets.ExitStatusMessage`,
 which carries the status *and* the diagnostic; the dispatch seam
-(`internal/shell/runtime/runtime.go:202-209`) prints the message under the applet
-name and then returns the status. A bare `applets.ExitStatus` carries no
+(`AppletFailure`, `internal/shell/runtime/runtime.go:214`) prints the message
+under the applet name and then returns the status. `cmd/nemosh/main.go` calls
+the same function, so a direct `nemosh cat missing` fails exactly the way
+`cat missing` inside the shell does; it used to print nothing at all. A bare `applets.ExitStatus` carries no
 diagnostic and so stays silent. Before that seam existed an applet
 got either a shell-printed message or a chosen status, never both, so anything
-that did not print for itself was pinned to 1. Four applets take a status other
-than the default today: `grep` exits 2 on any error so that 1 stays reserved for
+that did not print for itself was pinned to 1. Five applets take a status other
+than the default today, counting `sed` below: `grep` exits 2 on any error so that 1 stays reserved for
 `no match` (`findutils/grep.c:718-719`), `env` and `xargs` exit 127 for a command
 that is not found (`libbb/executable.c:117-122`, `findutils/xargs.c:385-390`), and
-`[` exits 2 on a missing `]` (`coreutils/test.c:897-901`).
+`[` exits 2 on a missing `]` (`coreutils/test.c:897-901`) as `test` does on a
+syntax error, and `sed` exits 1 when an operand cannot be read but keeps going
+to the next (`editors/sed.c:1061-1063`).
 
 Known divergences that are **deliberate and unfixed**, so a reader does not mistake
 the corpus for full parity:
@@ -186,29 +210,43 @@ the corpus for full parity:
   'NAME': No such file or directory`, because no `execvp` ran and claiming `ENOENT`
   would misdescribe the mechanism; and the 126 half of the SUSv3 table — a command
   found but not runnable — is unreachable, so only the 127 half is implemented.
-- `test` and `[` are a string-only stub (`internal/applets/test.go`): one- and
-  two-argument string tests plus `=` and `!=`. No file tests (`-f`, `-e`, `-d`),
-  no integer comparisons (`-gt` and friends), no `!`, `-a` or `-o`. Those all
-  evaluate false and exit 1 rather than being rejected as unknown operands
-  (`coreutils/test.c:1020`).
-- `sed` reads stdin only; it has no file-operand path, so `sed 's/a/b/' f.txt`
-  exits 1 without a diagnostic.
-- `chmod` reports a bad mode operand-first and unquoted (`chmod: zzz: invalid
-  mode`). BusyBox is message-first and quotes it (`chmod: invalid mode 'zzz'`,
-  `coreutils/chmod.c:87`).
-- Missing required operands fail silently — no diagnostic at all — in `basename`,
-  `dirname`, `chmod`, `cp`, `mv`, `mkdir`, `rmdir`, `rm`, `touch` and `sed`. The
-  status is right; BusyBox would print usage.
-- Some unknown options are swallowed rather than rejected: `wc -z FILE` selects no
-  counts and exits **0**, `touch -z` treats `-z` as a filename operand, and
-  `basename -z /a/b` prints `-z`.
+- `test`'s `-O` and `-G` ask whether the effective user owns a file. busybox-w32
+  answers them from a stat that reports one fixed owner for everything
+  (`win32/mingw.c:749`), so on Windows the question degrades to "does it exist".
+  Nemosh gives that same answer on every platform rather than one that means
+  something different on each. `-x` follows the executable-suffix rule
+  busybox-w32 synthesises a mode bit from (`win32/mingw.c:780-784`).
+- `sed` implements `s///` with the `g` and numeric flags and nothing else: no
+  `-n`, no `-e`, no addresses, no commands beyond substitution. An unknown flag
+  is named rather than swallowed.
+- `printf` does not implement the `%a` conversion or a `*` width taken from an
+  operand.
+
+Six entries that used to sit in this list were defects rather than divergences,
+and were fixed on 2026-08-07 rather than documented:
+
+- `test` and `[` were a string-only stub — one- and two-argument string tests
+  plus `=` and `!=` — and everything else evaluated **false**, so `test -f x` and
+  `test 1 -lt 2` reported failure while looking implemented. They walk the whole
+  POSIX 2.14 grammar now.
+- `sed` read stdin only, so `sed 's/a/b/' f.txt` exited 1 with no diagnostic and
+  the operand was neither used nor refused.
+- `printf` forwarded its format and operands to Go's `Fprintf`, so
+  `printf '%d\n' 42` printed `%!d(string=42)` with status 0.
+- `echo` read no options, so `echo -n abc` printed `-n abc`.
+- `mkdir` took `-p` as an operand and created a directory named `-p`; `rmdir`
+  called `os.Remove`, so `rmdir notes.txt` deleted the file and exited 0.
+- Missing operands failed silently in ten applets, and unknown options were
+  swallowed: `wc -z FILE` selected no counts and exited 0, `touch -z` created a
+  file called `-z`, `basename -z /a/b` printed `-z`. `chmod`'s bad-mode wording
+  also moved to busybox's message-first, quoted form.
 
 ### Behavior corpus and CI
 
 | Capability | Status | Evidence | Gap |
 | --- | --- | --- | --- |
 | Behavior case format/parser | **Partial but substantial** | `docs/testing/behavior-test-format.md`, `internal/testutil/behavior/case.go`, `parse.go`, `runner.go`, `runner_test.go`, `case_test.go` | Checked-in tests discover and validate all behavior TOMLs and execute both shell cases and applet script cases against a fresh Nemosh binary. Differential reference fan-out and product CI remain absent. |
-| Golden corpus | **Partial** | `tests/behavior/applets/` and `tests/behavior/shell/`; shell cases and applet script cases run against a freshly built `nemosh -c` product binary | Every v0 applet has a smoke and a negative case, but only those two per applet — the option matrices in `docs/testing/applet-test-inventory.md` are uncovered. Applet cases that declare `command` rather than `script` still run in-process against the registry, so full-corpus product execution remains incomplete. |
+| Golden corpus | **Partial** | `tests/behavior/applets/` and `tests/behavior/shell/`; shell cases and applet script cases run against a freshly built `nemosh -c` product binary | Every v0 applet has a smoke and a negative case; 88 applet cases and 51 shell cases are checked in, so several applets carry more than two. The per-applet option matrices in `docs/testing/applet-test-inventory.md` are still uncovered. Applet cases that declare `command` rather than `script` still run in-process against the registry, so full-corpus product execution remains incomplete. |
 | Differential runner | **Missing** | Planning exists in `docs/research/behavior-matrix.md`; case metadata can name references. | No executable fan-out, equivalent sandboxing, comparison, normalization policy, or divergence report against BusyBox-w32/ash/dash. |
 | Product CI | **Missing** | `.github/workflows/research-probe.yml` runs `scripts/research/posix-smoke.sh`. | The workflow probes reference shells only. No workflow builds Nemosh, runs `go test ./...`, executes the corpus/differential runner, validates manifests, or tests native Windows plus Unix product behavior. |
 
@@ -389,8 +427,13 @@ LSP diagnostics, and the 250-pure-LOC production-file gate passed. Two independe
 fresh-binary six-scenario QA runs passed with hard process deadlines and complete
 binary/helper teardown. Final post-fix reviews returned goal `bg_bfe492ad` PASS,
 quality `bg_31bfa68a` PASS, resource `bg_a2118929` PASS, QA
-`bg_53e10134` PASS, and context `bg_84b6d198` PASS. That closed P0.4 only. P0.5
-has since closed as well, so P1.1 is the next ordered v0 wave.
+`bg_53e10134` PASS, and context `bg_84b6d198` PASS. That closed P0.4 only.
+
+**Correction (2026-08-07).** This section used to end by saying P0.5 had closed
+as well and P1.1 was next. That was wrong on both counts: P0.5's Wave B had a
+batch-quoting defect and its Wave A had a script-operand one, and P1.1's own
+subject -- expansion -- had four gaps of its own. All of them have since been
+fixed and the waves rewritten below.
 
 ### P0.5 - Windows boundaries
 
@@ -432,9 +475,9 @@ encoding boundaries depend on it:
 
 | Sub-wave | Content | Status |
 | --- | --- | --- |
-| Wave A | Route shell-owned filesystem and lookup operations through `internal/pathmodel`. | **Complete.** `Runtime.ResolveNemoshPath` is the single seam, and the native Windows tests for UNC current roots, the alias and virtual-root switches, the host-only hint, and argv non-conversion landed after the other two waves; see the runtime-integration note above. |
-| Wave B | `/dev/clipboard`, fixed suffix lookup, `ComSpec` batch launch, `.sh`/shebang/CRLF dispatch, applet override configuration. | **Complete.** Suffix lookup, batch launch through `ComSpec`, `.sh`/shebang dispatch, CRLF handling down to a preserved lone `\r`, `/dev/clipboard`, and `NEMOSH_OVERRIDE_APPLETS` all landed; see the Windows launch rows, the device-set row, and the applet-override row above. |
-| Wave C | UTF-8/wide API boundaries and internal long-path handling. | **Complete.** Measurement found one genuine gap — a child could not be launched from a working directory over 258 UTF-16 characters — now carried by `external_directory.go`. The rest already held through Go's `os` layer and Nemosh's virtual cwd, and is now pinned rather than assumed; see the UTF-8/long-path row above. |
+| Wave A | Route shell-owned filesystem and lookup operations through `internal/pathmodel`. | **Complete.** `Runtime.ResolveNemoshPath` is the single seam. One operand had been missing from it: a script named on the command line went straight to `os.ReadFile`, so `nemosh /c/dir/build.sh` failed with 127 while `pwd` in that same shell printed exactly that spelling (`cmd/nemosh/script_file_path_test.go`). |
+| Wave B | `/dev/clipboard`, fixed suffix lookup, `ComSpec` batch launch, `.sh`/shebang/CRLF dispatch, applet override configuration. | **Complete.** Suffix lookup, batch launch through `ComSpec`, `.sh`/shebang dispatch, CRLF handling down to a preserved lone `\r`, `/dev/clipboard`, and `NEMOSH_OVERRIDE_APPLETS` all landed. The batch half was wrong until 2026-08-07: every operand was quoted on the way to cmd, so `%1` arrived as `"release"` and `if "%1"=="release"` never matched. The existing coverage all read `%~1`, whose whole job is to strip quotes, so it could not have caught this. Quoting is conditional now, matching cmd.exe and busybox's `quote_arg` (`win32/process.c:123-128`), and the new cases read `%1`. |
+| Wave C | UTF-8/wide API boundaries and internal long-path handling. | **Complete.** One genuine gap — a child could not be launched from a working directory over 258 UTF-16 characters — carried by `external_directory.go`. A later audit reported the *image* path as a second gap; re-measured, an 804-character image path launches, because Go's `os/exec` reaches CreateProcess with a wide path and there is nothing left for Nemosh to widen. What the audit was right about was coverage: neither long-path test launched anything at all. Two now do (`long_path_windows_test.go`). |
 
 Explicitly outside P0.5: general argv path conversion, user mount namespaces,
 P1.1 diagnostics, and interactive PTY or job-control work.
@@ -450,6 +493,21 @@ selected parameter operators, command substitution, and arithmetic cases are
 golden/differential tested; not-found, non-executable, directory, bad format,
 redirection, parse, and Windows launch failures have stable first lines,
 targeted hints, and opt-in debug details without leaking debug output by default.
+
+**Expansion half: complete (2026-08-07).** Field splitting, pathname expansion,
+the parameter operators, arithmetic, and backquote substitution all landed, each
+with a `tests/behavior/shell/posix/` case: `field-splitting.toml`,
+`pathname-expansion.toml`, `parameter-operators.toml`,
+`arithmetic-expansion.toml`, `backquote-substitution.toml`. What each of them
+did before is worth recording, because none of it was visible to a green suite:
+an unquoted expansion was never split, so `for f in $list` looped once; nothing
+globbed, so `ls *.txt` handed ls the pattern; every parameter operator outside
+`-` and `:-` expanded to its own literal text; and `$(( ))` and backquotes were
+syntax errors.
+
+**Diagnostics half: not started.** The layered first-line/hint/debug contract and
+`NEMOSH_DEBUG=path,exec,fd` are absent. Launch failures still collapse to
+"not found" without a hint, and there is no opt-in detail channel.
 
 ### P1.2 - Behavior corpus and product CI
 
