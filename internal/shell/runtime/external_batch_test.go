@@ -76,46 +76,55 @@ func TestComSpecCommandLine_wrapsTheWholeCommandForTheSlashSStripRule(t *testing
 		args   []string
 		want   string
 	}{
+		// An operand that needs no quotes gets none, so `%1` is what the caller
+		// wrote rather than a quoted copy of it. Quoting everything is what
+		// made `if "%1"=="release"` compare ""release"" against "release".
 		{
 			name:   "no arguments",
 			script: `C:\work\build.bat`,
-			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\work\build.bat""`,
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c "C:\work\build.bat"`,
 		},
 		{
 			name:   "plain argument",
 			script: `C:\work\build.bat`,
 			args:   []string{"release"},
-			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\work\build.bat" "release""`,
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c "C:\work\build.bat release"`,
+		},
+		{
+			name:   "a script path with spaces is quoted",
+			script: `C:\my work\build.bat`,
+			args:   []string{"release"},
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\my work\build.bat" release"`,
 		},
 		{
 			name:   "argument containing spaces",
 			script: `C:\work\build.bat`,
 			args:   []string{"two words"},
-			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\work\build.bat" "two words""`,
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c "C:\work\build.bat "two words""`,
 		},
 		{
 			name:   "argument containing a quote is doubled inside quotes",
 			script: `C:\work\build.bat`,
 			args:   []string{`say "hi"`},
-			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\work\build.bat" "say ""hi""""`,
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c "C:\work\build.bat "say ""hi""""`,
 		},
 		{
 			name:   "empty argument stays a distinct empty field",
 			script: `C:\work\build.bat`,
 			args:   []string{"", "after"},
-			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\work\build.bat" "" "after""`,
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c "C:\work\build.bat "" after"`,
 		},
 		{
-			name:   "cmd metacharacters are inert inside quotes",
+			name:   "cmd metacharacters are quoted so they reach the script whole",
 			script: `C:\work\build.bat`,
 			args:   []string{"a&b|c>d"},
-			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\work\build.bat" "a&b|c>d""`,
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c "C:\work\build.bat "a&b|c>d""`,
 		},
 		{
 			name:   "a lone percent cannot open a variable reference",
 			script: `C:\work\build.bat`,
 			args:   []string{"50%", "a%b"},
-			want:   `"C:\Windows\System32\cmd.exe" /d /s /c ""C:\work\build.bat" "50%" "a%b""`,
+			want:   `"C:\Windows\System32\cmd.exe" /d /s /c "C:\work\build.bat 50% a%b"`,
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
