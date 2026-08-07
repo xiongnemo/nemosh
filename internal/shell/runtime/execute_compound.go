@@ -88,16 +88,29 @@ func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatu
 		value = values[0]
 	}
 	for _, arm := range node.arms {
-		patterns := r.expandWord(ctx, arm.pattern, savedStatus)
-		pattern := ""
-		if len(patterns) > 0 {
-			pattern = patterns[0]
-		}
-		if pattern != value && pattern != "*" {
+		if !r.caseArmMatches(ctx, arm, value, savedStatus) {
 			continue
 		}
 		status, control := r.executeProgram(ctx, arm.body, savedStatus)
 		return lineResult{status: status, control: control}
 	}
 	return lineResult{status: 0}
+}
+
+// An arm matches when any one of its `|`-separated patterns does. The pattern
+// is matched rather than compared, so `*`, `?`, and bracket expressions mean
+// what POSIX 2.13.1 says they mean and not just the two literals -- an exact
+// string and a lone `*` -- that used to be recognised here.
+func (r Runtime) caseArmMatches(ctx context.Context, arm caseArmNode, value string, savedStatus int) bool {
+	for _, candidate := range arm.patterns {
+		expanded := r.expandWord(ctx, candidate, savedStatus)
+		pattern := ""
+		if len(expanded) > 0 {
+			pattern = expanded[0]
+		}
+		if matchShellPattern(pattern, value) {
+			return true
+		}
+	}
+	return false
 }
