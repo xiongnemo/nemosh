@@ -1,6 +1,7 @@
 package runtime_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -150,6 +151,17 @@ func TestRuntime_reportsTheShellAndChildCpuTime(t *testing.T) {
 		for _, field := range fields {
 			if !strings.Contains(field, "m") || !strings.HasSuffix(field, "s") {
 				t.Fatalf("time %q, want the %%dm%%fs shape", field)
+			}
+			// The shape alone cannot tell a real measurement from a bad unit
+			// conversion, so bound it too: a test process cannot have burned an
+			// hour of CPU, and the shape is identical either way.
+			minutes, _, _ := strings.Cut(field, "m")
+			elapsed, err := strconv.ParseInt(minutes, 10, 64)
+			if err != nil {
+				t.Fatalf("time %q, want parseable minutes: %v", field, err)
+			}
+			if elapsed < 0 || elapsed > 60 {
+				t.Fatalf("time %q reports %d minutes of CPU, which no test process has used", field, elapsed)
 			}
 		}
 	}
