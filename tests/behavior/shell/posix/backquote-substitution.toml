@@ -1,0 +1,28 @@
+id = "shell.posix.substitution.backquote"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+echo `echo inner`
+x=`echo value`
+echo [$x]
+echo "[`echo quoted`]"
+echo 'a `echo no` b'
+echo \`literal\`
+echo "`echo a; echo b`"
+y=outer
+echo `y=inner; echo \$y`
+echo `echo \`echo deep\``
+'''
+
+[expect]
+status = 0
+stdout = "inner\n[value]\n[quoted]\na `echo no` b\n`literal`\na\nb\ninner\ndeep\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.6.3 Command Substitution"
+why = "The backquote form was not implemented at all: `echo hi` reached the command line as its own literal text. It means the same as $(...) and differs only in the backslash rule -- inside backquotes a backslash is special before $, another backquote, and itself, and nothing else -- which is what lets an escaped pair nest one substitution inside another. Single quotes and an escaped backquote keep it as data."

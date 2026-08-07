@@ -62,6 +62,12 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 		}
 		budget.heredocsScanned = true
 	}
+	// After heredocs are collected, so a quoted-delimiter body keeps its
+	// backquotes as the literal text it is promised to be.
+	source, err := rewriteBackquotes(source)
+	if err != nil {
+		return Script{}, err
+	}
 	lines, err := logicalLines(source)
 	if err != nil {
 		return Script{}, err
