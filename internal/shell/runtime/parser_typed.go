@@ -154,10 +154,19 @@ func stripPipelineNegation(tokens []shellToken) ([]shellToken, bool) {
 // Quoting takes the reserved-word meaning away, so `"!" false` is a lookup for a
 // command named `!` and has to reach command lookup unchanged.
 func isPipelineNegationToken(token shellToken) bool {
-	if token.kind != tokenWord || token.value != "!" || token.parsed == nil {
+	return token.kind == tokenWord && token.value == "!" && token.parsed != nil &&
+		isUnquotedLiteralWord(*token.parsed)
+}
+
+// isUnquotedLiteralWord reports whether every part of a word is unquoted
+// literal text. That is what makes a word eligible to be a reserved word or an
+// alias: `'e'` and `"e"` are ordinary command names even where a bare `e` is
+// not.
+func isUnquotedLiteralWord(item word) bool {
+	if len(item.parts) == 0 {
 		return false
 	}
-	for _, part := range token.parsed.parts {
+	for _, part := range item.parts {
 		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {
 			return false
 		}
