@@ -67,6 +67,7 @@ func awaitOutstandingRead(t *testing.T, reader *trackingReader, minimum uint64) 
 }
 
 func TestRunInteractive_idleInterruptClearsContinuationAndReprompts(t *testing.T) {
+	requireVerifiedInterruptPlatform(t)
 	// Given
 	reader, writer, err := os.Pipe()
 	if err != nil {
