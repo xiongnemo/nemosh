@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 )
 
@@ -20,6 +21,15 @@ type reference struct {
 	candidates []string
 	// argv builds the command for a script, given the resolved program.
 	argv func(program, script string) []string
+	// platform, when set, is the only GOOS this reference can be resolved on.
+	//
+	// `busybox-w32` needs it: the name means the Windows port, and a `busybox`
+	// on a Linux PATH is a different program that answers Windows questions
+	// wrongly. Measured -- on ubuntu-latest it reported `one\r\r\ntwo\r\n` for
+	// the lone-carriage-return case, because a Linux busybox normalizes no line
+	// endings at all, which says nothing about whether Nemosh matches the port
+	// it is meant to match.
+	platform string
 }
 
 // The references Nemosh's cases already name. busybox-w32 is the primary
@@ -30,6 +40,7 @@ var references = []reference{
 		name:       "busybox-w32",
 		candidates: []string{"busybox", "busybox.exe"},
 		argv:       func(program, script string) []string { return []string{program, "sh", "-c", script} },
+		platform:   "windows",
 	},
 	{
 		name:       "busybox-ash",
@@ -65,6 +76,9 @@ func ReferenceExecutor(name string) (ScriptExecutor, string) {
 	for _, candidate := range references {
 		if candidate.name != name {
 			continue
+		}
+		if candidate.platform != "" && candidate.platform != runtime.GOOS {
+			return nil, fmt.Sprintf("reference %s exists only on %s", name, candidate.platform)
 		}
 		program, found := firstOnPath(candidate.candidates)
 		if !found {
