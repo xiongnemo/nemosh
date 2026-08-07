@@ -31,6 +31,10 @@ type Runtime struct {
 	options     *shellOptions
 	expansion   *expansionState
 	aliases     map[string]string
+	// childCPU is shared by pointer across snapshots: a pipeline stage's
+	// children are the shell's children too, and `times` in the parent has to
+	// see what they used.
+	childCPU *childCPUTime
 	// locals belongs to the function call in progress and is nil outside one,
 	// which is how `local` knows there is nothing to restore to.
 	locals *localScope
@@ -170,6 +174,10 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.local(args[1:])
 	case "type":
 		return r.typeBuiltin(args[1:])
+	case "let":
+		return r.let(args[1:])
+	case "times":
+		return r.times()
 	case ":":
 		// The null command of POSIX 2.14: its arguments are expanded, which has
 		// already happened by the time it gets here, and it returns zero.
@@ -208,6 +216,12 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.umask(args[1:])
 	case "wait":
 		return r.wait(ctx, args[1:])
+	}
+	// Before applet lookup and before PATH: a builtin this shell recognises and
+	// does not implement must say so, rather than depend on whether something
+	// of that name happens to be installed.
+	if status, refused := r.reportUnimplementedBuiltin(args[0]); refused {
+		return status
 	}
 	applet, ok := r.lookupApplet(args[0])
 	if !ok {

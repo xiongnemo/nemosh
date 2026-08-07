@@ -77,19 +77,50 @@ func (r Runtime) setLetterOptions(letters string, enable bool) int {
 			fmt.Fprintf(r.streams.Stderr, "set: illegal option %c%c\n", optionSign(enable), letters[index])
 			return 2
 		}
+		if status := r.refuseInertOption(letters[index], enable); status != 0 {
+			return status
+		}
 		*flag = enable
 	}
 	return 0
 }
 
 func (r Runtime) setNamedOption(name string, enable bool) int {
-	flag, ok := r.options.byName(name)
+	spec, ok := shellOptionSpecByName(name)
 	if !ok {
 		fmt.Fprintf(r.streams.Stderr, "set: illegal option %co %s\n", optionSign(enable), name)
 		return 2
 	}
-	*flag = enable
+	if status := r.refuseInertOption(spec.letter, enable); status != 0 {
+		return status
+	}
+	*spec.field(r.options) = enable
 	return 0
+}
+
+// refuseInertOption stops an option that would be remembered and never read.
+// Turning one *off* is always allowed, because that is the state it is already
+// in; only asking for behaviour that does not exist is refused.
+//
+// The alternative -- storing it and reporting it through `$-` -- was what this
+// shell did until every other option was made to act, and it is the same shape
+// of lie as an applet swallowing a flag: the script goes on believing it asked
+// for something.
+func (r Runtime) refuseInertOption(letter byte, enable bool) int {
+	if !enable {
+		return 0
+	}
+	reason, inert := inertShellOptions[letter]
+	if !inert {
+		return 0
+	}
+	fmt.Fprintf(r.streams.Stderr, "set: -%c: not implemented: %s\n", letter, reason)
+	return 2
+}
+
+var inertShellOptions = map[byte]string{
+	'b': "asynchronous job completion is reported when `wait` or `jobs` asks, " +
+		"not the moment it happens; there is no notification channel to switch on",
 }
 
 func optionSign(enable bool) byte {
