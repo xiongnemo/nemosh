@@ -34,12 +34,12 @@ var unimplementedBuiltins = map[string]unimplementedBuiltin{
 	"fg": {
 		reason: "job control needs a terminal process group, which Windows does not have. " +
 			"busybox-w32 does not implement it either: fg and bg are compiled out there " +
-			"(`#if JOBS`, and JOBS is 0 under ENABLE_PLATFORM_MINGW32, shell/ash.c:246-252)",
+			"(`#if JOBS`, and JOBS is 0 under ENABLE_PLATFORM_MINGW32, shell/ash.c:247-253, and the fg/bg table entries at 12050 and 12081)",
 	},
 	"bg": {
 		reason: "job control needs a terminal process group, which Windows does not have. " +
 			"busybox-w32 does not implement it either: fg and bg are compiled out there " +
-			"(`#if JOBS`, and JOBS is 0 under ENABLE_PLATFORM_MINGW32, shell/ash.c:246-252)",
+			"(`#if JOBS`, and JOBS is 0 under ENABLE_PLATFORM_MINGW32, shell/ash.c:247-253, and the fg/bg table entries at 12050 and 12081)",
 	},
 }
 
