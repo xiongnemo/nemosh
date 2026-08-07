@@ -15,6 +15,7 @@ const (
 	wordPartParameter
 	wordPartCommandSubstitution
 	wordPartEscaped
+	wordPartArithmetic
 )
 
 type wordPart struct {

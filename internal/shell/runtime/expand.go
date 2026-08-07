@@ -94,6 +94,14 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			fields, produced = r.appendExpansion(fields, values[0], part.quote)
 			contributed = contributed || produced
 			mark(values[0], part.quote, start)
+		case wordPartArithmetic:
+			value, err := r.evaluateArithmetic(part.text)
+			if err != nil {
+				r.reportExpansionError(err)
+				return nil, nil
+			}
+			fields[len(fields)-1] += strconv.FormatInt(value, 10)
+			contributed = true
 		case wordPartCommandSubstitution:
 			if part.script != nil {
 				output := r.commandSubstitutionScript(ctx, *part.script)

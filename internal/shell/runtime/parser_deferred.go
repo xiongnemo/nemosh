@@ -39,6 +39,15 @@ func rejectDeferredSyntax(line string) error {
 		if quote != 0 {
 			continue
 		}
+		// An arithmetic expansion is stepped over whole. Counting it as a
+		// substitution would leave its inner `(` to be read as a grouping this
+		// scan does not allow.
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' {
+			if end, ok := arithmeticExpansionEnd(line, index+3); ok {
+				index = end
+				continue
+			}
+		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' {
 			substitutions++
 			index++

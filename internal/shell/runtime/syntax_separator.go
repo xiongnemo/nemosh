@@ -99,6 +99,9 @@ func expansionEnd(line string, index int) (int, bool) {
 	}
 	switch line[index+1] {
 	case '(':
+		if index+2 < len(line) && line[index+2] == '(' {
+			return arithmeticExpansionEnd(line, index+3)
+		}
 		return commandSubstitutionEnd(line, index+2)
 	case '{':
 		end := strings.IndexByte(line[index+2:], '}')
