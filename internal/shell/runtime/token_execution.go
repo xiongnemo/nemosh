@@ -139,6 +139,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 			commandArgs = substituted
 		}
 	}
+	r.traceCommand(args)
 	// Dispatch on the command, not on args[0]: with a leading assignment those
 	// are different words, and reading the first one turned `V=x break` into a
 	// lookup for a command named `break`. In a `while true` loop that never
@@ -197,7 +198,7 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 
 func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redirectOperation, savedStatus int) ([]redirectOperation, bool) {
 	for index, operation := range operations {
-		if operation.kind != redirectInput && operation.kind != redirectOutput && operation.kind != redirectAppend {
+		if !operation.kind.takesPath() {
 			if operation.kind == redirectHeredoc && operation.expand {
 				operations[index].body = r.expandHeredocBody(ctx, operation.body, savedStatus)
 			}
