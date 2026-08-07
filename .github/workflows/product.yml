@@ -27,9 +27,18 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to commit SHAs, not tags. A tag is mutable, so `@v4`
+      # is a promise the upstream owner can rewrite at any time; the comment
+      # records which tag the SHA stood for when it was pinned.
+      #
+      # fetch-depth: 0 is required, not tidiness: the version is derived from
+      # the nearest semver tag, and a shallow clone has no tags, so it would
+      # silently produce the v0.0.1 fallback for every build.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -84,6 +93,37 @@ jobs:
 
       - name: applet manifest freshness
         run: go test ./internal/appletmanifest/ -count=1
+
+      # The release build path is exercised on every run rather than first at
+      # release time. It proves three things a unit test cannot: that the tags
+      # this clone fetched reach the version script, that -trimpath and
+      # -ldflags -X actually reach internal/version, and that both flags answer
+      # without a terminal -- the condition a package manager asks them under.
+      - name: release build and version derivation
+        shell: bash
+        run: |
+          mkdir -p dist
+          binary="dist/nemosh"
+          [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
+          CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w $(bash scripts/version.sh --ldflags)" \
+            -o "$binary" ./cmd/nemosh
+          version=$("$binary" --version)
+          echo "$version"
+          case "$version" in
+            "nemosh v"*) ;;
+            *) echo "version line is malformed"; exit 1 ;;
+          esac
+          applets=$("$binary" --list | wc -l)
+          echo "--list reports $applets applets"
+          [ "$applets" -gt 0 ] || { echo "--list reported nothing"; exit 1; }
+          # A shallow clone would silently yield the v0.0.1 fallback forever, so
+          # once a real tag exists this must stop reporting it.
+          if git describe --tags --abbrev=0 --match='v[0-9]*' --exclude='*-*' HEAD >/dev/null 2>&1; then
+            case "$version" in
+              *v0.0.*) echo "a semver tag is reachable but the fallback base was used; is fetch-depth 0 set?"; exit 1 ;;
+            esac
+          fi
 
       - name: production file size ceiling
         shell: bash
