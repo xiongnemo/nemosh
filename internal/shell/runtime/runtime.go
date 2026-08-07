@@ -158,6 +158,12 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		}
 	}
 	switch args[0] {
+	case ":":
+		// The null command of POSIX 2.14: its arguments are expanded, which has
+		// already happened by the time it gets here, and it returns zero.
+		// `while :; do ... done` is the ordinary way to write an endless loop,
+		// and without this it was a failed lookup for a program named `:`.
+		return 0
 	case ".", "source":
 		return r.dot(ctx, args[1:])
 	case "cd":

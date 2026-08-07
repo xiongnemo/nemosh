@@ -1,0 +1,41 @@
+id = "shell.posix.expansion.pathname"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+script = '''
+mkdir sub
+: > sub/inner.txt
+echo *.txt
+echo *
+echo .h*
+echo gamm?.md
+echo [ab]*.txt
+echo sub/*.txt
+echo nosuch*.zzz
+echo "*.txt"
+echo '*.txt'
+echo \*.txt
+p='*.md'
+echo $p
+echo "$p"
+for f in *.txt; do echo item=$f; done
+set -f
+echo *.txt
+'''
+
+[files]
+"alpha.txt" = "a\n"
+"beta.txt" = "b\n"
+"gamma.md" = "g\n"
+".hidden" = "h\n"
+
+[expect]
+status = 0
+stdout = "alpha.txt beta.txt\nalpha.txt beta.txt gamma.md sub\n.hidden\ngamma.md\nalpha.txt beta.txt\nsub/inner.txt\nnosuch*.zzz\n*.txt\n*.txt\n*.txt\ngamma.md\n*.md\nitem=alpha.txt\nitem=beta.txt\n*.txt\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.6.6 Pathname Expansion"
+why = "Nothing globbed, so `ls *.txt` handed ls the literal pattern and ls reported a missing file. Matches are sorted, a leading dot is matched only by a pattern that spells one out, and a pattern matching nothing is left exactly as written -- the shell has no nullglob. Quoting of any of the three kinds suppresses it, which is decided by where the metacharacter came from rather than by what the field ends up containing, so an unquoted expansion whose value holds a `*` still globs and a quoted one does not. `set -f` turns it off, which is the first thing that option has ever done."

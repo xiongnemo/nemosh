@@ -59,7 +59,7 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
-		values := r.expandWord(ctx, item, savedStatus)
+		values := r.expandCommandWord(ctx, item, savedStatus)
 		if r.expansionFailed() {
 			return unsetParameterResult()
 		}

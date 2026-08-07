@@ -108,7 +108,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	}
 	expanded := make([]shellToken, 0, len(command))
 	for _, item := range command {
-		values := r.expandWord(ctx, item, savedStatus)
+		values := r.expandCommandWord(ctx, item, savedStatus)
 		for _, value := range values {
 			expanded = append(expanded, shellToken{kind: tokenWord, value: value})
 		}
@@ -177,7 +177,7 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 			}
 			continue
 		}
-		fields := r.expandWord(ctx, operation.operand, savedStatus)
+		fields := r.expandCommandWord(ctx, operation.operand, savedStatus)
 		if len(fields) != 1 {
 			fmt.Fprintf(r.streams.Stderr, "nemosh: %s: %v\n", operation.path, errAmbiguousRedirect)
 			return nil, false
