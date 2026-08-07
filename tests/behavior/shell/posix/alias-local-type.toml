@@ -1,0 +1,42 @@
+id = "shell.posix.builtins.alias-local-type"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+alias e='echo hi'
+e
+e tail
+alias a=b
+alias b='echo chained'
+a
+alias p='echo '
+alias q=there
+p q
+alias
+unalias a
+'e'
+type cd
+type grep
+x=outer
+f() { local x=inner; echo [$x]; }
+f
+echo [$x]
+g() { local y; echo [$y]; y=leaked; }
+g
+echo [$y]
+h() { z=global; }
+h
+echo [$z]
+'''
+
+[expect]
+status = 0
+stdout = "hi\nhi tail\nchained\nthere\nalias a='b'\nalias b='echo chained'\nalias e='echo hi'\nalias p='echo '\nalias q='there'\ncd is a shell builtin\ngrep is a bundled applet\n[inner]\n[outer]\n[]\n[]\n[global]\n"
+stderr = "e: not found\n"
+
+[notes]
+standard = "POSIX Shell Command Language - 2.14 alias, type; local is an ash/bash extension"
+why = "Alias substitution happens after parsing rather than during tokenization, because Nemosh finishes parsing before any command runs. That makes an alias defined earlier in the same script take effect, which the POSIX timing does not, and costs one thing: an alias cannot introduce syntax, so a value that is not a list of words is refused at definition time. A name is not substituted into its own value, a chain is followed, a trailing blank makes the next word eligible, and a quoted command name is not an alias at all -- which is where this case stops, with `'e'` looked up as a command and not found. `local` is not in POSIX (2.9.5 makes function variables global) but every shell worth the name has it, and without it a function silently leaks its working variables into its caller."

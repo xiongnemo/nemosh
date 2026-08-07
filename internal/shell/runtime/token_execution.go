@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 )
 
 var (
@@ -124,6 +125,20 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	if len(assignments) > 0 && len(commandArgs) == 0 {
 		return lineResult{status: r.assignVars(assignments)}
 	}
+	// Alias substitution goes here rather than during tokenization, because
+	// parsing completes before anything runs; see substituteAliases. A quoted
+	// command name is not an alias, so the word as it was written decides --
+	// and with a leading assignment in front, command[0] is that assignment
+	// rather than the command, so there is no word here to judge.
+	if len(commandArgs) > 0 && len(assignments) == 0 && len(command) > 0 && isUnquotedLiteralWord(command[0]) {
+		substituted := r.substituteAliases(commandArgs)
+		if !slices.Equal(substituted, commandArgs) {
+			// The leading assignments keep their place in front; only the
+			// command and its arguments are replaced.
+			expanded = replaceCommandTokens(expanded, len(args)-len(commandArgs), substituted)
+			commandArgs = substituted
+		}
+	}
 	// Dispatch on the command, not on args[0]: with a leading assignment those
 	// are different words, and reading the first one turned `V=x break` into a
 	// lookup for a command named `break`. In a `while true` loop that never
@@ -132,6 +147,17 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		return result
 	}
 	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
+}
+
+// replaceCommandTokens swaps the command and its arguments for a new word list,
+// keeping the leading assignment tokens that sit before commandStart.
+func replaceCommandTokens(tokens []shellToken, commandStart int, words []string) []shellToken {
+	rebuilt := make([]shellToken, 0, commandStart+len(words))
+	rebuilt = append(rebuilt, tokens[:commandStart]...)
+	for _, word := range words {
+		rebuilt = append(rebuilt, shellToken{kind: tokenWord, value: word})
+	}
+	return rebuilt
 }
 
 // controlFlowBuiltin runs the builtins that answer with a control transfer

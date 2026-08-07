@@ -28,17 +28,22 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		lifecycle = r.lifecycle
 	}
 	return Runtime{
-		initErr:       r.initErr,
-		registry:      r.registry,
-		functions:     cloneMap(r.functions),
-		streams:       table.streams(),
-		fds:           table,
-		vars:          cloneMap(r.vars),
-		traps:         cloneMap(r.traps),
-		trapRunning:   map[trapName]bool{},
-		params:        &parameters{name: r.params.name, values: append([]string(nil), r.params.values...)},
-		options:       r.options.clone(),
-		expansion:     &expansionState{},
+		initErr:     r.initErr,
+		registry:    r.registry,
+		functions:   cloneMap(r.functions),
+		streams:     table.streams(),
+		fds:         table,
+		vars:        cloneMap(r.vars),
+		traps:       cloneMap(r.traps),
+		trapRunning: map[trapName]bool{},
+		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...)},
+		options:     r.options.clone(),
+		expansion:   &expansionState{},
+		aliases:     cloneMap(r.aliases),
+		// locals belongs to a function call, and a snapshot is not inside
+		// one: a subshell or a background worker that returns has nothing
+		// of the caller's to restore.
+		locals:        nil,
 		readonly:      cloneMap(r.readonly),
 		mutatedVars:   cloneMap(r.mutatedVars),
 		mask:          &fileModeMask{value: r.mask.value},

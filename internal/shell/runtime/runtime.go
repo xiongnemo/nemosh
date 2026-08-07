@@ -30,6 +30,10 @@ type Runtime struct {
 	params      *parameters
 	options     *shellOptions
 	expansion   *expansionState
+	aliases     map[string]string
+	// locals belongs to the function call in progress and is nil outside one,
+	// which is how `local` knows there is nothing to restore to.
+	locals *localScope
 	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options
@@ -158,6 +162,14 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		}
 	}
 	switch args[0] {
+	case "alias":
+		return r.alias(args[1:])
+	case "unalias":
+		return r.unalias(args[1:])
+	case "local":
+		return r.local(args[1:])
+	case "type":
+		return r.typeBuiltin(args[1:])
 	case ":":
 		// The null command of POSIX 2.14: its arguments are expanded, which has
 		// already happened by the time it gets here, and it returns zero.
