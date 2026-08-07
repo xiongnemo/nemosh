@@ -118,7 +118,13 @@ func (r Runtime) executeTypedAndOr(ctx context.Context, item andOr, savedStatus 
 				continue
 			}
 		}
-		result := r.executeTypedPipeline(ctx, pipeline, status)
+		// Only the last command of an and-or list answers to `set -e`; the
+		// earlier ones are what the operators are there to test.
+		stage := r
+		if index < len(item.pipelines)-1 {
+			stage = r.suppressingErrExit()
+		}
+		result := stage.executeTypedPipeline(ctx, pipeline, status)
 		status = result.status
 		if result.control != flowNone {
 			return result

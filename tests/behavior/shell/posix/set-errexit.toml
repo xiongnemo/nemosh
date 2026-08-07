@@ -1,0 +1,26 @@
+id = "shell.posix.set.errexit"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+set -e
+if false; then echo yes; else echo no; fi
+while false; do echo never; done
+false || echo recovered
+! false
+echo exempt
+false
+echo STILL
+'''
+
+[expect]
+status = 1
+stdout = "no\nrecovered\nexempt\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.9.1 Simple Commands, exit status and errors"
+why = "`set -e` leaves on the first command that fails, but only where POSIX says it counts: the condition of an if or a while, a negated pipeline, and every command but the last of an and-or list are all exempt. Without those exemptions -e is unusable; without -e acting at all -- which is what happened before -- a script that asked for it ran on unprotected."

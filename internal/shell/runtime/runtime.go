@@ -19,26 +19,32 @@ type Streams struct {
 }
 
 type Runtime struct {
-	initErr       error
-	registry      applets.Registry
-	functions     map[functionName]functionDefinition
-	streams       Streams
-	fds           *fdTable
-	vars          map[string]string
-	traps         map[trapName]string
-	trapRunning   map[trapName]bool
-	params        *parameters
-	options       *shellOptions
-	readonly      map[string]struct{}
-	mutatedVars   map[string]struct{}
-	mask          *fileModeMask
-	sourceDepth   int
-	functionDepth int
-	interactive   interactiveState
-	paths         *pathState
-	env           Environment
-	jobScope      *jobScope
-	lifecycle     *shellLifecycle
+	initErr     error
+	registry    applets.Registry
+	functions   map[functionName]functionDefinition
+	streams     Streams
+	fds         *fdTable
+	vars        map[string]string
+	traps       map[trapName]string
+	trapRunning map[trapName]bool
+	params      *parameters
+	options     *shellOptions
+	expansion   *expansionState
+	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
+	// condition, a negated pipeline, and every command but the last of an
+	// and-or list. It rides on the Runtime value rather than the shared options
+	// pointer so entering one of those places cannot leak out of it.
+	errExitSuppressed bool
+	readonly          map[string]struct{}
+	mutatedVars       map[string]struct{}
+	mask              *fileModeMask
+	sourceDepth       int
+	functionDepth     int
+	interactive       interactiveState
+	paths             *pathState
+	env               Environment
+	jobScope          *jobScope
+	lifecycle         *shellLifecycle
 }
 
 type shellLifecycle struct {

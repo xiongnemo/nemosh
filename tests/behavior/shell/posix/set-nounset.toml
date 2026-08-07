@@ -1,0 +1,24 @@
+id = "shell.posix.set.nounset"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash"]
+
+script = '''
+set -u
+empty=
+echo [$empty]
+echo [${nosuch:-fallback}]
+echo [$nope]
+echo STILL
+'''
+
+[expect]
+status = 2
+stdout = "[]\n[fallback]\n"
+stderr = "nemosh: nope: parameter not set\n"
+
+[notes]
+standard = "POSIX Shell Command Language - 2.5.2 Special Parameters, set -u"
+why = "Expanding an unset parameter under -u writes a message and exits a non-interactive shell. Being empty is not being unset, and a default supplies the value before anything is missing, so neither of those trips it. The wording and the status follow busybox ash: `NAME: parameter not set` from varunset (shell/ash.c:8269) and status 2 from ash_msg_and_raise_error (shell/ash.c:1803)."
