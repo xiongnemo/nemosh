@@ -92,3 +92,75 @@ func TestRuntime_entersDirectoriesPastMaxPath(t *testing.T) {
 		t.Errorf("pwd printed %q, want %q", stdout, want)
 	}
 }
+
+// TestRuntime_launchesAChildFromAnImagePathPastMaxPath fills the gap the
+// coverage above left: nothing here launched anything, so the claim that long
+// paths hold at the launch boundary rested on the filesystem half alone.
+//
+// Measured on Windows 10 19045, the image path is not the boundary the child's
+// working directory is. Go's os/exec reaches CreateProcess with a wide image
+// path and an 804-character one starts, so there is nothing for Nemosh to
+// widen. The child's cwd is the one that is MAX_PATH-bound, and
+// external_directory.go already answers for it.
+func TestRuntime_launchesAChildFromAnImagePathPastMaxPath(t *testing.T) {
+	// Given a copy of a real program sitting well past MAX_PATH.
+	source := filepath.Join(os.Getenv("SystemRoot"), "System32", "hostname.exe")
+	payload, err := os.ReadFile(source)
+	if err != nil {
+		t.Skipf("no host program to copy: %v", err)
+	}
+	deep := directoryOfWideLength(t, 310)
+	image := filepath.Join(deep, "child.exe")
+	if err := os.WriteFile(image, payload, 0o700); err != nil {
+		t.Fatalf("seed the deep program: %v", err)
+	}
+
+	// When
+	status, stdout, stderr := runFrom(t, t.TempDir(), "'"+filepath.ToSlash(image)+"'\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("status=%d stderr=%q (image is %d characters)", status, stderr, len(image))
+	}
+	if strings.TrimSpace(stdout) == "" {
+		t.Fatalf("the child produced no output; stderr=%q", stderr)
+	}
+}
+
+// A child cannot be given a working directory past MAX_PATH unless the volume
+// offers an 8.3 short name, and the diagnostic has to say so in those words:
+// Windows reports "The directory name is invalid", which says nothing about
+// length, and on a volume with 8.3 generation switched off there is no way to
+// launch from here at all.
+func TestRuntime_reportsTheLength_whenAChildsWorkingDirectoryCannotBeShortened(t *testing.T) {
+	// Given a working directory far past anything an 8.3 name could rescue.
+	// Nested rather than one long component, because a single name is capped at
+	// 255 characters no matter how long the path may be.
+	deep := t.TempDir()
+	for len(deep) < 700 {
+		deep = filepath.Join(deep, strings.Repeat("d", 24))
+	}
+	if err := os.MkdirAll(deep, 0o777); err != nil {
+		t.Fatalf("create the nested directory: %v", err)
+	}
+	source := filepath.Join(os.Getenv("SystemRoot"), "System32", "hostname.exe")
+	payload, err := os.ReadFile(source)
+	if err != nil {
+		t.Skipf("no host program to copy: %v", err)
+	}
+	image := filepath.Join(deep, "child.exe")
+	if err := os.WriteFile(image, payload, 0o700); err != nil {
+		t.Fatalf("seed the deep program: %v", err)
+	}
+
+	// When
+	status, _, stderr := runFrom(t, deep, "./child.exe\n")
+
+	// Then
+	if status == 0 {
+		t.Skip("this volume shortened a 700-character working directory")
+	}
+	if !strings.Contains(stderr, "working directory is too long") {
+		t.Fatalf("stderr=%q, want it to name the length as the constraint", stderr)
+	}
+}
