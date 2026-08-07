@@ -16,7 +16,24 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 			result.status = 0
 		}
 	}
+	// POSIX 2.9.1 exempts a negated pipeline from `set -e`, along with the
+	// places the caller marks by suppressing it.
+	if r.errExitTriggers(result) && !value.negated {
+		result.control = flowExit
+	}
 	return result
+}
+
+func (r Runtime) errExitTriggers(result lineResult) bool {
+	return r.options.errExit && !r.errExitSuppressed && result.control == flowNone && result.status != 0
+}
+
+// suppressingErrExit marks a nested execution as one of the contexts `set -e`
+// does not act on. The flag is on the Runtime value, so it applies to
+// everything the returned Runtime runs and to nothing else.
+func (r Runtime) suppressingErrExit() Runtime {
+	r.errExitSuppressed = true
+	return r
 }
 
 func (r Runtime) executeTypedPipelineStages(ctx context.Context, value pipeline, savedStatus int) lineResult {

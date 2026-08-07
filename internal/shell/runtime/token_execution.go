@@ -100,6 +100,9 @@ func (r Runtime) runTokenCommand(ctx context.Context, tokens []shellToken, saved
 func (r Runtime) runParsedWords(ctx context.Context, command []word, operations []redirectOperation, savedStatus int) lineResult {
 	var ok bool
 	operations, ok = r.expandRedirectOperations(ctx, operations, savedStatus)
+	if r.expansionFailed() {
+		return unsetParameterResult()
+	}
 	if !ok {
 		return lineResult{status: 1}
 	}
@@ -109,6 +112,9 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		for _, value := range values {
 			expanded = append(expanded, shellToken{kind: tokenWord, value: value})
 		}
+	}
+	if r.expansionFailed() {
+		return unsetParameterResult()
 	}
 	args := tokenValues(expanded)
 	if len(args) == 0 {

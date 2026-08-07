@@ -180,7 +180,7 @@ func newRuntimeWithState(registry applets.Registry, streams Streams, state State
 	for _, value := range state.Env.values {
 		variables[value.name] = value.value
 	}
-	return Runtime{initErr: initErr, registry: registry, functions: map[functionName]functionDefinition{}, streams: fds.streams(), fds: fds, vars: variables, traps: map[trapName]string{}, trapRunning: map[trapName]bool{}, params: &parameters{}, options: &shellOptions{}, readonly: map[string]struct{}{}, mask: newFileModeMask(), paths: &paths, env: state.Env.clone(), jobScope: newRootJobScope(), lifecycle: &shellLifecycle{}}
+	return Runtime{initErr: initErr, registry: registry, functions: map[functionName]functionDefinition{}, streams: fds.streams(), fds: fds, vars: variables, traps: map[trapName]string{}, trapRunning: map[trapName]bool{}, params: &parameters{}, options: &shellOptions{}, expansion: &expansionState{}, readonly: map[string]struct{}{}, mask: newFileModeMask(), paths: &paths, env: state.Env.clone(), jobScope: newRootJobScope(), lifecycle: &shellLifecycle{}}
 }
 
 func (r Runtime) WorkingDirectory() string {

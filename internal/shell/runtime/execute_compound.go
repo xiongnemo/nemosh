@@ -3,7 +3,9 @@ package runtime
 import "context"
 
 func (r Runtime) executeTypedIf(ctx context.Context, node ifNode, savedStatus int) lineResult {
-	condition := r.executeTypedList(ctx, node.condition, savedStatus)
+	// A failing condition is the question, not an error, so `set -e` does not
+	// act on it (POSIX 2.9.1).
+	condition := r.suppressingErrExit().executeTypedList(ctx, node.condition, savedStatus)
 	if condition.control != flowNone {
 		return condition
 	}
@@ -24,7 +26,7 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 	}
 	status := 0
 	for {
-		condition := r.executeTypedList(ctx, node.condition, savedStatus)
+		condition := r.suppressingErrExit().executeTypedList(ctx, node.condition, savedStatus)
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
@@ -58,6 +60,9 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 			return lineResult{status: contextStatus(ctx)}
 		}
 		values := r.expandWord(ctx, item, savedStatus)
+		if r.expansionFailed() {
+			return unsetParameterResult()
+		}
 	iteration:
 		for _, value := range values {
 			r.vars[node.name] = value
@@ -83,6 +88,9 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 
 func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatus int) lineResult {
 	values := r.expandWord(ctx, node.word, savedStatus)
+	if r.expansionFailed() {
+		return unsetParameterResult()
+	}
 	value := ""
 	if len(values) > 0 {
 		value = values[0]

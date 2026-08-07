@@ -1,0 +1,37 @@
+id = "shell.posix.set.options-and-positional"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "dash", "bash-posix"]
+
+script = '''
+x=value
+echo [${x}]
+echo [${nosuch}]
+echo ${x}bc
+set a b c
+echo $# $1 $2 $3
+set -f
+echo $#
+echo [$-]
+set +f
+echo [$-]
+set -- -f -x
+echo $# $1 $2
+set --
+echo [$#]
+set -o pipefail
+set +o pipefail
+false | true
+echo [$?]
+'''
+
+[expect]
+status = 0
+stdout = "[value]\n[]\nvaluebc\n3 a b c\n3\n[f]\n[]\n2 -f -x\n[0]\n[0]\n"
+stderr = ""
+
+[notes]
+standard = "POSIX Shell Command Language - 2.14 set"
+why = "`${name}` with no operator is the commonest brace form and used to expand to the literal `${name}`. `set a b c` sets the positional parameters and `set -f` alone must not clear them; only operands or a bare `--` replace them. `$-` reports the enabled letters, and an option can be turned off again -- pipefail was previously a one-way latch."

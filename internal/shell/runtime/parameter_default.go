@@ -11,6 +11,16 @@ type defaultParameterExpansion struct {
 }
 
 func (r Runtime) expandDefaultParameter(body string, savedStatus int) (string, bool) {
+	// `${name}` with no operator is the commonest brace form there is -- the
+	// braces are only there to end the name early, as in ${x}bc. It used to
+	// fall through to the caller, which handed back the literal `${x}`.
+	if isVariableName(body) {
+		value, set := r.vars[body]
+		if !set {
+			r.reportUnsetParameter(body)
+		}
+		return value, true
+	}
 	expansion, ok := parseDefaultParameterExpansion(body)
 	if !ok {
 		return "", false

@@ -74,12 +74,15 @@ func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
 		return append([]string(nil), r.params.values...)
 	case "$*":
 		return []string{strings.Join(r.params.values, " ")}
+	case "$-":
+		return []string{r.options.letters()}
 	}
 	if len(text) == 2 && '1' <= text[1] && text[1] <= '9' {
 		index := int(text[1] - '1')
 		if index < len(r.params.values) {
 			return []string{r.params.values[index]}
 		}
+		r.reportUnsetParameter(text[1:])
 		return []string{""}
 	}
 	if strings.HasPrefix(text, "${") && strings.HasSuffix(text, "}") {
@@ -89,7 +92,12 @@ func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
 		}
 		return []string{text}
 	}
-	return []string{r.vars[strings.TrimPrefix(text, "$")]}
+	name := strings.TrimPrefix(text, "$")
+	value, set := r.vars[name]
+	if !set {
+		r.reportUnsetParameter(name)
+	}
+	return []string{value}
 }
 
 func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script) string {
