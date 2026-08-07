@@ -22,7 +22,11 @@ func processCPUTime() (time.Duration, time.Duration, error) {
 	return filetimeDuration(user), filetimeDuration(kernel), nil
 }
 
-// A FILETIME counts 100-nanosecond intervals.
+// A FILETIME counts 100-nanosecond intervals. Here it is an elapsed amount, so
+// the two words are combined and scaled and nothing else: syscall.Filetime's own
+// Nanoseconds is for the instant form and first subtracts the 1601-to-1970
+// offset, which drives an elapsed value far negative and past the int64 floor.
 func filetimeDuration(t syscall.Filetime) time.Duration {
-	return time.Duration(t.Nanoseconds())
+	intervals := int64(t.HighDateTime)<<32 | int64(t.LowDateTime)
+	return time.Duration(intervals) * 100 * time.Nanosecond
 }
