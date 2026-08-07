@@ -35,7 +35,7 @@ echo [$z]
 [expect]
 status = 0
 stdout = "hi\nhi tail\nchained\nthere\nalias a='b'\nalias b='echo chained'\nalias e='echo hi'\nalias p='echo '\nalias q='there'\ncd is a shell builtin\ngrep is a bundled applet\n[inner]\n[outer]\n[]\n[]\n[global]\n"
-stderr = "e: not found\n"
+stderr = "e: not found\nhint: PATH is empty, so no directory was searched\n"
 
 [notes]
 standard = "POSIX Shell Command Language - 2.14 alias, type; local is an ash/bash extension"

@@ -32,16 +32,7 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	}
 	executable, err := r.externalCommandPath(args[0])
 	if err != nil {
-		if errors.Is(err, errExternalNotFound) {
-			fmt.Fprintf(r.streams.Stderr, "%s: not found\n", args[0])
-			return 127
-		}
-		if errors.Is(err, errExternalNotExecutable) {
-			fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
-			return 126
-		}
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
-		return 1
+		return r.reportLookupFailure(args[0], err)
 	}
 	executable, err = requireAbsoluteNativePath("executable", executable)
 	if err != nil {

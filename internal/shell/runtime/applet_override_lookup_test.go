@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	goruntime "runtime"
+	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -124,8 +125,10 @@ func TestRuntime_reportsNotFound_whenAnOverriddenAppletHasNoExternal(t *testing.
 	if status != 127 {
 		t.Fatalf("expected status 127, got %d with stderr %q", status, stderr.String())
 	}
-	if got := stderr.String(); got != "cat: not found\n" {
-		t.Fatalf("expected stderr %q, got %q", "cat: not found\n", got)
+	// The first line is the contract a script greps and does not move; the hint
+	// after it is P1.1's and is allowed to say whatever is most useful.
+	if got := stderr.String(); !strings.HasPrefix(got, "cat: not found\n") {
+		t.Fatalf("expected stderr to start with %q, got %q", "cat: not found\n", got)
 	}
 }
 

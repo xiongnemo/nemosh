@@ -38,7 +38,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		trapRunning: map[trapName]bool{},
 		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...)},
 		options:     r.options.clone(),
-		expansion:   &expansionState{},
+		expansion:   newExpansionState(),
 		aliases:     cloneMap(r.aliases),
 		childCPU:    r.childCPU,
 		// locals belongs to a function call, and a snapshot is not inside

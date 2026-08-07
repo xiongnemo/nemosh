@@ -12,6 +12,14 @@ import "fmt"
 // cannot see another's.
 type expansionState struct {
 	unsetParameter bool
+	// warnedDebugChannels remembers which unknown NEMOSH_DEBUG names have
+	// already been complained about, so the complaint does not bury the
+	// diagnostics it is attached to.
+	warnedDebugChannels map[string]bool
+}
+
+func newExpansionState() *expansionState {
+	return &expansionState{warnedDebugChannels: map[string]bool{}}
 }
 
 // reportExpansionError is the path for a substitution that cannot be carried
