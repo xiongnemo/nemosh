@@ -82,8 +82,12 @@ func TestDirectApplet_disabledCygdriveFailsBeforeTouchEffect_whenSelectedExplici
 }
 
 func TestDirectApplet_realpathDisplaysCanonicalWindowsPath_whenSelectedExplicitlyOrByInvocationName(t *testing.T) {
-	// Given
-	path := filepath.Join(t.TempDir(), "input.txt")
+	// Given a temporary directory in the spelling realpath will answer with:
+	// on a machine whose TEMP sits under an 8.3 alias -- which is what GitHub's
+	// Windows runners hand out, because the profile directory name is longer
+	// than eight characters -- t.TempDir() is the short form and realpath
+	// answers with the long one.
+	path := filepath.Join(canonicalTempDirForDirectApplet(t), "input.txt")
 	if err := os.WriteFile(path, []byte("realpath"), 0o600); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
@@ -177,4 +181,17 @@ func windowsAliasPath(t *testing.T, prefix, native string) string {
 		t.Fatalf("canonicalize %q: %v", native, err)
 	}
 	return prefix + string(canonical)
+}
+
+// canonicalTempDirForDirectApplet is t.TempDir() resolved the way realpath
+// resolves it, so a test can use one spelling for the file it creates and for
+// the answer it expects.
+func canonicalTempDirForDirectApplet(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return dir
+	}
+	return resolved
 }
