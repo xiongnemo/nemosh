@@ -128,7 +128,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// are different words, and reading the first one turned `V=x break` into a
 	// lookup for a command named `break`. In a `while true` loop that never
 	// ended.
-	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, savedStatus); handled {
+	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, operations, savedStatus); handled {
 		return result
 	}
 	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
@@ -138,7 +138,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 // rather than only a status. Each of them is a POSIX special builtin, so its
 // leading assignments persist after it completes (2.9.1) and are applied here
 // before the transfer leaves.
-func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignments []assignment, savedStatus int) (lineResult, bool) {
+func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation, savedStatus int) (lineResult, bool) {
 	switch args[0] {
 	case "exit", "exec", "return", "break", "continue":
 	default:
@@ -151,11 +151,10 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	case "exit":
 		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}, true
 	case "exec":
-		status := r.execBuiltin(ctx, args[1:])
 		if len(args) == 1 {
-			return lineResult{status: status}, true
+			return lineResult{status: r.execRedirect(operations)}, true
 		}
-		return lineResult{status: status, control: flowExec}, true
+		return lineResult{status: r.execBuiltin(ctx, args[1:]), control: flowExec}, true
 	case "return":
 		status := exitStatus(args[1:], savedStatus)
 		if r.sourceDepth == 0 && r.functionDepth == 0 {

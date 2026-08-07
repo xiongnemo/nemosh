@@ -49,6 +49,14 @@ func (r Runtime) CloseBatch(savedStatus int) {
 		r.runExitTrap(context.Background(), savedStatus)
 	}
 	r.jobScope.seal()
+	// A descriptor an `exec` redirect opened belongs to the shell and outlives
+	// every command that ran under it, so closing the shell is the only place
+	// it can be released. Everything else in the table is borrowed and closing
+	// it is a no-op. Reported before the table goes, since the report itself
+	// needs a descriptor to come out of.
+	if err := r.fds.closeAll(); err != nil {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+	}
 }
 
 func (r Runtime) executePrepared(ctx context.Context, script Script) (int, flowControl) {
