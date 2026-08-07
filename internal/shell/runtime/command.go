@@ -53,7 +53,11 @@ func (r Runtime) isKnownCommand(name string) bool {
 
 func isRuntimeBuiltin(name string) bool {
 	switch name {
-	case ":", ".", "alias", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "let", "local", "pwd", "read", "readonly", "set", "shift", "source", "times", "trap", "type", "umask", "unalias", "unset", "wait":
+	// `return` belongs here even though it is dispatched from
+	// controlFlowBuiltin rather than the switch in runCommandResolved: this
+	// answers `command -v` and `type`, and leaving it out had them report a
+	// builtin that plainly works as absent.
+	case ":", ".", "alias", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "let", "local", "pwd", "read", "readonly", "return", "set", "shift", "source", "times", "trap", "type", "umask", "unalias", "unset", "wait":
 		return true
 	default:
 		return false

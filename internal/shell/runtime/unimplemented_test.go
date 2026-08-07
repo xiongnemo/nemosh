@@ -104,3 +104,28 @@ func TestRuntime_allowsTurningAnInertOptionOff(t *testing.T) {
 		t.Fatalf("status = %d, stderr = %q, want 0 and nothing", status, stderr)
 	}
 }
+
+// Every builtin docs/design/v0-scope.md lists must answer `command -v`, because
+// that is what a script asks before relying on one. `return` did not: it is
+// dispatched from controlFlowBuiltin rather than the switch the lookup table was
+// written from, so a builtin that plainly works reported as absent.
+func TestRuntime_reportsEveryScopedBuiltinFromCommandV(t *testing.T) {
+	scoped := []string{
+		// Special builtins, v0-scope.md "Parser And Shell Semantic Gates".
+		"break", "continue", ".", "eval", "exec", "exit", "export",
+		"readonly", "return", "set", "shift", "trap", "unset",
+		// Stateful regular builtins, same section.
+		"cd", "command", "getopts", "jobs", "read", "umask", "wait",
+	}
+	for _, name := range scoped {
+		t.Run(name, func(t *testing.T) {
+			// When
+			status, stdout, _ := runSetScript(t, "command -v "+name+"\n")
+
+			// Then
+			if status != 0 || strings.TrimSpace(stdout) != name {
+				t.Fatalf("command -v %s = (%d, %q), want (0, %q)", name, status, stdout, name)
+			}
+		})
+	}
+}
