@@ -137,7 +137,31 @@ correctness rather than features, and neither should cross a release boundary.
 
 Deferring these is what makes v1.0 shippable. Each has a home.
 
-**v1.1 — applet option matrices and `~user`.**
+**v1.1 — line editing, then applet option matrices and `~user`.**
+
+Line editing was moved here from v2 on 2026-08-08, and the reason is that three
+things a user asks for separately turn out to be one thing:
+
+- arrow keys and history recall,
+- Ctrl-D and Ctrl-Z exiting the shell,
+- Tab completion.
+
+All three need the terminal in raw mode with the shell reading keys rather than
+lines. Measured: through a pipe neither Nemosh nor busybox treats `0x04` or
+`0x1a` as end of input -- busybox reports 127 for both, exactly as Nemosh does.
+What makes them work in busybox is `libbb/lineedit.c`, 3322 lines of raw-mode
+editor. Nemosh reads cooked lines and never calls `MakeRaw`, so it has no place
+to catch a key at all.
+
+Leaving this in v2 meant a completion *engine* would land in v1.2 with no Tab to
+trigger it, and a daily user would have no arrow keys until after a 1.0. The
+ordering was technical rather than a product judgement, and it inverted them.
+
+The double-width accounting that breaks busybox's own backspace over CJK -- one
+column deleted for a two-column character -- is an acceptance requirement here,
+not something to discover afterwards.
+
+Then, as before:
 39 applets are registered (`internal/applets/registry.go:52-92`) and every
 initial candidate name resolves, but *name presence is not semantic parity*. The
 per-applet tables in `docs/testing/applet-test-inventory.md` are the
@@ -158,11 +182,15 @@ behind a noninteractive harness. M2's exit criterion is that the core matrix
 passes with no terminal editor at all, which is why it stops there.
 
 **v2 — the interactive tier.**
-M3 is the editor bakeoff between `go-readline-ny` and `reeflective/readline`,
-and it would add **this project's first runtime dependency**; that is its own
-decision with its own written justification, not a line item here. M4–M6, the
-full raw-terminal REPL, ConPTY and PTY, `/dev/tty`, history suggestions, and
-plugins follow it.
+ConPTY and PTY, `/dev/tty`, history suggestions, plugins, and the bounded job
+control described below.
+
+The editor bakeoff between `go-readline-ny` and `reeflective/readline` is no
+longer what unblocks v1.1: an in-house editor covering the keys above avoids
+adding **this project's first runtime dependency** for a feature set busybox
+implements itself. Adopting one remains open, and remains its own decision with
+its own written justification -- but it is now an improvement rather than a
+prerequisite.
 
 ## Explicitly Still Non-Goals
 
@@ -221,9 +249,10 @@ V1-RC clean-machine acceptance
   ↓
 v1.0.0
   ↓
-v1.1  applet option matrices, ~user
+v1.1  line editing (arrows, history, Ctrl-D/Ctrl-Z, Tab)
+      applet option matrices, ~user
   ↓
 v1.2  completion M0–M2
   ↓
-v2    editor bakeoff, full REPL, PTY, bounded job control
+v2    PTY, /dev/tty, history suggestions, bounded job control
 ```
