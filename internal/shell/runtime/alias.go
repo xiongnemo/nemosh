@@ -40,7 +40,7 @@ func (r Runtime) alias(args []string) int {
 			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, singleQuoteForReuse(existing))
 			continue
 		}
-		if !isVariableName(name) {
+		if !isAliasName(name) {
 			fmt.Fprintf(r.streams.Stderr, "alias: %s: invalid alias name\n", name)
 			status = 1
 			continue
@@ -150,4 +150,25 @@ func aliasWords(value string) ([]string, error) {
 		words = append(words, token.value)
 	}
 	return words, nil
+}
+
+// isAliasName accepts any name that could actually be typed as a command word.
+//
+// isVariableName was too strict: it rejected `..`, `...`, `~`, and `a-b`, which
+// are among the first aliases anyone defines and which busybox ash accepts.
+// busybox validates nothing at all, so it also accepts `a=b` and `a b` -- names
+// no command word can ever match, because one parses as an assignment and the
+// other as two words. Those are refused here with a reason rather than stored
+// where they could never fire.
+func isAliasName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for index := 0; index < len(name); index++ {
+		switch name[index] {
+		case ' ', '\t', '\n', '\r', '=', '|', '&', ';', '<', '>', '(', ')', '\'', '"', '`', '\\', '$':
+			return false
+		}
+	}
+	return true
 }

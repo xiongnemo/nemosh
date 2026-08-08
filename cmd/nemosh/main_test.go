@@ -192,7 +192,7 @@ func TestRun_entersInteractiveMode_whenNoArgumentsAndStdinIsTerminal(t *testing.
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected no stdout, got %q", got)
 	}
-	if got := stderr.String(); !strings.HasPrefix(got, "# ") || !strings.HasSuffix(got, "\n"+promptSymbol()+" ") {
+	if got := withoutANSI(stderr.String()); !strings.HasPrefix(got, "# ") || !strings.HasSuffix(got, "\n"+promptSymbol()+" ") {
 		t.Fatalf("expected informative default prompt, got %q", got)
 	}
 }
@@ -240,7 +240,7 @@ func TestRun_forcesInteractiveMode_whenFlagProvidedAndStdinIsRedirected(t *testi
 	if err != nil {
 		t.Fatalf("expected -i to force interactive mode, got %v", err)
 	}
-	if got := stderr.String(); !strings.HasPrefix(got, "# ") || !strings.HasSuffix(got, "\n"+promptSymbol()+" ") {
+	if got := withoutANSI(stderr.String()); !strings.HasPrefix(got, "# ") || !strings.HasSuffix(got, "\n"+promptSymbol()+" ") {
 		t.Fatalf("expected informative default prompt, got %q", got)
 	}
 }

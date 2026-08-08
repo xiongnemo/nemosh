@@ -40,7 +40,8 @@ func TestRunInteractive_writesPrimaryPromptOnlyToStderr(t *testing.T) {
 	got := runInteractiveTest(strings.NewReader("exit 0\n"))
 
 	// Then
-	if got.stdout != "" || !strings.HasPrefix(got.stderr, "# ") || !strings.HasSuffix(got.stderr, "\n"+promptSymbol()+" ") {
+	plain := withoutANSI(got.stderr)
+	if got.stdout != "" || !strings.HasPrefix(plain, "# ") || !strings.HasSuffix(plain, "\n"+promptSymbol()+" ") {
 		t.Fatalf("streams = (%q, %q), want informative default prompt on stderr", got.stdout, got.stderr)
 	}
 }
@@ -63,7 +64,7 @@ func TestRunInteractive_preservesExplicitEmptyPS1(t *testing.T) {
 	got := runInteractiveTest(strings.NewReader("PS1=''\nexit 0\n"))
 
 	// Then
-	if got.stdout != "" || strings.Count(got.stderr, "\n"+promptSymbol()+" ") != 1 {
+	if got.stdout != "" || strings.Count(withoutANSI(got.stderr), "\n"+promptSymbol()+" ") != 1 {
 		t.Fatalf("streams = (%q, %q), want no fallback prompt after explicit empty PS1", got.stdout, got.stderr)
 	}
 }
@@ -73,7 +74,7 @@ func TestRunInteractive_writesContinuationPromptOnlyToStderr(t *testing.T) {
 	got := runInteractiveTest(strings.NewReader("echo one\\\ntwo\nexit 0\n"))
 
 	// Then
-	if got.stdout != "onetwo\n" || strings.Count(got.stderr, "> ") != 1 || strings.Count(got.stderr, "\n"+promptSymbol()+" ") != 2 {
+	if got.stdout != "onetwo\n" || strings.Count(withoutANSI(got.stderr), "> ") != 1 || strings.Count(withoutANSI(got.stderr), "\n"+promptSymbol()+" ") != 2 {
 		t.Fatalf("streams = (%q, %q), want two primary prompts and one continuation prompt", got.stdout, got.stderr)
 	}
 }
@@ -173,7 +174,7 @@ func TestRunInteractive_executesMultilineLexicalFormsOnce(t *testing.T) {
 			if got.stdout != tt.stdout {
 				t.Fatalf("stdout = %q, want %q", got.stdout, tt.stdout)
 			}
-			if strings.Count(got.stderr, "> ") == 0 {
+			if strings.Count(withoutANSI(got.stderr), "> ") == 0 {
 				t.Fatalf("stderr = %q, want continuation prompt", got.stderr)
 			}
 		})
@@ -188,7 +189,7 @@ func TestRunInteractive_continuesTrailingPipelineAcrossPhysicalLines(t *testing.
 	if got.stdout != "piped\n" || interactiveStatus(t, got.err) != 0 {
 		t.Fatalf("outcome = %+v, want piped output and status 0", got)
 	}
-	if strings.Count(got.stderr, "> ") != 1 {
+	if strings.Count(withoutANSI(got.stderr), "> ") != 1 {
 		t.Fatalf("stderr = %q, want one continuation prompt", got.stderr)
 	}
 }
@@ -201,7 +202,7 @@ func TestRunInteractive_continuesTrailingRedirectAcrossPhysicalLines(t *testing.
 	if got.stdout != "" || interactiveStatus(t, got.err) != 0 {
 		t.Fatalf("outcome = %+v, want redirected output and status 0", got)
 	}
-	if strings.Count(got.stderr, "> ") != 1 {
+	if strings.Count(withoutANSI(got.stderr), "> ") != 1 {
 		t.Fatalf("stderr = %q, want one continuation prompt", got.stderr)
 	}
 }
