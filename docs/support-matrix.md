@@ -55,7 +55,7 @@ these names why, and names what busybox-w32 does with the same name.
 
 ## Applets
 
-All 39 registered applets ship. **Name presence is not option parity**, and the
+All 40 registered applets ship. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
@@ -72,6 +72,7 @@ column that matters is the third one.
 | `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
 | `grep` | `-i -n -v` | refused by name |
 | `head` | `-n` | refused by name |
+| `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
 | `ls` | `-a -h -l` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
