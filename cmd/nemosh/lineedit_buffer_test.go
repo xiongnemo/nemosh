@@ -244,3 +244,43 @@ func TestLineBuffer_stringIsStableAcrossReads(t *testing.T) {
 		t.Fatalf("String() = %q then %q, want a stable %q", first, second, "abc")
 	}
 }
+
+func TestLineBuffer_movesAndDeletesByWord(t *testing.T) {
+	// Given
+	buffer := newLineBuffer()
+	for _, r := range "echo one two" {
+		buffer.insert(r)
+	}
+
+	// When: back one word, then delete the word ahead of the cursor
+	buffer.moveWordLeft()
+	buffer.deleteWordForward()
+
+	// Then
+	if got := buffer.String(); got != "echo one " {
+		t.Fatalf("String() = %q, want %q", got, "echo one ")
+	}
+
+	// And forward motion lands past the next word
+	buffer.moveHome()
+	buffer.moveWordRight()
+	buffer.insert('|')
+	if got := buffer.String(); got != "echo| one " {
+		t.Fatalf("String() = %q, want %q", got, "echo| one ")
+	}
+}
+
+func TestLineBuffer_wordMotionStopsAtTheEnds(t *testing.T) {
+	buffer := newLineBuffer()
+	for _, r := range "one" {
+		buffer.insert(r)
+	}
+	buffer.moveWordLeft()
+	buffer.moveWordLeft()
+	buffer.moveWordRight()
+	buffer.moveWordRight()
+	buffer.deleteWordForward()
+	if got := buffer.String(); got != "one" {
+		t.Fatalf("String() = %q, want it unchanged", got)
+	}
+}

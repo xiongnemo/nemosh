@@ -25,6 +25,9 @@ const (
 	keyEnd
 	keyClearLine
 	keyDeleteWord
+	keyDeleteWordForward
+	keyWordLeft
+	keyWordRight
 	keyClearScreen
 )
 
@@ -90,7 +93,21 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 		return key{kind: keyIncomplete}, 0
 	}
 	if buffer[1] != '[' && buffer[1] != 'O' {
-		// Alt-something, or a real Escape followed by text. Neither is bound.
+		// A Meta key. readline's word bindings live here; bash reports them as
+		// kill-word "\ed", backward-kill-word "\e\C-h" and "\e\C-?",
+		// backward-word "\eb", forward-word "\ef".
+		switch buffer[1] {
+		case 'd':
+			return key{kind: keyDeleteWordForward}, 2
+		case 0x7f, 0x08:
+			return key{kind: keyDeleteWord}, 2
+		case 'b':
+			return key{kind: keyWordLeft}, 2
+		case 'f':
+			return key{kind: keyWordRight}, 2
+		}
+		// Anything else Meta is skipped whole rather than inserted, so an
+		// unbound Alt key cannot leave its letter in the line.
 		return key{kind: keyUnknown}, 2
 	}
 	if len(buffer) < 3 {
@@ -117,6 +134,23 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 	}
 	if end >= len(buffer) {
 		return key{kind: keyIncomplete}, 0
+	}
+	if buffer[end] == ';' {
+		// A modified arrow: CSI 1;5D is Ctrl-Left, CSI 1;5C is Ctrl-Right.
+		modifier := end + 1
+		for modifier < len(buffer) && buffer[modifier] >= '0' && buffer[modifier] <= '9' {
+			modifier++
+		}
+		if modifier >= len(buffer) {
+			return key{kind: keyIncomplete}, 0
+		}
+		switch buffer[modifier] {
+		case 'D':
+			return key{kind: keyWordLeft}, modifier + 1
+		case 'C':
+			return key{kind: keyWordRight}, modifier + 1
+		}
+		return key{kind: keyUnknown}, modifier + 1
 	}
 	if buffer[end] != '~' {
 		return key{kind: keyUnknown}, end + 1
