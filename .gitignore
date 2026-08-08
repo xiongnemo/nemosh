@@ -1,4 +1,9 @@
+
 .omo/
 bin/
 dist/
 references/
+# Build output. A stray `go build -o nemosh.exe` in the repository root was
+# committed once by `git add -A`; 5.7 MB of it is still in history.
+*.exe
+/nemosh
