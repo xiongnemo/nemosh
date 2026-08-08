@@ -64,10 +64,37 @@ func TestFormat_buildsTheDocumentedVersionString(t *testing.T) {
 		build Build
 		want  string
 	}{
+		// A clean build of exactly a tagged commit *is* that release, so it
+		// renders bare. Otherwise a user downloading v0.1.0 would unpack
+		// `nemosh-v0.1.0-release-703714b2edcc-windows-amd64.zip` and a binary
+		// reporting a third spelling, for one and the same version.
 		{
-			name:  "on the tagged commit itself",
+			name:  "on the tagged commit itself, clean",
 			build: Build{Tag: "v0.1.0", CommitsSinceTag: 0, Branch: "master", Commit: "38e8ec9a1b2c3d4e"},
-			want:  "v0.1.0-master-38e8ec9a1b2c",
+			want:  "v0.1.0",
+		},
+		{
+			name:  "on the tagged commit itself, from a detached release build",
+			build: Build{Tag: "v1.2.3", CommitsSinceTag: 0, Branch: "release", Commit: "38e8ec9a1b2c3d4e"},
+			want:  "v1.2.3",
+		},
+		// Dirty is never hidden, even on a tag: that build is not the release.
+		{
+			name:  "on the tagged commit but dirty",
+			build: Build{Tag: "v0.1.0", CommitsSinceTag: 0, Branch: "master", Commit: "38e8ec9a1b2c3d4e", Dirty: true},
+			want:  "v0.1.0-master-38e8ec9a1b2c-dirty",
+		},
+		// The bare form is only for a real tag. A fallback base with no commits
+		// past it must stay distinguishable from an actual v0.0.1 release.
+		{
+			name:  "no tag and no commits still carries its provenance",
+			build: Build{Tag: "", CommitsSinceTag: 0, Branch: "master", Commit: "38e8ec9a1b2c3d4e"},
+			want:  "v0.0.1-master-38e8ec9a1b2c",
+		},
+		{
+			name:  "a prerelease tag with no commits past it is not a release",
+			build: Build{Tag: "v0.1.2-dev-abcdef123456", CommitsSinceTag: 0, Branch: "master", Commit: "38e8ec9a1b2c3d4e"},
+			want:  "v0.0.1-master-38e8ec9a1b2c",
 		},
 		{
 			name:  "one commit past the tag advances the patch",
@@ -104,15 +131,17 @@ func TestFormat_buildsTheDocumentedVersionString(t *testing.T) {
 			build: Build{Tag: "v0.1.2-dev-abcdef123456", CommitsSinceTag: 3, Branch: "master", Commit: "38e8ec9a1b2c3d4e"},
 			want:  "v0.0.4-master-38e8ec9a1b2c",
 		},
+		// A commit past the tag, so these exercise the placeholder path rather
+		// than the bare-release one.
 		{
 			name:  "an unknown commit still produces a usable string",
-			build: Build{Tag: "v0.1.0", CommitsSinceTag: 0, Branch: "master"},
-			want:  "v0.1.0-master-unknown",
+			build: Build{Tag: "v0.1.0", CommitsSinceTag: 1, Branch: "master"},
+			want:  "v0.1.1-master-unknown",
 		},
 		{
 			name:  "an unknown branch still produces a usable string",
-			build: Build{Tag: "v0.1.0", CommitsSinceTag: 0, Commit: "38e8ec9a1b2c3d4e"},
-			want:  "v0.1.0-unknown-38e8ec9a1b2c",
+			build: Build{Tag: "v0.1.0", CommitsSinceTag: 1, Commit: "38e8ec9a1b2c3d4e"},
+			want:  "v0.1.1-unknown-38e8ec9a1b2c",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

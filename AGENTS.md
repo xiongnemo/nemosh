@@ -26,9 +26,23 @@ v{major}.{minor}.{patch}-{branch}-{commit12}[-dirty]
 - To bump major/minor or reset the patch base, create and push a new exact
   semver tag on the desired base commit. That commit then builds as the tag; the
   next commit builds as patch + 1.
+- **A clean build of exactly a tagged commit renders bare**: `v0.1.0`, with no
+  branch or commit. That build *is* the release, and qualifying it would leave
+  one version wearing three spellings — a release named `v0.1.0`, an artifact
+  named `nemosh-v0.1.0-release-703714b2edcc-…`, and a binary reporting a third.
+  Dirty is never hidden, even on a tag, and the `v0.0.1` fallback never renders
+  bare because nobody tagged it.
 - Sanitize branch names before placing them in version strings or artifact
   names. Use a 12-character commit hash. Append `-dirty` when uncommitted
   changes are part of the build.
+- **Only two tag shapes exist**, and the difference is the mechanism rather than
+  a convention: an exact `vMAJOR.MINOR.PATCH` base, and a
+  `vX.Y.Z-branch-commit12[-dirty]` build marker that `--exclude='*-*'` keeps out
+  of base computation. Measured: with only a `v0.1.0-release-57b96893ed4d` tag
+  reachable, `git describe --exclude='*-*'` reports "No names found" and every
+  build falls back to `v0.0.1` forever. The shapes therefore cannot be unified.
+  `.github/workflows/tag-guard.yml` rejects a third shape; a repository ruleset
+  on `refs/tags` is what would prevent one being pushed at all.
 - Inject build metadata with `-ldflags -X` into `internal/version`. That package
   falls back to `debug.ReadBuildInfo()` when ldflags are absent, so `go run` and
   plain `go build` still report useful VCS metadata.
