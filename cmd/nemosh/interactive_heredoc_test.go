@@ -13,7 +13,7 @@ func TestRunInteractive_collectsPendingHeredocBeforeExecution(t *testing.T) {
 	if got.stdout != "interactive\n" || interactiveStatus(t, got.err) != 0 {
 		t.Fatalf("outcome = %+v, want heredoc output and status 0", got)
 	}
-	if strings.Count(got.stderr, "> ") != 2 {
+	if strings.Count(withoutANSI(got.stderr), "> ") != 2 {
 		t.Fatalf("stderr = %q, want two continuation prompts", got.stderr)
 	}
 }

@@ -15,9 +15,11 @@ func (c command) runInteractive(ctx context.Context, controller *interruptContro
 	inputReader := newInteractiveInput(c.stdin)
 	defer func() { runErr = errors.Join(runErr, inputReader.close()) }()
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: inputReader, Stdout: c.stdout, Stderr: c.stderr})
+	sourceStartupFile(ctx, rt, c.stderr)
 	idleInterrupts := controller.idleInterrupts()
 	var lineResults <-chan interactiveLine
 	linePending := false
+	lastStatus := 0
 	var input strings.Builder
 
 sessionLoop:
@@ -27,7 +29,7 @@ sessionLoop:
 			linePending = true
 			lineResults = inputReader.readLine(ctx, accumulated)
 		}
-		fmt.Fprint(c.stderr, interactivePrompt(rt, input.Len() > 0))
+		fmt.Fprint(c.stderr, interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus))
 		var lineResult interactiveLine
 		for {
 			if !linePending {
@@ -110,6 +112,7 @@ sessionLoop:
 			continue
 		}
 		result := rt.RunInteractive(executionCtx, script)
+		lastStatus = result.Status
 		clear()
 		if ctx.Err() != nil {
 			rt.CloseInteractive(ctx)

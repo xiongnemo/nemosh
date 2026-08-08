@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/user"
@@ -10,9 +11,27 @@ import (
 	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
+// The default prompt carries colour, because a prompt that does not is the
+// first thing a user replaces. Only the eight original foreground colours and
+// bold are used: those survive every terminal Nemosh runs on, including a plain
+// conhost, where the 256-colour and truecolour forms do not.
+//
+// Every sequence is closed with a reset, so a prompt cannot leave the terminal
+// tinted for the command that follows.
 const (
-	defaultPS1 = `# \u @ \h in \w\n\$ `
-	defaultPS2 = `> `
+	promptReset  = "\033[0m"
+	promptBlue   = "\033[1;34m"
+	promptGreen  = "\033[1;32m"
+	promptYellow = "\033[0;33m"
+	promptRed    = "\033[1;31m"
+	promptDim    = "\033[2m"
+)
+
+var (
+	defaultPS1 = promptBlue + `# \u` + promptReset + promptDim + ` @ ` + promptReset +
+		promptGreen + `\h` + promptReset + promptDim + ` in ` + promptReset +
+		promptYellow + `\w` + promptReset + "\n" + promptRed + `\$` + promptReset + ` `
+	defaultPS2 = promptDim + `>` + promptReset + ` `
 )
 
 type promptValues struct {
@@ -23,6 +42,13 @@ type promptValues struct {
 }
 
 func interactivePrompt(rt runtime.Runtime, continuation bool) string {
+	return interactivePromptWithStatus(context.Background(), rt, continuation, 0)
+}
+
+// The prompt is expanded before its backslash escapes are rendered. That order
+// is deliberate: rendering first would feed a directory name back into the
+// parser, so a directory called `$(...)` would run it.
+func interactivePromptWithStatus(ctx context.Context, rt runtime.Runtime, continuation bool, lastStatus int) string {
 	name, fallback := "PS1", defaultPS1
 	if continuation {
 		name, fallback = "PS2", defaultPS2
@@ -31,7 +57,7 @@ func interactivePrompt(rt runtime.Runtime, continuation bool) string {
 	if !present {
 		value = fallback
 	}
-	return renderPrompt(value, currentPromptValues(rt))
+	return renderPrompt(rt.ExpandPromptString(ctx, value, lastStatus), currentPromptValues(rt))
 }
 
 func currentPromptValues(rt runtime.Runtime) promptValues {
@@ -89,12 +115,44 @@ func renderPrompt(value string, values promptValues) string {
 			appendPromptValue(&rendered, values.symbol)
 		case '\\':
 			rendered.WriteByte('\\')
+		case 'e':
+			rendered.WriteByte(0x1b)
+		case 'a':
+			rendered.WriteByte(0x07)
+		case 'r':
+			rendered.WriteByte('\r')
+		case '[', ']':
+			// bash's markers around a non-printing run. Nemosh does not measure
+			// the prompt, so they carry no information here and are dropped
+			// rather than printed as literal brackets.
+		case '0', '1', '2', '3', '4', '5', '6', '7':
+			// An octal escape, which is how a startup file written for ash or
+			// bash spells a colour: `\033[1;34m`. Up to three digits, which is
+			// what bash and printf both read.
+			octal, consumed := readOctalEscape(value, index)
+			rendered.WriteByte(octal)
+			index += consumed - 1
 		default:
 			rendered.WriteByte('\\')
 			rendered.WriteByte(value[index])
 		}
 	}
 	return rendered.String()
+}
+
+// readOctalEscape reads up to three octal digits starting at index, returning
+// the byte they denote and how many digits were consumed.
+func readOctalEscape(text string, index int) (byte, int) {
+	value, consumed := 0, 0
+	for consumed < 3 && index+consumed < len(text) {
+		digit := text[index+consumed]
+		if digit < '0' || digit > '7' {
+			break
+		}
+		value = value*8 + int(digit-'0')
+		consumed++
+	}
+	return byte(value), consumed
 }
 
 func appendPromptValue(rendered *strings.Builder, value string) {

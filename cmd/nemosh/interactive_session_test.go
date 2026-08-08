@@ -52,7 +52,7 @@ func TestRunInteractive_trailingBackgroundCompletesAndMalformedEntryRecovers(t *
 	if got.stdout != "first\nrecovered\n" {
 		t.Fatalf("stdout = %q, want completed background and recovery output", got.stdout)
 	}
-	if strings.Contains(got.stderr, "$ > ") || strings.Count(got.stderr, "nemosh:") != 1 {
+	if strings.Contains(withoutANSI(got.stderr), "$ > ") || strings.Count(got.stderr, "nemosh:") != 1 {
 		t.Fatalf("stderr = %q, want primary prompts and one malformed diagnostic", got.stderr)
 	}
 }
@@ -62,7 +62,7 @@ func TestRunInteractive_preservesLogicalOperatorContinuationAfterBackgroundClosu
 	got := runInteractiveTest(strings.NewReader("echo and &&\necho continued\necho pipe |\ncat\nexit 0\n"))
 
 	// Then
-	if got.stdout != "and\ncontinued\npipe\n" || strings.Count(got.stderr, "> ") != 2 {
+	if got.stdout != "and\ncontinued\npipe\n" || strings.Count(withoutANSI(got.stderr), "> ") != 2 {
 		t.Fatalf("outcome = %+v, want two continued entries", got)
 	}
 }
