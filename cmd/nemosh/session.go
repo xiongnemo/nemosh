@@ -12,6 +12,21 @@ import (
 )
 
 func (c command) runInteractive(ctx context.Context, controller *interruptController) (runErr error) {
+	// A real terminal gets the line editor: arrows, history, Tab, and Ctrl-D or
+	// Ctrl-Z to leave. Raw mode is put back on every path out, including a
+	// panic, because terminal state is borrowed and leaving it raw hands the
+	// next program a shell with no echo.
+	//
+	// Anything else -- a pipe, a file, a test -- keeps the cooked loop below,
+	// which is what makes an idle Ctrl-C able to interrupt a blocked read.
+	if terminal := terminalFile(c.stdin); terminal != nil {
+		if editor := lineEditorFor(terminal, c.stderr, currentWorkingDirectory()); editor != nil {
+			if raw := enterRawMode(terminal); raw != nil {
+				defer raw.restore()
+				return c.runInteractiveEdited(ctx, controller, editor)
+			}
+		}
+	}
 	inputReader := newInteractiveInput(c.stdin)
 	defer func() { runErr = errors.Join(runErr, inputReader.close()) }()
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: inputReader, Stdout: c.stdout, Stderr: c.stderr})
