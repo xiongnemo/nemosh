@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
 )
 
 func (r Runtime) command(ctx context.Context, args []string) int {
@@ -82,4 +83,14 @@ func isSpecialBuiltin(name string) bool {
 	default:
 		return false
 	}
+}
+
+// BuiltinNames exposes the builtin list for Tab completion, which runs in the
+// CLI and cannot reach the unexported slice. Sorted, and a copy, so a caller
+// cannot reorder what the shell dispatches from.
+func BuiltinNames() []string {
+	names := make([]string, len(builtinNames))
+	copy(names, builtinNames)
+	sort.Strings(names)
+	return names
 }
