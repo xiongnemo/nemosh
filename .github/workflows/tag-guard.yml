@@ -1,0 +1,81 @@
+name: Tag Guard
+
+# Two tag shapes are sanctioned, and the difference between them is load-bearing
+# rather than cosmetic:
+#
+#   vMAJOR.MINOR.PATCH            a base. Moves the version line.
+#   vX.Y.Z-branch-commit12[-dirty]  a build marker. Created by the Release
+#                                   workflow, never a base.
+#
+# `scripts/version.sh` separates them with `--exclude='*-*'`, so the presence of
+# a dash *is* the mechanism. Measured: with only a `v0.1.0-release-57b96893ed4d`
+# tag reachable, `git describe --exclude='*-*'` reports "No names found" and
+# every build falls back to v0.0.1 forever. A third shape cannot be made to work
+# by being tidier; it can only be kept out.
+#
+# This detects, it does not prevent -- GitHub runs no server-side hook a user
+# can install. To actually block a push, add a repository ruleset on `refs/tags`
+# restricting creation to these two patterns. This workflow is the backstop that
+# says loudly which rule was broken.
+
+on:
+  push:
+    tags:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  shape:
+    name: Validate tag shape
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the pushed tag
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          base='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          build='^v[0-9]+\.[0-9]+\.[0-9]+-[A-Za-z0-9._-]+-[0-9a-f]{7,40}(-dirty)?$'
+
+          if [[ "$TAG" =~ $base ]]; then
+            echo "$TAG is an exact semver base tag."
+            echo "It moves the version line: the next commit builds as patch + 1,"
+            echo "and pushing it publishes a full release rather than a prerelease."
+            exit 0
+          fi
+
+          if [[ "$TAG" =~ $build ]]; then
+            echo "$TAG is a build marker."
+            echo "It carries a branch and a commit, so scripts/version.sh excludes"
+            echo "it from base computation and it cannot rebase the version line."
+            exit 0
+          fi
+
+          echo "::error title=Unsanctioned tag shape::$TAG"
+          cat <<EOF
+          $TAG is neither shape this repository sanctions.
+
+            base          vMAJOR.MINOR.PATCH              e.g. v0.1.0
+            build marker  vX.Y.Z-branch-commit12[-dirty]  e.g. v0.1.2-master-9d5e373438aa
+
+          Why it matters, rather than being a naming preference: the version is
+          derived with
+
+            git describe --tags --abbrev=0 --match='v[0-9]*' --exclude='*-*'
+
+          so a dash is what separates a base from a build marker. A tag like
+          'v0.1' matches --match but parses as neither, and a tag with a dash
+          that is not a build marker is silently ignored as a base -- both leave
+          the version quietly wrong rather than loudly broken.
+
+          Delete it and push a sanctioned shape:
+
+            git push --delete origin $TAG
+            git tag -d $TAG
+
+          See AGENTS.md, Versioning.
+          EOF
+          exit 1

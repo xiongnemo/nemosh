@@ -56,6 +56,15 @@ func (b Build) String() string {
 	if !isExactSemverTag(base) {
 		base = fallbackBase
 	}
+	// A clean build of exactly a tagged commit is that release, and says so
+	// without qualification. Carrying a branch and a commit here would leave
+	// one version wearing three spellings -- the release named `v0.1.0`, an
+	// artifact named `nemosh-v0.1.0-release-703714b2edcc-...`, and a binary
+	// reporting a third. The fallback base is deliberately excluded: it is not
+	// a tag anyone made, so a build sitting on it is not a v0.0.1 release.
+	if isExactSemverTag(b.Tag) && b.CommitsSinceTag == 0 && !b.Dirty {
+		return b.Tag
+	}
 	version := advancePatch(base, b.CommitsSinceTag)
 
 	name := sanitizeBranch(b.Branch)
