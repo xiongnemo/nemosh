@@ -178,6 +178,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.let(args[1:])
 	case "times":
 		return r.times()
+	case "help":
+		return r.help(args[1:])
 	case ":":
 		// The null command of POSIX 2.14: its arguments are expanded, which has
 		// already happened by the time it gets here, and it returns zero.

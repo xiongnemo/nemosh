@@ -51,17 +51,28 @@ func (r Runtime) isKnownCommand(name string) bool {
 	return ok
 }
 
+// builtinNames is the one list of what this shell runs without consulting PATH.
+// `help` prints it and isRuntimeBuiltin answers from it, so the two cannot
+// disagree about what a builtin is.
+//
+// `return` belongs here even though it is dispatched from controlFlowBuiltin
+// rather than the switch in runCommandResolved: this answers `command -v` and
+// `type`, and leaving it out had them report a builtin that plainly works as
+// absent.
+var builtinNames = []string{
+	":", ".", "alias", "break", "cd", "command", "continue", "eval", "exec",
+	"exit", "export", "getopts", "help", "jobs", "let", "local", "pwd", "read",
+	"readonly", "return", "set", "shift", "source", "times", "trap", "type",
+	"umask", "unalias", "unset", "wait",
+}
+
 func isRuntimeBuiltin(name string) bool {
-	switch name {
-	// `return` belongs here even though it is dispatched from
-	// controlFlowBuiltin rather than the switch in runCommandResolved: this
-	// answers `command -v` and `type`, and leaving it out had them report a
-	// builtin that plainly works as absent.
-	case ":", ".", "alias", "break", "cd", "command", "continue", "eval", "exec", "exit", "export", "getopts", "jobs", "let", "local", "pwd", "read", "readonly", "return", "set", "shift", "source", "times", "trap", "type", "umask", "unalias", "unset", "wait":
-		return true
-	default:
-		return false
+	for _, builtin := range builtinNames {
+		if builtin == name {
+			return true
+		}
 	}
+	return false
 }
 
 func isSpecialBuiltin(name string) bool {

@@ -42,15 +42,16 @@ source.
 ## Build
 
 ```bash
-go build -o nemosh ./cmd/nemosh
+bash scripts/build.sh          # dist/nemosh[.exe], version stamped in
+bash scripts/build.sh --dev    # keep symbols for a debugger
+bash scripts/build.sh -o path  # somewhere else
 ```
 
-For a release-shaped build, with the version stamped in:
-
-```bash
-go build -trimpath -ldflags "-s -w $(bash scripts/version.sh --ldflags)" \
-  -o dist/nemosh ./cmd/nemosh
-```
+A plain `go build ./cmd/nemosh` also works, but reports
+`v0.0.1-unknown-<commit>`: Go's build info records the commit, the time, and
+whether the tree was modified, but **not the tag and not the branch**. Those are
+build-time questions, so `scripts/version.sh` asks git and injects the answers,
+and `scripts/build.sh` is the wrapper that does it for you.
 
 A full clone is required — the version is derived from the nearest semver tag,
 and a shallow clone silently yields the fallback base.
@@ -63,6 +64,7 @@ $ nemosh script.sh arg1 arg2
 $ nemosh                       # interactive, when stdin is a terminal
 $ nemosh --version
 $ nemosh --list                # every bundled applet, one per line
+$ nemosh --help
 ```
 
 Nemosh is a multicall binary. Invoked under an applet's name — directly, or

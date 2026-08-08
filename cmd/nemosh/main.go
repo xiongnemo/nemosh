@@ -114,6 +114,7 @@ func (c command) run(ctx context.Context, args []string) error {
 		// A bare "-" is the POSIX spelling of "read the script from stdin".
 		if args[1] != "-" {
 			fmt.Fprintf(c.stderr, "nemosh: invalid option %s\n", args[1])
+			fmt.Fprintln(c.stderr, "hint: `nemosh --help` lists the options this build accepts")
 			return exitStatus(2)
 		}
 	}
