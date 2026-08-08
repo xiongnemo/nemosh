@@ -20,6 +20,10 @@ type shellOptions struct {
 	verbose   bool
 	xtrace    bool
 	pipefail  bool
+	// noCaseGlob has no letter, like pipefail. It matters more on Windows
+	// than elsewhere: NTFS is case-insensitive, so a pattern that fails only
+	// because of case is surprising here in a way it is not on Unix.
+	noCaseGlob bool
 }
 
 type shellOptionSpec struct {
@@ -41,6 +45,7 @@ var shellOptionSpecs = []shellOptionSpec{
 	{'v', "verbose", func(o *shellOptions) *bool { return &o.verbose }},
 	{'x', "xtrace", func(o *shellOptions) *bool { return &o.xtrace }},
 	{0, "pipefail", func(o *shellOptions) *bool { return &o.pipefail }},
+	{0, "nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }},
 }
 
 func (o *shellOptions) clone() *shellOptions {

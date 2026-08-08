@@ -35,6 +35,9 @@ type Runtime struct {
 	// children are the shell's children too, and `times` in the parent has to
 	// see what they used.
 	childCPU *childCPUTime
+	// history is shared by pointer across snapshots, so a command recorded in a
+	// pipeline stage is still there when the parent's `history` asks.
+	history *shellHistory
 	// locals belongs to the function call in progress and is nil outside one,
 	// which is how `local` knows there is nothing to restore to.
 	locals *localScope
@@ -180,6 +183,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.times()
 	case "help":
 		return r.help(args[1:])
+	case "history":
+		return r.historyBuiltin(args[1:])
 	case ":":
 		// The null command of POSIX 2.14: its arguments are expanded, which has
 		// already happened by the time it gets here, and it returns zero.

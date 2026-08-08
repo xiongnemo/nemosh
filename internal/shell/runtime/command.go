@@ -62,7 +62,8 @@ func (r Runtime) isKnownCommand(name string) bool {
 // absent.
 var builtinNames = []string{
 	":", ".", "alias", "break", "cd", "command", "continue", "eval", "exec",
-	"exit", "export", "getopts", "help", "jobs", "let", "local", "pwd", "read",
+	"exit", "export", "getopts", "help", "history", "jobs", "let", "local",
+	"pwd", "read",
 	"readonly", "return", "set", "shift", "source", "times", "trap", "type",
 	"umask", "unalias", "unset", "wait",
 }

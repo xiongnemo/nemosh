@@ -15,6 +15,10 @@ func newLsApplet() Applet {
 		if err != nil {
 			return err
 		}
+		// `auto` is resolved against the stream actually being written to, not
+		// at parse time: that is what makes `alias ls='ls --color=auto'` safe to
+		// pipe, colouring a terminal and staying plain into grep.
+		options.colored = colorEnabled(options.color, stdout)
 		if len(paths) == 0 {
 			paths = []string{"."}
 		}
@@ -36,6 +40,8 @@ type lsOptions struct {
 	all       bool
 	long      bool
 	human     bool
+	color     colorWhen
+	colored   bool
 	sizeWidth int
 }
 
@@ -50,6 +56,22 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 		}
 		if len(arg) <= 1 || arg[0] != '-' {
 			break
+		}
+		// A long option is one word, so it is matched whole rather than letter
+		// by letter -- `--color` used to be read as `-`, `-c`, `-o` and refused
+		// as the bare `-` it started with.
+		if strings.HasPrefix(arg, "--") {
+			name, value, present := strings.Cut(arg[2:], "=")
+			if name != "color" {
+				return lsOptions{}, nil, fmt.Errorf("unsupported ls option: %s", arg)
+			}
+			when, err := parseColorWhen(value, present)
+			if err != nil {
+				return lsOptions{}, nil, err
+			}
+			options.color = when
+			index++
+			continue
 		}
 		for _, flag := range arg[1:] {
 			switch flag {
@@ -112,11 +134,12 @@ type lsEntry struct {
 }
 
 func printLsEntry(stdout io.Writer, entry lsEntry, options lsOptions) error {
+	name := paintLsName(entry.name, entry.info, options.colored)
 	if options.long {
-		_, err := fmt.Fprintf(stdout, "%s %*s %s\n", entry.info.Mode().String(), options.sizeWidth, lsSize(entry.info.Size(), options), entry.name)
+		_, err := fmt.Fprintf(stdout, "%s %*s %s\n", entry.info.Mode().String(), options.sizeWidth, lsSize(entry.info.Size(), options), name)
 		return err
 	}
-	_, err := fmt.Fprintln(stdout, entry.name)
+	_, err := fmt.Fprintln(stdout, name)
 	return err
 }
 

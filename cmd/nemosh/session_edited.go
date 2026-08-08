@@ -63,8 +63,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			continue
 		}
 		// The whole command is remembered, not each physical line, so recalling
-		// a multi-line loop brings back the loop.
-		editor.remember(strings.TrimRight(input.String(), "\n"))
+		// a multi-line loop brings back the loop. Both lists get it: the arrows
+		// walk the editor's and `history` prints the shell's, and a user who
+		// saw one would be surprised to find the other different.
+		command := strings.TrimRight(input.String(), "\n")
+		editor.remember(command)
+		rt.RecordHistory(command)
 		input.Reset()
 		if parseErr != nil {
 			rt.ReportInteractiveParseError(parseErr)

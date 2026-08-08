@@ -41,6 +41,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		expansion:   newExpansionState(),
 		aliases:     cloneMap(r.aliases),
 		childCPU:    r.childCPU,
+		history:     r.history,
 		// locals belongs to a function call, and a snapshot is not inside
 		// one: a subshell or a background worker that returns has nothing
 		// of the caller's to restore.
