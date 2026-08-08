@@ -73,7 +73,7 @@ func (r Runtime) globChildren(base, segment string) []string {
 		if strings.HasPrefix(name, ".") && !strings.HasPrefix(segment, ".") {
 			continue
 		}
-		if !matchShellPattern(segment, name) {
+		if !r.matchGlobSegment(segment, name) {
 			continue
 		}
 		matched = append(matched, joinGlobPath(base, name))
@@ -117,4 +117,15 @@ func joinGlobPath(base, name string) string {
 
 func containsGlobMeta(text string) bool {
 	return strings.ContainsAny(text, "*?[")
+}
+
+// matchGlobSegment applies `set -o nocaseglob`, which busybox implements as
+// FNM_CASEFOLD (shell/ash.c:9230). Folding both sides rather than the pattern
+// alone is what makes it work in either direction: `upper.*` finds UPPER.TXT
+// and `LOWER.*` finds lower.txt.
+func (r Runtime) matchGlobSegment(segment, name string) bool {
+	if r.options != nil && r.options.noCaseGlob {
+		return matchShellPattern(strings.ToLower(segment), strings.ToLower(name))
+	}
+	return matchShellPattern(segment, name)
 }

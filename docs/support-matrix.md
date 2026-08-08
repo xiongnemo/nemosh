@@ -43,6 +43,8 @@ these names why, and names what busybox-w32 does with the same name.
 | `set -b` | 2 | Asynchronous completion is reported when `wait` or `jobs` asks; there is no notification channel to switch on. |
 | `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. |
 
+Beyond POSIX, `history` and `set -o nocaseglob` are implemented, both following busybox.
+
 ### Known divergences from bash/dash/ash
 
 - **Parse before effects.** A syntax error anywhere in a script means none of it
@@ -74,7 +76,7 @@ column that matters is the third one.
 | `head` | `-n` | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
-| `ls` | `-a -h -l` | refused by name |
+| `ls` | `-a -h -l`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
 | `mv` | none | refused by name |
 | `posixpath` | none | treated as a path operand |
