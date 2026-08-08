@@ -95,6 +95,7 @@ var DefaultRegistry = NewRegistry(
 	newRealpathApplet(),
 	newSleepApplet(),
 	newUnameApplet(),
+	newIDApplet(),
 	newCpApplet(),
 	newMvApplet(),
 	newChmodApplet(),
