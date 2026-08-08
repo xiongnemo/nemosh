@@ -132,3 +132,29 @@ func (b *lineBuffer) currentWord() string {
 func (b *lineBuffer) currentWordPrefix() string {
 	return string(b.runes[:b.wordStart()])
 }
+
+// wordEnd is the cursor position one word forward, for Alt-D and Alt-F.
+func (b *lineBuffer) wordEnd() int {
+	index := b.cursor
+	for index < len(b.runes) && b.runes[index] == ' ' {
+		index++
+	}
+	for index < len(b.runes) && b.runes[index] != ' ' {
+		index++
+	}
+	return index
+}
+
+func (b *lineBuffer) moveWordLeft() { b.cursor = b.wordStart() }
+
+func (b *lineBuffer) moveWordRight() { b.cursor = b.wordEnd() }
+
+// deleteWordForward removes the word ahead of the cursor, which is readline's
+// kill-word and busybox's Alt-D (libbb/lineedit.c:2926).
+func (b *lineBuffer) deleteWordForward() {
+	end := b.wordEnd()
+	if end == b.cursor {
+		return
+	}
+	b.runes = append(b.runes[:b.cursor], b.runes[end:]...)
+}

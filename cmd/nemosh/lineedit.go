@@ -110,6 +110,12 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			e.buffer.replace("")
 		case keyDeleteWord:
 			e.buffer.deleteWord()
+		case keyDeleteWordForward:
+			e.buffer.deleteWordForward()
+		case keyWordLeft:
+			e.buffer.moveWordLeft()
+		case keyWordRight:
+			e.buffer.moveWordRight()
 		case keyUp:
 			e.recallHistory(1)
 		case keyDown:

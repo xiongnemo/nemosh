@@ -83,3 +83,35 @@ func TestDecodeKey_acceptsASequenceArrivingInPieces(t *testing.T) {
 	}
 	t.Fatal("the sequence never completed")
 }
+
+// The Meta bindings readline defines for word motion and word deletion, taken
+// from bash's own `bind -q`: kill-word is "\ed", backward-kill-word is "\e\C-h"
+// and "\e\C-?", backward-word is "\eb" and "\e[1;5D", forward-word is "\ef" and
+// "\e[1;5C".
+func TestDecodeKey_readsTheMetaWordBindings(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		input    string
+		want     keyKind
+		consumed int
+	}{
+		{name: "alt-d kills the word forward", input: "\x1bd", want: keyDeleteWordForward, consumed: 2},
+		{name: "alt-backspace kills it backward", input: "\x1b\x7f", want: keyDeleteWord, consumed: 2},
+		{name: "alt-ctrl-h does too", input: "\x1b\x08", want: keyDeleteWord, consumed: 2},
+		{name: "alt-b moves back a word", input: "\x1bb", want: keyWordLeft, consumed: 2},
+		{name: "alt-f moves forward a word", input: "\x1bf", want: keyWordRight, consumed: 2},
+		{name: "ctrl-left moves back a word", input: "\x1b[1;5D", want: keyWordLeft, consumed: 6},
+		{name: "ctrl-right moves forward a word", input: "\x1b[1;5C", want: keyWordRight, consumed: 6},
+		{name: "an unbound meta key is skipped, not inserted", input: "\x1bq", want: keyUnknown, consumed: 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			key, consumed := decodeKey([]byte(test.input))
+			if key.kind != test.want {
+				t.Fatalf("decodeKey(%q).kind = %v, want %v", test.input, key.kind, test.want)
+			}
+			if consumed != test.consumed {
+				t.Fatalf("decodeKey(%q) consumed %d, want %d", test.input, consumed, test.consumed)
+			}
+		})
+	}
+}
