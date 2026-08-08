@@ -1,0 +1,162 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+)
+
+// errLineAbandoned is Ctrl-C: the line is discarded and the prompt returns,
+// which is not an error the caller should report.
+var errLineAbandoned = errors.New("line abandoned")
+
+// lineEditor reads one line a key at a time.
+//
+// The terminal side is deliberately just an io.Reader and an io.Writer, so the
+// whole editor is testable without a terminal. Raw mode is the caller's job;
+// see interactive_lineedit.go.
+type lineEditor struct {
+	input            io.Reader
+	screen           io.Writer
+	workingDirectory string
+	buffer           *lineBuffer
+	pending          []byte
+	history          []string
+	// recall is the index into history being shown, counted from the end.
+	// Zero means the line being typed rather than a remembered one.
+	recall int
+	// drawn is how many columns the last redraw put on screen, so the next one
+	// knows how much to erase.
+	drawn int
+}
+
+func newLineEditor(input io.Reader, screen io.Writer, workingDirectory string) *lineEditor {
+	return &lineEditor{
+		input:            input,
+		screen:           screen,
+		workingDirectory: workingDirectory,
+		buffer:           newLineBuffer(),
+	}
+}
+
+// remember adds a line to the history. A blank line and a repeat of the
+// previous entry are skipped, which is what every shell does and what keeps the
+// arrows worth pressing.
+func (e *lineEditor) remember(line string) {
+	if strings.TrimSpace(line) == "" {
+		return
+	}
+	if len(e.history) > 0 && e.history[len(e.history)-1] == line {
+		return
+	}
+	e.history = append(e.history, line)
+}
+
+func (e *lineEditor) entries() []string { return e.history }
+
+// readLine draws prompt and returns when the user submits a line. io.EOF means
+// end of input -- Ctrl-D on an empty line, Ctrl-Z, or the stream running out.
+func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error) {
+	e.buffer = newLineBuffer()
+	e.recall = 0
+	e.drawn = 0
+	fmt.Fprint(e.screen, prompt)
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		key, err := e.nextKey()
+		if err != nil {
+			// A stream that ends with text already typed submits it, the way a
+			// final line without a newline does.
+			if errors.Is(err, io.EOF) && !e.buffer.isEmpty() {
+				fmt.Fprintln(e.screen)
+				return e.buffer.String(), nil
+			}
+			return "", err
+		}
+		switch key.kind {
+		case keyEnter:
+			fmt.Fprintln(e.screen)
+			return e.buffer.String(), nil
+		case keyEndOfInput:
+			// Only on an empty line. With text in the buffer this is a forward
+			// delete, because ending input there would throw the line away.
+			if e.buffer.isEmpty() {
+				return "", io.EOF
+			}
+			e.buffer.deleteForward()
+		case keyInterrupt:
+			fmt.Fprintln(e.screen)
+			return "", errLineAbandoned
+		case keyRune:
+			e.buffer.insert(key.value)
+		case keyBackspace:
+			e.buffer.backspace()
+		case keyDelete:
+			e.buffer.deleteForward()
+		case keyLeft:
+			e.buffer.moveLeft()
+		case keyRight:
+			e.buffer.moveRight()
+		case keyHome:
+			e.buffer.moveHome()
+		case keyEnd:
+			e.buffer.moveEnd()
+		case keyClearLine:
+			e.buffer.replace("")
+		case keyDeleteWord:
+			e.buffer.deleteWord()
+		case keyUp:
+			e.recallHistory(1)
+		case keyDown:
+			e.recallHistory(-1)
+		case keyTab:
+			e.complete(prompt)
+		case keyClearScreen:
+			fmt.Fprint(e.screen, "\033[H\033[2J")
+			e.drawn = 0
+			fmt.Fprint(e.screen, prompt)
+		}
+		e.redraw(prompt)
+	}
+}
+
+// recallHistory walks back through what was typed before. Direction is +1 for
+// older and -1 for newer; walking past the newest returns the empty line.
+func (e *lineEditor) recallHistory(direction int) {
+	target := e.recall + direction
+	if target < 0 || target > len(e.history) {
+		return
+	}
+	e.recall = target
+	if target == 0 {
+		e.buffer.replace("")
+		return
+	}
+	e.buffer.replace(e.history[len(e.history)-target])
+}
+
+// nextKey decodes one key, reading more bytes when the buffer holds only part
+// of a sequence.
+func (e *lineEditor) nextKey() (key, error) {
+	for {
+		if decoded, consumed := decodeKey(e.pending); decoded.kind != keyIncomplete {
+			e.pending = e.pending[consumed:]
+			return decoded, nil
+		}
+		chunk := make([]byte, 64)
+		count, err := e.input.Read(chunk)
+		if count > 0 {
+			e.pending = append(e.pending, chunk[:count]...)
+			continue
+		}
+		if err == nil {
+			err = io.EOF
+		}
+		return key{}, err
+	}
+}

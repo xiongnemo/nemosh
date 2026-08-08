@@ -126,3 +126,9 @@ func (b *lineBuffer) deleteWord() {
 func (b *lineBuffer) currentWord() string {
 	return strings.TrimLeft(string(b.runes[b.wordStart():b.cursor]), " ")
 }
+
+// currentWordPrefix is the text before the word being completed, which is what
+// decides whether that word is a command name or an argument.
+func (b *lineBuffer) currentWordPrefix() string {
+	return string(b.runes[:b.wordStart()])
+}
