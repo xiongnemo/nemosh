@@ -144,6 +144,34 @@ details, including why green tests are not taken as evidence of correctness.
 Contributions are under Apache-2.0 by section 5 of the license; there is no
 separate CLA.
 
+## Not planned
+
+Recorded so the question is answered once rather than reopened.
+
+**A shim per applet.** Scoop could create `cat`, `grep`, `find` and the rest
+pointing at the same binary. It will not, and the reason is not effort.
+
+Scoop's shims share one flat directory, so a name belongs to whichever package
+wrote it last. BusyBox's own manifest shims every applet its `--list` reports; on
+the machine this was written on that is **173 shims** already pointing at
+`busybox.exe`, `cat`, `grep`, `find`, `sort` and `ls` among them. Nemosh has 40
+applets and **38 of those names overlap**. Installing it with per-applet shims
+would silently repoint 38 commands at a different implementation, and
+uninstalling either package afterwards would take the other's names with it.
+Anyone installing a Unix toolbox on Windows is likely to have BusyBox already,
+which makes this the expected case rather than an edge one.
+
+Two of the names are worse than merely contested: `find` and `sort` are real
+Windows commands with unrelated syntax -- `find.exe` takes a quoted string and a
+file -- so shadowing them breaks scripts that never asked for this shell. An
+install that changes what a name means is worse than one that makes you type
+`nemosh find`; `scoop shim add` covers the case where someone wants one anyway.
+
+**Applet parity with BusyBox.** 40 applets against its 179, and the gap is
+deliberate: `awk`, `vi`, `bc` and the archivers are standalone projects. What
+matters is that an option this shell does not implement is refused by name
+rather than doing something else, which `docs/support-matrix.md` records.
+
 ## License
 
 Apache-2.0. See [`LICENSE`](LICENSE), [`NOTICE`](NOTICE), and
