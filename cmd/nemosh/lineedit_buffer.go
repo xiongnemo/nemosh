@@ -1,7 +1,5 @@
 package main
 
-import "strings"
-
 // lineBuffer is one line being edited: the runes in it and where the cursor
 // sits between them.
 //
@@ -121,16 +119,35 @@ func (b *lineBuffer) deleteWord() {
 	b.cursor = start
 }
 
+// completionStart is where the word Tab is completing begins: after the last
+// blank before the cursor, with no walking back over blanks.
+//
+// Deliberately not wordStart. The two answer different questions and the blanks
+// are where they part company: Ctrl-W deleting `echo   ` should remove `echo`,
+// so wordStart steps over the trailing blanks to find it, while Tab after `cd `
+// is completing a new and empty word. Sharing one boundary made the word under
+// the cursor `"cd "`, which was completed as a command name, and nothing is
+// called `"cd "` -- so the commonest gesture there is, a blank and then Tab, did
+// nothing whatever.
+func (b *lineBuffer) completionStart() int {
+	index := b.cursor
+	for index > 0 && b.runes[index-1] != ' ' {
+		index--
+	}
+	return index
+}
+
 // currentWord is the text between the last blank and the cursor, which is what
-// Tab completes.
+// Tab completes. Empty when the cursor sits just after a blank, which is the
+// case that says "offer me everything that could go here".
 func (b *lineBuffer) currentWord() string {
-	return strings.TrimLeft(string(b.runes[b.wordStart():b.cursor]), " ")
+	return string(b.runes[b.completionStart():b.cursor])
 }
 
 // currentWordPrefix is the text before the word being completed, which is what
 // decides whether that word is a command name or an argument.
 func (b *lineBuffer) currentWordPrefix() string {
-	return string(b.runes[:b.wordStart()])
+	return string(b.runes[:b.completionStart()])
 }
 
 // wordEnd is the cursor position one word forward, for Alt-D and Alt-F.
