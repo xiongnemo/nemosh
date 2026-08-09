@@ -62,10 +62,10 @@ column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
-| `basename` | none; the `basename PATH [SUFFIX]` form works | refused by name |
-| `cat` | none | refused by name |
+| `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
+| `cat` | `-n` | refused by name |
 | `chmod` | numeric mode | refused by name |
-| `cp` | none | refused by name |
+| `cp` | `-r`, `-R` | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
 | `dirname` | none needed | refused by name |
@@ -73,12 +73,12 @@ column that matters is the third one.
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
 | `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
 | `grep` | `-i -n -v`, `--color[=WHEN]` accepted and ignored | refused by name |
-| `head` | `-n` | refused by name |
+| `head` | `-n -c` | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
 | `ls` | `-a -h -l -1`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
-| `mv` | none | refused by name |
+| `mv` | `-f`, accepted and already in force | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
 | `printf` | format string | treated as the format, which is correct |
@@ -95,7 +95,7 @@ column that matters is the third one.
 | `touch` | `-c` | refused by name |
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
-| `uniq` | none | refused by name |
+| `uniq` | `-c` | refused by name |
 | `wc` | `-c -l -w` | refused by name |
 | `winpath` | none | treated as a path operand |
 | `xargs` | none | refused by name |
@@ -103,10 +103,15 @@ column that matters is the third one.
 
 ### Options a script is most likely to reach for and not find
 
-`cat -n`, `cp -r`, `mv -f`, `head -c`, `uniq -c`, `basename -a`, `xargs -0`,
-`xargs -n`, `sort -k`, `grep -r`, and `ls -l` beyond the basic long form. Every
-one of them is refused by name, so a script asking for it fails rather than
-quietly getting something else. Filling them in is v1.1; see
+`xargs -0`, `xargs -n`, `sort -k`, `grep -r`, `tail -c`, and `ls -l` beyond the
+basic long form. Every one of them is refused by name, so a script asking for it
+fails rather than quietly getting something else.
+
+`tail -c` is worth calling out because `head -c` now exists: head counts bytes
+and tail does not, and the asymmetry is deliberate rather than overlooked --
+claiming both would be the kind of thing a script discovers the hard way.
+
+Filling in the rest is v1.1; see
 `docs/design/v1-scope.md` and the per-applet tables in
 `docs/testing/applet-test-inventory.md`.
 

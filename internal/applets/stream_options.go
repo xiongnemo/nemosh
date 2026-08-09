@@ -17,19 +17,28 @@ import (
 // A `--` ends option parsing and a lone `-` is an operand, which is what getopt
 // does and what busybox inherits from it.
 func streamOperands(applet string, args []string, supported ...string) ([]string, error) {
+	_, paths, err := streamOptionsAndOperands(applet, args, supported...)
+	return paths, err
+}
+
+// streamOptionsAndOperands is the same walk, but reports which of the supported
+// spellings were actually given. A caller that merely tolerates its options can
+// use streamOperands and ignore them; one that acts on them needs to know.
+func streamOptionsAndOperands(applet string, args []string, supported ...string) (given []string, paths []string, err error) {
 	for index, arg := range args {
 		if arg == "--" {
-			return args[index+1:], nil
+			return given, args[index+1:], nil
 		}
 		if len(arg) < 2 || arg[0] != '-' {
-			return args[index:], nil
+			return given, args[index:], nil
 		}
 		if containsString(supported, arg) {
+			given = append(given, arg)
 			continue
 		}
-		return nil, unsupportedStreamOption(applet, arg, supported)
+		return nil, nil, unsupportedStreamOption(applet, arg, supported)
 	}
-	return nil, nil
+	return given, nil, nil
 }
 
 func unsupportedStreamOption(applet, arg string, supported []string) error {

@@ -78,17 +78,25 @@ func invalidOption(letter byte) error {
 // is not two used to fail silently, so `cp one.txt` and `cp a b c` both exited
 // 1 with nothing said about which of them was wrong.
 func twoOperands(args []string) ([]string, error) {
-	_, operands, err := parseAppletOptions(args, "", "")
+	_, operands, err := twoOperandsWithOptions(args, "")
+	return operands, err
+}
+
+// twoOperandsWithOptions is the same shape for the two applets that do take
+// options: cp needs -r and mv needs -f, and both still want exactly a source and
+// a destination once those are removed.
+func twoOperandsWithOptions(args []string, short string) (appletOptions, []string, error) {
+	options, operands, err := parseAppletOptions(args, short, "")
 	if err != nil {
-		return nil, err
+		return options, nil, err
 	}
 	switch {
 	case len(operands) < 2:
-		return nil, missingOperand()
+		return options, nil, missingOperand()
 	case len(operands) > 2:
-		return nil, fmt.Errorf("extra operand '%s'", operands[2])
+		return options, nil, fmt.Errorf("extra operand '%s'", operands[2])
 	}
-	return operands, nil
+	return options, operands, nil
 }
 
 func containsByte(set string, letter byte) bool {

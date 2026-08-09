@@ -29,15 +29,18 @@ func TestComplete_prefixesADashLeadingOperand(t *testing.T) {
 			files: []string{"-1.18-windows.xml"},
 			want:  `ls ./-1.18-windows.xml `,
 		},
+		// A prefix no option matches, so the fallback to paths is what answers.
+		// A bare `-` would not do: cat takes -n, and an option that matches wins
+		// over a file, which is the rule and is tested next door.
 		{
-			name:  "from an empty word",
-			keys:  "cat -\t\r",
+			name:  "a dash-leading file",
+			keys:  "cat -o\t\r",
 			files: []string{"-only.txt"},
 			want:  `cat ./-only.txt `,
 		},
 		{
 			name:  "a shared prefix is prefixed once",
-			keys:  "cat -\t\r",
+			keys:  "cat -a\t\r",
 			files: []string{"-alpha.txt", "-alpine.txt"},
 			want:  `cat ./-alp`,
 		},

@@ -16,7 +16,7 @@ type pathOperand struct {
 
 func newCpApplet() Applet {
 	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		operands, err := twoOperands(args)
+		options, operands, err := twoOperandsWithOptions(args, "rR")
 		if err != nil {
 			return err
 		}
@@ -24,13 +24,26 @@ func newCpApplet() Applet {
 		if err != nil {
 			return err
 		}
+		// A directory needs -r, and saying so is the whole of the difference:
+		// without it busybox answers `omitting directory` and exits 1 rather
+		// than copying something else.
+		if info, statErr := os.Lstat(source.host); statErr == nil && info.IsDir() {
+			if !options.has('r') && !options.has('R') {
+				return omittingDirectory(source.operand)
+			}
+			return copyTree(source, dest)
+		}
 		return copyFile(source, dest)
 	}}
 }
 
 func newMvApplet() Applet {
 	return simpleApplet{name: "mv", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		operands, err := twoOperands(args)
+		// -f is accepted and changes nothing, because nothing here prompts:
+		// this mv overwrites its destination either way, so -f asks for the
+		// behaviour already in force. Scripts carry it constantly, and refusing
+		// it made them fail at a request that was already granted.
+		_, operands, err := twoOperandsWithOptions(args, "f")
 		if err != nil {
 			return err
 		}

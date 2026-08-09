@@ -12,18 +12,21 @@ import (
 )
 
 // An option these applets do not implement used to be handed to the file opener,
-// so `cat -n f` reported `cat: cannot open '-n': No such file or directory`. The
+// so `cat -b f` reported `cat: cannot open '-b': No such file or directory`. The
 // failure was loud but named the wrong cause, sending the reader after a file
 // that was never meant to be one.
+//
+// `cat -n` and `head -c` were on this list until they were implemented, which is
+// the right way for a row to leave it. `tail -c` is still here: head counts bytes
+// and tail does not, and claiming otherwise would be the kind of asymmetry a
+// script discovers the hard way.
 func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 	for _, test := range []struct {
 		applet string
 		args   []string
 	}{
-		{applet: "cat", args: []string{"-n"}},
 		{applet: "cat", args: []string{"-b"}},
 		{applet: "cat", args: []string{"-A", "f.txt"}},
-		{applet: "head", args: []string{"-c", "3"}},
 		{applet: "head", args: []string{"-q", "f.txt"}},
 		{applet: "tail", args: []string{"-c", "3"}},
 		{applet: "tail", args: []string{"-f", "f.txt"}},

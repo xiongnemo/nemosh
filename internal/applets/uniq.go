@@ -37,16 +37,20 @@ func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 		}
 		return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", err))
 	}
-	return writeUniqLines(stdout, collapseAdjacentLines(lines))
+	return writeUniqLines(stdout, collapseAdjacentLines(lines, input.count))
 }
 
 type uniqInput struct {
 	path    string
 	hasPath bool
+	// count prefixes each run with how many lines it collapsed, which is what
+	// makes `sort | uniq -c | sort -rn` -- the tally everyone writes -- work.
+	count bool
 }
 
 func parseUniqArgs(args []string) (uniqInput, error) {
 	var operands []string
+	count := false
 	for index := range len(args) {
 		arg := args[index]
 		if arg == "--" {
@@ -63,6 +67,10 @@ func parseUniqArgs(args []string) (uniqInput, error) {
 			return uniqInput{}, fmt.Errorf("uniq: unrecognized option %s", arg)
 		}
 		for _, flag := range arg[1:] {
+			if flag == 'c' {
+				count = true
+				continue
+			}
 			return uniqInput{}, fmt.Errorf("uniq: invalid option -- %c", flag)
 		}
 	}
@@ -71,9 +79,9 @@ func parseUniqArgs(args []string) (uniqInput, error) {
 		return uniqInput{}, errors.New("uniq: too many operands")
 	}
 	if len(operands) == 0 || operands[0] == "-" {
-		return uniqInput{}, nil
+		return uniqInput{count: count}, nil
 	}
-	return uniqInput{path: operands[0], hasPath: true}, nil
+	return uniqInput{path: operands[0], hasPath: true, count: count}, nil
 }
 
 func readUniqInput(ctx context.Context, view ProcessView, input uniqInput, stdin io.Reader) ([]string, error) {
@@ -112,19 +120,37 @@ func readUniqLines(input io.Reader) ([]string, error) {
 	}
 }
 
-func collapseAdjacentLines(lines []string) []string {
+// collapseAdjacentLines keeps one of each run of equal lines, and under -c
+// prefixes it with the size of the run.
+//
+// The layout is busybox's, which is GNU's: the count right-aligned in seven
+// columns and then a blank, so a column of tallies lines up.
+func collapseAdjacentLines(lines []string, count bool) []string {
 	if len(lines) == 0 {
 		return nil
 	}
 	collapsed := make([]string, 0, len(lines))
 	previous := ""
+	run := 0
+	flush := func() {
+		if run == 0 {
+			return
+		}
+		if count {
+			collapsed = append(collapsed, fmt.Sprintf("%7d %s", run, previous))
+			return
+		}
+		collapsed = append(collapsed, previous)
+	}
 	for index, line := range lines {
 		if index > 0 && line == previous {
+			run++
 			continue
 		}
-		collapsed = append(collapsed, line)
-		previous = line
+		flush()
+		previous, run = line, 1
 	}
+	flush()
 	return collapsed
 }
 

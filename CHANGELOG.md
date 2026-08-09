@@ -86,6 +86,15 @@ patch number is the commits since that tag.
   process is elevated and the Administrators group is enabled in its token.
 - `export` with no operands, and `export -p`, list exported variables. Both
   printed nothing before ([#10](https://github.com/xiongnemo/nemosh/issues/10)).
+- **`cp -r`.** Copying a directory was the one thing this bundle could not do at
+  all, by any combination of applets. Without `-r` a directory now answers
+  `cp: omitting directory 'src'` and exits 1; with it, a destination that does
+  not exist *becomes* the copy and one that already exists takes it underneath —
+  measured against busybox rather than assumed.
+- `cat -n`, `head -c`, `uniq -c`, `basename -a`, and `mv -f`, all matching
+  busybox's output byte for byte. `tail -c` is deliberately still refused: head
+  counts bytes and tail does not, and claiming otherwise is the kind of thing a
+  script discovers the hard way.
 - `ls -1`, which busybox has and which is among the most-typed options there is.
   This `ls` always writes one entry per line, so `-1` asks for the format
   already in use; `-C` stays refused, because columns are genuinely absent.

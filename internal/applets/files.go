@@ -40,14 +40,17 @@ func copyWithContext(ctx context.Context, stdout io.Writer, stdin io.Reader) (in
 func newCatApplet() Applet     { return catApplet{} }
 func (catApplet) Name() string { return "cat" }
 func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-	// cat implements no options here, so any operand that looks like one is
-	// refused by name instead of being opened as a file and reported missing.
-	paths, err := streamOperands("cat", args)
+	// An option cat does not implement is refused by name instead of being
+	// opened as a file and reported missing.
+	given, paths, err := streamOptionsAndOperands("cat", args, "-n")
 	if err != nil {
 		return err
 	}
+	// -n numbers every line across all the operands, not per file, which is what
+	// makes `cat -n a b` read as one document.
+	number := &lineNumberer{on: containsString(given, "-n")}
 	if len(paths) == 0 {
-		_, err := copyWithContext(ctx, stdout, stdin)
+		_, err := number.copy(ctx, stdout, stdin)
 		return err
 	}
 	view := ProcessViewFromContext(ctx)
@@ -56,7 +59,7 @@ func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 		if err != nil {
 			return cannotOpen(path, err)
 		}
-		_, copyErr := copyWithContext(ctx, stdout, file)
+		_, copyErr := number.copy(ctx, stdout, file)
 		closeErr := file.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
 			return err
