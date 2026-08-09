@@ -33,7 +33,14 @@ func (r Runtime) ExpandPromptString(ctx context.Context, text string, lastStatus
 	if text == "" {
 		return ""
 	}
-	tokens, err := scanShellTokens(`"` + escapeForPromptQuoting(text) + `"`)
+	// Backquotes are rewritten to $(...) first, which is what parseScript does
+	// for a script. A prompt does not go through parseScript, so without this a
+	// PS1 of "`git branch`" showed its own backquotes instead of running.
+	rewritten, err := rewriteBackquotes(text)
+	if err != nil {
+		return text
+	}
+	tokens, err := scanShellTokens(`"` + escapeForPromptQuoting(rewritten) + `"`)
 	if err != nil || len(tokens) != 1 || tokens[0].parsed == nil {
 		// An unbalanced quote or substitution is the user's, and a prompt is a
 		// bad place to fail: show the text as written rather than nothing.

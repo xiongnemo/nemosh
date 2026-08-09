@@ -25,7 +25,7 @@ func TestRuntime_childExecutionCopiesDoNotOverwriteInteractiveStatus(t *testing.
 			if err != nil {
 				t.Fatal(err)
 			}
-			r.commandSubstitutionScript(context.Background(), prepared)
+			r.commandSubstitutionScript(context.Background(), prepared, 0)
 			return 0
 		}},
 	}

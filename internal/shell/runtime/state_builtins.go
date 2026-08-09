@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
@@ -19,6 +20,12 @@ func (r Runtime) pwd() int {
 }
 
 func (r Runtime) export(args []string) int {
+	// No operands, or -p, lists what is exported. POSIX specifies the -p form;
+	// busybox lists for both, and a shell that prints nothing leaves a user no
+	// way to see the environment at all (nemosh issue #10).
+	if len(args) == 0 || (len(args) == 1 && args[0] == "-p") {
+		return r.listExported()
+	}
 	for _, arg := range args {
 		name, value, hasValue := strings.Cut(arg, "=")
 		if name == "" {
@@ -136,4 +143,25 @@ func (r Runtime) setDirectoryVariable(name, value string) {
 	r.vars[name] = value
 	r.env.Set(name, value)
 	r.markVarMutation(name)
+}
+
+// listExported writes every exported variable as `export NAME='value'`.
+//
+// Quoted for reuse, which is what POSIX means by writing them "in a form that
+// can be reused as input" -- singleQuoteForReuse is the same helper `alias`
+// uses, so a value carrying a quote comes back correct from either.
+//
+// Sorted by name, so two runs of the same script produce the same output and a
+// difference between them means something.
+func (r Runtime) listExported() int {
+	entries := r.env.Environ()
+	sort.Strings(entries)
+	for _, entry := range entries {
+		name, value, found := strings.Cut(entry, "=")
+		if !found || name == "" {
+			continue
+		}
+		fmt.Fprintf(r.streams.Stdout, "export %s=%s\n", name, singleQuoteForReuse(value))
+	}
+	return 0
 }

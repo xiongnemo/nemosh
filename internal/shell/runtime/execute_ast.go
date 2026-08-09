@@ -11,6 +11,18 @@ func (r Runtime) executeTypedScript(ctx context.Context, script Script) (int, fl
 	return r.executeProgram(ctx, script.program, 0)
 }
 
+// executeTypedScriptFrom runs a script whose `$?` starts at a status decided by
+// the caller rather than at zero.
+//
+// A command substitution needs this. Its script is a separate execution, so it
+// used to begin at zero however the shell was doing, and `$(echo $?)` answered
+// zero even when the previous command had failed. That is how a prompt like
+// `$(prompt_info $?)` -- which every startup file with a failure indicator uses
+// -- silently lost the exit code it exists to show.
+func (r Runtime) executeTypedScriptFrom(ctx context.Context, script Script, savedStatus int) (int, flowControl) {
+	return r.executeProgram(ctx, script.program, savedStatus)
+}
+
 func (r Runtime) executeProgram(ctx context.Context, program []programNode, savedStatus int) (int, flowControl) {
 	status := savedStatus
 	for _, item := range program {

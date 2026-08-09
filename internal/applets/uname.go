@@ -161,20 +161,26 @@ func allUnameFlags() unameFlag {
 	return flags
 }
 
+// unameUnknown is what a field says when the platform will not answer. busybox
+// uses the same word, and inventing a value would be worse than admitting the
+// gap -- the rule the rest of this shell follows.
+const unameUnknown = "unknown"
+
 func hostUnameInfo() unameInfo {
 	nodename, err := os.Hostname()
 	if err != nil || nodename == "" {
-		nodename = "unknown"
+		nodename = unameUnknown
 	}
 	machine := unameMachine(runtime.GOARCH)
+	release, version := osReleaseAndVersion()
 	return unameInfo{
 		sysname:   unameSysname(runtime.GOOS),
 		nodename:  nodename,
-		release:   "unknown",
-		version:   "unknown",
+		release:   release,
+		version:   version,
 		machine:   machine,
-		processor: "unknown",
-		platform:  "unknown",
+		processor: unameUnknown,
+		platform:  unameUnknown,
 		os:        unameOS(runtime.GOOS),
 	}
 }

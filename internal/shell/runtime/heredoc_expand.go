@@ -27,7 +27,7 @@ func (r Runtime) expandHeredocBody(ctx context.Context, body string, savedStatus
 			if ok {
 				script, err := ParseScript(body[index+2 : end])
 				if err == nil {
-					expanded.WriteString(r.commandSubstitutionScript(ctx, script))
+					expanded.WriteString(r.commandSubstitutionScript(ctx, script, savedStatus))
 					index = end + 1
 					continue
 				}

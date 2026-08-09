@@ -104,7 +104,7 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			contributed = true
 		case wordPartCommandSubstitution:
 			if part.script != nil {
-				output := r.commandSubstitutionScript(ctx, *part.script)
+				output := r.commandSubstitutionScript(ctx, *part.script, savedStatus)
 				var produced bool
 				fields, produced = r.appendExpansion(fields, output, part.quote)
 				contributed = contributed || produced
@@ -246,7 +246,7 @@ func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
 	return []string{value}
 }
 
-func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script) string {
+func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, savedStatus int) string {
 	var stdout bytes.Buffer
 	child, err := r.snapshot(ctx)
 	if err != nil {
@@ -261,7 +261,7 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script) s
 	}
 	child = child.withFDTable(table)
 	child.traps = map[trapName]string{}
-	child.executePrepared(ctx, script)
+	child.executeTypedScriptFrom(ctx, script, savedStatus)
 	child.jobScope.cancelAndDrain()
 	if err := table.closeAll(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
