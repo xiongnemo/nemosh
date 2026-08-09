@@ -5,6 +5,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -35,27 +36,53 @@ func TestBackgroundJobs_slotIsFreedWhenTheJobFinishes(t *testing.T) {
 	// Given
 	rt, _, stderr := newStressRuntime(t)
 
-	// When: well past maxJobs, none of them waited for, each finishing at once
-	const jobs = maxJobs * 3
-	for range jobs {
-		if status := rt.RunScript(context.Background(), "true &\n"); status != 0 {
-			t.Fatalf("starting a background job exited %d, stderr = %q", status, stderr.String())
+	// When: fill the limit, let the jobs finish without waiting for them, and
+	// fill it again -- three times over, so 128 of the 192 jobs can only start
+	// if a finished job gave its slot back.
+	//
+	// Letting them finish is the assertion, not a convenience. The limit bounds
+	// jobs that are still *running*, so a burst that outruns the scheduler is
+	// entitled to be refused -- on a two-core runner the loop below can queue 64
+	// jobs before any of their goroutines is scheduled at all, which is what
+	// made an earlier version of this test fail in CI and pass everywhere else.
+	// What must never happen is a slot staying spent after its job is over.
+	for round := range 3 {
+		for range maxJobs {
+			if status := rt.RunScript(context.Background(), "true &\n"); status != 0 {
+				t.Fatalf("round %d: starting a background job exited %d, stderr = %q", round, status, stderr.String())
+			}
 		}
+		awaitFinishedJobs(t, rt)
 	}
 
 	// Then
-	if strings.Contains(stderr.String(), "job limit reached") {
-		t.Fatalf("the job limit was hit after finished jobs should have freed their slots; stderr = %q", stderr.String())
-	}
-
-	// And: a further job still starts, which is the failure a session would
-	// actually notice.
-	stderr.Reset()
-	if status := rt.RunScript(context.Background(), "true &\nwait\n"); status != 0 {
-		t.Fatalf("a background job after %d earlier ones exited %d, stderr = %q", jobs, status, stderr.String())
-	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+// awaitFinishedJobs blocks until every job in the scope has completed, without
+// calling `wait` -- `wait` releases the slots itself, which is the very thing
+// under test here.
+func awaitFinishedJobs(t *testing.T, rt Runtime) {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		pending := 0
+		for _, record := range rt.jobScope.snapshot() {
+			select {
+			case <-record.done:
+			default:
+				pending++
+			}
+		}
+		if pending == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("%d background jobs never finished", pending)
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 
