@@ -59,6 +59,11 @@ patch number is the commits since that tag.
   busybox do, and reports every failure. The diagnostic names the file rather
   than the operand (`cannot remove 'b/held.exe'`, not `'b'`), and a directory
   left non-empty by a failure below it is not reported a second time.
+- **`rm` refuses a directory without `-r`.** It deleted an empty one, because
+  `os.Remove` unlinks a directory without complaint — so the shell was more
+  destructive than the reference it follows. `rm d` and `rm -f d` now both
+  answer `rm: 'd' is a directory` and exit 1, as busybox and POSIX do; `-f`
+  never excused it there either.
 - **A finished background job frees its slot.** A slot was released only by
   `wait`, and a script need never call it, so the 65th `foo &` in a session was
   refused with `job limit reached` and so was every one after it, permanently.

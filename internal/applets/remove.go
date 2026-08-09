@@ -71,6 +71,20 @@ func removeOne(native, display string, stderr io.Writer) bool {
 	return true
 }
 
+// Without -r a directory is refused whether or not it is empty, and -f does not
+// excuse it: busybox reaches this before it consults FILEUTILS_FORCE
+// (libbb/remove_file.c:35), and POSIX says the same. Worth stating because
+// os.Remove would unlink an empty directory without complaint, which made this
+// shell more destructive than the reference it follows.
+//
+// The sentence has no colon, unlike every other diagnostic here, because
+// busybox builds it with bb_error_msg rather than bb_perror_msg -- there is no
+// errno to append.
+func reportIsADirectory(stderr io.Writer, display string) bool {
+	fmt.Fprintf(stderr, "rm: '%s' is a directory\n", display)
+	return false
+}
+
 // The wording is the applet's own rather than the shell's, because the shell
 // only prints a diagnostic for an error an applet returns, and an applet that
 // reports several has to return a bare status instead. Routing through

@@ -84,7 +84,8 @@ func removeOperand(native, display string, recursive, force bool, stderr io.Writ
 	if recursive {
 		return removeTree(native, display, force, stderr)
 	}
-	if err := os.Remove(native); err != nil {
+	info, err := os.Lstat(native)
+	if err != nil {
 		// -f is silent about what was not there to begin with, which is what
 		// makes `rm -f build.out` usable in a cleanup script.
 		if force && errors.Is(err, fs.ErrNotExist) {
@@ -93,7 +94,12 @@ func removeOperand(native, display string, recursive, force bool, stderr io.Writ
 		reportRemoveFailure(stderr, display, err)
 		return false
 	}
-	return true
+	// Lstat rather than Stat, so a symlink to a directory is unlinked instead
+	// of being refused -- the link is not a directory, whatever it points at.
+	if info.IsDir() {
+		return reportIsADirectory(stderr, display)
+	}
+	return removeOne(native, display, stderr)
 }
 
 // mkdir takes -p and -m, the two options busybox's getopt32long string carries
