@@ -63,6 +63,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **File completion works in a real session at all.** The editor was handed the
+  shell's own view of the working directory — `/c/Users/...` on Windows — which
+  `os.ReadDir` cannot open, so completing a filename found nothing from the
+  first prompt onwards, however correct the rest of it was. Every test built the
+  editor with a native path, so the two vocabularies never met.
 - **An operator where a word belongs no longer crashes the shell.**
   `for i in a|b; do :; done` panicked on a nil dereference, taking the session
   with it, and so did `case | in x) :;; esac` and a redirect inside a case

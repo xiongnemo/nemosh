@@ -31,8 +31,10 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 
 	for {
 		// Completion follows `cd`, so the directory is refreshed each round
-		// rather than captured once when the editor was built.
-		editor.workingDirectory = rt.WorkingDirectory()
+		// rather than captured once when the editor was built. It is asked for
+		// in native form: WorkingDirectory answers in the shell's view, which
+		// os.ReadDir cannot open on Windows.
+		editor.workingDirectory = completionDirectory(rt)
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
 		line, err := editor.readLine(ctx, prompt)
 		if ctx.Err() != nil {
