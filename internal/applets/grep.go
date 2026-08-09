@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 )
 
 func newGrepApplet() Applet {
@@ -83,8 +84,40 @@ func (o grepOptions) patternPrefix() string {
 func grepArgs(args []string) (grepOptions, string, []string, error) {
 	var options grepOptions
 	index := 0
-	for index < len(args) && len(args[index]) > 1 && args[index][0] == '-' {
-		for _, flag := range args[index][1:] {
+	for index < len(args) {
+		arg := args[index]
+		if arg == "--" {
+			index++
+			break
+		}
+		if len(arg) <= 1 || arg[0] != '-' {
+			break
+		}
+		// A long option is one word, matched whole rather than letter by letter.
+		// Without this `--color=auto` was read as the flags `-`, `-c`, `-o`, ...
+		// and refused as the bare `-` it began with, so the diagnostic said
+		// `unsupported grep option: --` and named nothing the user had typed.
+		// ls had the same defect and the same fix; grep never got it.
+		if strings.HasPrefix(arg, "--") {
+			name, value, present := strings.Cut(arg[2:], "=")
+			if name != "color" {
+				return grepOptions{}, "", nil, fmt.Errorf("unsupported grep option: %s", arg)
+			}
+			// Accepted and ignored, which is exactly what busybox does: its
+			// option table maps --color to a pseudo-flag with a NULL sink
+			// (findutils/grep.c:728) and nothing reads it. The option exists so
+			// that `alias grep='grep --color=auto'`, which everyone copies from
+			// a GNU system, does not break the shell it is pasted into.
+			//
+			// The value is still checked, unlike busybox, so a typo is refused
+			// rather than silently swallowed by an option that does nothing.
+			if _, err := parseColorWhen(value, present); err != nil {
+				return grepOptions{}, "", nil, err
+			}
+			index++
+			continue
+		}
+		for _, flag := range arg[1:] {
 			switch flag {
 			case 'i':
 				options.ignoreCase = true

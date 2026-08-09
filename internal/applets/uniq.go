@@ -57,6 +57,11 @@ func parseUniqArgs(args []string) (uniqInput, error) {
 			operands = append(operands, arg)
 			continue
 		}
+		// See sort: a long option read letter by letter names the `-` it begins
+		// with rather than the option that was actually typed.
+		if strings.HasPrefix(arg, "--") {
+			return uniqInput{}, fmt.Errorf("uniq: unrecognized option %s", arg)
+		}
 		for _, flag := range arg[1:] {
 			return uniqInput{}, fmt.Errorf("uniq: invalid option -- %c", flag)
 		}

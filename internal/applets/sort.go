@@ -62,6 +62,13 @@ func parseSortArgs(args []string) (sortOptions, error) {
 			options.paths = append(options.paths, arg)
 			continue
 		}
+		// A long option is one word. Read letter by letter it reports the `-` it
+		// begins with, so `--nonsense` came back as `invalid option -- -`, which
+		// names nothing the user wrote. sort has no long options to accept; it
+		// only has to say which one it is refusing.
+		if strings.HasPrefix(arg, "--") {
+			return sortOptions{}, fmt.Errorf("sort: unrecognized option %s", arg)
+		}
 		for _, flag := range arg[1:] {
 			switch flag {
 			case 'n':
