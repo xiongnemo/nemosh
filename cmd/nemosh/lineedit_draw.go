@@ -89,17 +89,20 @@ func (e *lineEditor) complete(prompt string) {
 	prefix := e.buffer.currentWordPrefix()
 
 	var matches []string
+	var areOptions bool
 	operand := !completesCommand(prefix)
 	if operand {
-		matches = completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
+		matches, areOptions = completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
 	} else {
 		matches = completeCommand(stem, e.commands.candidates())
 	}
-	// Only an operand is rewritten, and only on the way in. The list below shows
-	// the names as they are on disk, because that is what the user is choosing
-	// between; `./` is a detail of making the choice runnable.
+	// Only a path is rewritten, and only on the way in. An option begins with a
+	// dash because that is what an option is, so prefixing it would turn
+	// `--color` into `./--color` -- the rule for making a filename usable,
+	// applied to the one word it was never about. The list below shows names as
+	// they are on disk, because that is what the reader is choosing between.
 	insert := func(text string) string {
-		if operand {
+		if operand && !areOptions {
 			text = disambiguateOperand(text)
 		}
 		return escapeForInsertion(text)

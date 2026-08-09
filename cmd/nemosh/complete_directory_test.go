@@ -54,11 +54,13 @@ func TestCompletionDirectory_isReadableByTheHost(t *testing.T) {
 	}
 
 	// And completion itself answers, which is the behaviour the user sees.
-	if got, want := completeOperand(where, "cd", ""), []string{"alpha/", "beta/"}; !slices.Equal(got, want) {
-		t.Fatalf("completeOperand = %v, want %v", got, want)
+	forCd, _ := completeOperand(where, "cd", "")
+	if want := []string{"alpha/", "beta/"}; !slices.Equal(forCd, want) {
+		t.Fatalf("completeOperand = %v, want %v", forCd, want)
 	}
-	if got, want := completeOperand(where, "cat", ""), []string{"alpha/", "beta/", "notes.txt"}; !slices.Equal(got, want) {
-		t.Fatalf("completeOperand = %v, want %v", got, want)
+	forCat, _ := completeOperand(where, "cat", "")
+	if want := []string{"alpha/", "beta/", "notes.txt"}; !slices.Equal(forCat, want) {
+		t.Fatalf("completeOperand = %v, want %v", forCat, want)
 	}
 }
 

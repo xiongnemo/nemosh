@@ -64,13 +64,17 @@ func completeCommand(prefix string, candidates []string) []string {
 // nothing, try the ordinary thing) and it is what keeps a file genuinely named
 // `-1.18-windows.xml` reachable: no option matches `-1.1`, so the file is
 // offered instead.
-func completeOperand(workingDirectory, command, prefix string) []string {
+// The second return says which kind came back, and the caller needs it: a
+// dash-leading *path* is rewritten to `./name` so the command does not read it as
+// options, and doing that to an actual option turns `--color` into `./--color`.
+// One rule for making a name usable, applied to the one kind of word it is about.
+func completeOperand(workingDirectory, command, prefix string) (matches []string, areOptions bool) {
 	if strings.HasPrefix(prefix, "-") {
 		if options := completeOption(command, prefix); len(options) > 0 {
-			return options
+			return options, true
 		}
 	}
-	return completePaths(workingDirectory, prefix, completesDirectoriesOnly(command))
+	return completePaths(workingDirectory, prefix, completesDirectoriesOnly(command)), false
 }
 
 // completeOption offers the options the command accepts, from the capability
