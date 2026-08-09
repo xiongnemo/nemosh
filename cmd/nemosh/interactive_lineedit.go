@@ -81,3 +81,17 @@ func currentWorkingDirectory() string {
 	}
 	return directory
 }
+
+// terminalColumns asks the screen how wide it is, when the screen is a terminal
+// at all. A pipe or a buffer has no width, and the caller falls back.
+func terminalColumns(screen io.Writer) int {
+	file, ok := screen.(*os.File)
+	if !ok {
+		return 0
+	}
+	columns, _, err := term.GetSize(int(file.Fd()))
+	if err != nil {
+		return 0
+	}
+	return columns
+}

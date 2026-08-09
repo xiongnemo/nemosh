@@ -30,7 +30,21 @@ type lineEditor struct {
 	// drawn is how many columns the last redraw put on screen, so the next one
 	// knows how much to erase.
 	drawn int
+	// drawnRows is how many rows below the prompt's the last redraw reached.
+	// Without it a wrapped line cannot be rewritten: `` returns to the start
+	// of the current row, not the row the prompt is on.
+	drawnRows int
+	// width reports the terminal's columns. Injectable so the redraw can be
+	// checked without a terminal, and defaulted rather than required so a
+	// stream that has no width still edits.
+	width func() int
 }
+
+// defaultTerminalColumns is used when the terminal will not say. Eighty is the
+// conventional answer and is wrong in a harmless direction: a line that does
+// not really wrap is redrawn as though it did, which costs a redundant cursor
+// move rather than corrupting anything.
+const defaultTerminalColumns = 80
 
 func newLineEditor(input io.Reader, screen io.Writer, workingDirectory string) *lineEditor {
 	return &lineEditor{
@@ -38,7 +52,21 @@ func newLineEditor(input io.Reader, screen io.Writer, workingDirectory string) *
 		screen:           screen,
 		workingDirectory: workingDirectory,
 		buffer:           newLineBuffer(),
+		width:            func() int { return terminalColumns(screen) },
 	}
+}
+
+// columnsOrDefault keeps the arithmetic safe when the terminal reports nothing
+// usable. A zero or negative width would divide by zero; a width of one would
+// put every character on its own row.
+func (e *lineEditor) columnsOrDefault() int {
+	if e.width == nil {
+		return defaultTerminalColumns
+	}
+	if columns := e.width(); columns > 1 {
+		return columns
+	}
+	return defaultTerminalColumns
 }
 
 // remember adds a line to the history. A blank line and a repeat of the
@@ -56,12 +84,20 @@ func (e *lineEditor) remember(line string) {
 
 func (e *lineEditor) entries() []string { return e.history }
 
+// resetDrawState declares that nothing of the previous drawing is on screen any
+// more. The two counters have to move together: keeping only the column count
+// would leave the next redraw climbing rows that are no longer its own.
+func (e *lineEditor) resetDrawState() {
+	e.drawn = 0
+	e.drawnRows = 0
+}
+
 // readLine draws prompt and returns when the user submits a line. io.EOF means
 // end of input -- Ctrl-D on an empty line, Ctrl-Z, or the stream running out.
 func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error) {
 	e.buffer = newLineBuffer()
 	e.recall = 0
-	e.drawn = 0
+	e.resetDrawState()
 	fmt.Fprint(e.screen, prompt)
 
 	for {
@@ -124,7 +160,7 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			e.complete(prompt)
 		case keyClearScreen:
 			fmt.Fprint(e.screen, "\033[H\033[2J")
-			e.drawn = 0
+			e.resetDrawState()
 			fmt.Fprint(e.screen, prompt)
 		}
 		e.redraw(prompt)

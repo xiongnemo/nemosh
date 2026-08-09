@@ -13,33 +13,53 @@ import (
 // breaks busybox's editor over CJK; rewriting makes the width question arise
 // once, in cursorColumns.
 //
-// Erasing uses the widest the line has ever been, so shrinking it -- a
-// backspace over a two-column character -- does not leave the tail on screen.
+// Wrapping is why this counts rows. A carriage return returns to the start of
+// the *current* row, so once the line is longer than the terminal the prompt's
+// row is above the cursor and rewriting from there would paint over the wrong
+// rows. The previous draw's row count is remembered and climbed back up.
 func (e *lineEditor) redraw(prompt string) {
-	// Measured with promptColumns, not textColumns: the prompt carries colour,
-	// and every byte of an escape sequence but the ESC itself is printable.
 	promptWidth := promptColumns(lastPromptLine(prompt))
-	line := e.buffer.String()
 	columns := e.buffer.columns()
+	width := e.columnsOrDefault()
 
 	var out strings.Builder
-	// To the start of the line, then past the prompt.
+	// Back up to the row the prompt is on, then to its start.
+	if e.drawnRows > 0 {
+		fmt.Fprintf(&out, "\033[%dA", e.drawnRows)
+	}
 	out.WriteString("\r")
 	if promptWidth > 0 {
 		fmt.Fprintf(&out, "\033[%dC", promptWidth)
 	}
-	out.WriteString(line)
-	// Erase whatever the previous, longer line left behind.
-	if e.drawn > columns {
-		out.WriteString(strings.Repeat(" ", e.drawn-columns))
+	out.WriteString(e.buffer.String())
+	// Erase to the end of the display rather than padding with spaces: a
+	// shrinking line can leave a tail on the rows below, and spaces would have
+	// to be counted across the wrap to reach it.
+	out.WriteString("\033[J")
+
+	// The cursor is now at the end of what was written. Move it to where it
+	// belongs, by row first and then by column.
+	endRow := (promptWidth + columns) / width
+	targetRow, targetColumn := e.cursorPosition(prompt)
+	if up := endRow - targetRow; up > 0 {
+		fmt.Fprintf(&out, "\033[%dA", up)
 	}
-	// Back to the start again, then out to where the cursor belongs.
 	out.WriteString("\r")
-	if target := promptWidth + e.buffer.cursorColumns(); target > 0 {
-		fmt.Fprintf(&out, "\033[%dC", target)
+	if targetColumn > 0 {
+		fmt.Fprintf(&out, "\033[%dC", targetColumn)
 	}
+
 	fmt.Fprint(e.screen, out.String())
 	e.drawn = columns
+	e.drawnRows = targetRow
+}
+
+// cursorPosition is where the terminal cursor belongs: how many rows below the
+// prompt's row, and how many columns across.
+func (e *lineEditor) cursorPosition(prompt string) (int, int) {
+	width := e.columnsOrDefault()
+	total := promptColumns(lastPromptLine(prompt)) + e.buffer.cursorColumns()
+	return total / width, total % width
 }
 
 // lastPromptLine is the part of the prompt the edited line shares a row with. A
@@ -98,5 +118,5 @@ func (e *lineEditor) listCandidates(matches []string, prompt string) {
 	fmt.Fprintln(e.screen)
 	fmt.Fprintln(e.screen, strings.Join(matches, "  "))
 	fmt.Fprint(e.screen, prompt)
-	e.drawn = 0
+	e.resetDrawState()
 }
