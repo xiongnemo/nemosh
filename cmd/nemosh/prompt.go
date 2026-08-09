@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/user"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
@@ -69,20 +69,27 @@ func currentPromptValues(rt runtime.Runtime) promptValues {
 	}
 }
 
+// promptUsername is `\u`, and it follows the shell's own identity rather than
+// the environment.
+//
+// bash and busybox both take `\u` from the passwd entry for the effective uid,
+// not from $USER. Reading the variable first is what made an elevated nemosh
+// disagree with itself: under gsudo `id -u` answered 0 and the prompt still read
+// `nemo`, because Windows leaves USERNAME alone when a process is elevated.
+// busybox says `root` there, and now so does this.
+//
+// The variables remain a fallback for the case the identity cannot be
+// determined at all, which is the only thing they were really covering.
 func promptUsername(rt runtime.Runtime) string {
+	if name := applets.CurrentUserName(); name != "" {
+		return name
+	}
 	for _, name := range []string{"USER", "USERNAME"} {
 		if value, present := rt.LookupVariable(name); present && value != "" {
 			return value
 		}
 	}
-	current, err := user.Current()
-	if err != nil {
-		return "user"
-	}
-	if _, name, found := strings.Cut(current.Username, `\`); found {
-		return name
-	}
-	return current.Username
+	return "user"
 }
 
 func promptHostname() string {

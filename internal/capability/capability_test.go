@@ -103,6 +103,10 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		"test": true, "[": true, "sleep": true, "env": true, "printenv": true,
 		"posixpath": true, "realpath": true, "winpath": true,
 		"chmod": true, "pwd": true, "sed": true,
+		// seq's operands are numbers and a negative number begins with a dash,
+		// so `-Z` is refused as a bad number rather than as a bad option --
+		// which is the right refusal, just not the one this test looks for.
+		"seq": true,
 		// find refuses it, but as an unsupported *expression* rather than an
 		// option, so the wording this test looks for is deliberately absent.
 		"find": true,

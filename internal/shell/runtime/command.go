@@ -65,7 +65,7 @@ var builtinNames = []string{
 	"exit", "export", "getopts", "help", "history", "jobs", "let", "local",
 	"pwd", "read",
 	"readonly", "return", "set", "shift", "source", "times", "trap", "type",
-	"umask", "unalias", "unset", "wait",
+	"umask", "unalias", "unset", "wait", "which",
 }
 
 func isRuntimeBuiltin(name string) bool {

@@ -64,18 +64,52 @@ type processIdentity struct {
 	group string
 }
 
-// currentIdentity answers with what the platform can actually say. The name
-// comes from the OS in both cases; only the number is synthesised on Windows.
+// rootUserName is what uid 0 is called.
+//
+// The name follows the number, which is busybox's model rather than an
+// invention of ours: getpwuid(0) answers "root" and getpwuid(DEFAULT_UID)
+// answers the Windows account name (win32/mingw.c:1313-1320). Windows has no
+// root account, so the name is exactly as synthetic as the number -- and it has
+// to be, because a prompt reading `nemo` while `id -u` reads 0 tells the reader
+// two different things about one process. Under gsudo that is what happened.
+const rootUserName = "root"
+
+// currentIdentity answers with what the platform can say, mapped through the
+// same rule `id -u` uses.
 func currentIdentity() processIdentity {
-	name := currentUserName()
+	name := CurrentUserName()
+	if name == "" {
+		name = "unknown"
+	}
 	uid := currentUserID()
 	return processIdentity{uid: uid, gid: uid, user: name, group: name}
 }
 
-func currentUserName() string {
+// CurrentUserName is the name belonging to this process's identity, or empty
+// when the platform cannot say.
+//
+// Exported because the prompt has to agree with `id`. bash and busybox both take
+// `\u` from the passwd entry for the effective uid rather than from $USER, which
+// is why an elevated busybox says root while USERNAME still says nemo.
+func CurrentUserName() string {
+	return identityName(currentUserID(), accountName())
+}
+
+// identityName is the mapping on its own, so it can be checked without being
+// elevated -- which is the only part of this a test could not otherwise reach.
+func identityName(uid int, account string) string {
+	if uid == 0 {
+		return rootUserName
+	}
+	return account
+}
+
+// accountName is what the operating system calls the logged-in user, empty when
+// it will not say.
+func accountName() string {
 	current, err := user.Current()
 	if err != nil || current.Username == "" {
-		return "unknown"
+		return ""
 	}
 	// Windows reports DOMAIN\user; the bare account name is what a prompt and a
 	// comparison both want.

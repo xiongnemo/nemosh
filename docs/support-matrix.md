@@ -57,7 +57,7 @@ Beyond POSIX, `history` and `set -o nocaseglob` are implemented, both following 
 
 ## Applets
 
-All 40 registered applets ship. **Name presence is not option parity**, and the
+All 46 registered applets ship. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
@@ -65,6 +65,7 @@ column that matters is the third one.
 | `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
 | `cat` | `-n` | refused by name |
 | `chmod` | numeric mode | refused by name |
+| `clear` | none | refused by name |
 | `cp` | `-r`, `-R` | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
@@ -78,6 +79,7 @@ column that matters is the third one.
 | `ln` | `-s` | refused by name |
 | `ls` | `-a -h -l -1`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
+| `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
@@ -88,15 +90,19 @@ column that matters is the third one.
 | `rm` | `-f -r` | refused by name |
 | `rmdir` | `-p -v` | refused by name |
 | `sed` | `s///` substitution | refused by name |
+| `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sort` | `-n -r` | refused by name |
 | `tail` | `-n` | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
+| `tee` | `-a` | refused by name |
 | `touch` | `-c` | refused by name |
+| `tr` | `-d -s -c`, ranges and backslash escapes; not classes | refused by name |
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
 | `uniq` | `-c` | refused by name |
 | `wc` | `-c -l -w` | refused by name |
+| `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
 | `xargs` | none | refused by name |
 | `yes` | none | treated as the string to repeat |

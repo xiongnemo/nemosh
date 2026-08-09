@@ -26,7 +26,7 @@ func TestCompleteCommand_reachesPath(t *testing.T) {
 		want   []string
 	}{
 		{name: "a program only PATH knows", prefix: "gi", want: []string{"git"}},
-		{name: "programs and applets together", prefix: "w", want: []string{"wait", "wc", "where", "winpath", "wsl"}},
+		{name: "programs and applets together", prefix: "w", want: []string{"wait", "wc", "where", "which", "whoami", "winpath", "wsl"}},
 		{name: "an alias this session defined", prefix: "ll", want: []string{"ll"}},
 		{name: "nothing at all", prefix: "zzzznosuch", want: nil},
 	} {

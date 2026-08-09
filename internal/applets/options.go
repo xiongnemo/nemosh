@@ -74,17 +74,10 @@ func invalidOption(letter byte) error {
 	return fmt.Errorf("invalid option -- '%c'", letter)
 }
 
-// twoOperands is the source-and-destination shape cp and mv take. A count that
-// is not two used to fail silently, so `cp one.txt` and `cp a b c` both exited
-// 1 with nothing said about which of them was wrong.
-func twoOperands(args []string) ([]string, error) {
-	_, operands, err := twoOperandsWithOptions(args, "")
-	return operands, err
-}
-
-// twoOperandsWithOptions is the same shape for the two applets that do take
-// options: cp needs -r and mv needs -f, and both still want exactly a source and
-// a destination once those are removed.
+// twoOperandsWithOptions is the source-and-destination shape cp and mv take,
+// once their own options are removed -- cp needs -r and mv needs -f. A count
+// that is not two used to fail silently, so `cp one.txt` and `cp a b c` both
+// exited 1 with nothing said about which of them was wrong.
 func twoOperandsWithOptions(args []string, short string) (appletOptions, []string, error) {
 	options, operands, err := parseAppletOptions(args, short, "")
 	if err != nil {

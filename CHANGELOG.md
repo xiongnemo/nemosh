@@ -86,6 +86,13 @@ patch number is the commits since that tag.
   process is elevated and the Administrators group is enabled in its token.
 - `export` with no operands, and `export -p`, list exported variables. Both
   printed nothing before ([#10](https://github.com/xiongnemo/nemosh/issues/10)).
+- **`tr`, `tee`, `seq`, `clear`, `whoami`, `mktemp`, and a `which` builtin.**
+  Measured, a clean Windows machine ships only `certutil`, `clip`, `curl`, `fc`,
+  `findstr`, `more`, `robocopy`, `tar`, `timeout`, `where` and `whoami` — every
+  one of these was simply unavailable there. `tr -d '\r'` matters twice over on
+  Windows, since nothing else in the bundle strips a carriage return. `which` is
+  a builtin rather than an applet so that its answer is the shell's own lookup
+  and cannot disagree with what typing the name would run.
 - **`cp -r`.** Copying a directory was the one thing this bundle could not do at
   all, by any combination of applets. Without `-r` a directory now answers
   `cp: omitting directory 'src'` and exits 1; with it, a destination that does
@@ -136,6 +143,13 @@ patch number is the commits since that tag.
   destructive than the reference it follows. `rm d` and `rm -f d` now both
   answer `rm: 'd' is a directory` and exit 1, as busybox and POSIX do; `-f`
   never excused it there either.
+- **An elevated shell calls itself root.** Under gsudo, `id -u` answered 0 while
+  every name still came from the Windows account, so `id` read `uid=0(nemo)` and
+  a prompt using `\u` read `nemo` beside a `\$` reading `%` — one process giving
+  two answers about itself. The name now follows the number, as busybox's does:
+  `getpwuid(0)` is `root` there and the account name otherwise. `\u` takes it
+  from the identity rather than from `$USERNAME`, which Windows leaves untouched
+  when a process is elevated.
 - **A finished background job frees its slot.** A slot was released only by
   `wait`, and a script need never call it, so the 65th `foo &` in a session was
   refused with `job limit reached` and so was every one after it, permanently.
