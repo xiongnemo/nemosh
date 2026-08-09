@@ -54,10 +54,20 @@ func completeCommand(prefix string) []string {
 	return slicesCompact(matches)
 }
 
-// completeFile offers paths under the shell's working directory. A directory
-// comes back with a trailing slash, so a second Tab descends into it rather
-// than stopping at a name that needs a separator typed by hand.
+// completeOperand offers what the command in progress can actually take.
+func completeOperand(workingDirectory, command, prefix string) []string {
+	return completePaths(workingDirectory, prefix, operandKind(command) == completeDirectory)
+}
+
+// completeFile offers any path under the shell's working directory.
 func completeFile(workingDirectory, prefix string) []string {
+	return completePaths(workingDirectory, prefix, false)
+}
+
+// completePaths does the reading. A directory comes back with a trailing slash,
+// so a second Tab descends into it rather than stopping at a name that needs a
+// separator typed by hand.
+func completePaths(workingDirectory, prefix string, directoriesOnly bool) []string {
 	directory, stem := path.Split(filepath.ToSlash(prefix))
 	searchIn := workingDirectory
 	if directory != "" {
@@ -70,11 +80,13 @@ func completeFile(workingDirectory, prefix string) []string {
 	var matches []string
 	for _, entry := range entries {
 		name := entry.Name()
-		if !strings.HasPrefix(name, stem) {
+		if !completionMatches(name, stem) {
 			continue
 		}
 		if entry.IsDir() {
 			name += "/"
+		} else if directoriesOnly {
+			continue
 		}
 		matches = append(matches, directory+name)
 	}

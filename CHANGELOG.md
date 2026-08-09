@@ -21,6 +21,17 @@ patch number is the commits since that tag.
 - **Tab completion** over builtins, applets, and file paths. A single candidate
   is inserted and followed by a blank, except after a directory; several insert
   only what they share and are listed.
+- **Completion knows what a command can take.** `cd`, `mkdir` and `rmdir` offer
+  directories only, so `cd al` completes to `alpha/` instead of stopping at the
+  `alp` it shares with `alpine.txt`. busybox has this rule for `cd` alone and
+  spells it out inline; here the command name is looked up.
+- **A completed name is usable.** Blanks and shell metacharacters are escaped on
+  insertion and unescaped before matching, so `cd Prog` produces
+  `cd Program\ Files/` — one operand — and a second Tab continues from it.
+- **Completion ignores case on Windows**, because NTFS does. `cd prog` offers
+  `Program Files/`, spelled as it is on disk.
+- `docs/design/completion.md` records how ash, bash and zsh each solve this and
+  which of their ideas this shell took.
 - **Backspace over a wide character removes all of it.** The editor edits by
   rune and measures by column, which busybox's own editor conflates — there,
   backspacing over a two-column CJK character leaves half of it on screen.

@@ -129,12 +129,28 @@ func (b *lineBuffer) deleteWord() {
 // the cursor `"cd "`, which was completed as a command name, and nothing is
 // called `"cd "` -- so the commonest gesture there is, a blank and then Tab, did
 // nothing whatever.
+// Scanned forwards rather than backwards, because an escape is only readable in
+// that direction: walking back from the cursor, the blank in `My\ Documents`
+// looks exactly like the one in `cd My`, and the word would be cut in half at a
+// blank the user had already said was part of the name. busybox has the same
+// problem and solves it the same way round, marking every `\c` before it looks
+// for boundaries (libbb/lineedit.c:1155).
 func (b *lineBuffer) completionStart() int {
-	index := b.cursor
-	for index > 0 && b.runes[index-1] != ' ' {
-		index--
+	start := 0
+	escaped := false
+	for index := 0; index < b.cursor; index++ {
+		if escaped {
+			escaped = false
+			continue
+		}
+		switch b.runes[index] {
+		case '\\':
+			escaped = true
+		case ' ':
+			start = index + 1
+		}
 	}
-	return index
+	return start
 }
 
 // currentWord is the text between the last blank and the cursor, which is what

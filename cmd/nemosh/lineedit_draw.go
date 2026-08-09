@@ -77,27 +77,35 @@ func lastPromptLine(prompt string) string {
 // only what they share, and are listed: taking the user as far as the choice
 // actually is, without choosing for them.
 func (e *lineEditor) complete(prompt string) {
-	word := e.buffer.currentWord()
+	// The word as typed and the word as a filename are not the same string once
+	// a blank has been escaped: on screen `My\ Do`, on disk `My Do`. Matching
+	// uses the second, and replacing uses the first, because that is what is
+	// actually on screen to be deleted.
+	typed := e.buffer.currentWord()
+	stem := unescapeTypedWord(typed)
+	prefix := e.buffer.currentWordPrefix()
+
 	var matches []string
-	if completesCommand(e.buffer.currentWordPrefix()) {
-		matches = completeCommand(word)
+	if completesCommand(prefix) {
+		matches = completeCommand(stem)
 	} else {
-		matches = completeFile(e.workingDirectory, word)
+		matches = completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
 	}
 	if len(matches) == 0 {
 		return
 	}
 	if len(matches) == 1 {
-		e.replaceWord(word, matches[0])
+		e.replaceWord(typed, escapeForInsertion(matches[0]))
 		if !strings.HasSuffix(matches[0], "/") {
 			e.buffer.insert(' ')
 		}
 		return
 	}
-	shared := longestSharedPrefix(matches)
-	if len(shared) > len(word) {
-		e.replaceWord(word, shared)
+	if shared := longestSharedPrefix(matches); len(shared) > len(stem) {
+		e.replaceWord(typed, escapeForInsertion(shared))
 	}
+	// Listed unescaped: the backslashes are how the shell reads the name, not
+	// how the name is spelled, and a column of them is harder to read.
 	e.listCandidates(matches, prompt)
 }
 
