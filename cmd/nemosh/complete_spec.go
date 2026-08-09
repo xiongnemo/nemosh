@@ -64,6 +64,30 @@ func commandInProgress(prefix string) string {
 	return fields[0]
 }
 
+// disambiguateOperand makes a completed name usable as an operand, in the one
+// case escaping cannot reach.
+//
+// A name beginning with `-` is read as options by the command that receives it,
+// and no quoting changes that. Measured: `ls -l \-1.18-windows.xml` and
+// `ls -l '-1.18-windows.xml'` both still fail, because quoting is resolved by
+// the shell and the operand/option split happens afterwards, inside the applet.
+// `./` is the only spelling that fixes it, and it names the same file.
+//
+// Only when there is no directory part yet -- `sub/-x` does not begin with a
+// dash, so it is left alone, and a second Tab continuing from `./-1` is not
+// prefixed twice.
+//
+// This is a divergence: bash and busybox both hand back the bare name and leave
+// the user with a command that cannot run. It is kept small on purpose -- it
+// applies to operands, never to a command word, where `./name` would mean
+// something different.
+func disambiguateOperand(name string) string {
+	if strings.HasPrefix(name, "-") {
+		return "./" + name
+	}
+	return name
+}
+
 // Escaping is what makes a completed name usable rather than merely correct. A
 // Windows path is very likely to hold a blank -- `Program Files` is on every
 // machine there is -- and inserting it raw produces a command line that names

@@ -86,10 +86,20 @@ func (e *lineEditor) complete(prompt string) {
 	prefix := e.buffer.currentWordPrefix()
 
 	var matches []string
-	if completesCommand(prefix) {
-		matches = completeCommand(stem)
-	} else {
+	operand := !completesCommand(prefix)
+	if operand {
 		matches = completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
+	} else {
+		matches = completeCommand(stem)
+	}
+	// Only an operand is rewritten, and only on the way in. The list below shows
+	// the names as they are on disk, because that is what the user is choosing
+	// between; `./` is a detail of making the choice runnable.
+	insert := func(text string) string {
+		if operand {
+			text = disambiguateOperand(text)
+		}
+		return escapeForInsertion(text)
 	}
 	if len(matches) == 0 {
 		// Nothing to offer has to be distinguishable from nothing happening.
@@ -105,14 +115,14 @@ func (e *lineEditor) complete(prompt string) {
 		return
 	}
 	if len(matches) == 1 {
-		e.replaceWord(typed, escapeForInsertion(matches[0]))
+		e.replaceWord(typed, insert(matches[0]))
 		if !strings.HasSuffix(matches[0], "/") {
 			e.buffer.insert(' ')
 		}
 		return
 	}
 	if shared := longestSharedPrefix(matches); len(shared) > len(stem) {
-		e.replaceWord(typed, escapeForInsertion(shared))
+		e.replaceWord(typed, insert(shared))
 	}
 	// Listed unescaped: the backslashes are how the shell reads the name, not
 	// how the name is spelled, and a column of them is harder to read.

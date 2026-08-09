@@ -116,6 +116,46 @@ unescaped before matching. On Windows a blank in a path is the common case, and
 inserting `Program Files/` raw produces a line naming two operands, neither of
 which exists.
 
+The set is busybox's, but it was re-measured against *this* parser rather than
+inherited on trust. Every one of `` ` `` `'` `"` `\` `$` `(` `)` `&` `;` `|` `<`
+`>` breaks it outright; `#` at the start of a word begins a comment and swallows
+the line; and `*` `?` `[` are the ones a naive check calls safe, because they are
+harmless until something matches -- with three files present, a bare `a*b`
+expanded to `a-b aXb azb` rather than naming the file called `a*b`. `~` is safe
+today and will not be once tilde expansion lands, so it is escaped now.
+
+**A dash-leading name is rewritten to `./name`**, which escaping cannot do
+anything about. Quoting is resolved by the shell; the operand/option split
+happens afterwards, inside the applet, so `ls -l \-1.18-windows.xml` and
+`ls -l '-1.18-windows.xml'` both fail identically and only `./` works. bash and
+busybox hand back the bare name and leave a command that cannot run. Applied to
+operands only, never to a command word, and never when a directory part is
+already present.
+
+## Backslashes, not quotes
+
+PowerShell quotes a completed name; bash, zsh and busybox all backslash-escape
+it. This follows the second group, and the reason is not habit.
+
+PowerShell has no choice. On Windows the backslash is the path separator, so it
+cannot also be the escape. This shell is POSIX-shaped -- backslash escapes and
+`/` separates, which is why `C:/Users` works here and the backslash spelling does
+not -- so the constraint that decides it for PowerShell does not apply.
+
+What decides it here is that completion has to compose with itself. A backslash
+escape is per-character and local: the word boundary scanner already understands
+it, so a second Tab continues from `My\ Do` without any further machinery. A
+quote is neither. It has to be inserted *before* text the user already typed, and
+then either closed or not -- close it and every later Tab has to notice the
+cursor is inside a string and complete there; leave it open and the line is
+broken until the user finishes it. zsh does the first properly, and it is a large
+amount of machinery.
+
+The honest middle path, if quoting is ever wanted, is zsh's: **preserve whatever
+the user started**. If the word already opens with a quote, complete inside it
+and close it; otherwise escape. That keeps one rule -- follow the user -- rather
+than two competing ones. It is listed below rather than done.
+
 ## Not done, in the order it is worth doing
 
 - **Option completion** (`ls -<TAB>`). The obvious idea -- derive it from the
@@ -132,6 +172,9 @@ which exists.
 - **Real columns in the listing.** Candidates are joined by two blanks and left
   to wrap; busybox lays them out to the terminal width (`showfiles`, `:1279`).
 
+- **Quote-preserving completion.** If the word already opens with a quote,
+  complete inside it and close it, instead of escaping. zsh's rule, and the only
+  version of "support quotes" that does not end up with two competing schemes.
 - **Fish-style inline suggestion.** See below.
 
 ## Listing on the first Tab
