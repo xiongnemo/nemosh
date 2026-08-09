@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -94,7 +93,7 @@ func (e *lineEditor) complete(prompt string) {
 	if operand {
 		matches = completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
 	} else {
-		matches = completeCommand(stem)
+		matches = completeCommand(stem, e.commands.candidates())
 	}
 	// Only an operand is rewritten, and only on the way in. The list below shows
 	// the names as they are on disk, because that is what the user is choosing
@@ -144,11 +143,40 @@ func (e *lineEditor) replaceWord(word, replacement string) {
 }
 
 // listCandidates prints the choices above a fresh prompt, which is what a user
-// expects a second Tab to show.
+// expects a second Tab to show. The column layout is in complete_listing.go.
+//
+// A listing that would fill the screen asks first, which is bash's behaviour and
+// for bash's reason: command completion reaches PATH, so `w` has a hundred and
+// eighteen answers here and a bare Tab has two thousand. Printing those without
+// asking scrolls the session away; refusing outright takes the decision from
+// someone who may well want to look. Asking is the only one of the three that
+// does neither.
 func (e *lineEditor) listCandidates(matches []string, prompt string) {
-	sort.Strings(matches)
+	sortCandidates(matches)
+	listing, rows := layoutCandidates(matches, e.columnsOrDefault())
 	fmt.Fprintln(e.screen)
-	fmt.Fprintln(e.screen, strings.Join(matches, "  "))
+	if rows > listedRowLimit && !e.confirmLongListing(len(matches)) {
+		fmt.Fprint(e.screen, prompt)
+		e.resetDrawState()
+		return
+	}
+	fmt.Fprint(e.screen, listing)
 	fmt.Fprint(e.screen, prompt)
 	e.resetDrawState()
+}
+
+// confirmLongListing asks before filling the screen, and reports the answer.
+//
+// The key is read from the same stream the editor is already reading, which is
+// safe here because this runs inside the key loop rather than beside it. Anything
+// other than y is no, and a stream that has ended is no -- a question nobody can
+// answer must not print two thousand lines.
+func (e *lineEditor) confirmLongListing(count int) bool {
+	fmt.Fprintf(e.screen, "Display all %d possibilities? (y or n) ", count)
+	answer, err := e.nextKey()
+	fmt.Fprintln(e.screen)
+	if err != nil {
+		return false
+	}
+	return answer.kind == keyRune && (answer.value == 'y' || answer.value == 'Y')
 }

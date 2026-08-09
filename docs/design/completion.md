@@ -107,10 +107,30 @@ were impossible, and a command that merely prefers directories does not qualify.
 bash's `-o bashdefault` idea and what keeps a file named `-1.18-windows.xml`
 reachable: nothing matches `-1.1`, so the file is offered instead.
 
-**Where candidates come from** is builtins and applets for a command word, and
-the named directory for an operand. `PATH` is deliberately not walked: on Windows
-that is dozens of directories and thousands of files, and the pause would be felt
-on every Tab. This is a real gap against all three references and is listed below.
+**Where candidates come from** is, for a command word, everything the shell can
+run: builtins, applets, this session's aliases and functions, and `PATH`. For an
+operand it is the named directory.
+
+`PATH` used to be left out, on the grounds that walking it -- 78 directories and
+9,917 files, measured -- would be felt on every Tab. That was right and is now
+obsolete: the suggestion engine already builds an index of it, once per `PATH`
+and on a background goroutine, so completion reads a map. `gi` finishes to `git`.
+
+A program is offered under the name a person types. `wsl.exe` is *recognised* as
+both `wsl` and `wsl.exe`, since either can be typed, but only `wsl` is offered --
+a column holding both reads as though there were two programs.
+
+**The listing is laid out in columns**, down rather than across, following
+busybox's `showfiles` (`:1279`), and ordered the way matching works: without
+regard to case on Windows, because byte order put `WFS WMIADAP WMIC` ahead of
+`wait` and `wc` on a `PATH` full of system programs spelled in capitals.
+
+**A listing that would fill the screen asks first**, which is bash's behaviour
+and for bash's reason. `w` has 118 answers here and a bare Tab has about two
+thousand. Printing those unasked scrolls the session away; refusing outright
+takes the decision from someone who may want to look. The question is the only
+option that does neither, and it is answerable because completion runs inside the
+key loop rather than beside it.
 
 **Matching ignores case on Windows** and does not elsewhere, because NTFS does
 not distinguish it and a shell that does is contradicting the directory it just
@@ -194,12 +214,8 @@ than two competing ones. It is listed below rather than done.
   this honestly means either declaring options per applet and binding the
   declaration to behaviour with a test that fails when they drift, or moving
   every applet onto the shared parser first. The second is the better order.
-- **`PATH` executables for command completion.** Needs a cache with an
-  invalidation story before it can be on the Tab path at all.
 - **`~` and `$VAR` expansion**, which busybox has for `~` and which v1.1 already
   lists.
-- **Real columns in the listing.** Candidates are joined by two blanks and left
-  to wrap; busybox lays them out to the terminal width (`showfiles`, `:1279`).
 
 - **Quote-preserving completion.** If the word already opens with a quote,
   complete inside it and close it, instead of escaping. zsh's rule, and the only

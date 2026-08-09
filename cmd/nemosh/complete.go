@@ -7,9 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/capability"
-	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // completesCommand reports whether the word being typed is a command name
@@ -35,23 +33,26 @@ func completesCommand(line string) bool {
 	return false
 }
 
-// completeCommand offers the names this shell can run without consulting PATH:
-// its builtins and its applets. PATH is deliberately not walked -- on Windows
-// that is dozens of directories and thousands of files, and the pause would be
-// felt on every Tab.
-func completeCommand(prefix string) []string {
+// completeCommand offers every name this shell can run: its builtins and
+// applets, this session's aliases and functions, and everything on PATH.
+//
+// PATH used to be left out on the grounds that walking it -- dozens of
+// directories and thousands of files on Windows -- would be felt on every Tab.
+// That reasoning was right and is now obsolete: the same index the suggestion
+// engine uses is already built, in the background, once per PATH. Reading it is
+// a map lookup, so the objection is gone and `gi` can finish to `git` like it
+// finishes to anything else.
+//
+// Matching follows the platform's own rule, so on Windows `WS` finds `wsl` for
+// the same reason completing a filename there ignores case.
+func completeCommand(prefix string, candidates []string) []string {
 	var matches []string
-	for _, name := range runtime.BuiltinNames() {
-		if strings.HasPrefix(name, prefix) {
+	for _, name := range candidates {
+		if completionMatches(name, prefix) {
 			matches = append(matches, name)
 		}
 	}
-	for _, name := range applets.DefaultRegistry.Names() {
-		if strings.HasPrefix(name, prefix) {
-			matches = append(matches, name)
-		}
-	}
-	sort.Strings(matches)
+	sortCandidates(matches)
 	return slicesCompact(matches)
 }
 

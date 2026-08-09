@@ -48,6 +48,17 @@ patch number is the commits since that tag.
 - **Colour absent turns both off** rather than degrading them, because a grey
   suggestion rendered as ordinary text would put characters on screen that are
   not in the line. `NO_COLOR`, `TERM=dumb`, and `NEMOSH_COLOR=always|never`.
+- **Command completion reaches PATH**, along with aliases and functions, so `gi`
+  finishes to `git`. It reads the index the suggestion engine already builds, so
+  the old objection — walking 78 directories and 9,917 files on every Tab — no
+  longer applies. A program is offered as `wsl`, though both `wsl` and `wsl.exe`
+  are recognised.
+- **Choices are listed in columns**, down rather than across, as busybox lays
+  them out, and ordered without regard to case on Windows — byte order put
+  `WFS WMIADAP WMIC` ahead of `wait` and `wc`.
+- **A listing that would fill the screen asks first.** `w` has 118 answers and a
+  bare Tab about two thousand; `Display all 118 possibilities? (y or n)`, which
+  is what bash does and for the same reason.
 - **Option completion.** `ls -<TAB>` offers `--color -1 -a -h -l`, from
   `internal/capability` -- one table that both completion and the renderer read,
   bound to the applets' real behaviour by a test that runs each of them. Writing

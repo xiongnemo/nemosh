@@ -69,6 +69,20 @@ func waitForPathIndex(t *testing.T, index *pathIndex) {
 	}
 }
 
+// waitForPathBuiltFrom waits for one particular PATH, which readiness alone
+// cannot express: an index that is ready from an earlier value is still ready
+// while the next build runs, so waiting on the flag would test the old contents.
+func waitForPathBuiltFrom(t *testing.T, index *pathIndex, want string) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for index.builtFrom() != want {
+		if time.Now().After(deadline) {
+			t.Fatalf("the index never rebuilt from %q", want)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
 // The suggestion is drawn after what was typed, in the suggestion colour, and
 // the cursor stays where the typing ended.
 //

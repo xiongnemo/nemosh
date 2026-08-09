@@ -37,9 +37,13 @@ func TestCompletionContext(t *testing.T) {
 
 // Command completion offers builtins and applets, which is what this shell can
 // actually run without consulting PATH.
+// shellOwnCommands is the candidate set these tests are about: what the shell
+// carries itself, without PATH, which varies by machine.
+func shellOwnCommands() []string { return commandNames() }
+
 func TestCompleteCommand_offersBuiltinsAndApplets(t *testing.T) {
 	// When
-	matches := completeCommand("ec")
+	matches := completeCommand("ec", shellOwnCommands())
 
 	// Then
 	if !slices.Contains(matches, "echo") {
@@ -57,7 +61,7 @@ func TestCompleteCommand_offersBuiltinsAndApplets(t *testing.T) {
 
 func TestCompleteCommand_offersBuiltins(t *testing.T) {
 	// When
-	matches := completeCommand("expo")
+	matches := completeCommand("expo", shellOwnCommands())
 
 	// Then
 	if !slices.Contains(matches, "export") {
@@ -66,7 +70,7 @@ func TestCompleteCommand_offersBuiltins(t *testing.T) {
 }
 
 func TestCompleteCommand_offersNothingForAnUnknownPrefix(t *testing.T) {
-	if matches := completeCommand("zzzznosuch"); len(matches) != 0 {
+	if matches := completeCommand("zzzznosuch", shellOwnCommands()); len(matches) != 0 {
 		t.Fatalf("completeCommand offered %v, want nothing", matches)
 	}
 }

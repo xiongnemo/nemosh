@@ -93,19 +93,24 @@ func (p *pathIndex) candidates() []string {
 	return p.sorted
 }
 
-// scanPath reads every directory on PATH and returns the names that can be run.
+// scanPath reads every directory on PATH and returns the names that can be run,
+// and separately the names worth offering.
 //
-// A name is recorded twice where it has an executable suffix: `wsl.exe` answers
-// to `wsl` as well, because that is what a person types. Recording only the full
-// name would have left the original complaint exactly where it was.
+// The two are not the same list, which is the point. `wsl.exe` must be
+// *recognised* under both spellings, because either can be typed -- but only
+// `wsl` should be *offered*, because completing `w` into a column containing
+// both `wsl` and `wsl.exe` reads as though there were two programs.
 func scanPath(pathValue string) (map[string]bool, []string) {
 	names := map[string]bool{}
 	var sorted []string
 	seen := map[string]bool{}
-	add := func(name string) {
-		key := indexKey(name)
-		names[key] = true
-		if !seen[key] {
+	// recognise makes a spelling answerable; offer also proposes it.
+	recognise := func(name string) {
+		names[indexKey(name)] = true
+	}
+	offer := func(name string) {
+		recognise(name)
+		if key := indexKey(name); !seen[key] {
 			seen[key] = true
 			sorted = append(sorted, name)
 		}
@@ -127,14 +132,14 @@ func scanPath(pathValue string) (map[string]bool, []string) {
 			}
 			name := entry.Name()
 			if stem, ok := executableStem(name); ok {
-				add(stem)
-				add(name)
+				offer(stem)
+				recognise(name)
 				continue
 			}
 			if !runsWithoutASuffix {
 				continue
 			}
-			add(name)
+			offer(name)
 		}
 	}
 	sort.Strings(sorted)
