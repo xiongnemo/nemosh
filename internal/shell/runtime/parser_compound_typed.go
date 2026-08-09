@@ -106,6 +106,24 @@ func parseTypedLoop(lines []string, spans []compoundSpan, byStart map[int]int, s
 	return loopNode{kind: kind, condition: condition, body: body}, err
 }
 
+// typedWordOf is the parsed form of a token, or a refusal naming it.
+//
+// Only a word token carries one: an operator such as `|` or `>` leaves parsed
+// nil, and dereferencing that panicked the whole shell on input as ordinary as
+// `for i in a|b; do :; done`. The fuzzer found it; the three places it could
+// happen are a for-loop's word list, the word a case selects on, and a case
+// arm's patterns. Everywhere else a redirect or a pipe is rejected before it
+// gets this far.
+//
+// busybox answers these with `syntax error: unexpected "|"`; the wording here is
+// this parser's own, which spells the same thing with %s.
+func typedWordOf(token shellToken) (word, error) {
+	if token.parsed == nil {
+		return word{}, fmt.Errorf("syntax error: unexpected %s", token.value)
+	}
+	return parseTypedWord(*token.parsed), nil
+}
+
 func parseTypedFor(header string, body []programNode, budget *parseBudget, depth int) (programNode, error) {
 	tokens, err := scanShellTokensWithBudget(header, budget, depth)
 	if err != nil {
@@ -116,7 +134,9 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 	}
 	values := make([]word, len(tokens)-2)
 	for index, token := range tokens[2:] {
-		values[index] = parseTypedWord(*token.parsed)
+		if values[index], err = typedWordOf(token); err != nil {
+			return nil, err
+		}
 	}
 	return loopNode{kind: loopFor, name: tokens[0].value, values: values, body: body}, nil
 }
@@ -126,7 +146,11 @@ func parseTypedCase(lines []string, spans []compoundSpan, byStart map[int]int, s
 	if err != nil || len(tokens) != 3 {
 		return nil, fmt.Errorf("case: expected: case word in")
 	}
-	node := caseNode{word: parseTypedWord(*tokens[1].parsed)}
+	selector, err := typedWordOf(tokens[1])
+	if err != nil {
+		return nil, err
+	}
+	node := caseNode{word: selector}
 	for _, arm := range span.caseArms {
 		pattern, _ := casePattern(lines[arm.patternIndex])
 		patterns, err := parseCaseAlternatives(pattern, budget, depth)
@@ -149,7 +173,11 @@ func parseCaseAlternatives(pattern string, budget *parseBudget, depth int) ([]wo
 		if err != nil || len(tokens) != 1 {
 			return nil, fmt.Errorf("case: invalid pattern %q", pattern)
 		}
-		patterns = append(patterns, parseTypedWord(*tokens[0].parsed))
+		typed, err := typedWordOf(tokens[0])
+		if err != nil {
+			return nil, err
+		}
+		patterns = append(patterns, typed)
 	}
 	return patterns, nil
 }

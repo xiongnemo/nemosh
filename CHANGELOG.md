@@ -63,6 +63,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **An operator where a word belongs no longer crashes the shell.**
+  `for i in a|b; do :; done` panicked on a nil dereference, taking the session
+  with it, and so did `case | in x) :;; esac` and a redirect inside a case
+  pattern. Found by the parser fuzzer's exploration run; all three now answer
+  `syntax error: unexpected |`, and the inputs are seeds from here on.
 - **`rm` finishes the job and says what stopped it.** A failure on one operand
   abandoned every operand after it, so `rm -rf a b c` with one file in use left
   `c` in place and named nothing but `a` — the shape a Windows cleanup script

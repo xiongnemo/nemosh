@@ -34,6 +34,13 @@ func FuzzParseScript(f *testing.F) {
 		"$(($(($(($((1))))))))",
 		"\\\n\\\n\\\n",
 		"echo \"$(echo \"$(echo x)\")\"",
+		// An operator where a word belongs. Each of these panicked the shell by
+		// dereferencing a token that carries no parsed form; the exploration run
+		// found the first in well under a second.
+		"for i in a|b; do :; done",
+		"for i in 2>a; do :; done",
+		"case | in x) :;; esac",
+		"case x in a|>) :;; esac",
 	} {
 		f.Add(seed)
 	}
