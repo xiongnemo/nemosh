@@ -36,8 +36,26 @@ begins, so a pipeline never receives paths the expression did not select.
 
 ## Install
 
-Scoop packaging is v1.0 work and does not exist yet. Until then, build from
-source.
+```powershell
+scoop bucket add nemo https://github.com/xiongnemo/windows-binaries-scoop-bucket
+scoop install nemo/nemosh            # the release line
+scoop install nemo/nemosh-nightly    # built from master, one per push
+```
+
+Only the `nemosh` shim is installed. It is a multicall binary, and two of its
+applets share a name with a Windows command that means something else --
+`find.exe` takes a literal string and a file rather than a path and a predicate,
+and `sort.exe` is not POSIX sort -- so shimming all of them would quietly change
+what those names do. `nemosh --list` names the applets; to reach one directly:
+
+```powershell
+scoop shim add cat "$(scoop prefix nemosh)
+emosh.exe" cat
+```
+
+The download is verified against a published SHA-256. Artifacts are not
+code-signed, so a browser download will raise SmartScreen; Scoop checks the
+checksum instead.
 
 ## Build
 
@@ -129,7 +147,9 @@ separate CLA.
 ## License
 
 Apache-2.0. See [`LICENSE`](LICENSE), [`NOTICE`](NOTICE), and
-[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md). Changes are listed in
+[`CHANGELOG.md`](CHANGELOG.md); to report something exploitable, see
+[`SECURITY.md`](SECURITY.md).
 
 BusyBox and busybox-w32 are GPL-2.0 and are **not** included here. No BusyBox
 code was copied, nothing of theirs is distributed, and what is taken from them

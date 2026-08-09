@@ -1,0 +1,41 @@
+name: Security
+
+# Kept apart from the Product workflow because it answers a different question:
+# Product asks whether this change is correct, this asks whether what the change
+# depends on has become unsafe since it was written. That second question has an
+# answer that changes without any commit, which is why it also runs on a
+# schedule.
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+  schedule:
+    # Weekly, because a vulnerability disclosed on Tuesday should not wait for
+    # someone to happen to push.
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  vulnerabilities:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # govulncheck reports only vulnerabilities in code that is actually
+      # reachable, so a finding here is one this binary can reach rather than
+      # one merely present in a dependency.
+      - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1
+        with:
+          go-version-file: go.mod
+          repo-checkout: false

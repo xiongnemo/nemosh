@@ -91,6 +91,21 @@ jobs:
           NEMOSH_DIFFERENTIAL: strict
         run: go test ./internal/testutil/behavior/ -run Differential -count=1 -v
 
+      # Fuzz seeds are run as ordinary tests on every platform: the corpus in
+      # testdata holds the inputs that have already broken something, so a
+      # regression is caught without spending CI time exploring.
+      - name: fuzz corpus regression
+        run: go test ./internal/shell/runtime/ -run 'Fuzz' -count=1
+
+      # A short exploration on Linux only. Long enough to be worth having, short
+      # enough not to make every push wait; anything it finds is written to
+      # testdata and becomes a seed above.
+      - name: fuzz exploration
+        if: runner.os == 'Linux'
+        run: |
+          go test ./internal/shell/runtime/ -run FuzzParseScript$ -fuzz 'FuzzParseScript$' -fuzztime 60s
+          go test ./internal/shell/runtime/ -run 'FuzzMatchShellPattern$' -fuzz 'FuzzMatchShellPattern$' -fuzztime 30s
+
       - name: applet manifest freshness
         run: go test ./internal/appletmanifest/ -count=1
 

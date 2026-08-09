@@ -190,7 +190,10 @@ func requireAbsoluteNativePath(kind, path string) (string, error) {
 func isExecutableFile(path string) (bool, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		// A name that cannot exist does not exist. Windows reports those
+		// separately from a missing file, and letting the difference through
+		// turned `not found` into a raw CreateFile failure.
+		if errors.Is(err, os.ErrNotExist) || isUnusableName(err) {
 			return false, nil
 		}
 		return false, fmt.Errorf("stat executable %q: %w", path, err)
