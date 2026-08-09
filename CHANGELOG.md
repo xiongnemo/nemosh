@@ -51,6 +51,13 @@ patch number is the commits since that tag.
   process is elevated and the Administrators group is enabled in its token.
 - `export` with no operands, and `export -p`, list exported variables. Both
   printed nothing before ([#10](https://github.com/xiongnemo/nemosh/issues/10)).
+- `ls -1`, which busybox has and which is among the most-typed options there is.
+  This `ls` always writes one entry per line, so `-1` asks for the format
+  already in use; `-C` stays refused, because columns are genuinely absent.
+- `grep --color[=WHEN]` is accepted and ignored, which is exactly what busybox
+  does (its option table maps it to a pseudo-flag nothing reads). Refusing it
+  broke `alias grep='grep --color=auto'` -- a line in almost every rc file --
+  and only interactively, since `$ENV` is not read for `-c`.
 - `ls --color[=always|never|auto]`, matching busybox's escapes byte for byte.
   `auto` is resolved against the stream being written to, so an alias using it
   is safe to pipe.

@@ -81,6 +81,15 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 				options.long = true
 			case 'h':
 				options.human = true
+			case '1':
+				// One entry per line is what this ls always writes -- it never
+				// lays out columns -- so -1 asks for the format already in use.
+				// Accepting it is not pretending to do something: it is the
+				// output that comes out either way, and busybox agrees on the
+				// interaction, where -l wins whichever order the two are given.
+				//
+				// -C is the opposite case and stays refused, because columns are
+				// the thing this cannot do.
 			default:
 				return lsOptions{}, nil, fmt.Errorf("unsupported ls option: -%c", flag)
 			}

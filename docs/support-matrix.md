@@ -72,11 +72,11 @@ column that matters is the third one.
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
 | `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
-| `grep` | `-i -n -v` | refused by name |
+| `grep` | `-i -n -v`, `--color[=WHEN]` accepted and ignored | refused by name |
 | `head` | `-n` | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
-| `ls` | `-a -h -l`, `--color[=always\|never\|auto]` | refused by name |
+| `ls` | `-a -h -l -1`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
 | `mv` | none | refused by name |
 | `posixpath` | none | treated as a path operand |
