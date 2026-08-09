@@ -70,6 +70,18 @@ tags and a shallow clone silently yields the fallback.
   has not validated.
 - Windows is the supported platform. Linux and macOS are build-and-test checks,
   not support commitments; see the support matrix in `README.md`.
+- Distribution is Scoop, through
+  [`xiongnemo/windows-binaries-scoop-bucket`](https://github.com/xiongnemo/windows-binaries-scoop-bucket).
+  The publish job dispatches that bucket's Excavator when it finishes, rather
+  than leaving the bucket to notice on its hourly cron -- a cron sweep packages
+  only whichever release is newest when it fires, so releases published between
+  two sweeps were being skipped outright.
+- **The bucket computes the hash itself, and that is the point.** The release
+  job knows the SHA-256 already and could write the manifest directly, which
+  would be faster; it does not, because a job that both produces a file and
+  declares its hash agrees with itself no matter what went wrong in between.
+  Anything that replaces the Excavator has to keep hashing the published
+  artifact.
 
 ## Tests And Gates
 
