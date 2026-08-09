@@ -23,7 +23,7 @@ func TestRun_directAppletDiagnosticsMatchTheShell(t *testing.T) {
 			direct:   []string{"cat", "nosuchfile.txt"},
 			script:   "cat nosuchfile.txt",
 			status:   1,
-			fragment: "cat: can't open 'nosuchfile.txt'",
+			fragment: "cat: cannot open 'nosuchfile.txt'",
 		},
 		{
 			name:     "a command env cannot run",

@@ -73,7 +73,7 @@ func parseFindArguments(args []string) ([]string, findExpression, error) {
 			expression.predicates = append(expression.predicates, findPredicate{name: operand, letter: letter[0]})
 			index++
 		default:
-			return nil, expression, fmt.Errorf("unrecognized: %s", operand)
+			return nil, expression, fmt.Errorf("unsupported expression: %s", operand)
 		}
 	}
 	return paths, expression, nil

@@ -9,8 +9,8 @@ script = "rm nope.txt\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "rm: can't remove 'nope.txt': No such file or directory\n"
+stderr = "rm: cannot remove 'nope.txt': No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/rm.c"
-why = "Without -f, remove_file reports an ENOENT lstat as `can't remove '%s'` rather than `can't stat` (libbb/remove_file.c:20-23) and rm_main returns 1 (coreutils/rm.c:69). Nemosh matches."
+why = "Without -f, remove_file reports an ENOENT lstat as `cannot remove '%s'` rather than `cannot stat` (libbb/remove_file.c:20-23) and rm_main returns 1 (coreutils/rm.c:69). Nemosh matches."

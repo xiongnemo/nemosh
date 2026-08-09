@@ -12,7 +12,7 @@ script = "mkdir taken\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "mkdir: can't create directory 'taken': File exists\n"
+stderr = "mkdir: cannot create directory 'taken': File exists\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/mkdir.c"

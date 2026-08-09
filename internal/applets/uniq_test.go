@@ -213,7 +213,7 @@ func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithMissingFile(t *test
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	want := "uniq: can't open '" + path + "': No such file or directory\n"
+	want := "uniq: cannot open '" + path + "': No such file or directory\n"
 	if got := stderr.String(); got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
@@ -233,7 +233,7 @@ func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithEmptyFileOperand(t 
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: can't open '': No such file or directory\n"; got != want {
+	if got, want := stderr.String(), "uniq: cannot open '': No such file or directory\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
@@ -252,7 +252,7 @@ func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithOptionTerminatedEmp
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: can't open '': No such file or directory\n"; got != want {
+	if got, want := stderr.String(), "uniq: cannot open '': No such file or directory\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }

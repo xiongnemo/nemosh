@@ -63,7 +63,7 @@ func (e quotedError) Error() string {
 	if e.action == "" {
 		return fmt.Sprintf("'%s': %s", e.operand, causeText(e.err))
 	}
-	return fmt.Sprintf("can't %s '%s': %s", e.action, e.operand, causeText(e.err))
+	return fmt.Sprintf("cannot %s '%s': %s", e.action, e.operand, causeText(e.err))
 }
 
 func (e quotedError) Unwrap() error { return e.err }
@@ -88,7 +88,7 @@ func (e operandError) Unwrap() error { return e.err }
 // otherwise before it dies (libbb/executable.c:117-122), and xargs names the
 // same two statuses (findutils/xargs.c:385-390). Nemosh dispatches registered
 // applets only, so only the not-found branch is reachable, and the wording says
-// "not found" rather than busybox's "can't execute '%s'" because no execvp ran.
+// "not found" rather than busybox's "cannot execute '%s'" because no execvp ran.
 func commandNotFound(name string) error {
 	return ExitStatusMessage(127, operandFailure(name, errors.New("not found")))
 }

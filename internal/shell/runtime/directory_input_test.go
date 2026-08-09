@@ -31,7 +31,7 @@ func TestRuntime_refuseToReadADirectoryThroughTheRuntimeProcessView(t *testing.T
 	if status != 1 {
 		t.Fatalf("RunScript() = %d, want 1", status)
 	}
-	if got, want := stderr.String(), "cat: can't open 'd': Is a directory\n"; got != want {
+	if got, want := stderr.String(), "cat: cannot open 'd': Is a directory\n"; got != want {
 		t.Fatalf("RunScript() wrote %q to stderr, want %q", got, want)
 	}
 }

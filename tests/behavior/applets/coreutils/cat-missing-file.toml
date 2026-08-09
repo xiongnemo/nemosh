@@ -9,8 +9,8 @@ script = "cat nope.txt\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "cat: can't open 'nope.txt': No such file or directory\n"
+stderr = "cat: cannot open 'nope.txt': No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/cat.c"
-why = "cat opens through open_or_warn_stdin, whose warning quotes the operand behind a verb -- `can't open '%s'` (libbb/xfuncs_printf.c:169) -- and sets retval = EXIT_FAILURE (coreutils/cat.c:133-135). Nemosh matches both."
+why = "cat opens through open_or_warn_stdin, which quotes the operand behind a verb and sets retval = EXIT_FAILURE (coreutils/cat.c:133-135). Nemosh matches the shape and the status. The verb is deliberately `cannot` where busybox writes `can't`: the wording is busybox's own and carries no behaviour, so Nemosh uses the spelling GNU coreutils uses instead. Declared as a divergence rather than left to surprise the differential runner."

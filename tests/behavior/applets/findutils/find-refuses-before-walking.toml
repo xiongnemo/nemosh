@@ -13,7 +13,7 @@ script = "find . -mtime 1\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "find: unrecognized: -mtime\n"
+stderr = "find: unsupported expression: -mtime\n"
 
 [notes]
 standard = "BusyBox-w32 findutils/find.c"

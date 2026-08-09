@@ -20,7 +20,7 @@ echo [$?]
 [expect]
 status = 0
 stdout = "Alpha\nbetA\ngAmma\nblphb\nbetb\nalphb\nbeta\nvia-stdin\n[1]\n"
-stderr = "sed: can't open 'absent.txt': No such file or directory\n"
+stderr = "sed: cannot open 'absent.txt': No such file or directory\n"
 
 [notes]
 standard = "POSIX Shell and Utilities - sed"

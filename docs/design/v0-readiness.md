@@ -219,7 +219,7 @@ the corpus for full parity:
   wording for every reader.
 - `env` and `xargs` dispatch registered applets only. BusyBox falls back to
   `execvp`, so `env python3 …` works there and reports `not found` here. Two
-  consequences: the wording stays `not found` rather than BusyBox's `can't execute
+  consequences: the wording stays `not found` rather than BusyBox's `cannot execute
   'NAME': No such file or directory`, because no `execvp` ran and claiming `ENOENT`
   would misdescribe the mechanism; and the 126 half of the SUSv3 table — a command
   found but not runnable — is unreachable, so only the 127 half is implemented.

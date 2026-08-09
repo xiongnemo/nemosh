@@ -21,8 +21,8 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheFileIsMissing(t *testi
 		want   string
 	}{
 		// open_or_warn, libbb/xfuncs_printf.c:169
-		{applet: "cat", want: "can't open 'nope.txt': No such file or directory"},
-		{applet: "tail", want: "can't open 'nope.txt': No such file or directory"},
+		{applet: "cat", want: "cannot open 'nope.txt': No such file or directory"},
+		{applet: "tail", want: "cannot open 'nope.txt': No such file or directory"},
 		// fopen_or_warn -> bb_simple_perror_msg, libbb/wfopen.c:11
 		{applet: "head", want: "nope.txt: No such file or directory"},
 		{applet: "wc", want: "nope.txt: No such file or directory"},
@@ -67,13 +67,13 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheOperationFails(t *test
 		{
 			name:   "rm on a missing file", // libbb/remove_file.c:23
 			applet: "rm", args: []string{"nope.txt"},
-			want: "can't remove 'nope.txt': No such file or directory",
+			want: "cannot remove 'nope.txt': No such file or directory",
 		},
 		{
 			name:   "mkdir over an existing directory", // libbb/make_directory.c:150
 			setup:  func(t *testing.T, dir string) { makeFixtureDir(t, dir, "taken") },
 			applet: "mkdir", args: []string{"taken"},
-			want: "can't create directory 'taken': File exists",
+			want: "cannot create directory 'taken': File exists",
 		},
 		{
 			name:   "rmdir on a missing directory", // coreutils/rmdir.c:78, "Match gnu rmdir msg"
@@ -114,13 +114,13 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheOperationFails(t *test
 		{
 			name:   "cp from a missing source", // libbb/copy_file.c:98
 			applet: "cp", args: []string{"nope.txt", "out.txt"},
-			want: "can't stat 'nope.txt': No such file or directory",
+			want: "cannot stat 'nope.txt': No such file or directory",
 		},
 		{
 			name:   "cp into a missing directory", // libbb/copy_file.c:64
 			setup:  func(t *testing.T, dir string) { makeFixtureFile(t, dir, "a.txt") },
 			applet: "cp", args: []string{"a.txt", "nope/out.txt"},
-			want: "can't create 'nope/out.txt': No such file or directory",
+			want: "cannot create 'nope/out.txt': No such file or directory",
 		},
 		{
 			// cp a.txt d writes d/a.txt, and the diagnostic names that joined
@@ -132,12 +132,12 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheOperationFails(t *test
 				makeFixtureDir(t, dir, filepath.Join("d", "a.txt"))
 			},
 			applet: "cp", args: []string{"a.txt", "d"},
-			want: "can't create 'd/a.txt': Is a directory",
+			want: "cannot create 'd/a.txt': Is a directory",
 		},
 		{
 			name:   "mv from a missing source", // coreutils/mv.c:143
 			applet: "mv", args: []string{"nope.txt", "out.txt"},
-			want: "can't rename 'nope.txt': No such file or directory",
+			want: "cannot rename 'nope.txt': No such file or directory",
 		},
 	}
 	for _, tt := range tests {
@@ -178,8 +178,8 @@ func TestAppletDiagnostics_rejectADirectoryOperandAsEISDIR(t *testing.T) {
 		args   []string
 		want   string
 	}{
-		{applet: "cat", want: "can't open 'd': Is a directory"},
-		{applet: "tail", want: "can't open 'd': Is a directory"},
+		{applet: "cat", want: "cannot open 'd': Is a directory"},
+		{applet: "tail", want: "cannot open 'd': Is a directory"},
 		{applet: "head", want: "d: Is a directory"},
 		{applet: "wc", want: "d: Is a directory"},
 		{applet: "grep", args: []string{"pattern"}, want: "d: Is a directory"},
@@ -229,13 +229,13 @@ func TestAppletDiagnostics_selfPrintingAppletsNameTheOperand(t *testing.T) {
 		{name: "sort on a missing file", applet: "sort", args: []string{"nope.txt"},
 			want: "sort: nope.txt: No such file or directory\n"},
 		{name: "uniq on a missing file", applet: "uniq", args: []string{"nope.txt"},
-			want: "uniq: can't open 'nope.txt': No such file or directory\n"},
+			want: "uniq: cannot open 'nope.txt': No such file or directory\n"},
 		{name: "cut on a directory", applet: "cut", args: []string{"-f1", "d"},
 			want: "cut: d: Is a directory\n"},
 		{name: "sort on a directory", applet: "sort", args: []string{"d"},
 			want: "sort: d: Is a directory\n"},
 		{name: "uniq on a directory", applet: "uniq", args: []string{"d"},
-			want: "uniq: can't open 'd': Is a directory\n"},
+			want: "uniq: cannot open 'd': Is a directory\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -299,7 +299,7 @@ func TestAppletDiagnostics_keepARelativeOperandRelative(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected cat to fail on a missing nested operand")
 	}
-	if got, want := err.Error(), "can't open 'sub/nope.txt': No such file or directory"; got != want {
+	if got, want := err.Error(), "cannot open 'sub/nope.txt': No such file or directory"; got != want {
 		t.Fatalf("expected cat diagnostic %q, got %q", want, got)
 	}
 }

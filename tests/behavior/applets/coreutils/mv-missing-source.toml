@@ -9,8 +9,8 @@ script = "mv nope.txt out.txt\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "mv: can't rename 'nope.txt': No such file or directory\n"
+stderr = "mv: cannot rename 'nope.txt': No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/mv.c"
-why = "rename() fails with ENOENT, which is not EXDEV, so BusyBox reports `can't rename '%s'` (coreutils/mv.c:136-143). Nemosh matches."
+why = "rename() fails with ENOENT, which is not EXDEV, so BusyBox reports `cannot rename '%s'` (coreutils/mv.c:136-143). Nemosh matches."

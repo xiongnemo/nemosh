@@ -69,7 +69,7 @@ func TestAppletExitStatus_matchTheReferenceFailureStatus(t *testing.T) {
 }
 
 // busybox's uniq opens its input with xopen, which reports a failure as
-// "can't open '%s'" (libbb/xfuncs_printf.c:151). cut and sort go through
+// "cannot open '%s'" (libbb/xfuncs_printf.c:151). cut and sort go through
 // fopen_or_warn_stdin instead (libbb/wfopen_input.c:16), whose
 // bb_simple_perror_msg prints the operand bare. Three readers, two shapes.
 func TestAppletExitStatus_uniqQuotesTheOperandTheWayXopenDoes(t *testing.T) {
@@ -88,7 +88,7 @@ func TestAppletExitStatus_uniqQuotesTheOperandTheWayXopenDoes(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected uniq to fail on a missing operand")
 	}
-	want := "uniq: can't open 'nope.txt': No such file or directory\n"
+	want := "uniq: cannot open 'nope.txt': No such file or directory\n"
 	if got := stderr.String(); got != want {
 		t.Fatalf("expected uniq to write %q to stderr, got %q", want, got)
 	}

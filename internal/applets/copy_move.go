@@ -88,8 +88,8 @@ func copyDestination(source, dest pathOperand) pathOperand {
 }
 
 // The source is stat'd before it is opened only so the two failures can be told
-// apart, which is the distinction busybox draws between "can't stat"
-// (libbb/copy_file.c:98) and open_or_warn's "can't open".
+// apart, which is the distinction busybox draws between "cannot stat"
+// (libbb/copy_file.c:98) and open_or_warn's "cannot open".
 func copyFile(source, dest pathOperand) error {
 	if _, err := os.Stat(source.host); err != nil {
 		return cannotStat(source.operand, err)

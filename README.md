@@ -132,4 +132,8 @@ Apache-2.0. See [`LICENSE`](LICENSE), [`NOTICE`](NOTICE), and
 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 BusyBox and busybox-w32 are GPL-2.0 and are **not** included here. No BusyBox
-code was copied; they are consulted as behavior references only.
+code was copied, nothing of theirs is distributed, and what is taken from them
+is behaviour — which copyright does not reach. What that means precisely, how a
+behaviour is established, where the wording deliberately differs, and why this
+is not a strict clean room, are all set out in
+[`docs/design/reference-methodology.md`](docs/design/reference-methodology.md).

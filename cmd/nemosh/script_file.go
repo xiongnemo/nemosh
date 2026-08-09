@@ -38,7 +38,7 @@ func (c command) runScriptFile(ctx context.Context, controller *interruptControl
 	rt := c.newRuntime()
 	script, err := readScriptFile(rt, path)
 	if err != nil {
-		fmt.Fprintf(c.stderr, "nemosh: can't open '%s': %v\n", path, openFailureReason(err))
+		fmt.Fprintf(c.stderr, "nemosh: cannot open '%s': %v\n", path, openFailureReason(err))
 		return exitStatus(127)
 	}
 	return c.runScriptWith(ctx, controller, rt, string(script), scriptInvocation{name: path, args: args})

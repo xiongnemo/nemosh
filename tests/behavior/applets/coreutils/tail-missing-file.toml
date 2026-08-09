@@ -9,8 +9,8 @@ script = "tail nope.txt\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "tail: can't open 'nope.txt': No such file or directory\n"
+stderr = "tail: cannot open 'nope.txt': No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/tail.c"
-why = "tail opens through open_or_warn_stdin like cat, so the operand is quoted behind `can't open` and G.exitcode becomes EXIT_FAILURE (coreutils/tail.c:180-182)."
+why = "tail opens through open_or_warn_stdin like cat, so the operand is quoted behind `cannot open` and G.exitcode becomes EXIT_FAILURE (coreutils/tail.c:180-182)."

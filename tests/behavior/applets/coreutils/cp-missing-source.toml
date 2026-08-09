@@ -9,8 +9,8 @@ script = "cp nope.txt out.txt\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "cp: can't stat 'nope.txt': No such file or directory\n"
+stderr = "cp: cannot stat 'nope.txt': No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 coreutils/cp.c and libbb/copy_file.c"
-why = "copy_file reports an unreadable source as `can't stat '%s'` (libbb/copy_file.c:98) and returns -1, which cp turns into EXIT_FAILURE. Nemosh matches."
+why = "copy_file reports an unreadable source as `cannot stat '%s'` (libbb/copy_file.c:98) and returns -1, which cp turns into EXIT_FAILURE. Nemosh matches."

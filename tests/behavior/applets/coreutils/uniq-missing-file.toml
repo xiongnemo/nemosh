@@ -9,7 +9,7 @@ command = ["uniq", "missing-uniq-input.txt"]
 [expect]
 status = 1
 stdout = ""
-stderr = "uniq: can't open 'missing-uniq-input.txt': No such file or directory\n"
+stderr = "uniq: cannot open 'missing-uniq-input.txt': No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 uniq utility"

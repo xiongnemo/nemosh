@@ -9,7 +9,7 @@ import (
 // and refuses any option the applet does not implement.
 //
 // The refusal is the point. These operands used to fall through to the file
-// opener, so `cat -n f.txt` answered `can't open '-n': No such file or
+// opener, so `cat -n f.txt` answered `cannot open '-n': No such file or
 // directory` -- loud, but naming the wrong cause, which sends the reader after
 // a file that was never meant to be one. `supported` lists the spellings the
 // caller really handles and has already consumed.

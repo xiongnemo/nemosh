@@ -12,7 +12,7 @@ import (
 )
 
 // An option these applets do not implement used to be handed to the file opener,
-// so `cat -n f` reported `cat: can't open '-n': No such file or directory`. The
+// so `cat -n f` reported `cat: cannot open '-n': No such file or directory`. The
 // failure was loud but named the wrong cause, sending the reader after a file
 // that was never meant to be one.
 func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
@@ -49,7 +49,7 @@ func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 				t.Fatalf("%s %v succeeded, want a refusal", test.applet, test.args)
 			}
 			message := stderr.String() + err.Error()
-			if strings.Contains(message, "No such file") || strings.Contains(message, "can't open") {
+			if strings.Contains(message, "No such file") || strings.Contains(message, "cannot open") {
 				t.Fatalf("%s %v still reports an option as a missing file: %q", test.applet, test.args, message)
 			}
 			if !strings.Contains(message, strings.TrimPrefix(test.args[0], "-")) {
