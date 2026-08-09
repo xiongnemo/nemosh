@@ -44,13 +44,51 @@ func newPrivateJobScope(parent context.Context, supervisor *jobSupervisor) *jobS
 func (s *jobScope) register() (*jobRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := s.supervisor.register(s.sealed); err != nil {
+	err := s.supervisor.register(s.sealed)
+	if errors.Is(err, errJobLimit) {
+		// A slot is released by `wait`, and a script need never call it -- `foo &`
+		// on its own is ordinary -- so without this a session that has started
+		// maxJobs background jobs refuses every one after them, permanently,
+		// however long ago they finished. Measured, busybox starts its hundred
+		// and first without complaint. The limit is meant to bound jobs that are
+		// still running, so the finished ones are swept when the space is needed.
+		if s.reapFinishedLocked() > 0 {
+			err = s.supervisor.register(s.sealed)
+		}
+	}
+	if err != nil {
 		return nil, err
 	}
 	s.next++
 	record := &jobRecord{id: s.next, done: make(chan struct{})}
 	s.records[record.id] = record
 	return record, nil
+}
+
+// reapFinishedLocked drops records whose job has completed and which nothing is
+// waiting on, and reports how many were dropped. The caller holds s.mu.
+//
+// Sweeping only under pressure rather than on every registration is deliberate:
+// below the limit a finished job stays visible to `jobs` as Done and addressable
+// by `wait %N`, which is what busybox shows. A claimed record is left alone
+// because a `wait` is already holding it.
+func (s *jobScope) reapFinishedLocked() int {
+	deleted := 0
+	for id, record := range s.records {
+		if record.claimed {
+			continue
+		}
+		select {
+		case <-record.done:
+			delete(s.records, id)
+			deleted++
+		default:
+		}
+	}
+	if deleted > 0 {
+		s.supervisor.release(deleted)
+	}
+	return deleted
 }
 
 func (s *jobScope) complete(record *jobRecord, status int) {

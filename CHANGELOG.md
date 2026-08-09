@@ -52,6 +52,12 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A finished background job frees its slot.** A slot was released only by
+  `wait`, and a script need never call it, so the 65th `foo &` in a session was
+  refused with `job limit reached` and so was every one after it, permanently.
+  BusyBox starts its 101st without complaint. The limit now bounds jobs that are
+  still running; finished ones are swept when the space is needed, so `jobs`
+  still shows them as Done below the limit.
 - **An external command inherits the console.** Every child was being handed a
   pipe, which turned `help.exe`'s output into replacement characters and made
   anything checking isatty — colours, progress bars, pagers — turn itself off.
@@ -80,6 +86,12 @@ patch number is the commits since that tag.
   tag publishes a full release.
 - `govulncheck` on every push and weekly; fuzzing over the parser and the
   pattern matcher, with the corpus checked in.
+- Leak, stress and performance-baseline coverage: goroutine counts across
+  repeated scripts and one long session, Windows handle counts across repeated
+  redirects and pipelines, and allocation ceilings for parsing and running.
+  These gate on counts rather than on wall-clock time, which flaps too much on a
+  shared runner to be worth failing a build over; binary size is checked in CI
+  for the same reason.
 - Scoop manifests in
   [`xiongnemo/windows-binaries-scoop-bucket`](https://github.com/xiongnemo/windows-binaries-scoop-bucket).
 

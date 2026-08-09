@@ -140,6 +140,28 @@ jobs:
             esac
           fi
 
+      # Binary size is the one performance number that is deterministic enough to
+      # gate on. Wall-clock time is not -- five consecutive startups on an idle
+      # machine measured 43, 45, 42, 26 and 43 ms -- so the timing side of the
+      # baseline lives in allocation ceilings in the Go tests instead.
+      #
+      # Measured at 3.78 MiB stripped and 5.58 MiB unstripped, so this ceiling
+      # leaves about 19% for growth while still catching the two regressions that
+      # matter: -s -w falling out of the release flags, and a heavy dependency
+      # arriving without anyone noticing.
+      - name: binary size ceiling
+        shell: bash
+        run: |
+          binary="dist/nemosh"
+          [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
+          size=$(wc -c < "$binary")
+          ceiling=4718592
+          echo "$binary is $size bytes, ceiling $ceiling"
+          if [ "$size" -gt "$ceiling" ]; then
+            echo "the binary grew past the ceiling; check the release flags and go.mod before raising it"
+            exit 1
+          fi
+
       - name: production file size ceiling
         shell: bash
         run: |

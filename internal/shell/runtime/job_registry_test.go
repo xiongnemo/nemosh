@@ -102,14 +102,22 @@ func TestRuntime_jobIDsAreMonotonic_andUnconsumedJobsAreCapped(t *testing.T) {
 	}
 }
 
+// The limit is one budget for the whole session, so a private scope cannot start
+// jobs the root scope has already spent.
+//
+// The jobs here block until released rather than returning at once, and that is
+// load-bearing: the limit bounds jobs that are still *running*, so a job that has
+// finished gives its slot back and a test built out of instantly-finishing jobs
+// would be timing-dependent rather than deterministic.
 func TestRuntime_jobLimitIsSessionWide_acrossRootAndPrivateScopes(t *testing.T) {
 	// Given
 	started := make(chan struct{}, 64)
 	registry := applets.NewRegistry(backgroundApplet{
 		name: "session-job",
-		run: func(context.Context, []string, io.Reader, io.Writer, io.Writer) error {
+		run: func(ctx context.Context, _ []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
 			started <- struct{}{}
-			return nil
+			<-ctx.Done()
+			return ctx.Err()
 		},
 	})
 	var script strings.Builder
@@ -121,13 +129,18 @@ func TestRuntime_jobLimitIsSessionWide_acrossRootAndPrivateScopes(t *testing.T) 
 	var stderr bytes.Buffer
 	rt := runtime.New(registry, runtime.Streams{Stderr: &stderr})
 
-	// When
+	// When: the group itself holds one of the 64 slots, so 63 of its jobs start
+	// and the 64th is refused.
 	launchStatus := rt.RunScript(context.Background(), script.String())
+	for range 63 {
+		<-started
+	}
 	waitStatus := rt.RunScript(context.Background(), "wait %1\n")
 
-	// Then
-	if launchStatus != 0 || waitStatus != 1 || len(started) != 63 {
-		t.Fatalf("statuses = %d, %d, nested starts = %d; want 0, 1, 63", launchStatus, waitStatus, len(started))
+	// Then: having received 63 without blocking, an empty channel now is what
+	// says the 64th never ran.
+	if launchStatus != 0 || waitStatus != 1 || len(started) != 0 {
+		t.Fatalf("statuses = %d, %d, starts beyond the limit = %d; want 0, 1, 0", launchStatus, waitStatus, len(started))
 	}
 	if got := stderr.String(); got != "nemosh: job limit reached\n" {
 		t.Fatalf("stderr = %q, want job-limit diagnostic", got)

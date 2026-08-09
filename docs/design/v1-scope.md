@@ -82,19 +82,39 @@ and is the one item of this section that v0 delivered. The rest is new:
   quoting. The brace defect found on 2026-08-07 is the shape of bug fuzzing
   finds.
 - Resource-leak and long-running stress coverage for goroutines, handles, and
-  the job supervisor.
+  the job supervisor. **Done 2026-08-09.** `leak_test.go` walks twelve script
+  shapes and one 200-command session; `handle_leak_windows_test.go` reads
+  `GetProcessHandleCount` across 600 redirects and 300 pipelines, measuring the
+  *second* identical batch so the Go runtime's own warm-up is behind the
+  reading; `job_stress_test.go` covers the supervisor. This found a real defect:
+  a finished background job never gave its slot back, so the 65th `foo &` in a
+  session was refused permanently.
 - **Pin GitHub Actions to commit SHAs.** Currently `actions/checkout@v4`,
   `actions/setup-go@v5`, and `msys2/setup-msys2@v2` are tags, which are mutable.
   Apply least-privilege permissions in the same pass.
-- Performance baselines with regression thresholds: startup, `-c`, a pipeline, a
-  representative applet, memory/handle/goroutine counts, and binary size.
+- Performance baselines with regression thresholds. **Done 2026-08-09, and not
+  as originally written.** Wall-clock thresholds were dropped: five consecutive
+  startups on an idle machine measured 43, 45, 42, 26 and 43 ms, a 42% spread
+  with nothing competing, and a gate that flaps on a shared runner gets ignored
+  rather than fixed. What is gated instead is deterministic -- allocation
+  ceilings per parse and per command (`allocation_test.go`, each about twice the
+  measured figure, with the measurement recorded beside it), handle and
+  goroutine counts as above, and a binary-size ceiling in `product.yml` at
+  4.5 MiB against 3.78 MiB measured, which is under the 5.58 MiB an unstripped
+  build produces and so catches `-s -w` falling out of the release flags.
+  `BenchmarkParseScript` and `BenchmarkRunScript_pipeline` exist for humans to
+  read; they do not fail a build.
 
 ### V1-C — Reproducible packaging and distribution
 
 - A single multicall binary.
-- Windows Scoop-first: generate the manifest, generate shims from the
-  authoritative applet list, and test clean install, shim invocation, upgrade,
-  and uninstall.
+- Windows Scoop-first: a manifest, and tests for clean install, shim
+  invocation, upgrade, and uninstall. **One shim, not one per applet** --
+  decided 2026-08-09. `find` and `sort` are Windows commands with different
+  syntax, and on a machine with busybox installed those names are already
+  taken; an install that silently changes what a name means is worse than one
+  that makes the user type `nemosh find`. `scoop shim add` covers the
+  exception.
 - Archives or packages for the supported Unix platforms.
 - `-trimpath` reproducible builds, checksums, SBOM, signing, provenance.
 - **The published artifact must be the same binary CI verified.** No rebuild at
