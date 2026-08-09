@@ -16,6 +16,12 @@ func newLineBuffer() *lineBuffer {
 	return &lineBuffer{}
 }
 
+// length is how many runes are in the line, which is what the cursor is counted
+// in. A suggestion is only offered when the cursor has reached it.
+func (b *lineBuffer) length() int {
+	return len(b.runes)
+}
+
 // insert adds a printable rune at the cursor. Control characters and tab are
 // refused: the editor handles those as keys, and a literal tab in the buffer
 // would make the drawn width depend on the terminal's tab stops.

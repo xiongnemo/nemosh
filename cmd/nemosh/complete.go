@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/capability"
 	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
@@ -55,8 +56,33 @@ func completeCommand(prefix string) []string {
 }
 
 // completeOperand offers what the command in progress can actually take.
+//
+// A word that begins with a dash asks for an option, so options are offered
+// first -- and only if none of them matches does this fall back to paths. That
+// fallback is bash's idea (`-o bashdefault`: when the specification produces
+// nothing, try the ordinary thing) and it is what keeps a file genuinely named
+// `-1.18-windows.xml` reachable: no option matches `-1.1`, so the file is
+// offered instead.
 func completeOperand(workingDirectory, command, prefix string) []string {
-	return completePaths(workingDirectory, prefix, operandKind(command) == completeDirectory)
+	if strings.HasPrefix(prefix, "-") {
+		if options := completeOption(command, prefix); len(options) > 0 {
+			return options
+		}
+	}
+	return completePaths(workingDirectory, prefix, completesDirectoriesOnly(command))
+}
+
+// completeOption offers the options the command accepts, from the capability
+// table that a test holds against the applets' real behaviour.
+func completeOption(command, prefix string) []string {
+	var matches []string
+	for _, option := range capability.Options(command) {
+		if strings.HasPrefix(option, prefix) {
+			matches = append(matches, option)
+		}
+	}
+	sort.Strings(matches)
+	return matches
 }
 
 // completeFile offers any path under the shell's working directory.

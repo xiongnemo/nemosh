@@ -1,6 +1,10 @@
 package main
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/capability"
+)
 
 // A command's operands are not all the same kind, and offering the wrong kind
 // is the difference between Tab helping and Tab being in the way: `cd ` must not
@@ -13,34 +17,11 @@ import "strings"
 // in shell functions outside the shell, and zsh in a declared option grammar per
 // command. This is busybox's rule with the command name looked up instead of
 // hardcoded, which costs nothing and holds the next command that wants it.
-type completionKind int
-
-const (
-	completeAnyPath completionKind = iota
-	completeDirectory
-)
-
-// directoryOperands are the commands no regular file can be an operand of.
-//
-// Deliberately short, and the bar for adding to it is that a file is *never*
-// valid: `cd notes.txt` and `rmdir notes.txt` both fail outright. `mkdir` is
-// here for a different reason -- its operand does not exist yet, so what helps
-// is completing the parent directories on the way to it, which is what bash's
-// own completion for it offers.
-//
-// A command that merely *prefers* directories does not belong here. Narrowing
-// the candidates is only safe when the omitted ones could not have been meant.
-var directoryOperands = map[string]bool{
-	"cd":    true,
-	"mkdir": true,
-	"rmdir": true,
-}
-
-func operandKind(command string) completionKind {
-	if directoryOperands[command] {
-		return completeDirectory
-	}
-	return completeAnyPath
+// The table itself lives in internal/capability, where a test binds it to what
+// the applets actually do. Two features want this knowledge -- completion and
+// the suggestion renderer -- and a second copy would drift from the first.
+func completesDirectoriesOnly(command string) bool {
+	return capability.OperandKindOf(command) == capability.Directory
 }
 
 // commandInProgress is the command word that the operand being completed belongs

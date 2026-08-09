@@ -95,12 +95,17 @@ one. This is a separate question from `wordStart`, which Ctrl-W uses and which
 *does* step back over blanks -- sharing the one boundary is what made Tab after
 any command plus a blank do nothing at all.
 
-**What kind of thing can go there** is `operandKind` (`complete_spec.go`).
+**What kind of thing can go there** comes from `internal/capability`, below.
 busybox's `cd` rule, with the command name looked up in a table rather than
 compared inline. `cd`, `mkdir` and `rmdir` take directories; everything else
 takes any path. The bar for adding to that table is that a regular file could
 *never* have been meant -- narrowing is only safe when the omitted candidates
 were impossible, and a command that merely prefers directories does not qualify.
+
+**An option is offered from the same table.** `ls -<TAB>` answers
+`--color -1 -a -h -l`. When no option matches, this falls back to paths, which is
+bash's `-o bashdefault` idea and what keeps a file named `-1.18-windows.xml`
+reachable: nothing matches `-1.1`, so the file is offered instead.
 
 **Where candidates come from** is builtins and applets for a command word, and
 the named directory for an operand. `PATH` is deliberately not walked: on Windows
@@ -131,6 +136,30 @@ happens afterwards, inside the applet, so `ls -l \-1.18-windows.xml` and
 busybox hand back the bare name and leave a command that cannot run. Applied to
 operands only, never to a command word, and never when a directory part is
 already present.
+
+## One table, two features
+
+`internal/capability` says what each command takes: its short options, its long
+options, and whether an operand can only be a directory. Completion offers from
+it, and the renderer colours from it, so the two cannot disagree about what
+exists -- an option Tab offers is an option drawn as accepted, because one place
+says so.
+
+What makes it worth having rather than another thing to keep up to date is that
+it is **bound to behaviour**. `capability_test.go` runs every applet with every
+option the table claims and fails if one is refused, and runs each with `-Z` and
+fails if it is accepted. A table that merely looked consistent with the code
+would drift within a release; this one cannot drift without a red build.
+
+Writing it caught three things immediately: `id` was credited with a `-U` it does
+not have, and `chmod` and `sed` turned out not to refuse unknown options at all,
+because their first operand is the mode and the script -- so `-Z` comes back as
+`invalid mode` rather than as an unknown option. The support matrix's third
+column said otherwise for those two, and measurement won.
+
+Builtins carry an operand kind and no option claims. Nothing here measures a
+builtin's options yet, and an unchecked claim is exactly the kind that goes stale
+quietly.
 
 ## Backslashes, not quotes
 
@@ -175,7 +204,7 @@ than two competing ones. It is listed below rather than done.
 - **Quote-preserving completion.** If the word already opens with a quote,
   complete inside it and close it, instead of escaping. zsh's rule, and the only
   version of "support quotes" that does not end up with two competing schemes.
-- **Fish-style inline suggestion.** See below.
+- **Persistent history**, which is what would make inline suggestion strong.
 
 ## Listing on the first Tab
 
@@ -195,38 +224,8 @@ silence genuinely cannot express -- an empty directory and a broken Tab look
 identical without it, which is exactly how a defect that made every argument
 uncompletable went unnoticed.
 
-## Inline suggestion, and what it would need
+## Inline suggestion
 
-The grey-text-ahead-of-the-cursor behaviour is not completion. Completion answers
-"what could go here" on demand; suggestion answers "what did you most likely mean"
-on *every keystroke*, and shows one answer speculatively. Fish draws it from
-history first and falls back to completions.
-
-Nothing in the current design forbids it, and three of the four pieces exist:
-
-- The editor already redraws the whole line on every keystroke
-  (`lineedit_draw.go`), which is the expensive prerequisite most line editors
-  lack.
-- History is already kept and already searched for Up/Down.
-- `\033[90m` and a reset are all the rendering it needs.
-
-What is missing is honest accounting rather than machinery:
-
-1. **The suggestion occupies columns it does not own.** `promptColumns` and
-   `cursorColumns` decide where the cursor goes; grey text drawn past the cursor
-   has to be erased before the cursor is placed, or every subsequent redraw is
-   off by its width -- the same class of defect as the prompt measuring eleven
-   columns for a two-column `$ `.
-2. **It must never be committed by accident.** Enter has to submit the typed
-   line, not the suggestion; only an explicit key (fish uses Right/End) accepts
-   it.
-3. **It runs on every keystroke**, so the lookup has to be bounded. History
-   search is fine; a directory read per keystroke is not, which is why the first
-   version should suggest from history only.
-4. **It has to survive wrapping**, since a suggestion is what most often pushes a
-   line past the terminal width.
-
-The screen-model tests already assert what a row looks like rather than which
-bytes were sent, which is exactly the harness this needs: a suggestion that
-leaves the cursor one column off would be visible there and invisible to a
-`strings.Contains` assertion.
+Built, and written up separately in [`suggestion.md`](suggestion.md): it shares
+the capability table with completion but is a different feature, answering on
+every keystroke rather than on request.

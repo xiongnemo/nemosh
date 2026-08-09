@@ -21,14 +21,23 @@ import (
 type screenModel struct {
 	width int
 	rows  [][]rune
-	row   int
-	col   int
-	t     *testing.T
+	// attributes runs alongside rows, one entry per cell, holding the SGR
+	// parameters in force when that cell was written.
+	//
+	// Tracked because the styling is not decoration to the tests: an underline
+	// under the wrong word, or grey over text the user actually typed, is a
+	// defect that byte assertions cannot see. `\033[4m` is well formed wherever
+	// it appears, exactly as `\033[3C` was.
+	attributes [][]string
+	current    string
+	row        int
+	col        int
+	t          *testing.T
 }
 
 func newScreenModel(t *testing.T, width int) *screenModel {
 	t.Helper()
-	return &screenModel{width: width, rows: [][]rune{{}}, t: t}
+	return &screenModel{width: width, rows: [][]rune{{}}, attributes: [][]string{{}}, t: t}
 }
 
 // Write feeds the editor's output through the model.
@@ -92,12 +101,21 @@ func (s *screenModel) applyEscape(text string) int {
 		// Erase from the cursor to the end of the display, which is the only
 		// form the editor emits.
 		s.rows[s.row] = s.rows[s.row][:min(s.col, len(s.rows[s.row]))]
+		s.attributes[s.row] = s.attributes[s.row][:min(s.col, len(s.attributes[s.row]))]
 		s.rows = s.rows[:s.row+1]
+		s.attributes = s.attributes[:s.row+1]
 	case 'H':
 		s.row, s.col = 0, 0
 	case 'm':
-		// Colour. It changes nothing about layout, which is the whole point of
-		// the bug this model exists to catch.
+		// Styling changes nothing about layout, which is the whole point of the
+		// defect this model exists to catch -- but it does change what a person
+		// sees, so it is recorded rather than discarded. `0` and an empty body
+		// both mean "back to plain".
+		if body == "" || body == "0" {
+			s.current = ""
+			break
+		}
+		s.current = body
 	default:
 		s.t.Fatalf("screen model saw a final byte it does not implement: %q", sequence)
 	}
@@ -117,14 +135,18 @@ func (s *screenModel) put(r rune) {
 	s.ensureRow(s.row)
 	for len(s.rows[s.row]) < s.col {
 		s.rows[s.row] = append(s.rows[s.row], ' ')
+		s.attributes[s.row] = append(s.attributes[s.row], "")
 	}
 	if s.col < len(s.rows[s.row]) {
 		s.rows[s.row] = s.rows[s.row][:s.col]
+		s.attributes[s.row] = s.attributes[s.row][:s.col]
 	}
 	s.rows[s.row] = append(s.rows[s.row], r)
+	s.attributes[s.row] = append(s.attributes[s.row], s.current)
 	// A wide character occupies a second cell that holds nothing of its own.
 	for filler := 1; filler < width; filler++ {
 		s.rows[s.row] = append(s.rows[s.row], 0)
+		s.attributes[s.row] = append(s.attributes[s.row], s.current)
 	}
 	s.col += width
 }
@@ -132,7 +154,33 @@ func (s *screenModel) put(r rune) {
 func (s *screenModel) ensureRow(row int) {
 	for len(s.rows) <= row {
 		s.rows = append(s.rows, []rune{})
+		s.attributes = append(s.attributes, []string{})
 	}
+}
+
+// styleAt reports the SGR parameters in force at one cell, joined with `;` so a
+// test can name it as it was written: "32", "32;4", "" for plain.
+func (s *screenModel) styleAt(row, col int) string {
+	if row >= len(s.attributes) || col >= len(s.attributes[row]) {
+		return ""
+	}
+	return s.attributes[row][col]
+}
+
+// styledRun returns the text of the cells sharing the style at a starting cell,
+// which is how a test asks "what exactly is underlined".
+func (s *screenModel) styledRun(row, col int) string {
+	want := s.styleAt(row, col)
+	var run strings.Builder
+	for index := col; index < len(s.rows[row]); index++ {
+		if s.styleAt(row, index) != want {
+			break
+		}
+		if s.rows[row][index] != 0 {
+			run.WriteRune(s.rows[row][index])
+		}
+	}
+	return run.String()
 }
 
 // text returns what a person would see on one row.

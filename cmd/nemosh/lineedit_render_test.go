@@ -20,6 +20,11 @@ func renderEditor(t *testing.T, width int, prompt, keys string) *screenModel {
 	screen := newScreenModel(t, width)
 	editor := newLineEditor(strings.NewReader(keys), screen, t.TempDir())
 	editor.width = func() int { return width }
+	// Highlighting stays on -- it emits escapes, and these tests are the ones
+	// that would catch an escape the screen cannot make sense of. Suggestions go
+	// off: they put text on the row that these assertions are not about, and a
+	// test that has to restate an unrelated feature stops testing its own.
+	editor.styling.colours.suggestion = nil
 	if _, err := editor.readLine(context.Background(), prompt); err != nil {
 		t.Fatalf("readLine: %v", err)
 	}
@@ -101,6 +106,7 @@ func TestRender_recallingAShorterLineClearsTheRest(t *testing.T) {
 	screen := newScreenModel(t, 80)
 	editor := newLineEditor(strings.NewReader("\033[A\r"), screen, t.TempDir())
 	editor.width = func() int { return 80 }
+	editor.styling.colours.suggestion = nil
 	editor.remember("hi")
 
 	// When: type nothing, recall the short entry over the empty line

@@ -22,6 +22,10 @@ func (e *lineEditor) redraw(prompt string) {
 	columns := e.buffer.columns()
 	width := e.columnsOrDefault()
 
+	// The suggestion is computed here, not stored by the keypress that caused
+	// it, because it depends on the width the line is being drawn at.
+	e.suggestion = e.suggestionFor(promptWidth, columns, width)
+
 	var out strings.Builder
 	// Back up to the row the prompt is on, then to its start.
 	if e.drawnRows > 0 {
@@ -31,7 +35,7 @@ func (e *lineEditor) redraw(prompt string) {
 	if promptWidth > 0 {
 		fmt.Fprintf(&out, "\033[%dC", promptWidth)
 	}
-	out.WriteString(e.buffer.String())
+	out.WriteString(e.styling.paint(e.buffer.String(), e.buffer.cursor, e.suggestion))
 	// Erase to the end of the display rather than padding with spaces: a
 	// shrinking line can leave a tail on the rows below, and spaces would have
 	// to be counted across the wrap to reach it.

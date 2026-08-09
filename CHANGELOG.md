@@ -30,8 +30,26 @@ patch number is the commits since that tag.
   `cd Program\ Files/` — one operand — and a second Tab continues from it.
 - **Completion ignores case on Windows**, because NTFS does. `cd prog` offers
   `Program Files/`, spelled as it is on disk.
+- **Inline suggestion.** What the line would most likely become is drawn ahead of
+  the cursor in grey, from history first and command names second, and Right or
+  End takes it. It is never in the buffer, so Enter submits what was typed and
+  could not do otherwise; it is cut to the columns left on the row, so it can
+  never wrap; and it is only offered at the end of a line.
+- **The line is drawn in colour.** A command this shell carries is green and one
+  it does not is red; an option the command accepts is cyan and one it does not
+  is yellow; the word being edited is underlined until a blank ends it. Every
+  choice is in one struct, `defaultPalette()`.
+- **Colour absent turns both off** rather than degrading them, because a grey
+  suggestion rendered as ordinary text would put characters on screen that are
+  not in the line. `NO_COLOR`, `TERM=dumb`, and `NEMOSH_COLOR=always|never`.
+- **Option completion.** `ls -<TAB>` offers `--color -1 -a -h -l`, from
+  `internal/capability` -- one table that both completion and the renderer read,
+  bound to the applets' real behaviour by a test that runs each of them. Writing
+  that test found `id` credited with a `-U` it does not have, and `chmod` and
+  `sed` documented as refusing unknown options when they do not.
 - `docs/design/completion.md` records how ash, bash and zsh each solve this and
-  which of their ideas this shell took.
+  which of their ideas this shell took; `docs/design/suggestion.md` covers the
+  suggestion engine and the rendering.
 - **Backspace over a wide character removes all of it.** The editor edits by
   rune and measures by column, which busybox's own editor conflates — there,
   backspacing over a two-column CJK character leaves half of it on screen.

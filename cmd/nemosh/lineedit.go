@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -38,6 +39,14 @@ type lineEditor struct {
 	// checked without a terminal, and defaulted rather than required so a
 	// stream that has no width still edits.
 	width func() int
+	// styling decides whether the line is drawn in colour and whether a
+	// suggestion is drawn at all. Absent colour turns both off rather than
+	// degrading them; see theme.go.
+	styling theme
+	// suggestion is the text drawn grey after the cursor, held between the draw
+	// that computed it and the key that may accept it. Never part of the
+	// buffer -- that is what makes it impossible to submit by accident.
+	suggestion string
 }
 
 // defaultTerminalColumns is used when the terminal will not say. Eighty is the
@@ -53,6 +62,7 @@ func newLineEditor(input io.Reader, screen io.Writer, workingDirectory string) *
 		workingDirectory: workingDirectory,
 		buffer:           newLineBuffer(),
 		width:            func() int { return terminalColumns(screen) },
+		styling:          newTheme(os.LookupEnv),
 	}
 }
 
@@ -137,11 +147,19 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		case keyLeft:
 			e.buffer.moveLeft()
 		case keyRight:
-			e.buffer.moveRight()
+			// At the end of the line there is nothing to move onto, so the key
+			// is free to mean "take the suggestion" -- which is what fish binds
+			// it to, and what makes accepting one keystroke rather than a
+			// decision.
+			if !e.acceptSuggestion() {
+				e.buffer.moveRight()
+			}
 		case keyHome:
 			e.buffer.moveHome()
 		case keyEnd:
-			e.buffer.moveEnd()
+			if !e.acceptSuggestion() {
+				e.buffer.moveEnd()
+			}
 		case keyClearLine:
 			e.buffer.replace("")
 		case keyDeleteWord:
