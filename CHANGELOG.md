@@ -35,10 +35,16 @@ patch number is the commits since that tag.
   End takes it. It is never in the buffer, so Enter submits what was typed and
   could not do otherwise; it is cut to the columns left on the row, so it can
   never wrap; and it is only offered at the end of a line.
-- **The line is drawn in colour.** A command this shell carries is green and one
-  it does not is red; an option the command accepts is cyan and one it does not
-  is yellow; the word being edited is underlined until a blank ends it. Every
-  choice is in one struct, `defaultPalette()`.
+- **The line is drawn in colour.** A command that will run is green and one that
+  will not is red; an option the command accepts is cyan and one it does not is
+  yellow; the word being edited is underlined until a blank ends it. Every choice
+  is in one struct, `defaultPalette()`.
+- **"Will run" means PATH too**, along with this session's aliases and functions,
+  so `wsl` and `ll` are green rather than red. PATH is read once on a background
+  goroutine and rebuilt only when the variable changes — 78 directories and 9,917
+  files measured at 16ms, which is nothing once and far too much per keystroke.
+  Until that read finishes a name is drawn plainly rather than red, because red
+  turning green a moment later is a colour you learn to ignore.
 - **Colour absent turns both off** rather than degrading them, because a grey
   suggestion rendered as ordinary text would put characters on screen that are
   not in the line. `NO_COLOR`, `TERM=dumb`, and `NEMOSH_COLOR=always|never`.

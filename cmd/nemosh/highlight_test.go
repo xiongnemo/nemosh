@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+// neverKnows is an oracle that recognises nothing, for tests about the theme
+// rather than about what exists.
+func neverKnows(string) commandStanding { return standingUnknown }
+
 // hasParameter reports whether an SGR parameter is present as itself.
 // Substring matching would call `34` an underline because it contains `4`.
 func hasParameter(style, want string) bool {
@@ -151,7 +155,7 @@ func TestTheme_disablesItselfWhenColourIsUnavailable(t *testing.T) {
 			if styled.enabled != test.want {
 				t.Fatalf("enabled = %v, want %v", styled.enabled, test.want)
 			}
-			if !test.want && styled.paint("ls -a", 5, "bcd") != "ls -a" {
+			if !test.want && styled.paint("ls -a", 5, "bcd", neverKnows) != "ls -a" {
 				t.Fatal("a disabled theme still painted something")
 			}
 			if !test.want && styled.suggests() {

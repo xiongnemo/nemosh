@@ -47,6 +47,10 @@ type lineEditor struct {
 	// that computed it and the key that may accept it. Never part of the
 	// buffer -- that is what makes it impossible to submit by accident.
 	suggestion string
+	// commands is what this session can run: builtins and applets, the aliases
+	// and functions it has defined, and everything on PATH. It decides both the
+	// colour a command word is drawn in and what a suggestion may propose.
+	commands *shellCommands
 }
 
 // defaultTerminalColumns is used when the terminal will not say. Eighty is the
@@ -63,6 +67,7 @@ func newLineEditor(input io.Reader, screen io.Writer, workingDirectory string) *
 		buffer:           newLineBuffer(),
 		width:            func() int { return terminalColumns(screen) },
 		styling:          newTheme(os.LookupEnv),
+		commands:         newShellCommands(newPathIndex()),
 	}
 }
 

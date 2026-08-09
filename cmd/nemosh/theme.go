@@ -51,11 +51,11 @@ func newTheme(lookupEnv func(string) (string, bool)) theme {
 // suggestion's from the plain text it passed in. Escapes must never reach the
 // column arithmetic, and the surest way to guarantee that is never to hand them
 // anything that could be mistaken for a width.
-func (t theme) paint(line string, cursor int, suggestion string) string {
+func (t theme) paint(line string, cursor int, suggestion string, knows commandOracle) string {
 	if !t.enabled {
 		return line
 	}
-	painted := renderSpans(highlight(line, cursor, t.colours))
+	painted := renderSpans(highlight(line, cursor, t.colours, knows))
 	if suggestion != "" {
 		painted += span{text: suggestion, codes: t.colours.suggestion}.render()
 	}

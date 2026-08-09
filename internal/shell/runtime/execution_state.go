@@ -203,3 +203,21 @@ func (r Runtime) LookupVariable(name string) (string, bool) {
 	return value, present
 }
 func (r Runtime) ResolvePath(path string) string { return r.resolvePath(path) }
+
+// RunnableNames is every name this session can run that is not a builtin or an
+// applet: the aliases and functions it has defined.
+//
+// The line editor asks so that it can draw a name it can run in the colour of a
+// name it can run. Without it, `ll` from an rc file was drawn as an error while
+// working perfectly, which is the shell contradicting itself on screen.
+func (r Runtime) RunnableNames() []string {
+	names := make([]string, 0, len(r.aliases)+len(r.functions))
+	for name := range r.aliases {
+		names = append(names, name)
+	}
+	for name := range r.functions {
+		names = append(names, name.String())
+	}
+	sort.Strings(names)
+	return names
+}

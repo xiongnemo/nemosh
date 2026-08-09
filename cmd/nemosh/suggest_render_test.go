@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 )
 
 // styledEditor is the editor as a user gets it: colour on, suggestions on. It
@@ -46,7 +47,26 @@ func newStyledEditor(t *testing.T, width int, keys string, history []string) (*s
 	for _, entry := range history {
 		editor.remember(entry)
 	}
+	// An empty PATH, settled. Without this the index is still building and every
+	// name is undetermined, which is the right answer in production and the wrong
+	// one for a test that wants to know how a name it can name is drawn.
+	editor.commands.path.refresh("")
+	waitForPathIndex(t, editor.commands.path)
 	return screen, editor
+}
+
+func waitForPathIndex(t *testing.T, index *pathIndex) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		if _, ready := index.has("anything"); ready {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the PATH index never became ready")
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 // The suggestion is drawn after what was typed, in the suggestion colour, and

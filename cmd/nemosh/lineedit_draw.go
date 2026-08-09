@@ -35,7 +35,7 @@ func (e *lineEditor) redraw(prompt string) {
 	if promptWidth > 0 {
 		fmt.Fprintf(&out, "\033[%dC", promptWidth)
 	}
-	out.WriteString(e.styling.paint(e.buffer.String(), e.buffer.cursor, e.suggestion))
+	out.WriteString(e.styling.paint(e.buffer.String(), e.buffer.cursor, e.suggestion, e.commands.standing))
 	// Erase to the end of the display rather than padding with spaces: a
 	// shrinking line can leave a tail on the rows below, and spaces would have
 	// to be counted across the wrap to reach it.

@@ -20,13 +20,25 @@ is a different guess and the first that answers wins:
 
 1. **History**, most recent first. A line already run is a line meant, and it is
    the source fish leads with.
-2. **Command names**, for the first word only. This is what history cannot help
-   with in a fresh session, and a fresh session is exactly where a suggestion
-   engine looks broken if it has nothing to say. The shortest match wins, so `e`
-   suggests `echo` rather than whatever sorts first.
+2. **Command names**, for the first word only -- builtins, applets, this
+   session's aliases and functions, and everything on PATH. This is what history
+   cannot help with in a fresh session, and a fresh session is exactly where a
+   suggestion engine looks broken if it has nothing to say. The shortest match
+   wins, so `e` suggests `echo` rather than whatever sorts first.
 
 An operand is deliberately not suggested. That is a filesystem question and it
 belongs to Tab, which is allowed to be slow because it was asked.
+
+PATH is the exception that proves the rule. It *is* the filesystem, so it is read
+**once, on a background goroutine**, and rebuilt only when the variable actually
+changes -- comparing the string is the whole invalidation story, and it is the
+right one for a shell, where changing PATH is ordinary and installing a program
+mid-session is not. Measured here: 78 directories holding 9,917 files take 16ms,
+which is nothing once and far too much per character.
+
+Until that read finishes, a name the shell does not otherwise recognise is
+**undetermined**, not unknown, and is drawn plainly. Red then green a moment
+later is a colour you learn to ignore.
 
 History is per-session today. Persisting it would make the first source much
 stronger and is the single biggest improvement available to this feature.
@@ -69,18 +81,22 @@ accepts, so there is one vocabulary rather than two.
 
 | role | drawn as | decided by |
 | --- | --- | --- |
-| a command this shell carries | green | `capability.Known` |
-| a command it does not | red | the same, absent |
+| a command that will run | green | the table, this session's aliases and functions, then PATH |
+| a command that will not | red | none of the above knows it |
+| a command not yet decided | plain | PATH has not finished being read |
 | an option the command accepts | cyan | `capability.Lookup` |
 | an option it does not | yellow | the same, absent |
 | the word being edited | underline, over whatever colour applies | the cursor |
 | the suggestion | grey | not typed yet |
 
-Unknown is yellow rather than red because it is a guess, not a verdict: an
-external program on `PATH` is not in the table, and neither is a function or an
-alias this session defined. For the same reason a word belonging to an unknown
-command gets no option verdict at all -- inventing one from absence would be
-saying something the shell does not know.
+Unknown options are yellow rather than red because absence from the table is a
+guess, not a verdict: an external program's options are not in it. For the same
+reason a word belonging to an unknown command gets no option verdict at all --
+inventing one from absence would be saying something the shell does not know.
+
+A **command** is a firmer answer, because the shell knows every way it resolves
+one: its own table, this session's aliases and functions, and PATH. So red there
+means it really will not run.
 
 Every choice is in `defaultPalette()`, one struct, so changing how a known
 command looks is one edit rather than a search.

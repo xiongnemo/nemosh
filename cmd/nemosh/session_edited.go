@@ -35,6 +35,15 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// in native form: WorkingDirectory answers in the shell's view, which
 		// os.ReadDir cannot open on Windows.
 		editor.workingDirectory = completionDirectory(rt)
+		// What this session can run changes while it runs: an rc file defines
+		// aliases, a script defines functions, and PATH can be exported to. All
+		// three decide the colour a command is drawn in and what a suggestion may
+		// propose, so they are re-read here rather than captured once. The PATH
+		// index rebuilds only when the variable actually moves.
+		editor.commands.set(rt.RunnableNames())
+		if value, ok := rt.LookupEnv("PATH"); ok {
+			editor.commands.path.refresh(value)
+		}
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
 		line, err := editor.readLine(ctx, prompt)
 		if ctx.Err() != nil {

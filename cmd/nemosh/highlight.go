@@ -73,7 +73,7 @@ func renderSpans(spans []span) string {
 // cursor is a rune index, and it decides one thing only: which word is being
 // edited. That word is underlined while it is still being typed -- until a blank
 // ends it -- which is the visible answer to "what will Tab act on".
-func highlight(line string, cursor int, colours palette) []span {
+func highlight(line string, cursor int, colours palette, knows commandOracle) []span {
 	runes := []rune(line)
 	var spans []span
 	commandPosition := true
@@ -99,7 +99,7 @@ func highlight(line string, cursor int, colours palette) []span {
 			index = len(runes)
 		}
 		word := string(runes[start:index])
-		codes := wordCodes(word, command, commandPosition, colours)
+		codes := wordCodes(word, command, commandPosition, colours, knows)
 		if commandPosition && !isCommandSeparatorWord(word) {
 			command = word
 		}
@@ -116,15 +116,20 @@ func highlight(line string, cursor int, colours palette) []span {
 }
 
 // wordCodes decides how one word is drawn.
-func wordCodes(word, command string, commandPosition bool, colours palette) []string {
+func wordCodes(word, command string, commandPosition bool, colours palette, knows commandOracle) []string {
 	if isCommandSeparatorWord(word) {
 		return nil
 	}
 	if commandPosition {
-		if knownCommand(word) {
+		switch knows(word) {
+		case standingRunnable:
 			return append([]string(nil), colours.knownCommand...)
+		case standingUnknown:
+			return append([]string(nil), colours.unknownCommand...)
 		}
-		return append([]string(nil), colours.unknownCommand...)
+		// Undetermined: PATH has not been read yet, or the word names a file
+		// rather than a command. Saying nothing is the honest colour.
+		return nil
 	}
 	switch optionStanding(command, word) {
 	case optionAccepted:

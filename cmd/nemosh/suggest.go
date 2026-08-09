@@ -1,12 +1,6 @@
 package main
 
-import (
-	"strings"
-
-	"github.com/xiongnemo/nemosh/internal/applets"
-	"github.com/xiongnemo/nemosh/internal/capability"
-	"github.com/xiongnemo/nemosh/internal/shell/runtime"
-)
+import "strings"
 
 // A suggestion is what the line would most likely become, drawn ahead of the
 // cursor in grey and accepted only if asked for.
@@ -25,6 +19,9 @@ import (
 type suggester struct {
 	// history is the lines already run, oldest first.
 	history []string
+	// commands is every name that can be run: builtins, applets, this session's
+	// aliases and functions, and everything on PATH.
+	commands []string
 }
 
 // suggest returns the text to draw after the line, or "" for none.
@@ -72,7 +69,7 @@ func (s suggester) fromCommandNames(line string) (string, bool) {
 		return "", false
 	}
 	best := ""
-	for _, name := range commandNames() {
+	for _, name := range s.commands {
 		if !strings.HasPrefix(name, line) || len(name) == len(line) {
 			continue
 		}
@@ -87,28 +84,4 @@ func (s suggester) fromCommandNames(line string) (string, bool) {
 		return "", false
 	}
 	return best[len(line):], true
-}
-
-// commandNames is every name this shell can run without consulting PATH. Built
-// once: it cannot change during a session, and this is on the keystroke path.
-var commandNames = func() func() []string {
-	var names []string
-	return func() []string {
-		if names != nil {
-			return names
-		}
-		names = append(names, runtime.BuiltinNames()...)
-		names = append(names, applets.DefaultRegistry.Names()...)
-		return names
-	}
-}()
-
-// knownCommand reports whether a command word names something this shell can
-// run, which is what decides the colour it is drawn in.
-//
-// An unknown name is not necessarily wrong -- it may be a program on PATH, or a
-// function or alias this session defined -- so the caller decides how loud to be
-// about it. What this answers is only whether the shell itself carries it.
-func knownCommand(name string) bool {
-	return capability.Known(name)
 }

@@ -22,7 +22,7 @@ func (e *lineEditor) suggestionFor(promptWidth, bufferColumns, width int) string
 	if e.buffer.cursor != e.buffer.length() {
 		return ""
 	}
-	text := suggester{history: e.history}.suggest(e.buffer.String())
+	text := suggester{history: e.history, commands: e.commands.candidates()}.suggest(e.buffer.String())
 	if text == "" {
 		return ""
 	}
