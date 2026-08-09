@@ -16,15 +16,17 @@ import (
 // Erasing uses the widest the line has ever been, so shrinking it -- a
 // backspace over a two-column character -- does not leave the tail on screen.
 func (e *lineEditor) redraw(prompt string) {
-	promptColumns := textColumns(lastPromptLine(prompt))
+	// Measured with promptColumns, not textColumns: the prompt carries colour,
+	// and every byte of an escape sequence but the ESC itself is printable.
+	promptWidth := promptColumns(lastPromptLine(prompt))
 	line := e.buffer.String()
 	columns := e.buffer.columns()
 
 	var out strings.Builder
 	// To the start of the line, then past the prompt.
 	out.WriteString("\r")
-	if promptColumns > 0 {
-		fmt.Fprintf(&out, "\033[%dC", promptColumns)
+	if promptWidth > 0 {
+		fmt.Fprintf(&out, "\033[%dC", promptWidth)
 	}
 	out.WriteString(line)
 	// Erase whatever the previous, longer line left behind.
@@ -33,7 +35,7 @@ func (e *lineEditor) redraw(prompt string) {
 	}
 	// Back to the start again, then out to where the cursor belongs.
 	out.WriteString("\r")
-	if target := promptColumns + e.buffer.cursorColumns(); target > 0 {
+	if target := promptWidth + e.buffer.cursorColumns(); target > 0 {
 		fmt.Fprintf(&out, "\033[%dC", target)
 	}
 	fmt.Fprint(e.screen, out.String())
