@@ -92,6 +92,16 @@ func (e *lineEditor) complete(prompt string) {
 		matches = completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
 	}
 	if len(matches) == 0 {
+		// Nothing to offer has to be distinguishable from nothing happening.
+		// `cd ` in a directory holding no subdirectories is a correct empty
+		// answer, and in silence it reads exactly like a broken Tab -- which is
+		// how the defect that made every argument uncompletable went unnoticed.
+		// busybox rings the bell here (libbb/lineedit.c:1468).
+		//
+		// Only here, though. busybox also rings it when several candidates
+		// match, and that is the common case with a list already appearing
+		// underneath: the feedback is on screen, so a bell would be noise.
+		fmt.Fprint(e.screen, "\a")
 		return
 	}
 	if len(matches) == 1 {

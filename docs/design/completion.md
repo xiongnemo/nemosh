@@ -129,11 +129,28 @@ which exists.
   invalidation story before it can be on the Tab path at all.
 - **`~` and `$VAR` expansion**, which busybox has for `~` and which v1.1 already
   lists.
-- **Listing on the second Tab rather than the first**, with real columns. Nemosh
-  currently inserts the shared prefix and lists immediately, joined by two
-  blanks; busybox and bash both wait for a second Tab and lay out columns to the
-  terminal width.
+- **Real columns in the listing.** Candidates are joined by two blanks and left
+  to wrap; busybox lays them out to the terminal width (`showfiles`, `:1279`).
+
 - **Fish-style inline suggestion.** See below.
+
+## Listing on the first Tab
+
+A deliberate divergence, not an omission, and worth recording because it looks
+like a missing feature from the busybox side.
+
+busybox rings the bell on the first Tab and lists only on the second
+(`lastWasTab`, `:1383`). With an empty word -- `cd ` and Tab, the commonest case
+there is -- there is no common prefix to insert, so that first press produces no
+visible result at all, and seeing what is available costs two keystrokes. bash is
+the same by default, and `show-all-if-ambiguous` exists precisely because people
+turn it off.
+
+Nemosh inserts the shared prefix and lists at once. The bell is kept for the one
+case that has no visible result to give: no candidates at all. That is the case
+silence genuinely cannot express -- an empty directory and a broken Tab look
+identical without it, which is exactly how a defect that made every argument
+uncompletable went unnoticed.
 
 ## Inline suggestion, and what it would need
 
