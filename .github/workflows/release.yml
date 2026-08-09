@@ -197,3 +197,33 @@ jobs:
             Verify the download against the `.sha256` beside it.
 
             Commit: `${{ github.sha }}`
+
+      # The Scoop bucket finds out about a release through its own Excavator,
+      # which runs on an hourly cron. That is both slow and lossy: GitHub delays
+      # scheduled runs (measured on this bucket at 32, 39 and 52 minutes past the
+      # hour) and drops them under load, and a sweep only ever packages whichever
+      # release is newest when it fires. Measured on 2026-08-09, eight
+      # prereleases were published and the bucket recorded four -- v0.1.11,
+      # v0.1.14 and v0.1.16 were never packaged at all.
+      #
+      # So the release tells the bucket rather than waiting to be found. The
+      # Excavator still does the work: it downloads the published archive and
+      # computes the hash itself, which is what keeps the manifest honest and is
+      # why this dispatches the existing workflow instead of writing a manifest
+      # from here. All this removes is the waiting.
+      #
+      # A release is not held up by this. The default GITHUB_TOKEN deliberately
+      # cannot start a workflow in another repository, so without the secret the
+      # step says so and succeeds, leaving the hourly cron exactly as it was.
+      - name: Tell the Scoop bucket to update
+        env:
+          GH_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "SCOOP_BUCKET_TOKEN is not set, so the bucket will pick this up on its own schedule."
+            echo "To make it immediate, add a fine-grained token with Actions: read and write on"
+            echo "xiongnemo/windows-binaries-scoop-bucket as the SCOOP_BUCKET_TOKEN secret here."
+            exit 0
+          fi
+          gh workflow run excavator.yml --repo xiongnemo/windows-binaries-scoop-bucket
