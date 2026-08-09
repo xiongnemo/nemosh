@@ -44,7 +44,7 @@ func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 }
 
 func newRmApplet() Applet {
-	return simpleApplet{name: "rm", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
+	return simpleApplet{name: "rm", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
 		options, operands, err := parseAppletOptions(args, "fr", "")
 		if err != nil {
 			return err
@@ -58,34 +58,42 @@ func newRmApplet() Applet {
 			return missingOperand()
 		}
 		view := ProcessViewFromContext(ctx)
+		removed := true
 		for _, path := range operands {
 			native, err := resolveHostPath(view, path)
 			if err != nil {
-				return err
+				fmt.Fprintf(stderr, "rm: %v\n", err)
+				removed = false
+				continue
 			}
-			if err := removeOperand(native, options.has('r')); err != nil {
-				// -f is silent about what was not there to begin with, which is
-				// what makes `rm -f build.out` usable in a cleanup script.
-				if options.has('f') && errors.Is(err, fs.ErrNotExist) {
-					continue
-				}
-				return cannotRemove(path, err)
+			if !removeOperand(native, path, options.has('r'), options.has('f'), stderr) {
+				removed = false
 			}
+		}
+		if !removed {
+			// Every failure has been reported already, so this carries the
+			// status and nothing else. Stopping at the first one instead left a
+			// cleanup half done and named none of what survived.
+			return ExitStatus(1)
 		}
 		return nil
 	}}
 }
 
-func removeOperand(native string, recursive bool) error {
-	if !recursive {
-		return os.Remove(native)
+func removeOperand(native, display string, recursive, force bool, stderr io.Writer) bool {
+	if recursive {
+		return removeTree(native, display, force, stderr)
 	}
-	// RemoveAll treats a missing path as success, so the existence check that
-	// -f would otherwise make redundant has to happen first for the plain form.
-	if _, err := os.Lstat(native); err != nil {
-		return err
+	if err := os.Remove(native); err != nil {
+		// -f is silent about what was not there to begin with, which is what
+		// makes `rm -f build.out` usable in a cleanup script.
+		if force && errors.Is(err, fs.ErrNotExist) {
+			return true
+		}
+		reportRemoveFailure(stderr, display, err)
+		return false
 	}
-	return os.RemoveAll(native)
+	return true
 }
 
 // mkdir takes -p and -m, the two options busybox's getopt32long string carries

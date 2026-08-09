@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -161,7 +162,18 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheOperationFails(t *test
 			if err == nil {
 				t.Fatalf("expected %s %v to fail", tt.applet, tt.args)
 			}
-			if got := err.Error(); got != tt.want {
+			// A diagnostic reaches the user one of two ways: as the error the
+			// applet returns, or on stderr for an applet that can report more
+			// than one failure and so returns a bare status instead. rm became
+			// the second kind when it stopped abandoning the operands after the
+			// first failure. Either way it must name the operand as written.
+			got := err.Error()
+			if _, carriesMessage := applets.StatusMessage(err); !carriesMessage {
+				if _, isBareStatus := applets.StatusCode(err); isBareStatus {
+					got = strings.TrimPrefix(strings.TrimSpace(stderr.String()), tt.applet+": ")
+				}
+			}
+			if got != tt.want {
 				t.Fatalf("expected %s diagnostic %q, got %q", tt.applet, tt.want, got)
 			}
 		})

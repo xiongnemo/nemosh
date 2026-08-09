@@ -52,6 +52,13 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`rm` finishes the job and says what stopped it.** A failure on one operand
+  abandoned every operand after it, so `rm -rf a b c` with one file in use left
+  `c` in place and named nothing but `a` — the shape a Windows cleanup script
+  hits whenever something is still running. It now continues, as POSIX and
+  busybox do, and reports every failure. The diagnostic names the file rather
+  than the operand (`cannot remove 'b/held.exe'`, not `'b'`), and a directory
+  left non-empty by a failure below it is not reported a second time.
 - **A finished background job frees its slot.** A slot was released only by
   `wait`, and a script need never call it, so the 65th `foo &` in a session was
   refused with `job limit reached` and so was every one after it, permanently.
