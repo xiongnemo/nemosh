@@ -213,3 +213,28 @@ func TestLineEditor_submitsAPartialLineAtEndOfStream(t *testing.T) {
 		t.Fatalf("line = %q, want %q (err %v)", line, "echo tail", err)
 	}
 }
+
+// The redraw's cursor placement is what the prompt-width bug corrupted, so it
+// is pinned by the bytes actually written rather than by the width function
+// alone. With a coloured `$ ` prompt the cursor must be moved two columns, not
+// eleven.
+func TestLineEditor_placesTheCursorPastAColouredPrompt(t *testing.T) {
+	// Given
+	var screen bytes.Buffer
+	editor := newLineEditor(strings.NewReader("w"), &screen, t.TempDir())
+
+	// When: one keystroke, then the stream ends and the line is submitted
+	if _, err := editor.readLine(context.Background(), "\033[1;31m$\033[0m "); err != nil {
+		t.Fatal(err)
+	}
+
+	// Then: the redraw moves the cursor by the prompt's drawn width plus the
+	// one character typed, which is 2 + 1.
+	if !strings.Contains(screen.String(), "\033[3C") {
+		t.Fatalf("screen = %q, want a move to column 3 (prompt 2 + one character)", screen.String())
+	}
+	// The over-count this replaces would have produced 11 + 1.
+	if strings.Contains(screen.String(), "\033[12C") {
+		t.Fatalf("screen = %q, the prompt's escapes are being counted as columns", screen.String())
+	}
+}
