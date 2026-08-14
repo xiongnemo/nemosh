@@ -49,9 +49,11 @@ and `sort.exe` is not POSIX sort -- so shimming all of them would quietly change
 what those names do. `nemosh --list` names the applets; to reach one directly:
 
 ```powershell
-scoop shim add cat "$(scoop prefix nemosh)
-emosh.exe" cat
+scoop shim add cat "$(scoop prefix nemosh)/nemosh.exe" cat
 ```
+
+Forward slashes on purpose: PowerShell accepts them, and a backslash here is one
+escape away from being eaten by whatever generates the documentation.
 
 The download is verified against a published SHA-256. Artifacts are not
 code-signed, so a browser download will raise SmartScreen; Scoop checks the
@@ -154,9 +156,9 @@ pointing at the same binary. It will not, and the reason is not effort.
 Scoop's shims share one flat directory, so a name belongs to whichever package
 wrote it last. BusyBox's own manifest shims every applet its `--list` reports; on
 the machine this was written on that is **173 shims** already pointing at
-`busybox.exe`, `cat`, `grep`, `find`, `sort` and `ls` among them. Nemosh has 46
-applets and **44 of those names overlap**. Installing it with per-applet shims
-would silently repoint 44 commands at a different implementation, and
+`busybox.exe`, `cat`, `grep`, `find`, `sort` and `ls` among them. Nemosh has 48
+applets and **46 of those names overlap**. Installing it with per-applet shims
+would silently repoint 46 commands at a different implementation, and
 uninstalling either package afterwards would take the other's names with it.
 Anyone installing a Unix toolbox on Windows is likely to have BusyBox already,
 which makes this the expected case rather than an edge one.
@@ -167,7 +169,7 @@ file -- so shadowing them breaks scripts that never asked for this shell. An
 install that changes what a name means is worse than one that makes you type
 `nemosh find`; `scoop shim add` covers the case where someone wants one anyway.
 
-**Applet parity with BusyBox.** 46 applets against its 179, and the gap is
+**Applet parity with BusyBox.** 48 applets against its 179, and the gap is
 deliberate: `awk`, `vi`, `bc` and the archivers are standalone projects. What
 matters is that an option this shell does not implement is refused by name
 rather than doing something else, which `docs/support-matrix.md` records.

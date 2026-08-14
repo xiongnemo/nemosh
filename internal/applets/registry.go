@@ -96,6 +96,8 @@ var DefaultRegistry = NewRegistry(
 	newSleepApplet(),
 	newUnameApplet(),
 	newIDApplet(),
+	newPgrepApplet(),
+	newPkillApplet(),
 	newTrApplet(),
 	newTeeApplet(),
 	newSeqApplet(),

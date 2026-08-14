@@ -86,6 +86,15 @@ patch number is the commits since that tag.
   process is elevated and the Administrators group is enabled in its token.
 - `export` with no operands, and `export -p`, list exported variables. Both
   printed nothing before ([#10](https://github.com/xiongnemo/nemosh/issues/10)).
+- **`pgrep` and `pkill`.** A clean Windows machine cannot find a process by
+  pattern at all: it ships `tasklist` and `taskkill`, neither of which takes one.
+  The pattern is a regular expression on the executable's name, matched with or
+  without its suffix and without regard to case, and an *empty* pattern is
+  refused outright — `pkill ""` would match every process on the machine. `-f` is
+  refused rather than quietly matching the name instead, because reading another
+  process's command line on Windows needs privileges an ordinary session has not
+  got. Process listing and termination live in one place, `internal/proc`, so the
+  `kill` builtin and the `pkill` applet cannot disagree about what killing means.
 - **`kill`, as a builtin.** `kill %1` stops a background job, `kill PID`
   terminates a real process, `kill -9`/`-TERM`/`-SIGTERM` are all accepted, and
   `kill -l` lists what the shell can act on. It is a builtin because `%N` names a

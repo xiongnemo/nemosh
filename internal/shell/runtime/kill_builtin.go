@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/proc"
 )
 
 // kill is a builtin, and busybox's is too, for exactly one reason: `%N` names a
@@ -17,8 +19,8 @@ import (
 // command in a background job is launched with exec.CommandContext under that
 // context, so cancelling it terminates the real process.
 //
-// A pid operand is killed for real, through the platform: TerminateProcess on
-// Windows, as busybox does (win32/process.c:909), and a signal elsewhere.
+// A pid operand is killed for real, through internal/proc -- the same code the
+// pkill applet uses, so the two cannot disagree about what killing means.
 func (r Runtime) killBuiltin(args []string) int {
 	if len(args) == 0 {
 		fmt.Fprintln(r.streams.Stderr, "kill: expected a job or a process id")
@@ -55,7 +57,7 @@ func (r Runtime) killOne(operand string, signal int) error {
 		// busybox's wording, which names the operand rather than the option.
 		return fmt.Errorf("illegal pid: %s", operand)
 	}
-	return terminateProcess(pid, signal)
+	return proc.Terminate(pid, signal)
 }
 
 // killJob stops one background job.

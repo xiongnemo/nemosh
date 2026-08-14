@@ -30,6 +30,8 @@ var commands = []Command{
 	{Name: "mkdir", Short: "mpv", Operand: Directory},
 	{Name: "mktemp", Short: "dqu", Operand: AnyPath},
 	{Name: "mv", Short: "f", Operand: AnyPath},
+	{Name: "pgrep", Short: "lx", Operand: AnyPath},
+	{Name: "pkill", Short: "x", Operand: AnyPath},
 	{Name: "posixpath", Operand: AnyPath},
 	{Name: "printenv", Operand: AnyPath},
 	{Name: "printf", Operand: AnyPath},

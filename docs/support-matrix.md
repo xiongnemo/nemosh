@@ -83,7 +83,7 @@ process.
 
 ## Applets
 
-All 46 registered applets ship. **Name presence is not option parity**, and the
+All 48 registered applets ship. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
@@ -107,6 +107,8 @@ column that matters is the third one.
 | `mkdir` | `-m -p -v` | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |
+| `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
+| `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
 | `printf` | format string | treated as the format, which is correct |
