@@ -205,6 +205,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.jobs(args[1:])
 	case "which":
 		return r.whichBuiltin(args[1:])
+	case "kill":
+		return r.killBuiltin(args[1:])
 	case "export":
 		return r.export(args[1:])
 	case "unset":

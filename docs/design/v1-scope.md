@@ -145,13 +145,22 @@ correctness rather than features, and neither should cross a release boundary.
    interrupt tests skipped on non-Windows
    (`cmd/nemosh/interactive_interrupt_platform_test.go`) gain a native
    counterpart.
-2. **Cancellation ownership.** `copyWithContext` in `internal/applets/files.go`
-   is redundant: `contextApplet` in `registry.go` already wraps every applet's
-   stdin, so `cat` carries two prechecking wrappers. Reverting it to plain
-   `io.Copy` keeps the suite green. No wrong behavior today, but the ambiguity
-   about which layer owns cancellation is exactly the kind of thing a release
-   should not inherit. Collapse it, or pin it with a test that constructs
-   `catApplet{}` directly.
+2. **Cancellation ownership. Settled 2026-08-14, and the premise above was
+   wrong.** This said `copyWithContext` was redundant because `contextApplet`
+   already wraps every applet's stdin, and proposed collapsing it to plain
+   `io.Copy`.
+
+   That holds for **stdin**, where the second wrap is a harmless extra hop. It
+   does not hold for an **operand**: `cat file.txt` hands `OpenProcessInput`'s
+   `*os.File` straight to the copy, and a file knows nothing about a context.
+   Collapsing would have meant Ctrl-C could not interrupt `cat` on a large file
+   -- silently, and only in the case a user is most likely to hit.
+
+   So it stays, and the ownership is now stated rather than assumed: the registry
+   makes stdin cancellable, `copyWithContext` makes everything else cancellable,
+   and `cancellation_ownership_test.go` fails if either layer is removed --
+   including a test that constructs `catApplet{}` directly, which is the check
+   this entry asked for.
 
 ## Deferred, With The Release They Belong To
 

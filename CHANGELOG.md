@@ -86,6 +86,16 @@ patch number is the commits since that tag.
   process is elevated and the Administrators group is enabled in its token.
 - `export` with no operands, and `export -p`, list exported variables. Both
   printed nothing before ([#10](https://github.com/xiongnemo/nemosh/issues/10)).
+- **`kill`, as a builtin.** `kill %1` stops a background job, `kill PID`
+  terminates a real process, `kill -9`/`-TERM`/`-SIGTERM` are all accepted, and
+  `kill -l` lists what the shell can act on. It is a builtin because `%N` names a
+  job and only the shell has the job table -- which is exactly why busybox's is
+  one too. A job here is a goroutine with no pid, so the signal arrives as a
+  cancellation of the job's own context; an external command in that job was
+  launched under that context, so a real process still dies. It does not claim
+  the job, so a later `wait %N` still finds it.
+- `head -3` and `tail -2`, the obsolete count form POSIX still lists and everyone
+  types. busybox takes it; refusing it made muscle memory an error.
 - **`tr`, `tee`, `seq`, `clear`, `whoami`, `mktemp`, and a `which` builtin.**
   Measured, a clean Windows machine ships only `certutil`, `clip`, `curl`, `fc`,
   `findstr`, `more`, `robocopy`, `tar`, `timeout`, `where` and `whoami` — every

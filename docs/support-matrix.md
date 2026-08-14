@@ -43,7 +43,33 @@ these names why, and names what busybox-w32 does with the same name.
 | `set -b` | 2 | Asynchronous completion is reported when `wait` or `jobs` asks; there is no notification channel to switch on. |
 | `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. |
 
-Beyond POSIX, `history` and `set -o nocaseglob` are implemented, both following busybox.
+Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
+following busybox.
+
+### `kill`
+
+A builtin, as busybox's is (`shell/ash.c:12096`), and for the same reason: `%N`
+names a job and only the shell has the job table. busybox's `killcmd` does
+nothing but translate `%N` into that job's pids and hand them to the ordinary
+`kill` (`:4787-4830`).
+
+Here there is nothing to translate into, because a background job is a goroutine
+and has no pid. What it has is its own context, so the signal arrives as a
+cancellation — and for the case that matters most that is not a weaker
+substitute: an external command in a background job is launched with
+`exec.CommandContext` under that context, so cancelling it terminates the real
+process.
+
+| Form | Behaviour |
+| --- | --- |
+| `kill %N` | cancels that job. Every signal cancels; a goroutine has no handler, so telling TERM from KILL would be a promise this cannot keep |
+| `kill PID` | `TerminateProcess` on Windows, as busybox does (`win32/process.c:909`), a real signal elsewhere |
+| `kill -9`, `kill -TERM`, `kill -SIGTERM` | all accepted; a script writes the number and a person writes the name |
+| `kill -l` | lists the signals this shell can act on, not the whole POSIX set |
+| a pid that has already exited | refused, not reported as killed — the check busybox makes with `GetExitCodeProcess` first |
+| pid `0` or negative | refused on Windows: those mean process groups, which Windows has not got in the POSIX sense. Passed through elsewhere |
+
+`kill` does not claim the job, so a later `wait %N` still finds it.
 
 ### Known divergences from bash/dash/ash
 
@@ -74,7 +100,7 @@ column that matters is the third one.
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
 | `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
 | `grep` | `-i -n -v`, `--color[=WHEN]` accepted and ignored | refused by name |
-| `head` | `-n -c` | refused by name |
+| `head` | `-n -c`, and the `-N` form | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
 | `ls` | `-a -h -l -1`, `--color[=always\|never\|auto]` | refused by name |
@@ -93,7 +119,7 @@ column that matters is the third one.
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sort` | `-n -r` | refused by name |
-| `tail` | `-n` | refused by name |
+| `tail` | `-n`, and the `-N` form | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |
 | `touch` | `-c` | refused by name |

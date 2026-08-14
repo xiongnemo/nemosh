@@ -19,6 +19,16 @@ type jobRecord struct {
 	done    chan struct{}
 	status  int
 	claimed bool
+	// cancel stops this job and nothing else, which is what `kill %N` needs.
+	//
+	// A background job here is a goroutine rather than a process, so it has no
+	// pid to signal -- busybox's kill builtin translates %N into the job's pids
+	// (shell/ash.c:4801-4830) and there is nothing to translate into. What the
+	// job does have is its own context, so cancelling that is the same act
+	// arriving by a different route. An external command in a background job is
+	// launched with exec.CommandContext under this very context, so cancelling it
+	// terminates the real process too.
+	cancel context.CancelFunc
 }
 
 type jobScope struct {
@@ -42,6 +52,11 @@ func newPrivateJobScope(parent context.Context, supervisor *jobSupervisor) *jobS
 }
 
 func (s *jobScope) register() (*jobRecord, error) {
+	return s.registerCancellable(nil)
+}
+
+// registerCancellable records a job along with the means to stop it.
+func (s *jobScope) registerCancellable(cancel context.CancelFunc) (*jobRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	err := s.supervisor.register(s.sealed)
@@ -60,7 +75,7 @@ func (s *jobScope) register() (*jobRecord, error) {
 		return nil, err
 	}
 	s.next++
-	record := &jobRecord{id: s.next, done: make(chan struct{})}
+	record := &jobRecord{id: s.next, done: make(chan struct{}), cancel: cancel}
 	s.records[record.id] = record
 	return record, nil
 }
@@ -107,6 +122,15 @@ func (s *jobScope) snapshot() []*jobRecord {
 	}
 	sort.Slice(records, func(i, j int) bool { return records[i].id < records[j].id })
 	return records
+}
+
+// lookup finds a job without claiming it. `kill` is not waiting for the job, so
+// taking ownership the way claim does would make a later `wait` fail.
+func (s *jobScope) lookup(id jobID) (*jobRecord, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	record, ok := s.records[id]
+	return record, ok
 }
 
 func (s *jobScope) claim(id jobID) (*jobRecord, bool) {

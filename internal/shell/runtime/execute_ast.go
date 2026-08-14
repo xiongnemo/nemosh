@@ -103,7 +103,8 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, worker.fds.closeAll()))
 		return lineResult{status: 1}
 	}
-	record, err := r.jobScope.register()
+	// The worker's own scope cancel is what `kill %N` will reach for.
+	record, err := r.jobScope.registerCancellable(worker.jobScope.cancel)
 	if err != nil {
 		worker.jobScope.cancelAndDrain()
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, worker.fds.closeAll()))

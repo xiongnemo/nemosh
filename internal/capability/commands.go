@@ -79,6 +79,7 @@ var commands = []Command{
 	{Name: "help", Operand: AnyPath, Builtin: true},
 	{Name: "history", Operand: AnyPath, Builtin: true},
 	{Name: "jobs", Operand: AnyPath, Builtin: true},
+	{Name: "kill", Operand: AnyPath, Builtin: true},
 	{Name: "let", Operand: AnyPath, Builtin: true},
 	{Name: "local", Operand: AnyPath, Builtin: true},
 	{Name: "read", Operand: AnyPath, Builtin: true},

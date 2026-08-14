@@ -109,6 +109,20 @@ func copyTail(stdout io.Writer, input io.Reader, count int) error {
 // lineCountArgs consumes `-n COUNT` and then refuses anything else that looks
 // like an option, rather than letting it reach the file opener and be reported
 // as a missing file.
+// bareCountOption reads the `-3` form, and only that: a dash followed by digits
+// and nothing else. `-n` and `-c` are handled by name, and anything with a
+// letter in it is an option this build does not have rather than a count.
+func bareCountOption(arg string) (int, bool) {
+	if len(arg) < 2 || arg[0] != '-' {
+		return 0, false
+	}
+	count, err := strconv.Atoi(arg[1:])
+	if err != nil || count < 0 {
+		return 0, false
+	}
+	return count, true
+}
+
 func lineCountArgs(applet string, args []string, defaultCount int) (int, []string, error) {
 	count, _, paths, err := countArgs(applet, args, defaultCount, false)
 	return count, paths, err
@@ -126,7 +140,17 @@ func countArgs(applet string, args []string, defaultCount int, allowBytes bool) 
 	if allowBytes {
 		supported = append(supported, "-c")
 	}
-	for len(args) > 0 && (args[0] == "-n" || (allowBytes && args[0] == "-c")) {
+	for len(args) > 0 {
+		// `-3` is the obsolete form POSIX still lists, and it is what everybody
+		// types. busybox takes it; refusing it made `head -3` an error in a shell
+		// whose whole point is that the muscle memory works.
+		if digits, ok := bareCountOption(args[0]); ok {
+			count, bytes, args = digits, false, args[1:]
+			continue
+		}
+		if args[0] != "-n" && !(allowBytes && args[0] == "-c") {
+			break
+		}
 		flag := args[0]
 		if len(args) < 2 {
 			return 0, false, nil, fmt.Errorf("%s: requires a count", flag)
