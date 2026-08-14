@@ -86,6 +86,13 @@ patch number is the commits since that tag.
   process is elevated and the Administrators group is enabled in its token.
 - `export` with no operands, and `export -p`, list exported variables. Both
   printed nothing before ([#10](https://github.com/xiongnemo/nemosh/issues/10)).
+- **Process control is now stated as a contract.** `docs/support-matrix.md` has a
+  table of what the shell can do to a job or a process and what it will not, with
+  the reason. The short version: ending something maps onto cancelling a context,
+  so `kill %N` is honest; resuming needs a door that opens both ways, and there
+  is none — Go cannot freeze a goroutine from outside and Windows has no
+  `SIGSTOP` even for a real process. `fg` and `bg` now say that instead of
+  blaming process groups, which was true and was the second reason.
 - **`pgrep` and `pkill`.** A clean Windows machine cannot find a process by
   pattern at all: it ships `tasklist` and `taskkill`, neither of which takes one.
   The pattern is a regular expression on the executable's name, matched with or

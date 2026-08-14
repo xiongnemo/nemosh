@@ -25,15 +25,24 @@ func TestRuntime_refusesABuiltinItDoesNotImplement(t *testing.T) {
 			script:    "ulimit -n\n",
 			fragments: []string{"ulimit: not implemented", "no getrlimit", "busybox-w32 does not implement it either", "returns 1 with no message"},
 		},
+		// These used to say "terminal process group", which is true and is the
+		// second reason. The first is that there is nothing to resume: no layer
+		// below can suspend a job at all. Naming the process group made the gap
+		// look like one about terminal ownership, which someone would reasonably
+		// try to close.
+		//
+		// The `kill` contrast is asserted deliberately. It is the sentence that
+		// answers "why does kill %1 work then", and a reader who does not get it
+		// here will ask it somewhere more expensive.
 		{
 			name:      "fg",
 			script:    "fg\n",
-			fragments: []string{"fg: not implemented", "terminal process group", "compiled out"},
+			fragments: []string{"fg: not implemented", "cannot be suspended", "kill %N", "no SIGSTOP", "busybox-w32"},
 		},
 		{
 			name:      "bg",
 			script:    "bg\n",
-			fragments: []string{"bg: not implemented", "terminal process group", "compiled out"},
+			fragments: []string{"bg: not implemented", "cannot be suspended", "kill %N", "no SIGSTOP", "busybox-w32"},
 		},
 	}
 	for _, test := range tests {

@@ -44,12 +44,59 @@ these names why, and names what busybox-w32 does with the same name.
 | --- | --- | --- |
 | `hash` | 126 | Command lookup is not cached, so there is nothing to remember or forget. busybox-w32 does implement it, over a hash table this shell does not have. |
 | `ulimit` | 126 | Windows has no `getrlimit`. busybox-w32 does not implement it either — it keeps the name and returns 1 with no message. |
-| `fg`, `bg` | 126 | Job control needs a terminal process group, which Windows does not have. busybox-w32 compiles both out under `#if JOBS`. |
+| `fg`, `bg` | 126 | They resume a *suspended* job and nothing here can suspend one — see **Process control** below, which is the long answer. busybox-w32 compiles both out under `#if JOBS`. |
 | `set -b` | 2 | Asynchronous completion is reported when `wait` or `jobs` asks; there is no notification channel to switch on. |
 | `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. |
 
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.
+
+### Process control — what is implemented, and what will not be
+
+One table, because the line between the two halves is a single distinction and
+it is easier to see them together.
+
+| | Implemented | Why it can be |
+| --- | --- | --- |
+| `jobs`, `wait`, `wait %N` | yes | bookkeeping over the shell's own job table |
+| `kill %N` | yes | ending a job maps onto cancelling its context |
+| `kill PID`, `kill -l` | yes | `TerminateProcess` on Windows, a real signal elsewhere |
+| `pgrep`, `pkill` | yes | `CreateToolhelp32Snapshot` lists, the above terminates |
+| **`fg`, `bg`** | **no, and not planned** | they resume a *suspended* job, and nothing here can suspend one |
+| **Ctrl-Z as suspend** | **no** | same primitive; Ctrl-Z exits the shell on an empty line instead |
+
+**The distinction is direction, not difficulty.** Ending something and cancelling
+a context are both one-way doors, so `kill %N` is an honest implementation of the
+real thing. Suspension needs a door that opens both ways — stop now, continue
+later from exactly here — and there is no such door at any layer beneath this
+shell:
+
+1. **Go cannot suspend a goroutine from outside.** The runtime parks one only when
+   the goroutine itself blocks — a channel, a mutex, a syscall, a sleep. There is
+   no `runtime.Suspend`. And cancellation is not a substitute: it sets a flag, the
+   goroutine notices at a checkpoint it chose, and unwinds. The stack is gone;
+   there is no un-cancelling.
+2. **A cooperative pause would be a lie.** A pause channel checked at loop
+   boundaries would stop only where an applet chose to look, so a tight loop would
+   ignore Ctrl-Z silently, every applet would have to implement it, and an
+   external process in a background job could not be paused this way at all.
+   Silent partial obedience is worse than a refusal.
+3. **Windows has no `SIGSTOP` even for real processes.** `NtSuspendProcess` is
+   undocumented; `SuspendThread` is documented and warned against, because
+   suspending a thread that holds the heap lock deadlocks the process; debuggers
+   use `DebugActiveProcess`, which is different semantics. There is no supported
+   stop-and-continue primitive to build on.
+
+busybox-w32 reaches the same conclusion, and its own comment draws the same line:
+`JOBS` is `0` under `ENABLE_PLATFORM_MINGW32` (`shell/ash.c:247-253`), where the
+comment reads *"JOBS_WIN32 doesn't enable job control, just some job-related
+features"*. Those job-related features are precisely the top half of the table
+above. Measured: `SIGSTOP`, `SIGTSTP` and `SIGCONT` appear nowhere in its `win32/`
+layer.
+
+Making `fg` work would mean moving background jobs from goroutines to real child
+processes and then gambling on `SuspendThread` against the heap lock — trading a
+property that holds for a feature that might.
 
 ### `kill`
 

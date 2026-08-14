@@ -31,17 +31,31 @@ var unimplementedBuiltins = map[string]unimplementedBuiltin{
 			"it keeps the name and returns 1 with no message (shell/shell_common.c, " +
 			"the #else of `#if !ENABLE_PLATFORM_MINGW32`)",
 	},
-	"fg": {
-		reason: "job control needs a terminal process group, which Windows does not have. " +
-			"busybox-w32 does not implement it either: fg and bg are compiled out there " +
-			"(`#if JOBS`, and JOBS is 0 under ENABLE_PLATFORM_MINGW32, shell/ash.c:247-253, and the fg/bg table entries at 12050 and 12081)",
-	},
-	"bg": {
-		reason: "job control needs a terminal process group, which Windows does not have. " +
-			"busybox-w32 does not implement it either: fg and bg are compiled out there " +
-			"(`#if JOBS`, and JOBS is 0 under ENABLE_PLATFORM_MINGW32, shell/ash.c:247-253, and the fg/bg table entries at 12050 and 12081)",
-	},
+	"fg": {reason: noSuspensionReason},
+	"bg": {reason: noSuspensionReason},
 }
+
+// noSuspensionReason is why fg and bg are refused, and it is deliberately not
+// "Windows has no process groups".
+//
+// That is true and it is the second reason. The first is that there is nothing to
+// resume: `fg` and `bg` continue a job that was *suspended*, and no layer under
+// this shell can suspend one. Naming the process group instead would suggest the
+// gap is about terminal ownership, and someone would reasonably try to close it.
+//
+// The contrast with `kill` is the whole of it. Ending something maps cleanly onto
+// cancelling its context -- both are one-way doors, so `kill %N` is honest.
+// Ctrl-Z needs a door that opens both ways, and there is not one: Go parks a
+// goroutine only when the goroutine itself blocks, with no API to freeze one from
+// outside, and Windows has no SIGSTOP for a real process either.
+const noSuspensionReason = "a job cannot be suspended, and fg and bg resume a suspended job. " +
+	"`kill %N` works because ending a job maps onto cancelling its context, which is one-way; " +
+	"suspension needs stop-and-continue, and neither layer below offers it -- Go cannot freeze a " +
+	"goroutine from outside, and Windows has no SIGSTOP even for a real process. " +
+	"busybox-w32 reaches the same conclusion: JOBS is 0 under ENABLE_PLATFORM_MINGW32 " +
+	"(shell/ash.c:247-253), its own comment there says the Windows build \"doesn't enable job " +
+	"control, just some job-related features\", and no SIGSTOP, SIGTSTP or SIGCONT appears " +
+	"anywhere in its win32 layer"
 
 // reportUnimplementedBuiltin prints the refusal and reports whether the name was
 // one. Checked before applet lookup and before PATH, so a program that happens
