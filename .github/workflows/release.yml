@@ -141,6 +141,13 @@ jobs:
     if: github.event_name == 'push'
     permissions:
       contents: write
+      # Provenance is signed with a short-lived OIDC token minted for this run,
+      # which is what makes the attestation say something a checksum cannot: not
+      # merely that the file is unaltered, but that *this workflow, at this
+      # commit* produced it. Least privilege still applies -- these two are the
+      # whole of what attest-build-provenance needs.
+      id-token: write
+      attestations: write
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -175,6 +182,19 @@ jobs:
             echo "name=Dev prerelease ${version}" >> "$GITHUB_OUTPUT"
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Attested before publishing, so a release can never carry an artifact that
+      # has no provenance -- the failure mode worth avoiding is the one where the
+      # download exists and the attestation quietly does not.
+      #
+      # This is deliberately not a substitute for code signing, and it does not
+      # quiet SmartScreen: it answers a different question. A checksum says the
+      # file is the file; this says which workflow, at which commit, built it.
+      # Verified with `gh attestation verify <file> --repo xiongnemo/nemosh`.
+      - name: Attest provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: dist/*.zip
 
       - name: Publish
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2

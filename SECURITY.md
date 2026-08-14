@@ -78,5 +78,17 @@ the one CI verified — there is no rebuild at release time. Artifacts are **not
 code-signed, so Windows SmartScreen will warn on a browser download; installing
 through Scoop verifies the checksum instead.
 
+Each archive also carries a **build provenance attestation**, which answers a
+different question from the checksum: not whether the file is unaltered, but
+which workflow at which commit produced it.
+
+```console
+$ gh attestation verify nemosh-v0.1.0-windows-amd64.zip --repo xiongnemo/nemosh
+```
+
+The dependency list needs no separate document — a Go binary records it, so
+`go version -m nemosh.exe` reports every module and its hash. There are two:
+`golang.org/x/sys` and `golang.org/x/term`.
+
 BusyBox is a behaviour reference and none of its code is here; see
 [`docs/design/reference-methodology.md`](docs/design/reference-methodology.md).

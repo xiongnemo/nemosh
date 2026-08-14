@@ -109,14 +109,33 @@ and is the one item of this section that v0 delivered. The rest is new:
 
 - A single multicall binary.
 - Windows Scoop-first: a manifest, and tests for clean install, shim
-  invocation, upgrade, and uninstall. **One shim, not one per applet** --
+  invocation, upgrade, and uninstall. **Exercised for real rather than by test,
+  2026-08-14.** `~/scoop/apps/nemosh-nightly/` on the development machine holds
+  nine installed versions, 0.1.10 through 0.1.33 -- a clean install and eight
+  upgrades -- plus the uninstall of the plain `nemosh` line and shim invocation
+  on every use since. A CI test would be the weaker evidence: it can only run
+  after a release exists, so it would be testing the published bucket rather than
+  the change under review, and manifest breakage is already caught by the
+  Excavator, which computes the hash from the published archive and fails when it
+  cannot. What is genuinely uncovered is a machine with no Scoop and no prior
+  install, and that belongs to V1-RC. **One shim, not one per applet** --
   decided 2026-08-09. `find` and `sort` are Windows commands with different
   syntax, and on a machine with busybox installed those names are already
   taken; an install that silently changes what a name means is worse than one
   that makes the user type `nemosh find`. `scoop shim add` covers the
   exception.
 - Archives or packages for the supported Unix platforms.
-- `-trimpath` reproducible builds, checksums, SBOM, signing, provenance.
+- `-trimpath` reproducible builds and checksums. Both done.
+- **Provenance. Done 2026-08-14.** `actions/attest-build-provenance` signs each
+  published archive with a short-lived OIDC token minted for that run, so the
+  attestation says what a checksum cannot: not merely that the file is unaltered,
+  but that *this workflow, at this commit* produced it. Verified with
+  `gh attestation verify <file> --repo xiongnemo/nemosh`. It is attested before
+  publishing, so a release cannot carry an artifact whose provenance is missing.
+  This is not a substitute for code signing and does not quiet SmartScreen -- it
+  answers a different question -- but it is the strongest origin claim available
+  without a certificate, which was declined.
+- Signing: declined. Recorded in `SECURITY.md`; Scoop verifies the checksum.
 - **The published artifact must be the same binary CI verified.** No rebuild at
   release time.
 
