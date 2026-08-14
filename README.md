@@ -27,12 +27,16 @@ begins, so a pipeline never receives paths the expression did not select.
 
 ## Platforms
 
-| Platform | Status |
-| --- | --- |
-| `windows/amd64` | **Supported** — the target |
-| `linux/amd64` | Build and test only, not a support commitment |
-| `darwin/*` | Compile check only |
-| `windows/arm64` | Untested |
+| Platform | Status | Binary published |
+| --- | --- | --- |
+| `windows/amd64` | **Supported** — the target | yes, `.zip` |
+| `linux/amd64` | Build and test only, not a support commitment | yes, `.tar.gz` |
+| `linux/arm64` | Compiled, never executed | yes, `.tar.gz` |
+| `darwin/amd64`, `darwin/arm64` | Compiled, never executed | yes, `.tar.gz` |
+| `windows/arm64` | Untested | no |
+
+A published binary is a convenience, not a promise. Only `windows/amd64` is
+supported; a bug elsewhere is a welcome report and not a release blocker.
 
 ## Install
 

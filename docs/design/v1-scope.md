@@ -124,7 +124,21 @@ and is the one item of this section that v0 delivered. The rest is new:
   taken; an install that silently changes what a name means is worse than one
   that makes the user type `nemosh find`. `scoop shim add` covers the
   exception.
-- Archives or packages for the supported Unix platforms.
+- Archives for the other platforms. **Done 2026-08-14**, and the wording above
+  had to be resolved first: there are no *supported* Unix platforms, so on its own
+  reading this bullet had nothing to satisfy. It is done anyway, because the
+  README's first line says cross-platform and one binary under-delivers on that.
+  `linux/amd64`, `linux/arm64`, `darwin/amd64` and `darwin/arm64` now ship as
+  `.tar.gz` -- tar rather than zip because a zip does not carry the executable
+  bit. Publishing is not promising: the release notes, the README table and the
+  support matrix each say that only `windows/amd64` is supported and that a bug
+  elsewhere is a report rather than a release blocker.
+- SBOM. **Declined 2026-08-14.** A Go binary already records its module graph, so
+  `go version -m nemosh.exe` reports every dependency and its hash -- two of them,
+  `golang.org/x/sys` and `golang.org/x/term`. A formal SPDX or CycloneDX document
+  would restate that in another syntax, and `govulncheck` already reports
+  *reachable* vulnerabilities weekly, which is the thing an SBOM is usually wanted
+  for. `cyclonedx-gomod` is one step away if a consumer ever asks for the format.
 - `-trimpath` reproducible builds and checksums. Both done.
 - **Provenance. Done 2026-08-14.** `actions/attest-build-provenance` signs each
   published archive with a short-lived OIDC token minted for that run, so the

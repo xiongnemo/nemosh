@@ -11,11 +11,16 @@ changes; see AGENTS.md, Documentation Hygiene.
 
 ## Platforms
 
+A binary being published is not the same as the platform being supported, and
+the second column is the one that decides. Four of these ship archives; one is
+supported.
+
 | Platform | Status | What that means |
 | --- | --- | --- |
 | `windows/amd64` | **Supported** | The target. Bugs here are bugs. Behavior corpus, differential suite against busybox-w32/ash, and native path, launch, device, and interrupt tests all run here. |
-| `linux/amd64` | **Build and test only** | CI compiles and runs the full suite, which is what keeps the platform splits from rotting. Not a support commitment: three interactive interrupt tests are skipped here, and the Windows-only surfaces (clipboard device, `ComSpec` batch launch, 8.3 fallback, case-preserving `cd`) have no counterpart. |
-| `darwin/*` | **Compile check only** | `GOOS=darwin go build ./...` runs in CI. Nothing is executed. |
+| `linux/amd64` | **Build and test only**, binary published | CI compiles and runs the full suite, which is what keeps the platform splits from rotting. Not a support commitment: three interactive interrupt tests are skipped here, and the Windows-only surfaces (clipboard device, `ComSpec` batch launch, 8.3 fallback, case-preserving `cd`) have no counterpart. |
+| `linux/arm64` | **Compile only**, binary published | Cross-compiled and never executed. |
+| `darwin/amd64`, `darwin/arm64` | **Compile only**, binaries published | `GOOS=darwin go build ./...` runs in CI. Nothing is executed. |
 | `windows/arm64` | **Untested** | Not built, not run, not claimed. |
 
 Go 1.26, `CGO_ENABLED=0`, single binary, no runtime sidecars.

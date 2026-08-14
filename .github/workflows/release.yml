@@ -42,15 +42,34 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # windows/amd64 is the supported target, and the only one shipped.
-          # Linux and darwin are build-and-test checks rather than support
-          # commitments (docs/support-matrix.md), so publishing a binary for
-          # them would promise more than the project is willing to keep.
-          # Adding one here is a single entry when that changes.
+          # windows/amd64 is the supported target. The others are published
+          # because the README's first line says cross-platform and shipping only
+          # one binary under-delivers on that -- but publishing is not promising:
+          # docs/support-matrix.md still names Windows as the only supported
+          # platform, and the release notes say so beside the download.
+          #
+          # `native` marks the entries whose tests can actually run on their
+          # runner. A cross-compiled darwin binary cannot be executed on Linux,
+          # and pretending otherwise would run the host's tests four times and
+          # call it coverage.
           - goos: windows
             goarch: amd64
             runner: windows-latest
             extension: .exe
+            native: true
+          - goos: linux
+            goarch: amd64
+            runner: ubuntu-latest
+            native: true
+          - goos: linux
+            goarch: arm64
+            runner: ubuntu-latest
+          - goos: darwin
+            goarch: amd64
+            runner: ubuntu-latest
+          - goos: darwin
+            goarch: arm64
+            runner: ubuntu-latest
 
     steps:
       # fetch-depth: 0 because the version is derived from tags. A shallow
@@ -64,7 +83,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # Only where the target is the runner. A cross-compiled binary cannot be
+      # executed here, and the Product workflow is what covers the platforms this
+      # job can only compile for.
       - name: Test
+        if: matrix.native
         run: go test -count=1 ./...
 
       - id: meta
@@ -112,16 +135,27 @@ jobs:
           [ "$applets" -gt 0 ] || { echo "--list reported nothing"; exit 1; }
           echo "$applets applets"
 
+      # zip for Windows, tar.gz elsewhere, and that is functional rather than
+      # conventional: a zip does not carry the Unix executable bit, so a Linux
+      # user who unpacked one would get a file they then had to chmod. tar keeps
+      # the mode the build gave it.
       - name: Archive and checksum
         shell: bash
         run: |
           set -euo pipefail
           cd dist
-          archive="${{ steps.meta.outputs.artifact }}.zip"
-          if command -v 7z >/dev/null 2>&1; then
-            7z a -tzip "$archive" "${{ steps.meta.outputs.artifact }}" >/dev/null
+          staging="${{ steps.meta.outputs.artifact }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            archive="$staging.zip"
+            if command -v 7z >/dev/null 2>&1; then
+              7z a -tzip "$archive" "$staging" >/dev/null
+            else
+              zip -r "$archive" "$staging" >/dev/null
+            fi
           else
-            zip -r "$archive" "${{ steps.meta.outputs.artifact }}" >/dev/null
+            archive="$staging.tar.gz"
+            chmod +x "$staging/nemosh"
+            tar -czf "$archive" "$staging"
           fi
           sha256sum "$archive" > "$archive.sha256"
           cat "$archive.sha256"
@@ -131,6 +165,7 @@ jobs:
           name: ${{ steps.meta.outputs.artifact }}
           path: |
             dist/*.zip
+            dist/*.tar.gz
             dist/*.sha256
           if-no-files-found: error
 
@@ -194,7 +229,9 @@ jobs:
       - name: Attest provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
-          subject-path: dist/*.zip
+          subject-path: |
+            dist/*.zip
+            dist/*.tar.gz
 
       - name: Publish
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
@@ -205,6 +242,7 @@ jobs:
           generate_release_notes: true
           files: |
             dist/*.zip
+            dist/*.tar.gz
             dist/*.sha256
           body: |
             Nemosh ${{ steps.meta.outputs.version }}
@@ -214,7 +252,19 @@ jobs:
             for what is implemented and what is refused, measured rather than
             claimed.
 
-            Verify the download against the `.sha256` beside it.
+            Binaries for `linux/amd64`, `linux/arm64`, `darwin/amd64` and
+            `darwin/arm64` are published as a convenience and are **not
+            supported**. Linux is compiled and tested in CI; darwin is compiled
+            only and never executed. Bugs there are welcome as reports and are
+            not release blockers. Windows archives are `.zip`; the rest are
+            `.tar.gz`, because a zip does not carry the executable bit.
+
+            Verify the download against the `.sha256` beside it, and its origin
+            with:
+
+            ```
+            gh attestation verify <file> --repo xiongnemo/nemosh
+            ```
 
             Commit: `${{ github.sha }}`
 

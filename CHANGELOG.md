@@ -138,6 +138,21 @@ patch number is the commits since that tag.
 - `nemosh --version`, `--list`, and `--help`. All three answered
   `invalid option` before.
 
+### Project
+
+- **Binaries for Linux and macOS.** `linux/amd64`, `linux/arm64`, `darwin/amd64`
+  and `darwin/arm64` now ship alongside Windows, as `.tar.gz` — tar rather than
+  zip because a zip does not carry the executable bit. Publishing is not
+  promising: only `windows/amd64` is supported, and the release notes, README and
+  support matrix each say so beside the download.
+- **Build provenance.** Every published archive carries a signed attestation
+  tying it to the workflow and commit that produced it. `gh attestation verify
+  <file> --repo xiongnemo/nemosh`. It is not code signing and does not quiet
+  SmartScreen; it answers a different question.
+- No SBOM, deliberately: a Go binary records its own module graph, so
+  `go version -m nemosh.exe` lists every dependency and hash — there are two —
+  and `govulncheck` already reports the reachable vulnerabilities weekly.
+
 ### Fixed
 
 - **File completion works in a real session at all.** The editor was handed the
