@@ -159,12 +159,29 @@ front of the command. `gsudo` is the usual one on Windows and does the part that
 is genuinely hard — an elevated helper relaying stdio back over a named pipe, so
 redirection keeps working.
 
-An explicit `elevate CMD [ARG…]` builtin is a candidate, not a commitment. If it
-lands it will refuse a command carrying redirections or sitting in a pipeline,
-because those are exactly what it could not honour, and it will report the real
-exit status (`SEE_MASK_NOCLOSEPROCESS`, then `GetExitCodeProcess`). Note that
-Ctrl-C could not reach such a child either: terminating a high-integrity process
-from a medium-integrity shell is refused by the same mechanism.
+**The deliberate route, if one is added, is `su`, not a new name.** busybox-w32
+already answers this question and answers it with `su`
+(`loginutils/suw32.c`, applet-odd-named from `suw32`; `busybox su` works today).
+What it does is the part worth copying: it does **not** elevate a command inside
+the current pipeline. It launches *a new elevated shell in its own console* via
+`ShellExecuteEx`/`runas`, and `su -c CMD` runs `CMD` in that shell rather than in
+this one. Sidestepping the handle problem instead of pretending it is not there.
+
+Three things its source shows are not optional:
+
+- `ShellExecuteEx` resets the child's working directory to
+  `%SYSTEMROOT%\System32`, so the cwd has to be passed explicitly — and
+  canonicalised first, because a mapped network drive may not exist under the
+  elevated token (`suw32.c:96-113`).
+- Without `-N` the window closes the moment the shell exits, taking any output
+  with it.
+- The exit status is only available if asked for: `-W` sets
+  `SEE_MASK_NOCLOSEPROCESS` and waits (`suw32.c:137-147`).
+
+Not `sudo`: Windows 11 24H2 ships a real `sudo.exe`, and the name promises one
+command in the current console with its streams intact — which is precisely what
+this cannot deliver. busybox also ships the complement, `drop`/`cdrop`/`pdrop`,
+for running with the Administrators group disabled.
 
 ### Known divergences from bash/dash/ash
 
