@@ -17,14 +17,22 @@ import (
 func main() {
 	signals, stopSignals := notifyInterrupts()
 	defer stopSignals()
+	// Joining a console has to happen before the streams are read, because it is
+	// what makes them exist: a process launched without a console has no valid
+	// standard handles for os.Stdin and friends to have wrapped.
+	args, stdin, stdout, stderr := joinRequestedConsole(os.Args)
+	// And the escapes come after, because the console to ask is the one just
+	// joined. They are interpreted only where something asked; a plain console
+	// window draws them as text.
+	defer enableVirtualTerminal(stdout, stderr)()
 	cmd := command{
-		stdin:           os.Stdin,
-		stdout:          os.Stdout,
-		stderr:          os.Stderr,
-		stdinIsTerminal: term.IsTerminal(int(os.Stdin.Fd())),
+		stdin:           stdin,
+		stdout:          stdout,
+		stderr:          stderr,
+		stdinIsTerminal: term.IsTerminal(int(stdin.Fd())),
 		interrupts:      signals,
 	}
-	if err := cmd.run(context.Background(), os.Args); err != nil {
+	if err := cmd.run(context.Background(), args); err != nil {
 		if status, ok := applets.StatusCode(err); ok {
 			os.Exit(status)
 		}
@@ -229,4 +237,28 @@ type exitStatus int
 
 func (e exitStatus) Error() string {
 	return fmt.Sprintf("exit status %d", int(e))
+}
+
+// joinRequestedConsole honours --attach-console, and answers with the streams to
+// use either way.
+//
+// A failure to join is reported and then ignored, falling back to this process's
+// own streams. The alternative is an elevated shell that exits silently because
+// it had nowhere to say why -- and having *a* console, even the wrong one, is
+// what makes the diagnostic readable at all.
+func joinRequestedConsole(argv []string) (args []string, stdin, stdout, stderr *os.File) {
+	args, pid := stripAttachConsoleOption(argv)
+	if pid == 0 {
+		return args, os.Stdin, os.Stdout, os.Stderr
+	}
+	input, output, err := attachToConsoleOf(pid)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "nemosh:", err)
+		return args, os.Stdin, os.Stdout, os.Stderr
+	}
+	// One handle for both output streams, because a console is one screen. They
+	// are separate elsewhere so that redirecting one does not take the other,
+	// and here neither can be redirected: this process was launched with no
+	// standard handles at all and these are the ones it opened.
+	return args, input, output, output
 }

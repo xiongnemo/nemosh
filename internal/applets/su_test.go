@@ -22,6 +22,8 @@ func TestPlanElevation_assemblesTheCommandLine(t *testing.T) {
 		program   string
 		wait      bool
 		test      bool
+		inPlace   bool
+		console   consoleHandover
 	}{
 		{
 			// A shell to work in, which is what su with no arguments means.
@@ -55,6 +57,35 @@ func TestPlanElevation_assemblesTheCommandLine(t *testing.T) {
 		{
 			name: "-N leads the command too",
 			args: []string{"-N", "-c", "ls"}, arguments: "-N -c ls", program: self,
+		},
+		{
+			// The window busybox always gives its shell is what this replaces.
+			// The elevated shell is told which console to join, and waiting stops
+			// being optional -- two shells reading one keyboard is the failure it
+			// prevents.
+			name: "with a console to join, the shell runs in it",
+			args: nil, console: joinableConsole{pid: 4242},
+			arguments: "--attach-console 4242 -i", program: self, wait: true, inPlace: true,
+		},
+		{
+			name: "and the command runs in it too",
+			args: []string{"-c", "ls"}, console: joinableConsole{pid: 4242},
+			arguments: "--attach-console 4242 -c ls", program: self, wait: true, inPlace: true,
+		},
+		{
+			// -N holds a console open so its output is not lost when it closes.
+			// Nothing closes here, so asking for it would only add a keypress
+			// between the command and the prompt.
+			name: "-N is dropped when nothing is going to close",
+			args: []string{"-N"}, console: joinableConsole{pid: 4242},
+			arguments: "--attach-console 4242 -i", program: self, wait: true, inPlace: true,
+		},
+		{
+			// A foreign program has no option meaning "join this console", so it
+			// keeps the window it would always have had.
+			name: "a named shell keeps its own window",
+			args: []string{"-s", "/bin/sh", "-c", "id"}, console: joinableConsole{pid: 4242},
+			arguments: "-c id", program: "/bin/sh",
 		},
 		{
 			name:      "operands follow the command",
@@ -92,8 +123,13 @@ func TestPlanElevation_assemblesTheCommandLine(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			console := test.console
+			if console == nil {
+				console = noConsole{}
+			}
+
 			// When
-			plan, err := planElevation(test.args, nil)
+			plan, err := planElevation(test.args, nil, console)
 
 			// Then
 			if err != nil {
@@ -105,8 +141,9 @@ func TestPlanElevation_assemblesTheCommandLine(t *testing.T) {
 			if plan.arguments != test.arguments {
 				t.Fatalf("arguments = %q, want %q", plan.arguments, test.arguments)
 			}
-			if plan.wait != test.wait || plan.test != test.test {
-				t.Fatalf("wait = %v, test = %v, want %v and %v", plan.wait, plan.test, test.wait, test.test)
+			if plan.wait != test.wait || plan.test != test.test || plan.inPlace != test.inPlace {
+				t.Fatalf("wait = %v, test = %v, inPlace = %v, want %v, %v and %v",
+					plan.wait, plan.test, plan.inPlace, test.wait, test.test, test.inPlace)
 			}
 			if plan.directory == "" {
 				t.Fatal("directory is empty: the child would start wherever ShellExecuteEx decided")
@@ -145,7 +182,7 @@ func TestPlanElevation_refuses(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// When
-			_, err := planElevation(test.args, nil)
+			_, err := planElevation(test.args, nil, noConsole{})
 
 			// Then
 			if err == nil || !strings.Contains(err.Error(), test.fragment) {
@@ -186,3 +223,17 @@ func TestQuoteWindowsArgument_survivesTheRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+// A process with no console: every non-Windows one, and a Windows service or CI
+// runner. The elevated shell then has nowhere to join and takes a window.
+type noConsole struct{}
+
+func (noConsole) usable() bool { return false }
+
+func (noConsole) ownerProcessID() int { return 0 }
+
+type joinableConsole struct{ pid int }
+
+func (joinableConsole) usable() bool { return true }
+
+func (c joinableConsole) ownerProcessID() int { return c.pid }

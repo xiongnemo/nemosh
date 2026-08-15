@@ -66,6 +66,11 @@ func runElevated(ctx context.Context, plan elevationPlan, stderr io.Writer) erro
 		verb = "open"
 		mask |= seeMaskNoConsole
 	}
+	if plan.inPlace {
+		// No console of its own: the shell is about to join the one this process
+		// is in, and a window created here would be an empty one left behind.
+		mask |= seeMaskNoConsole
+	}
 	if plan.wait {
 		mask |= seeMaskNoCloseProcess
 	}
