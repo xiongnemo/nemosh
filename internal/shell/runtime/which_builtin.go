@@ -34,6 +34,12 @@ func (r Runtime) whichBuiltin(args []string) int {
 			fmt.Fprintln(r.streams.Stdout, name)
 			continue
 		}
+		// Same reason as in commandV: dispatch refuses these before PATH, so a
+		// file of that name on PATH must not be offered as the answer.
+		if isUnimplementedBuiltin(name) {
+			status = 1
+			continue
+		}
 		resolved, err := r.externalCommandPath(name)
 		if err != nil {
 			// Silent, as which is: the exit status is the answer, and a script

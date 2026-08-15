@@ -54,12 +54,19 @@ func TestRuntime_cdPreservesMountAliasNativeCwdForRelativeEffects_onNonWindows(t
 	if status != 0 {
 		t.Fatalf("expected status 0, got %d: %s", status, stderr.String())
 	}
+	// The child reports its cwd through getcwd, which the kernel answers with
+	// symlinks already resolved. On macOS the temporary directory lives under
+	// /var, which is a symlink to /private/var, so the child says /private/var
+	// and the launch path says /var -- both correct, describing different
+	// things. Resolving the expectation the same way the kernel does keeps the
+	// assertion about what this test is for (the alias cwd reaching the child)
+	// rather than about the host's symlink layout. A no-op on Linux and Windows.
 	wantOutput := strings.Join([]string{
 		"/q/" + leaf,
 		"alias-applet",
 		"alias-redirect",
 		executable,
-		aliasDir,
+		resolveSymlinks(t, aliasDir),
 		"alias-child",
 	}, "\n") + "\n"
 	if got := stdout.String(); got != wantOutput {
@@ -72,6 +79,15 @@ func TestRuntime_cdPreservesMountAliasNativeCwdForRelativeEffects_onNonWindows(t
 	assertMountCwdResolvedPath(t, resolved, "/q/"+leaf+"/applet-input.txt", filepath.Join(aliasDir, "applet-input.txt"))
 	assertFileText(t, filepath.Join(aliasDir, "redirect-output.txt"), "alias-output\n")
 	assertFileText(t, filepath.Join(aliasDir, "applet-created.txt"), "")
+}
+
+func resolveSymlinks(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatalf("resolve %q: %v", path, err)
+	}
+	return resolved
 }
 
 func writeMountCwdFixture(t *testing.T, aliasDir, executable string) {

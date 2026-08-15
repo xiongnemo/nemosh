@@ -30,6 +30,11 @@ func (r Runtime) commandV(args []string) int {
 		fmt.Fprintln(r.streams.Stdout, name)
 		return 0
 	}
+	// A name this shell refuses is refused here too. Dispatch never reaches PATH
+	// for one, so reporting a PATH hit would promise something that cannot run.
+	if isUnimplementedBuiltin(name) {
+		return 1
+	}
 	// The same lookup dispatch uses, so the two cannot drift apart again.
 	resolved, err := r.externalCommandPath(name)
 	if err != nil {

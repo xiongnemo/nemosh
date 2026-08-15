@@ -46,6 +46,10 @@ func TestPathStateOther_resolvesRelativeTraversalFromCanonicalTmp_consistently(t
 	}
 }
 
+// The fixture is /etc/hosts, not /etc/hostname. hostname is a Linux convention
+// and macOS has no such file, so the test failed there on a missing fixture
+// rather than on anything it was written to check. hosts is in POSIX-adjacent
+// use everywhere this builds and is world-readable on all of them.
 func TestPathStateOther_relativeIOAfterTmpTraversal_usesCanonicalNativeDestination(t *testing.T) {
 	// Given
 	tmpRoot := t.TempDir()
@@ -53,12 +57,12 @@ func TestPathStateOther_relativeIOAfterTmpTraversal_usesCanonicalNativeDestinati
 	if err := os.MkdirAll(filepath.Join(backingParent, "etc"), 0o700); err != nil {
 		t.Fatalf("create conflicting backing parent: %v", err)
 	}
-	conflict := filepath.Join(backingParent, "etc", "hostname")
+	conflict := filepath.Join(backingParent, "etc", "hosts")
 	if err := os.WriteFile(conflict, []byte("wrong-backing-parent\n"), 0o600); err != nil {
 		t.Fatalf("write conflicting backing file: %v", err)
 	}
 	t.Cleanup(func() { _ = os.Remove(conflict) })
-	want, err := os.ReadFile("/etc/hostname")
+	want, err := os.ReadFile("/etc/hosts")
 	if err != nil {
 		t.Fatalf("read canonical host fixture: %v", err)
 	}
@@ -66,7 +70,7 @@ func TestPathStateOther_relativeIOAfterTmpTraversal_usesCanonicalNativeDestinati
 	rt := newOtherPathRuntimeWithStreams(mustOtherWorkingDirectory(t), tmpRoot, Streams{Stdout: &stdout, Stderr: &stderr})
 
 	// When
-	status := rt.RunScript(context.Background(), "cd /tmp\ncat ../etc/hostname\n")
+	status := rt.RunScript(context.Background(), "cd /tmp\ncat ../etc/hosts\n")
 
 	// Then
 	if status != 0 {

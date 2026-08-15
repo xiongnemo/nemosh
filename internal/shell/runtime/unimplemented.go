@@ -56,6 +56,21 @@ var unimplementedBuiltins = map[string]unimplementedBuiltin{
 const noSuspensionReason = "nothing here can suspend a job, so there is nothing for them to resume " +
 	"(`kill %N` still works). See docs/support-matrix.md, Process control"
 
+// isUnimplementedBuiltin reports whether this is a name the shell refuses.
+//
+// `command -v` and `which` have to ask, and did not. Dispatch refuses these
+// before it looks at PATH, so a directory holding a program of that name made
+// the two answer "yes, here it is" about a name that comes back 126 when run --
+// the same lookup drift `command -v` was fixed for once already.
+//
+// It went unseen because neither Windows nor Linux ships a file called `ulimit`,
+// `hash`, `fg`, or `bg`. macOS does ship /usr/bin/ulimit, and found it on the
+// first run of the widened test matrix.
+func isUnimplementedBuiltin(name string) bool {
+	_, ok := unimplementedBuiltins[name]
+	return ok
+}
+
 // reportUnimplementedBuiltin prints the refusal and reports whether the name was
 // one. Checked before applet lookup and before PATH, so a program that happens
 // to share the name cannot make the answer depend on what is installed.
