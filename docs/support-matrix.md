@@ -177,19 +177,59 @@ shell rather than in this one.
 
 | Form | Behaviour |
 | --- | --- |
-| `su`, `su root` | an elevated `nemosh -i` in a new console, starting in the current directory |
-| `su -c CMD` | that shell runs `CMD` |
+| `su`, `su root` | an elevated `nemosh -i` **in the console you are already in**, starting in the current directory |
+| `su -c CMD` | that shell runs `CMD`, in the same console |
 | `su -s SHELL` | launches `SHELL` instead. `cmd.exe` is given `/c`, everything else `-c`, matching busybox (`suw32.c:118-120`) |
 | `su -W` | waits and reports the shell's exit status; without it `su` returns as soon as the shell is launched, having nothing to report |
 | `su -t` | test mode: the `open` verb instead of `runas`, so the whole path runs with no elevation and no consent dialog. This is what makes any of it testable |
 | `su USER` for any other user | refused. There is no user database here; `root` is the name this shell gives an elevated token, not an account |
-| `su -N` | holds the console open at exit, so the output of `-c` survives the shell it ran in. The child honours it -- the console is its own -- and the shell grew a leading `-N` for the purpose, as busybox's ash did (`shell/ash.c:13442`, `:16371`) |
+| `su -N` | holds the console open at exit, so the output of `-c` survives the shell it ran in. Only meaningful where a window is going to close, so it is dropped on the in-place path; the shell grew a leading `-N` for it, as busybox's ash did (`shell/ash.c:13442`, `:16371`) |
 | the consent dialog answered "no" | status 1, `elevation was refused` — a decision, not a fault |
 
 The working directory is passed explicitly and canonicalised first, because a
 directory reached through a mapped network drive may not exist under the
 elevated token — drive mappings belong to a logon session (`suw32.c:96-113`).
 Measured: without it, ShellExecuteEx decides for itself.
+
+#### Running in the current console
+
+busybox always gives its elevated shell a window of its own. This one does not,
+and the reason is what the symptom was: a new console is a *plain* console.
+Nothing has turned on `ENABLE_VIRTUAL_TERMINAL_PROCESSING` in it, so a shell
+that draws in colour draws escape codes as text instead, and the size, font and
+scrollback are not the ones being used.
+
+**The launcher still cannot hand its console over.** Only the AppInfo service can
+create an elevated process, and it is reached through `ShellExecuteEx` or a COM
+elevation moniker, neither of which takes a `STARTUPINFO`. That much of the
+original reasoning stands.
+
+**The child can take it.** `AttachConsole` attaches the caller to another
+process's console, and an elevated process attaching to a medium-integrity one is
+allowed — privilege runs the other way. So the handover happens on the far side:
+the shell is launched with `SEE_MASK_NO_CONSOLE`, given `--attach-console PID`,
+and joins before it reads a stream. `CONIN$` and `CONOUT$` are opened *after* the
+attach, because a process launched without a console has no valid standard
+handles to inherit. This is what `gsudo` does, and it is why `gsudo` can run a
+command in place where `ShellExecuteEx` alone cannot.
+
+Two consequences, enforced rather than merely documented:
+
+- **`-W` is implied.** Two shells attached to one console would both read the
+  keyboard. The one that launched waits, and does not read, until the elevated
+  one exits.
+- **`-s SHELL` keeps its own window.** "Join this console" is an option of *this*
+  shell; a foreign program has no equivalent to be told.
+
+Where there is no console to join — a service, a CI runner — the plan falls back
+to a window, which is the old behaviour and the only one available.
+
+Separately and underneath all of this: the shell now turns
+`ENABLE_VIRTUAL_TERMINAL_PROCESSING` on for its own output at startup and puts
+the mode back on the way out. It never did, and only ever worked because ConPTY
+turns it on for everything Windows Terminal runs. Measured on this machine: a
+handle opened on `CONOUT$` reports mode `0x0003`, with `0x0004` clear. Anyone
+running `nemosh.exe` from a classic console window was seeing literal escapes.
 
 Ctrl-C while `-W` is waiting stops the wait and says so; it cannot stop the
 shell. Terminating a high-integrity process from a medium-integrity one is
