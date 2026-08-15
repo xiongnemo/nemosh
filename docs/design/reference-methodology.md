@@ -53,6 +53,35 @@ folds both sides with `strings.ToLower`. The line editor cites
 moves one column and deletes one character, so a two-column CJK character loses
 half of itself, and Nemosh edits by rune while measuring by column.
 
+## Test material
+
+A test file is source. `testsuite/tr.tests` opens with
+`Copyright 2009 by Denys Vlasenko` and `Licensed under GPLv2`, exactly as
+`coreutils/tr.c` does, and copying one is the same act as copying the other.
+
+It is worth stating separately because the intuition runs the other way — a test
+looks like a description of behaviour rather than an implementation of it. Two
+reasons it is not safer:
+
+- Almost all of a test file is material that can be copied verbatim: the input
+  strings, the expected output, the order. There is no "write it your own way"
+  step to put distance in.
+- **The selection and arrangement of cases is its own authorship.** The
+  individual fact each case asserts is not protected, but a curated list of forty
+  edge cases for `tr` is a compilation, and compilations are the one place where
+  arranging unprotected facts can attract protection.
+
+So the rule is the same as for source, and the escape hatch is better than for
+source: **run the binary**. The differential suite executes the reference and
+records what came back, which yields facts observed here rather than transcribed
+from there. A reference test is a legitimate *lead* — it says where to probe —
+and the expectation that goes into `tests/behavior/` is then measured, never
+copied across.
+
+Checked on 2026-08-15: nothing in this repository carries busybox's test idioms
+(`. ./testing.sh`, `testing "…"`, `optional FEATURE_…`, `SKIP=`); the search
+returns no files outside the ignored `references/` clones.
+
 ## Wording
 
 Error text is behaviour a script can branch on, so its *shape* is matched: which
