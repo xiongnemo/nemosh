@@ -20,7 +20,8 @@ supported.
 | `windows/amd64` | **Supported** | The target. Bugs here are bugs. Behavior corpus, differential suite against busybox-w32/ash, and native path, launch, device, and interrupt tests all run here. |
 | `linux/amd64` | **Build and test only**, binary published | CI compiles and runs the full suite, which is what keeps the platform splits from rotting. Not a support commitment: three interactive interrupt tests are skipped here, and the Windows-only surfaces (clipboard device, `ComSpec` batch launch, 8.3 fallback, case-preserving `cd`) have no counterpart. |
 | `linux/arm64` | **Compile only**, binary published | Cross-compiled and never executed. |
-| `darwin/amd64`, `darwin/arm64` | **Compile only**, binaries published | `GOOS=darwin go build ./...` runs in CI. Nothing is executed. |
+| `darwin/arm64` | **Build and test only**, binary published | `macos-latest` runs the full suite, which is what makes the `_other.go` half of every platform split — process listing, identity, executability, device input — *executed* rather than merely compiled. It found three failures the hour it was added, one of them a real defect in `command -v`. The strict differential does not run there: the only reference shell macOS ships is bash 3.2, so a divergence says more about 2007 than about Nemosh. |
+| `darwin/amd64` | **Compile only**, binary published | Cross-compiled. GitHub's macOS runners are arm64, so the Intel build is never executed. |
 | `windows/arm64` | **Untested** | Not built, not run, not claimed. |
 
 Go 1.26, `CGO_ENABLED=0`, single binary, no runtime sidecars.
