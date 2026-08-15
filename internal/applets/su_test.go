@@ -54,9 +54,25 @@ func TestPlanElevation_assemblesTheCommandLine(t *testing.T) {
 		{
 			// busybox special-cases cmd.exe by basename, because /c is what it
 			// takes where every other shell takes -c (suw32.c:118-120).
+			//
+			// Spelled with backslashes deliberately, and asserted on every
+			// platform: the first version asked path/filepath for the basename,
+			// which answers for the host, so on Linux the whole path came back
+			// as the name, cmd.exe went unnoticed, and it was handed a -c it
+			// does not take. The path is a Windows path wherever this compiles.
 			name:      "a foreign cmd.exe takes /c",
 			args:      []string{"-s", `C:\Windows\System32\cmd.exe`, "-c", "dir"},
 			arguments: `/c dir`, program: `C:\Windows\System32\cmd.exe`,
+		},
+		{
+			name:      "and so does a bare cmd, in any case",
+			args:      []string{"-s", "CMD", "-c", "dir"},
+			arguments: `/c dir`, program: "CMD",
+		},
+		{
+			name:      "a forward-slash path is read the same way",
+			args:      []string{"-s", "C:/Windows/System32/cmd.exe", "-c", "dir"},
+			arguments: `/c dir`, program: "C:/Windows/System32/cmd.exe",
 		},
 		{
 			name:      "any other foreign shell takes -c",

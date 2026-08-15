@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -128,12 +127,27 @@ func foreignShellArguments(shell string, options appletOptions, operands []strin
 	var arguments []string
 	if options.has('c') {
 		flag := "-c"
-		if base := strings.ToLower(filepath.Base(shell)); base == "cmd.exe" || base == "cmd" {
+		if base := windowsBaseName(shell); base == "cmd.exe" || base == "cmd" {
 			flag = "/c"
 		}
 		arguments = append(arguments, flag, options.value('c'))
 	}
 	return append(arguments, operands...)
+}
+
+// windowsBaseName cuts at either separator, folded, rather than asking
+// path/filepath.
+//
+// filepath.Base answers for the *host*, and this is a question about the
+// launch: the path is a Windows path whatever the code was compiled for. On
+// Linux it left `C:\Windows\System32\cmd.exe` whole, so cmd.exe went unnoticed
+// and was handed `-c`, which it does not take. The Unix runners caught it; a
+// Windows-only test never would have.
+func windowsBaseName(path string) string {
+	if cut := strings.LastIndexAny(path, `/\`); cut >= 0 {
+		path = path[cut+1:]
+	}
+	return strings.ToLower(path)
 }
 
 // elevationDirectory is the working directory to hand the child, canonicalised
