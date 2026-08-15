@@ -3,6 +3,7 @@ package applets_test
 import (
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"slices"
 	"testing"
 
@@ -51,10 +52,21 @@ func TestRegistryNames_returnsACopy(t *testing.T) {
 // package would ship a shim for an applet that does not exist, or miss one that
 // does, so the agreement is pinned here rather than assumed.
 func TestRegistryNames_agreeWithTheManifestSourceParse(t *testing.T) {
-	// Given
-	source, err := os.ReadFile(filepath.Join("registry.go"))
-	if err != nil {
-		t.Fatal(err)
+	// Given: both halves of the list. The registry stopped being one literal
+	// when `su` arrived, because that name is registered on Windows and nowhere
+	// else, so the parse has to read the platform file this build actually
+	// compiled or it will report a shim short on Windows.
+	platform := "registry_other.go"
+	if goruntime.GOOS == "windows" {
+		platform = "registry_windows.go"
+	}
+	var source []byte
+	for _, file := range []string{"registry.go", platform} {
+		text, err := os.ReadFile(filepath.Join(file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		source = append(source, text...)
 	}
 
 	// When

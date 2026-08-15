@@ -159,29 +159,47 @@ front of the command. `gsudo` is the usual one on Windows and does the part that
 is genuinely hard — an elevated helper relaying stdio back over a named pipe, so
 redirection keeps working.
 
-**The deliberate route, if one is added, is `su`, not a new name.** busybox-w32
-already answers this question and answers it with `su`
-(`loginutils/suw32.c`, applet-odd-named from `suw32`; `busybox su` works today).
-What it does is the part worth copying: it does **not** elevate a command inside
-the current pipeline. It launches *a new elevated shell in its own console* via
-`ShellExecuteEx`/`runas`, and `su -c CMD` runs `CMD` in that shell rather than in
-this one. Sidestepping the handle problem instead of pretending it is not there.
+**The deliberate route is `su`, and it is implemented.** busybox-w32 answered this
+question first and answered it with `su` (`loginutils/suw32.c`, applet-odd-named
+from `suw32`), so that is the name here too. It is **not POSIX** — checked
+against POSIX.1-2024, which has a `newgrp` page and no `su` page at all — so the
+reference is the whole of the specification.
 
-Three things its source shows are not optional:
+What it does *not* do is the important part: it does not elevate a command
+inside the current pipeline. It launches **a new elevated shell in its own
+console** through `ShellExecuteEx`/`runas`, and `su -c CMD` runs `CMD` in that
+shell rather than in this one.
 
-- `ShellExecuteEx` resets the child's working directory to
-  `%SYSTEMROOT%\System32`, so the cwd has to be passed explicitly — and
-  canonicalised first, because a mapped network drive may not exist under the
-  elevated token (`suw32.c:96-113`).
-- Without `-N` the window closes the moment the shell exits, taking any output
-  with it.
-- The exit status is only available if asked for: `-W` sets
-  `SEE_MASK_NOCLOSEPROCESS` and waits (`suw32.c:137-147`).
+| Form | Behaviour |
+| --- | --- |
+| `su`, `su root` | an elevated `nemosh -i` in a new console, starting in the current directory |
+| `su -c CMD` | that shell runs `CMD` |
+| `su -s SHELL` | launches `SHELL` instead. `cmd.exe` is given `/c`, everything else `-c`, matching busybox (`suw32.c:118-120`) |
+| `su -W` | waits and reports the shell's exit status; without it `su` returns as soon as the shell is launched, having nothing to report |
+| `su -t` | test mode: the `open` verb instead of `runas`, so the whole path runs with no elevation and no consent dialog. This is what makes any of it testable |
+| `su USER` for any other user | refused. There is no user database here; `root` is the name this shell gives an elevated token, not an account |
+| `su -N` | **refused.** It should hold the console open at exit, and that needs an option in the shell itself which this build's argument parsing has not got |
+| the consent dialog answered "no" | status 1, `elevation was refused` — a decision, not a fault |
+
+The working directory is passed explicitly and canonicalised first, because a
+directory reached through a mapped network drive may not exist under the
+elevated token — drive mappings belong to a logon session (`suw32.c:96-113`).
+Measured: without it, ShellExecuteEx decides for itself.
+
+Ctrl-C while `-W` is waiting stops the wait and says so; it cannot stop the
+shell. Terminating a high-integrity process from a medium-integrity one is
+refused by the same mechanism that made elevation necessary in the first place.
+
+`su` is registered **on Windows only**. Unix already has a real `su` in
+util-linux, and an applet of that name would shadow it while doing none of what
+it does — no setuid, no user database, no password. busybox-w32 makes the same
+split, building `suw32` under `PLATFORM_MINGW32` alone.
 
 Not `sudo`: Windows 11 24H2 ships a real `sudo.exe`, and the name promises one
 command in the current console with its streams intact — which is precisely what
 this cannot deliver. busybox also ships the complement, `drop`/`cdrop`/`pdrop`,
-for running with the Administrators group disabled.
+for running with the Administrators group disabled; those are not implemented
+here.
 
 ### Known divergences from bash/dash/ash
 
@@ -195,7 +213,7 @@ for running with the Administrators group disabled.
 
 ## Applets
 
-All 48 registered applets ship. **Name presence is not option parity**, and the
+All 48 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
@@ -233,6 +251,7 @@ column that matters is the third one.
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sort` | `-n -r` | refused by name |
+| `su` | `-c -s -t -W`; Windows only, see **Elevation** | refused by name |
 | `tail` | `-n`, and the `-N` form | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |

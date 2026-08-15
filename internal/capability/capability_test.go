@@ -63,6 +63,9 @@ func runWithOption(t *testing.T, name, option string) string {
 // the code fails here even though both files still look consistent.
 func TestDeclaredOptionsAreAccepted(t *testing.T) {
 	for _, name := range appletNames(t) {
+		if launchesSomething[name] {
+			continue
+		}
 		command, _ := capability.Lookup(name)
 		for _, flag := range command.Short {
 			t.Run(name+" -"+string(flag), func(t *testing.T) {
@@ -80,6 +83,19 @@ func TestDeclaredOptionsAreAccepted(t *testing.T) {
 		}
 	}
 }
+
+// Applets this test must not run, because running them starts a process.
+//
+// su is the only one. Every option in its row would launch something: -t starts
+// a shell and waits for it, and -W or -c under the runas verb raises a consent
+// dialog that no test can answer. Its options are held instead by
+// TestPlanElevation_assemblesTheCommandLine and TestPlanElevation_refuses in
+// internal/applets, which measure the same claims -- every option accepted,
+// -Z refused -- against the same code, without starting anything.
+//
+// The registry only carries su on Windows, so elsewhere this map is never
+// consulted.
+var launchesSomething = map[string]bool{"su": true}
 
 // And an option the table does not claim must be refused, or the claim is not
 // saying anything. An applet that accepts everything would pass the test above
@@ -112,7 +128,7 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		"find": true,
 	}
 	for _, name := range appletNames(t) {
-		if noOptionParsing[name] {
+		if noOptionParsing[name] || launchesSomething[name] {
 			continue
 		}
 		command, _ := capability.Lookup(name)
