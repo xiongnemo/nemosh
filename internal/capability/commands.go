@@ -46,10 +46,8 @@ var commands = []Command{
 	{Name: "sort", Short: "nr", Operand: AnyPath},
 	// su's operand is a user name rather than a path, and the only name it takes
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,
-	// and there is no kind for "one fixed word". -N is deliberately absent --
-	// it is recognised and refused, and a table that claimed it would be
-	// claiming something that does not work.
-	{Name: "su", Short: "cstW", Operand: AnyPath},
+	// and there is no kind for "one fixed word".
+	{Name: "su", Short: "cstWN", Operand: AnyPath},
 	{Name: "tail", Short: "n", Operand: AnyPath},
 	{Name: "test", Operand: AnyPath},
 	{Name: "[", Operand: AnyPath},

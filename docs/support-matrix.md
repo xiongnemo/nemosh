@@ -178,7 +178,7 @@ shell rather than in this one.
 | `su -W` | waits and reports the shell's exit status; without it `su` returns as soon as the shell is launched, having nothing to report |
 | `su -t` | test mode: the `open` verb instead of `runas`, so the whole path runs with no elevation and no consent dialog. This is what makes any of it testable |
 | `su USER` for any other user | refused. There is no user database here; `root` is the name this shell gives an elevated token, not an account |
-| `su -N` | **refused.** It should hold the console open at exit, and that needs an option in the shell itself which this build's argument parsing has not got |
+| `su -N` | holds the console open at exit, so the output of `-c` survives the shell it ran in. The child honours it -- the console is its own -- and the shell grew a leading `-N` for the purpose, as busybox's ash did (`shell/ash.c:13442`, `:16371`) |
 | the consent dialog answered "no" | status 1, `elevation was refused` — a decision, not a fault |
 
 The working directory is passed explicitly and canonicalised first, because a
@@ -251,7 +251,7 @@ column that matters is the third one.
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sort` | `-n -r` | refused by name |
-| `su` | `-c -s -t -W`; Windows only, see **Elevation** | refused by name |
+| `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tail` | `-n`, and the `-N` form | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |

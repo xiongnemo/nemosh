@@ -64,6 +64,11 @@ func run(ctx context.Context, args []string) error {
 }
 
 func (c command) run(ctx context.Context, args []string) error {
+	// Before anything reads args by position. See stripHoldOption.
+	args, held := stripHoldOption(args)
+	if held {
+		defer c.holdConsole()
+	}
 	controller := &interruptController{}
 	stop := make(chan struct{})
 	if c.interrupts != nil {

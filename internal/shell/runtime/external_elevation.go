@@ -24,11 +24,16 @@ package runtime
 //
 // The failure keeps status 126: the command was found and could not be run,
 // which is exactly SUSv3's distinction.
+// The hint names `su` first because it is this shell's own answer and needs
+// nothing installed. It is spelled out with the command in it, so it can be
+// copied rather than reconstructed -- and with -N, because without it the new
+// console closes on exit and takes the output with it, which is the second thing
+// a reader would otherwise come back about.
 func elevationDiagnostic(name string) shellDiagnostic {
 	return shellDiagnostic{
 		message: "requires administrator, and this shell does not elevate on its own",
-		hint: "start an elevated shell and run it there, or launch it through a tool that " +
-			"elevates (`gsudo " + name + " ...`). See docs/support-matrix.md, Elevation",
+		hint: "run it in an elevated shell: `su -N -c '" + name + " ...'`, or `su` for a shell to work in. " +
+			"See docs/support-matrix.md, Elevation",
 		channel: debugExec,
 	}
 }

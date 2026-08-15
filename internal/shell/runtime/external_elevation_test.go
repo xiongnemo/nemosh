@@ -26,8 +26,9 @@ func TestElevationDiagnostic_saysWhoWillNotDoItAndWhatToDoInstead(t *testing.T) 
 		}
 	}
 	// The hint has to name the command, because a reader copying it out has one
-	// less thing to get wrong, and has to name where the reasoning lives.
-	for _, fragment := range []string{"WinSAT", "elevated shell", "support-matrix.md"} {
+	// less thing to get wrong; has to name the shell's own way of doing it,
+	// which is su; and has to say where the reasoning lives.
+	for _, fragment := range []string{"WinSAT", "su -N -c", "elevated shell", "support-matrix.md"} {
 		if !strings.Contains(diagnostic.hint, fragment) {
 			t.Fatalf("hint = %q, want it to contain %q", diagnostic.hint, fragment)
 		}

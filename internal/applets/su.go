@@ -70,10 +70,6 @@ func planElevation(args []string, view ProcessView) (elevationPlan, error) {
 	if options.has('s') && options.has('N') {
 		return elevationPlan{}, fmt.Errorf("-s and -N cannot be used together: -N is an option of this shell, and -s names another")
 	}
-	if options.has('N') {
-		return elevationPlan{}, fmt.Errorf("-N is not implemented: it needs a hold-at-exit option in the shell itself, " +
-			"and without one the console closes when the shell exits, taking any output with it")
-	}
 	plan := elevationPlan{
 		// -t implies -W, because a test that does not wait observes nothing.
 		test: options.has('t'),
@@ -112,11 +108,19 @@ func planElevation(args []string, view ProcessView) (elevationPlan, error) {
 // `-i` because what is being asked for is a shell to work in: a nemosh with no
 // script operand reads stdin, and an elevated process launched this way has no
 // stdin worth reading.
+//
+// `-N` leads, because the dispatch in cmd/nemosh reads `-c` by position. It is
+// also the child that has to honour it: the new console belongs to that process
+// and dies with it, so nothing on this side could hold it open.
 func ownShellArguments(options appletOptions) []string {
-	if options.has('c') {
-		return []string{"-c", options.value('c')}
+	var arguments []string
+	if options.has('N') {
+		arguments = append(arguments, "-N")
 	}
-	return []string{"-i"}
+	if options.has('c') {
+		return append(arguments, "-c", options.value('c'))
+	}
+	return append(arguments, "-i")
 }
 
 // foreignShellArguments builds the tail for a shell named with -s.

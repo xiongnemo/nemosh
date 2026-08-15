@@ -47,6 +47,16 @@ func TestPlanElevation_assemblesTheCommandLine(t *testing.T) {
 			name: "-t implies -W", args: []string{"-t"}, arguments: "-i", program: self, wait: true, test: true,
 		},
 		{
+			// -N leads, because cmd/nemosh reads -c by position. Only the child
+			// can honour it: the console it holds open is its own.
+			name: "-N is passed to the shell that owns the console",
+			args: []string{"-N"}, arguments: "-N -i", program: self,
+		},
+		{
+			name: "-N leads the command too",
+			args: []string{"-N", "-c", "ls"}, arguments: "-N -c ls", program: self,
+		},
+		{
 			name:      "operands follow the command",
 			args:      []string{"-c", "echo $1", "root", "one", "two"},
 			arguments: `-c "echo $1" one two`, program: self,
@@ -122,10 +132,6 @@ func TestPlanElevation_refuses(t *testing.T) {
 		{
 			name: "-N with a foreign shell", args: []string{"-s", "/bin/sh", "-N"},
 			fragment: "-N is an option of this shell",
-		},
-		{
-			name: "-N at all, for now", args: []string{"-N"},
-			fragment: "hold-at-exit",
 		},
 		{
 			name: "an option that does not exist", args: []string{"-Z"},
