@@ -124,6 +124,48 @@ process.
 
 `kill` does not claim the job, so a later `wait %N` still finds it.
 
+### Elevation
+
+A program whose manifest demands administrator — `WinSAT`, `bcdedit`, `sfc` —
+cannot be started from here. `CreateProcess` refuses it with
+`ERROR_ELEVATION_REQUIRED` (740), and there is no flag that changes that:
+Windows elevates through `ShellExecuteEx` with the `runas` verb, or through a
+COM elevation moniker, and neither is a variant of `CreateProcess`.
+
+```console
+$ WinSAT
+WinSAT: requires administrator, and this shell does not elevate on its own
+hint: start an elevated shell and run it there, or launch it through a tool that elevates (`gsudo WinSAT ...`). See docs/support-matrix.md, Elevation
+$ echo $?
+126
+```
+
+**busybox-w32 does the opposite**, and this is a deliberate divergence rather
+than a gap. Its `mingw_execve` retries through `ShellExecuteEx` with `runas`
+when the launch comes back with 740 (`win32/process.c:560-566`, `shell_execute`
+at `:514`). Two reasons not to follow it:
+
+1. **`ShellExecuteEx` cannot pass handles to the child.** The elevated process
+   gets a new console, so every redirection and pipe in the command is silently
+   ignored. `WinSAT formal > report.txt` would leave an empty file and put the
+   real output in a window that closes when it finishes. That is the same silent
+   partial obedience refused under **Process control**, and it is no better for
+   being convenient.
+2. **A consent dialog that appears because a name was typed is a dialog people
+   learn to dismiss.** Elevation is worth asking for on purpose.
+
+What works today: run an already-elevated shell, or put an elevating tool in
+front of the command. `gsudo` is the usual one on Windows and does the part that
+is genuinely hard — an elevated helper relaying stdio back over a named pipe, so
+redirection keeps working.
+
+An explicit `elevate CMD [ARG…]` builtin is a candidate, not a commitment. If it
+lands it will refuse a command carrying redirections or sitting in a pipeline,
+because those are exactly what it could not honour, and it will report the real
+exit status (`SEE_MASK_NOCLOSEPROCESS`, then `GetExitCodeProcess`). Note that
+Ctrl-C could not reach such a child either: terminating a high-integrity process
+from a medium-integrity shell is refused by the same mechanism.
+
 ### Known divergences from bash/dash/ash
 
 - **Parse before effects.** A syntax error anywhere in a script means none of it

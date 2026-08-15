@@ -91,6 +91,13 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
 			return 0
 		}
+		// A program that demands administrator is present and runnable and still
+		// cannot be started from here. That is its own answer, not a generic
+		// launch failure, and it is worth its own words.
+		if requiresElevation(err) {
+			r.report(args[0], elevationDiagnostic(args[0]))
+			return 126
+		}
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
 		return 126
 	}
