@@ -25,7 +25,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        # macOS earns its place by *executing* the `_other.go` half of every
+        # platform split -- process listing, identity, executability, device
+        # input. Those files are compiled for darwin by `GOOS=darwin go build`
+        # below, and compiling is not running: a nil map, a wrong path
+        # separator, or a syscall that returns a different errno there survives
+        # a cross-compile untouched. Linux runs the same files, so this is not
+        # redundant only because darwin and linux disagree often enough to
+        # matter (case-insensitive filesystem by default, BSD userland).
+        os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       # Actions are pinned to commit SHAs, not tags. A tag is mutable, so `@v4`
       # is a promise the upstream owner can rewrite at any time; the comment
@@ -85,10 +93,17 @@ jobs:
       # Strict mode turns a divergence from a reference shell into a failure.
       # CI has a known toolbox, which is the condition that makes that fair; on a
       # developer's machine the same test reports and does not fail.
+      #
+      # macOS is the exception, and reports instead. The only reference shell it
+      # ships is bash 3.2 -- Apple froze it in 2007 over the GPLv3 change -- so a
+      # divergence there is as likely to be nineteen years of bash as anything
+      # about Nemosh. Gating on it would make the build depend on a shell nobody
+      # is targeting. The output is still printed, so a real difference is
+      # visible; it is just not a veto.
       - name: differential against reference shells
         shell: bash
         env:
-          NEMOSH_DIFFERENTIAL: strict
+          NEMOSH_DIFFERENTIAL: ${{ runner.os == 'macOS' && 'report' || 'strict' }}
         run: go test ./internal/testutil/behavior/ -run Differential -count=1 -v
 
       # Fuzz seeds are run as ordinary tests on every platform: the corpus in
