@@ -15,8 +15,14 @@ import "fmt"
 // Status 126 rather than 127: SUSv3 keeps 127 for a command that could not be
 // found and 126 for one that was found and could not be run, which is exactly
 // the distinction being drawn.
+// permanent separates "not yet" from "never", because they are different
+// answers and a reader acts on them differently. `hash` could be implemented any
+// day -- it is a cache this shell has not got round to. `fg` cannot be, and
+// someone who reads "not implemented" may reasonably go and try; saying so
+// spares them.
 type unimplementedBuiltin struct {
-	reason string
+	reason    string
+	permanent bool
 }
 
 const unimplementedBuiltinStatus = 126
@@ -31,31 +37,24 @@ var unimplementedBuiltins = map[string]unimplementedBuiltin{
 			"it keeps the name and returns 1 with no message (shell/shell_common.c, " +
 			"the #else of `#if !ENABLE_PLATFORM_MINGW32`)",
 	},
-	"fg": {reason: noSuspensionReason},
-	"bg": {reason: noSuspensionReason},
+	"fg": {reason: noSuspensionReason, permanent: true},
+	"bg": {reason: noSuspensionReason, permanent: true},
 }
 
-// noSuspensionReason is why fg and bg are refused, and it is deliberately not
-// "Windows has no process groups".
+// noSuspensionReason is why fg and bg are refused.
 //
-// That is true and it is the second reason. The first is that there is nothing to
-// resume: `fg` and `bg` continue a job that was *suspended*, and no layer under
-// this shell can suspend one. Naming the process group instead would suggest the
-// gap is about terminal ownership, and someone would reasonably try to close it.
+// One sentence, on purpose. This is read at a prompt by someone who typed two
+// letters, and the earlier version was a paragraph citing three platform layers
+// and a busybox line number -- true, and not what anyone wants back from `fg`.
+// The full argument lives in docs/support-matrix.md under Process control, which
+// is where a reader who actually wants it will look.
 //
-// The contrast with `kill` is the whole of it. Ending something maps cleanly onto
-// cancelling its context -- both are one-way doors, so `kill %N` is honest.
-// Ctrl-Z needs a door that opens both ways, and there is not one: Go parks a
-// goroutine only when the goroutine itself blocks, with no API to freeze one from
-// outside, and Windows has no SIGSTOP for a real process either.
-const noSuspensionReason = "a job cannot be suspended, and fg and bg resume a suspended job. " +
-	"`kill %N` works because ending a job maps onto cancelling its context, which is one-way; " +
-	"suspension needs stop-and-continue, and neither layer below offers it -- Go cannot freeze a " +
-	"goroutine from outside, and Windows has no SIGSTOP even for a real process. " +
-	"busybox-w32 reaches the same conclusion: JOBS is 0 under ENABLE_PLATFORM_MINGW32 " +
-	"(shell/ash.c:247-253), its own comment there says the Windows build \"doesn't enable job " +
-	"control, just some job-related features\", and no SIGSTOP, SIGTSTP or SIGCONT appears " +
-	"anywhere in its win32 layer"
+// It is deliberately not "Windows has no process groups", which is true and is
+// the second reason. The first is that there is nothing to resume, and that is
+// also what makes `kill %N` fine by contrast: ending a job maps onto cancelling
+// its context, and both are one-way.
+const noSuspensionReason = "nothing here can suspend a job, so there is nothing for them to resume " +
+	"(`kill %N` still works). See docs/support-matrix.md, Process control"
 
 // reportUnimplementedBuiltin prints the refusal and reports whether the name was
 // one. Checked before applet lookup and before PATH, so a program that happens
@@ -65,6 +64,13 @@ func (r Runtime) reportUnimplementedBuiltin(name string) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s: not implemented: %s\n", name, builtin.reason)
+	// "and will not be" is the whole point of the distinction: a reader told only
+	// "not implemented" may go looking for a flag, a newer build, or an issue to
+	// file. One that is settled should say it is settled.
+	verdict := "not implemented"
+	if builtin.permanent {
+		verdict = "not implemented, and will not be"
+	}
+	fmt.Fprintf(r.streams.Stderr, "%s: %s: %s\n", name, verdict, builtin.reason)
 	return unimplementedBuiltinStatus, true
 }

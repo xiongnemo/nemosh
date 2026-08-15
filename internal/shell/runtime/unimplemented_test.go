@@ -25,24 +25,26 @@ func TestRuntime_refusesABuiltinItDoesNotImplement(t *testing.T) {
 			script:    "ulimit -n\n",
 			fragments: []string{"ulimit: not implemented", "no getrlimit", "busybox-w32 does not implement it either", "returns 1 with no message"},
 		},
-		// These used to say "terminal process group", which is true and is the
-		// second reason. The first is that there is nothing to resume: no layer
-		// below can suspend a job at all. Naming the process group made the gap
-		// look like one about terminal ownership, which someone would reasonably
-		// try to close.
+		// Two things are pinned here that the others do not have.
 		//
-		// The `kill` contrast is asserted deliberately. It is the sentence that
-		// answers "why does kill %1 work then", and a reader who does not get it
-		// here will ask it somewhere more expensive.
+		// "and will not be", because these are settled rather than pending, and a
+		// reader told only "not implemented" may go looking for a flag or a newer
+		// build. hash and ulimit deliberately do *not* say it -- they could be
+		// implemented any day.
+		//
+		// And the `kill %N` clause, which answers "why does that work then" in
+		// the same breath. The long argument is in the support matrix; the prompt
+		// gets one sentence, because this is read by someone who typed two
+		// letters and does not want a paragraph about heap locks.
 		{
 			name:      "fg",
 			script:    "fg\n",
-			fragments: []string{"fg: not implemented", "cannot be suspended", "kill %N", "no SIGSTOP", "busybox-w32"},
+			fragments: []string{"fg: not implemented, and will not be", "suspend", "kill %N", "support-matrix"},
 		},
 		{
 			name:      "bg",
 			script:    "bg\n",
-			fragments: []string{"bg: not implemented", "cannot be suspended", "kill %N", "no SIGSTOP", "busybox-w32"},
+			fragments: []string{"bg: not implemented, and will not be", "suspend", "kill %N", "support-matrix"},
 		},
 	}
 	for _, test := range tests {

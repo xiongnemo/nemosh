@@ -35,7 +35,12 @@ func (r Runtime) describeCommand(name string) (string, bool) {
 	if isRuntimeBuiltin(name) {
 		return name + " is a shell builtin", true
 	}
-	if _, ok := unimplementedBuiltins[name]; ok {
+	if builtin, ok := unimplementedBuiltins[name]; ok {
+		// "and will not" separates a gap from a decision, which is the thing
+		// `type` is being asked about.
+		if builtin.permanent {
+			return name + " is a shell builtin this shell does not implement and will not", true
+		}
 		return name + " is a shell builtin this shell does not implement", true
 	}
 	if parsed, ok := newFunctionName(name); ok {
