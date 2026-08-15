@@ -9,3 +9,11 @@ import "strings"
 func completionMatches(name, stem string) bool {
 	return strings.HasPrefix(name, stem)
 }
+
+// foldForCompletion is the identity here, and is still worth having: it is the
+// one place the case rule is written, so the shared prefix and the suggestion
+// cannot each invent their own -- which is exactly what had happened on the
+// Windows side of this split.
+func foldForCompletion(value string) string {
+	return value
+}

@@ -127,7 +127,12 @@ func (e *lineEditor) complete(prompt string) {
 		}
 		return
 	}
-	if shared := longestSharedPrefix(matches); len(shared) > len(stem) {
+	// Not "longer than the stem". Every match matches the stem, so the shared
+	// prefix is never shorter than it -- but on Windows it can be the same length
+	// and a different case, and that is worth inserting too: it puts the name on
+	// the line as it is really spelled. busybox-w32 does the same, and says so:
+	// "replace match prefix to allow for altered case" (libbb/lineedit.c:1531).
+	if shared := longestSharedPrefix(matches); shared != stem {
 		e.replaceWord(typed, insert(shared))
 	}
 	// Listed unescaped: the backslashes are how the shell reads the name, not

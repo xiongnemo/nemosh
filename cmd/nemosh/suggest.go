@@ -68,9 +68,14 @@ func (s suggester) fromCommandNames(line string) (string, bool) {
 	if strings.ContainsAny(line, " \t|&;<>()") {
 		return "", false
 	}
+	typed := len([]rune(line))
 	best := ""
 	for _, name := range s.commands {
-		if !strings.HasPrefix(name, line) || len(name) == len(line) {
+		// completionMatches, not HasPrefix: Tab and the suggestion are looking at
+		// one list and have to agree about what matches in it. They did not, and
+		// on Windows that showed as `WH` finding eight commands under Tab and
+		// suggesting nothing.
+		if !completionMatches(name, line) || len([]rune(name)) == typed {
 			continue
 		}
 		// The shortest match, so the suggestion is the least the shell is
@@ -83,5 +88,8 @@ func (s suggester) fromCommandNames(line string) (string, bool) {
 	if best == "" {
 		return "", false
 	}
-	return best[len(line):], true
+	// Sliced by runes, not bytes: the match may be a different case from what was
+	// typed, and folding can change a rune's byte length without changing the
+	// count. Byte arithmetic against the typed text would cut the name mid-rune.
+	return string([]rune(best)[typed:]), true
 }

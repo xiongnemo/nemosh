@@ -127,13 +127,30 @@ func completePaths(workingDirectory, prefix string, directoriesOnly bool) []stri
 
 // longestSharedPrefix is what Tab inserts when several candidates match: it
 // takes the user as far as the choice actually is, and no further.
+//
+// "The same" means what completionMatches means by it, which is why the
+// comparison runs over foldForCompletion. It used to compare bytes while
+// matching folded case, so on Windows one candidate spelled `WhoUses` reduced
+// the prefix of eight `wh` matches to nothing and Tab appeared to do nothing at
+// all.
+//
+// The spelling comes from the first candidate rather than from what was typed,
+// following busybox-w32, which truncates its chosen match and replaces the typed
+// prefix outright -- its comment reads "replace match prefix to allow for
+// altered case" (libbb/lineedit.c:1483, 1531-1537). So `PROG` + Tab can come
+// back as `Program`, showing the name as it is really spelled.
 func longestSharedPrefix(matches []string) string {
 	if len(matches) == 0 {
 		return ""
 	}
-	shared := []rune(matches[0])
+	// Folded and unfolded are indexed together, so the length agreed in folded
+	// runes can be taken from the original spelling. unicode.ToLower is
+	// per-rune, so the two have the same rune count even where they differ in
+	// bytes.
+	spelling := []rune(matches[0])
+	shared := []rune(foldForCompletion(matches[0]))
 	for _, match := range matches[1:] {
-		candidate := []rune(match)
+		candidate := []rune(foldForCompletion(match))
 		if len(candidate) < len(shared) {
 			shared = shared[:len(candidate)]
 		}
@@ -144,7 +161,7 @@ func longestSharedPrefix(matches []string) string {
 			}
 		}
 	}
-	return string(shared)
+	return string(spelling[:len(shared)])
 }
 
 func slicesCompact(sorted []string) []string {
