@@ -52,6 +52,11 @@ these names why, and names what busybox-w32 does with the same name.
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.
 
+Tab completion and the inline suggestion offer host names for `ssh`, read from
+`~/.ssh/config` -- and `/etc/hosts` off Windows. See
+`docs/design/completion.md`, Host names, for what is read and what deliberately
+is not.
+
 ### Process control — what is implemented, and what will not be
 
 One table, because the line between the two halves is a single distinction and

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -208,4 +209,59 @@ func appletNames(t *testing.T) []string {
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
+}
+
+// The table's value is that it is measured, and exactly one row is not. This
+// holds that line: an unmeasured row has to say so, and the ones that say so
+// have to stay the ones we decided on.
+//
+// Without it, `External: true` would be an escape hatch that quietly widens --
+// a row nobody can check is easier to write than one that has to survive being
+// run, so the pressure is always in that direction.
+func TestOnlyExternalRowsAreUnmeasured(t *testing.T) {
+	// Given: the names the drift tests above actually exercise.
+	measured := map[string]bool{}
+	for _, name := range appletNames(t) {
+		measured[name] = true
+	}
+
+	// When
+	var unmeasured []string
+	for _, name := range capability.Names() {
+		command, _ := capability.Lookup(name)
+		if command.Builtin || measured[name] || launchesSomething[name] {
+			continue
+		}
+		if !command.External {
+			t.Errorf("%s is neither an applet, a builtin, nor marked External: nothing measures it", name)
+		}
+		unmeasured = append(unmeasured, name)
+	}
+
+	// Then: the list of rows nobody can check is the one that was argued for,
+	// command by command, in commands.go.
+	if !slices.Equal(unmeasured, []string{"ssh"}) {
+		t.Fatalf("unmeasured rows = %v, want only [ssh]. Adding one is a decision, not a detail", unmeasured)
+	}
+}
+
+// An option that takes a file must take a value, and one that takes a value must
+// be an option the command accepts. Two subsets, stated as such, so a letter
+// cannot be claimed in the narrow column and missing from the wide one.
+func TestValueAndFileOptionsAreSubsetsOfTheAcceptedOnes(t *testing.T) {
+	for _, name := range capability.Names() {
+		command, _ := capability.Lookup(name)
+		t.Run(name, func(t *testing.T) {
+			for _, flag := range command.ValueShort {
+				if !command.AcceptsShort(flag) {
+					t.Errorf("%s claims -%c takes a value but does not accept it", name, flag)
+				}
+			}
+			for _, flag := range command.FileShort {
+				if !command.TakesValue(flag) {
+					t.Errorf("%s claims -%c takes a file but not a value", name, flag)
+				}
+			}
+		})
+	}
 }

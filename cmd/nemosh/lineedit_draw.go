@@ -92,7 +92,7 @@ func (e *lineEditor) complete(prompt string) {
 	var areOptions bool
 	operand := !completesCommand(prefix)
 	if operand {
-		matches, areOptions = completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
+		matches, areOptions = e.completeOperandWord(prefix, stem)
 	} else {
 		matches = completeCommand(stem, e.commands.candidates())
 	}

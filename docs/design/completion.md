@@ -245,3 +245,96 @@ uncompletable went unnoticed.
 Built, and written up separately in [`suggestion.md`](suggestion.md): it shares
 the capability table with completion but is a different feature, answering on
 every keystroke rather than on request.
+
+## Host names
+
+`ssh <TAB>` completes machines rather than files, from `~/.ssh/config`. It is the
+first operand kind that does not come from the filesystem at all, which changes
+two rules.
+
+**The source is deliberately narrow.** `~/.ssh/config` only: it is the file a
+person curates on purpose, so its names are the ones they meant. `known_hosts` is
+*not* read — it is a machine-written cache, it is the file most likely to be
+enormous, and under `HashKnownHosts yes` its entries are hashed and unreadable by
+design, so it would answer richly on one machine and not at all on the next.
+`/etc/hosts` is read off Windows and not on it: measured, the Windows one ships
+with every line commented out and usually stays that way, and it is the file most
+likely to have been replaced wholesale with an ad-blocking list of tens of
+thousands of names. Entries pointing at `0.0.0.0` are skipped for the same
+reason — a name installed in order *not* to reach is not somewhere to connect.
+
+Both `Host` and `HostName` are read. They answer different halves of one
+question: `Host` is the short alias someone wrote the file to have, `HostName` is
+what it resolves to and is also frequently typed. fish reads only `Host`;
+bash-completion's `_known_hosts_real` reads both, and is right — an alias whose
+real name is never offered makes the file look half-read. Patterns (`Host *`,
+`prod-*`, `!name`) and ssh's substitution tokens (`%h`) are skipped: they
+configure a set, and completing one puts a name on the line that resolves to
+nothing.
+
+**There is no fallback to paths.** Everywhere else a specific completion that
+finds nothing falls through to the ordinary one — that is what keeps a file
+named `-1.18-windows.xml` reachable. A host is not a path, so `ssh nonexist<TAB>`
+answering `notes.txt` would be an answer from the wrong universe rather than a
+wider guess. Nothing to offer rings the bell.
+
+### Knowing that `ssh -i` wants a file
+
+The word after an option is not always an operand, and which it is cannot be read
+off the word itself. The capability table therefore carries two subsets of each
+command's option letters: the ones that consume the following word, and the ones
+whose consumed word is a path.
+
+- `ssh -i <TAB>` → files, because `-i` takes an identity file.
+- `ssh -p <TAB>` → **nothing**, because `-p` takes a port and this shell cannot
+  guess one. Offering the current directory there would be the wrong universe.
+- `ssh -i key <TAB>` → hosts again. `key` belongs to `-i`, so the host has not
+  been given yet.
+- `ssh myhost <TAB>` → nothing. The second operand is a command run on the far
+  side; bash-completion answers it by opening a real connection to the remote
+  machine, which this shell will not do behind anyone's back.
+
+zsh has this because `_arguments` declares an argument type per option;
+bash-completion hand-writes it as a `case $prev in` per command. Here it is data
+in the one table both completion and the suggestion renderer already read.
+
+### The one unmeasured row
+
+Every other row in `internal/capability` is bound to behaviour by a test that
+runs the command. `ssh` cannot be run to check, so its row is marked `External`
+and was transcribed from the usage synopsis the installed program prints for
+itself — OpenSSH_10.2p1, 2026-08-15 — rather than from memory or a web page. The
+bracket groups in that synopsis map exactly onto the three columns: the flags
+that stand alone, the ones with an argument, and the five whose argument is
+spelled as a file.
+
+`TestOnlyExternalRowsAreUnmeasured` holds the line. `External` is an escape
+hatch, and a row nobody can check is easier to write than one that has to survive
+being run, so the pressure is always to widen it; the test makes widening a
+decision someone has to make on purpose.
+
+## Where the three shells keep this knowledge
+
+Recorded because the design above is a choice among these, not an invention.
+
+| | Completion comes from | Knows `-i` takes a file | Cached | Descriptions | Inline suggestion |
+| --- | --- | --- | --- | --- | --- |
+| **bash** | `bash-completion`'s shell functions, `complete -F _ssh ssh`, reading `COMP_WORDS` and writing `COMPREPLY` | hand-written `case $prev in` per command | no — `known_hosts` is re-read on every Tab | none; readline shows bare words | none built in |
+| **zsh** | compsys `_ssh`, an `_arguments` grammar declaring every option and its argument type | yes, from that grammar | yes, `_store_cache`/`_retrieve_cache` | yes, and candidates are grouped under tag headings | a plugin, zsh-autosuggestions, with `history`/`completion`/`match_prev_cmd` strategies |
+| **fish** | declarative `complete` lines in `share/completions/*.fish` | yes, `-r` and `-F` declare it | some functions cache their own | yes, one column in the pager | built in, history-first, grey, accepted with → or End |
+
+Two things worth taking from that table. zsh's per-option argument types are the
+right shape for the `ssh -i` problem, and are what the capability table now
+carries. And zsh-autosuggestions' `completion` strategy — ask the completer and
+show its first answer — is what makes a suggestion possible for a host never
+typed before; it is adopted here only for sources already in memory, because
+nothing on the keystroke path may touch the filesystem.
+
+**Neither fish nor bash labels which source a host came from.** Checked:
+`__fish_print_hostnames.fish` merges `/etc/hosts`, `/etc/fstab`, `known_hosts`
+and the ssh configs and emits them with no attribution, and both host lines in
+`completions/ssh.fish` carry the same description, `Remote`. fish distinguishes
+its two sources by *order* instead — the history-derived one is `-k`, kept at the
+top. zsh is the shell that labels, by grouping candidates under a tag heading.
+Labelling here would mean giving the listing a description column or group
+headings; today it is busybox's `showfiles` layout, which has neither.

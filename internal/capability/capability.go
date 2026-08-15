@@ -15,7 +15,10 @@
 // of not knowing.
 package capability
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 // OperandKind is what a command's operands can be.
 //
@@ -27,6 +30,11 @@ type OperandKind int
 const (
 	AnyPath OperandKind = iota
 	Directory
+	// HostName is a remote machine: `ssh HOST`. Unlike the other two this
+	// narrows to a source that is not the filesystem at all, so completing the
+	// wrong kind here is not "too many candidates" but "candidates from the
+	// wrong universe" -- `ssh notes.txt` is never what was meant.
+	HostName
 )
 
 // Command is one command's surface.
@@ -43,6 +51,34 @@ type Command struct {
 	// distinction matters for the drift test, which can run an applet in
 	// isolation and cannot run a builtin without a whole runtime.
 	Builtin bool
+	// External marks a command this shell does not ship and cannot run to check.
+	//
+	// This is the honest label on the one thing that weakens the table: every
+	// other row is bound to behaviour by a test that runs the command, and these
+	// are transcribed from the command's own usage output instead. The field
+	// exists so that fact is in the data rather than in a comment nobody reads,
+	// and a test holds the line -- see TestOnlyExternalRowsAreUnmeasured.
+	External bool
+	// ValueShort is the subset of Short whose option takes the next word as its
+	// argument. Completion needs it to know that the word after `ssh -p` is a
+	// port and not a host: offering a host there is the wrong universe, which is
+	// worse than offering nothing.
+	ValueShort string
+	// FileShort is the subset of ValueShort whose argument is a path, so
+	// `ssh -i ` completes a file. zsh knows this because its completion grammar
+	// declares an argument type per option; bash-completion hand-writes a
+	// `case $prev in` per command. This is the same knowledge as data.
+	FileShort string
+}
+
+// TakesValue reports whether the option letter consumes the following word.
+func (c Command) TakesValue(flag rune) bool {
+	return strings.ContainsRune(c.ValueShort, flag)
+}
+
+// TakesFile reports whether that consumed word is a path.
+func (c Command) TakesFile(flag rune) bool {
+	return strings.ContainsRune(c.FileShort, flag)
 }
 
 // AcceptsShort reports whether the command takes a one-letter option.
@@ -112,3 +148,14 @@ var byName = func() map[string]Command {
 	}
 	return index
 }()
+
+// Names lists every command with a row, sorted. Tests walk it to hold the whole
+// table to a rule rather than to one row at a time.
+func Names() []string {
+	names := make([]string, 0, len(commands))
+	for _, command := range commands {
+		names = append(names, command.Name)
+	}
+	sort.Strings(names)
+	return names
+}

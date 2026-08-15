@@ -44,6 +44,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		if value, ok := rt.LookupEnv("PATH"); ok {
 			editor.commands.path.refresh(value)
 		}
+		// And the host list, which changes when ~/.ssh/config is edited. Its
+		// invalidation is a stat of one file per prompt, which is why it can sit
+		// here and not in the keystroke path.
+		if home, ok := rt.LookupEnv("HOME"); ok {
+			editor.hosts.refresh(hostSources(home))
+		}
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
 		line, err := editor.readLine(ctx, prompt)
 		if ctx.Err() != nil {

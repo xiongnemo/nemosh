@@ -22,6 +22,9 @@ type suggester struct {
 	// commands is every name that can be run: builtins, applets, this session's
 	// aliases and functions, and everything on PATH.
 	commands []string
+	// hosts is the machines ~/.ssh/config names. In memory like everything else
+	// here, which is the whole reason the index behind it exists.
+	hosts []string
 }
 
 // suggest returns the text to draw after the line, or "" for none.
@@ -40,6 +43,9 @@ func (s suggester) suggest(line string) string {
 		return remainder
 	}
 	if remainder, ok := s.fromCommandNames(line); ok {
+		return remainder
+	}
+	if remainder, ok := s.fromHostNames(line); ok {
 		return remainder
 	}
 	return ""
@@ -92,4 +98,56 @@ func (s suggester) fromCommandNames(line string) (string, bool) {
 	// typed, and folding can change a rune's byte length without changing the
 	// count. Byte arithmetic against the typed text would cut the name mid-rune.
 	return string([]rune(best)[typed:]), true
+}
+
+// fromHostNames guesses the operand of `ssh`, which is the one operand in this
+// shell that comes from a closed set rather than from the filesystem.
+//
+// This is the idea zsh-autosuggestions calls its `completion` strategy: ask what
+// completion would offer and show the first answer, so a suggestion can appear
+// for something never typed before. It is restricted here to the one source that
+// is already in memory, because the rule that nothing on this path touches the
+// filesystem is what keeps typing from stuttering.
+//
+// Only when completion would offer a host for this exact word. That check is the
+// same operandTargetFor the Tab key uses, so the grey text and the Tab key can
+// never disagree about what the word is -- which is the failure the case-folding
+// bug already demonstrated once.
+func (s suggester) fromHostNames(line string) (string, bool) {
+	word := line[len(line)-len(currentSuggestionWord(line)):]
+	if operandTargetFor(line[:len(line)-len(word)]) != targetHost {
+		return "", false
+	}
+	name := word
+	if at := strings.LastIndexByte(word, '@'); at >= 0 {
+		name = word[at+1:]
+	}
+	if name == "" {
+		return "", false
+	}
+	best := ""
+	for _, host := range s.hosts {
+		if !completionMatches(host, name) || len([]rune(host)) == len([]rune(name)) {
+			continue
+		}
+		// The shortest, as with command names: the least the shell is
+		// committing to on the strength of a guess.
+		if best == "" || len(host) < len(best) {
+			best = host
+		}
+	}
+	if best == "" {
+		return "", false
+	}
+	return string([]rune(best)[len([]rune(name)):]), true
+}
+
+// currentSuggestionWord is the unfinished word at the end of the line. Blanks
+// only: a suggestion is offered for what is being typed, and the operators that
+// would separate commands are already handled by the callers above.
+func currentSuggestionWord(line string) string {
+	if start := strings.LastIndexAny(line, " \t"); start >= 0 {
+		return line[start+1:]
+	}
+	return line
 }

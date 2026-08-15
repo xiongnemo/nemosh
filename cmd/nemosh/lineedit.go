@@ -51,6 +51,11 @@ type lineEditor struct {
 	// and functions it has defined, and everything on PATH. It decides both the
 	// colour a command word is drawn in and what a suggestion may propose.
 	commands *shellCommands
+	// hosts is the machines `ssh` could be asked for, read from ~/.ssh/config in
+	// the background. A separate index from commands because it answers a
+	// different question about a different word, and because it is invalidated
+	// differently -- a file's mtime rather than a variable's value.
+	hosts *hostIndex
 }
 
 // defaultTerminalColumns is used when the terminal will not say. Eighty is the
@@ -68,6 +73,7 @@ func newLineEditor(input io.Reader, screen io.Writer, workingDirectory string) *
 		width:            func() int { return terminalColumns(screen) },
 		styling:          newTheme(os.LookupEnv),
 		commands:         newShellCommands(newPathIndex()),
+		hosts:            newHostIndex(),
 	}
 }
 
