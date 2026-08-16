@@ -45,18 +45,30 @@ func TestRuntime_fillsInTheLoginVariablesWindowsDoesNotSet(t *testing.T) {
 	if home == "" {
 		t.Fatal("HOME is still empty")
 	}
-	// The shell's own spelling, not the host's. Otherwise `echo $HOME` and
-	// `pwd` disagree about the same directory, and a script comparing them is
-	// wrong for a reason nobody would guess.
-	if !strings.HasPrefix(home, "/") {
-		t.Fatalf("HOME = %q, want the shell's spelling rather than a native path", home)
+	// A native path, not this shell's own spelling, because HOME is exported and
+	// the programs it reaches are native. The first version of this used
+	// /c/Users/nemo and broke every child:
+	//
+	//	HOME=/c/Users/nemo  busybox ash -c 'cd $HOME; pwd'  ->  C:/c/Users/nemo
+	//
+	// busybox read the leading slash as "absolute on the current drive". Git
+	// Bash survives that spelling only because MSYS2 rewrites paths as it
+	// spawns; this shell has no such layer.
+	if strings.HasPrefix(home, "/") {
+		t.Fatalf("HOME = %q, want a native path a launched program can open", home)
+	}
+	if strings.Contains(home, `\`) {
+		t.Fatalf("HOME = %q, want forward slashes: a backslash is an escape character in a shell", home)
 	}
 	if lines[1] == "" || lines[1] != lines[2] {
 		t.Fatalf("USER = %q, LOGNAME = %q, want both set and equal", lines[1], lines[2])
 	}
-	// `cd` with no operand goes home, and `pwd` agrees with $HOME.
-	if lines[3] != home {
-		t.Fatalf("pwd after cd = %q, want %q", lines[3], home)
+	// `cd` with no operand goes home. pwd answers in the shell's own spelling
+	// and $HOME in the host's, so they name one directory two ways -- the wart
+	// that comes with having no path-rewriting layer, and the smaller of the two
+	// available warts.
+	if lines[3] == "" || !strings.HasSuffix(strings.ToLower(lines[3]), strings.ToLower(strings.TrimPrefix(home, "C:"))) {
+		t.Fatalf("pwd after cd = %q, want the same directory as HOME %q", lines[3], home)
 	}
 	if lines[4] != home {
 		t.Fatalf("echo ~ = %q, want %q", lines[4], home)
@@ -103,7 +115,10 @@ func TestRuntime_exportsTheFilledInHome(t *testing.T) {
 	}
 
 	// Then
-	if !strings.HasPrefix(stdout.String(), "HOME=/") {
-		t.Fatalf("env showed %q, want an exported HOME", stdout.String())
+	// Exported, and exported in the form the child can use. This is the assertion
+	// that would have caught the first attempt.
+	exported := strings.TrimSpace(stdout.String())
+	if !strings.HasPrefix(exported, "HOME=") || strings.HasPrefix(exported, "HOME=/") {
+		t.Fatalf("env showed %q, want an exported HOME as a native path", exported)
 	}
 }

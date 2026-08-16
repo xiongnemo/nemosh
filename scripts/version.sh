@@ -56,12 +56,26 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
   dirty=true
 fi
 
-ldflags=$(printf -- '-X %s.tag=%s -X %s.commitsSinceTag=%s -X %s.branch=%s -X %s.commit=%s -X %s.dirty=%s' \
+# Who built it, where, and when -- the Linux kernel's banner, which answers what
+# a version number cannot: two binaries claiming one commit can still differ, and
+# the first thing worth knowing about a misbehaving one is whether it came off CI
+# or somebody's laptop.
+#
+# UTC and to the second. A local time would make the same build look different
+# from two desks, and anything finer is noise.
+build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+build_user=${USER:-${USERNAME:-unknown}}
+build_host=$(hostname 2>/dev/null || echo unknown)
+
+ldflags=$(printf -- '-X %s.tag=%s -X %s.commitsSinceTag=%s -X %s.branch=%s -X %s.commit=%s -X %s.dirty=%s -X %s.buildTime=%s -X %s.buildUser=%s -X %s.buildHost=%s' \
   "$package" "$tag" \
   "$package" "$commits" \
   "$package" "$branch" \
   "$package" "$commit" \
-  "$package" "$dirty")
+  "$package" "$dirty" \
+  "$package" "$build_time" \
+  "$package" "$build_user" \
+  "$package" "$build_host")
 
 if [ "${1:-}" = "--ldflags" ]; then
   printf '%s\n' "$ldflags"
@@ -73,7 +87,10 @@ fi
 # them `go run` falls back to debug.ReadBuildInfo, which knows the commit but
 # not the tag, and would report a different version than a release build of the
 # same tree.
-line=$(go run -ldflags "$ldflags" ./cmd/nemosh --version)
+# The first line only. `--version` prints a second one naming who built it, and
+# this script's job is the version -- feeding both to awk printed `by` as a
+# second answer, which is how this comment came to exist.
+line=$(go run -ldflags "$ldflags" ./cmd/nemosh --version | head -n 1)
 
 if [ "${1:-}" = "--version" ]; then
   printf '%s\n' "$line" | awk '{print $2}'

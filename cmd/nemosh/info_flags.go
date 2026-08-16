@@ -18,6 +18,13 @@ func (c command) infoFlag(argument string) (bool, error) {
 	switch argument {
 	case "--version":
 		fmt.Fprintln(c.stdout, version.Describe())
+		// A second line rather than a longer first one. The first is what the
+		// release workflow and a package manager parse, and it must not grow a
+		// field that depends on how the binary was produced. Absent entirely
+		// when the build did not record who made it.
+		if built := version.DescribeBuild(); built != "" {
+			fmt.Fprintln(c.stdout, built)
+		}
 		return true, nil
 	case "--list":
 		// One name per line, sorted, no decoration: this output generates the
