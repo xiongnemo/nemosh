@@ -1,0 +1,24 @@
+[meta]
+# The bracket groups of ssh's own synopsis map exactly onto the columns below:
+# the first group is the flags that stand alone, every other bracket is an option
+# with an argument, and the five whose argument is spelled as a file or a path
+# are the ones completion should answer with a filename.
+#
+#	usage: ssh [-46AaCfGgKkMNnqsTtVvXxYy] [-B bind_interface] [-b bind_address]
+#	           [-c cipher_spec] [-D [bind_address:]port] [-E log_file]
+#	           [-e escape_char] [-F configfile] [-I pkcs11] [-i identity_file]
+#	           [-J destination] [-L address] [-l login_name] [-m mac_spec]
+#	           [-O ctl_cmd] [-o option] [-P tag] [-p port] [-R address]
+#	           [-S ctl_path] [-W host:port] [-w local_tun[:remote_tun]]
+#	           destination [command [argument ...]]
+#	       ssh [-Q query_option]
+derived-from = "ssh (usage synopsis, printed when run with no arguments)"
+tool-version = "OpenSSH_10.2p1, OpenSSL 3.5.4 30 Sep 2025"
+measured-on = "2026-08-15"
+
+[command]
+name = "ssh"
+operand = "host"
+short = "46AaCfGgKkMNnqsTtVvXxYyBbcDEeFIiJLlmOoPpRSWwQ"
+value-short = "BbcDEeFIiJLlmOoPpRSWwQ"
+file-short = "EFiIS"

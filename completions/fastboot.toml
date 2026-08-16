@@ -1,0 +1,115 @@
+[meta]
+# fastboot does print a `usage:` line, but only the shape of it --
+# `usage: fastboot [OPTION...] COMMAND...` -- so the options and the commands
+# both come from the sections below it rather than from a synopsis.
+derived-from = "fastboot --help"
+tool-version = "fastboot, Android platform-tools (see adb.toml for the bundle version)"
+measured-on = "2026-08-16"
+
+[command]
+name = "fastboot"
+operand = "none"
+short = "wsSv"
+value-short = "sS"
+long = [
+  "dtb", "cmdline", "base", "kernel-offset", "ramdisk-offset", "tags-offset",
+  "dtb-offset", "page-size", "header-version", "os-version", "os-patch-level",
+  "force", "slot", "set-active", "skip-secondary", "skip-reboot",
+  "disable-verity", "disable-verification", "disable-super-optimization",
+  "exclude-dynamic-partitions", "disable-fastboot-info", "fs-options",
+  "unbuffered", "verbose", "version",
+]
+value-long = [
+  "dtb", "cmdline", "base", "kernel-offset", "ramdisk-offset", "tags-offset",
+  "dtb-offset", "page-size", "header-version", "os-version", "os-patch-level",
+  "slot", "fs-options",
+]
+# Only --dtb is spelled as a path in the help; SERIAL, SIZE and SLOT are not
+# files, and completing the current directory for them would be an answer from
+# the wrong universe.
+file-long = ["dtb"]
+
+[[subcommand]]
+name = "flash"
+operand = "path"
+
+[[subcommand]]
+name = "flashall"
+operand = "none"
+
+[[subcommand]]
+name = "boot"
+operand = "path"
+
+[[subcommand]]
+name = "update"
+operand = "path"
+
+[[subcommand]]
+name = "stage"
+operand = "path"
+
+[[subcommand]]
+name = "fetch"
+operand = "path"
+
+[[subcommand]]
+name = "get_staged"
+operand = "path"
+
+[[subcommand]]
+name = "devices"
+operand = "none"
+short = "l"
+
+[[subcommand]]
+name = "erase"
+operand = "none"
+
+[[subcommand]]
+name = "format"
+operand = "none"
+
+[[subcommand]]
+name = "getvar"
+operand = "none"
+
+[[subcommand]]
+name = "set_active"
+operand = "none"
+
+[[subcommand]]
+name = "reboot"
+operand = "none"
+
+[[subcommand]]
+name = "oem"
+operand = "none"
+
+[[subcommand]]
+name = "gsi"
+operand = "none"
+
+[[subcommand]]
+name = "flashing"
+operand = "none"
+
+[[subcommand]]
+name = "snapshot-update"
+operand = "none"
+
+[[subcommand]]
+name = "wipe-super"
+operand = "path"
+
+[[subcommand]]
+name = "create-logical-partition"
+operand = "none"
+
+[[subcommand]]
+name = "delete-logical-partition"
+operand = "none"
+
+[[subcommand]]
+name = "resize-logical-partition"
+operand = "none"

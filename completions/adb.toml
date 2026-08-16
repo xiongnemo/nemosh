@@ -1,0 +1,181 @@
+[meta]
+# adb prints no `usage:` synopsis at all, so the generator's synopsis reader gets
+# nothing from it. What it does print is structured: ` -x  description` under
+# `global options:`, and ` subcommand ARGS  description` under section headings.
+# Both were read off that.
+#
+# What is deliberately *not* here is the part that matters most for adb: the
+# serial numbers `-s` wants, the package names `uninstall` wants, the remote
+# paths `pull` wants. None of those are in any help text and never will be --
+# they come from running adb, which no spec can do yet.
+derived-from = "adb --help"
+tool-version = "Android Debug Bridge version 1.0.41 / Version 37.0.0-14910828"
+measured-on = "2026-08-16"
+
+[command]
+name = "adb"
+operand = "none"
+short = "adestHPL"
+value-short = "stHPL"
+long = ["one-device", "exit-on-write-error"]
+value-long = ["one-device"]
+
+# The subcommands, from the section headings of the same help. Each carries only
+# what could be read there; an operand kind of "none" means adb takes nothing
+# further, not that nothing is known.
+[[subcommand]]
+name = "devices"
+operand = "none"
+short = "l"
+
+[[subcommand]]
+name = "install"
+operand = "path"
+
+[[subcommand]]
+name = "install-multiple"
+operand = "path"
+
+[[subcommand]]
+name = "install-multi-package"
+operand = "path"
+
+[[subcommand]]
+name = "push"
+operand = "path"
+
+[[subcommand]]
+name = "pull"
+operand = "path"
+
+[[subcommand]]
+name = "sideload"
+operand = "path"
+
+[[subcommand]]
+name = "sync"
+operand = "path"
+
+[[subcommand]]
+name = "shell"
+operand = "none"
+
+[[subcommand]]
+name = "logcat"
+operand = "none"
+
+[[subcommand]]
+name = "uninstall"
+operand = "none"
+
+[[subcommand]]
+name = "connect"
+operand = "none"
+
+[[subcommand]]
+name = "disconnect"
+operand = "none"
+
+[[subcommand]]
+name = "pair"
+operand = "none"
+
+[[subcommand]]
+name = "forward"
+operand = "none"
+
+[[subcommand]]
+name = "reverse"
+operand = "none"
+
+[[subcommand]]
+name = "reboot"
+operand = "none"
+
+[[subcommand]]
+name = "root"
+operand = "none"
+
+[[subcommand]]
+name = "unroot"
+operand = "none"
+
+[[subcommand]]
+name = "remount"
+operand = "none"
+
+[[subcommand]]
+name = "bugreport"
+operand = "path"
+
+[[subcommand]]
+name = "start-server"
+operand = "none"
+
+[[subcommand]]
+name = "kill-server"
+operand = "none"
+
+[[subcommand]]
+name = "get-state"
+operand = "none"
+
+[[subcommand]]
+name = "get-serialno"
+operand = "none"
+
+[[subcommand]]
+name = "get-devpath"
+operand = "none"
+
+[[subcommand]]
+name = "attach"
+operand = "none"
+
+[[subcommand]]
+name = "detach"
+operand = "none"
+
+[[subcommand]]
+name = "disable-verity"
+operand = "none"
+
+[[subcommand]]
+name = "enable-verity"
+operand = "none"
+
+[[subcommand]]
+name = "keygen"
+operand = "path"
+
+[[subcommand]]
+name = "jdwp"
+operand = "none"
+
+[[subcommand]]
+name = "mdns"
+operand = "none"
+
+[[subcommand]]
+name = "emu"
+operand = "none"
+
+[[subcommand]]
+name = "tcpip"
+operand = "none"
+
+[[subcommand]]
+name = "usb"
+operand = "none"
+
+[[subcommand]]
+name = "reconnect"
+operand = "none"
+
+[[subcommand]]
+name = "version"
+operand = "none"
+
+[[subcommand]]
+name = "help"
+operand = "none"
