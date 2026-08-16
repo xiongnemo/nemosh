@@ -25,7 +25,16 @@ def run(argv):
 # The argument must be spelled in angle brackets. Without that anchor the first
 # word of the description is read as an argument, and every option in curl's help
 # came back as taking one.
-OPTION = re.compile(r"^\s+(?:-([a-zA-Z0-9]), )?--([a-z0-9.-]+)(?:\s+<([^>]+)>)?\s*(.*)$")
+# Three shapes seen so far. The argument must be anchored -- by angle brackets
+# (curl) or by an equals sign (aria2c) -- because without an anchor the first
+# word of the description reads as an argument and every option comes back as
+# taking one. A help that spells no arguments at all (wget2) yields none, which
+# is the safe direction: an option not claimed to take a value is simply not
+# treated as consuming the next word.
+OPTION = re.compile(
+    r"^\s+(?:-([a-zA-Z0-9])[,]?\s+)?--([a-z0-9.-]+)"
+    r"(?:\s+<([^>]+)>|\[?=([A-Z][A-Za-z0-9|_]*)\]?)?\s*(.*)$"
+)
 BARE = re.compile(r"^\s+-([a-zA-Z0-9])\s\s+(.*)$")
 # An argument spelled as a file, a directory or a path is one completion can
 # answer with a filename. Anything else -- a port, a cipher, a number -- it
@@ -40,7 +49,8 @@ def parse(text):
     for line in text.splitlines():
         match = OPTION.match(line)
         if match:
-            letter, name, argument, _ = match.groups()
+            letter, name, bracketed, equalled, _ = match.groups()
+            argument = bracketed or equalled
             if name in long:
                 continue
             long.append(name)

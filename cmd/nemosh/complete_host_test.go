@@ -6,6 +6,9 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/xiongnemo/nemosh/completions"
+	"github.com/xiongnemo/nemosh/internal/completionspec"
 )
 
 // What the word being typed is, decided from the words before it.
@@ -50,13 +53,20 @@ func TestOperandTargetFor(t *testing.T) {
 		{name: "an ordinary command is unaffected", prefix: "ls ", want: targetPath},
 		{name: "cd is unaffected", prefix: "cd ", want: targetPath},
 		{name: "a command with no row at all", prefix: "nosuchcommand ", want: targetPath},
+		{
+			// From completions/adb.toml, which is data rather than a compiled-in
+			// row -- so this is the loader as much as the rule.
+			name: "a command whose first operand is a subcommand", prefix: "adb ", want: targetSubcommand,
+		},
+		{name: "and after the subcommand, its own operand kind", prefix: "adb install ", want: targetPath},
+		{name: "a subcommand that takes nothing", prefix: "adb devices ", want: targetUnknown},
 		{name: "after a pipe, the new command decides", prefix: "ls | ssh ", want: targetHost},
 		{name: "nothing typed yet", prefix: "", want: targetPath},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// When
-			got := operandTargetFor(test.prefix)
+			got := operandTargetFor(testSpecs(t), test.prefix)
 
 			// Then
 			if got != test.want {
@@ -270,5 +280,94 @@ func TestSuggest_prefersHistoryOverTheHostList(t *testing.T) {
 	// Then
 	if got != "ild -p 2222" {
 		t.Fatalf("suggest = %q, want the whole line from history", got)
+	}
+}
+
+// testSpecs is the bundled set with no user directory in front of it, which is
+// what a machine with nothing in %APPDATA% has.
+func testSpecs(t *testing.T) *completionspec.Registry {
+	t.Helper()
+	return completionspec.NewRegistry(completions.Files)
+}
+
+// The loader, end to end: a spec file is data until something reads it, and this
+// is the something. `curl` and `adb` are not commands this shell ships, so
+// before completions/ existed neither could complete anything but a filename.
+func TestComplete_usesABundledSpec(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		typed string
+		want  string
+	}{
+		{
+			// A long option out of the generated curl file, which was read off
+			// curl's own `--help all` rather than transcribed.
+			name: "a long option", typed: "curl --resol", want: "curl --resolve ",
+		},
+		{
+			// From adb's subcommand list. Before this, `adb ins` completed the
+			// files in the current directory.
+			name: "a subcommand", typed: "adb install-mul", want: "adb install-multi",
+		},
+		{
+			// The subcommand's own surface decides the operand: `adb install`
+			// takes a path, so the file is offered.
+			name: "a path under a subcommand that takes one", typed: "adb install pkg", want: "adb install pkg.apk ",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// Given
+			_, editor := newStyledEditor(t, 80, "", nil)
+			editor.specs = testSpecs(t)
+			if err := os.WriteFile(filepath.Join(editor.workingDirectory, "pkg.apk"), []byte("x"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			// When
+			for _, r := range test.typed {
+				editor.buffer.insert(r)
+			}
+			editor.complete("$ ")
+
+			// Then
+			if got := editor.buffer.String(); got != test.want {
+				t.Fatalf("buffer = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+// A user's own file wins. That is the whole answer to a bundled spec being wrong
+// for a particular machine, which `wget` already is -- busybox's applet here,
+// GNU wget elsewhere, one name.
+func TestComplete_prefersTheUsersOwnSpec(t *testing.T) {
+	// Given: a directory holding a wget spec that claims an option the bundled
+	// busybox one does not have
+	directory := t.TempDir()
+	spec := `[meta]
+derived-from = "wget --help"
+tool-version = "GNU Wget 1.24.5"
+measured-on = "2026-08-16"
+
+[command]
+name = "wget"
+operand = "path"
+long = ["mirror"]
+`
+	if err := os.WriteFile(filepath.Join(directory, "wget.toml"), []byte(spec), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, editor := newStyledEditor(t, 80, "", nil)
+	editor.specs = completionspec.NewRegistry(completions.Files, directory)
+
+	// When
+	for _, r := range "wget --mir" {
+		editor.buffer.insert(r)
+	}
+	editor.complete("$ ")
+
+	// Then
+	if got := editor.buffer.String(); got != "wget --mirror " {
+		t.Fatalf("buffer = %q, want the user's spec to have won", got)
 	}
 }

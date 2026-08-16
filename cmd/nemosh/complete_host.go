@@ -1,9 +1,10 @@
 package main
 
 import (
+	"sort"
 	"strings"
 
-	"github.com/xiongnemo/nemosh/internal/capability"
+	"github.com/xiongnemo/nemosh/internal/completionspec"
 )
 
 // operandTarget is what the word being typed is, once the words before it are
@@ -24,28 +25,27 @@ const (
 	// in the current directory would be an answer from the wrong universe. So
 	// this offers nothing, which at least reads as "I do not know".
 	targetUnknown
+	// targetSubcommand is the word that selects a surface: `adb install`.
+	targetSubcommand
 )
 
 // operandTargetFor decides from the text before the word being typed.
 //
 // It reads rather than parses, like everything else on this path: the line is
 // half-typed and will usually not parse at all.
-func operandTargetFor(prefix string) operandTarget {
+func operandTargetFor(specs *completionspec.Registry, prefix string) operandTarget {
 	words := strings.Fields(commandSegment(prefix))
-	if len(words) == 0 {
-		return targetPath
-	}
-	command, ok := capability.Lookup(words[0])
+	surface, ok := surfaceFor(specs, words)
 	if !ok {
 		return targetPath
 	}
 	operands := 0
 	for index := 1; index < len(words); index++ {
-		flag, takesValue := detachedValueOption(command, words[index])
+		flag, takesValue := detachedValueOption(surface, words[index])
 		if takesValue {
 			if index+1 == len(words) {
 				// The word being typed is this option's value.
-				if command.TakesFile(flag) {
+				if surface.takesFile(flag) {
 					return targetPath
 				}
 				return targetUnknown
@@ -60,7 +60,18 @@ func operandTargetFor(prefix string) operandTarget {
 			operands++
 		}
 	}
-	if command.Operand != capability.HostName {
+	// A command with subcommands wants one of those for its first operand:
+	// `adb ins` should reach `install`, not the files in this directory.
+	if operands == 0 && len(surface.subcommands) > 0 {
+		return targetSubcommand
+	}
+	// A surface that takes no operand says so, and the honest answer for the
+	// word after it is nothing at all -- `adb devices ` takes nothing, and the
+	// files in this directory are not what was wanted.
+	if surface.operand == completionspec.OperandNone {
+		return targetUnknown
+	}
+	if surface.operand != completionspec.OperandHost {
 		return targetPath
 	}
 	// Only the first operand is a host. `ssh host command...` runs *command* on
@@ -79,12 +90,12 @@ func operandTargetFor(prefix string) operandTarget {
 // Only the detached spelling counts. `ssh -i key` has the value in the following
 // word; `ssh -ikey` carries it already, so what comes after that is an operand
 // again. The length is enough to tell them apart.
-func detachedValueOption(command capability.Command, word string) (rune, bool) {
+func detachedValueOption(surface commandSurface, word string) (rune, bool) {
 	if len(word) != 2 || word[0] != '-' {
 		return 0, false
 	}
 	flag := rune(word[1])
-	return flag, command.TakesValue(flag)
+	return flag, surface.takesValue(flag)
 }
 
 // commandSegment is the current command and the words already typed after it,
@@ -130,16 +141,45 @@ func completeHost(hosts []string, stem string) []string {
 // because a leading dash is a request for an option and `ssh -` should not be
 // answered with a host called `-something`.
 func (e *lineEditor) completeOperandWord(prefix, stem string) ([]string, bool) {
-	command := commandInProgress(prefix)
-	target := operandTargetFor(prefix)
-	if target == targetPath {
-		return completeOperand(e.workingDirectory, command, stem)
+	words := strings.Fields(commandSegment(prefix))
+	surface, known := surfaceFor(e.specs, words)
+	// An option is asked for by the dash, whatever kind the operand is, and the
+	// surface decides which options exist -- `adb install -` and `adb -` are not
+	// the same question.
+	if known && strings.HasPrefix(stem, "-") {
+		if offers := matchingOptions(surface, stem); len(offers) > 0 {
+			return offers, true
+		}
 	}
-	if strings.HasPrefix(stem, "-") {
-		return completeOption(command, stem), true
-	}
-	if target == targetHost {
+	switch operandTargetFor(e.specs, prefix) {
+	case targetHost:
 		return completeHost(e.hosts.candidates(), stem), false
+	case targetSubcommand:
+		return matchingSubcommands(surface, stem), false
+	case targetUnknown:
+		return nil, false
 	}
-	return nil, false
+	return completeOperand(e.workingDirectory, commandInProgress(prefix), stem)
+}
+
+func matchingOptions(surface commandSurface, stem string) []string {
+	var matches []string
+	for _, option := range surface.options() {
+		if strings.HasPrefix(option, stem) {
+			matches = append(matches, option)
+		}
+	}
+	sort.Strings(matches)
+	return matches
+}
+
+func matchingSubcommands(surface commandSurface, stem string) []string {
+	var matches []string
+	for _, name := range surface.subcommands {
+		if completionMatches(name, stem) {
+			matches = append(matches, name)
+		}
+	}
+	sortCandidates(matches)
+	return slicesCompact(matches)
 }

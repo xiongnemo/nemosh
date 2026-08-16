@@ -1,0 +1,15 @@
+[meta]
+derived-from = "aria2c --help"
+tool-version = "aria2 version 1.37.0"
+measured-on = "2026-08-16"
+generated-by = "scripts/completions/generate.py"
+
+[command]
+name = "aria2c"
+operand = "path"
+short = "vhldosVcijZSTM"
+value-short = "hldosijTM"
+file-short = "doiTM"
+long = ["version", "help", "log", "dir", "out", "split", "max-connection-per-server", "min-split-size", "file-allocation", "check-integrity", "checksum", "continue", "input-file", "max-concurrent-downloads", "force-sequential", "ftp-user", "ftp-passwd", "http-user", "http-passwd", "load-cookies", "show-files", "max-overall-upload-limit", "max-upload-limit", "torrent-file", "listen-port", "enable-dht", "dht-listen-port", "enable-dht6", "dht-listen-addr6", "metalink-file"]
+value-long = ["help", "log", "dir", "out", "split", "file-allocation", "input-file", "max-concurrent-downloads", "ftp-user", "ftp-passwd", "http-user", "http-passwd", "load-cookies", "max-overall-upload-limit", "torrent-file", "listen-port", "dht-listen-port", "dht-listen-addr6", "metalink-file"]
+file-long = ["dir", "out", "input-file", "load-cookies", "torrent-file", "metalink-file"]

@@ -1,0 +1,20 @@
+[meta]
+derived-from = "wget2 --help"
+tool-version = "GNU Wget2 2.2.1 - multithreaded metalink/file/website downloader"
+measured-on = "2026-08-16"
+generated-by = "scripts/completions/generate.py"
+# wget2's help does not spell its arguments -- every line reads
+# `-O  --output-document   description`, with no <FILE> or =FILE to anchor on --
+# so no option here is claimed to take a value. That is the safe direction:
+# unclaimed means the following word is treated as an operand, and wget2's
+# operand is a URL or a path, which is what would have been offered anyway.
+
+[command]
+name = "wget2"
+operand = "path"
+short = "abBdeFhioqvVAckDXI46lmOprRSHTNtwEKQUPx"
+value-short = ""
+file-short = ""
+long = ["append-output", "background", "base", "config", "debug", "execute", "force-atom", "force-css", "force-html", "force-metalink", "force-rss", "force-sitemap", "fsync-policy", "help", "hyperlink", "input-encoding", "input-file.", "input-file", "local-db", "output-file", "quiet", "stats-dns", "stats-ocsp", "stats-server", "stats-site", "stats-tls", "unlink", "verbose", "version", "accept", "accept-regex", "ask-password", "backups", "bind-address", "bind-interface", "body-data", "body-file", "cache", "chunk-size", "clobber", "connect-timeout", "content-on-error", "continue", "convert-file-only", "convert-links", "cut-file-get-vars", "cut-url-get-vars", "delete-after", "dns-cache", "dns-cache-preload", "dns-timeout", "domains", "download-attr", "exclude-directories", "exclude-domains", "filter-mime-type", "filter-urls", "follow-sitemaps", "follow-tags", "force-progress", "http2-request-window", "if-modified-since", "ignore-case", "ignore-length", "ignore-tags", "include-directories", "inet4-only", "inet6-only", "iri", "keep-extension", "level", "local-encoding", "max-redirect", "max-threads", "mirror", "netrc", "output-document", "page-requisites", "parent", "password", "post-data", "post-file", "prefer-family", "progress", "proxy", "random-wait", "read-timeout", "recursive", "regex-type", "reject", "reject-regex", "remote-encoding", "report-speed", "restrict-file-names", "retry-on-http-error", "robots", "save-content-on", "server-response", "show-progress", "span-hosts", "spider", "start-pos", "strict-comments", "tcp-fastopen", "timeout", "timestamping", "tries", "trust-server-names", "use-askpass", "use-server-timestamps", "user", "wait", "waitretry", "xattr", "adjust-extension", "auth-no-challenge", "backup-converted", "compression", "content-disposition", "cookie-suffixes", "cookies", "default-http-port", "default-https-port", "default-page", "header", "html-extension", "http-keep-alive", "http-password", "http-proxy", "http-proxy-password", "http-proxy-user", "http-user", "keep-session-cookies", "limit-rate", "load-cookies", "metalink", "method", "netrc-file", "quota", "referer", "retry-connrefused", "save-cookies", "save-headers", "user-agent", "ca-certificate", "ca-directory", "certificate", "certificate-type", "check-certificate", "check-hostname", "crl-file", "dane", "egd-file", "hpkp", "hpkp-file", "hsts", "hsts-file", "hsts-preload", "hsts-preload-file", "http2", "http2-only", "https-enforce", "https-only", "https-proxy", "ocsp", "ocsp-date", "ocsp-file", "ocsp-nonce", "ocsp-server", "ocsp-stapling", "private-key", "private-key-type", "random-file", "secure-protocol", "tls-false-start", "tls-resume", "tls-session-file", "cut-dirs", "directories", "directory-prefix", "force-directories", "host-directories", "protocol-directories", "list-plugins", "local-plugin", "plugin", "plugin-dirs", "plugin-help", "plugin-opt"]
+value-long = []
+file-long = []

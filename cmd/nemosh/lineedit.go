@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/completionspec"
 )
 
 // errLineAbandoned is Ctrl-C: the line is discarded and the prompt returns,
@@ -56,6 +58,10 @@ type lineEditor struct {
 	// different question about a different word, and because it is invalidated
 	// differently -- a file's mtime rather than a variable's value.
 	hosts *hostIndex
+	// specs is what is known about commands this shell does not ship, read from
+	// completions/ on first use. Held here rather than looked up globally so a
+	// test can hand the editor its own directory.
+	specs *completionspec.Registry
 }
 
 // defaultTerminalColumns is used when the terminal will not say. Eighty is the
@@ -74,6 +80,7 @@ func newLineEditor(input io.Reader, screen io.Writer, workingDirectory string) *
 		styling:          newTheme(os.LookupEnv),
 		commands:         newShellCommands(newPathIndex()),
 		hosts:            newHostIndex(),
+		specs:            newSpecRegistry(environmentLookup),
 	}
 }
 

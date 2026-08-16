@@ -26,6 +26,7 @@ func (e *lineEditor) suggestionFor(promptWidth, bufferColumns, width int) string
 		history:  e.history,
 		commands: e.commands.candidates(),
 		hosts:    e.hosts.candidates(),
+		specs:    e.specs,
 	}.suggest(e.buffer.String())
 	if text == "" {
 		return ""

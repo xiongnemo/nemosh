@@ -1,6 +1,10 @@
 package main
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/completionspec"
+)
 
 // A suggestion is what the line would most likely become, drawn ahead of the
 // cursor in grey and accepted only if asked for.
@@ -25,6 +29,9 @@ type suggester struct {
 	// hosts is the machines ~/.ssh/config names. In memory like everything else
 	// here, which is the whole reason the index behind it exists.
 	hosts []string
+	// specs answers what a command's operand is, so the grey text and the Tab
+	// key cannot disagree about what the word being typed is.
+	specs *completionspec.Registry
 }
 
 // suggest returns the text to draw after the line, or "" for none.
@@ -115,7 +122,7 @@ func (s suggester) fromCommandNames(line string) (string, bool) {
 // bug already demonstrated once.
 func (s suggester) fromHostNames(line string) (string, bool) {
 	word := line[len(line)-len(currentSuggestionWord(line)):]
-	if operandTargetFor(line[:len(line)-len(word)]) != targetHost {
+	if operandTargetFor(s.specs, line[:len(line)-len(word)]) != targetHost {
 		return "", false
 	}
 	name := word
