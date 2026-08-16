@@ -186,6 +186,10 @@ func newRuntimeWithState(registry applets.Registry, streams Streams, state State
 	// process's, so an inherited PWD can be wrong from the very first line.
 	if initErr == nil {
 		created.setDirectoryVariable("PWD", created.WorkingDirectory())
+		// Windows sets none of the variables a shell assumes it was logged in
+		// with, and the symptoms of that do not look like one cause. See
+		// login_defaults.go.
+		created.applyLoginDefaults()
 	}
 	return created
 }

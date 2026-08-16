@@ -7,12 +7,18 @@
 // a command by whether it exists and an option by whether it is accepted. A
 // second copy of that knowledge would drift from the first within a release.
 //
-// What is claimed here is only what is checked. The applet table is bound to
-// behaviour by a test that runs each applet and fails if a declared option is
-// refused or an undeclared one is accepted, so the table cannot quietly fall
-// behind the code. Builtins carry an operand kind and no option claims, because
-// nothing here measures their options yet -- saying nothing is the honest form
-// of not knowing.
+// What is claimed here is only what is checked, and every row is a command this
+// shell ships. The applet table is bound to behaviour by a test that runs each
+// applet and fails if a declared option is refused or an undeclared one is
+// accepted, so it cannot quietly fall behind the code. Builtins carry an operand
+// kind and no option claims, because nothing here measures their options yet --
+// saying nothing is the honest form of not knowing.
+//
+// Commands this shell does *not* ship are described in completions/ instead, as
+// data with its provenance attached. That separation is the point: for a while
+// `ssh` had a row here marked External, meaning "transcribed, nobody can check
+// it", and one unverified row in a table whose whole value is that it is
+// verified was a hole that would only ever widen.
 package capability
 
 import (
@@ -51,14 +57,6 @@ type Command struct {
 	// distinction matters for the drift test, which can run an applet in
 	// isolation and cannot run a builtin without a whole runtime.
 	Builtin bool
-	// External marks a command this shell does not ship and cannot run to check.
-	//
-	// This is the honest label on the one thing that weakens the table: every
-	// other row is bound to behaviour by a test that runs the command, and these
-	// are transcribed from the command's own usage output instead. The field
-	// exists so that fact is in the data rather than in a comment nobody reads,
-	// and a test holds the line -- see TestOnlyExternalRowsAreUnmeasured.
-	External bool
 	// ValueShort is the subset of Short whose option takes the next word as its
 	// argument. Completion needs it to know that the word after `ssh -p` is a
 	// port and not a host: offering a host there is the wrong universe, which is

@@ -64,40 +64,6 @@ var commands = []Command{
 	{Name: "xargs", Operand: AnyPath},
 	{Name: "yes", Operand: AnyPath},
 
-	// Commands this shell does not ship, listed because completion is worth
-	// having for them and the knowledge has to live somewhere. These are the one
-	// unmeasured part of this table, which is what External says.
-	//
-	// Transcribed on 2026-08-15 from the usage synopsis the installed program
-	// prints for itself -- OpenSSH_10.2p1 -- rather than from memory or a man
-	// page on the web:
-	//
-	//	usage: ssh [-46AaCfGgKkMNnqsTtVvXxYy] [-B bind_interface] [-b bind_address]
-	//	           [-c cipher_spec] [-D [bind_address:]port] [-E log_file]
-	//	           [-e escape_char] [-F configfile] [-I pkcs11] [-i identity_file]
-	//	           [-J destination] [-L address] [-l login_name] [-m mac_spec]
-	//	           [-O ctl_cmd] [-o option] [-P tag] [-p port] [-R address]
-	//	           [-S ctl_path] [-W host:port] [-w local_tun[:remote_tun]]
-	//	           destination [command [argument ...]]
-	//	       ssh [-Q query_option]
-	//
-	// The bracket groups are exactly the three columns below: the first group is
-	// the flags that stand alone, every other bracket is an option with an
-	// argument, and the five whose argument is spelled as a file or a path are
-	// the ones completion should answer with a filename.
-	//
-	// Option sets move between OpenSSH releases and nothing here will notice, so
-	// this is deliberately the only external row: it is worth the cost once, for
-	// a command people use constantly, and is not a pattern to spread.
-	{
-		Name:       "ssh",
-		Short:      "46AaCfGgKkMNnqsTtVvXxYyBbcDEeFIiJLlmOoPpRSWwQ",
-		ValueShort: "BbcDEeFIiJLlmOoPpRSWwQ",
-		FileShort:  "EFiIS",
-		Operand:    HostName,
-		External:   true,
-	},
-
 	// Builtins carry an operand kind and no option claims. Nothing here measures
 	// a builtin's options, and a claim that is not checked is the kind that goes
 	// stale silently -- the whole reason this table exists in one place.

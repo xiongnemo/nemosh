@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 	"testing"
 
@@ -211,37 +210,28 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// The table's value is that it is measured, and exactly one row is not. This
-// holds that line: an unmeasured row has to say so, and the ones that say so
-// have to stay the ones we decided on.
+// Every row is a command this shell ships, and every one of them is measured.
 //
-// Without it, `External: true` would be an escape hatch that quietly widens --
-// a row nobody can check is easier to write than one that has to survive being
-// run, so the pressure is always in that direction.
-func TestOnlyExternalRowsAreUnmeasured(t *testing.T) {
+// This used to allow one exception -- `ssh`, marked External, transcribed from
+// its own usage output because nothing could run it to check. That row now lives
+// in completions/ssh.toml, where unverifiable data belongs and carries its
+// provenance. The test that pinned the exception at exactly [ssh] is this one,
+// rewritten to say there are none: an escape hatch nobody uses is one nobody can
+// widen.
+func TestEveryRowIsMeasured(t *testing.T) {
 	// Given: the names the drift tests above actually exercise.
 	measured := map[string]bool{}
 	for _, name := range appletNames(t) {
 		measured[name] = true
 	}
 
-	// When
-	var unmeasured []string
+	// Then
 	for _, name := range capability.Names() {
 		command, _ := capability.Lookup(name)
 		if command.Builtin || measured[name] || launchesSomething[name] {
 			continue
 		}
-		if !command.External {
-			t.Errorf("%s is neither an applet, a builtin, nor marked External: nothing measures it", name)
-		}
-		unmeasured = append(unmeasured, name)
-	}
-
-	// Then: the list of rows nobody can check is the one that was argued for,
-	// command by command, in commands.go.
-	if !slices.Equal(unmeasured, []string{"ssh"}) {
-		t.Fatalf("unmeasured rows = %v, want only [ssh]. Adding one is a decision, not a detail", unmeasured)
+		t.Errorf("%s is neither an applet nor a builtin: nothing measures it, and a row nothing measures belongs in completions/", name)
 	}
 }
 

@@ -228,7 +228,10 @@ func settledHostIndex(t *testing.T, sources []string) *hostIndex {
 // This is zsh-autosuggestions' `completion` strategy in miniature: a suggestion
 // for something never typed before, from the one source already in memory.
 func TestSuggest_offersAHostAfterSSH(t *testing.T) {
-	engine := suggester{commands: []string{"ssh"}, hosts: []string{"build", "prod"}}
+	// The registry has to be here. Since ssh's surface moved out of the compiled
+	// table and into completions/ssh.toml, "ssh takes a host" is something only
+	// the spec knows -- and a suggester with no registry correctly knows nothing.
+	engine := suggester{commands: []string{"ssh"}, hosts: []string{"build", "prod"}, specs: testSpecs(t)}
 	tests := []struct {
 		name string
 		line string
@@ -272,6 +275,7 @@ func TestSuggest_prefersHistoryOverTheHostList(t *testing.T) {
 	engine := suggester{
 		history: []string{"ssh build -p 2222"},
 		hosts:   []string{"bu", "build"},
+		specs:   testSpecs(t),
 	}
 
 	// When

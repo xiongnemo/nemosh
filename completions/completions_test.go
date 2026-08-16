@@ -75,10 +75,7 @@ func TestBundledSpecs_doNotShadowWhatThisShellShips(t *testing.T) {
 		if shipped[name] {
 			t.Errorf("%s describes an applet or builtin; those are measured in internal/capability", entry.Name())
 		}
-		// ssh is the exception in the other direction, and only until the loader
-		// lands: its row is still in the capability table, and this file is the
-		// replacement waiting for something to read it.
-		if name != "ssh" && capability.Known(name) {
+		if capability.Known(name) {
 			t.Errorf("%s is also a row in internal/capability, so two sources describe it", entry.Name())
 		}
 	}
