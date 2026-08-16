@@ -217,3 +217,44 @@ func TestSuggestion_neverWraps(t *testing.T) {
 		t.Fatalf("cursor at (%d,%d), want (0,6) -- just past `echo`", row, col)
 	}
 }
+
+// The whole point of persisting history, drawn on one line.
+//
+// Yesterday's `ssh gpu-worker-34` is loaded, so typing `s` today suggests the
+// whole thing. Three separate things are happening to that one character and
+// they must not be confused with each other:
+//
+//   - `s` is drawn red, because `s` is not a command. The colour is about the
+//     word that was typed, not about what is being suggested -- a word that will
+//     become `ssh` is still not a command until it is.
+//   - the rest is grey and after the cursor, so Enter submits `s` and nothing
+//     else.
+//   - Tab is unaffected: it completes command names, and answers `sed`, `seq`,
+//     `set`, `shift`... rather than the suggestion.
+func TestSuggestion_fromYesterdaysHistoryLeavesTheTypedWordRed(t *testing.T) {
+	// Given: history as a new session would have loaded it from the file
+	screen, editor := typedScreen(t, 80, "s", "ssh gpu-worker-34")
+
+	// Then: the typed character is red and underlined -- red because `s` is not
+	// a command, underlined because it is the word under the cursor. Two
+	// attributes answering two different questions about the same character.
+	if style := screen.styleAt(0, 2); style != "31;4" {
+		t.Fatalf("style of the typed `s` = %q, want red and underlined: it is not a command yet, and it is the word being edited", style)
+	}
+	// And the rest is grey, after the cursor
+	if got := screen.styledRun(0, 3); got != "sh gpu-worker-34" {
+		t.Fatalf("suggestion = %q, want the rest of yesterday's line", got)
+	}
+	if style := screen.styleAt(0, 3); style != "90" {
+		t.Fatalf("style of the suggestion = %q, want grey", style)
+	}
+
+	// And Tab still completes command names rather than taking the suggestion.
+	editor.complete("$ ")
+	if got := editor.buffer.String(); got == "ssh gpu-worker-34" {
+		t.Fatal("Tab took the suggestion; it completes command names, and the two are different questions")
+	}
+	if !strings.HasPrefix(editor.buffer.String(), "s") {
+		t.Fatalf("buffer = %q, want it still starting from what was typed", editor.buffer.String())
+	}
+}

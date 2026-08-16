@@ -52,6 +52,14 @@ these names why, and names what busybox-w32 does with the same name.
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.
 
+History survives the session. `HISTFILE` names the file and defaults to
+`~/.nemosh_history`; `HISTFILESIZE` caps it at 500 lines by default; setting
+either to nothing turns saving off, which is bash's rule and busybox's. Lines
+are appended one at a time in a single write, so a session that is killed still
+leaves what it ran and two windows interleave whole lines rather than
+overwriting each other, and the file is rewritten only once it has grown to four
+times the cap (`libbb/lineedit.c:1826`, `:1841`).
+
 Tab completion and the inline suggestion offer host names for `ssh`, read from
 `~/.ssh/config` -- and `/etc/hosts` off Windows. See
 `docs/design/completion.md`, Host names, for what is read and what deliberately

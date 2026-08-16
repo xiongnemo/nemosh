@@ -25,6 +25,14 @@ import (
 func (c command) runInteractiveEdited(ctx context.Context, controller *interruptController, editor *lineEditor) (runErr error) {
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: c.stdin, Stdout: c.stdout, Stderr: c.stderr})
 	sourceStartupFile(ctx, rt, c.stderr)
+	// After the rc file, so an `export HISTFILE=...` in it is honoured, and
+	// before the first prompt, so the first thing typed already has yesterday to
+	// suggest from.
+	saved := newHistoryFile(rt.LookupEnv)
+	for _, line := range saved.load() {
+		editor.remember(line)
+		rt.RecordHistory(line)
+	}
 
 	lastStatus := 0
 	var input strings.Builder
@@ -86,6 +94,10 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		command := strings.TrimRight(input.String(), "\n")
 		editor.remember(command)
 		rt.RecordHistory(command)
+		// Written now rather than at exit: a session that is killed still leaves
+		// what it ran, and two windows appending interleave whole lines instead
+		// of overwriting each other.
+		saved.append(command)
 		input.Reset()
 		if parseErr != nil {
 			rt.ReportInteractiveParseError(parseErr)
