@@ -66,6 +66,16 @@ func rejectDeferredSyntax(line string) error {
 			parameterBraces--
 			continue
 		}
+		if char == '(' {
+			// An array assignment's parentheses belong to a word. Fourth and last
+			// layer that needs to know: this one refuses grouping outright, so
+			// without the test `a=(one two)` came back as "unsupported syntax:
+			// grouping".
+			if end, ok := arrayAssignmentSpan(line, index, line[:index]); ok {
+				index = end
+				continue
+			}
+		}
 		if char == '(' || char == ')' {
 			return fmt.Errorf("unsupported syntax: grouping")
 		}

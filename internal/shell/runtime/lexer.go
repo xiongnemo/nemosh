@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -148,6 +149,22 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			}
 		}
 		if !inSingle && !inDouble {
+			// `a=(one two three)` is an array assignment, not a subshell. The `(`
+			// belongs to the word only when it comes directly after `name=` or
+			// `name+=`, which is the test bash applies too -- everywhere else a
+			// parenthesis still starts a subshell.
+			if char == '(' && looksLikeArrayAssignment(buffer.String()) {
+				end, ok := matchingParenthesis(line, index)
+				if !ok {
+					return nil, nil, fmt.Errorf("%w: missing ) for array assignment", ErrIncompleteScript)
+				}
+				text := line[index : end+1]
+				buffer.WriteString(text)
+				appendLiteralPart(&parts, text, quoteUnquoted)
+				wordPresent = true
+				index = end
+				continue
+			}
 			if char == ' ' || char == '\t' {
 				if err := flush(index); err != nil {
 					return nil, nil, err

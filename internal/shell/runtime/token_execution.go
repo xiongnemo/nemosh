@@ -113,6 +113,18 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	if isDoubleBracket(command) {
 		return r.runDoubleBracket(ctx, command, savedStatus)
 	}
+	// Array assignments are also settled before expansion, and for the same
+	// reason: `a=(one "two words" three)` is three elements, and after expansion
+	// the quotes are gone. See array_assign.go.
+	if remaining, applied := r.applyArrayAssignments(ctx, command, savedStatus); applied {
+		if r.expansionFailed() {
+			return unsetParameterResult()
+		}
+		if len(remaining) == 0 {
+			return lineResult{}
+		}
+		command = remaining
+	}
 	expanded := make([]shellToken, 0, len(command))
 	for _, item := range command {
 		values := r.expandCommandWord(ctx, item, savedStatus)

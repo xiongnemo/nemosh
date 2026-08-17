@@ -83,6 +83,18 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			index++
 			continue
 		}
+		// An array assignment's parentheses are part of a word, so they are
+		// stepped over whole. Third layer that has to know this -- the scanner
+		// decides where a logical line ends, the lexer where a word ends, and
+		// this one where a group is. Missing it here left the `)` with no opener
+		// to match and reported `syntax error: unexpected )`.
+		if char == '(' {
+			if end, ok := arrayAssignmentSpan(line, index, output.String()); ok {
+				output.WriteString(line[index : end+1])
+				index = end + 1
+				continue
+			}
+		}
 		start, opener, ok := groupOpenerAt(line, index)
 		if !ok {
 			// A brace outside command position is an ordinary character, so

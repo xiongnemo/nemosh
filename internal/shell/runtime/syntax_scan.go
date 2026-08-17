@@ -121,6 +121,17 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			continue
 		}
 		if scanner.quote() == 0 && scanner.substitutions == 0 && char == '(' {
+			// `a=(one two three)` is an array assignment, and the parentheses are
+			// part of the word rather than a subshell. The scanner has to know
+			// too, not only the lexer: it decides where a logical line ends, and
+			// treating this `(` as a group opener made the `)` arrive at the
+			// compound parser as a statement of its own -- `syntax error:
+			// unexpected )`.
+			if end, ok := arrayAssignmentSpan(line, index, scanner.logical.String()); ok {
+				scanner.logical.WriteString(line[index : end+1])
+				index = end
+				continue
+			}
 			scanner.groupClosers = append(scanner.groupClosers, ')')
 			scanner.logical.WriteByte(char)
 			continue

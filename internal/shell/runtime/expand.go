@@ -1,10 +1,7 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -89,6 +86,22 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			}
 		case wordPartParameter:
 			values := r.expandParameterPart(part, savedStatus)
+			// `"${a[@]}"` is one word per element, exactly as `"$@"` is -- which
+			// is the whole reason arrays are worth having, since it is the only
+			// form that keeps an element containing a blank intact.
+			if isArrayAtReference(part.text) && part.quote != quoteSingle {
+				if len(values) == 0 {
+					if len(item.parts) == 1 {
+						return nil, nil
+					}
+					continue
+				}
+				fields[len(fields)-1] += values[0]
+				fields = append(fields, values[1:]...)
+				contributed = true
+				mark(strings.Join(values, " "), part.quote, start)
+				continue
+			}
 			if part.text == "$@" && part.quote != quoteSingle {
 				if len(values) == 0 {
 					if len(item.parts) == 1 {
@@ -216,85 +229,4 @@ func (r Runtime) expandHomeTilde(value string) string {
 		return home
 	}
 	return strings.TrimRight(home, `/\`) + "/" + strings.TrimPrefix(value, "~/")
-}
-
-func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
-	text := part.text
-	switch text {
-	case "$0":
-		return []string{r.params.name}
-	case "$?":
-		return []string{strconv.Itoa(savedStatus)}
-	case "$#":
-		return []string{strconv.Itoa(len(r.params.values))}
-	case "$@":
-		return append([]string(nil), r.params.values...)
-	case "$*":
-		return []string{strings.Join(r.params.values, " ")}
-	case "$-":
-		return []string{r.options.letters()}
-	}
-	if len(text) == 2 && '1' <= text[1] && text[1] <= '9' {
-		index := int(text[1] - '1')
-		if index < len(r.params.values) {
-			return []string{r.params.values[index]}
-		}
-		r.reportUnsetParameter(text[1:])
-		return []string{""}
-	}
-	if strings.HasPrefix(text, "${") && strings.HasSuffix(text, "}") {
-		expanded, err := r.expandBracedParameter(text[2:len(text)-1], savedStatus)
-		if err != nil {
-			r.reportExpansionError(err)
-			return []string{""}
-		}
-		return []string{expanded}
-	}
-	name := strings.TrimPrefix(text, "$")
-	value, set := r.vars[name]
-	if !set {
-		r.reportUnsetParameter(name)
-	}
-	return []string{value}
-}
-
-func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, savedStatus int) string {
-	var stdout bytes.Buffer
-	child, err := r.snapshot(ctx)
-	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-		return ""
-	}
-	table := child.fds
-	if err := table.bindBorrowedWriter(1, &stdout); err != nil {
-		child.jobScope.cancelAndDrain()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, table.closeAll()))
-		return ""
-	}
-	child = child.withFDTable(table)
-	child.traps = map[trapName]string{}
-	child.executeTypedScriptFrom(ctx, script, savedStatus)
-	child.jobScope.cancelAndDrain()
-	if err := table.closeAll(); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-		return ""
-	}
-	return strings.TrimRight(stdout.String(), "\n")
-}
-
-func isAssignment(arg string) bool {
-	name, _, ok := strings.Cut(arg, "=")
-	if !ok || name == "" {
-		return false
-	}
-	for i := 0; i < len(name); i++ {
-		if !isNameByte(name[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func isNameByte(b byte) bool {
-	return ('a' <= b && b <= 'z') || ('A' <= b && b <= 'Z') || ('0' <= b && b <= '9') || b == '_'
 }

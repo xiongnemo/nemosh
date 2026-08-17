@@ -301,6 +301,35 @@ while here it is recognised at execution time, after the line has been divided
 into commands. And `[[` is only a conditional at the **start of a command** --
 `echo [[` prints two ordinary words.
 
+**Indexed arrays.** `a=(one two three)`, `${a[0]}`, `${a[@]}`, `${a[*]}`,
+`${#a[@]}`, `${#a[0]}`, `${!a[@]}`, `a[1]=x`, `a+=(four)`, `a=()`. Neither dash
+nor ash has them; this follows bash, measured case by case.
+
+The distinction that carries the feature is `"${a[@]}"` against `"${a[*]}"`: the
+first is one word per element, so an element containing a blank survives, and the
+second is a single word joined by IFS. Without the first there would be no reason
+to have arrays at all -- a string would do.
+
+Storage is separate from the scalar variables rather than packed into one string
+with a separator, because that representation cannot hold an element containing
+the separator, which is exactly the case arrays exist for. A bare `$a` is element
+zero, as in bash.
+
+Assignment is settled **before expansion**, like `[[ ]]` and for the same reason:
+`a=(one "two words" three)` is three elements, and by the time a word has been
+expanded the quotes are gone.
+
+`a=(...)`'s parenthesis is part of a word rather than a subshell, and **four
+layers had to learn that** -- the logical-line scanner, the group parser, the
+deferred scan, and the lexer. Each refused it with a different message on the way
+(`syntax error: unexpected )`, then `unsupported syntax: grouping`), and there is
+a test for each ordinary use of parentheses -- subshell, command substitution,
+arithmetic, function definition -- so that none of them moved.
+
+Not implemented: associative arrays (`declare -A`), slices (`${a[@]:1}`),
+`unset a[i]` (which leaves a sparse array in bash, and compacting instead would
+silently shift every later index), and negative indices.
+
 ### Known divergences from bash/dash/ash
 
 - **Parse before effects.** A syntax error anywhere in a script means none of it

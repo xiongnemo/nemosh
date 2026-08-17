@@ -38,6 +38,10 @@ type Runtime struct {
 	// history is shared by pointer across snapshots, so a command recorded in a
 	// pipeline stage is still there when the parent's `history` asks.
 	history *shellHistory
+	// arrays is the indexed-array store, kept apart from vars because packing
+	// elements into one string cannot represent an element containing the
+	// separator -- which is the case arrays exist for. See array.go.
+	arrays *shellArrays
 	// locals belongs to the function call in progress and is nil outside one,
 	// which is how `local` knows there is nothing to restore to.
 	locals *localScope
