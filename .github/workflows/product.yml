@@ -187,6 +187,42 @@ jobs:
             exit 1
           fi
 
+      # Package init is the other deterministic performance number, and it is the
+      # one nothing was watching. A dependency's `init` runs on every invocation
+      # whether or not anything calls into it, so it is charged to `nemosh true`
+      # and to every applet shim -- which is how BurntSushi/toml came to spend
+      # 22 ms and 1,343 allocations naming the local timezone through the Windows
+      # registry, for a completion spec that has no datetime in it. That was three
+      # quarters of this shell's startup and no test could see it.
+      #
+      # Allocations rather than the clock, for the reason the comment above gives:
+      # a wall-clock threshold on a shared runner flaps until it is ignored. The
+      # count is what a new dependency moves, and it moves it by a lot.
+      #
+      # Measured after the fix: 325 on windows-latest. The ceiling is deliberately
+      # loose because the three platforms link different packages -- x/sys/windows
+      # pulls in `net`, and so Winsock, on Windows only -- and it still catches a
+      # regression of toml's size from any of those baselines.
+      - name: package init ceiling
+        shell: bash
+        run: |
+          binary="dist/nemosh"
+          [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
+          trace=$(GODEBUG=inittrace=1 "$binary" --version 2>&1 | grep '^init ' || true)
+          if [ -z "$trace" ]; then
+            echo "inittrace printed nothing; the check cannot report and is not passing silently"
+            exit 1
+          fi
+          allocs=$(printf '%s\n' "$trace" | awk '{for (i = 1; i <= NF; i++) if ($i == "allocs") s += $(i - 1)} END {print s + 0}')
+          ceiling=900
+          echo "package init makes $allocs allocations, ceiling $ceiling"
+          printf '%s\n' "$trace" | sort -t, -k4 -rn | head -5
+          if [ "$allocs" -gt "$ceiling" ]; then
+            echo "package init grew past the ceiling: something new is doing work before main"
+            echo "run GODEBUG=inittrace=1 against the binary to see which package"
+            exit 1
+          fi
+
       - name: production file size ceiling
         shell: bash
         run: |
