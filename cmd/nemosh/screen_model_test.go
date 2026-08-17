@@ -104,6 +104,12 @@ func (s *screenModel) applyEscape(text string) int {
 		s.attributes[s.row] = s.attributes[s.row][:min(s.col, len(s.attributes[s.row]))]
 		s.rows = s.rows[:s.row+1]
 		s.attributes = s.attributes[:s.row+1]
+	case 'K':
+		// Erase from the cursor to the end of the *line*, which is what the
+		// incremental search emits: its prompt changes width with every
+		// keystroke, so the row is cleared rather than patched.
+		s.rows[s.row] = s.rows[s.row][:min(s.col, len(s.rows[s.row]))]
+		s.attributes[s.row] = s.attributes[s.row][:min(s.col, len(s.attributes[s.row]))]
 	case 'H':
 		s.row, s.col = 0, 0
 	case 'm':

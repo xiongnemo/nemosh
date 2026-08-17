@@ -62,6 +62,10 @@ type lineEditor struct {
 	// completions/ on first use. Held here rather than looked up globally so a
 	// test can hand the editor its own directory.
 	specs *completionspec.Registry
+	// search is the incremental history search, non-nil only while Ctrl-R has
+	// the line. It owns the prompt and most of the keys while it lives; see
+	// lineedit_search.go.
+	search *historySearch
 }
 
 // defaultTerminalColumns is used when the terminal will not say. Eighty is the
@@ -142,6 +146,24 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			}
 			return "", err
 		}
+		// The search owns the keyboard while it is up, so the ordinary bindings
+		// are not reached: `b` narrows the pattern rather than being inserted.
+		// A key the search does not want ends the mode and is then handled
+		// normally, in this same pass -- readline lets you land on a line with
+		// Ctrl-R and fix it with an arrow, and swallowing that arrow would be a
+		// half-in, half-out version of the mode.
+		if e.searching() {
+			consumed := e.searchKey(key)
+			if e.searching() {
+				e.drawSearch()
+				continue
+			}
+			e.restorePrompt(prompt)
+			if consumed {
+				e.redraw(prompt)
+				continue
+			}
+		}
 		switch key.kind {
 		case keyEnter:
 			fmt.Fprintln(e.screen)
@@ -198,6 +220,10 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			fmt.Fprint(e.screen, "\033[H\033[2J")
 			e.resetDrawState()
 			fmt.Fprint(e.screen, prompt)
+		case keyReverseSearch:
+			e.beginHistorySearch()
+			e.drawSearch()
+			continue
 		}
 		e.redraw(prompt)
 	}

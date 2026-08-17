@@ -29,6 +29,11 @@ const (
 	keyWordLeft
 	keyWordRight
 	keyClearScreen
+	keyReverseSearch
+	// keyAbort is Ctrl-G, which readline binds to abort. It only means anything
+	// during an incremental search, where it is the escape hatch that puts the
+	// line back.
+	keyAbort
 )
 
 type key struct {
@@ -62,8 +67,12 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyHome}, 1
 	case 0x05:
 		return key{kind: keyEnd}, 1
+	case 0x07:
+		return key{kind: keyAbort}, 1
 	case 0x0c:
 		return key{kind: keyClearScreen}, 1
+	case 0x12:
+		return key{kind: keyReverseSearch}, 1
 	case 0x15:
 		return key{kind: keyClearLine}, 1
 	case 0x17:
