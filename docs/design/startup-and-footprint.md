@@ -123,6 +123,15 @@ RSS tracks binary size closely enough to be treated as the same lever: removing
 ceiling in CI is also the footprint ceiling, and there is no separate number to
 watch.
 
+Binary size is **not** a startup lever, which is worth knowing before anyone
+spends a day on it for the wrong reason. Padding the floor program with a 2.9 MB
+array to match this shell's image size left its startup unchanged — 4.6 ms
+median at 4,567,040 bytes against 4.9 ms at 1,667,072, which is inside the noise
+and nominally the wrong way round. Windows demand-pages the image, so the pages
+a run never touches cost nothing to launch. The 165 KB priced above is therefore
+worth 165 KB of footprint and no milliseconds; the 1.5 ms next to it is Winsock
+initialising, not the image being larger.
+
 Where the interactive session's 9.66 MB goes: 5.4 MB is the floor for any live
 Go process, and most of the rest is image pages for a 4.5 MB binary. Of that
 binary, `runtime` and `runtime.pclntab` are 2.9 MB and 1.35 MB; everything under
