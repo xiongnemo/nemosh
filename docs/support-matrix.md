@@ -266,7 +266,7 @@ here.
 
 ## Applets
 
-All 54 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
+All 59 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
@@ -276,6 +276,8 @@ column that matters is the third one.
 | `cat` | `-n` | refused by name |
 | `chmod` | numeric mode | refused by name |
 | `clear` | none | refused by name |
+| `cmp` | `-s -l`; the message goes to stdout, as GNU's does | refused by name |
+| `comm` | `-1 -2 -3` | refused by name |
 | `cp` | `-r`, `-R` | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
@@ -292,6 +294,7 @@ column that matters is the third one.
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |
 | `nl` | `-b t\|a\|n` | refused by name |
+| `paste` | `-s -d`; the delimiter list cycles | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
 | `posixpath` | none | treated as a path operand |
@@ -308,6 +311,7 @@ column that matters is the third one.
 | `sleep` | duration operand | reported as an invalid duration |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
 | `sort` | `-n -r` | refused by name |
+| `split` | `-l`; two-letter suffixes, `aa` upwards | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
 | `tail` | `-n`, and the `-N` form | refused by name |
@@ -322,6 +326,7 @@ column that matters is the third one.
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
 | `xargs` | none | refused by name |
+| `xxd` | `-p` | refused by name |
 | `yes` | none | treated as the string to repeat |
 
 The six most recently added -- `tac`, `rev`, `nl`, `base64`, `sha256sum`,

@@ -16,6 +16,8 @@ var commands = []Command{
 	{Name: "cat", Short: "n", Operand: AnyPath},
 	{Name: "chmod", Operand: AnyPath},
 	{Name: "clear", Operand: AnyPath},
+	{Name: "cmp", Short: "sl", Operand: AnyPath},
+	{Name: "comm", Short: "123", Operand: AnyPath},
 	{Name: "cp", Short: "rR", Operand: AnyPath},
 	{Name: "cut", Short: "bcdfns", Operand: AnyPath},
 	{Name: "date", Short: "du", Operand: AnyPath},
@@ -32,6 +34,7 @@ var commands = []Command{
 	{Name: "mktemp", Short: "dqu", Operand: AnyPath},
 	{Name: "mv", Short: "f", Operand: AnyPath},
 	{Name: "nl", Short: "b", ValueShort: "b", Operand: AnyPath},
+	{Name: "paste", Short: "sd", ValueShort: "d", Operand: AnyPath},
 	{Name: "pgrep", Short: "lx", Operand: AnyPath},
 	{Name: "pkill", Short: "x", Operand: AnyPath},
 	{Name: "posixpath", Operand: AnyPath},
@@ -49,6 +52,7 @@ var commands = []Command{
 	{Name: "seq", Operand: AnyPath},
 	{Name: "sleep", Operand: AnyPath},
 	{Name: "sort", Short: "nr", Operand: AnyPath},
+	{Name: "split", Short: "l", ValueShort: "l", Operand: AnyPath},
 	// su's operand is a user name rather than a path, and the only name it takes
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,
 	// and there is no kind for "one fixed word".
@@ -68,6 +72,7 @@ var commands = []Command{
 	{Name: "whoami", Operand: AnyPath},
 	{Name: "winpath", Operand: AnyPath},
 	{Name: "xargs", Operand: AnyPath},
+	{Name: "xxd", Short: "p", Operand: AnyPath},
 	{Name: "yes", Operand: AnyPath},
 
 	// Builtins carry an operand kind and no option claims. Nothing here measures
