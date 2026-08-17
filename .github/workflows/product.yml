@@ -160,17 +160,27 @@ jobs:
       # machine measured 43, 45, 42, 26 and 43 ms -- so the timing side of the
       # baseline lives in allocation ceilings in the Go tests instead.
       #
-      # Measured at 3.78 MiB stripped and 5.58 MiB unstripped, so this ceiling
-      # leaves about 19% for growth while still catching the two regressions that
-      # matter: -s -w falling out of the release flags, and a heavy dependency
-      # arriving without anyone noticing.
+      # Re-measured 2026-08-17 at **4.52 MiB stripped** and 6.62 MiB unstripped,
+      # after fifteen applets, brace expansion, `[[ ]]`, arrays, Ctrl-R and the
+      # completion-spec loader. It had been 3.78 MiB against a 4.5 MiB ceiling,
+      # and the Windows job caught the crossing at 4,740,608 bytes -- 22 KB over.
+      #
+      # Raised rather than trimmed, because the two regressions this exists to
+      # catch were both checked and are absent: `-s -w` is still in force (it is
+      # worth 2.2 MB, and without it the build would be 6.62 MiB and still trip
+      # the new ceiling), and go.mod is unchanged at toml, term and sys. So the
+      # growth is code that was written on purpose.
+      #
+      # 5.5 MiB leaves about 21% for growth and stays below what an unstripped
+      # build measures, which is the property that keeps the flag regression
+      # catchable.
       - name: binary size ceiling
         shell: bash
         run: |
           binary="dist/nemosh"
           [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
           size=$(wc -c < "$binary")
-          ceiling=4718592
+          ceiling=5767168
           echo "$binary is $size bytes, ceiling $ceiling"
           if [ "$size" -gt "$ceiling" ]; then
             echo "the binary grew past the ceiling; check the release flags and go.mod before raising it"
