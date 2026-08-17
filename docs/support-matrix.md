@@ -287,7 +287,7 @@ column that matters is the third one.
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
-| `grep` | `-i -n -v`, `--color[=WHEN]` accepted and ignored | refused by name |
+| `grep` | `-i -n -v -r -R -l -c -q -w -x -F -o -s -h -H -E -m`, `--color[=WHEN]` accepted and ignored | refused by name |
 | `head` | `-n -c`, and the `-N` form | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
@@ -313,23 +313,23 @@ column that matters is the third one.
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
-| `sort` | `-n -r` | refused by name |
+| `sort` | `-n -r -u -f -b -k -t` | refused by name |
 | `stat` | `-c FORMAT` with `%n %s %F %f %y %Y`; the default output is refused | refused by name |
 | `split` | `-l`; two-letter suffixes, `aa` upwards | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
-| `tail` | `-n`, and the `-N` form | refused by name |
+| `tail` | `-n -c`, and the `-N` form | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |
 | `touch` | `-c` | refused by name |
 | `tr` | `-d -s -c`, ranges and backslash escapes; not classes | refused by name |
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
-| `uniq` | `-c` | refused by name |
-| `wc` | `-c -l -w` | refused by name |
+| `uniq` | `-c -d -u -i` | refused by name |
+| `wc` | `-c -l -w -m -L` | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
-| `xargs` | none | refused by name |
+| `xargs` | `-0 -n -I -r -t` | refused by name |
 | `xxd` | `-p` | refused by name |
 | `yes` | none | treated as the string to repeat |
 
@@ -360,13 +360,31 @@ Three of these diverge from GNU on purpose, and say so where it matters:
 
 ### Options a script is most likely to reach for and not find
 
-`xargs -0`, `xargs -n`, `sort -k`, `grep -r`, `tail -c`, and `ls -l` beyond the
-basic long form. Every one of them is refused by name, so a script asking for it
-fails rather than quietly getting something else.
+The list used to be `xargs -0`, `xargs -n`, `sort -k`, `grep -r` and `tail -c`.
+All five are implemented, measured against GNU. What is still absent:
 
-`tail -c` is worth calling out because `head -c` now exists: head counts bytes
-and tail does not, and the asymmetry is deliberate rather than overlooked --
-claiming both would be the kind of thing a script discovers the hard way.
+- **`ls -l` beyond the basic long form** -- no `-R`, `-t`, `-S`, `-r`.
+- **`tail -f`.** Following a file needs a polling loop and a decision about what
+  to do when it is truncated or replaced under you, and an implementation that
+  silently stops following is worse than one that says it cannot.
+- **`xargs -P`.** Running batches in parallel needs a scheduler this does not
+  have, and pretending to accept it would serialise silently.
+- **`sed` beyond `s///`**, and **`find` beyond `-name`, `-type` and `-print`**.
+- **`grep -A -B -C`.** Context lines need a ring buffer of preceding lines; the
+  option is refused rather than approximated.
+
+Every one of them is refused by name, so a script asking for it fails rather than
+quietly getting something else.
+
+Two deliberate near-misses worth naming:
+
+- **`grep -E` is accepted and does nothing**, because Go's regexp is RE2 and has
+  no basic mode -- what grep here always did was extended. `-G` is *not* accepted,
+  because claiming to switch to basic syntax and not doing it would be the lie.
+- **`wc -m` counts runes.** GNU said 19 where this says 18 for the same input,
+  which is a locale artifact rather than a disagreement: with no locale set a
+  character is a byte, and under `LC_ALL=C.UTF-8` GNU says 18 too. Runes are what
+  everything else here measures in.
 
 Filling in the rest is v1.1; see
 `docs/design/v1-scope.md` and the per-applet tables in

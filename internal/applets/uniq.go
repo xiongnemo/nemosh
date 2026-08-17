@@ -37,7 +37,7 @@ func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 		}
 		return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", err))
 	}
-	return writeUniqLines(stdout, collapseAdjacentLines(lines, input.count))
+	return writeUniqLines(stdout, collapseAdjacentLines(lines, input))
 }
 
 type uniqInput struct {
@@ -46,11 +46,23 @@ type uniqInput struct {
 	// count prefixes each run with how many lines it collapsed, which is what
 	// makes `sort | uniq -c | sort -rn` -- the tally everyone writes -- work.
 	count bool
+	// GNU's two filters, measured on `a a b`:
+	//
+	//	uniq -d  ->  a      only the lines that repeated
+	//	uniq -u  ->  b      only the lines that did not
+	//
+	// They are opposites, and asking for both is asking for nothing -- GNU
+	// prints nothing rather than everything, which is what falls out of applying
+	// both conditions.
+	onlyRepeated bool
+	onlyUnique   bool
+	// foldCase is -i. `A` and `a` become one run.
+	foldCase bool
 }
 
 func parseUniqArgs(args []string) (uniqInput, error) {
 	var operands []string
-	count := false
+	var parsed uniqInput
 	for index := range len(args) {
 		arg := args[index]
 		if arg == "--" {
@@ -67,11 +79,18 @@ func parseUniqArgs(args []string) (uniqInput, error) {
 			return uniqInput{}, fmt.Errorf("uniq: unrecognized option %s", arg)
 		}
 		for _, flag := range arg[1:] {
-			if flag == 'c' {
-				count = true
-				continue
+			switch flag {
+			case 'c':
+				parsed.count = true
+			case 'd':
+				parsed.onlyRepeated = true
+			case 'u':
+				parsed.onlyUnique = true
+			case 'i':
+				parsed.foldCase = true
+			default:
+				return uniqInput{}, fmt.Errorf("uniq: invalid option -- %c", flag)
 			}
-			return uniqInput{}, fmt.Errorf("uniq: invalid option -- %c", flag)
 		}
 	}
 
@@ -79,9 +98,10 @@ func parseUniqArgs(args []string) (uniqInput, error) {
 		return uniqInput{}, errors.New("uniq: too many operands")
 	}
 	if len(operands) == 0 || operands[0] == "-" {
-		return uniqInput{count: count}, nil
+		return parsed, nil
 	}
-	return uniqInput{path: operands[0], hasPath: true, count: count}, nil
+	parsed.path, parsed.hasPath = operands[0], true
+	return parsed, nil
 }
 
 func readUniqInput(ctx context.Context, view ProcessView, input uniqInput, stdin io.Reader) ([]string, error) {
@@ -125,7 +145,7 @@ func readUniqLines(input io.Reader) ([]string, error) {
 //
 // The layout is busybox's, which is GNU's: the count right-aligned in seven
 // columns and then a blank, so a column of tallies lines up.
-func collapseAdjacentLines(lines []string, count bool) []string {
+func collapseAdjacentLines(lines []string, input uniqInput) []string {
 	if len(lines) == 0 {
 		return nil
 	}
@@ -136,14 +156,29 @@ func collapseAdjacentLines(lines []string, count bool) []string {
 		if run == 0 {
 			return
 		}
-		if count {
+		// -d wants only runs longer than one, -u only runs of exactly one. Both
+		// together select nothing, which is what GNU prints and what falls out of
+		// applying both conditions rather than a special case.
+		if input.onlyRepeated && run < 2 {
+			return
+		}
+		if input.onlyUnique && run > 1 {
+			return
+		}
+		if input.count {
 			collapsed = append(collapsed, fmt.Sprintf("%7d %s", run, previous))
 			return
 		}
 		collapsed = append(collapsed, previous)
 	}
+	same := func(left, right string) bool {
+		if input.foldCase {
+			return strings.EqualFold(left, right)
+		}
+		return left == right
+	}
 	for index, line := range lines {
-		if index > 0 && line == previous {
+		if index > 0 && same(line, previous) {
 			run++
 			continue
 		}

@@ -16,10 +16,14 @@ import (
 // failure was loud but named the wrong cause, sending the reader after a file
 // that was never meant to be one.
 //
-// `cat -n` and `head -c` were on this list until they were implemented, which is
-// the right way for a row to leave it. `tail -c` is still here: head counts bytes
-// and tail does not, and claiming otherwise would be the kind of asymmetry a
-// script discovers the hard way.
+// `cat -n`, `head -c` and now `tail -c` were on this list until they were
+// implemented, which is the right way for a row to leave it -- the asymmetry
+// between head and tail was documented as deliberate for exactly as long as it
+// took to implement the missing half.
+//
+// `tail -f` stays: following a file needs a polling loop and a decision about
+// what to do when it is truncated or replaced, and an implementation that
+// silently stops following is worse than one that says it cannot.
 func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 	for _, test := range []struct {
 		applet string
@@ -28,7 +32,6 @@ func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 		{applet: "cat", args: []string{"-b"}},
 		{applet: "cat", args: []string{"-A", "f.txt"}},
 		{applet: "head", args: []string{"-q", "f.txt"}},
-		{applet: "tail", args: []string{"-c", "3"}},
 		{applet: "tail", args: []string{"-f", "f.txt"}},
 	} {
 		t.Run(test.applet+" "+strings.Join(test.args, " "), func(t *testing.T) {

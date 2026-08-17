@@ -17,7 +17,18 @@ func TestFinalSecurity_countBytes_preservesWordsAcrossChunkBoundaries(t *testing
 	if err != nil {
 		t.Fatalf("count chunked input: %v", err)
 	}
-	if want := (wcCounts{lines: 1, words: 4, bytes: len("alpha\u2003beta\nγδ epsilon")}); counts != want {
+	// The multi-byte characters are why chars and bytes differ here, which is
+	// exactly what -m exists to report: an em space and two Greek letters are
+	// three characters and seven bytes between them.
+	text := "alpha\u2003beta\nγδ epsilon"
+	want := wcCounts{
+		lines:   1,
+		words:   4,
+		bytes:   len(text),
+		chars:   len([]rune(text)),
+		longest: len([]rune("γδ epsilon")),
+	}
+	if counts != want {
 		t.Fatalf("chunked counts: got %+v want %+v", counts, want)
 	}
 }
@@ -34,7 +45,17 @@ func TestFinalSecurity_countBytes_countsLargeBoundedInputIncrementally(t *testin
 	if err != nil {
 		t.Fatalf("count large input: %v", err)
 	}
-	if want := (wcCounts{lines: repetitions, words: repetitions, bytes: 5 * repetitions}); counts != want {
+	// chars and longest are counted in the same pass now, so they are part of the
+	// expectation rather than left at zero: five ASCII bytes per repetition means
+	// characters equal bytes, and every line is four characters wide.
+	want := wcCounts{
+		lines:   repetitions,
+		words:   repetitions,
+		bytes:   5 * repetitions,
+		chars:   5 * repetitions,
+		longest: 4,
+	}
+	if counts != want {
 		t.Fatalf("large counts: got %+v want %+v", counts, want)
 	}
 }

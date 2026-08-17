@@ -86,27 +86,42 @@ func TestDefaultRegistry_XargsReturnsFalse_whenChildAppletReturnsFalse(t *testin
 	}
 }
 
-func TestDefaultRegistry_XargsRejectsUnsupportedOption_whenDashZeroProvided(t *testing.T) {
+// -0 is implemented now, and it is the option that matters most: NUL separation
+// is the only way a filename with a blank in it survives the trip, and splitting
+// on whitespace -- which is what this did for every input -- is how `xargs rm`
+// comes to delete the wrong thing.
+func TestDefaultRegistry_XargsSplitsOnNul(t *testing.T) {
 	// Given
 	applet := lookupXargsApplet(t)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
 
 	// When
-	err := applet.Run(context.Background(), []string{"-0"}, strings.NewReader("one\n"), &stdout, &stderr)
+	err := applet.Run(context.Background(), []string{"-0", "echo"},
+		strings.NewReader("a b\x00c\x00"), &stdout, &stderr)
+
+	// Then
+	if err != nil {
+		t.Fatalf("xargs -0: %v", err)
+	}
+	if stdout.String() != "a b c\n" {
+		t.Fatalf("xargs -0 = %q, want the blank kept inside one argument", stdout.String())
+	}
+}
+
+// An option xargs still does not have is refused by name rather than treated as
+// the command to run, which is what would happen if the parser simply stopped at
+// the first dash.
+func TestDefaultRegistry_XargsRejectsAnOptionItDoesNotHave(t *testing.T) {
+	// Given
+	applet := lookupXargsApplet(t)
+	var stdout, stderr bytes.Buffer
+
+	// When: -P is GNU's parallel option, which this has no way to honour
+	err := applet.Run(context.Background(), []string{"-P4", "echo"}, strings.NewReader("one\n"), &stdout, &stderr)
 
 	// Then
 	if err == nil {
-		t.Fatal("expected unsupported option error")
-	}
-	if got := err.Error(); got != "unsupported xargs option: -0" {
-		t.Fatalf("expected unsupported option error, got %q", got)
-	}
-	if got := stdout.String(); got != "" {
-		t.Fatalf("expected empty stdout, got %q", got)
-	}
-	if got := stderr.String(); got != "" {
-		t.Fatalf("expected empty stderr, got %q", got)
+		t.Fatal("expected an unsupported option error")
 	}
 }
 

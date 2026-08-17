@@ -41,18 +41,28 @@ func (sortApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 		return writeSortDiagnostic(stderr, inputDiagnostic("sort", err))
 	}
 	sortTextLines(lines, options)
+	if options.fields.unique {
+		// After sorting, because -u removes duplicates *by the comparison key*
+		// rather than as text: `sort -uf` on `B b a` answers `a B`.
+		lines = uniqueSorted(lines, options.fields, options.numeric)
+	}
 	return writeSortLines(stdout, lines)
 }
 
 type sortOptions struct {
 	numeric bool
 	reverse bool
+	fields  sortFields
 	paths   []string
 }
 
 func parseSortArgs(args []string) (sortOptions, error) {
 	var options sortOptions
+	skip := -1
 	for index := range len(args) {
+		if index <= skip {
+			continue
+		}
 		arg := args[index]
 		if arg == "--" {
 			options.paths = append(options.paths, args[index+1:]...)
@@ -69,12 +79,28 @@ func parseSortArgs(args []string) (sortOptions, error) {
 		if strings.HasPrefix(arg, "--") {
 			return sortOptions{}, fmt.Errorf("sort: unrecognized option %s", arg)
 		}
+		// -k and -t take a value, attached or as the next word, so they are
+		// settled before the remaining letters are walked.
+		letters, consumed, err := sortValueOption(args, index, &options.fields)
+		if err != nil {
+			return sortOptions{}, err
+		}
+		if consumed > 0 {
+			skip = index + consumed - 1
+			arg = "-" + letters
+		}
 		for _, flag := range arg[1:] {
 			switch flag {
 			case 'n':
 				options.numeric = true
 			case 'r':
 				options.reverse = true
+			case 'u':
+				options.fields.unique = true
+			case 'f':
+				options.fields.foldCase = true
+			case 'b':
+				options.fields.ignoreBlanks = true
 			default:
 				return sortOptions{}, fmt.Errorf("sort: invalid option -- %c", flag)
 			}
@@ -134,17 +160,7 @@ func sortTextLines(lines []string, options sortOptions) {
 }
 
 func compareSortLines(left string, right string, options sortOptions) int {
-	if options.numeric {
-		leftNumber := sortNumericPrefix(left)
-		rightNumber := sortNumericPrefix(right)
-		if leftNumber < rightNumber {
-			return -1
-		}
-		if leftNumber > rightNumber {
-			return 1
-		}
-	}
-	return strings.Compare(left, right)
+	return compareSortKeys(left, right, options.fields, options.numeric)
 }
 
 func sortNumericPrefix(line string) int64 {

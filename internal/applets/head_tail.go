@@ -63,12 +63,16 @@ func copyHead(stdout io.Writer, input io.Reader, count int) error {
 
 func newTailApplet() Applet {
 	return simpleApplet{name: "tail", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		count, paths, err := lineCountArgs("tail", args, 10)
+		// -c counts bytes here too now. It was head-only, and the asymmetry was
+		// documented as deliberate -- claiming both without implementing both
+		// would have been the kind of thing a script discovers the hard way. This
+		// implements it instead.
+		count, bytes, paths, err := countArgs("tail", args, 10, true)
 		if err != nil {
 			return err
 		}
 		if len(paths) == 0 {
-			return copyTail(stdout, stdin, count)
+			return copyTailOf(stdout, stdin, count, bytes)
 		}
 		view := ProcessViewFromContext(ctx)
 		for _, path := range paths {
@@ -76,7 +80,7 @@ func newTailApplet() Applet {
 			if err != nil {
 				return cannotOpen(path, err)
 			}
-			copyErr := copyTail(stdout, file, count)
+			copyErr := copyTailOf(stdout, file, count, bytes)
 			closeErr := file.Close()
 			if err := errors.Join(copyErr, closeErr); err != nil {
 				return err
@@ -84,6 +88,27 @@ func newTailApplet() Applet {
 		}
 		return nil
 	}}
+}
+
+// copyTailOf is the last `count` lines, or the last `count` bytes for -c.
+//
+//	$ printf '0123456789' | tail -c 3   ->  789
+//
+// No newline is added: -c deals in bytes, and inventing one would change the
+// length of what was asked for.
+func copyTailOf(stdout io.Writer, input io.Reader, count int, bytes bool) error {
+	if !bytes {
+		return copyTail(stdout, input, count)
+	}
+	data, err := io.ReadAll(input)
+	if err != nil {
+		return err
+	}
+	if len(data) > count {
+		data = data[len(data)-count:]
+	}
+	_, err = stdout.Write(data)
+	return err
 }
 
 func copyTail(stdout io.Writer, input io.Reader, count int) error {

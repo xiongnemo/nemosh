@@ -46,24 +46,47 @@ type wcFlags struct {
 	lines bool
 	words bool
 	bytes bool
+	// chars is -m, and it is not the same as -c. Measured on a two-line input
+	// holding one accented letter: 19 bytes, 18 characters.
+	//
+	// GNU said 19 for both at first, which is a locale artifact rather than a
+	// disagreement -- with no locale set a character *is* a byte. Under
+	// LC_ALL=C.UTF-8 it says 18, and 18 is what this counts, because runes are
+	// what everything else here measures in: the line editor's widths, `rev`,
+	// `expr length`.
+	chars bool
+	// longest is -L, the width of the longest line. GNU counts characters, not
+	// bytes, and does not count the newline.
+	longest bool
 }
 
 type wcCounts struct {
-	lines int
-	words int
-	bytes int
+	lines   int
+	words   int
+	bytes   int
+	chars   int
+	longest int
 }
 
 // An unknown letter used to be dropped on the floor after clearing the
 // defaults, so `wc -z FILE` selected no counts at all and still exited 0 --
 // printing a line with nothing on it but the filename.
 func wcArgs(args []string) (wcFlags, []string, error) {
-	options, paths, err := parseAppletOptions(args, "lwc", "")
+	options, paths, err := parseAppletOptions(args, "lwcmL", "")
 	if err != nil {
 		return wcFlags{}, nil, err
 	}
-	selected := wcFlags{lines: options.has('l'), words: options.has('w'), bytes: options.has('c')}
-	if !selected.lines && !selected.words && !selected.bytes {
+	selected := wcFlags{
+		lines:   options.has('l'),
+		words:   options.has('w'),
+		bytes:   options.has('c'),
+		chars:   options.has('m'),
+		longest: options.has('L'),
+	}
+	if !selected.lines && !selected.words && !selected.bytes && !selected.chars && !selected.longest {
+		// The default three, and not the two that were added: GNU's default is
+		// lines, words and bytes, and adding -m to it would change every existing
+		// script's output.
 		selected = wcFlags{lines: true, words: true, bytes: true}
 	}
 	return selected, paths, nil
@@ -77,8 +100,14 @@ func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string
 	if flags.words {
 		values = append(values, counts.words)
 	}
+	if flags.chars {
+		values = append(values, counts.chars)
+	}
 	if flags.bytes {
 		values = append(values, counts.bytes)
+	}
+	if flags.longest {
+		values = append(values, counts.longest)
 	}
 	for i, value := range values {
 		if i > 0 {
@@ -103,11 +132,21 @@ func countBytes(input io.Reader) (wcCounts, error) {
 	reader := bufio.NewReader(input)
 	counts := wcCounts{}
 	inWord := false
+	lineWidth := 0
 	for {
 		r, size, err := reader.ReadRune()
 		counts.bytes += size
+		if size > 0 {
+			counts.chars++
+		}
 		if r == '\n' {
 			counts.lines++
+			// -L is the width of the longest line, in characters, not counting
+			// the newline.
+			counts.longest = max(counts.longest, lineWidth)
+			lineWidth = 0
+		} else if size > 0 {
+			lineWidth++
 		}
 		if size > 0 && unicode.IsSpace(r) {
 			inWord = false
@@ -117,6 +156,10 @@ func countBytes(input io.Reader) (wcCounts, error) {
 		}
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				// A final line without a newline is still a line for -L, which is
+				// the width of the longest *line* rather than of the longest
+				// newline-terminated one.
+				counts.longest = max(counts.longest, lineWidth)
 				return counts, nil
 			}
 			return wcCounts{}, err
