@@ -107,6 +107,12 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	if !ok {
 		return lineResult{status: 1}
 	}
+	// `[[ ]]` is handled here, before expansion, because that is the whole of
+	// what makes it different: inside it a word is not split and not globbed, and
+	// whether the right-hand side was quoted still matters. See double_bracket.go.
+	if isDoubleBracket(command) {
+		return r.runDoubleBracket(ctx, command, savedStatus)
+	}
 	expanded := make([]shellToken, 0, len(command))
 	for _, item := range command {
 		values := r.expandCommandWord(ctx, item, savedStatus)

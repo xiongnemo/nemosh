@@ -44,9 +44,24 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 	inSingle := false
 	inDouble := false
 	escaped := false
+	// inCondition is set between an unquoted `[[` and its `]]`. See the operator
+	// check below for why the lexer has to know.
+	inCondition := false
 	appendToken := func(token shellToken) error {
 		if err := budget.consumeTokens(1); err != nil {
 			return err
+		}
+		if token.kind == tokenWord {
+			switch token.value {
+			case "[[":
+				// Only at the start of a command: `echo [[` is two ordinary words.
+				// A word already on the line means this one is an argument.
+				if len(tokens) == 0 || tokens[len(tokens)-1].kind != tokenWord {
+					inCondition = true
+				}
+			case "]]":
+				inCondition = false
+			}
 		}
 		tokens = append(tokens, token)
 		starts = append(starts, wordStart)
@@ -139,7 +154,13 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 				}
 				continue
 			}
-			if kind, width := activeOperator(line[index:]); width > 0 {
+			// Inside `[[ ]]` none of these are operators. bash makes `[[` a
+			// reserved word for exactly this reason: `&&`, `||`, `<` and `>` are
+			// part of the conditional's own grammar there, so splitting the line
+			// on them would tear the expression apart -- and `[[ a < b ]]`, which
+			// is a lexical comparison, would create a file called `b`. Measured
+			// before this: it did.
+			if kind, width := activeOperator(line[index:]); width > 0 && !inCondition {
 				if kind == tokenRedirect && isDigits(line[wordStart:index]) {
 					buffer.WriteString(line[index : index+width])
 					if err := appendToken(shellToken{kind: tokenRedirect, value: buffer.String()}); err != nil {

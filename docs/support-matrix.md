@@ -274,6 +274,33 @@ range whose endpoints are not both numeric or both alphabetic (`{1..x}`,
 `{a..3}`), and a case pattern -- there the pattern is the point, the same reason
 pathname expansion is kept away from it.
 
+**`[[ ]]`, the conditional expression.** Not POSIX -- dash has only `[` -- and
+this follows bash, measured case by case.
+
+The reason it exists is the reason it cannot be an applet: inside `[[ ]]` a word
+is neither split nor globbed, so `[[ $x == "a b" ]]` works where
+`[ $x = "a b" ]` becomes `[ a b = a b ]` and is a usage error. An applet receives
+words that have already been split; by then the information is gone. So `[[` is
+intercepted before expansion, with the word AST still in hand -- which also
+supplies the other thing an applet could not know: whether the right-hand side
+was quoted, and therefore whether `==` compares a pattern or a literal.
+
+| | |
+| --- | --- |
+| `==`, `=`, `!=` | the right side is a **pattern** unless quoted. `[[ abc == a* ]]` is true, `[[ abc == "a*" ]]` is false |
+| `=~` | an extended regular expression, anchored nowhere |
+| `<`, `>` | lexical comparison, **not redirection** -- which is a lexer question, and the reason `[[` had to become known to the lexer |
+| `-eq -ne -lt -le -gt -ge` | numeric |
+| unary tests, `-nt -ot -ef` | `test`'s own, through one exported entry point, because two copies of `-f` would drift |
+| `&&`, `||`, `!`, `( )` | the conditional's own grammar, not the shell's |
+| a malformed expression | **status 2**, so "that was not an expression" stays distinguishable from "the answer is no" |
+
+Two limitations, stated rather than hidden. The expression must be on **one
+line**: bash can span lines because `[[` is a reserved word its parser knows,
+while here it is recognised at execution time, after the line has been divided
+into commands. And `[[` is only a conditional at the **start of a command** --
+`echo [[` prints two ordinary words.
+
 ### Known divergences from bash/dash/ash
 
 - **Parse before effects.** A syntax error anywhere in a script means none of it

@@ -159,3 +159,32 @@ func (e *testEvaluator) isTerminal(operand string) (bool, error) {
 	}
 	return term.IsTerminal(int(file.Fd())), nil
 }
+
+// EvaluateConditionPrimary is the shell's way in to `test`'s primaries, so that
+// `[[ ]]` can use them rather than grow a second `-f`.
+//
+// Two copies of a file test would drift, and this project has fixed that class of
+// bug twice -- once in `command -v` and once between `kill` and `pkill`. The
+// operators here are exactly the ones `[` implements; `[[ ]]` adds its own
+// pattern and regular-expression comparisons on top, because those are the ones
+// that differ.
+//
+// `right` is ignored for a unary operator, which is what makes one entry point
+// serve both shapes.
+func EvaluateConditionPrimary(view ProcessView, operator, left, right string) (bool, error) {
+	evaluator := &testEvaluator{view: view}
+	if IsUnaryConditionOperator(operator) {
+		return evaluator.unaryPrimary(operator, left)
+	}
+	return evaluator.applyBinary(left, operator, right)
+}
+
+// IsUnaryConditionOperator reports whether the operator takes one operand. The
+// list is `test`'s, so the two cannot disagree about what `-s` is.
+func IsUnaryConditionOperator(operator string) bool {
+	switch operator {
+	case "-e", "-f", "-d", "-r", "-w", "-x", "-s", "-z", "-n", "-L", "-h", "-b", "-c", "-p", "-S", "-t", "-g", "-u", "-k", "-O", "-G":
+		return true
+	}
+	return false
+}
