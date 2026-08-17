@@ -126,6 +126,11 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		// find refuses it, but as an unsupported *expression* rather than an
 		// option, so the wording this test looks for is deliberately absent.
 		"find": true,
+		// expr has no options at all: every argument is a term of the
+		// expression, so `-Z` is a string and the refusal is a syntax error
+		// about the word after it. Which is the right refusal, just not the one
+		// this test looks for.
+		"expr": true,
 	}
 	for _, name := range appletNames(t) {
 		if noOptionParsing[name] || launchesSomething[name] {

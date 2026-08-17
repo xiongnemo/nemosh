@@ -134,5 +134,9 @@ func portableApplets() []Applet {
 		newPasteApplet(),
 		newXxdApplet(),
 		newSplitApplet(),
+		newPsApplet(),
+		newDuApplet(),
+		newStatApplet(),
+		newExprApplet(),
 	}
 }

@@ -266,7 +266,7 @@ here.
 
 ## Applets
 
-All 59 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
+All 63 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
@@ -282,8 +282,10 @@ column that matters is the third one.
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
 | `dirname` | none needed | refused by name |
+| `du` | `-s -h`; **apparent** sizes in 1024-byte blocks, not allocation | refused by name |
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
+| `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
 | `grep` | `-i -n -v`, `--color[=WHEN]` accepted and ignored | refused by name |
 | `head` | `-n -c`, and the `-N` form | refused by name |
@@ -299,6 +301,7 @@ column that matters is the third one.
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
+| `ps` | none; `PID` and `COMMAND` only | refused by name |
 | `printf` | format string | treated as the format, which is correct |
 | `pwd` | `-L -P` both accepted | accepted |
 | `readlink` | `-n` | refused by name |
@@ -311,6 +314,7 @@ column that matters is the third one.
 | `sleep` | duration operand | reported as an invalid duration |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
 | `sort` | `-n -r` | refused by name |
+| `stat` | `-c FORMAT` with `%n %s %F %f %y %Y`; the default output is refused | refused by name |
 | `split` | `-l`; two-letter suffixes, `aa` upwards | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
@@ -334,6 +338,25 @@ The six most recently added -- `tac`, `rev`, `nl`, `base64`, `sha256sum`,
 the small versions, and the behaviour people rely on, including the checksum
 format printed in every release note, is GNU's. Each carries the observed output
 in its test table.
+
+Three of these diverge from GNU on purpose, and say so where it matters:
+
+- **`du` counts apparent sizes**, rounded up to a 1024-byte block, where GNU
+  counts what the filesystem allocated. The two differ in both directions: a
+  3000-byte file occupies 4096 on NTFS, and a 3-byte one may occupy nothing
+  because it fits in the MFT record. Measured on one tree, GNU said 5 and this
+  says 6. Go cannot read allocation size portably, and a `du` that silently means
+  something slightly different from the one in a script is worse than one that is
+  documented to mean apparent size. GNU spells this `--apparent-size`.
+- **`stat` implements only `-c FORMAT`.** The default output is inode numbers,
+  device ids, permission bits in two notations and three timestamps -- mostly
+  fields Windows has not got or reports through a different API, and a block of
+  zeroes would be indistinguishable from a real answer.
+- **`ps` prints `PID` and `COMMAND` and nothing else.** No TTY, no STAT, no TIME,
+  not the command line: Windows has no controlling terminal in the POSIX sense,
+  and reading another process's command line means walking its PEB, which an
+  ordinary session may not do for anything it does not own. A column of `?` per
+  row would be worse than no column.
 
 ### Options a script is most likely to reach for and not find
 
