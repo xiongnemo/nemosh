@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	"github.com/BurntSushi/toml"
 )
 
 // validateSurface holds the rules that apply equally to a command and to a
@@ -85,17 +83,13 @@ func firstRepeatedName(names []string) (string, bool) {
 // gives its author no reason why -- the same argument the behavior corpus makes
 // for rejecting unknown keys in its own cases.
 func Parse(name string, source []byte) (Spec, error) {
-	var spec Spec
-	metadata, err := toml.Decode(string(source), &spec)
+	document, err := parseTOML(source)
 	if err != nil {
 		return Spec{}, fmt.Errorf("%s: %w", name, err)
 	}
-	if undecoded := metadata.Undecoded(); len(undecoded) > 0 {
-		keys := make([]string, 0, len(undecoded))
-		for _, key := range undecoded {
-			keys = append(keys, key.String())
-		}
-		return Spec{}, fmt.Errorf("%s: keys this format does not have: %s", name, strings.Join(keys, ", "))
+	spec, err := decodeDocument(document)
+	if err != nil {
+		return Spec{}, fmt.Errorf("%s: %w", name, err)
 	}
 	if err := spec.Validate(name); err != nil {
 		return Spec{}, err
