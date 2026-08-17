@@ -123,5 +123,11 @@ func portableApplets() []Applet {
 		newSedApplet(),
 		newFindApplet(),
 		newXargsApplet(),
+		newTacApplet(),
+		newRevApplet(),
+		newNlApplet(),
+		newBase64Applet(),
+		newSha256sumApplet(),
+		newMd5sumApplet(),
 	}
 }

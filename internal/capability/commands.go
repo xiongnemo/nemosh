@@ -11,6 +11,7 @@ package capability
 // offering a path there is harmless, and refusing one would hide a file the user
 // meant to name.
 var commands = []Command{
+	{Name: "base64", Short: "diw", ValueShort: "w", Operand: AnyPath},
 	{Name: "basename", Short: "a", Operand: AnyPath},
 	{Name: "cat", Short: "n", Operand: AnyPath},
 	{Name: "chmod", Operand: AnyPath},
@@ -30,6 +31,7 @@ var commands = []Command{
 	{Name: "mkdir", Short: "mpv", Operand: Directory},
 	{Name: "mktemp", Short: "dqu", Operand: AnyPath},
 	{Name: "mv", Short: "f", Operand: AnyPath},
+	{Name: "nl", Short: "b", ValueShort: "b", Operand: AnyPath},
 	{Name: "pgrep", Short: "lx", Operand: AnyPath},
 	{Name: "pkill", Short: "x", Operand: AnyPath},
 	{Name: "posixpath", Operand: AnyPath},
@@ -37,10 +39,13 @@ var commands = []Command{
 	{Name: "printf", Operand: AnyPath},
 	{Name: "pwd", Short: "LP", Operand: AnyPath},
 	{Name: "readlink", Short: "n", Operand: AnyPath},
+	{Name: "rev", Operand: AnyPath},
 	{Name: "realpath", Operand: AnyPath},
 	{Name: "rm", Short: "fr", Operand: AnyPath},
 	{Name: "rmdir", Short: "pv", Operand: Directory},
+	{Name: "md5sum", Short: "bctw", Operand: AnyPath},
 	{Name: "sed", Operand: AnyPath},
+	{Name: "sha256sum", Short: "bctw", Operand: AnyPath},
 	{Name: "seq", Operand: AnyPath},
 	{Name: "sleep", Operand: AnyPath},
 	{Name: "sort", Short: "nr", Operand: AnyPath},
@@ -48,6 +53,7 @@ var commands = []Command{
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,
 	// and there is no kind for "one fixed word".
 	{Name: "su", Short: "cstWN", Operand: AnyPath},
+	{Name: "tac", Operand: AnyPath},
 	{Name: "tail", Short: "n", Operand: AnyPath},
 	{Name: "test", Operand: AnyPath},
 	{Name: "[", Operand: AnyPath},

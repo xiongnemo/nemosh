@@ -266,11 +266,12 @@ here.
 
 ## Applets
 
-All 48 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
+All 54 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
+| `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
 | `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
 | `cat` | `-n` | refused by name |
 | `chmod` | numeric mode | refused by name |
@@ -290,6 +291,7 @@ column that matters is the third one.
 | `mkdir` | `-m -p -v` | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |
+| `nl` | `-b t\|a\|n` | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
 | `posixpath` | none | treated as a path operand |
@@ -297,14 +299,17 @@ column that matters is the third one.
 | `printf` | format string | treated as the format, which is correct |
 | `pwd` | `-L -P` both accepted | accepted |
 | `readlink` | `-n` | refused by name |
+| `rev` | none; reverses runes, not bytes | refused by name |
 | `realpath` | none | treated as a path operand |
 | `rm` | `-f -r` | refused by name |
 | `rmdir` | `-p -v` | refused by name |
 | `sed` | `s///` substitution | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
+| `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
 | `sort` | `-n -r` | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
+| `tac` | none | refused by name |
 | `tail` | `-n`, and the `-N` form | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |
@@ -318,6 +323,12 @@ column that matters is the third one.
 | `winpath` | none | treated as a path operand |
 | `xargs` | none | refused by name |
 | `yes` | none | treated as the string to repeat |
+
+The six most recently added -- `tac`, `rev`, `nl`, `base64`, `sha256sum`,
+`md5sum` -- were measured against **GNU coreutils**, not busybox: busybox's are
+the small versions, and the behaviour people rely on, including the checksum
+format printed in every release note, is GNU's. Each carries the observed output
+in its test table.
 
 ### Options a script is most likely to reach for and not find
 
