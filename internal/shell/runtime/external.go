@@ -58,7 +58,7 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		return 126
 	}
 	cmd.Dir = launchDirectory
-	cmd.Env = r.env.childEnviron(hostEnvironmentPlatform())
+	cmd.Env = r.childEnvironment()
 	stdin, err := r.fds.reader(0)
 	if err != nil {
 		if !errors.Is(err, errDescriptorAbsent) && !errors.Is(err, errDescriptorClosed) {

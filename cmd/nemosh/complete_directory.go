@@ -29,3 +29,22 @@ func completionDirectory(rt runtime.Runtime) string {
 	}
 	return resolved.Native
 }
+
+// nativePath crosses the same seam for a path the shell already holds, and
+// reports whether it could.
+//
+// The seam moved when the launch boundary started translating: HOME is now
+// `/c/Users/nemo` inside the shell, so Go code that opens it -- the history
+// file, the ssh config -- has to ask for the native spelling rather than reuse
+// the string. That is the lesson from completionDirectory above, arriving a
+// second time in a different place.
+func nativePath(rt runtime.Runtime, path string) (string, bool) {
+	if path == "" {
+		return "", false
+	}
+	resolved, err := applets.ResolveProcessPath(rt, path)
+	if err != nil || resolved.Device || resolved.Native == "" {
+		return "", false
+	}
+	return resolved.Native, true
+}

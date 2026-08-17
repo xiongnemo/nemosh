@@ -3,6 +3,8 @@
 package runtime_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -45,30 +47,24 @@ func TestRuntime_fillsInTheLoginVariablesWindowsDoesNotSet(t *testing.T) {
 	if home == "" {
 		t.Fatal("HOME is still empty")
 	}
-	// A native path, not this shell's own spelling, because HOME is exported and
-	// the programs it reaches are native. The first version of this used
-	// /c/Users/nemo and broke every child:
+	// This shell's own spelling, like every other path it reports, so that
+	// `echo $HOME`, `echo ~` and `pwd` all say the same thing about the same
+	// directory.
 	//
-	//	HOME=/c/Users/nemo  busybox ash -c 'cd $HOME; pwd'  ->  C:/c/Users/nemo
-	//
-	// busybox read the leading slash as "absolute on the current drive". Git
-	// Bash survives that spelling only because MSYS2 rewrites paths as it
-	// spawns; this shell has no such layer.
-	if strings.HasPrefix(home, "/") {
-		t.Fatalf("HOME = %q, want a native path a launched program can open", home)
-	}
-	if strings.Contains(home, `\`) {
-		t.Fatalf("HOME = %q, want forward slashes: a backslash is an escape character in a shell", home)
+	// It briefly was not. Storing it natively made those three agree with a
+	// launched program and disagree with each other; the fix belongs at the one
+	// place the two worlds meet, not in the value. See environment_launch.go and
+	// TestRuntime_translatesItsOwnPathVariablesForALaunchedProgram.
+	if !strings.HasPrefix(home, "/") {
+		t.Fatalf("HOME = %q, want the shell's own spelling", home)
 	}
 	if lines[1] == "" || lines[1] != lines[2] {
 		t.Fatalf("USER = %q, LOGNAME = %q, want both set and equal", lines[1], lines[2])
 	}
-	// `cd` with no operand goes home. pwd answers in the shell's own spelling
-	// and $HOME in the host's, so they name one directory two ways -- the wart
-	// that comes with having no path-rewriting layer, and the smaller of the two
-	// available warts.
-	if lines[3] == "" || !strings.HasSuffix(strings.ToLower(lines[3]), strings.ToLower(strings.TrimPrefix(home, "C:"))) {
-		t.Fatalf("pwd after cd = %q, want the same directory as HOME %q", lines[3], home)
+	// `cd` with no operand goes home, and pwd says exactly what $HOME says --
+	// which is the point of keeping one spelling inside.
+	if lines[3] != home {
+		t.Fatalf("pwd after cd = %q, want %q", lines[3], home)
 	}
 	if lines[4] != home {
 		t.Fatalf("echo ~ = %q, want %q", lines[4], home)
@@ -97,8 +93,14 @@ func TestRuntime_doesNotOverrideAnInheritedHome(t *testing.T) {
 	}
 }
 
-// And it has to reach the programs started from here, which is the whole reason
-// ash could not find ~/.profile.
+// Exported, not merely set -- which is the whole reason ash could not find
+// ~/.profile.
+//
+// `env` reports the shell's environment, in the shell's spelling. What a
+// launched program actually receives is translated at the boundary and is
+// asserted against a real child in
+// TestRuntime_translatesItsOwnPathVariablesForALaunchedProgram; the two are
+// different questions and this is the first one.
 func TestRuntime_exportsTheFilledInHome(t *testing.T) {
 	// Given
 	var stdout strings.Builder
@@ -115,10 +117,90 @@ func TestRuntime_exportsTheFilledInHome(t *testing.T) {
 	}
 
 	// Then
-	// Exported, and exported in the form the child can use. This is the assertion
-	// that would have caught the first attempt.
-	exported := strings.TrimSpace(stdout.String())
-	if !strings.HasPrefix(exported, "HOME=") || strings.HasPrefix(exported, "HOME=/") {
-		t.Fatalf("env showed %q, want an exported HOME as a native path", exported)
+	if exported := strings.TrimSpace(stdout.String()); !strings.HasPrefix(exported, "HOME=/") {
+		t.Fatalf("env showed %q, want an exported HOME in the shell's spelling", exported)
 	}
+}
+
+// The launch boundary is where the two spellings meet, and the only place.
+//
+// Inside, every path this shell reports uses its own form. Outside is a native
+// program that has never heard of it -- measured, with HOME exported unchanged:
+//
+//	busybox ash -c 'cd $HOME; pwd'  ->  C:/c/Users/nemo
+//
+// Before this, the environment handed out both forms at once: PWD as /c/... and
+// OLDPWD as C:/..., in the same block. That is not a rule, it is the absence of
+// one.
+func TestRuntime_translatesItsOwnPathVariablesForALaunchedProgram(t *testing.T) {
+	// Given
+	var stdout, stderr strings.Builder
+	rt, err := shellruntime.NewRuntimeWithState(applets.DefaultRegistry,
+		shellruntime.Streams{Stdout: &stdout, Stderr: &stderr},
+		shellruntime.State{Cwd: shellruntime.WorkingDirectory(t.TempDir()), Env: shellruntime.NewEnvironment(nil)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// When: cmd.exe reports what it was handed, which no amount of shell
+	// bookkeeping can influence.
+	// Two echoes rather than one with a separator: a `|` in the script is a
+	// pipe, which is how the first version of this test came to report
+	// `%PWD%: not found`.
+	status := rt.RunScript(t.Context(), commandProcessor(t)+" /c echo %HOME%\n"+commandProcessor(t)+" /c echo %PWD%\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("status = %d, output %q, stderr %q", status, stdout.String(), stderr.String())
+	}
+	for _, handed := range strings.Fields(stdout.String()) {
+		if strings.HasPrefix(handed, "/") {
+			t.Fatalf("the child was handed %q, want a native path it can open", handed)
+		}
+	}
+	// And the shell still says its own thing about the same directories.
+	stdout.Reset()
+	if status := rt.RunScript(t.Context(), "echo $HOME\n"); status != 0 {
+		t.Fatalf("status = %d", status)
+	}
+	if inside := strings.TrimSpace(stdout.String()); !strings.HasPrefix(inside, "/") {
+		t.Fatalf("inside the shell HOME = %q, want the shell's own spelling", inside)
+	}
+}
+
+// A variable the user exported travels verbatim, whatever it looks like. This is
+// the whole difference from MSYS2, which rewrites anything resembling a path on
+// its way out and is regularly wrong about arguments that were never paths.
+func TestRuntime_doesNotRewriteVariablesItDidNotSet(t *testing.T) {
+	// Given
+	var stdout strings.Builder
+	rt, err := shellruntime.NewRuntimeWithState(applets.DefaultRegistry,
+		shellruntime.Streams{Stdout: &stdout},
+		shellruntime.State{Cwd: shellruntime.WorkingDirectory(t.TempDir()), Env: shellruntime.NewEnvironment(nil)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// When
+	script := "export MYDIR=/c/Users/nemo\n" + commandProcessor(t) + " /c echo %MYDIR%\n"
+	if status := rt.RunScript(t.Context(), script); status != 0 {
+		t.Fatalf("status = %d, output %q", status, stdout.String())
+	}
+
+	// Then
+	if got := strings.TrimSpace(stdout.String()); got != "/c/Users/nemo" {
+		t.Fatalf("the child was handed %q, want it untouched", got)
+	}
+}
+
+// commandProcessor is cmd.exe by absolute path, because these runtimes are built
+// with an empty environment on purpose -- the point is what the shell puts into
+// a child's, and an inherited PATH would be one more thing in the way.
+func commandProcessor(t *testing.T) string {
+	t.Helper()
+	root := os.Getenv("SystemRoot")
+	if root == "" {
+		t.Skip("no SystemRoot to find cmd.exe with")
+	}
+	return filepath.ToSlash(filepath.Join(root, "System32", "cmd.exe"))
 }

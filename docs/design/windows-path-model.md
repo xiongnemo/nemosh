@@ -12,6 +12,40 @@ draft, not final implementation code.
 - Treat MSYS2 and Cygwin as non-target references only: useful for studying
   edge cases, not compatibility targets for Nemosh behavior.
 
+## The launch boundary
+
+Inside this shell every path is spelled its way: `pwd`, `$PWD`, `echo ~` and
+`$HOME` all say `/c/Users/nemo`. Outside is a native program that has never heard
+of it. Measured, with the shell's spelling exported unchanged:
+
+```console
+$ HOME=/c/Users/nemo busybox ash -c 'cd $HOME; pwd'
+C:/c/Users/nemo
+```
+
+busybox read the leading slash as "absolute on the current drive" and glued the
+drive on in front, which is what any native program does with it.
+
+**So the two spellings meet when a program is launched, and nowhere else.** The
+environment handed to a child has the shell's own path variables converted to
+native form; everything inside keeps one spelling.
+
+Before this the environment handed out both at once — `PWD` as `/c/...` and
+`OLDPWD` as `C:/...`, in the same block. That was not a rule, it was the absence
+of one.
+
+**Only the variables this shell sets itself** are converted: `HOME`, `PWD`,
+`OLDPWD`, `SHELL`. A value the user exported travels verbatim, whatever it looks
+like. That is the deliberate difference from MSYS2, which rewrites anything
+resembling a path on its way out and is regularly wrong about `--prefix=/opt` and
+about arguments that were never paths. Guessing is the failure mode; a fixed list
+is not.
+
+The same seam exists inside the process wherever Go code opens something the
+shell named — the completion directory, the history file, the ssh config. Each
+asks for the native spelling explicitly rather than reusing the string, because
+`os.Open` cannot read `/c/...` either.
+
 ## Confirmed Direction
 
 | Topic | Decision |

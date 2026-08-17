@@ -45,7 +45,16 @@ type historyFile struct {
 // newHistoryFile reads the two variables that decide this. Both are consulted
 // through the shell's own environment rather than the process's, so `export
 // HISTFILE=...` in an rc file takes effect.
-func newHistoryFile(lookup func(string) (string, bool)) historyFile {
+// toNative crosses from the shell's path spelling to the host's, and may be nil
+// where the two are already the same -- a test working in t.TempDir, or any
+// platform where there is only one spelling.
+//
+// It is needed because the launch boundary now translates rather than the
+// variable being stored translated: HOME is `/c/Users/nemo` inside the shell,
+// and os.OpenFile cannot open that. Handing it over unresolved would have
+// written the history to `C:\c\Users\nemo\.nemosh_history`, which is a real
+// path, in the wrong place, that nobody would ever look at.
+func newHistoryFile(lookup func(string) (string, bool), toNative func(string) (string, bool)) historyFile {
 	file := historyFile{limit: defaultHistoryEntries}
 	if value, ok := lookup("HISTFILESIZE"); ok {
 		if size, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && size >= 0 {
@@ -60,6 +69,15 @@ func newHistoryFile(lookup func(string) (string, bool)) historyFile {
 		file.path = value
 	default:
 		file.path = defaultHistoryPath(lookup)
+	}
+	if file.path != "" && toNative != nil {
+		native, ok := toNative(file.path)
+		if !ok {
+			// A HISTFILE that does not resolve saves nothing, rather than
+			// creating a file somewhere surprising and reporting success.
+			return historyFile{limit: file.limit}
+		}
+		file.path = native
 	}
 	return file
 }

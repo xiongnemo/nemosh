@@ -28,7 +28,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	// After the rc file, so an `export HISTFILE=...` in it is honoured, and
 	// before the first prompt, so the first thing typed already has yesterday to
 	// suggest from.
-	saved := newHistoryFile(rt.LookupEnv)
+	saved := newHistoryFile(rt.LookupEnv, func(path string) (string, bool) { return nativePath(rt, path) })
 	for _, line := range saved.load() {
 		editor.remember(line)
 		rt.RecordHistory(line)
@@ -55,8 +55,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// And the host list, which changes when ~/.ssh/config is edited. Its
 		// invalidation is a stat of one file per prompt, which is why it can sit
 		// here and not in the keystroke path.
+		// In the host's spelling: these are opened with os.Open, which cannot
+		// read the shell's own /c/... form.
 		if home, ok := rt.LookupEnv("HOME"); ok {
-			editor.hosts.refresh(hostSources(home))
+			if native, ok := nativePath(rt, home); ok {
+				editor.hosts.refresh(hostSources(native))
+			}
 		}
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
 		line, err := editor.readLine(ctx, prompt)

@@ -63,7 +63,7 @@ func TestNewHistoryFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// When
-			file := newHistoryFile(lookupFrom(test.env))
+			file := newHistoryFile(lookupFrom(test.env), nil)
 
 			// Then
 			if file.path != test.path || file.limit != test.limit || file.enabled() != test.enabled {
@@ -79,7 +79,7 @@ func TestNewHistoryFile(t *testing.T) {
 func TestHistoryFile_appendsAndReloads(t *testing.T) {
 	// Given
 	home := t.TempDir()
-	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home}))
+	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home}), nil)
 
 	// When
 	file.append("ssh gpu-worker-34")
@@ -91,7 +91,7 @@ func TestHistoryFile_appendsAndReloads(t *testing.T) {
 		t.Fatalf("load = %q, want the two real lines", got)
 	}
 	// A second shell sees it, which is the whole point.
-	other := newHistoryFile(lookupFrom(map[string]string{"HOME": home}))
+	other := newHistoryFile(lookupFrom(map[string]string{"HOME": home}), nil)
 	if got := other.load(); len(got) != 2 {
 		t.Fatalf("a second session loaded %q", got)
 	}
@@ -103,7 +103,7 @@ func TestHistoryFile_appendsAndReloads(t *testing.T) {
 func TestHistoryFile_refusesAMultiLineCommand(t *testing.T) {
 	// Given
 	home := t.TempDir()
-	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home}))
+	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home}), nil)
 
 	// When
 	file.append("for i in a b\ndo echo $i\ndone")
@@ -119,7 +119,7 @@ func TestHistoryFile_refusesAMultiLineCommand(t *testing.T) {
 func TestHistoryFile_loadsOnlyTheMostRecent(t *testing.T) {
 	// Given
 	home := t.TempDir()
-	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home, "HISTFILESIZE": "3"}))
+	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home, "HISTFILESIZE": "3"}), nil)
 	for _, line := range []string{"one", "two", "three", "four", "five"} {
 		file.append(line)
 	}
@@ -139,7 +139,7 @@ func TestHistoryFile_loadsOnlyTheMostRecent(t *testing.T) {
 func TestHistoryFile_trimsOnlyOnceTheFileIsFarPastTheLimit(t *testing.T) {
 	// Given
 	home := t.TempDir()
-	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home, "HISTFILESIZE": "2"}))
+	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home, "HISTFILESIZE": "2"}), nil)
 
 	// When: five lines, against a limit of 2 and a trim threshold of 2*4
 	for _, line := range []string{"a", "b", "c", "d", "e"} {
@@ -167,7 +167,7 @@ func TestHistoryFile_trimsOnlyOnceTheFileIsFarPastTheLimit(t *testing.T) {
 // opened.
 func TestHistoryFile_isSilentAboutAMissingFile(t *testing.T) {
 	// Given
-	file := newHistoryFile(lookupFrom(map[string]string{"HOME": filepath.Join(t.TempDir(), "nothing-here")}))
+	file := newHistoryFile(lookupFrom(map[string]string{"HOME": filepath.Join(t.TempDir(), "nothing-here")}), nil)
 
 	// When
 	got := file.load()
@@ -182,7 +182,7 @@ func TestHistoryFile_isSilentAboutAMissingFile(t *testing.T) {
 func TestHistoryFile_writesNothingWhenDisabled(t *testing.T) {
 	// Given
 	home := t.TempDir()
-	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home, "HISTFILE": ""}))
+	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home, "HISTFILE": ""}), nil)
 
 	// When
 	file.append("secret")

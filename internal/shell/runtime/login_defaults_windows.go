@@ -4,7 +4,6 @@ package runtime
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
@@ -12,40 +11,36 @@ import (
 
 // loginDefaults is what this platform can answer when the environment did not.
 //
-// The value is a *native* path with forward slashes -- `C:/Users/nemo` -- and
-// not this shell's own `/c/Users/nemo`. That was the first attempt, on the
-// reasoning that `echo $HOME` should agree with `pwd`, and it was wrong for a
-// reason worth writing down: HOME is exported, and the programs it is exported
-// to are native. Measured:
+// The value is in this shell's own spelling -- `/c/Users/nemo` -- like every
+// other path it reports, so `echo $HOME`, `echo ~` and `pwd` all say the same
+// thing about the same directory.
 //
-//	$ HOME=/c/Users/nemo   busybox ash -c 'cd $HOME; pwd'  ->  C:/c/Users/nemo
-//	$ HOME=C:/Users/nemo   busybox ash -c 'cd $HOME; pwd'  ->  C:/Users/nemo
+// It briefly was not. Setting it this way and exporting it verbatim broke every
+// native program launched from here:
 //
-// busybox read the leading slash as "absolute on the current drive" and glued
-// the drive on in front, which is what any native program does with it. Git Bash
-// gets away with `/c/...` only because MSYS2 rewrites paths in the environment
-// as it spawns a native child; this shell has no such layer, and adding one is a
-// much larger promise than a default value should be making.
+//	$ HOME=/c/Users/nemo busybox ash -c 'cd $HOME; pwd'  ->  C:/c/Users/nemo
 //
-// So this follows busybox-w32 exactly, which sets HOME from
-// GetUserProfileDirectory and then runs bs_to_slash over it (win32/mingw.c,
-// gethomedir). Forward slashes because every Windows API accepts them and
-// because a backslash is an escape character in a shell.
+// The answer is not to pick the other spelling and live with $HOME disagreeing
+// with pwd -- it is to translate at the one place the two worlds meet. See
+// environment_launch.go.
 //
-// The cost is that `echo $HOME` and `pwd` spell the same directory differently.
-// This shell accepts both spellings as input, so nothing breaks; it is a wart,
-// and it is the smaller one.
-func loginDefaults(pathmodel.Model) map[string]string {
+// The directory itself is busybox-w32's: GetUserProfileDirectory rather than
+// %USERPROFILE%, which os.UserHomeDir reads (win32/mingw.c, gethomedir).
+func loginDefaults(model pathmodel.Model) map[string]string {
 	defaults := map[string]string{}
 	if profile, err := os.UserHomeDir(); err == nil && profile != "" {
-		defaults["HOME"] = filepath.ToSlash(profile)
+		if canonical, err := model.Resolve(profile); err == nil {
+			defaults["HOME"] = string(canonical)
+		}
 	}
 	if name := applets.CurrentUserName(); name != "" {
 		defaults["USER"] = name
 		defaults["LOGNAME"] = name
 	}
 	if executable, err := os.Executable(); err == nil {
-		defaults["SHELL"] = filepath.ToSlash(executable)
+		if canonical, err := model.Resolve(executable); err == nil {
+			defaults["SHELL"] = string(canonical)
+		}
 	}
 	return defaults
 }
