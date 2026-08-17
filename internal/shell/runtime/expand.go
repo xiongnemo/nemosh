@@ -15,6 +15,18 @@ import (
 // there the pattern is the whole point, and globbing `*)` against the
 // filesystem would take the default arm away.
 func (r Runtime) expandCommandWord(ctx context.Context, item word, savedStatus int) []string {
+	// Brace expansion first, and it is the only expansion that turns one word
+	// into several *before* anything is looked up. See brace.go: with `x=1`,
+	// `echo {$x,2}` prints `1 2`, so the split has to happen while the parameter
+	// is still unexpanded.
+	var expanded []string
+	for _, braced := range expandBraceWord(item) {
+		expanded = append(expanded, r.expandOneCommandWord(ctx, braced, savedStatus)...)
+	}
+	return expanded
+}
+
+func (r Runtime) expandOneCommandWord(ctx context.Context, item word, savedStatus int) []string {
 	fields, globbable := r.expandWordFields(ctx, item, savedStatus)
 	var expanded []string
 	for index, field := range fields {

@@ -254,6 +254,26 @@ this cannot deliver. busybox also ships the complement, `drop`/`cdrop`/`pdrop`,
 for running with the Administrators group disabled; those are not implemented
 here.
 
+### Beyond POSIX, on purpose
+
+**Brace expansion.** `{a,b}`, `pre{a,b}post`, `{1..5}`, `{5..1}`, `{a..e}`,
+`{01..03}`, `{1..10..3}`, and any nesting or product of those. dash has none of
+it; this follows bash, measured case by case, because it is what fingers do.
+
+It runs **before every other expansion**, which is the fact that decides the
+implementation rather than a detail of it: with `x=1`, `echo {$x,2}` prints
+`1 2`, so the split cannot be done on expanded text. It therefore works on the
+word's *parts* -- each unquoted literal contributes characters, and a parameter,
+a substitution, an escape or anything quoted becomes one opaque atom no brace can
+be found inside. `"{a,b}"` and `\{a,b\}` come out literal from that alone,
+without a special case.
+
+Where it deliberately does nothing, all measured against bash: a group with
+neither a comma nor a range (`{a}`, `{}`), an unmatched brace (`echo {a,b`), a
+range whose endpoints are not both numeric or both alphabetic (`{1..x}`,
+`{a..3}`), and a case pattern -- there the pattern is the point, the same reason
+pathname expansion is kept away from it.
+
 ### Known divergences from bash/dash/ash
 
 - **Parse before effects.** A syntax error anywhere in a script means none of it
