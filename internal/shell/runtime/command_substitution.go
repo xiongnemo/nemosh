@@ -32,6 +32,18 @@ func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 			}
 			continue
 		}
+		// An arithmetic expansion is stepped over whole, before the substitution
+		// branch below can claim its first `(`. `$((` opens two parentheses and
+		// closes two, and treating it as one substitution left the count one short:
+		// `echo $(echo $((2*3)))` failed with `syntax error: unexpected )`. The
+		// logical-line scanner already had this exact branch for the same reason;
+		// this scanner did not.
+		if char == '$' && index+2 < len(input) && input[index+1] == '(' && input[index+2] == '(' && quote != '\'' {
+			if end, ok := arithmeticExpansionEnd(input, index+3); ok {
+				index = end
+				continue
+			}
+		}
 		if char == '$' && index+1 < len(input) && input[index+1] == '(' && quote != '\'' {
 			quotes = append(quotes, 0)
 			index++
