@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // The increment and decrement operators, split from arithmetic.go to stay under the
@@ -134,4 +135,25 @@ func integerPower(left, right int64) (int64, error) {
 		result *= left
 	}
 	return result, nil
+}
+
+// parseArithmeticBase reads bash's `base#digits`: `2#101` is 5 and `16#ff` is 255.
+//
+// The `#` reported `unexpected "#"`, because the lexer had no such operator and the
+// number parser had no such form. It is how a script reads a binary mask or a hex value
+// without a leading 0x.
+func parseArithmeticBase(token string) (int64, bool) {
+	base, digits, found := strings.Cut(token, "#")
+	if !found {
+		return 0, false
+	}
+	radix, err := strconv.ParseInt(base, 10, 32)
+	if err != nil || radix < 2 || radix > 64 {
+		return 0, false
+	}
+	value, err := strconv.ParseInt(digits, int(radix), 64)
+	if err != nil {
+		return 0, false
+	}
+	return value, true
 }

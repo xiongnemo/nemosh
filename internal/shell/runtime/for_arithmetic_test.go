@@ -152,11 +152,15 @@ func TestArithmeticFor_leavesTheWordListFormAlone(t *testing.T) {
 	}
 }
 
-// A header that is neither form has to say what the two forms are, rather than name
+// A header that is none of the forms has to say what the forms are, rather than name
 // only the one it happened to check first.
+//
+// The example was `for broken; do` until `for name` -- POSIX's loop over the positional
+// parameters -- was implemented, which made that input legal. `for a b c` is the
+// malformed one now: three words and no `in`.
 func TestArithmeticFor_saysWhatItExpected(t *testing.T) {
 	// When
-	_, _, stderr := runSetScript(t, "for broken; do echo x; done\n")
+	_, _, stderr := runSetScript(t, "for a b c; do echo x; done\n")
 
 	// Then
 	if !strings.Contains(stderr, "for ((init; condition; step))") {

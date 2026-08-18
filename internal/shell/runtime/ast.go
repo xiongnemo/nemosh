@@ -60,6 +60,9 @@ type loopNode struct {
 	body      []programNode
 	// arith is set only for loopArithmetic, where name and values are unused.
 	arith arithmeticLoop
+	// overArguments is `for name` with no `in`: the list is the positional
+	// parameters, which POSIX 2.9.4.2 specifies.
+	overArguments bool
 }
 
 func (loopNode) programNode() {}

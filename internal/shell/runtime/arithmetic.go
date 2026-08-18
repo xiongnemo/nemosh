@@ -217,6 +217,10 @@ func (p *arithmeticParser) primary() (int64, error) {
 	if value, err := strconv.ParseInt(token, 0, 64); err == nil {
 		return value, nil
 	}
+	// `base#digits`, bash's explicit radix form. See parseArithmeticBase.
+	if value, ok := parseArithmeticBase(token); ok {
+		return value, nil
+	}
 	if !isVariableName(token) {
 		return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", token)
 	}

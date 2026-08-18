@@ -10,6 +10,10 @@ var arithmeticOperators = []string{
 	// otherwise `i++` lexes as `i`, `+`, `+` and the second plus has no operand,
 	// which is exactly the "expression ended early" it used to report.
 	"++", "--",
+	// `#` is not an operator, but it has to be *absent* from this list for
+	// `2#101` to stay one token. Recorded here because a reader adding operators
+	// will wonder.
+
 	// `**` before `*`, or `2**10` lexes as two multiplications with nothing
 	// between them -- which is the "unexpected *" it used to report.
 	"**",
@@ -76,6 +80,16 @@ func arithmeticWordEnd(expression string, start int) int {
 	end := start
 	for end < len(expression) && (isNameByte(expression[end]) || expression[end] == 'x' || expression[end] == 'X') {
 		end++
+	}
+	// `base#digits` is one word: `2#101` is 5, and `16#ff` is 255. Without this the
+	// `#` ended the word and became a token of its own, which the parser reported as
+	// `unexpected "#"`. Only after digits, so a `#` anywhere else is still whatever it
+	// was.
+	if end > start && end < len(expression) && expression[end] == '#' && isDigits(expression[start:end]) {
+		end++
+		for end < len(expression) && isNameByte(expression[end]) {
+			end++
+		}
 	}
 	return end
 }

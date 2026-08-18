@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 )
 
 var ErrIncompleteScript = errors.New("incomplete script")
@@ -31,32 +30,6 @@ type compoundSpan struct {
 	// suffix is what followed the closer -- a redirection, or a pipe into another
 	// command. Empty for the ordinary case; see splitCompoundCloser.
 	suffix string
-}
-
-// splitCompoundCloser reads a closer with a suffix: `done < file` gives `done` and
-// `< file`.
-//
-// The suffix has to begin with a redirection or a pipe. `done extra` is not a closer
-// with a suffix, it is a syntax error, and calling it one here would hide the mistake.
-func splitCompoundCloser(line string) (string, string, bool) {
-	for _, closer := range [...]string{"fi", "done", "esac"} {
-		rest, ok := strings.CutPrefix(line, closer)
-		if !ok || rest == "" {
-			continue
-		}
-		if rest[0] != ' ' && rest[0] != '	' && rest[0] != '<' && rest[0] != '>' {
-			continue
-		}
-		suffix := strings.TrimSpace(rest)
-		// A redirection only. A pipe after a closer is left to fail as it did, because
-		// handling it needs the pipeline built from the remaining words and the brace
-		// group spelling already works; see wrapCompoundWithSuffix.
-		if suffix == "" || !strings.ContainsAny(suffix[:1], "<>") {
-			continue
-		}
-		return closer, suffix, true
-	}
-	return "", "", false
 }
 
 type caseArmSpan struct {

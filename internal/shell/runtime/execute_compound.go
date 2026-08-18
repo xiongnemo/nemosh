@@ -71,6 +71,9 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 	r.loops.enter()
 	defer r.loops.leave()
 	status := 0
+	if node.overArguments {
+		return r.executeForOverArguments(ctx, node, savedStatus)
+	}
 	for _, item := range node.values {
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
@@ -160,4 +163,36 @@ func (r Runtime) caseArmMatches(ctx context.Context, arm caseArmNode, value stri
 		}
 	}
 	return false
+}
+
+// executeForOverArguments is `for name; do ... done`, whose list is the positional
+// parameters. Written separately from the word-list loop because the values need no
+// expansion -- they are already the parameters, and expanding them again would split
+// one holding a blank.
+func (r Runtime) executeForOverArguments(ctx context.Context, node loopNode, savedStatus int) lineResult {
+	status := 0
+	for _, value := range r.params.values {
+		if ctx.Err() != nil {
+			return lineResult{status: contextStatus(ctx)}
+		}
+		r.vars[node.name] = value
+		bodyStatus, control := r.executeProgram(ctx, node.body, savedStatus)
+		status, savedStatus = bodyStatus, bodyStatus
+		switch control {
+		case flowNone:
+		case flowContinue:
+			if !r.loops.consume() {
+				return lineResult{status: 0, control: flowContinue}
+			}
+			status, savedStatus = 0, 0
+		case flowBreak:
+			if !r.loops.consume() {
+				return lineResult{status: 0, control: flowBreak}
+			}
+			return lineResult{status: 0}
+		default:
+			return lineResult{status: status, control: control}
+		}
+	}
+	return lineResult{status: status}
 }

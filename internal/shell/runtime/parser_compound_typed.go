@@ -145,8 +145,18 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 	if err != nil {
 		return nil, err
 	}
-	if len(tokens) < 3 || tokens[1].value != "in" {
+	// `for name` with no list is `for name in "$@"`, which POSIX 2.9.4.2 specifies and
+	// which is how a function loops over its arguments. It reported the usage instead.
+	if len(tokens) == 1 && tokens[0].kind == tokenWord {
+		return loopNode{kind: loopFor, name: tokens[0].value, overArguments: true, body: body}, nil
+	}
+	if len(tokens) < 2 || tokens[1].value != "in" {
 		return nil, fmt.Errorf("expected: for name in words, or for ((init; condition; step))")
+	}
+	// `for name in` with nothing after it loops zero times. Not an error: it is what a
+	// generated list that came out empty looks like.
+	if len(tokens) == 2 {
+		return loopNode{kind: loopFor, name: tokens[0].value, body: body}, nil
 	}
 	values := make([]word, len(tokens)-2)
 	for index, token := range tokens[2:] {
