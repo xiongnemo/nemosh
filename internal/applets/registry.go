@@ -31,6 +31,12 @@ type contextApplet struct {
 }
 
 func (a contextApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	// Before the applet's own parser, which is the whole point: each of them
+	// rejected `--help` in its own words, and this is the one place all of them
+	// pass through. See help_option.go for which applets are excluded and why.
+	if helpRequested(a.Applet.Name(), args) && writeUsage(a.Applet.Name(), stdout) {
+		return nil
+	}
 	return a.Applet.Run(ctx, args, contextReader{ctx: ctx, reader: stdin}, stdout, stderr)
 }
 

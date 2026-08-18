@@ -35,7 +35,7 @@ func (r Runtime) help(args []string) int {
 
 	fmt.Fprintln(r.streams.Stdout)
 	fmt.Fprintln(r.streams.Stdout, "`nemosh --help` describes the command line; `type NAME` describes one name.")
-	fmt.Fprintln(r.streams.Stdout, "Applets carry no usage text; docs/support-matrix.md records what each accepts.")
+	fmt.Fprintln(r.streams.Stdout, "`NAME --help` describes one applet; docs/support-matrix.md records them all.")
 	return 0
 }
 

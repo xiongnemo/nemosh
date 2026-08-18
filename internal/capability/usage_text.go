@@ -1,0 +1,118 @@
+package capability
+
+// The hand-written half of the applet help: what the matrix cannot know.
+//
+// Held to the matrix by usage_test.go, in both directions -- every applet needs an
+// entry, every accepted option needs a gloss, and a gloss for an option that does
+// not exist is a failure. That is what stops this file from becoming a list of
+// claims nobody checks, which is the failure mode docs/design/reference-methodology
+// exists to guard against.
+//
+// The glosses describe *this build*, not GNU's. Where the two differ the Notes say
+// so, because a reader who knows GNU's version will assume the rest.
+var usageText = map[string]Usage{
+	"base64": {
+		Summary:  "Encode or decode base64.",
+		Operands: "[FILE]...",
+		Options:  map[string]string{"d": "decode", "i": "when decoding, ignore characters that are not base64", "w": "wrap encoded lines at this column, 0 for no wrapping"},
+	},
+	"basename": {
+		Summary:  "Strip directory and suffix from a path.",
+		Operands: "NAME [SUFFIX]",
+		Options:  map[string]string{"a": "treat every operand as a name, so several can be stripped at once"},
+	},
+	"cat": {
+		Summary:  "Copy files to standard output.",
+		Operands: "[FILE]...",
+		Options:  map[string]string{"n": "number the output lines"},
+		Notes:    []string{"A FILE of - is standard input."},
+	},
+	"chmod":     {Summary: "Change file mode bits.", Operands: "MODE FILE..."},
+	"clear":     {Summary: "Clear the terminal screen."},
+	"cmp":       {Summary: "Compare two files byte by byte.", Operands: "FILE1 [FILE2]", Options: map[string]string{"s": "say nothing; report only through the exit status", "l": "list the offset and the two bytes of every difference"}},
+	"comm":      {Summary: "Compare two sorted files line by line, in three columns.", Operands: "FILE1 FILE2", Options: map[string]string{"1": "suppress column 1, the lines only in FILE1", "2": "suppress column 2, the lines only in FILE2", "3": "suppress column 3, the lines in both"}},
+	"cp":        {Summary: "Copy files and directories.", Operands: "SOURCE... DEST", Options: map[string]string{"r": "copy directories and their contents", "R": "the same as -r"}},
+	"cut":       {Summary: "Print selected parts of each line.", Operands: "[FILE]...", Options: map[string]string{"b": "select these byte positions", "c": "select these character positions", "d": "use this field delimiter instead of tab", "f": "select these fields", "n": "accepted and ignored, as it is by GNU cut without a multibyte locale", "s": "with -f, skip lines that hold no delimiter"}},
+	"date":      {Summary: "Print the date and time.", Operands: "[+FORMAT]", Options: map[string]string{"d": "print this time rather than now", "u": "work in UTC"}},
+	"dirname":   {Summary: "Strip the last component from a path.", Operands: "NAME..."},
+	"du":        {Summary: "Report how much space files use.", Operands: "[FILE]...", Options: map[string]string{"s": "one total per operand rather than a line per file", "h": "print sizes in powers of 1024, as K, M and G"}},
+	"echo":      {Summary: "Write arguments to standard output.", Operands: "[ARG]...", Options: map[string]string{"n": "no trailing newline", "e": "interpret backslash escapes"}, Notes: []string{"echo does not answer --help, because an argument is data: `echo --help` prints it."}},
+	"env":       {Summary: "Run a command in a modified environment, or print the environment.", Operands: "[NAME=VALUE]... [COMMAND [ARG]...]", Options: map[string]string{"i": "start from an empty environment"}, Notes: []string{"COMMAND is resolved among this shell's applets only, not on PATH."}},
+	"expr":      {Summary: "Evaluate an expression and print the result.", Operands: "EXPRESSION", Notes: []string{"Operators that the shell would take for its own -- ( ) * < > | & -- have to be quoted."}},
+	"false":     {Summary: "Do nothing and fail."},
+	"find":      {Summary: "Walk a directory tree and print what is there.", Operands: "[PATH]... [EXPRESSION]"},
+	"grep":      {Summary: "Print the lines that match a pattern.", Operands: "PATTERN [FILE]...", Options: map[string]string{"i": "match without regard to case", "n": "prefix each line with its line number", "v": "print the lines that do not match", "r": "search directories, following no symlinks", "R": "the same as -r", "l": "print only the names of the files that match", "c": "print only how many lines matched", "q": "print nothing; report through the exit status", "w": "match whole words only", "x": "match whole lines only", "F": "take the pattern as a literal string, not a regular expression", "o": "print only the matching part of each line", "s": "do not report unreadable files", "h": "never prefix a line with its file name", "H": "always prefix a line with its file name", "E": "take the pattern as an extended regular expression", "m": "stop after this many matching lines", "color": "colour the matching part when the output is a terminal"}},
+	"head":      {Summary: "Print the beginning of each file.", Operands: "[FILE]...", Options: map[string]string{"n": "print this many lines instead of 10", "c": "print this many bytes instead"}},
+	"id":        {Summary: "Print the current user's identity.", Operands: "[USER]", Options: map[string]string{"u": "print only the user id", "g": "print only the primary group id", "G": "print every group id", "n": "with -u, -g or -G, print names rather than numbers"}},
+	"ln":        {Summary: "Make a link to a file.", Operands: "TARGET LINK", Options: map[string]string{"s": "make a symbolic link rather than a hard one"}},
+	"ls":        {Summary: "List directory contents.", Operands: "[FILE]...", Options: map[string]string{"a": "include names beginning with a dot", "h": "with -l, print sizes as K, M and G", "l": "one file per line, with mode, size and time", "1": "one name per line", "color": "colour the names by kind when the output is a terminal"}},
+	"md5sum":    {Summary: "Print or check MD5 digests.", Operands: "[FILE]...", Options: map[string]string{"b": "read in binary mode, and mark it with a * in the output", "c": "read the operands as lists of digests and check them", "t": "read in text mode, which is the default", "w": "with -c, warn about lines that are not a digest"}, Notes: []string{"MD5 is broken for anything security-related; this is for comparing files."}},
+	"mkdir":     {Summary: "Create directories.", Operands: "DIRECTORY...", Options: map[string]string{"m": "set the mode of the new directory", "p": "create missing parents, and do not fail if it exists", "v": "print a line per directory created"}},
+	"mktemp":    {Summary: "Create a temporary file or directory and print its name.", Operands: "[TEMPLATE]", Options: map[string]string{"d": "create a directory rather than a file", "q": "say nothing when it cannot", "u": "print a name without creating anything"}, Notes: []string{"-u is unsafe by nature: the name it prints is not reserved."}},
+	"mv":        {Summary: "Move or rename files.", Operands: "SOURCE... DEST", Options: map[string]string{"f": "do not ask before replacing an existing file"}},
+	"nl":        {Summary: "Number the lines of each file.", Operands: "[FILE]...", Options: map[string]string{"b": "which lines to number: a for all, t for the non-empty ones, n for none"}},
+	"paste":     {Summary: "Join corresponding lines of files side by side.", Operands: "[FILE]...", Options: map[string]string{"s": "paste each file as one line rather than in parallel", "d": "use these characters as separators in turn instead of tab"}},
+	"pgrep":     {Summary: "Find processes by name.", Operands: "PATTERN", Options: map[string]string{"l": "print the name beside the process id", "x": "match the whole name rather than part of it"}},
+	"pkill":     {Summary: "Signal processes by name.", Operands: "PATTERN", Options: map[string]string{"x": "match the whole name rather than part of it"}},
+	"posixpath": {Summary: "Print the shell's spelling of a host path.", Operands: "PATH...", Notes: []string{"The inverse of winpath. See docs/design/windows-path-model.md."}},
+	"printenv":  {Summary: "Print environment variables.", Operands: "[NAME]..."},
+	"printf":    {Summary: "Format and print arguments.", Operands: "FORMAT [ARG]...", Notes: []string{"Conversions: %s %d %i %u %o %x %X %c %b %q %% and \\ escapes.", "The format is reused until the arguments run out, as POSIX requires."}},
+	"ps":        {Summary: "Report the processes running now."},
+	"pwd":       {Summary: "Print the working directory.", Options: map[string]string{"L": "print it as the shell remembers it, symlinks and all", "P": "resolve every symlink first"}},
+	"readlink":  {Summary: "Print what a symbolic link points at.", Operands: "FILE...", Options: map[string]string{"n": "no trailing newline"}},
+	"realpath":  {Summary: "Resolve a path to an absolute one with no symlinks.", Operands: "FILE..."},
+	"rev":       {Summary: "Reverse the characters of every line.", Operands: "[FILE]..."},
+	"rm":        {Summary: "Remove files and directories.", Operands: "FILE...", Options: map[string]string{"f": "do not complain about what is not there", "r": "remove directories and their contents"}},
+	"rmdir":     {Summary: "Remove empty directories.", Operands: "DIRECTORY...", Options: map[string]string{"p": "remove each parent that becomes empty too", "v": "print a line per directory removed"}},
+	"sed":       {Summary: "Edit a stream of text by script.", Operands: "SCRIPT [FILE]..."},
+	"seq":       {Summary: "Print a sequence of numbers.", Operands: "[FIRST [INCREMENT]] LAST"},
+	"sha256sum": {Summary: "Print or check SHA-256 digests.", Operands: "[FILE]...", Options: map[string]string{"b": "read in binary mode, and mark it with a * in the output", "c": "read the operands as lists of digests and check them", "t": "read in text mode, which is the default", "w": "with -c, warn about lines that are not a digest"}},
+	"sleep":     {Summary: "Wait for a while.", Operands: "SECONDS"},
+	"sort":      {Summary: "Sort lines of text.", Operands: "[FILE]...", Options: map[string]string{"n": "compare as numbers rather than as text", "r": "reverse the result", "u": "print only the first of an equal run", "f": "fold case when comparing", "b": "ignore leading blanks", "k": "sort on this key rather than the whole line", "t": "use this character as the field separator"}},
+	"split":     {Summary: "Split a file into pieces.", Operands: "[FILE [PREFIX]]", Options: map[string]string{"l": "put this many lines in each piece"}},
+	"stat":      {Summary: "Report what the filesystem knows about a file.", Operands: "FILE...", Options: map[string]string{"c": "print in this format rather than the default one"}},
+	"su":        {Summary: "Run a shell with administrator rights.", Operands: "[root]", Options: map[string]string{"c": "run this command in the elevated shell instead of an interactive one", "s": "use this shell rather than nemosh", "t": "test whether elevation would work, and report it; implies -W", "W": "wait for the elevated shell to finish", "N": "use this nemosh, which is the default and cannot be combined with -s"}, Notes: []string{"The only user it will become is root, which on Windows means an elevated session.", "A pipe or redirection around su cannot reach the elevated shell: Windows cannot", "pass handles across the elevation boundary. Use -c and redirect inside it."}},
+	"tac":       {Summary: "Print the lines of each file in reverse order.", Operands: "[FILE]..."},
+	"tail":      {Summary: "Print the end of each file.", Operands: "[FILE]...", Options: map[string]string{"n": "print this many lines instead of 10", "c": "print this many bytes instead"}, Notes: []string{"-f is not implemented; `tail -f` is refused rather than quietly finishing."}},
+	"tee":       {Summary: "Copy standard input to each file and to standard output.", Operands: "[FILE]...", Options: map[string]string{"a": "append to the files rather than truncating them"}},
+	"touch":     {Summary: "Set a file's timestamps, creating it if it is absent.", Operands: "FILE...", Options: map[string]string{"c": "do not create anything that is not already there"}},
+	"tr":        {Summary: "Translate, squeeze or delete characters.", Operands: "SET1 [SET2]", Options: map[string]string{"d": "delete the characters in SET1", "s": "squeeze each repeated run down to one character", "c": "act on the complement of SET1"}},
+	"true":      {Summary: "Do nothing and succeed."},
+	"uname":     {Summary: "Print information about the system.", Options: map[string]string{"a": "print everything below", "i": "the hardware platform", "m": "the machine's hardware name", "n": "the network node name", "o": "the operating system", "p": "the processor type", "r": "the release", "s": "the kernel name, which is what it prints with no options", "v": "the version"}},
+	"uniq":      {Summary: "Report or omit repeated adjacent lines.", Operands: "[INPUT [OUTPUT]]", Options: map[string]string{"c": "prefix each line with how many times it repeated", "d": "print only the lines that repeated", "u": "print only the lines that did not", "i": "compare without regard to case"}, Notes: []string{"Only *adjacent* duplicates, so the input usually wants sorting first."}},
+	"wc":        {Summary: "Count lines, words and bytes.", Operands: "[FILE]...", Options: map[string]string{"c": "count bytes", "l": "count lines", "w": "count words", "m": "count characters, which differs from -c outside ASCII", "L": "print the length of the longest line"}},
+	"whoami":    {Summary: "Print the current user's name."},
+	"winpath":   {Summary: "Print the host's spelling of a shell path.", Operands: "PATH...", Notes: []string{"The inverse of posixpath. See docs/design/windows-path-model.md."}},
+	"xargs":     {Summary: "Build and run command lines from standard input.", Operands: "[COMMAND [ARG]...]", Options: map[string]string{"0": "input is separated by NUL, which is what pairs with `find -print0`", "r": "do not run the command at all if the input is empty", "t": "print each command line before running it", "n": "pass at most this many arguments per run", "I": "replace this string in the command with one input line per run"}, Notes: []string{"-P is not implemented; parallel runs are refused rather than run one at a time."}},
+	"xxd":       {Summary: "Make a hex dump.", Operands: "[FILE]", Options: map[string]string{"p": "plain dump: hex only, no offsets and no text column"}},
+	"yes":       {Summary: "Print a string over and over until killed.", Operands: "[STRING]"},
+	"test":      {Summary: "Evaluate a conditional expression.", Operands: "EXPRESSION", Notes: []string{"test does not answer --help, because an argument is data: `test --help` asks", "whether the string --help is non-empty, and it is."}},
+	"[":         {Summary: "Evaluate a conditional expression; the last argument must be ].", Operands: "EXPRESSION ]"},
+}
+
+// valuePlaceholders name what an option's argument is, keyed by command and letter.
+// Without these the synopsis would read `-k VALUE`, which says nothing.
+var valuePlaceholders = map[string]string{
+	"base64w": "COLUMN",
+	"cutb":    "LIST",
+	"cutc":    "LIST",
+	"cutd":    "DELIM",
+	"cutf":    "LIST",
+	"dated":   "DATESTRING",
+	"grepm":   "COUNT",
+	"headn":   "LINES",
+	"headc":   "BYTES",
+	"mkdirm":  "MODE",
+	"nlb":     "STYLE",
+	"pasted":  "DELIMS",
+	"sortk":   "KEYDEF",
+	"sortt":   "SEP",
+	"statc":   "FORMAT",
+	"splitl":  "LINES",
+	"suc":     "COMMAND",
+	"sus":     "SHELL",
+	"tailn":   "LINES",
+	"tailc":   "BYTES",
+	"xargsn":  "COUNT",
+	"xargsI":  "REPLACE",
+}

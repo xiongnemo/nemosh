@@ -5,6 +5,13 @@ package capability
 // bound to behaviour by capability_test.go. A row that overstates what an applet
 // takes fails there; so does one that understates it.
 //
+// ValueShort had been understated on five rows -- cut, date, head, mkdir and su --
+// which is not cosmetic: it is what completion reads to know that the word after
+// `-d` is a delimiter rather than a file, so Tab was offering directory listings
+// after `head -n` and after `su -c`. Measured, all five take the value as the next
+// word. Found by the usage test next door rather than by capability_test.go, which
+// binds Short to behaviour and does not yet bind ValueShort.
+//
 // Directory is claimed only where a regular file could never have been meant:
 // `cd notes.txt`, `mkdir notes.txt` and `rmdir notes.txt` all fail outright.
 // Everything else is AnyPath, including commands that take no operand at all --
@@ -19,8 +26,8 @@ var commands = []Command{
 	{Name: "cmp", Short: "sl", Operand: AnyPath},
 	{Name: "comm", Short: "123", Operand: AnyPath},
 	{Name: "cp", Short: "rR", Operand: AnyPath},
-	{Name: "cut", Short: "bcdfns", Operand: AnyPath},
-	{Name: "date", Short: "du", Operand: AnyPath},
+	{Name: "cut", Short: "bcdfns", ValueShort: "bcdf", Operand: AnyPath},
+	{Name: "date", Short: "du", ValueShort: "d", Operand: AnyPath},
 	{Name: "dirname", Operand: AnyPath},
 	{Name: "echo", Short: "ne", Operand: AnyPath},
 	{Name: "env", Short: "i", Operand: AnyPath},
@@ -28,11 +35,11 @@ var commands = []Command{
 	{Name: "expr", Operand: AnyPath},
 	{Name: "find", Operand: AnyPath},
 	{Name: "grep", Short: "invrRlcqwxFoshHEm", ValueShort: "m", Long: []string{"color"}, Operand: AnyPath},
-	{Name: "head", Short: "nc", Operand: AnyPath},
+	{Name: "head", Short: "nc", ValueShort: "nc", Operand: AnyPath},
 	{Name: "id", Short: "ugGn", Operand: AnyPath},
 	{Name: "ln", Short: "s", Operand: AnyPath},
 	{Name: "ls", Short: "ahl1", Long: []string{"color"}, Operand: AnyPath},
-	{Name: "mkdir", Short: "mpv", Operand: Directory},
+	{Name: "mkdir", Short: "mpv", ValueShort: "m", Operand: Directory},
 	{Name: "mktemp", Short: "dqu", Operand: AnyPath},
 	{Name: "mv", Short: "f", Operand: AnyPath},
 	{Name: "nl", Short: "b", ValueShort: "b", Operand: AnyPath},
@@ -60,7 +67,7 @@ var commands = []Command{
 	// su's operand is a user name rather than a path, and the only name it takes
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,
 	// and there is no kind for "one fixed word".
-	{Name: "su", Short: "cstWN", Operand: AnyPath},
+	{Name: "su", Short: "cstWN", ValueShort: "cs", Operand: AnyPath},
 	{Name: "tac", Operand: AnyPath},
 	{Name: "tail", Short: "nc", ValueShort: "nc", Operand: AnyPath},
 	{Name: "test", Operand: AnyPath},
