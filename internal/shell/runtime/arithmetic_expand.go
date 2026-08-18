@@ -27,6 +27,17 @@ import "strings"
 // token is, and rewriting anything but the references would be this function
 // guessing at that.
 func (r Runtime) expandArithmeticText(text string, savedStatus int) string {
+	return r.expandEmbeddedParameters(text, savedStatus)
+}
+
+// expandEmbeddedParameters replaces each parameter reference in a piece of text with
+// its value, leaving everything else alone.
+//
+// Shared by arithmetic and by the word of a parameter operator, because they need the
+// same thing: `$(( $i + 1 ))` and `${x:-${y}}` are both text with references in it,
+// and the operand path used to look the whole word up as a variable name -- so
+// `${x:-${y}}` asked for a variable called `{y}` and found nothing.
+func (r Runtime) expandEmbeddedParameters(text string, savedStatus int) string {
 	if !strings.ContainsRune(text, '$') {
 		return text
 	}

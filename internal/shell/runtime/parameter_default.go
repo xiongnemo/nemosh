@@ -212,8 +212,14 @@ func (r Runtime) lookupParameter(name string, savedStatus int) (string, bool) {
 }
 
 func (r Runtime) expandScalarParameterText(text string, savedStatus int) string {
-	if !strings.HasPrefix(text, "$") || len(text) == 1 {
+	if !strings.ContainsRune(text, '$') {
 		return text
+	}
+	if !strings.HasPrefix(text, "$") || len(text) == 1 {
+		// A reference somewhere other than the start: `${x:-pre${y}post}`. Returning
+		// the text unchanged here is what left the inner reference sitting in the
+		// output as its own characters.
+		return r.expandEmbeddedParameters(text, savedStatus)
 	}
 	switch text {
 	case "$0":
@@ -234,7 +240,13 @@ func (r Runtime) expandScalarParameterText(text string, savedStatus int) string 
 		}
 		return ""
 	}
-	return r.vars[strings.TrimPrefix(text, "$")]
+	if isVariableName(strings.TrimPrefix(text, "$")) {
+		return r.vars[strings.TrimPrefix(text, "$")]
+	}
+	// Anything else is text with references in it -- `${y}`, `pre$y post`, a nested
+	// default. Looking the whole thing up as a variable name is what made
+	// `${x:-${y}}` produce a stray brace. See expandEmbeddedParameters.
+	return r.expandEmbeddedParameters(text, savedStatus)
 }
 
 func isBareParameterReference(body string) bool {
