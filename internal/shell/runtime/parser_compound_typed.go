@@ -11,6 +11,16 @@ func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int
 			if err != nil {
 				return nil, err
 			}
+			if span.suffix != "" {
+				// A compound with a redirection or a pipe after it is exactly a brace
+				// group holding that compound: same scope, same redirects, same
+				// behaviour as a pipeline stage. Reusing the group rather than adding
+				// a second thing that carries redirects is what keeps the two from
+				// disagreeing -- `{ ...; } < file` already worked.
+				if node, err = wrapCompoundWithSuffix(node, span.suffix, budget, depth); err != nil {
+					return nil, err
+				}
+			}
 			if span.background {
 				node = backgroundNode{value: node}
 			}
@@ -186,4 +196,24 @@ func parseCaseAlternatives(pattern string, budget *parseBudget, depth int) ([]wo
 		patterns = append(patterns, typed)
 	}
 	return patterns, nil
+}
+
+// wrapCompoundWithSuffix turns `while ...; done < file` into the brace group it is
+// equivalent to.
+//
+// The suffix is parsed by handing the group's own machinery a line it already knows how
+// to read: `{ compound; } suffix` cannot be built as text without re-quoting, so the
+// group is built directly and only the suffix is parsed here.
+func wrapCompoundWithSuffix(node programNode, suffix string, budget *parseBudget, depth int) (programNode, error) {
+	tokens, err := scanShellTokensWithBudget(suffix, budget, depth)
+	if err != nil {
+		return nil, err
+	}
+	operations, err := parseRedirectsOnly(tokens)
+	if err != nil {
+		return nil, err
+	}
+	group := braceGroup{body: Script{program: []programNode{node}}, redirects: operations}
+	item := listItem{value: andOr{pipelines: []pipeline{{commands: []commandNode{group}}}}}
+	return listNode{value: list{items: []listItem{item}}}, nil
 }

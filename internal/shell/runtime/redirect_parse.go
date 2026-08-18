@@ -54,6 +54,17 @@ type redirectOperation struct {
 }
 
 func parseRedirects(tokens []shellToken) ([]shellToken, []redirectOperation, error) {
+	command, operations, err := parseRedirectsAllowingNoCommand(tokens)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(command) == 0 {
+		return nil, nil, errors.New("empty command after redirection")
+	}
+	return command, operations, nil
+}
+
+func parseRedirectsAllowingNoCommand(tokens []shellToken) ([]shellToken, []redirectOperation, error) {
 	return parseRedirectsWithBudget(tokens, nil)
 }
 
@@ -109,10 +120,24 @@ func parseRedirectsWithBudget(tokens []shellToken, budget *parseBudget) ([]shell
 		}
 		operations = append(operations, operation)
 	}
-	if len(command) == 0 {
-		return nil, nil, errors.New("empty command after redirection")
-	}
 	return command, operations, nil
+}
+
+// parseRedirectsOnly reads redirections with no command in front of them.
+//
+// The one caller is a compound with a redirection after its closer -- `done < file` --
+// where the redirections belong to the compound and there is no command word at all.
+// Sharing the scan rather than writing a second one is what keeps `done < file` and
+// `cat < file` agreeing about what a redirection is.
+func parseRedirectsOnly(tokens []shellToken) ([]redirectOperation, error) {
+	command, operations, err := parseRedirectsAllowingNoCommand(tokens)
+	if err != nil {
+		return nil, err
+	}
+	if len(command) > 0 {
+		return nil, errors.New("unexpected word after a redirection")
+	}
+	return operations, nil
 }
 
 func parseRedirectToken(value string) (redirectOperation, bool, error) {

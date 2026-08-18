@@ -37,7 +37,13 @@ func requireCaseBoundary(stack []compoundFrame, line string) error {
 }
 
 func caseCloserOrContinuation(line string) bool {
-	return line == "esac" || strings.HasPrefix(line, "esac &&") || strings.HasPrefix(line, "esac ||") || strings.HasPrefix(line, "esac |")
+	if line == "esac" || strings.HasPrefix(line, "esac &&") || strings.HasPrefix(line, "esac ||") || strings.HasPrefix(line, "esac |") {
+		return true
+	}
+	// `esac > file`: a closer with a redirection is still a closer, and this check runs
+	// before the one that recognises it.
+	closer, _, ok := splitCompoundCloser(line)
+	return ok && closer == "esac"
 }
 
 func casePattern(line string) (string, bool) {
