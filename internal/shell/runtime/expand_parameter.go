@@ -44,6 +44,12 @@ func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedSt
 		if values, ok := r.expandArrayParameter(ctx, text[2:len(text)-1]); ok {
 			return values
 		}
+		// An operator applied to a list produces fields too, and means something
+		// different from the same operator applied to a joined string: `${@:2:2}` is
+		// two parameters, not a substring of them. See parameter_list.go.
+		if values, ok := r.expandListOperator(ctx, text[2:len(text)-1], savedStatus); ok {
+			return values
+		}
 		expanded, err := r.expandBracedParameter(ctx, text[2:len(text)-1], savedStatus)
 		if err != nil {
 			r.reportExpansionError(err)

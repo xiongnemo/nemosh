@@ -303,26 +303,6 @@ func arrayAssignmentSpan(line string, open int, sofar string) (int, bool) {
 	return matchingParenthesis(line, open)
 }
 
-// isArrayAtReference reports whether the text is one of the forms that produces
-// *several* fields rather than a string: `${name[@]}` and `${!name[@]}`.
-//
-// `${#name[@]}` is deliberately not one of them -- it is a count, and a count is
-// one word. Leaving `${!a[@]}` out of this list made it expand to `0` instead of
-// `0 1 2`, because the caller took only the first value.
-func isArrayAtReference(text string) bool {
-	body, ok := strings.CutPrefix(text, "${")
-	if !ok {
-		return false
-	}
-	body, ok = strings.CutSuffix(body, "}")
-	if !ok {
-		return false
-	}
-	body = strings.TrimPrefix(body, "!")
-	reference, ok := parseArrayReference(body)
-	return ok && reference.subscript == "@"
-}
-
 // expandArrayParameter answers the array forms of `${...}`, reporting whether the
 // body was one.
 //
