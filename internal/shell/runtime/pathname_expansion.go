@@ -34,6 +34,15 @@ func (r Runtime) expandPathnames(field string) []string {
 	}
 	matches := []string{base}
 	for _, segment := range segments[fixed:] {
+		// `**` crosses directories, but only when asked: without globstar bash reads
+		// it as an ordinary `*`, and so does this.
+		if segment == "**" && r.options.globStar {
+			matches = r.expandGlobStar(matches)
+			if len(matches) == 0 {
+				return nil
+			}
+			continue
+		}
 		matches = r.expandPathSegment(matches, segment)
 		if len(matches) == 0 {
 			return nil
@@ -70,7 +79,7 @@ func (r Runtime) globChildren(base, segment string) []string {
 		name := entry.Name()
 		// A leading dot is matched only by a pattern that spells one out, which
 		// is what keeps `*` from returning every hidden file.
-		if strings.HasPrefix(name, ".") && !strings.HasPrefix(segment, ".") {
+		if strings.HasPrefix(name, ".") && !strings.HasPrefix(segment, ".") && !r.options.dotGlob {
 			continue
 		}
 		if !r.matchGlobSegment(segment, name) {
@@ -129,3 +138,44 @@ func (r Runtime) matchGlobSegment(segment, name string) bool {
 	}
 	return matchShellPattern(segment, name)
 }
+
+// expandGlobStar answers a `**` segment: each base, and every directory beneath it.
+//
+// Directories only, because `**` is a path segment and what follows it has to be
+// looked up inside something. `**/*.go` is the shape it exists for: the bases become
+// every directory in the tree and the next segment matches files in each.
+//
+// Bounded by globStarDepth. A pattern is not worth an unbounded walk of a filesystem
+// that may be a network drive, and a shell that appears to hang while a user waits
+// for a prompt is worse than one that misses a very deep file.
+func (r Runtime) expandGlobStar(bases []string) []string {
+	matches := append([]string(nil), bases...)
+	frontier := append([]string(nil), bases...)
+	for depth := 0; depth < globStarDepth && len(frontier) > 0; depth++ {
+		var next []string
+		for _, base := range frontier {
+			entries, err := r.readDirectory(base)
+			if err != nil {
+				continue
+			}
+			for _, entry := range entries {
+				if !entry.IsDir() {
+					continue
+				}
+				name := entry.Name()
+				if strings.HasPrefix(name, ".") && !r.options.dotGlob {
+					continue
+				}
+				next = append(next, joinGlobPath(base, name))
+			}
+		}
+		matches = append(matches, next...)
+		frontier = next
+	}
+	return matches
+}
+
+// globStarDepth is how far `**` descends. Deep enough for a source tree -- the
+// deepest path in this repository is six segments -- and shallow enough that a
+// mistaken `**` at the root of a drive does not become a filesystem walk.
+const globStarDepth = 32

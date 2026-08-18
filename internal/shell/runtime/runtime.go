@@ -199,6 +199,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.unset(args[1:])
 	case "pwd":
 		return r.pwd()
+	case "shopt":
+		return r.shoptBuiltin(args[1:])
 	case "declare", "typeset":
 		return r.declareBuiltin(ctx, args[1:])
 	case "read":

@@ -24,6 +24,11 @@ type shellOptions struct {
 	// than elsewhere: NTFS is case-insensitive, so a pattern that fails only
 	// because of case is surprising here in a way it is not on Unix.
 	noCaseGlob bool
+	// The three glob options `shopt` sets. No letters and no `set -o` names,
+	// because bash keeps them on shopt; see builtin_shopt.go.
+	globStar bool
+	nullGlob bool
+	dotGlob  bool
 }
 
 type shellOptionSpec struct {

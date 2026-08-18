@@ -33,8 +33,13 @@ func (r Runtime) expandOneCommandWord(ctx context.Context, item word, savedStatu
 		}
 		matches := r.expandPathnames(field)
 		if len(matches) == 0 {
-			// A pattern matching nothing stays exactly as written.
-			expanded = append(expanded, field)
+			// A pattern matching nothing stays exactly as written, which is POSIX.
+			// `shopt -s nullglob` asks for the other answer -- the field disappears --
+			// which is what makes `for f in *.none` iterate zero times instead of once
+			// over the pattern itself.
+			if !r.options.nullGlob {
+				expanded = append(expanded, field)
+			}
 			continue
 		}
 		expanded = append(expanded, matches...)
