@@ -31,6 +31,9 @@ type caseArmSpan struct {
 	patternIndex int
 	bodyStart    int
 	bodyEnd      int
+	// terminator is `;;`, `;;&` or `;&`, which decides what happens after the body
+	// runs. See caseArmNode.
+	terminator string
 }
 
 type compoundFrame struct {
@@ -89,6 +92,14 @@ func compoundSpans(lines []string) ([]compoundSpan, error) {
 	var spans []compoundSpan
 	for index, line := range lines {
 		baseLine, background := trailingBackground(line)
+		// A case terminator is not a command with a background `&` after it. Two of
+		// the three spellings end in `&`, and stripping it turned `;&` into `;` --
+		// which matched no case below, so the arm never closed and the next arm's
+		// `)` arrived as a statement of its own. `;;&` only worked because the
+		// terminator handed on was the whole line rather than this stripped one.
+		if isCaseTerminator(line) {
+			baseLine, background = line, false
+		}
 		if err := requireCaseBoundary(stack, baseLine); err != nil {
 			return nil, err
 		}
@@ -115,8 +126,8 @@ func compoundSpans(lines []string) ([]compoundSpan, error) {
 			if err := markDo(stack, index); err != nil {
 				return nil, err
 			}
-		case ";;":
-			if err := closeCaseArm(stack, index); err != nil {
+		case ";;", ";;&", ";&":
+			if err := closeCaseArm(stack, index, line); err != nil {
 				return nil, err
 			}
 		case "fi", "done", "esac":

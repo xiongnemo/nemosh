@@ -135,17 +135,24 @@ func TestRuntime_malformedSuffixDoesNotInstallParsedPrefix(t *testing.T) {
 	}
 }
 
-func TestRuntime_rejectsFunctionKeywordWithoutInstalling(t *testing.T) {
+// The `function` keyword used to be refused, and this case asserted the refusal. It is
+// a function definition now, so what it pins is that the keyword *installs* the
+// function -- the same rule, from the other side. See function_keyword_test.go for the
+// three spellings.
+func TestRuntime_installsAFunctionDeclaredWithTheKeyword(t *testing.T) {
 	// Given
-	var stderr bytes.Buffer
-	rt := New(applets.DefaultRegistry, Streams{Stderr: &stderr})
+	var stdout, stderr bytes.Buffer
+	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
 
 	// When
-	status := rt.RunScript(context.Background(), "function f { echo no; }\n")
+	status := rt.RunScript(context.Background(), "function f { echo installed; }\nf\n")
 
 	// Then
-	if status != 2 {
-		t.Fatalf("RunScript() status = %d, want 2", status)
+	if status != 0 {
+		t.Fatalf("RunScript() status = %d, stderr = %q", status, stderr.String())
+	}
+	if stdout.String() != "installed\n" {
+		t.Fatalf("stdout = %q, want the function to have run", stdout.String())
 	}
 }
 

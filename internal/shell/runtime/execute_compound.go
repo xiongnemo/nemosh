@@ -117,14 +117,31 @@ func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatu
 	if len(values) > 0 {
 		value = values[0]
 	}
+	status := 0
+	// runNext is set by a `;&` terminator: the arm below runs without its pattern
+	// being tested at all, which is the whole difference between `;&` and `;;&`.
+	runNext := false
 	for _, arm := range node.arms {
-		if !r.caseArmMatches(ctx, arm, value, savedStatus) {
+		if !runNext && !r.caseArmMatches(ctx, arm, value, savedStatus) {
 			continue
 		}
-		status, control := r.executeProgram(ctx, arm.body, savedStatus)
-		return lineResult{status: status, control: control}
+		bodyStatus, control := r.executeProgram(ctx, arm.body, savedStatus)
+		status = bodyStatus
+		if control != flowNone {
+			return lineResult{status: status, control: control}
+		}
+		switch arm.terminator {
+		case ";;&":
+			// Keep testing the patterns below. Measured: `case a in a) one ;;& a) two ;;`
+			// prints both.
+			runNext = false
+		case ";&":
+			runNext = true
+		default:
+			return lineResult{status: status}
+		}
 	}
-	return lineResult{status: 0}
+	return lineResult{status: status}
 }
 
 // An arm matches when any one of its `|`-separated patterns does. The pattern

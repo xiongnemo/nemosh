@@ -188,20 +188,6 @@ func isCommandBoundary(char byte) bool {
 //     `{ echo $((1+2))}; }` is text and only the second one closes.
 //
 // bash, dash, and busybox ash agree on every case above.
-func braceDelimiterAt(line string, index int, delimiter byte) bool {
-	if line[index] != delimiter {
-		return false
-	}
-	if index+1 != len(line) && !isCommandBoundary(line[index+1]) {
-		return false
-	}
-	previous, found := previousNonBlank(line, index)
-	if !found || isCommandSeparator(previous) {
-		return true
-	}
-	return delimiter == '{' && (previous == ')' || previous == '(' || previous == '{')
-}
-
 // previousNonBlank reports the last character before index that is not a blank,
 // and whether the scan found one before running off the front of the line.
 func previousNonBlank(line string, index int) (byte, bool) {

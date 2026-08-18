@@ -167,7 +167,7 @@ func parseTypedCase(lines []string, spans []compoundSpan, byStart map[int]int, s
 		if err != nil {
 			return nil, err
 		}
-		node.arms = append(node.arms, caseArmNode{patterns: patterns, body: body})
+		node.arms = append(node.arms, caseArmNode{patterns: patterns, body: body, terminator: arm.terminator})
 	}
 	return node, nil
 }

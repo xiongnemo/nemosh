@@ -61,8 +61,19 @@ func splitSequentialSegments(line string) ([]string, error) {
 			continue
 		}
 		segments = append(segments, line[start:index])
+		// `;;&` and `;&` are case-arm terminators, not `;;` or `;` followed by a
+		// background `&`. Read the other way, `case a in a) echo one ;;& ...` put the
+		// `&` at the start of the next segment and the whole line failed.
 		if index+1 < len(line) && line[index+1] == ';' {
-			segments = append(segments, ";;")
+			terminator := ";;"
+			index++
+			if index+1 < len(line) && line[index+1] == '&' {
+				terminator = ";;&"
+				index++
+			}
+			segments = append(segments, terminator)
+		} else if index+1 < len(line) && line[index+1] == '&' {
+			segments = append(segments, ";&")
 			index++
 		}
 		start = index + 1
@@ -125,7 +136,13 @@ func rejectSeparatorMisuse(segments []string) error {
 			continue
 		}
 		trimmed := strings.Trim(segment, logicalLineCutset)
-		if trimmed == "" && segments[index+1] == ";;" {
+		if trimmed == "" && isCaseTerminator(segments[index+1]) {
+			continue
+		}
+		// A case terminator is a segment of its own and ends in `&` for two of the
+		// three spellings. It is not a command left dangling after a background
+		// operator, which is what the check below is for.
+		if isCaseTerminator(trimmed) {
 			continue
 		}
 		if trimmed == "" || endsWithBackgroundOperator(trimmed) {
@@ -142,4 +159,15 @@ func endsWithBackgroundOperator(segment string) bool {
 		return false
 	}
 	return !strings.HasSuffix(segment, "\\&")
+}
+
+// isCaseTerminator reports whether a segment is one of the three ways a case arm can
+// end. `;;&` keeps testing the patterns after it and `;&` runs the next arm without
+// testing; see parser_case.go.
+func isCaseTerminator(segment string) bool {
+	switch segment {
+	case ";;", ";;&", ";&":
+		return true
+	}
+	return false
 }

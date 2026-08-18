@@ -74,6 +74,10 @@ func (caseNode) programNode() {}
 type caseArmNode struct {
 	patterns []word
 	body     []programNode
+	// terminator decides what happens after the body runs: `;;` stops, `;;&` goes on
+	// testing the patterns below, and `;&` runs the next arm's body without testing
+	// it. Measured against bash; see execute_case.go.
+	terminator string
 }
 
 type list struct {

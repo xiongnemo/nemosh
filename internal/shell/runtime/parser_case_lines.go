@@ -39,7 +39,7 @@ func nextCaseLine(stack *[]bool, line string) (string, string) {
 		}
 		return line, ""
 	}
-	if line == ";;" {
+	if isCaseTerminator(line) {
 		if len(*stack) > 0 {
 			(*stack)[len(*stack)-1] = true
 		}

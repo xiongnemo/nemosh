@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"fmt"
-	"strings"
 )
 
 func rejectDeferredSyntax(line string) error {
@@ -96,9 +95,7 @@ func rejectDeferredSyntax(line string) error {
 			return fmt.Errorf("unsupported syntax: %c", char)
 		}
 	}
-	fields := strings.Fields(line)
-	if len(fields) > 0 && fields[0] == "function" {
-		return fmt.Errorf("unsupported syntax: function")
-	}
+	// The `function` keyword used to be refused here. It is a function definition now,
+	// recognised before this scan runs; see parser_function.go.
 	return nil
 }

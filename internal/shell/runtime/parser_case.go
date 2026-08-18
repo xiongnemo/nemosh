@@ -55,8 +55,8 @@ func casePattern(line string) (string, bool) {
 	return strings.TrimPrefix(pattern, "("), true
 }
 
-func closeCaseArm(stack []compoundFrame, index int) error {
-	if err := requireTop(stack, compoundCase, ";;"); err != nil {
+func closeCaseArm(stack []compoundFrame, index int, terminator string) error {
+	if err := requireTop(stack, compoundCase, terminator); err != nil {
 		return err
 	}
 	top := &stack[len(stack)-1]
@@ -67,6 +67,7 @@ func closeCaseArm(stack []compoundFrame, index int) error {
 		patternIndex: top.casePattern,
 		bodyStart:    top.casePattern + 1,
 		bodyEnd:      index,
+		terminator:   terminator,
 	})
 	top.casePatternSet = false
 	return nil
