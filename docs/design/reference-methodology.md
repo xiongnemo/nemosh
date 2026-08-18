@@ -119,3 +119,43 @@ protected expression and none was copied — not that nobody looked.
 `bash` is consulted for interactive conventions its own `bind -q` reports, such
 as the readline key bindings, because those are the conventions users have in
 their fingers.
+
+## Public test suites this project may use
+
+Behaviour is not protected expression, but a test file is source like any other,
+which is the whole reason this document exists. So the question "can we borrow a
+conformance suite" is a licence question, not a behaviour question, and the answer
+differs sharply between the obvious candidates.
+
+Nemosh is Apache-2.0. Inbound-compatible means permissive: Apache-2.0, BSD, ISC,
+MIT. A GPL suite is not usable *as files* no matter how useful it would be.
+
+Each licence below was checked against the project's own licence file or a source
+header on 2026-08-18, not recalled.
+
+| suite | licence | what it is good for |
+| --- | --- | --- |
+| **Oils** `spec/*.test.sh` | Apache-2.0 (`LICENSE.txt`, repo-wide; no separate grant under `spec/`) | The shell language. Thousands of cases, and the format already records *which shells disagree* |
+| **toybox** `tests/*.test` | ISC (`LICENSE`) | The applets — the coreutils surface, which is where 58 of ours live |
+| **FreeBSD** `bin/sh/tests` | BSD-3-Clause (from `bin/sh` headers; the test files carry none of their own) | POSIX `sh` conformance, written by people maintaining a real `sh` |
+
+Not usable, and worth naming so nobody spends an afternoon on them:
+
+- **bash**'s own tests — GPL-3.0.
+- **busybox**'s `testsuite/` — GPL-2.0. Doubly awkward, since busybox-w32 is the
+  primary *behaviour* reference: we may read it to learn what it does and may not
+  copy its test files. That distinction is exactly the one this document draws.
+- **GNU coreutils** `tests/` — GPL-3.0.
+
+Oils is the best fit and it is worth saying why beyond the licence. Its case
+format carries a `## compare_shells: bash dash mksh zsh` header and per-shell
+expected values, because it was built to describe where shells legitimately
+differ. That is the same shape as this repository's `[differential]` table with
+its required `why`. A case imported from there arrives with the knowledge of which
+reference disagrees already attached, which is the expensive half of writing one.
+
+Anything imported must carry attribution in `THIRD-PARTY-NOTICES.md` naming the
+suite, its licence, and the commit it came from, and must be translated into this
+repository's own case format rather than vendored as a runnable script — a
+`spec/*.test.sh` runner would be a second test framework, and the corpus already
+has one.
