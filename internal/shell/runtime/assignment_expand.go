@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -136,8 +135,8 @@ func assignmentTildeWord(item word) word {
 // a plain literal before expansion, and a value that had to be expanded arrives
 // here instead. Both end at shellArrays.setElement, so the two spellings cannot
 // drift apart.
-func (r Runtime) assignArrayElementText(reference arrayReference, value string) int {
-	index, err := strconv.Atoi(reference.subscript)
+func (r Runtime) assignArrayElementText(ctx context.Context, reference arrayReference, value string) int {
+	index, err := r.resolveSubscript(ctx, reference.subscript)
 	if err != nil || index < 0 {
 		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", reference.subscript)
 		return 1

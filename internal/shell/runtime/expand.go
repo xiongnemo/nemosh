@@ -90,7 +90,7 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 				mark(part.text, part.quote, start)
 			}
 		case wordPartParameter:
-			values := r.expandParameterPart(part, savedStatus)
+			values := r.expandParameterPart(ctx, part, savedStatus)
 			// `"${a[@]}"` is one word per element, exactly as `"$@"` is -- which
 			// is the whole reason arrays are worth having, since it is the only
 			// form that keeps an element containing a blank intact.
@@ -127,7 +127,7 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 		case wordPartArithmetic:
 			// Expanded before evaluated: the evaluator's lexer has no `$`. See
 			// arithmetic_expand.go.
-			value, err := r.evaluateArithmetic(r.expandArithmeticText(part.text, savedStatus))
+			value, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, part.text, savedStatus))
 			if err != nil {
 				r.reportExpansionError(err)
 				return nil, nil

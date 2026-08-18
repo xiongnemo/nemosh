@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -224,7 +225,7 @@ func parameterCase(value, operator, pattern string) string {
 //
 // The array forms `${!a[@]}` and `${!a[*]}` are subscripts rather than indirection
 // and are answered before this is reached; see array.go.
-func (r Runtime) expandIndirectParameter(name string, savedStatus int) (string, error) {
+func (r Runtime) expandIndirectParameter(ctx context.Context, name string, savedStatus int) (string, error) {
 	// `${!prefix*}` and `${!prefix@}` are a different question sharing the `!`:
 	// the *names* that begin with prefix, not the value one of them holds. Handled
 	// here because otherwise it would ask for a variable called `HO*` and quietly
@@ -240,7 +241,7 @@ func (r Runtime) expandIndirectParameter(name string, savedStatus int) (string, 
 		// joined form is the closer of the two.
 		return r.namesWithPrefix(prefix), nil
 	}
-	target, set := r.lookupParameter(name, savedStatus)
+	target, set := r.lookupParameter(ctx, name, savedStatus)
 	if !set || target == "" {
 		// bash gives the empty string rather than an error, and a script testing
 		// `${!ref}` for emptiness is asking a reasonable question.
@@ -249,7 +250,7 @@ func (r Runtime) expandIndirectParameter(name string, savedStatus int) (string, 
 	if !isVariableName(target) {
 		return "", fmt.Errorf("%s: invalid variable name", target)
 	}
-	value, _ := r.lookupParameter(target, savedStatus)
+	value, _ := r.lookupParameter(ctx, target, savedStatus)
 	return value, nil
 }
 

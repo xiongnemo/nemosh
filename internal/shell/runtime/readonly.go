@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -40,7 +41,12 @@ func (r Runtime) assignVar(name string, value string) int {
 	// is settled before expansion by applyArrayAssignments; this is the same
 	// destination reached from the other direction.
 	if reference, ok := parseArrayReference(name); ok {
-		return r.assignElementByKind(reference, value)
+		// An element assignment reached through the string path. context.Background
+		// rather than a threaded one: assignVar is called from thirty places, most
+		// with no context, and the only thing the context reaches here is a key
+		// held in a variable -- which needs no I/O. A command substitution in a
+		// subscript is refused either way; see array_subscript.go.
+		return r.assignElementByKind(context.Background(), reference, value)
 	}
 	r.vars[name] = value
 	// `set -a` exports every name an assignment touches, so a variable set

@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -28,16 +29,22 @@ import (
 // expansion machinery and a context this path does not carry, and they are refused
 // below rather than quietly becoming zero, because zero is a valid index and would
 // silently read the wrong element.
-func (r Runtime) resolveSubscript(subscript string) (int, error) {
+func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, error) {
 	text := strings.TrimSpace(subscript)
 	if text == "" {
 		return 0, fmt.Errorf("array subscript: empty")
 	}
 	if inner, ok := unwrapSubscriptParameter(text); ok {
 		text = inner
-	}
-	if strings.ContainsAny(text, "$`") {
-		return 0, fmt.Errorf("array subscript %q: this build evaluates a subscript as arithmetic and cannot expand one", subscript)
+	} else if strings.ContainsAny(text, "$`") {
+		// Anything else with a dollar in it -- `a[$(cmd)]`, `a[${#x}]` -- is expanded
+		// before it is evaluated, the same way arithmetic is. This used to be refused
+		// outright, which was better than reading the wrong element but is not an
+		// answer.
+		text = strings.TrimSpace(r.expandEmbeddedParameters(ctx, text, 0))
+		if text == "" {
+			return 0, fmt.Errorf("array subscript %q: expanded to nothing", subscript)
+		}
 	}
 	value, err := r.evaluateArithmetic(text)
 	if err != nil {
@@ -73,8 +80,8 @@ func unwrapSubscriptParameter(text string) (string, bool) {
 // string is what a bad subscript produces, which is what bash does for one that is
 // merely out of range. The distinction the error above draws still holds where a
 // caller can use it -- the assignment paths report.
-func (r Runtime) subscriptIndex(subscript string) (int, bool) {
-	index, err := r.resolveSubscript(subscript)
+func (r Runtime) subscriptIndex(ctx context.Context, subscript string) (int, bool) {
+	index, err := r.resolveSubscript(ctx, subscript)
 	if err != nil {
 		return 0, false
 	}

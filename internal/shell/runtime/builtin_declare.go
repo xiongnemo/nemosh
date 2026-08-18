@@ -93,7 +93,7 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		if !assigned {
 			return 0
 		}
-		return r.assignElementByKind(reference, value)
+		return r.assignElementByKind(ctx, reference, value)
 	}
 	if !isValidVariableName(name) {
 		fmt.Fprintf(r.streams.Stderr, "declare: %s: not a valid name\n", name)
@@ -134,12 +134,12 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 // the name was declared as. The distinction is the whole point of `declare -A`:
 // without it `m[k]` is an arithmetic subscript and `k` is a variable holding a
 // number.
-func (r Runtime) assignElementByKind(reference arrayReference, value string) int {
+func (r Runtime) assignElementByKind(ctx context.Context, reference arrayReference, value string) int {
 	if r.arrays.isAssociative(reference.name) {
-		r.arrays.setKey(reference.name, r.resolveKey(reference.subscript), value)
+		r.arrays.setKey(reference.name, r.resolveKey(ctx, reference.subscript), value)
 		return 0
 	}
-	return r.assignArrayElementText(reference, value)
+	return r.assignArrayElementText(ctx, reference, value)
 }
 
 // printDeclarations is `declare -p`, and `declare` with no operands.

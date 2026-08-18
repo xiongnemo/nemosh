@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"strconv"
 	"strings"
 )
@@ -122,7 +123,7 @@ func parseArrayReference(text string) (arrayReference, bool) {
 // A scalar answers to `[0]` and to `[@]`, which is bash's rule: every variable is
 // an array of one as far as a subscript is concerned. That is what keeps
 // `${x[0]}` from being an error for an ordinary variable.
-func (r Runtime) elementsFor(reference arrayReference) ([]string, bool) {
+func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]string, bool) {
 	// An associative name is answered by key rather than by index, and `[@]` gives
 	// its values in the order its keys come out in.
 	if r.arrays.isAssociative(reference.name) {
@@ -130,7 +131,7 @@ func (r Runtime) elementsFor(reference arrayReference) ([]string, bool) {
 		case "@", "*":
 			return r.arrays.valuesOf(reference.name), true
 		}
-		value, present := r.arrays.lookupKey(reference.name, r.resolveKey(reference.subscript))
+		value, present := r.arrays.lookupKey(reference.name, r.resolveKey(ctx, reference.subscript))
 		if !present {
 			return nil, true
 		}
@@ -150,7 +151,7 @@ func (r Runtime) elementsFor(reference arrayReference) ([]string, bool) {
 	}
 	// A subscript is an expression, not a literal: `${a[$i]}` and `${a[1+1]}` both
 	// have to resolve. See array_subscript.go for what this used to do instead.
-	index, ok := r.subscriptIndex(reference.subscript)
+	index, ok := r.subscriptIndex(ctx, reference.subscript)
 	if !ok || index >= len(elements) {
 		// Out of range is the empty string, not an error: a script testing
 		// `${a[9]}` for emptiness is asking a reasonable question.
@@ -292,13 +293,13 @@ func isArrayAtReference(text string) bool {
 //	${#a[@]}   how many
 //	${#a[0]}   the length of that element
 //	${!a[@]}   the subscripts
-func (r Runtime) expandArrayParameter(body string) ([]string, bool) {
+func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]string, bool) {
 	if count, ok := strings.CutPrefix(body, "#"); ok {
 		reference, ok := parseArrayReference(count)
 		if !ok {
 			return nil, false
 		}
-		elements, exists := r.elementsFor(reference)
+		elements, exists := r.elementsFor(ctx, reference)
 		if reference.subscript == "@" || reference.subscript == "*" {
 			return []string{strconv.Itoa(len(elements))}, true
 		}
@@ -318,7 +319,7 @@ func (r Runtime) expandArrayParameter(body string) ([]string, bool) {
 	if !ok {
 		return nil, false
 	}
-	elements, _ := r.elementsFor(reference)
+	elements, _ := r.elementsFor(ctx, reference)
 	if reference.subscript == "*" {
 		// Joined into one field. Unquoted, the caller splits it on IFS again --
 		// which is bash's behaviour and the reason `"${a[*]}"` is the form that

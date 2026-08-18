@@ -35,7 +35,7 @@ func (r Runtime) expandHeredocBody(ctx context.Context, body string, savedStatus
 		}
 		end := parameterEnd(body, index+1)
 		if end > index+1 {
-			values := r.expandParameterPart(wordPart{kind: wordPartParameter, text: body[index:end]}, savedStatus)
+			values := r.expandParameterPart(ctx, wordPart{kind: wordPartParameter, text: body[index:end]}, savedStatus)
 			expanded.WriteString(strings.Join(values, " "))
 			index = end
 			continue

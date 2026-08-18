@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,12 +15,12 @@ import (
 // six characters `${x%.txt}` and exited 0. An operator that is not implemented
 // has to say so rather than quietly become data, which is why the default case
 // is an error now instead of a fallthrough.
-func (r Runtime) expandBracedParameter(body string, savedStatus int) (string, error) {
+func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedStatus int) (string, error) {
 	if body == "" {
 		return "", fmt.Errorf("bad substitution: ${}")
 	}
 	if length, ok := strings.CutPrefix(body, "#"); ok && length != "" {
-		return r.expandParameterLength(length, savedStatus)
+		return r.expandParameterLength(ctx, length, savedStatus)
 	}
 	// A body that is a parameter reference and nothing else: a name, a
 	// positional number, or one of the special symbols. `${2}` and `${?}` are
@@ -29,10 +30,10 @@ func (r Runtime) expandBracedParameter(body string, savedStatus int) (string, er
 	// prefix rather than an operator between a name and a word. The array forms
 	// `${!a[@]}` never reach here; see array.go.
 	if indirect, ok := strings.CutPrefix(body, "!"); ok && indirect != "" {
-		return r.expandIndirectParameter(indirect, savedStatus)
+		return r.expandIndirectParameter(ctx, indirect, savedStatus)
 	}
 	if isBareParameterReference(body) {
-		value, set := r.lookupParameter(body, savedStatus)
+		value, set := r.lookupParameter(ctx, body, savedStatus)
 		if !set {
 			r.reportUnsetParameter(body)
 		}
@@ -42,24 +43,24 @@ func (r Runtime) expandBracedParameter(body string, savedStatus int) (string, er
 	if !ok {
 		return "", fmt.Errorf("bad substitution: ${%s}", body)
 	}
-	value, set := r.lookupParameter(name, savedStatus)
+	value, set := r.lookupParameter(ctx, name, savedStatus)
 	switch operator {
 	case "-", ":-", "=", ":=", "+", ":+", "?", ":?":
-		return r.applyDefaultOperator(name, operator, word, value, set, savedStatus)
+		return r.applyDefaultOperator(ctx, name, operator, word, value, set, savedStatus)
 	case ":":
 		return r.parameterSubstring(value, word)
 	case "/", "//", "/#", "/%":
-		return parameterReplace(value, operator, r.expandScalarParameterText(word, savedStatus)), nil
+		return parameterReplace(value, operator, r.expandScalarParameterText(ctx, word, savedStatus)), nil
 	case "^", "^^", ",", ",,":
-		return parameterCase(value, operator, r.expandScalarParameterText(word, savedStatus)), nil
+		return parameterCase(value, operator, r.expandScalarParameterText(ctx, word, savedStatus)), nil
 	default:
-		return trimParameter(operator, value, r.expandScalarParameterText(word, savedStatus)), nil
+		return trimParameter(operator, value, r.expandScalarParameterText(ctx, word, savedStatus)), nil
 	}
 }
 
 // The colon forms treat an empty value as absent; the bare forms only care
 // whether the parameter is set at all.
-func (r Runtime) applyDefaultOperator(name, operator, word, value string, set bool, savedStatus int) (string, error) {
+func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word, value string, set bool, savedStatus int) (string, error) {
 	missing := !set
 	if strings.HasPrefix(operator, ":") {
 		missing = !set || value == ""
@@ -69,12 +70,12 @@ func (r Runtime) applyDefaultOperator(name, operator, word, value string, set bo
 		if missing {
 			return "", nil
 		}
-		return r.expandScalarParameterText(word, savedStatus), nil
+		return r.expandScalarParameterText(ctx, word, savedStatus), nil
 	case "?":
 		if !missing {
 			return value, nil
 		}
-		message := r.expandScalarParameterText(word, savedStatus)
+		message := r.expandScalarParameterText(ctx, word, savedStatus)
 		if message == "" {
 			message = "parameter not set"
 		}
@@ -85,7 +86,7 @@ func (r Runtime) applyDefaultOperator(name, operator, word, value string, set bo
 		}
 		// `=` assigns as well as substitutes, which is the only expansion that
 		// changes the shell's state.
-		assigned := r.expandScalarParameterText(word, savedStatus)
+		assigned := r.expandScalarParameterText(ctx, word, savedStatus)
 		if !isVariableName(name) {
 			return "", fmt.Errorf("%s: cannot assign in this way", name)
 		}
@@ -94,7 +95,7 @@ func (r Runtime) applyDefaultOperator(name, operator, word, value string, set bo
 		return assigned, nil
 	default:
 		if missing {
-			return r.expandScalarParameterText(word, savedStatus), nil
+			return r.expandScalarParameterText(ctx, word, savedStatus), nil
 		}
 		return value, nil
 	}
@@ -150,14 +151,14 @@ func trimPatternSuffix(value, pattern string, longest bool) string {
 	return value[:best]
 }
 
-func (r Runtime) expandParameterLength(name string, savedStatus int) (string, error) {
+func (r Runtime) expandParameterLength(ctx context.Context, name string, savedStatus int) (string, error) {
 	if !isVariableName(name) && name != "@" && name != "*" {
 		return "", fmt.Errorf("bad substitution: ${#%s}", name)
 	}
 	if name == "@" || name == "*" {
 		return strconv.Itoa(len(r.params.values)), nil
 	}
-	value, _ := r.lookupParameter(name, savedStatus)
+	value, _ := r.lookupParameter(ctx, name, savedStatus)
 	return strconv.Itoa(len([]rune(value))), nil
 }
 
@@ -189,7 +190,7 @@ func splitParameterOperator(body string) (string, string, string, bool) {
 // lookupParameter reads a name the way an expansion sees it: a positional
 // parameter by number, a special parameter by symbol, and anything else from
 // the shell variables.
-func (r Runtime) lookupParameter(name string, savedStatus int) (string, bool) {
+func (r Runtime) lookupParameter(ctx context.Context, name string, savedStatus int) (string, bool) {
 	if number, err := strconv.Atoi(name); err == nil && number > 0 {
 		if number <= len(r.params.values) {
 			return r.params.values[number-1], true
@@ -198,7 +199,7 @@ func (r Runtime) lookupParameter(name string, savedStatus int) (string, bool) {
 	}
 	switch name {
 	case "0", "?", "#", "@", "*", "-":
-		return r.expandScalarParameterText("$"+name, savedStatus), true
+		return r.expandScalarParameterText(ctx, "$"+name, savedStatus), true
 	}
 	if value, set := r.vars[name]; set {
 		return value, true
@@ -211,7 +212,7 @@ func (r Runtime) lookupParameter(name string, savedStatus int) (string, bool) {
 	return "", false
 }
 
-func (r Runtime) expandScalarParameterText(text string, savedStatus int) string {
+func (r Runtime) expandScalarParameterText(ctx context.Context, text string, savedStatus int) string {
 	if !strings.ContainsRune(text, '$') {
 		return text
 	}
@@ -219,7 +220,7 @@ func (r Runtime) expandScalarParameterText(text string, savedStatus int) string 
 		// A reference somewhere other than the start: `${x:-pre${y}post}`. Returning
 		// the text unchanged here is what left the inner reference sitting in the
 		// output as its own characters.
-		return r.expandEmbeddedParameters(text, savedStatus)
+		return r.expandEmbeddedParameters(ctx, text, savedStatus)
 	}
 	switch text {
 	case "$0":
@@ -246,7 +247,7 @@ func (r Runtime) expandScalarParameterText(text string, savedStatus int) string 
 	// Anything else is text with references in it -- `${y}`, `pre$y post`, a nested
 	// default. Looking the whole thing up as a variable name is what made
 	// `${x:-${y}}` produce a stray brace. See expandEmbeddedParameters.
-	return r.expandEmbeddedParameters(text, savedStatus)
+	return r.expandEmbeddedParameters(ctx, text, savedStatus)
 }
 
 func isBareParameterReference(body string) bool {

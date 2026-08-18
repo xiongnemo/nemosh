@@ -96,10 +96,10 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 	if !assignment.list {
 		values := r.expandWord(ctx, assignment.value, savedStatus)
 		if r.arrays.isAssociative(assignment.name) {
-			r.arrays.setKey(assignment.name, r.resolveKey(assignment.subscript), strings.Join(values, " "))
+			r.arrays.setKey(assignment.name, r.resolveKey(ctx, assignment.subscript), strings.Join(values, " "))
 			return
 		}
-		index, err := r.resolveSubscript(assignment.subscript)
+		index, err := r.resolveSubscript(ctx, assignment.subscript)
 		if err != nil {
 			fmt.Fprintln(r.streams.Stderr, err)
 			return

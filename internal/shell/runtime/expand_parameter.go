@@ -13,7 +13,7 @@ import (
 // file-size ceiling. The field-splitting half stays there; this is the half that
 // turns one reference into a value.
 
-func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
+func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedStatus int) []string {
 	text := part.text
 	switch text {
 	case "$0":
@@ -41,10 +41,10 @@ func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
 		// An array reference produces fields rather than a string, so it is
 		// answered here: expandBracedParameter returns one value and cannot say
 		// "three words".
-		if values, ok := r.expandArrayParameter(text[2 : len(text)-1]); ok {
+		if values, ok := r.expandArrayParameter(ctx, text[2:len(text)-1]); ok {
 			return values
 		}
-		expanded, err := r.expandBracedParameter(text[2:len(text)-1], savedStatus)
+		expanded, err := r.expandBracedParameter(ctx, text[2:len(text)-1], savedStatus)
 		if err != nil {
 			r.reportExpansionError(err)
 			return []string{""}

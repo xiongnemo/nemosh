@@ -73,7 +73,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 	r.loops.enter()
 	defer r.loops.leave()
 	if node.arith.initialize != "" {
-		if _, err := r.evaluateArithmetic(r.expandArithmeticText(node.arith.initialize, savedStatus)); err != nil {
+		if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.initialize, savedStatus)); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
 			return lineResult{status: 1}
 		}
@@ -83,7 +83,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
-		keepGoing, err := r.arithmeticLoopCondition(r.expandArithmeticText(node.arith.condition, savedStatus))
+		keepGoing, err := r.arithmeticLoopCondition(r.expandArithmeticText(ctx, node.arith.condition, savedStatus))
 		if err != nil {
 			fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
 			return lineResult{status: 1}
@@ -112,7 +112,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 			return lineResult{status: status, control: control}
 		}
 		if node.arith.step != "" {
-			if _, err := r.evaluateArithmetic(r.expandArithmeticText(node.arith.step, savedStatus)); err != nil {
+			if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.step, savedStatus)); err != nil {
 				fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
 				return lineResult{status: 1}
 			}

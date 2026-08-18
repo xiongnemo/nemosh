@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"sort"
 	"strings"
 )
@@ -118,10 +119,10 @@ func (a *shellArrays) associativeNames() []string {
 // are still unwrapped, because `m[$key]` is how a key held in a variable is written --
 // the same limited unwrapping the indexed side does, and with the same gap for a
 // subscript needing full expansion.
-func (r Runtime) resolveKey(subscript string) string {
+func (r Runtime) resolveKey(ctx context.Context, subscript string) string {
 	text := strings.TrimSpace(subscript)
 	if inner, ok := unwrapSubscriptParameter(text); ok {
-		value, _ := r.lookupParameter(inner, 0)
+		value, _ := r.lookupParameter(ctx, inner, 0)
 		return value
 	}
 	// A quoted key -- `m["with space"]` -- keeps its text and loses the quotes, which
