@@ -120,7 +120,9 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			contributed = contributed || produced
 			mark(values[0], part.quote, start)
 		case wordPartArithmetic:
-			value, err := r.evaluateArithmetic(part.text)
+			// Expanded before evaluated: the evaluator's lexer has no `$`. See
+			// arithmetic_expand.go.
+			value, err := r.evaluateArithmetic(r.expandArithmeticText(part.text, savedStatus))
 			if err != nil {
 				r.reportExpansionError(err)
 				return nil, nil

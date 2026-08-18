@@ -2,7 +2,7 @@ package runtime
 
 import (
 	"context"
-	"strconv"
+	"fmt"
 	"strings"
 )
 
@@ -17,8 +17,11 @@ import (
 // arrayAssignment is a parsed `name=(...)`, `name+=(...)` or `name[i]=value`.
 type arrayAssignment struct {
 	name string
-	// index is set for the `a[1]=x` form, and -1 otherwise.
-	index int
+	// subscript is the text between the brackets of the `a[1]=x` form, and empty
+	// otherwise. Kept as text because a subscript is an expression -- `a[1+1]=q`
+	// and `a[$i]=q` both have to work -- and this parse runs before anything is
+	// evaluated. See array_subscript.go.
+	subscript string
 	// append is the `+=` form.
 	append bool
 	// raw is the text between the parentheses, unexpanded. Empty for the
@@ -41,18 +44,17 @@ func parseArrayAssignmentWord(item word) (arrayAssignment, bool) {
 	if !found {
 		return arrayAssignment{}, false
 	}
-	assignment := arrayAssignment{index: -1}
+	assignment := arrayAssignment{}
 	if name, isAppend := strings.CutSuffix(target, "+"); isAppend {
 		assignment.name, assignment.append = name, true
 	} else {
 		assignment.name = target
 	}
 	if reference, ok := parseArrayReference(assignment.name); ok {
-		index, err := strconv.Atoi(reference.subscript)
-		if err != nil || index < 0 {
-			return arrayAssignment{}, false
-		}
-		assignment.name, assignment.index = reference.name, index
+		// Left as text here and resolved when the assignment runs: a subscript is
+		// an expression, and this parse happens before anything is evaluated. See
+		// array_subscript.go.
+		assignment.name, assignment.subscript = reference.name, reference.subscript
 	}
 	if !isValidVariableName(assignment.name) {
 		return arrayAssignment{}, false
@@ -64,7 +66,7 @@ func parseArrayAssignmentWord(item word) (arrayAssignment, bool) {
 	}
 	// `a[1]=x` is an array assignment even without parentheses; a plain `a=x`
 	// is not, and is left to the ordinary scalar path.
-	if assignment.index < 0 {
+	if assignment.subscript == "" {
 		return arrayAssignment{}, false
 	}
 	assignment.value = word{parts: []wordPart{{kind: wordPartLiteral, text: value}}}
@@ -93,7 +95,12 @@ func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, save
 func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, savedStatus int) {
 	if !assignment.list {
 		values := r.expandWord(ctx, assignment.value, savedStatus)
-		r.arrays.setElement(assignment.name, assignment.index, strings.Join(values, " "))
+		index, err := r.resolveSubscript(assignment.subscript)
+		if err != nil {
+			fmt.Fprintln(r.streams.Stderr, err)
+			return
+		}
+		r.arrays.setElement(assignment.name, index, strings.Join(values, " "))
 		r.syncArrayScalar(assignment.name)
 		return
 	}
