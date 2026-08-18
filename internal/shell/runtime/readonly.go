@@ -40,7 +40,7 @@ func (r Runtime) assignVar(name string, value string) int {
 	// is settled before expansion by applyArrayAssignments; this is the same
 	// destination reached from the other direction.
 	if reference, ok := parseArrayReference(name); ok {
-		return r.assignArrayElementText(reference, value)
+		return r.assignElementByKind(reference, value)
 	}
 	r.vars[name] = value
 	// `set -a` exports every name an assignment touches, so a variable set

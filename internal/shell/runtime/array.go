@@ -36,6 +36,9 @@ import (
 // here.
 type shellArrays struct {
 	values map[string][]string
+	// associative holds the `declare -A` names. A separate map because the two kinds
+	// answer different questions; see array_associative.go.
+	associative map[string]*associativeArray
 }
 
 func newShellArrays() *shellArrays { return &shellArrays{values: map[string][]string{}} }
@@ -83,6 +86,12 @@ func (a *shellArrays) clone() *shellArrays {
 	for name, elements := range a.values {
 		copied.values[name] = append([]string(nil), elements...)
 	}
+	if len(a.associative) > 0 {
+		copied.associative = make(map[string]*associativeArray, len(a.associative))
+		for name, array := range a.associative {
+			copied.associative[name] = array.clone()
+		}
+	}
 	return copied
 }
 
@@ -114,6 +123,19 @@ func parseArrayReference(text string) (arrayReference, bool) {
 // an array of one as far as a subscript is concerned. That is what keeps
 // `${x[0]}` from being an error for an ordinary variable.
 func (r Runtime) elementsFor(reference arrayReference) ([]string, bool) {
+	// An associative name is answered by key rather than by index, and `[@]` gives
+	// its values in the order its keys come out in.
+	if r.arrays.isAssociative(reference.name) {
+		switch reference.subscript {
+		case "@", "*":
+			return r.arrays.valuesOf(reference.name), true
+		}
+		value, present := r.arrays.lookupKey(reference.name, r.resolveKey(reference.subscript))
+		if !present {
+			return nil, true
+		}
+		return []string{value}, true
+	}
 	elements, isArray := r.arrays.get(reference.name)
 	if !isArray {
 		value, exists := r.vars[reference.name]
@@ -156,6 +178,9 @@ func isValidVariableName(name string) bool {
 
 // arrayIndices is `${!a[@]}`: the subscripts that exist, as words.
 func (r Runtime) arrayIndices(name string) []string {
+	if r.arrays.isAssociative(name) {
+		return r.arrays.keysOf(name)
+	}
 	elements, ok := r.arrays.get(name)
 	if !ok {
 		if _, exists := r.vars[name]; exists {

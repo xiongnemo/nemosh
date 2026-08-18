@@ -1,13 +1,11 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"strconv"
-	"sync"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -90,33 +88,6 @@ func New(registry applets.Registry, streams Streams) Runtime {
 
 func NewRuntime(registry applets.Registry, streams Streams) (Runtime, error) {
 	return NewRuntimeWithState(registry, streams, hostState())
-}
-
-func fillStreams(streams Streams) Streams {
-	if streams.Stdin == nil {
-		streams.Stdin = bytes.NewReader(nil)
-	}
-	if streams.Stdout == nil {
-		streams.Stdout = io.Discard
-	}
-	if streams.Stderr == nil {
-		streams.Stderr = io.Discard
-	}
-	mutex := &sync.Mutex{}
-	streams.Stdout = synchronizedWriter{mutex: mutex, writer: streams.Stdout}
-	streams.Stderr = synchronizedWriter{mutex: mutex, writer: streams.Stderr}
-	return streams
-}
-
-type synchronizedWriter struct {
-	mutex  *sync.Mutex
-	writer io.Writer
-}
-
-func (w synchronizedWriter) Write(buffer []byte) (int, error) {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
-	return w.writer.Write(buffer)
 }
 
 type lineResult struct {
@@ -228,6 +199,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.unset(args[1:])
 	case "pwd":
 		return r.pwd()
+	case "declare", "typeset":
+		return r.declareBuiltin(ctx, args[1:])
 	case "read":
 		return r.read(ctx, args[1:])
 	case "readonly":

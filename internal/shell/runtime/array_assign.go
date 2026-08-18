@@ -95,6 +95,10 @@ func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, save
 func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, savedStatus int) {
 	if !assignment.list {
 		values := r.expandWord(ctx, assignment.value, savedStatus)
+		if r.arrays.isAssociative(assignment.name) {
+			r.arrays.setKey(assignment.name, r.resolveKey(assignment.subscript), strings.Join(values, " "))
+			return
+		}
 		index, err := r.resolveSubscript(assignment.subscript)
 		if err != nil {
 			fmt.Fprintln(r.streams.Stderr, err)

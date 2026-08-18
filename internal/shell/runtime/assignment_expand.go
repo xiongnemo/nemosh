@@ -46,11 +46,38 @@ func isAssignmentWord(item word) bool {
 	}
 	name, _, found := strings.Cut(first.text, "=")
 	if !found {
-		return false
+		// The `=` may be past a subscript that is itself an expansion: `m[$k]=v`
+		// begins with the literal `m[` and the equals arrives two parts later. Left
+		// unrecognised, the whole word was field split, so a key holding a blank
+		// became two words and the second was run as a command.
+		return isElementAssignmentWord(item)
 	}
 	// `a[0]=x` is an assignment too, and applyArrayAssignments has already taken
 	// the ones it handles; this keeps the rest from being split.
 	return isValidVariableName(name) || isArrayElementTarget(name)
+}
+
+// isElementAssignmentWord reports whether a word is `name[...]=value` whose subscript
+// is not a plain literal.
+//
+// Judged on the literal parts alone: the name and the brackets are always written,
+// only the subscript and the value can be computed. A `]=` in a *quoted* part does not
+// count, because `x='a]=b'` is a command name.
+func isElementAssignmentWord(item word) bool {
+	first := item.parts[0]
+	name, _, found := strings.Cut(first.text, "[")
+	if !found || !isValidVariableName(name) {
+		return false
+	}
+	for _, part := range item.parts[1:] {
+		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {
+			continue
+		}
+		if strings.Contains(part.text, "]=") {
+			return true
+		}
+	}
+	return false
 }
 
 // expandingAssignment returns a Runtime whose expansions are not field split.
