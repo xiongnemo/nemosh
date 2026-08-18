@@ -71,9 +71,14 @@ func TestRuntime_stopsWithTheGivenMessage_whenAQuestionOperatorFindsNothingSet(t
 
 func TestRuntime_refusesAnOperatorItDoesNotImplement(t *testing.T) {
 	// An unrecognised operator used to expand to its own literal text and exit
-	// 0, so `${x//a/b}` silently became data.
+	// 0, so an operator this shell did not have silently became data.
+	//
+	// The example was `${x//a/b}` until replacement was implemented; it is now one
+	// of bash's `@` transformations, which this build still does not have. The rule
+	// being pinned is not about any particular operator: one that is not
+	// implemented has to say so.
 	// When
-	status, stdout, stderr := runSetScript(t, "x=abc\necho [${x//a/b}]\n")
+	status, stdout, stderr := runSetScript(t, "x=abc\necho [${x@Q}]\n")
 
 	// Then
 	if status != 2 || stdout != "" {

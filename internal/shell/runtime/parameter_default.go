@@ -25,6 +25,12 @@ func (r Runtime) expandBracedParameter(body string, savedStatus int) (string, er
 	// positional number, or one of the special symbols. `${2}` and `${?}` are
 	// the commonest, and reaching the operator split with them would find the
 	// `?` and call it an operator with no name in front of it.
+	// `${!name}` is indirection. Before the operator split, because the `!` is a
+	// prefix rather than an operator between a name and a word. The array forms
+	// `${!a[@]}` never reach here; see array.go.
+	if indirect, ok := strings.CutPrefix(body, "!"); ok && indirect != "" {
+		return r.expandIndirectParameter(indirect, savedStatus)
+	}
 	if isBareParameterReference(body) {
 		value, set := r.lookupParameter(body, savedStatus)
 		if !set {
@@ -40,6 +46,12 @@ func (r Runtime) expandBracedParameter(body string, savedStatus int) (string, er
 	switch operator {
 	case "-", ":-", "=", ":=", "+", ":+", "?", ":?":
 		return r.applyDefaultOperator(name, operator, word, value, set, savedStatus)
+	case ":":
+		return r.parameterSubstring(value, word)
+	case "/", "//", "/#", "/%":
+		return parameterReplace(value, operator, r.expandScalarParameterText(word, savedStatus)), nil
+	case "^", "^^", ",", ",,":
+		return parameterCase(value, operator, r.expandScalarParameterText(word, savedStatus)), nil
 	default:
 		return trimParameter(operator, value, r.expandScalarParameterText(word, savedStatus)), nil
 	}
@@ -154,7 +166,13 @@ func (r Runtime) expandParameterLength(name string, savedStatus int) (string, er
 // read as a name ending in `:` followed by `-`.
 func splitParameterOperator(body string) (string, string, string, bool) {
 	for index := range len(body) {
-		for _, operator := range [...]string{":-", ":=", ":+", ":?", "##", "%%", "-", "=", "+", "?", "#", "%"} {
+		// Longest first at each position, and the `:x` defaults before a bare `:`,
+		// which is what keeps `${x:-2}` a default and `${x: -2}` a substring. The
+		// pairs `//`, `^^` and `,,` likewise precede their single forms.
+		for _, operator := range [...]string{
+			":-", ":=", ":+", ":?", "##", "%%", "//", "/#", "/%", "^^", ",,",
+			":", "-", "=", "+", "?", "#", "%", "/", "^", ",",
+		} {
 			if !strings.HasPrefix(body[index:], operator) {
 				continue
 			}
