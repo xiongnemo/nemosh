@@ -50,12 +50,10 @@ func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, e
 	if err != nil {
 		return 0, fmt.Errorf("array subscript %q: %w", subscript, err)
 	}
-	if value < 0 {
-		// bash counts a negative subscript from the end. Refused here rather than
-		// wrapped to zero, which would read the first element for `${a[-1]}` and
-		// look like an answer.
-		return 0, fmt.Errorf("array subscript %q: negative subscripts are not implemented", subscript)
-	}
+	// A negative subscript is returned as it is and counted from the end by the
+	// caller, which is the only place that knows how long the array is. bash does the
+	// same, and refuses one that reaches past the start rather than clamping it:
+	// `${a[-9]}` on three elements is `bad array subscript`, not the first element.
 	return int(value), nil
 }
 
@@ -80,9 +78,22 @@ func unwrapSubscriptParameter(text string) (string, bool) {
 // string is what a bad subscript produces, which is what bash does for one that is
 // merely out of range. The distinction the error above draws still holds where a
 // caller can use it -- the assignment paths report.
-func (r Runtime) subscriptIndex(ctx context.Context, subscript string) (int, bool) {
+func (r Runtime) subscriptIndex(ctx context.Context, subscript string, length int) (int, bool) {
 	index, err := r.resolveSubscript(ctx, subscript)
 	if err != nil {
+		return 0, false
+	}
+	return countFromEnd(index, length)
+}
+
+// countFromEnd turns a negative subscript into a real one. `${a[-1]}` is the last
+// element; one that reaches past the start is not an element at all.
+func countFromEnd(index, length int) (int, bool) {
+	if index >= 0 {
+		return index, true
+	}
+	index += length
+	if index < 0 {
 		return 0, false
 	}
 	return index, true

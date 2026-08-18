@@ -104,6 +104,16 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 			fmt.Fprintln(r.streams.Stderr, err)
 			return
 		}
+		// A negative subscript counts from the end, so it needs the length the array
+		// has now. Without the check this reached setElement with -1 and panicked --
+		// caught by the guard, which printed a diagnostic instead of a stack trace,
+		// but a diagnostic about an internal error is not the right answer either.
+		existing, _ := r.arrays.get(assignment.name)
+		index, withinRange := countFromEnd(index, len(existing))
+		if !withinRange {
+			fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", assignment.subscript)
+			return
+		}
 		r.arrays.setElement(assignment.name, index, strings.Join(values, " "))
 		r.syncArrayScalar(assignment.name)
 		return

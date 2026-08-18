@@ -37,12 +37,22 @@ import (
 // here.
 type shellArrays struct {
 	values map[string][]string
+	// present is which indices of each name are actually set. An indexed array in
+	// bash is sparse: `a=(p); a[3]=z` has two elements, not four, so `${#a[@]}` is 2
+	// and `${!a[@]}` is `0 3`. Held beside the slice rather than replacing it with a
+	// map, because the slice is what keeps the elements in index order for free.
+	//
+	// Without this `"${a[@]}"` over a sparse array produced phantom empty fields --
+	// `p`, ``, ``, `z` -- and a loop over it ran four times.
+	present map[string]map[int]bool
 	// associative holds the `declare -A` names. A separate map because the two kinds
 	// answer different questions; see array_associative.go.
 	associative map[string]*associativeArray
 }
 
-func newShellArrays() *shellArrays { return &shellArrays{values: map[string][]string{}} }
+func newShellArrays() *shellArrays {
+	return &shellArrays{values: map[string][]string{}, present: map[string]map[int]bool{}}
+}
 
 func (a *shellArrays) get(name string) ([]string, bool) {
 	elements, ok := a.values[name]
@@ -51,10 +61,21 @@ func (a *shellArrays) get(name string) ([]string, bool) {
 
 func (a *shellArrays) set(name string, elements []string) {
 	a.values[name] = append([]string(nil), elements...)
+	delete(a.present, name)
+	for index := range elements {
+		a.mark(name, index)
+	}
+	if len(elements) == 0 {
+		a.mark(name)
+	}
 }
 
 func (a *shellArrays) append(name string, elements []string) {
+	start := len(a.values[name])
 	a.values[name] = append(a.values[name], elements...)
+	for offset := range elements {
+		a.mark(name, start+offset)
+	}
 }
 
 // setElement writes one index, growing the array with empty strings if the index
@@ -67,9 +88,13 @@ func (a *shellArrays) setElement(name string, index int, value string) {
 	}
 	elements[index] = value
 	a.values[name] = elements
+	a.mark(name, index)
 }
 
-func (a *shellArrays) unset(name string) { delete(a.values, name) }
+func (a *shellArrays) unset(name string) {
+	delete(a.values, name)
+	delete(a.present, name)
+}
 
 // clone is what a subshell gets: the parent's arrays are visible inside it and a
 // mutation there does not escape. Measured against bash --
@@ -83,9 +108,18 @@ func (a *shellArrays) unset(name string) { delete(a.values, name) }
 // assignment in a subshell or a pipeline stage a nil map write: `(a=(1 2))` died
 // with a Go stack trace where a shell should have printed nothing at all.
 func (a *shellArrays) clone() *shellArrays {
-	copied := &shellArrays{values: make(map[string][]string, len(a.values))}
+	copied := &shellArrays{
+		values:  make(map[string][]string, len(a.values)),
+		present: make(map[string]map[int]bool, len(a.present)),
+	}
 	for name, elements := range a.values {
 		copied.values[name] = append([]string(nil), elements...)
+	}
+	for name, set := range a.present {
+		copied.present[name] = make(map[int]bool, len(set))
+		for index := range set {
+			copied.present[name][index] = true
+		}
 	}
 	if len(a.associative) > 0 {
 		copied.associative = make(map[string]*associativeArray, len(a.associative))
@@ -147,11 +181,14 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 	}
 	switch reference.subscript {
 	case "@", "*":
+		if isArray {
+			return r.arrays.liveValues(reference.name), true
+		}
 		return elements, true
 	}
 	// A subscript is an expression, not a literal: `${a[$i]}` and `${a[1+1]}` both
 	// have to resolve. See array_subscript.go for what this used to do instead.
-	index, ok := r.subscriptIndex(ctx, reference.subscript)
+	index, ok := r.subscriptIndex(ctx, reference.subscript, len(elements))
 	if !ok || index >= len(elements) {
 		// Out of range is the empty string, not an error: a script testing
 		// `${a[9]}` for emptiness is asking a reasonable question.
@@ -189,8 +226,10 @@ func (r Runtime) arrayIndices(name string) []string {
 		}
 		return nil
 	}
-	indices := make([]string, 0, len(elements))
-	for index := range elements {
+	_ = elements
+	live := r.arrays.liveIndices(name)
+	indices := make([]string, 0, len(live))
+	for _, index := range live {
 		indices = append(indices, strconv.Itoa(index))
 	}
 	return indices

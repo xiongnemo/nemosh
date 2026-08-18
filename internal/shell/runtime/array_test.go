@@ -47,9 +47,16 @@ func TestRuntime_arrays(t *testing.T) {
 		},
 		{name: "assigning one element", script: "a=(one two)\na[1]=TWO\necho ${a[@]}\n", want: "one TWO\n"},
 		{
-			// Past the end grows the array, which is bash's behaviour and what
-			// makes `a[5]=x` leave gaps rather than fail.
-			name: "assigning past the end", script: "a=(one)\na[2]=three\necho ${#a[@]}\n", want: "3\n",
+			// Past the end leaves a gap rather than failing -- but the gap is not an
+			// element. bash counts two here, not three, because an indexed array is
+			// sparse. This case asserted three and its comment claimed bash did the
+			// same; bash had not been asked. See array_sparse_test.go.
+			name: "assigning past the end leaves a gap", script: "a=(one)\na[2]=three\necho ${#a[@]}\n", want: "2\n",
+		},
+		{
+			// The gap is reachable and empty, which is what makes it a gap rather than
+			// an absence.
+			name: "the gap reads as empty", script: "a=(one)\na[2]=three\necho [${a[1]}]\n", want: "[]\n",
 		},
 		{name: "appending", script: "a=(one two)\na+=(three)\necho ${#a[@]}\n", want: "3\n"},
 		{
