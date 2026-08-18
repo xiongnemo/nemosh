@@ -71,6 +71,28 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			}
 			continue
 		}
+		// Inside `$'...'` a backslash escapes, which is the whole difference from a
+		// POSIX single-quoted string. Without this state the scanner read
+		// `$'it\'s'` as a complete `'it\'` followed by an unterminated one and
+		// called the script incomplete. See ansi_quote.go.
+		if scanner.quote() == ansiQuoteMarker {
+			scanner.logical.WriteByte(char)
+			if char == '\\' && index+1 < len(line) {
+				scanner.escaped = true
+				continue
+			}
+			if char == '\'' {
+				scanner.popQuote()
+			}
+			continue
+		}
+		if char == '$' && index+1 < len(line) && line[index+1] == '\'' && scanner.quote() == 0 {
+			scanner.quotes = append(scanner.quotes, ansiQuoteMarker)
+			scanner.logical.WriteByte(char)
+			scanner.logical.WriteByte('\'')
+			index++
+			continue
+		}
 		if char == '\\' {
 			if scanner.quote() != '\'' && index == len(line)-1 {
 				scanner.continued = true
@@ -215,6 +237,12 @@ func (scanner *syntaxScanner) incompleteError() error {
 	}
 	return nil
 }
+
+// ansiQuoteMarker stands for `$'...'` on the quote stack. Not a quote character,
+// because it is not one: it is a state whose closing quote is `'` and in which a
+// backslash escapes. Any non-zero value keeps the rest of the scanner treating the
+// text as quoted, which is what it is.
+const ansiQuoteMarker byte = 1
 
 func (scanner *syntaxScanner) quote() byte {
 	if len(scanner.quotes) == 0 {

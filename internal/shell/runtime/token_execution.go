@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 var (
@@ -233,6 +234,15 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 		if !operation.kind.takesPath() {
 			if operation.kind == redirectHeredoc && operation.expand {
 				operations[index].body = r.expandHeredocBody(ctx, operation.body, savedStatus)
+			}
+			if operation.kind == redirectHereString {
+				// One word, unsplit: `cat <<< $x` with x set to `a b` feeds `a b`,
+				// not `a`. Same exemption an assignment's value gets, for the same
+				// reason -- the operand is a value here, not a list of arguments.
+				values := r.expandingAssignment().expandCommandWord(ctx, operation.operand, savedStatus)
+				// The trailing newline is part of the form: `read v <<< "one two"`
+				// has to see a complete line or it reports end of input.
+				operations[index].body = strings.Join(values, " ") + "\n"
 			}
 			continue
 		}

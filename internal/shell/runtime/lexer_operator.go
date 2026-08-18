@@ -9,6 +9,15 @@ func activeOperator(input string) (tokenKind, int) {
 	if strings.HasPrefix(input, "||") {
 		return tokenOrIf, 2
 	}
+	// `&>file` and `&>>file` send both stdout and stderr, and they have to be
+	// tested before the bare `&`: otherwise `cmd &> log` is a background `cmd`
+	// followed by a redirect of nothing, which is a different program.
+	if strings.HasPrefix(input, "&>>") {
+		return tokenRedirect, 3
+	}
+	if strings.HasPrefix(input, "&>") {
+		return tokenRedirect, 2
+	}
 	if input[0] == '&' {
 		return tokenBackground, 1
 	}
@@ -22,6 +31,9 @@ func activeOperator(input string) (tokenKind, int) {
 }
 
 func redirectTokenWidth(input string) int {
+	if strings.HasPrefix(input, "<<<") {
+		return 3
+	}
 	if strings.HasPrefix(input, "<<-") {
 		return 3
 	}

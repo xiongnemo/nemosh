@@ -18,7 +18,13 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 			err = r.bindInputRedirect(table, operation)
 		case redirectOutput, redirectClobber, redirectReadWrite, redirectAppend:
 			err = r.bindOutputRedirect(table, operation)
-		case redirectHeredoc:
+			// `&>`: stderr goes wherever stdout just went. After the bind rather
+			// than before, because it is descriptor 1 as it now is that 2 has to
+			// follow -- the same reason `2>&1` has to come after `>file`.
+			if err == nil && operation.bothStreams {
+				err = table.dup(2, 1)
+			}
+		case redirectHeredoc, redirectHereString:
 			err = table.bindOwnedReader(operation.target, io.NopCloser(bytes.NewReader([]byte(operation.body))))
 		case redirectDup:
 			err = table.dup(operation.target, operation.source)

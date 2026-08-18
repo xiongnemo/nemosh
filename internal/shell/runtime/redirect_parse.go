@@ -26,6 +26,10 @@ const (
 	redirectReadWrite
 	redirectAppend
 	redirectHeredoc
+	// redirectHereString is `<<<word`: the word, expanded, with one newline after
+	// it. A heredoc whose body is written on the same line, which is what makes
+	// `read v <<< "$x"` the usual way to feed one string to something.
+	redirectHereString
 	redirectDup
 	redirectClose
 )
@@ -40,9 +44,13 @@ type redirectOperation struct {
 	delimiter     string
 	expand        bool
 	stripTabs     bool
-	body          string
-	line          int
-	order         int
+	// bothStreams is `&>`: stderr follows stdout to the same place. Kept as a flag
+	// rather than expanded into two operations so the pair cannot be separated by
+	// ordering, which is the bug `>file 2>&1` written backwards already is.
+	bothStreams bool
+	body        string
+	line        int
+	order       int
 }
 
 func parseRedirects(tokens []shellToken) ([]shellToken, []redirectOperation, error) {
@@ -84,6 +92,11 @@ func parseRedirectsWithBudget(tokens []shellToken, budget *parseBudget) ([]shell
 				operation.body = record.body
 				operation.line = record.line
 				operation.order = record.order
+			case redirectHereString:
+				// The operand is the body rather than a path, so it is kept as a
+				// word and expanded with the rest of the command. Not read here:
+				// `<<< "$x"` has to see the value $x holds when the command runs.
+				operation.operand = parseTypedWord(*tokens[index].parsed)
 			case redirectInput, redirectOutput, redirectClobber, redirectReadWrite, redirectAppend:
 				operation.path = operand
 				operation.operand = parseTypedWord(*tokens[index].parsed)
@@ -125,8 +138,17 @@ func parseRedirectToken(value string) (redirectOperation, bool, error) {
 	if operator == "<" {
 		return redirectOperation{kind: redirectInput, target: target}, true, nil
 	}
+	if operator == "<<<" {
+		return redirectOperation{kind: redirectHereString, target: target}, true, nil
+	}
 	if operator == "<<" || operator == "<<-" {
 		return redirectOperation{kind: redirectHeredoc, target: target, stripTabs: operator == "<<-"}, true, nil
+	}
+	if operator == "&>" {
+		return redirectOperation{kind: redirectOutput, target: 1, bothStreams: true}, true, nil
+	}
+	if operator == "&>>" {
+		return redirectOperation{kind: redirectAppend, target: 1, bothStreams: true}, true, nil
 	}
 	if operator == ">" {
 		return redirectOperation{kind: redirectOutput, target: target}, true, nil

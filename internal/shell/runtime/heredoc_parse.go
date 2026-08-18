@@ -101,6 +101,14 @@ func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHere
 			}
 			continue
 		}
+		// `<<<` is a here-string, not a heredoc: its body is on the same line and
+		// there is no delimiter to go looking for on the following ones. Without
+		// this the scanner read the third `<` as the start of a delimiter, found
+		// nothing usable, and reported the whole script incomplete.
+		if index+2 < len(line) && line[index+2] == '<' {
+			index += 2
+			continue
+		}
 		stripTabs := index+2 < len(line) && line[index+2] == '-'
 		operandStart := index + 2
 		if stripTabs {
