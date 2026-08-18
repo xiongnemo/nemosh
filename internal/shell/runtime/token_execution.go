@@ -207,8 +207,8 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 			return lineResult{status: status}, true
 		}
 		return lineResult{status: status, control: flowReturn}, true
-	case "break":
-		return lineResult{control: flowBreak}, true
+	case "break", "continue":
+		return r.loopControlResult(args[0], args[1:]), true
 	default:
 		return lineResult{control: flowContinue}, true
 	}

@@ -37,6 +37,17 @@ func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 			index++
 			continue
 		}
+		// `x=$(a=(1 2); echo ${a[0]})` -- the parenthesis of an array assignment
+		// is part of a word, not a subshell, so its closing one must not be taken
+		// for the end of the substitution. Without this the scan popped its own
+		// nesting at `2)` and then reported the real `)` as missing. This is the
+		// fifth scanner to need the rule; the other four are named in array.go.
+		if char == '(' && quote == 0 {
+			if end, ok := arrayAssignmentSpan(input, index, input[bodyStart:index]); ok {
+				index = end
+				continue
+			}
+		}
 		if char == ')' && quote == 0 {
 			quotes = quotes[:len(quotes)-1]
 			if len(quotes) == 0 {

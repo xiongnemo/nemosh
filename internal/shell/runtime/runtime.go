@@ -42,6 +42,10 @@ type Runtime struct {
 	// elements into one string cannot represent an element containing the
 	// separator -- which is the case arrays exist for. See array.go.
 	arrays *shellArrays
+	// loops carries the pending `break n` / `continue n` level. Shared by pointer
+	// for the reason loop_levels.go gives: only loops read it, and threading it
+	// through every flowControl signature would touch everything that does not.
+	loops *loopLevels
 	// locals belongs to the function call in progress and is nil outside one,
 	// which is how `local` knows there is nothing to restore to.
 	locals *localScope

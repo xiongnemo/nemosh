@@ -24,6 +24,8 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 	if node.kind == loopFor {
 		return r.executeTypedFor(ctx, node, savedStatus)
 	}
+	r.loops.enter()
+	defer r.loops.leave()
 	status := 0
 	for {
 		condition := r.suppressingErrExit().executeTypedList(ctx, node.condition, savedStatus)
@@ -44,8 +46,17 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 		switch control {
 		case flowNone:
 		case flowContinue:
+			// `continue 2` has to leave this loop and resume the one outside it,
+			// so a level that is not ours is passed up as-is: the parent loop
+			// sees flowContinue and continues, which is exactly the meaning.
+			if !r.loops.consume() {
+				return lineResult{status: 0, control: flowContinue}
+			}
 			status, savedStatus = 0, 0
 		case flowBreak:
+			if !r.loops.consume() {
+				return lineResult{status: 0, control: flowBreak}
+			}
 			return lineResult{status: 0}
 		default:
 			return lineResult{status: status, control: control}
@@ -54,6 +65,8 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 }
 
 func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus int) lineResult {
+	r.loops.enter()
+	defer r.loops.leave()
 	status := 0
 	for _, item := range node.values {
 		if ctx.Err() != nil {
@@ -74,9 +87,15 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 			switch control {
 			case flowNone:
 			case flowContinue:
+				if !r.loops.consume() {
+					return lineResult{status: 0, control: flowContinue}
+				}
 				status, savedStatus = 0, 0
 				continue iteration
 			case flowBreak:
+				if !r.loops.consume() {
+					return lineResult{status: 0, control: flowBreak}
+				}
 				return lineResult{status: 0}
 			default:
 				return lineResult{status: status, control: control}

@@ -67,6 +67,25 @@ func (a *shellArrays) setElement(name string, index int, value string) {
 
 func (a *shellArrays) unset(name string) { delete(a.values, name) }
 
+// clone is what a subshell gets: the parent's arrays are visible inside it and a
+// mutation there does not escape. Measured against bash --
+//
+//	a=(1 2); (echo ${a[0]})   prints 1, so they are inherited
+//	a=(1 2); (a[0]=9); echo ${a[0]}   prints 1, so a write stays inside
+//
+// The elements are copied as well as the map, because appending to an inherited
+// array in a subshell would otherwise write through the shared backing slice into
+// the parent. Leaving this off the snapshot entirely is what made every array
+// assignment in a subshell or a pipeline stage a nil map write: `(a=(1 2))` died
+// with a Go stack trace where a shell should have printed nothing at all.
+func (a *shellArrays) clone() *shellArrays {
+	copied := &shellArrays{values: make(map[string][]string, len(a.values))}
+	for name, elements := range a.values {
+		copied.values[name] = append([]string(nil), elements...)
+	}
+	return copied
+}
+
 // arrayReference is a parsed `name[subscript]`.
 type arrayReference struct {
 	name string
