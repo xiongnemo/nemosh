@@ -109,7 +109,11 @@ func TestParseScript_treatsQuotedAndEscapedGroupCharactersAsWords(t *testing.T) 
 }
 
 func TestParseScript_enforcesSharedDepthAcrossGroups(t *testing.T) {
-	source := strings.Repeat("(", maxParseDepth+1) + "true" + strings.Repeat(")", maxParseDepth+1)
+	// Spaced, because `((` is now an arithmetic command rather than two groups, and
+	// an unspaced run of parentheses is no longer group nesting at all. It is still
+	// safe -- 5,000 of them parse and run without crashing, because the scan that
+	// steps over `((expr))` is iterative -- but it is not what this test is about.
+	source := strings.Repeat("( ", maxParseDepth+1) + "true" + strings.Repeat(" )", maxParseDepth+1)
 	_, err := ParseScript(source)
 	if !errors.Is(err, errParseLimit) {
 		t.Fatalf("ParseScript() error = %v, want errParseLimit", err)

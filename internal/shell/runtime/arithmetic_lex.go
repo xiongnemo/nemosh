@@ -6,6 +6,10 @@ import "strings"
 // two `<`.
 var arithmeticOperators = []string{
 	"<<=", ">>=",
+	// `++` and `--` before `+=` and `-=`, and both before the single characters:
+	// otherwise `i++` lexes as `i`, `+`, `+` and the second plus has no operand,
+	// which is exactly the "expression ended early" it used to report.
+	"++", "--",
 	"<<", ">>", "<=", ">=", "==", "!=", "&&", "||",
 	"+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=",
 	"+", "-", "*", "/", "%", "(", ")", "<", ">", "&", "^", "|", "!", "~", "?", ":", "=",

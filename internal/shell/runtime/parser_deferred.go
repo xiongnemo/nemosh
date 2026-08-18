@@ -67,11 +67,18 @@ func rejectDeferredSyntax(line string) error {
 			continue
 		}
 		if char == '(' {
-			// An array assignment's parentheses belong to a word. Fourth and last
-			// layer that needs to know: this one refuses grouping outright, so
-			// without the test `a=(one two)` came back as "unsupported syntax:
-			// grouping".
+			// An array assignment's parentheses belong to a word. This layer refuses
+			// grouping outright, so without the test `a=(one two)` came back as
+			// "unsupported syntax: grouping".
 			if end, ok := arrayAssignmentSpan(line, index, line[:index]); ok {
+				index = end
+				continue
+			}
+			// And an arithmetic command's belong to itself. Fifth layer, which is
+			// what the count in array.go is about: a construct spelled with a
+			// parenthesis has to be recognised by every scan that has an opinion
+			// about parentheses, and there are five of them.
+			if end := arithmeticCommandEnd(line, index); end > 0 {
 				index = end
 				continue
 			}

@@ -94,6 +94,13 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 				index = end + 1
 				continue
 			}
+			// And `((expr))` is an arithmetic command, stepped over whole for the
+			// same reason. Fourth layer to need telling.
+			if end := arithmeticCommandEnd(line, index); end > 0 {
+				output.WriteString(line[index : end+1])
+				index = end + 1
+				continue
+			}
 		}
 		start, opener, ok := groupOpenerAt(line, index)
 		if !ok {
@@ -148,6 +155,13 @@ func groupOpenerAt(line string, index int) (int, byte, bool) {
 		return 0, 0, false
 	}
 	if line[index] == '(' && index > 0 && (!isCommandBoundary(line[index-1]) || line[index-1] == '$') {
+		return 0, 0, false
+	}
+	// `((expr))` is an arithmetic command, not a subshell inside a subshell. The
+	// lexer turns it into `let`; see arithmetic_command.go. Without this it parsed
+	// as two nested groups running a command named after the expression, so
+	// `((i++))` reported `i++: not found`.
+	if line[index] == '(' && arithmeticCommandEnd(line, index) > 0 {
 		return 0, 0, false
 	}
 	return index, line[index], true

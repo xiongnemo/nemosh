@@ -154,6 +154,15 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				index = end
 				continue
 			}
+			// `((expr))` is an arithmetic command rather than two groups, and this
+			// scanner has to know for the same reason it has to know about array
+			// assignments: it decides where a logical line ends. See
+			// arithmetic_command.go.
+			if end := arithmeticCommandEnd(line, index); end > 0 {
+				scanner.logical.WriteString(line[index : end+1])
+				index = end
+				continue
+			}
 			scanner.groupClosers = append(scanner.groupClosers, ')')
 			scanner.logical.WriteByte(char)
 			continue

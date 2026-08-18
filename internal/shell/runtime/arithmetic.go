@@ -152,6 +152,14 @@ func (p *arithmeticParser) binary(level int) (int64, error) {
 }
 
 func (p *arithmeticParser) unary() (int64, error) {
+	// `++i` and `--i`: the value after the change. Before the sign operators,
+	// because `++` used to lex as two `+` and be read as unary plus applied twice
+	// -- which returned the variable unchanged and reported nothing. `$((++i))`
+	// gave 0 for an i of 0, silently.
+	if operator := p.peek(); operator == "++" || operator == "--" {
+		p.index++
+		return p.step(operator, false)
+	}
 	switch operator := p.peek(); operator {
 	case "-", "+", "!", "~":
 		p.index++
@@ -196,64 +204,15 @@ func (p *arithmeticParser) primary() (int64, error) {
 		return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", token)
 	}
 	value, _ := p.lookup(token)
+	// `i++` and `i--`: the value before the change. This is what `for ((i=0;
+	// i<n; i++))` is written with, and the difference from the prefix form is the
+	// value the expression has, not what the variable ends up holding.
+	if operator := p.peek(); operator == "++" || operator == "--" {
+		p.index++
+		if err := p.store(token, stepped(value, operator)); err != nil {
+			return 0, err
+		}
+		return value, nil
+	}
 	return value, nil
-}
-
-func (p *arithmeticParser) peek() string {
-	if p.index >= len(p.tokens) {
-		return ""
-	}
-	return p.tokens[p.index]
-}
-
-func applyArithmetic(left int64, operator string, right int64) (int64, error) {
-	switch operator {
-	case "+":
-		return left + right, nil
-	case "-":
-		return left - right, nil
-	case "*":
-		return left * right, nil
-	case "/", "%":
-		if right == 0 {
-			return 0, fmt.Errorf("division by zero")
-		}
-		if operator == "/" {
-			return left / right, nil
-		}
-		return left % right, nil
-	case "<<":
-		return left << uint64(right), nil
-	case ">>":
-		return left >> uint64(right), nil
-	case "<":
-		return boolValue(left < right), nil
-	case "<=":
-		return boolValue(left <= right), nil
-	case ">":
-		return boolValue(left > right), nil
-	case ">=":
-		return boolValue(left >= right), nil
-	case "==":
-		return boolValue(left == right), nil
-	case "!=":
-		return boolValue(left != right), nil
-	case "&":
-		return left & right, nil
-	case "^":
-		return left ^ right, nil
-	case "|":
-		return left | right, nil
-	case "&&":
-		return boolValue(left != 0 && right != 0), nil
-	default:
-		return boolValue(left != 0 || right != 0), nil
-	}
-}
-
-func boolValue(condition bool) int64 {
-	if condition {
-		return 1
-	}
-	return 0
 }

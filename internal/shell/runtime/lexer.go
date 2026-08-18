@@ -149,6 +149,32 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			}
 		}
 		if !inSingle && !inDouble {
+			// `((expr))` at the start of a command becomes `let expr`, which is the
+			// equivalence bash documents. Only at the start: `echo ((` is two
+			// ordinary words, and a `(` after a word is not this. See
+			// arithmetic_command.go.
+			if char == '(' && !wordPresent && (len(tokens) == 0 || tokens[len(tokens)-1].kind != tokenWord) {
+				if end := arithmeticCommandEnd(line, index); end > 0 {
+					text := arithmeticCommandText(line, index, end)
+					if err := appendToken(shellToken{
+						kind: tokenWord, value: "let",
+						parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: "let"}}},
+					}); err != nil {
+						return nil, nil, err
+					}
+					// The expression goes in single-quoted, so its own blanks and
+					// stars are data: `(( i < 10 ))` is one argument to let, and the
+					// `*` in `(( a * b ))` is not a directory listing.
+					if err := appendToken(shellToken{
+						kind: tokenWord, value: text,
+						parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: text, quote: quoteSingle}}},
+					}); err != nil {
+						return nil, nil, err
+					}
+					index = end
+					continue
+				}
+			}
 			// `$'...'` -- ANSI-C quoting. Before the array-assignment branch only
 			// because both start from an unquoted position; they cannot overlap.
 			// The decoded text goes in as a *single-quoted* part, because `$'a b'`
