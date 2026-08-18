@@ -90,7 +90,16 @@ fi
 # The first line only. `--version` prints a second one naming who built it, and
 # this script's job is the version -- feeding both to awk printed `by` as a
 # second answer, which is how this comment came to exist.
-line=$(go run -ldflags "$ldflags" ./cmd/nemosh --version | head -n 1)
+#
+# Taken with a parameter expansion rather than `| head -n 1`, because head exits
+# as soon as it has its line and `go run` then writes into a closed pipe. Under
+# `set -o pipefail`, which is what GitHub's bash steps run with, that SIGPIPE
+# fails the step: the darwin/arm64 release build died with `signal: broken pipe`
+# on two commits out of three, passing on the third. A race that fails a release
+# one time in three is worse than a slow pipe.
+output=$(go run -ldflags "$ldflags" ./cmd/nemosh --version)
+line=${output%%
+*}
 
 if [ "${1:-}" = "--version" ]; then
   printf '%s\n' "$line" | awk '{print $2}'
