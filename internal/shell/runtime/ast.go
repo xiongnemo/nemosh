@@ -39,7 +39,18 @@ const (
 	loopFor loopKind = iota
 	loopWhile
 	loopUntil
+	// loopArithmetic is `for ((init; condition; step))`, whose three parts are
+	// arithmetic expressions rather than a name and a word list.
+	loopArithmetic
 )
+
+// arithmeticLoop is the three expressions of a C-style for. Any of them may be
+// empty: `for ((;;))` is a loop forever, which is what an empty condition means.
+type arithmeticLoop struct {
+	initialize string
+	condition  string
+	step       string
+}
 
 type loopNode struct {
 	kind      loopKind
@@ -47,6 +58,8 @@ type loopNode struct {
 	name      string
 	values    []word
 	body      []programNode
+	// arith is set only for loopArithmetic, where name and values are unused.
+	arith arithmeticLoop
 }
 
 func (loopNode) programNode() {}

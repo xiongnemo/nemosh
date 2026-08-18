@@ -24,6 +24,9 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 	if node.kind == loopFor {
 		return r.executeTypedFor(ctx, node, savedStatus)
 	}
+	if node.kind == loopArithmetic {
+		return r.executeArithmeticFor(ctx, node, savedStatus)
+	}
 	r.loops.enter()
 	defer r.loops.leave()
 	status := 0

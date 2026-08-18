@@ -125,12 +125,18 @@ func typedWordOf(token shellToken) (word, error) {
 }
 
 func parseTypedFor(header string, body []programNode, budget *parseBudget, depth int) (programNode, error) {
+	// The C-style form is settled before tokenizing, because the lexer rewrites a
+	// leading `((expr))` into `let` -- correct for a command, wrong here, where the
+	// three parts have to stay separate. See arithmetic_command.go.
+	if loop, ok := parseArithmeticForHeader(header); ok {
+		return loopNode{kind: loopArithmetic, arith: loop, body: body}, nil
+	}
 	tokens, err := scanShellTokensWithBudget(header, budget, depth)
 	if err != nil {
 		return nil, err
 	}
 	if len(tokens) < 3 || tokens[1].value != "in" {
-		return nil, fmt.Errorf("expected: for name in words")
+		return nil, fmt.Errorf("expected: for name in words, or for ((init; condition; step))")
 	}
 	values := make([]word, len(tokens)-2)
 	for index, token := range tokens[2:] {
