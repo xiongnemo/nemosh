@@ -552,3 +552,33 @@ Other local artifacts are not implementation evidence:
 Do not classify untracked Go files, behavior cases, or `go.sum` as disposable
 without review; they may be substantive current work rather than generated
 residue.
+
+## Known gaps in the shell language, measured 2026-08-18
+
+Found by running a differential sweep against bash over about 140 constructs rather
+than by reading the code, which is why they had gone unnoticed: each is a form
+nothing in the corpus exercised. What follows is what the sweep found and did *not*
+get fixed, with the workaround where there is one, so the next reader starts from a
+list rather than from a surprise.
+
+Everything else the sweep turned up was fixed in the same pass: `read` taking no
+options at all, `x=$(cmd)` field splitting its value, `${VAR:-${DEFAULT}}`,
+`$(...)` inside an expansion or arithmetic, `${@:2:2}` and the other list
+operators, sparse arrays, negative subscripts, `$$`, `${#1}`, `**`, `,`,
+`base#digits`, `$'...'`, `<<<`, `&>`, `((expr))`, `for ((;;))`, `for name`,
+`declare`/`typeset` with associative arrays, `shopt` with globstar, the `function`
+keyword, `;;&` and `;&`, `case (pattern)`, and a redirection after a compound's
+closer.
+
+| gap | workaround | why it is not done |
+| --- | --- | --- |
+| `cmd \| while read ...; do ...; done` -- a compound as a pipeline stage | `cmd \| { while read ...; do ...; done; }`, which works | The span model finds a compound only at the start of a line. Doing it properly means recording the pipeline prefix on the span and rebuilding the stages around the compound; the brace group it would become already carries redirections after the previous commit, so the machinery is there, but the detection is not |
+| an operator after a closer -- `done \| cat`, `esac && echo` | wrap in `{ }` for a loop or an `if` | Needs the words after the compound built into pipelines or an and-or list. A redirection needs none of that, which is why only that half landed |
+| `{ case a in a) x ;; esac; }` -- a case inside a brace group | none; use the case on its own | Two layers: the pattern's `)` is taken for the group's closer, and past that the group's body does not get the case-arm expansion, so the `;;` is unexpected too |
+| `<(cmd)` and `>(cmd)` -- process substitution | a temporary file, or `cmd \| { ...; }` | Windows has no `/dev/fd`, so it needs a named pipe or a temp file and a decision about which. The one item here that is genuinely platform work rather than parser work |
+| `$LINENO` | none | No AST node carries a position. A `$LINENO` that is always 1 would send someone to the wrong line with confidence, which is worse than its being unset |
+| `$!` -- the last background process id | `wait` with no argument | Background jobs here are goroutines, not processes, so there is no pid to report. A job number would be a different thing wearing the same name |
+| `BASH_REMATCH` after `[[ =~ ]]` | `grep -o`, or `expr` | The match runs but the captures are not kept |
+| `${x:-"}"}` keeps its quotes | none | Quote removal inside an operand word. The `}` inside quotes correctly does not end the expansion, which is the half that matters |
+| `${a[-9]}` gives empty where bash errors | none needed | Deliberate: it is the same answer `${a[9]}` gives, and being consistent about "not an element" matters more here than matching bash's choice to distinguish the two |
+| two heredocs on one line -- `cat <<A; cat <<B` | put them on separate lines | The delimiter scan collects one per line |
