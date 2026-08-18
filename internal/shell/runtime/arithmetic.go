@@ -14,7 +14,7 @@ import (
 // the new value and stores it.
 func (r Runtime) evaluateArithmetic(expression string) (int64, error) {
 	parser := &arithmeticParser{tokens: tokenizeArithmetic(expression), runtime: r}
-	value, err := parser.assignment()
+	value, err := parser.comma()
 	if err != nil {
 		return 0, err
 	}
@@ -27,6 +27,23 @@ func (r Runtime) evaluateArithmetic(expression string) (int64, error) {
 // assignment is the lowest-precedence level and the only one that writes:
 // `x = expr` and the compound forms POSIX 2.6.4 lists. Right-associative, so
 // `a = b = 1` sets both.
+// comma evaluates each expression and answers with the last, which is what
+// `$((1,2))` is 2 for. The lowest precedence there is, so it sits outside
+// assignment: `$((a=1, b=2))` sets both and answers 2.
+func (p *arithmeticParser) comma() (int64, error) {
+	value, err := p.assignment()
+	if err != nil {
+		return 0, err
+	}
+	for p.peek() == "," {
+		p.index++
+		if value, err = p.assignment(); err != nil {
+			return 0, err
+		}
+	}
+	return value, nil
+}
+
 func (p *arithmeticParser) assignment() (int64, error) {
 	name, operator, ok := p.assignmentTarget()
 	if !ok {
@@ -121,7 +138,7 @@ func (p *arithmeticParser) ternary() (int64, error) {
 
 func (p *arithmeticParser) binary(level int) (int64, error) {
 	if level >= len(arithmeticPrecedence) {
-		return p.unary()
+		return p.power()
 	}
 	left, err := p.binary(level + 1)
 	if err != nil {

@@ -10,6 +10,9 @@ var arithmeticOperators = []string{
 	// otherwise `i++` lexes as `i`, `+`, `+` and the second plus has no operand,
 	// which is exactly the "expression ended early" it used to report.
 	"++", "--",
+	// `**` before `*`, or `2**10` lexes as two multiplications with nothing
+	// between them -- which is the "unexpected *" it used to report.
+	"**",
 	"<<", ">>", "<=", ">=", "==", "!=", "&&", "||",
 	"+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=",
 	"+", "-", "*", "/", "%", "(", ")", "<", ">", "&", "^", "|", "!", "~", "?", ":", "=",

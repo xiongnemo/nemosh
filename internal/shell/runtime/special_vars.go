@@ -69,6 +69,12 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		return strconv.Itoa(elapsed + r.special.secondsOffset), true
 	case "PPID":
 		return strconv.Itoa(os.Getppid()), true
+	case "$":
+		// `$$`, the shell's own process id. Answered here rather than in either
+		// expansion switch, because there are two of them -- the braced path and the
+		// bare one -- and a special parameter that only one knows about is how `$$`
+		// came to work inside `${...}` and not on its own.
+		return strconv.Itoa(os.Getpid()), true
 	}
 	return "", false
 }

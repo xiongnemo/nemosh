@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -152,8 +153,14 @@ func trimPatternSuffix(value, pattern string, longest bool) string {
 }
 
 func (r Runtime) expandParameterLength(ctx context.Context, name string, savedStatus int) (string, error) {
+	// A positional or special parameter has a length too: `${#1}` is how a script
+	// checks the size of its first argument, and it reported `bad substitution`.
 	if !isVariableName(name) && name != "@" && name != "*" {
-		return "", fmt.Errorf("bad substitution: ${#%s}", name)
+		if !isBareParameterReference(name) {
+			return "", fmt.Errorf("bad substitution: ${#%s}", name)
+		}
+		value, _ := r.lookupParameter(ctx, name, savedStatus)
+		return strconv.Itoa(len([]rune(value))), nil
 	}
 	if name == "@" || name == "*" {
 		return strconv.Itoa(len(r.params.values)), nil
@@ -198,7 +205,7 @@ func (r Runtime) lookupParameter(ctx context.Context, name string, savedStatus i
 		return "", false
 	}
 	switch name {
-	case "0", "?", "#", "@", "*", "-":
+	case "0", "?", "#", "@", "*", "-", "$":
 		return r.expandScalarParameterText(ctx, "$"+name, savedStatus), true
 	}
 	if value, set := r.vars[name]; set {
@@ -233,6 +240,11 @@ func (r Runtime) expandScalarParameterText(ctx context.Context, text string, sav
 		return strings.Join(r.params.values, " ")
 	case "$-":
 		return r.options.letters()
+	case "$$":
+		// The shell's own process id, which is what a script builds a temporary name
+		// out of. It was empty, so `/tmp/work.$$` was `/tmp/work.` for every run and
+		// two scripts collided.
+		return strconv.Itoa(os.Getpid())
 	}
 	if len(text) == 2 && text[1] >= '1' && text[1] <= '9' {
 		index := int(text[1] - '1')

@@ -97,3 +97,41 @@ func boolValue(condition bool) int64 {
 	}
 	return 0
 }
+
+// power is `**`, and it is right-associative: measured, bash reads `2**3**2` as
+// 2**(3**2), which is 512 rather than 64. Left-associative folding through the
+// ordinary precedence table could not express that, so it has its own level between
+// the binary operators and unary.
+//
+// It binds tighter than unary minus, which is the other thing measured: `-2**2` is 4
+// in bash, not -4, because the minus applies to the result.
+func (p *arithmeticParser) power() (int64, error) {
+	left, err := p.unary()
+	if err != nil {
+		return 0, err
+	}
+	if p.peek() != "**" {
+		return left, nil
+	}
+	p.index++
+	right, err := p.power()
+	if err != nil {
+		return 0, err
+	}
+	return integerPower(left, right)
+}
+
+// integerPower raises left to right by repeated multiplication, because these are
+// integers and math.Pow would round.
+func integerPower(left, right int64) (int64, error) {
+	if right < 0 {
+		// bash gives "exponent less than 0" and so does this: the answer is a
+		// fraction, and there is nowhere to put one.
+		return 0, fmt.Errorf("arithmetic: exponent less than 0")
+	}
+	result := int64(1)
+	for count := int64(0); count < right; count++ {
+		result *= left
+	}
+	return result, nil
+}
