@@ -130,6 +130,11 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 		<-done
 	case <-done:
 	}
+	statuses := make([]int, 0, len(results))
+	for _, result := range results {
+		statuses = append(statuses, result.status)
+	}
+	r.recordPipeStatus(statuses...)
 	status := results[len(results)-1].status
 	if r.options.pipefail {
 		for index := len(results) - 1; index >= 0; index-- {

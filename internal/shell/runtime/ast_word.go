@@ -29,4 +29,7 @@ type word struct {
 	parts       []wordPart
 	quotedEmpty bool
 	expandTilde bool
+	// assignmentTilde marks a `name=~` word, where the tilde to expand is after
+	// the `=` rather than at the start. See assignment_expand.go.
+	assignmentTilde bool
 }

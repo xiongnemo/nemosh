@@ -54,6 +54,12 @@ func (r Runtime) expandParameterPart(part wordPart, savedStatus int) []string {
 	name := strings.TrimPrefix(text, "$")
 	value, set := r.vars[name]
 	if !set {
+		// The computed names -- $RANDOM, $SECONDS, $PPID -- are not stored, so a
+		// bare `$RANDOM` has to ask for them here as well as through the braced
+		// path. See special_vars.go.
+		if computed, ok := r.dynamicParameter(name); ok {
+			return []string{computed}
+		}
 		r.reportUnsetParameter(name)
 	}
 	return []string{value}
@@ -87,6 +93,13 @@ func isAssignment(arg string) bool {
 	name, _, ok := strings.Cut(arg, "=")
 	if !ok || name == "" {
 		return false
+	}
+	// `a[0]=value` is an assignment too. applyArrayAssignments takes the ones whose
+	// value is a plain literal, before expansion; one whose value comes from an
+	// expansion -- `a[0]=$(cmd)` -- reaches here instead, and used to be run as a
+	// command called `a[0]=p q`.
+	if isArrayElementTarget(name) {
+		return true
 	}
 	for i := 0; i < len(name); i++ {
 		if !isNameByte(name[i]) {

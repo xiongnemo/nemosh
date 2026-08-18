@@ -29,6 +29,19 @@ func (r Runtime) assignVar(name string, value string) int {
 		fmt.Fprintf(r.streams.Stderr, "%s: readonly variable\n", name)
 		return 1
 	}
+	// RANDOM and SECONDS take an assignment as a seed and a reset rather than
+	// storing it. Storing would make the next read return a constant, and a
+	// `$RANDOM` that is always the same is the kind of thing noticed after the
+	// damage. See special_vars.go.
+	if r.assignSpecialVar(name, value) {
+		return 0
+	}
+	// `a[0]=value`, where the value came from an expansion. The literal-value form
+	// is settled before expansion by applyArrayAssignments; this is the same
+	// destination reached from the other direction.
+	if reference, ok := parseArrayReference(name); ok {
+		return r.assignArrayElementText(reference, value)
+	}
 	r.vars[name] = value
 	// `set -a` exports every name an assignment touches, so a variable set
 	// after it is on reaches children without a separate `export`.

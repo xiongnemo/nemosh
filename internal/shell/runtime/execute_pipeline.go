@@ -38,7 +38,13 @@ func (r Runtime) suppressingErrExit() Runtime {
 
 func (r Runtime) executeTypedPipelineStages(ctx context.Context, value pipeline, savedStatus int) lineResult {
 	if len(value.commands) == 1 {
-		return r.executeCommandNode(ctx, value.commands[0], savedStatus)
+		// A one-element $PIPESTATUS, as bash gives. Set here as well as in
+		// runTokenPipeline because a single command reaches execution by two
+		// routes -- the AST one and the token one -- and a read after a plain
+		// command must not find the previous pipeline's leftovers by either.
+		result := r.executeCommandNode(ctx, value.commands[0], savedStatus)
+		r.recordPipeStatus(result.status)
+		return result
 	}
 	stages := make([]pipelineStageRun, len(value.commands))
 	for index, command := range value.commands {

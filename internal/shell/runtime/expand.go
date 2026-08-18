@@ -147,6 +147,13 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 	if item.expandTilde && len(fields) > 0 {
 		fields[0] = r.expandHomeTilde(fields[0])
 	}
+	if item.assignmentTilde && len(fields) > 0 {
+		// The tilde is after the `=`, so the name and the equals are put back in
+		// front of whatever the tilde expanded to.
+		if name, value, found := strings.Cut(fields[0], "="); found {
+			fields[0] = name + "=" + r.expandHomeTilde(value)
+		}
+	}
 	return fields, globbable
 }
 
@@ -160,7 +167,7 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 // contributes nothing when it splits to nothing.
 func (r Runtime) appendExpansion(fields []string, value string, quote quoteContext) ([]string, bool) {
 	separators := r.fieldSeparators()
-	if quote != quoteUnquoted || separators == "" {
+	if quote != quoteUnquoted || separators == "" || r.noFieldSplit {
 		fields[len(fields)-1] += value
 		return fields, true
 	}

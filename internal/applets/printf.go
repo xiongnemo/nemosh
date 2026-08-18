@@ -142,6 +142,11 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 		// XSI's %b: the operand's own escape sequences are processed.
 		expanded, _ := expandEchoEscapes(next())
 		return fmt.Sprintf(spec+"s", expanded), nil
+	case 'q':
+		// bash's %q: quote the operand so the shell would read it back as itself.
+		// The point of it is `eval` and generated scripts -- a file name with a
+		// space or a quote in it survives being written into a command line.
+		return fmt.Sprintf(spec+"s", shellQuote(next())), nil
 	default:
 		return "", fmt.Errorf("invalid conversion specification %%%c", verb)
 	}

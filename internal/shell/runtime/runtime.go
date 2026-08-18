@@ -46,6 +46,9 @@ type Runtime struct {
 	// for the reason loop_levels.go gives: only loops read it, and threading it
 	// through every flowControl signature would touch everything that does not.
 	loops *loopLevels
+	// special holds what $RANDOM and $SECONDS are computed from. Shared by
+	// pointer so a subshell keeps counting from the same start.
+	special *specialState
 	// locals belongs to the function call in progress and is nil outside one,
 	// which is how `local` knows there is nothing to restore to.
 	locals *localScope
@@ -53,6 +56,10 @@ type Runtime struct {
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options
 	// pointer so entering one of those places cannot leak out of it.
+	// noFieldSplit marks an expansion whose result POSIX 2.6.5 exempts from field
+	// splitting: the value of an assignment. On the Runtime value like
+	// errExitSuppressed, so it cannot leak past the word it was set for.
+	noFieldSplit      bool
 	errExitSuppressed bool
 	readonly          map[string]struct{}
 	mutatedVars       map[string]struct{}

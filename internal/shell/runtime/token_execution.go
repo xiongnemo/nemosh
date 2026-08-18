@@ -75,7 +75,11 @@ func (r Runtime) runTokenPipeline(ctx context.Context, tokens []shellToken, save
 		return lineResult{status: 2}
 	}
 	if len(commands) == 1 {
-		return r.runTokenCommand(ctx, commands[0], savedStatus)
+		// A one-element $PIPESTATUS, as bash gives, so a read after a plain command
+		// does not find the previous pipeline's leftovers.
+		result := r.runTokenCommand(ctx, commands[0], savedStatus)
+		r.recordPipeStatus(result.status)
+		return result
 	}
 	pipeline, err := r.prepareTokenPipeline(ctx, commands)
 	if err != nil {
@@ -126,8 +130,18 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		command = remaining
 	}
 	expanded := make([]shellToken, 0, len(command))
+	// Leading assignments are expanded unsplit. Recognised on the word rather than
+	// on its expansion, which is the only place the distinction still exists: see
+	// assignment_expand.go for what `d=$(date)` did without this.
+	leading := true
 	for _, item := range command {
-		values := r.expandCommandWord(ctx, item, savedStatus)
+		var values []string
+		if leading && isAssignmentWord(item) {
+			values = r.expandAssignmentWord(ctx, item, savedStatus)
+		} else {
+			leading = false
+			values = r.expandCommandWord(ctx, item, savedStatus)
+		}
 		for _, value := range values {
 			expanded = append(expanded, shellToken{kind: tokenWord, value: value})
 		}

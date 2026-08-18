@@ -45,6 +45,9 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		// A subshell starts with no pending break: `(break)` inside a loop does
 		// not break the loop outside it, because the loop is not in the subshell.
 		loops: newLoopLevels(),
+		// Shared: $SECONDS in a subshell counts from when the shell started, not
+		// from when the subshell did.
+		special: r.special,
 		// Cloned rather than shared, and never omitted: see shellArrays.clone.
 		arrays: r.arrays.clone(),
 		// locals belongs to a function call, and a snapshot is not inside

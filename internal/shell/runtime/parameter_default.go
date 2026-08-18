@@ -200,8 +200,15 @@ func (r Runtime) lookupParameter(name string, savedStatus int) (string, bool) {
 	case "0", "?", "#", "@", "*", "-":
 		return r.expandScalarParameterText("$"+name, savedStatus), true
 	}
-	value, set := r.vars[name]
-	return value, set
+	if value, set := r.vars[name]; set {
+		return value, true
+	}
+	// After the stored variables, so a script that set one of these names sees what
+	// it set. See special_vars.go.
+	if value, ok := r.dynamicParameter(name); ok {
+		return value, true
+	}
+	return "", false
 }
 
 func (r Runtime) expandScalarParameterText(text string, savedStatus int) string {
