@@ -106,7 +106,9 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 		go func() {
 			defer wait.Done()
 			stage := pipeline.stages[index]
-			result := stage.run(ctx, stage.runtime, savedStatus)
+			result := stage.runtime.guardedRun("running a pipeline stage", func() lineResult {
+				return stage.run(ctx, stage.runtime, savedStatus)
+			})
 			stage.runtime.jobScope.cancelAndDrain()
 			if err := stage.runtime.fds.closeAll(); err != nil && result.status == 0 {
 				fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)

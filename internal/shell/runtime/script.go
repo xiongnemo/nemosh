@@ -10,7 +10,11 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", r.initErr)
 		return 1
 	}
-	return r.runScript(ctx, script, true)
+	// The synchronous guard. In an interactive session this is per command, which
+	// is what lets the session outlive a defect instead of dying with it.
+	return r.guardedStatus("running a command", func() int {
+		return r.runScript(ctx, script, true)
+	})
 }
 
 func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool) int {

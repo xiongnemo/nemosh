@@ -111,7 +111,12 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		return lineResult{status: 1}
 	}
 	go func() {
-		result := run(worker)
+		// Guarded here rather than relying on a defer further down: complete() is
+		// not deferred, so a panic in run left the parent's wait with nobody to
+		// answer it -- a hang, not a crash.
+		result := worker.guardedRun("running a background job", func() lineResult {
+			return run(worker)
+		})
 		worker.jobScope.cancelAndDrain()
 		if err := worker.fds.closeAll(); err != nil && result.status == 0 {
 			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)

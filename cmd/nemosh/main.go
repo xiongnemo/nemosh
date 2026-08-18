@@ -15,6 +15,12 @@ import (
 )
 
 func main() {
+	// The last resort. Runtime.RunScript guards each command, and the pipeline and
+	// background goroutines guard themselves, so what is left for this one is
+	// everything outside a command: console attachment, option parsing, the line
+	// editor, terminal restoration. A defect in any of those used to print a
+	// goroutine dump, which tells the reader nothing they can act on.
+	defer guardMain()
 	signals, stopSignals := notifyInterrupts()
 	defer stopSignals()
 	// Joining a console has to happen before the streams are read, because it is

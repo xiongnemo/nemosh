@@ -37,9 +37,13 @@ const (
 	debugExec debugChannel = "exec"
 	// debugFD covers the descriptor table: what was opened, bound, and closed.
 	debugFD debugChannel = "fd"
+	// debugPanic covers a recovered panic's stack trace. Off by default because
+	// the trace carries host paths and the behavior corpus compares output byte
+	// for byte; the diagnostic itself always prints and names this channel.
+	debugPanic debugChannel = "panic"
 )
 
-var knownDebugChannels = []debugChannel{debugPath, debugExec, debugFD}
+var knownDebugChannels = []debugChannel{debugPath, debugExec, debugFD, debugPanic}
 
 // report writes a diagnostic in its layers. The prefix is the command's name
 // where there is one and `nemosh` where the shell itself is speaking.
@@ -106,7 +110,7 @@ func (r Runtime) warnUnknownDebugChannel(name string) {
 		return
 	}
 	r.expansion.warnedDebugChannels[name] = true
-	fmt.Fprintf(r.streams.Stderr, "nemosh: NEMOSH_DEBUG: unknown channel %q; known channels are path, exec, fd, all\n", name)
+	fmt.Fprintf(r.streams.Stderr, "nemosh: NEMOSH_DEBUG: unknown channel %q; known channels are path, exec, fd, panic, all\n", name)
 }
 
 // debugDetails builds the detail lines only when the channel is on, so a
