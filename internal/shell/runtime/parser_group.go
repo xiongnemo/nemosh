@@ -258,6 +258,14 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 		}
 		expected := closers[len(closers)-1]
 		if char != expected {
+			// A `)` while a `}` is open is a case pattern, not a mismatch. Third scan to
+			// need this: the logical-line scanner decides where a line ends, the
+			// separator decides where a `;` splits, and this one finds the group's own
+			// extent. The body it hands back goes through parseScript, which knows about
+			// case arms, so stepping over the pattern is all any of them has to do.
+			if char == ')' && expected == '}' && insideCase(line[start:index]) {
+				continue
+			}
 			return 0, fmt.Errorf("syntax error: unexpected %c, expected %c", char, expected)
 		}
 		closers = closers[:len(closers)-1]

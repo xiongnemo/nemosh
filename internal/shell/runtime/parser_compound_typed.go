@@ -21,6 +21,11 @@ func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int
 					return nil, err
 				}
 			}
+			if span.prefix != "" {
+				if node, err = wrapCompoundIntoPipeline(node, span.prefix, budget, depth); err != nil {
+					return nil, err
+				}
+			}
 			if span.background {
 				node = backgroundNode{value: node}
 			}
@@ -78,7 +83,7 @@ func parseTypedCompound(lines []string, spans []compoundSpan, byStart map[int]in
 }
 
 func parseTypedIf(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, budget *parseBudget, depth int) (programNode, error) {
-	header, _ := compoundHeader(lines[span.start], "if")
+	header, _ := compoundHeader(spanHeaderLine(lines, span), "if")
 	condition, err := parseTypedLineWithBudget(header, budget, depth)
 	if err != nil {
 		return nil, err
@@ -103,7 +108,7 @@ func parseTypedLoop(lines []string, spans []compoundSpan, byStart map[int]int, s
 	if err != nil {
 		return nil, err
 	}
-	line := lines[span.start]
+	line := spanHeaderLine(lines, span)
 	if header, ok := compoundHeader(line, "for"); ok {
 		return parseTypedFor(header, body, budget, depth)
 	}
@@ -168,7 +173,7 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 }
 
 func parseTypedCase(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, budget *parseBudget, depth int) (programNode, error) {
-	tokens, err := scanShellTokensWithBudget(lines[span.start], budget, depth)
+	tokens, err := scanShellTokensWithBudget(spanHeaderLine(lines, span), budget, depth)
 	if err != nil || len(tokens) != 3 {
 		return nil, fmt.Errorf("case: expected: case word in")
 	}
@@ -215,6 +220,11 @@ func parseCaseAlternatives(pattern string, budget *parseBudget, depth int) ([]wo
 // to read: `{ compound; } suffix` cannot be built as text without re-quoting, so the
 // group is built directly and only the suffix is parsed here.
 func wrapCompoundWithSuffix(node programNode, suffix string, budget *parseBudget, depth int) (programNode, error) {
+	// A pipe or an and-or operator makes the compound a stage or a term of what
+	// follows, rather than something with redirections on it.
+	if operator, rest, ok := splitCloserOperator(suffix); ok {
+		return wrapCompoundBeforeOperator(node, operator, rest, budget, depth)
+	}
 	tokens, err := scanShellTokensWithBudget(suffix, budget, depth)
 	if err != nil {
 		return nil, err
@@ -226,4 +236,13 @@ func wrapCompoundWithSuffix(node programNode, suffix string, budget *parseBudget
 	group := braceGroup{body: Script{program: []programNode{node}}, redirects: operations}
 	item := listItem{value: andOr{pipelines: []pipeline{{commands: []commandNode{group}}}}}
 	return listNode{value: list{items: []listItem{item}}}, nil
+}
+
+// spanHeaderLine is the compound's header: the span's own when the line held something
+// before it -- `cmd | while read -r l` -- and the whole line otherwise.
+func spanHeaderLine(lines []string, span compoundSpan) string {
+	if span.header != "" {
+		return span.header
+	}
+	return lines[span.start]
 }

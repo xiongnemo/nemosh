@@ -174,6 +174,16 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			}
 			expected := scanner.groupClosers[len(scanner.groupClosers)-1]
 			if char != expected {
+				// A `)` while a `}` is open is a case pattern, not a mismatch:
+				// `{ case a in a) x ;; esac; }` is ordinary and was reported as
+				// `unexpected ), expected }`. The group's body is parsed by parseScript,
+				// which knows about case arms, so passing it through is all that is
+				// needed. The reverse -- a `}` while a `(` is open -- stays an error,
+				// because a brace inside a subshell has no second meaning.
+				if char == ')' && expected == '}' && insideCase(scanner.logical.String()) {
+					scanner.logical.WriteByte(char)
+					continue
+				}
 				scanner.syntaxErr = fmt.Errorf("syntax error: unexpected %c, expected %c", char, expected)
 				return
 			}

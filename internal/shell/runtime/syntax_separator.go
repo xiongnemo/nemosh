@@ -22,7 +22,9 @@ func splitSequentialSegments(line string) ([]string, error) {
 	var segments []string
 	quote := byte(0)
 	escaped := false
-	depth := 0
+	// openers is the brackets still open, innermost last. A count is not enough: a `)`
+	// closes a `(` and not a `{`, and a case pattern's `)` sits inside a brace group.
+	var openers []byte
 	start := 0
 	for index := 0; index < len(line); index++ {
 		char := line[index]
@@ -49,15 +51,32 @@ func splitSequentialSegments(line string) ([]string, error) {
 			index = skip
 			continue
 		}
-		if char == '(' || braceDelimiterAt(line, index, '{') {
-			depth++
+		if char == '(' {
+			openers = append(openers, '(')
 			continue
 		}
-		if (char == ')' || braceDelimiterAt(line, index, '}')) && depth > 0 {
-			depth--
+		if braceDelimiterAt(line, index, '{') {
+			openers = append(openers, '{')
 			continue
 		}
-		if char != ';' || depth != 0 {
+		// A `)` closes only a `(`. Inside a brace group it is a case pattern --
+		// `{ case a in a) x ;; esac; }` -- and popping the brace there dropped the depth
+		// to zero, so the `;;` after it was split off as a separator and the group came
+		// apart. Counting openers rather than tracking which is what let that happen.
+		// No insideCase guard here, unlike the other two scans: knowing *which* opener
+		// is on top is already enough. A pattern's `)` cannot pop a `{`, and the
+		// optional `(` before a pattern pushes and pops itself. Adding the guard broke
+		// `case a in (a) x ;; esac`, because then nothing popped that `(` and the `;;`
+		// stopped splitting.
+		if char == ')' && len(openers) > 0 && openers[len(openers)-1] == '(' {
+			openers = openers[:len(openers)-1]
+			continue
+		}
+		if braceDelimiterAt(line, index, '}') && len(openers) > 0 && openers[len(openers)-1] == '{' {
+			openers = openers[:len(openers)-1]
+			continue
+		}
+		if char != ';' || len(openers) != 0 {
 			continue
 		}
 		segments = append(segments, line[start:index])
