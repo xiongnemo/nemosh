@@ -1,0 +1,16 @@
+id = "applet.coreutils.wc.directory-operand"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+command = ["wc", "."]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "wc: .: Is a directory\n"
+
+[notes]
+standard = "POSIX wc: a directory operand is not a file to count"
+why = "Ported from uutils tests/by-util/test_wc.rs (MIT, commit e275cd5), which has a Windows branch here because the two platforms fail at different calls: on Unix the read fails, on Windows the open does, so uutils answers `cannot open '.' for reading: Permission denied` there. This shell reports what is actually wrong with the operand instead, which is busybox-w32's answer on both platforms and needs no branch."

@@ -1,0 +1,16 @@
+id = "applet.coreutils.ls.refuses-recursive-by-name"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows", "linux", "darwin"]
+references = ["nemosh", "uutils"]
+command = ["ls", "-R"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "ls: unsupported ls option: -R\n"
+
+[notes]
+standard = "Nemosh support matrix: ls implements -a -h -l -1 and --color, and refuses the rest by name"
+why = "Pinned while porting uutils tests/by-util/test_ls.rs (MIT, commit e275cd5), whose Windows branch asserts that `ls -1 -R` separates its directory headers with a backslash. That question cannot be asked here because -R is refused, and the refusal is the thing worth guarding: an option that silently listed one level would be a wrong answer where a named refusal is a workaround someone can act on. busybox-w32 does implement -R, and its headers use forward slashes."

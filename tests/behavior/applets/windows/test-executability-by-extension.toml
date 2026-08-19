@@ -1,0 +1,23 @@
+id = "applet.coreutils.test.executability-by-extension"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows"]
+references = ["busybox-w32", "uutils"]
+files = { "program.exe" = "", "regular_file" = "", "readonly_file" = "" }
+script = '''
+chmod 444 readonly_file
+test -x program.exe;   echo "exe=$?"
+test -x regular_file;  echo "plain=$?"
+test -w readonly_file; echo "writable=$?"
+test -r readonly_file; echo "readable=$?"
+'''
+
+[expect]
+status = 0
+stdout = "exe=0\nplain=1\nwritable=1\nreadable=0\n"
+stderr = ""
+
+[notes]
+standard = "POSIX test -x/-w/-r, answered with Windows' notion of the three permissions"
+why = "Ported from uutils tests/by-util/test_rm.rs siblings test_file_is_executable_windows and test_file_is_not_writable_windows (MIT, commit e275cd5). Executability on Windows is a property of the extension rather than of a mode bit, and writability comes from the read-only attribute; both are answers a POSIX-shaped test operator has to invent. All four were measured against busybox-w32 and agree, so this is a regression guard: the four could each drift to a plausible-looking wrong answer without anything else failing."
