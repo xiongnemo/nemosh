@@ -86,7 +86,10 @@ func TestDu(t *testing.T) {
 		}
 	})
 
-	t.Run("-h uses the largest unit that fits", func(t *testing.T) {
+	// The expectation here was `6K`, which neither reference prints: busybox-w32 and GNU
+	// both keep the decimal on a whole number below ten, so it is `6.0K`. Above ten the
+	// decimal goes again -- GNU says `97K` and busybox `96.7K`, and this follows GNU.
+	t.Run("-h keeps one decimal below ten", func(t *testing.T) {
 		// When
 		got, err := runInDirectory(t, "du", directory, "-sh")
 
@@ -94,8 +97,8 @@ func TestDu(t *testing.T) {
 		if err != nil {
 			t.Fatalf("du -sh: %v", err)
 		}
-		if fields := strings.Fields(got); len(fields) == 0 || fields[0] != "6K" {
-			t.Fatalf("du -sh = %q, want 6K", got)
+		if fields := strings.Fields(got); len(fields) == 0 || fields[0] != "6.0K" {
+			t.Fatalf("du -sh = %q, want 6.0K", got)
 		}
 	})
 }

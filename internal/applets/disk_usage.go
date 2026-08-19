@@ -65,6 +65,14 @@ func newDuApplet() Applet {
 // tree should not turn a total into nothing, and the diagnostic on stderr keeps
 // the number on stdout honest about being partial.
 func reportUsage(ctx context.Context, stdout, stderr io.Writer, native, shown string, summarise, human bool) error {
+	// A file operand is answered before the walk, because the walk cannot answer it. Only
+	// directories are ever recorded in `order` below -- a file's blocks are charged to its
+	// parents and not to itself, which is right for a file *inside* a tree and wrong for
+	// one named on the command line. So `du somefile` printed nothing at all and exited 0,
+	// and `du -sh somefile` printed `0K` for a file with bytes in it. Both silent.
+	if info, err := os.Stat(native); err == nil && !info.IsDir() {
+		return writeUsageLine(stdout, (info.Size()+duBlock-1)/duBlock, shown, human)
+	}
 	totals := map[string]int64{}
 	var order []string
 	walkErr := filepath.WalkDir(native, func(current string, entry fs.DirEntry, err error) error {
@@ -137,7 +145,10 @@ func humanBlocks(blocks int64) string {
 	value := float64(blocks)
 	for _, unit := range []string{"K", "M", "G", "T"} {
 		if value < 1024 {
-			if value < 10 && value != float64(int64(value)) {
+			// A whole number keeps its decimal: both references print `4.0K` and this
+			// printed `4K`. Above ten the decimal goes, which is GNU's rule; busybox
+			// keeps one there too and says `96.7K` where GNU and this say `97K`.
+			if value < 10 {
 				return fmt.Sprintf("%.1f%s", value, unit)
 			}
 			return fmt.Sprintf("%d%s", int64(value), unit)
