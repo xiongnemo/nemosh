@@ -1,0 +1,26 @@
+id = "applet.coreutils.head-tail.signed-counts"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "posix", "uutils"]
+files = { "twelve.txt" = "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\n", "digits.txt" = "0123456789" }
+script = '''
+echo "tail +10:  $(tail -n +10 twelve.txt | tr '\n' ' ')"
+echo "tail 3:    $(tail -n 3 twelve.txt | tr '\n' ' ')"
+echo "tail -3:   $(tail -n -3 twelve.txt | tr '\n' ' ')"
+echo "head -2:   $(head -n -2 twelve.txt | tr '\n' ' ')"
+echo "head 3:    $(head -n 3 twelve.txt | tr '\n' ' ')"
+echo "tail c+8:  $(tail -c +8 digits.txt)"
+echo "head c-3:  $(head -c -3 digits.txt)"
+echo "tail +99:  [$(tail -n +99 twelve.txt)]"
+'''
+
+[expect]
+status = 0
+stdout = "tail +10:  j k l \ntail 3:    j k l \ntail -3:   j k l \nhead -2:   a b c d e f g h i j \nhead 3:    a b c \ntail c+8:  789\nhead c-3:  0123456\ntail +99:  []\n"
+stderr = ""
+
+[notes]
+standard = "POSIX tail -n +number starts at that line; GNU and busybox extend head with -n -number"
+why = "`tail -n +10` printed the last ten lines instead of starting at the tenth, with no diagnostic, because strconv.Atoi accepts a leading + and the sign was then thrown away. Measured against busybox-w32 on this twelve-line file: it answers j k l and this answered c through l. `head -n -2` was at least loud, failing with `invalid count`, but both references implement it. Found by a differential sweep over the applet surface uutils covers, not by a single ported case, which is why all four forms and both -c variants are pinned together."
