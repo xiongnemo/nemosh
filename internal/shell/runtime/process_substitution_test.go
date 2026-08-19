@@ -143,6 +143,23 @@ func TestProcessSubstitution_substitutesARealPathAndRemovesIt(t *testing.T) {
 	}
 }
 
+// The path names a regular file, which is the whole of what the temporary-file decision
+// buys, so the tests that ask about it have to agree. `-f` answers false in bash, where the
+// path names a pipe; pinned here so it is a decision rather than an accident.
+func TestProcessSubstitution_thePathIsARegularFile(t *testing.T) {
+	// When
+	status, stdout, stderr := runSetScript(t,
+		"[[ -f <(echo x) ]] && echo isfile\ntest -r <(echo y) && echo readable\n")
+
+	// Then
+	if status != 0 {
+		t.Fatalf("status = %d, stderr = %q", status, stderr)
+	}
+	if stdout != "isfile\nreadable\n" {
+		t.Fatalf("stdout = %q, want both tests to pass -- bash says false to the first", stdout)
+	}
+}
+
 // A substitution in a loop must not leave one file per iteration behind.
 func TestProcessSubstitution_removesOneFilePerIteration(t *testing.T) {
 	before := countSubstitutionFiles(t)

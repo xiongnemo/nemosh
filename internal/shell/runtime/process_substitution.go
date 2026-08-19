@@ -25,7 +25,8 @@ import (
 // consumer that stops early does not stop the producer. What it buys is that the path
 // behaves like any other file: readable twice, seekable, and usable by an external program
 // that knows nothing about this shell -- none of which a Windows named pipe can promise,
-// being one-shot and forward-only.
+// being one-shot and forward-only. `[[ -f <(echo x) ]]` is therefore true here and false in
+// bash, where the path names a pipe.
 //
 // That is the right trade for what the form is used for: comparing or reading the output of
 // a command that ends. `>(command)` is refused by name rather than approximated, because
