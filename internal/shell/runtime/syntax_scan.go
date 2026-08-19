@@ -163,6 +163,12 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				index = end
 				continue
 			}
+			if extendedGroupOpensAt(line, index) {
+				end := skipBalancedParens(line, index)
+				scanner.logical.WriteString(line[index:end])
+				index = end - 1
+				continue
+			}
 			scanner.groupClosers = append(scanner.groupClosers, ')')
 			scanner.logical.WriteByte(char)
 			continue

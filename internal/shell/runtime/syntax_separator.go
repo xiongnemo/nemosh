@@ -52,6 +52,10 @@ func splitSequentialSegments(line string) ([]string, error) {
 			continue
 		}
 		if char == '(' {
+			if extendedGroupOpensAt(line, index) {
+				index = skipBalancedParens(line, index) - 1
+				continue
+			}
 			openers = append(openers, '(')
 			continue
 		}

@@ -38,3 +38,18 @@ func arithmeticCommandEnd(line string, index int) int {
 func arithmeticCommandText(line string, index, end int) string {
 	return line[index+2 : end-1]
 }
+
+// arithmeticCommandTokens is the two words `((expr))` becomes: `let` and the expression.
+//
+// The expression goes in single-quoted, so its own blanks and stars are data --
+// `(( i < 10 ))` is one argument to let, and the `*` in `(( a * b ))` is not a directory
+// listing.
+func arithmeticCommandTokens(line string, index, end int) []shellToken {
+	text := arithmeticCommandText(line, index, end)
+	return []shellToken{
+		{kind: tokenWord, value: "let", parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: "let"}}}},
+		{kind: tokenWord, value: text, parsed: &word{
+			parts: []wordPart{{kind: wordPartLiteral, text: text, quote: quoteSingle}},
+		}},
+	}
+}

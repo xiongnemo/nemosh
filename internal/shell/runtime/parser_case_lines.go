@@ -80,6 +80,12 @@ func splitAfterCaseIn(header string) (string, string) {
 func splitCasePatternLine(line string) (string, string, bool) {
 	unquoted := unquotedMask(line)
 	for index := 0; index < len(line); index++ {
+		// `case f in @(*.jpg|*.png))` -- the first `)` closes the pattern group, not the
+		// pattern. Stepping over the group leaves the second one to be found.
+		if unquoted[index] && extendedGroupOpensAt(line, index) {
+			index = skipBalancedParens(line, index) - 1
+			continue
+		}
 		if unquoted[index] && line[index] == ')' {
 			return line[:index+1], strings.TrimLeft(line[index+1:], " \t"), true
 		}
@@ -94,6 +100,12 @@ func splitCaseAlternatives(pattern string) []string {
 	var alternatives []string
 	start := 0
 	for index := 0; index < len(pattern); index++ {
+		// `@(abc|xyz)` is one alternative: the `|` inside a pattern group belongs to the
+		// group, and splitting there left `xyz)` whose `)` reached the line parser.
+		if unquoted[index] && extendedGroupOpensAt(pattern, index) {
+			index = skipBalancedParens(pattern, index) - 1
+			continue
+		}
 		if !unquoted[index] || pattern[index] != '|' {
 			continue
 		}

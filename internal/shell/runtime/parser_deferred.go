@@ -82,6 +82,12 @@ func rejectDeferredSyntax(line string) error {
 				continue
 			}
 		}
+		// A pattern group is not grouping: `[[ x == @(a|b) ]]` and a case pattern both
+		// carry one, and this scan refuses parentheses outright.
+		if extendedGroupOpensAt(line, index) {
+			index = skipBalancedParens(line, index) - 1
+			continue
+		}
 		if char == '(' || char == ')' {
 			return fmt.Errorf("unsupported syntax: grouping")
 		}

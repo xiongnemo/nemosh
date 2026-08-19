@@ -43,6 +43,12 @@ func hasTrailingSyntaxOperator(line string) bool {
 			index++
 			continue
 		}
+		if extendedGroupOpensAt(line, index) {
+			// A pattern group is not a bracket, so it must not raise the depth that
+			// decides whether the line continues.
+			index = skipBalancedParens(line, index) - 1
+			continue
+		}
 		if char == '(' || braceDelimiterAt(line, index, '{') {
 			if depth == 0 {
 				trailing = false

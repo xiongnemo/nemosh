@@ -85,3 +85,66 @@ func TestExtendedPattern_shoptAcceptsIt(t *testing.T) {
 		})
 	}
 }
+
+// The operators in a `case` pattern and inside `[[ ]]`, which is where they are usually
+// written. Eight scans had to learn that a `(` after one of `?*+@!` belongs to the pattern:
+// the logical-line scanner, the `;` separator, the continuation scan, the group extractor,
+// the deferred scan that refuses parentheses, the one that cuts `pattern) body`, the one
+// that splits alternatives on `|`, and the lexer -- which read the `|` inside the group as
+// a pipe and turned one word into three.
+//
+// Measured against `bash -O extglob`.
+func TestExtendedPattern_inCaseAndDoubleBracket(t *testing.T) {
+	tests := []struct {
+		name   string
+		script string
+		want   string
+	}{
+		{name: "at in a case", script: "case abc in @(abc|xyz)) echo at ;; esac\n", want: "at\n"},
+		{
+			// The shape a script actually writes.
+			name:   "alternatives of globs",
+			script: "case file.jpg in @(*.jpg|*.png)) echo image ;; esac\n", want: "image\n",
+		},
+		{name: "question in a case", script: "case a in ?(a)) echo opt ;; esac\n", want: "opt\n"},
+		{name: "plus in a case", script: "case aab in +(a)b) echo plus ;; esac\n", want: "plus\n"},
+		{name: "plus with alternatives", script: "case aab in +(a|ab)) echo backtrack ;; esac\n", want: "backtrack\n"},
+		{name: "negation in a case", script: "case b in !(a)) echo neg ;; esac\n", want: "neg\n"},
+		{
+			name:   "negation not matching falls to the star",
+			script: "case a in !(a)) echo no ;; *) echo star ;; esac\n", want: "star\n",
+		},
+		{name: "at inside double brackets", script: "[[ abc == @(abc|x) ]] && echo db\n", want: "db\n"},
+		{name: "plus inside double brackets", script: "[[ abc == +(a|b|c) ]] && echo plus\n", want: "plus\n"},
+		{
+			name:   "negation inside double brackets",
+			script: "[[ b == !(a) ]] && echo neg\n", want: "neg\n",
+		},
+		{name: "a group written across arms", script: "case png in @(jpg|png)) echo m ;; esac\n", want: "m\n"},
+		// The forms these eight scans exist for, which must be untouched.
+		{name: "an ordinary alternative list", script: "case b in a|b) echo alt ;; esac\n", want: "alt\n"},
+		{name: "an ordinary pattern", script: "case abc in a*) echo plain ;; esac\n", want: "plain\n"},
+		{name: "the optional open paren", script: "case a in (a) echo p ;; esac\n", want: "p\n"},
+		{name: "a subshell", script: "(echo sub)\n", want: "sub\n"},
+		{name: "a pipeline", script: "echo a | cat\n", want: "a\n"},
+		{name: "a pipe in a quoted word", script: "echo 'a|b'\n", want: "a|b\n"},
+		{name: "an arithmetic command", script: "i=0\n((i++))\necho $i\n", want: "1\n"},
+		{name: "a counted for", script: "for ((i=0;i<2;i++)); do printf %s $i; done\necho\n", want: "01\n"},
+		{name: "an array assignment", script: "a=(x y)\necho ${a[1]}\n", want: "y\n"},
+		{name: "a nested condition", script: "[[ ( a == a ) ]] && echo nested\n", want: "nested\n"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// When
+			status, stdout, stderr := runSetScript(t, test.script)
+
+			// Then
+			if status != 0 {
+				t.Fatalf("status = %d, stderr = %q", status, stderr)
+			}
+			if stdout != test.want {
+				t.Fatalf("%q printed %q, want %q", test.script, stdout, test.want)
+			}
+		})
+	}
+}

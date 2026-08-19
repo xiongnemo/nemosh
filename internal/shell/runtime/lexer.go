@@ -155,25 +155,25 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			// arithmetic_command.go.
 			if char == '(' && !wordPresent && (len(tokens) == 0 || tokens[len(tokens)-1].kind != tokenWord) {
 				if end := arithmeticCommandEnd(line, index); end > 0 {
-					text := arithmeticCommandText(line, index, end)
-					if err := appendToken(shellToken{
-						kind: tokenWord, value: "let",
-						parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: "let"}}},
-					}); err != nil {
-						return nil, nil, err
-					}
-					// The expression goes in single-quoted, so its own blanks and
-					// stars are data: `(( i < 10 ))` is one argument to let, and the
-					// `*` in `(( a * b ))` is not a directory listing.
-					if err := appendToken(shellToken{
-						kind: tokenWord, value: text,
-						parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: text, quote: quoteSingle}}},
-					}); err != nil {
-						return nil, nil, err
+					for _, token := range arithmeticCommandTokens(line, index, end) {
+						if err := appendToken(token); err != nil {
+							return nil, nil, err
+						}
 					}
 					index = end
 					continue
 				}
+			}
+			// `@(a|b)` and its four siblings: the whole group is one word, and the
+			// `|` inside it is not a pipe. Eighth scan to need this -- without it the
+			// group reached the case parser intact and then tokenized into three
+			// words, reported as `case: invalid pattern`. See pattern_extended.go.
+			if text, ok := extendedGroupText(line, index); ok {
+				buffer.WriteString(text)
+				appendLiteralPart(&parts, text, quoteUnquoted)
+				wordPresent = true
+				index += len(text) - 1
+				continue
 			}
 			// `$'...'` -- ANSI-C quoting. Before the array-assignment branch only
 			// because both start from an unquoted position; they cannot overlap.

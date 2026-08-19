@@ -102,6 +102,15 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 				continue
 			}
 		}
+		// `@(a|b)` and its four siblings: the parenthesis belongs to the pattern, so the
+		// whole group is data. Before groupOpenerAt, because that one answers "is this a
+		// group" and the `)` below then reported `unexpected )` on what it left behind.
+		if extendedGroupOpensAt(line, index) {
+			end := skipBalancedParens(line, index)
+			output.WriteString(line[index:end])
+			index = end
+			continue
+		}
 		start, opener, ok := groupOpenerAt(line, index)
 		if !ok {
 			// A brace outside command position is an ordinary character, so

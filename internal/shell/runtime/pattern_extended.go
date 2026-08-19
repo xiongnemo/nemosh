@@ -243,3 +243,12 @@ func skipBalancedParens(line string, index int) int {
 	}
 	return len(line)
 }
+
+// extendedGroupText is the whole `X(...)` starting at index, for the scans that copy it
+// through rather than only stepping over it.
+func extendedGroupText(line string, index int) (string, bool) {
+	if !extendedGroupOpensAt(line, index) {
+		return "", false
+	}
+	return line[index:skipBalancedParens(line, index)], true
+}
