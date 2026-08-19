@@ -186,6 +186,13 @@ var provenanceOnlyReferences = map[string]bool{
 	"busybox-w32-ash": true,
 	"nemosh":          true,
 	"dash-posix":      true,
+	// `uutils` names the MIT test suite a case was translated from, not a program to
+	// run: it is Rust, and building it to answer one question would be a second
+	// toolchain in the corpus. The attribution it obliges is in
+	// THIRD-PARTY-NOTICES.md, and a case citing it says in its `why` which executable
+	// reference settled the answer -- uutils follows GNU, and where GNU and busybox-w32
+	// disagree, AGENTS.md says busybox-w32 wins.
+	"uutils": true,
 }
 
 // ProvenanceOnlyReference reports whether a cited reference is documentation

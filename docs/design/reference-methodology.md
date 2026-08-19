@@ -138,6 +138,7 @@ header on 2026-08-18, not recalled.
 | **Oils** `spec/*.test.sh` | Apache-2.0 (`LICENSE.txt`, repo-wide; no separate grant under `spec/`) | The shell language. Thousands of cases, and the format already records *which shells disagree* |
 | **toybox** `tests/*.test` | ISC (`LICENSE`) | The applets — the coreutils surface, which is where 58 of ours live |
 | **FreeBSD** `bin/sh/tests` | BSD-3-Clause (from `bin/sh` headers; the test files carry none of their own) | POSIX `sh` conformance, written by people maintaining a real `sh` |
+| **uutils** `tests/by-util/test_*.rs` | MIT (`LICENSE`, and `license = "MIT"` in the workspace `Cargo.toml`; the test files carry only a pointer to it) | The applets *on Windows*. 5,483 cases, 3,589 of them for names we have, and 319 `cfg(windows)` branches — the only suite here that has any |
 
 Not usable, and worth naming so nobody spends an afternoon on them:
 
@@ -159,3 +160,33 @@ suite, its licence, and the commit it came from, and must be translated into thi
 repository's own case format rather than vendored as a runnable script — a
 `spec/*.test.sh` runner would be a second test framework, and the corpus already
 has one.
+
+Translation does not remove the obligation, and that is worth stating plainly
+because it is the part most easily got wrong: a case rewritten from Rust into TOML
+is a derivative work of the case it was rewritten from, so it is credited. Only a
+case *measured* — run the reference, record what it printed, write the case from
+the observation — carries nothing, because that is behaviour rather than
+expression. Both routes are used here, and the notices file is what tells them
+apart.
+
+## uutils, and why a second opinion is not an oracle
+
+uutils earns its row for one reason the others cannot match: it runs on Windows,
+so its tests state what an applet does *there*. `test_ls.rs` records that
+`ls -1 -R` separates with a backslash, and that a Windows mode string matches
+`[-dl](r[w-]x){3}`. toybox, being Linux-only, has no opinion to offer on either.
+Those are decisions this project has to make too, and until now nothing in the
+reference set could be consulted about them.
+
+But uutils targets **GNU** coreutils, and the primary behaviour reference here is
+busybox-w32, which differs from GNU on flags, on error text, and on `ls` output.
+So a uutils case is evidence, not an answer. Where the two disagree, `AGENTS.md`
+settles it — busybox-w32 wins — and the imported case records in its `why` which
+reference it followed. A case that cannot say which one it follows is not ready to
+be imported.
+
+Two parts of that repository are *not* usable, named here so the boundary is not
+rediscovered later. `util/gnu-patches/` holds patches against GNU's own test
+files, and a patch to a GPL-3.0 file is derivative of it. And the GNU suite itself
+is never in the tree: `util/fetch-gnu.sh` clones it at CI time, which is why
+`tests/` greps clean for `GPL`.

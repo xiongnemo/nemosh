@@ -81,3 +81,39 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
+---
+
+## uutils developers — `uutils/coreutils` behavior test cases
+
+MIT License. No code from this project is included in the `nemosh` binary and
+none is compiled: what is derived from it is *test cases*, translated from
+`tests/by-util/test_*.rs` into this repository's TOML corpus format under
+`tests/behavior/`. Commit `e275cd5`, read 2026-08-20.
+
+A translated case is still a derivative work of the case it was translated from,
+which is why this entry exists; see `docs/design/reference-methodology.md`. Cases
+merely *measured* against a reference carry no such obligation and are not
+credited here. Every file that owes this entry names `uutils` in its `references`
+list, so the set is greppable rather than remembered.
+
+```text
+Copyright (c) uutils developers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
