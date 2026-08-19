@@ -82,7 +82,7 @@ func splitCasePatternLine(line string) (string, string, bool) {
 	for index := 0; index < len(line); index++ {
 		// `case f in @(*.jpg|*.png))` -- the first `)` closes the pattern group, not the
 		// pattern. Stepping over the group leaves the second one to be found.
-		if unquoted[index] && extendedGroupOpensAt(line, index) {
+		if unquoted[index] && wordGroupOpensAt(line, index) {
 			index = skipBalancedParens(line, index) - 1
 			continue
 		}
@@ -102,7 +102,7 @@ func splitCaseAlternatives(pattern string) []string {
 	for index := 0; index < len(pattern); index++ {
 		// `@(abc|xyz)` is one alternative: the `|` inside a pattern group belongs to the
 		// group, and splitting there left `xyz)` whose `)` reached the line parser.
-		if unquoted[index] && extendedGroupOpensAt(pattern, index) {
+		if unquoted[index] && wordGroupOpensAt(pattern, index) {
 			index = skipBalancedParens(pattern, index) - 1
 			continue
 		}

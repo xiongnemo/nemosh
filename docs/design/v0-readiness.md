@@ -567,14 +567,19 @@ options at all, `x=$(cmd)` field splitting its value, `${VAR:-${DEFAULT}}`,
 operators, sparse arrays, negative subscripts, `$$`, `${#1}`, `**`, `,`,
 `base#digits`, `$'...'`, `<<<`, `&>`, `((expr))`, `for ((;;))`, `for name`,
 `declare`/`typeset` with associative arrays, `shopt` with globstar, the `function`
-keyword, `;;&` and `;&`, `case (pattern)`, and a redirection after a compound's
-closer.
+keyword, `;;&` and `;&`, `case (pattern)`, a redirection after a compound's
+closer, the extended pattern operators, `BASH_REMATCH`, and `<(cmd)`.
+
+Three things a bare `(` inside `$( )` broke, all found while adding `<(cmd)` and
+all fixed with it: a subshell (`$( (cd x && pwd) )`), an extended pattern group,
+and a case arm's pattern. The substitution scanner counted only the parentheses
+of `$(`, so the first `)` belonging to anything else ended the body early.
 
 | gap | workaround | why it is not done |
 | --- | --- | --- |
 | `true \| case a in a) x ;; esac` -- piping into a *case* | pipe into a `while`, `if`, `for` or `until`, all of which work; or `{ case ...; esac; }` | The case-arm line pass finds a `case` only at the start of a line. The other four compounds are done |
 | a *multi-arm* case inside a brace group | a case at the top level takes any number of arms; a single-arm one works inside a group | The second pattern's `)` meets a fourth scan with its own opinion about brackets. Three of the four now ask whether a `case` is open |
-| `<(cmd)` and `>(cmd)` -- process substitution | a temporary file, or `cmd \| { ...; }` | Windows has no `/dev/fd`, so it needs a named pipe or a temp file and a decision about which. The one item here that is genuinely platform work rather than parser work |
+| `>(cmd)` -- the *output* half of process substitution | `cmd1 > file; cmd2 < file`, or a pipe | Refused by name rather than approximated. `<(cmd)` works, as a real temporary file rather than `/dev/fd/63`, which Windows has no equivalent of; the input form's consumer reads a file the command has already finished writing, and that trade does not carry over to writing into one. See process_substitution.go |
 | `$LINENO` | none | No AST node carries a position. A `$LINENO` that is always 1 would send someone to the wrong line with confidence, which is worse than its being unset |
 | `$!` -- the last background process id | `wait` with no argument | Background jobs here are goroutines, not processes, so there is no pid to report. A job number would be a different thing wearing the same name |
 | an *unquoted* group in a `[[ =~ ]]` regex | quote it: `[[ x =~ "(b)" ]]`, which works here though bash reads a quoted regex as a literal | Same cause as the row above: the parenthesis is read as a bracket before the condition is parsed. The captures themselves are kept now, in BASH_REMATCH |

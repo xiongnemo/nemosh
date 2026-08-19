@@ -48,6 +48,16 @@ func rejectDeferredSyntax(line string) error {
 			}
 		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' {
+			// Stepped over whole rather than counted. A count of open substitutions
+			// cannot tell a subshell's `)` from the substitution's own, so
+			// `echo $( (echo x) )` came back as "unsupported syntax: grouping" -- the
+			// subshell's `)` closed the count and the next one had nothing to close.
+			// commandSubstitutionEnd knows every parenthesis rule there is; asking it
+			// is how this scan stops having its own opinion.
+			if end, ok := commandSubstitutionEnd(line, index+2); ok {
+				index = end
+				continue
+			}
 			substitutions++
 			index++
 			continue
@@ -84,7 +94,7 @@ func rejectDeferredSyntax(line string) error {
 		}
 		// A pattern group is not grouping: `[[ x == @(a|b) ]]` and a case pattern both
 		// carry one, and this scan refuses parentheses outright.
-		if extendedGroupOpensAt(line, index) {
+		if wordGroupOpensAt(line, index) {
 			index = skipBalancedParens(line, index) - 1
 			continue
 		}

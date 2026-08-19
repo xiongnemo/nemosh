@@ -52,18 +52,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 		if err := budget.consumeTokens(1); err != nil {
 			return err
 		}
-		if token.kind == tokenWord {
-			switch token.value {
-			case "[[":
-				// Only at the start of a command: `echo [[` is two ordinary words.
-				// A word already on the line means this one is an argument.
-				if len(tokens) == 0 || tokens[len(tokens)-1].kind != tokenWord {
-					inCondition = true
-				}
-			case "]]":
-				inCondition = false
-			}
-		}
+		inCondition = conditionAfterToken(inCondition, token, tokens)
 		tokens = append(tokens, token)
 		starts = append(starts, wordStart)
 		return nil
@@ -163,6 +152,21 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 					index = end
 					continue
 				}
+			}
+			// `<(command)` -- process substitution. Before the operator check below,
+			// which would otherwise take the `<` for a redirect and leave `(command)`
+			// as a subshell. `>(command)` is recognised too, so that it can be refused
+			// by name. See process_substitution.go.
+			substitution, end, err := processSubstitutionPart(line, index, budget, depth)
+			if err != nil {
+				return nil, nil, err
+			}
+			if end > 0 {
+				buffer.WriteString(substitution.text)
+				parts = append(parts, substitution)
+				wordPresent = true
+				index = end
+				continue
 			}
 			// `@(a|b)` and its four siblings: the whole group is one word, and the
 			// `|` inside it is not a pipe. Eighth scan to need this -- without it the

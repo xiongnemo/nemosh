@@ -105,7 +105,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		// `@(a|b)` and its four siblings: the parenthesis belongs to the pattern, so the
 		// whole group is data. Before groupOpenerAt, because that one answers "is this a
 		// group" and the `)` below then reported `unexpected )` on what it left behind.
-		if extendedGroupOpensAt(line, index) {
+		if wordGroupOpensAt(line, index) {
 			end := skipBalancedParens(line, index)
 			output.WriteString(line[index:end])
 			index = end

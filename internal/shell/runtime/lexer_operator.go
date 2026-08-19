@@ -46,6 +46,25 @@ func redirectTokenWidth(input string) int {
 	return 1
 }
 
+// conditionAfterToken reports whether the scan is inside `[[ ]]` once token has been
+// appended, which the lexer needs because inside a condition `&&`, `||`, `<` and `>` are
+// not operators. Here rather than in the loop that calls it: lexer.go is at its line
+// ceiling, and this is the one question in it that is about a token rather than a byte.
+//
+// `[[` counts only at the start of a command, because `echo [[` is two ordinary words.
+func conditionAfterToken(inCondition bool, token shellToken, tokens []shellToken) bool {
+	if token.kind != tokenWord {
+		return inCondition
+	}
+	switch token.value {
+	case "[[":
+		return len(tokens) == 0 || tokens[len(tokens)-1].kind != tokenWord
+	case "]]":
+		return false
+	}
+	return inCondition
+}
+
 func isRedirectToken(value string) bool {
 	index := 0
 	for index < len(value) && value[index] >= '0' && value[index] <= '9' {

@@ -104,6 +104,11 @@ func (r Runtime) runTokenCommand(ctx context.Context, tokens []shellToken, saved
 }
 
 func (r Runtime) runParsedWords(ctx context.Context, command []word, operations []redirectOperation, savedStatus int) lineResult {
+	// `<(command)` left a temporary file behind, and this is the point that knows the
+	// consumer has finished reading it. Deferred from here rather than from the expansion
+	// so `cat <(echo hi)` still has a file to open; a snapshot carries its own expansion
+	// state, so a background job or a subshell removes its own and not another's.
+	defer r.cleanUpProcessSubstitutions()
 	var ok bool
 	operations, ok = r.expandRedirectOperations(ctx, operations, savedStatus)
 	if r.expansionFailed() {

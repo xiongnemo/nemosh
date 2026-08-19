@@ -54,11 +54,32 @@ func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 		// for the end of the substitution. Without this the scan popped its own
 		// nesting at `2)` and then reported the real `)` as missing. This is the
 		// fifth scanner to need the rule; the other four are named in array.go.
+		// `@(a|b)` and `<(cmd)` are stepped over whole: those parentheses belong to a
+		// word, so they neither open nor close a level. Sixth scanner to need the rule,
+		// and it was missing both of them -- `echo $(echo @(a|b))` reported
+		// `unexpected )` before this. See wordGroupOpensAt.
+		if quote == 0 && wordGroupOpensAt(input, index) {
+			index = skipBalancedParens(input, index) - 1
+			continue
+		}
+		// Inside a `case`, a parenthesis is pattern syntax rather than nesting: the `)`
+		// of `x)` closes nothing, and the optional `(` of `(x)` opens nothing. Skipping
+		// only one of the two would leave the count off by one, which is why both live
+		// under the same test. `echo $(case x in x) echo hit;; esac)` was cut off at the
+		// pattern before this. See case_awareness.go.
+		if quote == 0 && (char == '(' || char == ')') && insideCase(input[bodyStart:index]) {
+			continue
+		}
 		if char == '(' && quote == 0 {
 			if end, ok := arrayAssignmentSpan(input, index, input[bodyStart:index]); ok {
 				index = end
 				continue
 			}
+			// A subshell inside a substitution: `$( (cd x && pwd) )`. Only `$(` pushed a
+			// level, so the subshell's `)` popped the substitution's own and the body
+			// was cut off there.
+			quotes = append(quotes, 0)
+			continue
 		}
 		if char == ')' && quote == 0 {
 			quotes = quotes[:len(quotes)-1]

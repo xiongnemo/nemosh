@@ -163,7 +163,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				index = end
 				continue
 			}
-			if extendedGroupOpensAt(line, index) {
+			if wordGroupOpensAt(line, index) {
 				end := skipBalancedParens(line, index)
 				scanner.logical.WriteString(line[index:end])
 				index = end - 1

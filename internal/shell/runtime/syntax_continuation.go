@@ -43,7 +43,7 @@ func hasTrailingSyntaxOperator(line string) bool {
 			index++
 			continue
 		}
-		if extendedGroupOpensAt(line, index) {
+		if wordGroupOpensAt(line, index) {
 			// A pattern group is not a bracket, so it must not raise the depth that
 			// decides whether the line continues.
 			index = skipBalancedParens(line, index) - 1
@@ -64,6 +64,15 @@ func hasTrailingSyntaxOperator(line string) bool {
 			continue
 		}
 		if char == '<' || char == '>' {
+			// `cat <(echo hi)` is a complete line, and this scan has to decide that at
+			// the `<` rather than at the parenthesis: by the time wordGroupOpensAt
+			// above sees the `(`, the `<` has already been recorded as a redirect
+			// waiting for its target, and the line was reported as continuing.
+			if index+1 < len(line) && line[index+1] == '(' {
+				index = skipBalancedParens(line, index+1) - 1
+				trailing = false
+				continue
+			}
 			trailing = true
 			index += redirectTokenWidth(line[index:]) - 1
 			continue

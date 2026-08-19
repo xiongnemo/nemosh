@@ -16,6 +16,22 @@ type expansionState struct {
 	// already been complained about, so the complaint does not bury the
 	// diagnostics it is attached to.
 	warnedDebugChannels map[string]bool
+	// processSubstitutions are the temporary files `<(cmd)` created for the command being
+	// expanded. Held until the command has run, because the consumer opens them in
+	// between; see process_substitution.go.
+	processSubstitutions []string
+}
+
+func (state *expansionState) registerProcessSubstitution(path string) {
+	state.processSubstitutions = append(state.processSubstitutions, path)
+}
+
+// takeProcessSubstitutions hands over the paths and forgets them, so a second command does
+// not try to remove the same files.
+func (state *expansionState) takeProcessSubstitutions() []string {
+	paths := state.processSubstitutions
+	state.processSubstitutions = nil
+	return paths
 }
 
 func newExpansionState() *expansionState {

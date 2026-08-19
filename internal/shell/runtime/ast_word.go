@@ -16,6 +16,9 @@ const (
 	wordPartCommandSubstitution
 	wordPartEscaped
 	wordPartArithmetic
+	// wordPartProcessSubstitution is `<(command)`: it expands to a path holding the
+	// command's output. See process_substitution.go.
+	wordPartProcessSubstitution
 )
 
 type wordPart struct {
