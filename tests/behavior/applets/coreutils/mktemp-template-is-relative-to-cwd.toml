@@ -1,0 +1,26 @@
+id = "applet.coreutils.mktemp.template-is-relative-to-cwd"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+script = '''
+mkdir work
+cd work
+name=$(mktemp fooXXXXXX)
+case "$name" in
+foo??????) echo "named in place" ;;
+*) echo "unexpected name: $name" ;;
+esac
+test -f "$name" && echo created
+ls . | wc -l
+'''
+
+[expect]
+status = 0
+stdout = "named in place\ncreated\n1\n"
+stderr = ""
+
+[notes]
+standard = "GNU coreutils and busybox mktemp: a template with no directory part names a file in the current directory"
+why = "Found while porting uutils tests/by-util/test_mktemp.rs (MIT, commit e275cd5), whose Windows branches pass templates containing a separator and so depend on where a template without one lands. This shell put every such file in $TMPDIR, so a script doing f=$(mktemp out.XXXXXX) got a file somewhere else and no indication of it. busybox-w32 was measured and creates it in the current directory. The name is matched with a pattern because the random part is random; six question marks also pin that six X produce six characters, which the previous implementation did not -- it appended a ten-digit number."

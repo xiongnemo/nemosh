@@ -1,0 +1,16 @@
+id = "applet.coreutils.mktemp.rejects-a-template-without-xs"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+command = ["mktemp", "noxes"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "mktemp: too few X's in template 'noxes'\n"
+
+[notes]
+standard = "GNU coreutils mktemp: the template's last component needs at least three X"
+why = "Ported from uutils tests/by-util/test_mktemp.rs (MIT, commit e275cd5). This shell accepted any template and invented a suffix, so `mktemp noxes` succeeded and returned a name the template never asked for. busybox-w32 refuses it too, more strictly -- it demands the template end with exactly six X and rejects `aXXX` -- but its diagnostic is `mktemp: : Invalid argument`, naming no operand. The rule followed here is GNU's, because it accepts everything busybox accepts and so cannot break a script that works against the primary reference; the wording is GNU's for the same reason."

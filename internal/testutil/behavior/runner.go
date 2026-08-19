@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
+	shellruntime "github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 type Runner struct {
@@ -64,7 +65,18 @@ func (r Runner) Run(ctx context.Context, c Case) Result {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := applet.Run(ctx, c.Command[1:], bytes.NewReader([]byte(c.Stdin)), &stdout, &stderr)
-	return Result{Status: statusFromError(err), Stdout: stdout.String(), Stderr: stderr.String()}
+	// The CLI and the shell both turn an applet's *returned* error into
+	// `applet: message` on stderr. The harness dropped it, so a command case could not
+	// assert a diagnostic an applet reports by returning rather than by writing --
+	// `mktemp noxes` looked silent here and is not. Same formatter as both callers, so
+	// the case sees what a user would.
+	status, message := shellruntime.AppletFailure(name, err)
+	if message != "" {
+		if _, err := fmt.Fprintln(&stderr, message); err != nil {
+			return Result{HarnessError: err}
+		}
+	}
+	return Result{Status: status, Stdout: stdout.String(), Stderr: stderr.String()}
 }
 
 func skipReason(c Case) string {
@@ -83,17 +95,4 @@ func skipReason(c Case) string {
 		}
 	}
 	return ""
-}
-
-func statusFromError(err error) int {
-	if err == nil {
-		return 0
-	}
-	if status, ok := applets.StatusCode(err); ok {
-		return status
-	}
-	if errors.Is(err, applets.ErrExitFalse) {
-		return 1
-	}
-	return 1
 }

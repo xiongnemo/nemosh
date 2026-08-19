@@ -1,0 +1,16 @@
+id = "applet.coreutils.mktemp.t-refuses-a-separator"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["uutils", "busybox-w32"]
+command = ["mktemp", "-t", "a/bXXXXXX"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "mktemp: invalid template, 'a/bXXXXXX', contains directory separator\n"
+
+[notes]
+standard = "GNU coreutils mktemp: -t names the base directory, so the template may not name one too"
+why = "Ported from uutils tests/by-util/test_mktemp.rs (MIT, commit e275cd5), test_prefix_template_separator, which asserts this refusal for the Windows spelling a\\bXXX. -t and -p were not implemented here at all before -- both were refused as invalid options, though busybox-w32 has both. This is the one place the imported case is followed against the primary reference: busybox ignores the template's directory silently, and a request with two answers is better refused than half-honoured."
