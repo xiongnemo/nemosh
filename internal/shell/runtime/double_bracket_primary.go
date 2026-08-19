@@ -83,13 +83,22 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 		return !matchShellPattern(right.text, left.text), nil
 	case "=~":
 		// An extended regular expression, anchored nowhere -- so `[[ abc =~ b ]]`
-		// is true. A quoted right side is still a regular expression in bash;
-		// quoting only stops the *pattern* operators, and =~ is not one of them.
+		// is true.
+		//
+		// A quoted right side is treated as a regular expression here, which bash 3.2
+		// and later do not do: there, quoting makes it a literal string. The divergence
+		// predates this comment and is recorded in case_awareness.go, where the reason it
+		// has not been closed is set out -- an unquoted group does not reach the matcher
+		// at all yet, so making quoting literal would leave no working spelling.
 		expression, err := regexp.Compile(right.text)
 		if err != nil {
 			return false, fmt.Errorf("invalid regular expression: %s", right.text)
 		}
-		return expression.MatchString(left.text), nil
+		// FindStringSubmatch rather than MatchString, because the groups are the
+		// point: `[[ $x =~ (a)(b) ]]` is how a script pulls fields out of a string
+		// in bash, and the captures land in BASH_REMATCH. Without them the match
+		// answered yes and then had nothing to show for it.
+		return r.recordRegexMatch(expression.FindStringSubmatch(left.text)), nil
 	case "<":
 		return left.text < right.text, nil
 	case ">":
