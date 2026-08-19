@@ -84,23 +84,32 @@ func TestDefaultRegistry_printsEachOperand_whenRealpathRunsWithMultipleFiles(t *
 	}
 }
 
-func TestDefaultRegistry_printsMissingFinalComponent_whenParentExists(t *testing.T) {
+// This test used to assert the opposite -- that a missing final component was printed and
+// exit 0 -- and it was wrong. busybox-w32, GNU and uutils all fail here; printing the path
+// is what `realpath -m` does, and neither reference has that option. The behaviour that
+// really does print a path that is not there is a *dangling symlink*, which has its own test
+// in realpath_symlink_test.go and still passes.
+func TestDefaultRegistry_returnsErrExitFalse_whenFinalComponentIsMissing(t *testing.T) {
 	// Given
-	dir := t.TempDir()
-	path := filepath.Join(dir, "missing.txt")
+	path := filepath.Join(t.TempDir(), "missing.txt")
 	applet := lookupRealpath(t)
-	var stdout bytes.Buffer
+	var stdout, stderr bytes.Buffer
 
 	// When
-	err := applet.Run(context.Background(), []string{path}, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+	err := applet.Run(context.Background(), []string{path}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
-	if err != nil {
-		t.Fatalf("expected realpath to allow a missing final component, got %v", err)
+	if !errors.Is(err, applets.ErrExitFalse) {
+		t.Fatalf("expected a missing final component to return ErrExitFalse, got %v", err)
 	}
-	if got, want := stdout.String(), slashAbs(t, path)+"\n"; got != want {
-		t.Fatalf("expected missing-leaf stdout %q, got %q", want, got)
+	if got := stdout.String(); got != "" {
+		t.Fatalf("expected empty stdout, got %q", got)
 	}
+	// Measured from busybox-w32: `realpath: <operand>: No such file or directory`.
+	if want := "No such file or directory\n"; !strings.HasSuffix(stderr.String(), want) {
+		t.Fatalf("stderr = %q, want it to end with %q", stderr.String(), want)
+	}
+	assertRealpathDiagnostic(t, stderr.String(), path)
 }
 
 func TestDefaultRegistry_returnsErrExitFalseAndWritesDiagnostic_whenParentIsMissing(t *testing.T) {

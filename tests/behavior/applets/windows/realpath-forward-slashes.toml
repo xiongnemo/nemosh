@@ -1,0 +1,26 @@
+id = "applet.coreutils.realpath.forward-slashes"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows"]
+references = ["busybox-w32", "uutils"]
+files = { "dir1/keep.txt" = "x\n" }
+script = '''
+cd dir1
+plain=$(realpath ../dir1/keep.txt)
+noisy=$(realpath ./../dir1//keep.txt)
+if [ "$plain" = "$noisy" ]; then echo same; else echo "differs: $plain vs $noisy"; fi
+case "$plain" in
+*/dir1/keep.txt) echo "forward slashes" ;;
+*) echo "unexpected spelling: $plain" ;;
+esac
+'''
+
+[expect]
+status = 0
+stdout = "same\nforward slashes\n"
+stderr = ""
+
+[notes]
+standard = "GNU coreutils realpath: resolve . and .. and collapse repeated separators"
+why = "Ported from uutils tests/by-util/test_realpath.rs (MIT, commit e275cd5), which asserts backslash output on Windows because it follows GNU. That half is deliberately not followed: busybox-w32 was measured on this machine and prints forward slashes, and AGENTS.md makes it the primary reference. The answer is matched with a case pattern rather than a literal so the case pins the separator style and the traversal without pinning a temporary directory."

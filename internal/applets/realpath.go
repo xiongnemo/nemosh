@@ -28,7 +28,12 @@ func newRealpathApplet() Applet {
 			}
 			if err != nil {
 				failed = true
-				if _, writeErr := fmt.Fprintf(stderr, "realpath: %s: %v\n", filepath.ToSlash(arg), err); writeErr != nil {
+				// operandFailure rather than the error itself: a *fs.PathError prints
+				// the host path it failed on, which arrives with native separators
+				// mixed into an operand the caller spelled with slashes --
+				// `GetFileAttributesEx C:/Users\nemo\...` was the actual output. See
+				// diagnostic.go, which exists for this.
+				if _, writeErr := fmt.Fprintf(stderr, "realpath: %v\n", operandFailure(filepath.ToSlash(arg), err)); writeErr != nil {
 					return writeErr
 				}
 				continue
@@ -45,10 +50,24 @@ func newRealpathApplet() Applet {
 }
 
 func realpath(path string) (string, error) {
-	return realpathAbs(path)
+	return realpathAbs(path, false)
 }
 
-func realpathAbs(path string) (string, error) {
+// realpathAbs resolves path, where missingAllowed says whether a path that is not there is
+// an answer or a failure.
+//
+// The distinction is the whole of what `realpath` has to get right about absence, and both
+// halves were measured against busybox-w32, which is the reference this shell follows:
+//
+//	realpath nosuch    -> realpath: nosuch: No such file or directory, status 1
+//	realpath dangling  -> the target it points at, status 0
+//
+// So an operand that does not exist fails, and a *symlink target* that does not exist does
+// not -- a dangling link still names a path, and printing it is what makes `realpath` usable
+// for "where would this go". GNU and uutils agree on both. Before this, the first form
+// printed a path and exited 0, which is `realpath -m` behaviour that neither reference has
+// and that no operand asked for.
+func realpathAbs(path string, missingAllowed bool) (string, error) {
 	resolved, err := filepath.EvalSymlinks(path)
 	if err == nil {
 		return filepath.ToSlash(filepath.Clean(resolved)), nil
@@ -62,7 +81,11 @@ func realpathAbs(path string) (string, error) {
 		if !filepath.IsAbs(target) {
 			target = appendPath(filepath.Dir(path), target)
 		}
-		return realpath(target)
+		// Following a link is what licenses the absence below.
+		return realpathAbs(target, true)
+	}
+	if !missingAllowed {
+		return "", err
 	}
 
 	parent, leaf := splitFinalPathElement(path)

@@ -1,0 +1,16 @@
+id = "applet.coreutils.realpath.missing-operand-fails"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+command = ["realpath", "nosuch.txt"]
+
+[expect]
+status = 1
+stdout = ""
+stderr = "realpath: nosuch.txt: No such file or directory\n"
+
+[notes]
+standard = "GNU coreutils realpath: without -m or -q, a path that does not resolve is an error"
+why = "Ported from uutils tests/by-util/test_realpath.rs (MIT, commit e275cd5), whose Windows branches assert failure for an unresolvable operand. Nemosh printed the path and exited 0, which is `realpath -m` behaviour that neither reference has. busybox-w32 was then measured directly and produces this exact stderr and status, so the answer follows the primary reference rather than the imported case. uutils spells the resolved path with backslashes; that half is deliberately not followed, because busybox-w32 and this shell both use forward slashes."
