@@ -582,7 +582,6 @@ closer.
 | `${a[-9]}` gives empty where bash errors | none needed | Deliberate: it is the same answer `${a[9]}` gives, and being consistent about "not an element" matters more here than matching bash's choice to distinguish the two |
 | two heredocs on one line -- `cat <<A; cat <<B` | put them on separate lines | The delimiter scan collects one per line |
 | `select name in ...; do ... done` | a `while` loop with `read` and a `case` | Not implemented. It is an interactive menu construct, and the loop it expands to is three lines someone can write |
-| extended globs -- `@(a\|b)`, `+(x)`, `!(y)` | `case` with `\|` alternatives, which POSIX has | `shopt -s extglob` is refused by name rather than accepted, so nothing believes it works. The patterns are a syntax error |
 | `coproc` | a named pipe, or two redirections | Not implemented. It needs a bidirectional child, which on Windows means deciding on pipes before deciding on this |
 | `trap -l` | `kill -l`, which works | The signal list is only wired to kill |
 
