@@ -1,0 +1,22 @@
+id = "applet.coreutils.cp.multiple-sources-into-directory"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "posix", "uutils"]
+files = { "a.txt" = "A\n", "b.txt" = "B\n", "c.txt" = "C\n" }
+script = '''
+mkdir dest
+cp a.txt b.txt c.txt dest
+echo status=$?
+cat dest/a.txt dest/b.txt dest/c.txt
+'''
+
+[expect]
+status = 0
+stdout = "status=0\nA\nB\nC\n"
+stderr = ""
+
+[notes]
+standard = "POSIX cp: source_file... target_directory"
+why = "Found while porting uutils tests/by-util/test_cp.rs (MIT, commit e275cd5), several of whose cases pass three sources and a directory. This shell refused any third operand with `extra operand`, a refusal POSIX does not license; busybox-w32 was measured and copies all three with status 0."

@@ -1,0 +1,22 @@
+id = "applet.coreutils.cp.recursion-detected"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+files = { "keep.txt" = "K\n" }
+script = '''
+cp -r . into
+echo status=$?
+cat into/keep.txt
+test -d into/into && echo recursed || echo "not recursed"
+'''
+
+[expect]
+status = 0
+stdout = "status=1\nK\nnot recursed\n"
+stderr = "cp: recursion detected, omitting directory 'into'\n"
+
+[notes]
+standard = "GNU coreutils cp: a destination inside the source is not descended into"
+why = "Found while porting uutils tests/by-util/test_cp.rs (MIT, commit e275cd5). Copying a directory into its own child made this shell create into/into/into/... several hundred levels deep and keep going, because the destination is created inside the source and the next read of the source finds it. busybox-w32 was measured: it names the directory it omitted, copies everything else, and exits 1. GNU words the message differently and also exits 1. busybox prints './into' where this prints 'into', because Go's path join drops the leading './'."

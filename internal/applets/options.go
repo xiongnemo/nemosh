@@ -78,16 +78,18 @@ func invalidOption(letter byte) error {
 // once their own options are removed -- cp needs -r and mv needs -f. A count
 // that is not two used to fail silently, so `cp one.txt` and `cp a b c` both
 // exited 1 with nothing said about which of them was wrong.
+//
+// Three or more operands are no longer refused: POSIX gives both applets a
+// `source_file... target_directory` form, and `cp a b c dir/` is common enough in
+// scripts that refusing it with `extra operand 'c'` was the more surprising answer.
+// The caller checks that the last operand is a directory; see copyManyOperands.
 func twoOperandsWithOptions(args []string, short string) (appletOptions, []string, error) {
 	options, operands, err := parseAppletOptions(args, short, "")
 	if err != nil {
 		return options, nil, err
 	}
-	switch {
-	case len(operands) < 2:
+	if len(operands) < 2 {
 		return options, nil, missingOperand()
-	case len(operands) > 2:
-		return options, nil, fmt.Errorf("extra operand '%s'", operands[2])
 	}
 	return options, operands, nil
 }

@@ -1,0 +1,22 @@
+id = "applet.coreutils.cp.reports-missing-source-and-continues"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+files = { "a.txt" = "A\n", "b.txt" = "B\n" }
+script = '''
+mkdir dest
+cp a.txt nosuch.txt b.txt dest
+echo status=$?
+cat dest/a.txt dest/b.txt
+'''
+
+[expect]
+status = 0
+stdout = "status=1\nA\nB\n"
+stderr = "cp: cannot stat 'nosuch.txt': No such file or directory\n"
+
+[notes]
+standard = "POSIX cp: a source that cannot be copied is reported and the rest are still copied"
+why = "Ported from uutils tests/by-util/test_cp.rs (MIT, commit e275cd5), which passes a nonexistent middle source. busybox-w32 was measured: it copies the two that exist, names the one it could not, and exits 1. Stopping at the first failure would leave a half-done copy with no record of which half. busybox spells it `can't stat`; this shell says `cannot` everywhere, which is also the GNU and uutils wording."

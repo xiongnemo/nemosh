@@ -15,30 +15,43 @@ type pathOperand struct {
 }
 
 func newCpApplet() Applet {
-	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
+	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
 		options, operands, err := twoOperandsWithOptions(args, "rR")
 		if err != nil {
 			return err
+		}
+		if len(operands) > 2 {
+			last := len(operands) - 1
+			return copyManyOperands(ctx, "cp", operands[:last], operands[last], stderr,
+				func(source, dest pathOperand) error {
+					return copyOneInto(source, dest, options, stderr)
+				})
 		}
 		source, dest, err := copyOperands(ctx, operands)
 		if err != nil {
 			return err
 		}
-		// A directory needs -r, and saying so is the whole of the difference:
-		// without it busybox answers `omitting directory` and exits 1 rather
-		// than copying something else.
-		if info, statErr := os.Lstat(source.host); statErr == nil && info.IsDir() {
-			if !options.has('r') && !options.has('R') {
-				return omittingDirectory(source.operand)
-			}
-			return copyTree(source, dest)
-		}
-		return copyFile(source, dest)
+		return copyOneInto(source, dest, options, stderr)
 	}}
 }
 
+// copyOneInto copies one already-resolved source, which is the body both the two-operand form
+// and the `source... directory` form need.
+//
+// A directory needs -r, and saying so is the whole of the difference: without it busybox
+// answers `omitting directory` and exits 1 rather than copying something else.
+func copyOneInto(source, dest pathOperand, options appletOptions, stderr io.Writer) error {
+	if info, statErr := os.Lstat(source.host); statErr == nil && info.IsDir() {
+		if !options.has('r') && !options.has('R') {
+			return omittingDirectory(source.operand)
+		}
+		return copyTree(source, dest, stderr)
+	}
+	return copyFile(source, dest)
+}
+
 func newMvApplet() Applet {
-	return simpleApplet{name: "mv", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
+	return simpleApplet{name: "mv", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
 		// -f is accepted and changes nothing, because nothing here prompts:
 		// this mv overwrites its destination either way, so -f asks for the
 		// behaviour already in force. Scripts carry it constantly, and refusing
@@ -47,28 +60,38 @@ func newMvApplet() Applet {
 		if err != nil {
 			return err
 		}
+		if len(operands) > 2 {
+			last := len(operands) - 1
+			return copyManyOperands(ctx, "mv", operands[:last], operands[last], stderr, moveOne)
+		}
 		source, dest, err := copyOperands(ctx, operands)
 		if err != nil {
 			return err
 		}
-		renameErr := os.Rename(source.host, dest.host)
-		if renameErr == nil {
-			return nil
-		}
-		// Only a cross-device rename is worth retrying as copy-then-delete.
-		// Anything else is a real failure, and busybox reports it as one
-		// instead of falling through to the copy (coreutils/mv.c:137).
-		if !isCrossDeviceRename(renameErr) {
-			return cannotRename(source.operand, renameErr)
-		}
-		if err := copyFile(source, dest); err != nil {
-			return err
-		}
-		if err := os.Remove(source.host); err != nil {
-			return cannotRemove(source.operand, err)
-		}
-		return nil
+		return moveOne(source, dest)
 	}}
+}
+
+// moveOne renames one already-resolved source, which is the body both the two-operand form
+// and the `source... directory` form need.
+func moveOne(source, dest pathOperand) error {
+	renameErr := os.Rename(source.host, dest.host)
+	if renameErr == nil {
+		return nil
+	}
+	// Only a cross-device rename is worth retrying as copy-then-delete. Anything else is a
+	// real failure, and busybox reports it as one instead of falling through to the copy
+	// (coreutils/mv.c:137).
+	if !isCrossDeviceRename(renameErr) {
+		return cannotRename(source.operand, renameErr)
+	}
+	if err := copyFile(source, dest); err != nil {
+		return err
+	}
+	if err := os.Remove(source.host); err != nil {
+		return cannotRemove(source.operand, err)
+	}
+	return nil
 }
 
 func copyOperands(ctx context.Context, args []string) (pathOperand, pathOperand, error) {

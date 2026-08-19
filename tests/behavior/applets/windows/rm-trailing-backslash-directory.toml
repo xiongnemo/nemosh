@@ -1,0 +1,20 @@
+id = "applet.coreutils.rm.trailing-backslash-directory"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows"]
+references = ["busybox-w32", "uutils"]
+files = { "dir/f.txt" = "x\n" }
+script = '''
+rm -rf ".\dir\\"
+test -d dir && echo present || echo gone
+'''
+
+[expect]
+status = 0
+stdout = "gone\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh Windows path handling at the applet boundary"
+why = "Ported from uutils tests/by-util/test_rm.rs (MIT, commit e275cd5), test_directory_with_trailing_backslash, which exists for uutils issue 3200: a Windows operand with a trailing separator. The operand is double-quoted so the backslashes survive the shell and reach the applet. This shell already handled it and busybox-w32 agrees, so the case is a regression guard rather than a fix."
