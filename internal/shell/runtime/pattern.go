@@ -13,6 +13,12 @@ package runtime
 // Runes rather than bytes, so `?` matches one character of a non-ASCII word
 // instead of one byte of its UTF-8 encoding.
 func matchShellPattern(pattern, value string) bool {
+	// The extended operators need a real search rather than the single backtrack point
+	// below, so they have their own matcher. Checked first and cheaply, because an
+	// ordinary pattern -- nearly all of them -- should not pay for this.
+	if hasExtendedPattern(pattern) {
+		return matchExtendedPattern([]rune(pattern), []rune(value))
+	}
 	return matchRunePattern([]rune(pattern), []rune(value))
 }
 

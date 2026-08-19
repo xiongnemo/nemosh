@@ -577,7 +577,7 @@ closer.
 | `<(cmd)` and `>(cmd)` -- process substitution | a temporary file, or `cmd \| { ...; }` | Windows has no `/dev/fd`, so it needs a named pipe or a temp file and a decision about which. The one item here that is genuinely platform work rather than parser work |
 | `$LINENO` | none | No AST node carries a position. A `$LINENO` that is always 1 would send someone to the wrong line with confidence, which is worse than its being unset |
 | `$!` -- the last background process id | `wait` with no argument | Background jobs here are goroutines, not processes, so there is no pid to report. A job number would be a different thing wearing the same name |
-| `BASH_REMATCH` after `[[ =~ ]]` | `grep -o`, or `expr` | The match runs but the captures are not kept |
+| an *unquoted* group in a `[[ =~ ]]` regex | quote it: `[[ x =~ "(b)" ]]`, which works here though bash reads a quoted regex as a literal | Same cause as the row above: the parenthesis is read as a bracket before the condition is parsed. The captures themselves are kept now, in BASH_REMATCH |
 | `${x:-"}"}` keeps its quotes | none | Quote removal inside an operand word. The `}` inside quotes correctly does not end the expansion, which is the half that matters |
 | `${a[-9]}` gives empty where bash errors | none needed | Deliberate: it is the same answer `${a[9]}` gives, and being consistent about "not an element" matters more here than matching bash's choice to distinguish the two |
 | two heredocs on one line -- `cat <<A; cat <<B` | put them on separate lines | The delimiter scan collects one per line |

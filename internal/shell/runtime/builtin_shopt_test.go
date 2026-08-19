@@ -127,8 +127,18 @@ func TestShopt_reportsAndSetsState(t *testing.T) {
 		{
 			// Refused rather than accepted: accepting it would leave a script
 			// believing `@(a|b)` works.
-			name: "an option this build does not have", script: "shopt -s extglob\n",
+			// The example was extglob until the pattern operators were implemented. It is
+			// `failglob` now, which this build does not have.
+			name: "an option this build does not have", script: "shopt -s failglob\n",
 			contains: "not an option this build has", status: 1,
+		},
+		{name: "extglob is on", script: "shopt -q extglob\n", contains: "", status: 0},
+		{
+			// It cannot be turned off, because the matcher recognises the operators
+			// whether or not it is asked to. Saying so beats accepting the request and
+			// going on matching them.
+			name: "extglob cannot be turned off", script: "shopt -u extglob\n",
+			contains: "always on in this build", status: 1,
 		},
 		{
 			name: "the set -o options are not shopt's", script: "shopt -o errexit\n",

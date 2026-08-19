@@ -29,6 +29,7 @@ var shoptOptions = []shoptOption{
 	{"globstar", func(o *shellOptions) *bool { return &o.globStar }, "** matches across directories"},
 	{"nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }, "patterns match without regard to case"},
 	{"nullglob", func(o *shellOptions) *bool { return &o.nullGlob }, "a pattern matching nothing expands to nothing"},
+	{"extglob", func(o *shellOptions) *bool { return &o.extGlob }, "?() *() +() @() !() in patterns; always on here"},
 }
 
 func lookupShoptOption(name string) (shoptOption, bool) {
@@ -66,6 +67,15 @@ func (r Runtime) shoptBuiltin(args []string) int {
 		case set:
 			*option.field(r.options) = true
 		case unset:
+			// extglob cannot be turned off: the matcher recognises the operators
+			// unconditionally, for the reason pattern_extended.go gives. Saying so beats
+			// accepting the request and going on matching them.
+			if name == "extglob" {
+				fmt.Fprintln(r.streams.Stderr,
+					"shopt: extglob is always on in this build and cannot be turned off")
+				status = 1
+				continue
+			}
 			*option.field(r.options) = false
 		case quiet:
 			if !*option.field(r.options) {

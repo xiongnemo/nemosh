@@ -180,7 +180,7 @@ func newRuntimeWithState(registry applets.Registry, streams Streams, state State
 	for _, value := range state.Env.values {
 		variables[value.name] = value.value
 	}
-	created := Runtime{initErr: initErr, registry: registry, functions: map[functionName]functionDefinition{}, streams: fds.streams(), fds: fds, vars: variables, traps: map[trapName]string{}, trapRunning: map[trapName]bool{}, params: &parameters{}, options: &shellOptions{}, expansion: newExpansionState(), aliases: map[string]string{}, childCPU: &childCPUTime{}, history: newShellHistory(), arrays: newShellArrays(), loops: newLoopLevels(), special: newSpecialState(), readonly: map[string]struct{}{}, mask: newFileModeMask(), paths: &paths, env: state.Env.clone(), jobScope: newRootJobScope(), lifecycle: &shellLifecycle{}}
+	created := Runtime{initErr: initErr, registry: registry, functions: map[functionName]functionDefinition{}, streams: fds.streams(), fds: fds, vars: variables, traps: map[trapName]string{}, trapRunning: map[trapName]bool{}, params: &parameters{}, options: &shellOptions{extGlob: true}, expansion: newExpansionState(), aliases: map[string]string{}, childCPU: &childCPUTime{}, history: newShellHistory(), arrays: newShellArrays(), loops: newLoopLevels(), special: newSpecialState(), readonly: map[string]struct{}{}, mask: newFileModeMask(), paths: &paths, env: state.Env.clone(), jobScope: newRootJobScope(), lifecycle: &shellLifecycle{}}
 	// $PWD has to answer for this shell's working directory rather than for
 	// whatever launched it. Nemosh's cwd is a value in pathState, not the
 	// process's, so an inherited PWD can be wrong from the very first line.
