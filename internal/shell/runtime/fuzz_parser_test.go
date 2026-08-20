@@ -146,7 +146,13 @@ func FuzzMatchShellPattern(f *testing.F) {
 
 		// A pattern with no metacharacter is a literal, and that is checkable
 		// independently of how the matcher works.
-		if !strings.ContainsAny(pattern, `*?[\`) {
+		//
+		// hasExtendedPattern is part of the test because the extended operators made
+		// `!(`, `@(`, `+(`, `?(` and `*(` metacharacter *sequences*, and neither `!` nor
+		// `(` is in the set above. The fuzzer found `!()` against `0`: bash with extglob
+		// matches that too -- `!()` is "anything but the empty string" -- so the matcher
+		// was right and this test's idea of a literal had not been updated with it.
+		if !strings.ContainsAny(pattern, `*?[\`) && !hasExtendedPattern(pattern) {
 			if matched != (pattern == value) {
 				t.Fatalf("matchShellPattern(%q, %q) = %v, want %v for a literal", pattern, value, matched, pattern == value)
 			}
