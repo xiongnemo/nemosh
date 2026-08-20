@@ -223,3 +223,39 @@ once per file into once per owner.
 Two of my own inefficiencies were found the same way and fixed: `du` was calling
 `filepath.Abs` per file, which is a `Getwd` syscall, to find the volume of a path
 that already named one (150 ms → 132 ms).
+
+## What tview and tcell cost, measured 2026-08-21
+
+`top` is built on tview, and the question asked before writing any of it was what
+that costs a shell whose startup this document exists to protect. Go has no lazy
+package init and `AGENTS.md` forbids a sidecar binary, so whatever the answer was,
+it was going to be charged to `nemosh -c true` as much as to `top`.
+
+| | before | after | ceiling |
+| --- | --- | --- | --- |
+| stripped binary | 4,885,504 B | 4,972,544 B (+85 KiB) | 5,767,168 — still under |
+| package init allocations | 440 | 1,710 (+1,270) | 900 → **raised to 2,100** |
+| package init clock | 0.00 ms | 0.00 ms | — |
+| `nemosh -c true` | 9.4 ms min | 9.1 ms min | — |
+
+The size estimate that went into the decision was wrong by a factor of about
+twenty: tview and tcell were expected to add 1.5–2.5 MiB and added 85 KiB. They
+are compact pure Go, and the linker drops what is not reached. That was checked
+rather than assumed — a second spike constructing `Table`, `Flex`, `TextView`,
+`InputField`, `Modal`, `Pages`, `Application.Run` and `tcell.NewScreen` measured
+2 KiB *smaller* than a trivial one, which is the same number within noise.
+
+The allocation count is the one that moved, and it is worth naming where it went:
+**1,103 of the 1,270 are `gdamore/encoding`**, building 66 KB of legacy
+character-set tables at init, resident for the life of every process. About thirty
+more are terminfo descriptions registering themselves. On Windows tcell drives the
+console API and consults terminfo for nothing, so most of that is paid and unused
+here. tcell imports both unconditionally; there is no build tag that avoids them.
+
+So the gate tripped and the property it guards did not move. That parting of proxy
+and property is the thing to remember about this measurement: the ceiling was
+introduced to catch a package doing *work* before `main` — it caught toml spending
+22 ms in the Windows registry — and it cannot tell that from a package merely
+allocating a table quickly. It is kept on allocations because a clock threshold
+flaps on a shared runner, and the ceiling was raised with this note rather than the
+number being changed quietly.

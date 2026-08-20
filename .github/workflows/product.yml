@@ -203,6 +203,23 @@ jobs:
       # loose because the three platforms link different packages -- x/sys/windows
       # pulls in `net`, and so Winsock, on Windows only -- and it still catches a
       # regression of toml's size from any of those baselines.
+      #
+      # Raised from 900 to 2100 on 2026-08-21 for tview and tcell, which `top` is
+      # built on. Measured on windows-latest's shape locally: 440 allocations
+      # before, 1,710 after. The reason for accepting an overrun of that size is
+      # that every one of the new entries reports **0 ms clock** -- 1,103 of them
+      # are gdamore/encoding building character-set tables, and about thirty more
+      # are terminfo descriptions registering themselves, none of which tcell even
+      # consults on Windows. So the number this gate watches moved by four times
+      # while the thing the gate exists to protect did not move at all: total init
+      # clock is 0.00 ms either way, and `nemosh -c true` measured 9.1 ms against
+      # 9.4 ms before, which is noise.
+      #
+      # That is worth being uneasy about, because it means the proxy and the
+      # property can part company. The gate is kept on allocations anyway, for the
+      # reason above -- a clock threshold flaps on a shared runner -- and the
+      # honest reading is that it now catches *size* of init work rather than
+      # cost. A future overrun still deserves the same investigation this one got.
       - name: package init ceiling
         shell: bash
         run: |
@@ -214,7 +231,7 @@ jobs:
             exit 1
           fi
           allocs=$(printf '%s\n' "$trace" | awk '{for (i = 1; i <= NF; i++) if ($i == "allocs") s += $(i - 1)} END {print s + 0}')
-          ceiling=900
+          ceiling=2100
           echo "package init makes $allocs allocations, ceiling $ceiling"
           printf '%s\n' "$trace" | sort -t, -k4 -rn | head -5
           if [ "$allocs" -gt "$ceiling" ]; then
