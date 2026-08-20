@@ -3,6 +3,7 @@ package runtime
 import (
 	"bytes"
 	"io"
+	"os"
 	"sync"
 )
 
@@ -36,3 +37,7 @@ func (w synchronizedWriter) Write(buffer []byte) (int, error) {
 	defer w.mutex.Unlock()
 	return w.writer.Write(buffer)
 }
+
+// TerminalFile passes the question through to the writer underneath, so an applet can still
+// find the terminal behind the lock that serializes writes to it.
+func (w synchronizedWriter) TerminalFile() *os.File { return terminalFileOf(w.writer) }

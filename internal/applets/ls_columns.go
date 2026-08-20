@@ -63,7 +63,7 @@ func lsTerminalWidth(stdout io.Writer, options lsOptions) int {
 	if options.width > 0 {
 		return options.width
 	}
-	if file, ok := stdout.(*os.File); ok {
+	if file := stdoutFile(stdout); file != nil {
 		if width, _, err := term.GetSize(int(file.Fd())); err == nil && width > 0 {
 			return width
 		}
@@ -79,6 +79,29 @@ func lsWantsColumns(options lsOptions, stdout io.Writer) bool {
 	if options.forceColumns || options.width > 0 {
 		return true
 	}
-	file, ok := stdout.(*os.File)
-	return ok && term.IsTerminal(int(file.Fd()))
+	return stdoutIsTerminal(stdout)
+}
+
+// terminalSource is what a stream implements when it can name the file it ends at.
+//
+// The shell hands an applet a descriptor-backed writer, not os.Stdout, so asking
+// `stdout.(*os.File)` is always false inside the shell -- which is why `ls` laid out no
+// columns on a terminal and `--color=auto` coloured nothing. See fd_stream.go.
+type terminalSource interface{ TerminalFile() *os.File }
+
+// stdoutFile is the file a stream ends at, or nil when it is not one.
+func stdoutFile(stdout io.Writer) *os.File {
+	if file, ok := stdout.(*os.File); ok {
+		return file
+	}
+	if source, ok := stdout.(terminalSource); ok {
+		return source.TerminalFile()
+	}
+	return nil
+}
+
+// stdoutIsTerminal reports whether the stream draws on a terminal.
+func stdoutIsTerminal(stdout io.Writer) bool {
+	file := stdoutFile(stdout)
+	return file != nil && term.IsTerminal(int(file.Fd()))
 }

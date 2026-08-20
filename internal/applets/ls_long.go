@@ -56,7 +56,7 @@ func formatLongEntry(path, name string, info os.FileInfo, size string, sizeField
 		links = count
 	}
 	owner := fileOwnerName(path)
-	mode := info.Mode().String()
+	mode := lsModeString(info)
 	// A link says so in the first column and names its target, which is what busybox does
 	// and what this did not: the ten junctions in a home directory came out as
 	// `?rw-rw-rw-` with a size of 0 and no target at all. A link's size is the length of
@@ -118,4 +118,34 @@ func lsTimeColumn(when, now time.Time) string {
 		return when.Format(lsYearLayout)
 	}
 	return when.Format(lsTimeLayout)
+}
+
+// lsModeString is the ten-character mode column: one character for what the entry is, then
+// nine for its permissions.
+//
+// os.FileMode.String() cannot be used for a *column*, which is the trap this fell into. It
+// emits one character per set bit from a fixed list, so a thing that is two things at once
+// gets two: a OneDrive folder is a directory *and* a reparse point, and Go answered
+// `d?r-xr-xr-x` -- eleven characters, shifting every column after it one place right. Found by
+// running `ls -alh` in a home directory that has OneDrive in it, which is a shape no temporary
+// directory in a test was ever going to produce.
+func lsModeString(info os.FileInfo) string {
+	// Perm().String() is always ten characters with a leading `-`, so its tail is exactly
+	// the nine permission characters.
+	permissions := info.Mode().Perm().String()[1:]
+	switch {
+	case info.IsDir():
+		return "d" + permissions
+	case info.Mode()&os.ModeNamedPipe != 0:
+		return "p" + permissions
+	case info.Mode()&os.ModeSocket != 0:
+		return "s" + permissions
+	case info.Mode()&os.ModeDevice != 0:
+		if info.Mode()&os.ModeCharDevice != 0 {
+			return "c" + permissions
+		}
+		return "b" + permissions
+	default:
+		return "-" + permissions
+	}
 }

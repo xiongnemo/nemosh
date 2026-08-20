@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"strings"
-
-	"golang.org/x/term"
 )
 
 // The escapes busybox-w32 emits, measured on 2026-08-09: a directory is
@@ -55,8 +53,10 @@ func colorEnabled(when colorWhen, stdout io.Writer) bool {
 	case colorAlways:
 		return true
 	case colorAuto:
-		file, ok := stdout.(*os.File)
-		return ok && term.IsTerminal(int(file.Fd()))
+		// Through stdoutIsTerminal, because inside the shell this stream is a
+		// descriptor-backed writer and never an *os.File -- so `auto` answered false
+		// always, and `alias ls='ls --color=auto'` coloured nothing. See ls_columns.go.
+		return stdoutIsTerminal(stdout)
 	}
 	return false
 }
