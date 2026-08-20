@@ -19,15 +19,12 @@ package proc
 
 import "errors"
 
-// Process is one entry of the process list.
-type Process struct {
-	PID int
-	// Name is the executable's file name, which is what a pattern is matched
-	// against. Not the full command line: getting that on Windows means opening
-	// each process and reading its PEB, which needs privileges an ordinary
-	// session has not got for anything it does not own.
-	Name string
-}
+// Process is declared in sample.go, because the list and the monitor want the same type. It
+// used to be a pair of fields -- pid and image name -- and that was all Toolhelp32 could
+// answer. The system table answers a great deal more for no more privilege, so there is one
+// type and one lookup rather than a poor one for `ps` and a rich one for `top`. That was the
+// point of this package: two copies of a lookup drift, and this project has fixed that once
+// already, in `command -v`.
 
 // ErrListUnsupported is returned where the process list cannot be read. A caller
 // must report it rather than treat it as an empty list -- "nothing matched" and
