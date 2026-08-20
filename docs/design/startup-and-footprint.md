@@ -176,3 +176,50 @@ because `candidates()` hands back the index's slice rather than copying it and
 the sources are all in memory. The measurements are kept so that stays true — a
 stray `os.Stat` on this path would show up as a failing ceiling rather than as a
 stutter someone has to reproduce.
+
+## What the Windows metadata calls cost, measured 2026-08-20
+
+`du` and `ls -l` were both reporting less than they claimed to: `du` counted
+apparent size where the name means allocated, and `ls -l` printed three fields
+where every other `ls` prints seven. Both wanted facts `os.FileInfo` does not
+carry, so both reach the platform directly, and the price is worth having on
+record before anyone reaches for it again.
+
+**Nothing was added to the binary.** `golang.org/x/sys/windows` was already
+linked — `internal/applets/id_windows.go` uses it for `id`, and `cmd/nemosh` for
+the console work — so the dependency was paid for long ago:
+
+| | measured | ceiling |
+| --- | --- | --- |
+| stripped binary | 4,854,272 bytes (4.63 MiB) | 5,767,168 (5.50 MiB) |
+| package init allocations | 439 | 900 |
+
+Startup is untouched by construction: nothing here runs at init, and both calls
+sit behind an applet that has to be asked.
+
+What it costs is per-file calls, over the 4,895 entries of `C:\Windows\System32`:
+
+| | nemosh | busybox-w32 |
+| --- | --- | --- |
+| `ls` | 14 ms | 45 ms |
+| `ls -l` | 276 ms | 45 ms |
+| `du -s` | 132 ms | 43 ms |
+
+So `ls -l` is roughly 57 µs a file and about six times busybox, and `du` about
+three times. Two things are worth saying about that. The first is that it is a
+directory with five thousand files in it; a listing of fifty costs about 3 ms,
+which nobody can perceive. The second is that busybox is clearly doing something
+cheaper for the owner column, and finding out what would be the next
+optimisation — the obvious one, a single handle serving both the link count and
+the security query, needs `READ_CONTROL` on the open and would silently degrade
+every owner to `root` if that were refused, so it was not taken blind.
+
+One caching decision already paid for itself: resolving an owner SID to a name
+costs 170 µs per file, and 29 µs with a SID-to-name cache, because a directory
+usually has one or two distinct owners. A domain account is the case to watch —
+`LookupAccount` may go to a domain controller — and the cache turns that from
+once per file into once per owner.
+
+Two of my own inefficiencies were found the same way and fixed: `du` was calling
+`filepath.Abs` per file, which is a `Getwd` syscall, to find the volume of a path
+that already named one (150 ms → 132 ms).

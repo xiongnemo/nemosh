@@ -47,11 +47,18 @@ var procGetDiskFreeSpace = windows.NewLazySystemDLL("kernel32.dll").NewProc("Get
 var clusterSizes sync.Map
 
 func volumeClusterSize(path string) (int64, bool) {
-	absolute, err := filepath.Abs(path)
-	if err != nil {
-		return 0, false
+	// filepath.Abs only when the path does not already name a volume. It calls Getwd,
+	// which is a syscall, and `du` asks once per file: on a 4,895-entry tree that alone
+	// cost around 20ms of the 150 the walk took.
+	volume := filepath.VolumeName(path)
+	if volume == "" {
+		absolute, err := filepath.Abs(path)
+		if err != nil {
+			return 0, false
+		}
+		volume = filepath.VolumeName(absolute)
 	}
-	root := filepath.VolumeName(absolute) + string(filepath.Separator)
+	root := volume + string(filepath.Separator)
 	if cached, ok := clusterSizes.Load(root); ok {
 		return cached.(int64), true
 	}
@@ -96,16 +103,8 @@ type fileStandardInfo struct {
 // This one does cost a handle open and a call per file, which is why it is only reached from
 // `ls -l` and only for the long form.
 func fileLinkCount(path string) (int, bool) {
-	name, err := windows.UTF16PtrFromString(path)
-	if err != nil {
-		return 0, false
-	}
-	// No access rights beyond metadata, so a file another process holds open for writing
-	// can still be asked; FILE_FLAG_BACKUP_SEMANTICS so a directory can be opened too.
-	handle, err := windows.CreateFile(name, 0,
-		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
-		nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS, 0)
-	if err != nil {
+	handle, ok := openForMetadata(path)
+	if !ok {
 		return 0, false
 	}
 	defer windows.CloseHandle(handle)
@@ -115,6 +114,24 @@ func fileLinkCount(path string) (int, bool) {
 		return 0, false
 	}
 	return int(info.NumberOfLinks), true
+}
+
+// openForMetadata opens a path for asking questions about it and nothing else.
+//
+// No access rights beyond metadata, so a file another process holds open for writing can
+// still be asked; FILE_FLAG_BACKUP_SEMANTICS so a directory can be opened too.
+func openForMetadata(path string) (windows.Handle, bool) {
+	name, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return 0, false
+	}
+	handle, err := windows.CreateFile(name, 0,
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
+		nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS, 0)
+	if err != nil {
+		return 0, false
+	}
+	return handle, true
 }
 
 // fileOwnerName is the account that owns the file, mapped the way busybox-w32 maps it.
