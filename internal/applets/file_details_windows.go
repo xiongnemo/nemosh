@@ -3,8 +3,10 @@
 package applets
 
 import (
+	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -160,4 +162,18 @@ func fileOwnerName(path string) string {
 		}
 		return account
 	})
+}
+
+// isSymbolicLink reports whether the entry is a link of some kind.
+//
+// Not `info.Mode()&os.ModeSymlink`, which is false for the ones that matter here. A Windows
+// *junction* is a reparse point rather than a symlink, and Go reports it as ModeIrregular --
+// so `ls -l` printed `?rw-rw-rw-` for the ten junctions in a home directory, where busybox
+// prints `lrwxrwxrwx` and the target. The attribute is what both cases have in common.
+func isSymbolicLink(info os.FileInfo) bool {
+	if info.Mode()&os.ModeSymlink != 0 {
+		return true
+	}
+	data, ok := info.Sys().(*syscall.Win32FileAttributeData)
+	return ok && data.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0
 }

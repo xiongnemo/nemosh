@@ -60,3 +60,8 @@ func fileOwnerName(path string) string {
 		return account.Username
 	})
 }
+
+// isSymbolicLink reports whether the entry is a link. Elsewhere the mode says so.
+func isSymbolicLink(info os.FileInfo) bool {
+	return info.Mode()&os.ModeSymlink != 0
+}
