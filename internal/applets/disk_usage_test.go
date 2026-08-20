@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -31,12 +32,12 @@ func runInDirectory(t *testing.T, name string, directory string, args ...string)
 
 // du's arithmetic, and the one property a script depends on.
 //
-// The totals are *apparent* sizes rounded up to a 1024-byte block, not what the
-// filesystem allocated -- GNU reports allocation and the two differ in both
-// directions. Measured on this tree: GNU said 5 for the root and 1 for the
-// subdirectory, this says 6 and 2. The divergence is documented rather than
-// papered over, because Go cannot read allocation size portably and a `du` that
-// silently means something slightly different is worse than one that says so.
+// The totals are what the filesystem *allocated* now, which is what the name means and what
+// both references report. That makes the exact number a property of the volume rather than of
+// the tree -- a 3000-byte file costs one 4096-byte cluster on NTFS and one 4096-byte block on
+// ext4, but nothing in Go promises either -- so these assert the relationships a script
+// actually depends on instead of a number measured on one machine. The numbers themselves are
+// pinned per platform in the corpus, where the volume is known.
 func TestDu(t *testing.T) {
 	// Given: 3000 bytes in the root, three in a subdirectory
 	directory := t.TempDir()
@@ -51,7 +52,7 @@ func TestDu(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Run("-s reports one total", func(t *testing.T) {
+	t.Run("-s reports one total, and it covers both files", func(t *testing.T) {
 		// When
 		got, err := runInDirectory(t, "du", directory, "-s")
 
@@ -59,10 +60,17 @@ func TestDu(t *testing.T) {
 		if err != nil {
 			t.Fatalf("du -s: %v", err)
 		}
-		// 3 blocks for the 3000-byte file, 1 for the 3-byte one, 1 for each of
-		// the two directories.
-		if fields := strings.Fields(got); len(fields) == 0 || fields[0] != "6" {
-			t.Fatalf("du -s = %q, want 6 blocks", got)
+		if lines := strings.Split(strings.TrimSpace(got), "\n"); len(lines) != 1 {
+			t.Fatalf("du -s printed %d lines, want one", len(lines))
+		}
+		// At least the 3000-byte file rounded up, plus something for the 3-byte one.
+		// An exact number would be a fact about the volume; see the comment above.
+		blocks, err := strconv.Atoi(strings.Fields(got)[0])
+		if err != nil {
+			t.Fatalf("du -s = %q, want a block count first", got)
+		}
+		if blocks < 4 {
+			t.Fatalf("du -s = %q, want at least 4 blocks for 3003 bytes in two files", got)
 		}
 	})
 
@@ -87,8 +95,8 @@ func TestDu(t *testing.T) {
 	})
 
 	// The expectation here was `6K`, which neither reference prints: busybox-w32 and GNU
-	// both keep the decimal on a whole number below ten, so it is `6.0K`. Above ten the
-	// decimal goes again -- GNU says `97K` and busybox `96.7K`, and this follows GNU.
+	// both keep the decimal on a whole number below ten. Above ten it goes again -- GNU says
+	// `97K` and busybox `96.7K`, and this follows GNU.
 	t.Run("-h keeps one decimal below ten", func(t *testing.T) {
 		// When
 		got, err := runInDirectory(t, "du", directory, "-sh")
@@ -97,8 +105,9 @@ func TestDu(t *testing.T) {
 		if err != nil {
 			t.Fatalf("du -sh: %v", err)
 		}
-		if fields := strings.Fields(got); len(fields) == 0 || fields[0] != "6.0K" {
-			t.Fatalf("du -sh = %q, want 6.0K", got)
+		field := strings.Fields(got)[0]
+		if !strings.HasSuffix(field, ".0K") {
+			t.Fatalf("du -sh = %q, want a whole number of kilobytes with its decimal kept", got)
 		}
 	})
 }

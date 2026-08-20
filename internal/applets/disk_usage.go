@@ -15,19 +15,25 @@ import (
 // duBlock is the unit du counts in. GNU's default is 1024-byte blocks, which is
 // why `du -s .` on a 17KB tree says 17 rather than 17408.
 //
-// **The totals are derived from apparent sizes**, rounded up to a block, and will
-// not always equal GNU's. GNU reports what the filesystem allocated -- st_blocks
-// -- and that differs from the file's length in both directions: a 3000-byte file
-// occupies 4096 on NTFS, while a 3-byte one may occupy nothing at all because it
-// fits inside the MFT record. Measured on a two-file tree, GNU said 5 and the
-// apparent-size arithmetic says 6.
-//
-// Go's os.FileInfo does not carry allocation size portably, so the choice is
-// between a number derived from what is knowable and a platform-specific syscall
-// per file. This is the first, and says so, because a `du` that silently means
-// something slightly different from the `du` in a script is worse than one that
-// is documented to mean apparent size. GNU spells this `--apparent-size`.
+// The totals are what the filesystem *allocated*, which is what the name means. They used to
+// be apparent sizes rounded up to a block, and that was documented as a deliberate
+// simplification on the grounds that Go cannot read allocation size portably -- true of
+// os.FileInfo, and not true of the platform underneath it. See file_details_windows.go.
 const duBlock = 1024
+
+// usageBlocks is what the file occupies, in du's blocks.
+//
+// The allocated size where the platform will say -- a ten-byte file inside one NTFS cluster
+// occupies four kilobytes, and reporting 1 for it made `du` a slower `wc -c`. busybox-w32
+// answers 4 and so does this now. Where the allocation cannot be read the apparent size is
+// used instead, rounded up, because a number that is optimistic beats no number at all. See
+// file_details_windows.go for the call and what it costs.
+func usageBlocks(path string, size int64, isDir bool) int64 {
+	if allocated, ok := allocatedSize(path, size, isDir); ok {
+		return (allocated + duBlock - 1) / duBlock
+	}
+	return (size + duBlock - 1) / duBlock
+}
 
 func newDuApplet() Applet {
 	return simpleApplet{name: "du", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
@@ -71,7 +77,7 @@ func reportUsage(ctx context.Context, stdout, stderr io.Writer, native, shown st
 	// one named on the command line. So `du somefile` printed nothing at all and exited 0,
 	// and `du -sh somefile` printed `0K` for a file with bytes in it. Both silent.
 	if info, err := os.Stat(native); err == nil && !info.IsDir() {
-		return writeUsageLine(stdout, (info.Size()+duBlock-1)/duBlock, shown, human)
+		return writeUsageLine(stdout, usageBlocks(native, info.Size(), false), shown, human)
 	}
 	totals := map[string]int64{}
 	var order []string
@@ -88,12 +94,8 @@ func reportUsage(ctx context.Context, stdout, stderr io.Writer, native, shown st
 			fmt.Fprintf(stderr, "du: cannot stat %s: %v\n", filepath.ToSlash(current), err)
 			return nil
 		}
-		blocks := (info.Size() + duBlock - 1) / duBlock
+		blocks := usageBlocks(current, info.Size(), entry.IsDir())
 		if entry.IsDir() {
-			// A directory's own entry counts as one block, which is what makes an
-			// empty tree report 1 rather than 0 -- and what makes the totals here
-			// close to GNU's rather than merely the sum of file sizes.
-			blocks = 1
 			order = append(order, current)
 		}
 		// Charged to every directory above it, which is what makes the

@@ -1,0 +1,22 @@
+id = "applet.coreutils.du.allocated-size"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32"]
+files = { "tiny.txt" = "x", "dir/inner.txt" = "12345" }
+script = '''
+mkdir empty
+du -s tiny.txt
+du -s empty
+du -s dir
+'''
+
+[expect]
+status = 0
+stdout = "4\ttiny.txt\n0\tempty\n4\tdir\n"
+stderr = ""
+
+[notes]
+standard = "GNU coreutils du reports allocated size; the unit here is NTFS's cluster"
+why = "du means disk usage, and this reported apparent size instead: a one-byte file came back as 1 where busybox-w32 says 4, because one NTFS cluster is four kilobytes. Windows-only because the numbers are a property of the volume. Two measured details drive the implementation: FILE_STANDARD_INFO's AllocationSize is *zero* for a small file, since NTFS keeps it inside the MFT record, so the cluster size from GetDiskFreeSpaceW is rounded up to instead; and a directory costs nothing, which is why empty is 0 here and why dir is 4 rather than 8. Both match busybox-w32 exactly. golang.org/x/sys/windows was already linked for id and the console work, so this cost no new dependency and no per-file call -- the cluster size is read once per volume and cached."
