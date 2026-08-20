@@ -41,9 +41,15 @@ func TestLs_acceptsOnePerLine_andStillRefusesColumns(t *testing.T) {
 		t.Fatalf("ls gave %q, want %q", plain, want)
 	}
 
-	// And columns are still refused, because that is genuinely absent.
-	if _, _, err := runAppletWithInput(t, "", "ls", "-C", directory); err == nil {
-		t.Fatal("ls -C succeeded; columns are not implemented and must be refused")
+	// -C is implemented now, and it is the only way to see the layout from a test at all:
+	// the destination decides the format, and a test's destination is never a terminal.
+	// This assertion used to require that -C be *refused*.
+	columns, _, err := runAppletWithInput(t, "", "ls", "-C", directory)
+	if err != nil {
+		t.Fatalf("ls -C = %v, want it accepted", err)
+	}
+	if want := "alpha.txt  beta.txt\n"; columns != want {
+		t.Fatalf("ls -C gave %q, want %q", columns, want)
 	}
 }
 

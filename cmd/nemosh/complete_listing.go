@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/textgrid"
 )
 
 // Laying the choices out in columns rather than running them together is what
@@ -36,44 +38,9 @@ func candidateListing(matches []string, width int) string {
 // layoutCandidates renders the choices and reports how many rows that took, so
 // a caller can decide whether to print them or ask first.
 func layoutCandidates(matches []string, width int) (string, int) {
-	if len(matches) == 0 {
+	lines, rows := textgrid.Grid(matches, width)
+	if rows == 0 {
 		return "", 0
 	}
-	columnWidth := 0
-	for _, match := range matches {
-		if columns := textColumns(match); columns > columnWidth {
-			columnWidth = columns
-		}
-	}
-	columnWidth += 2
-	columns := max(width/columnWidth, 1)
-	rows := (len(matches) + columns - 1) / columns
-
-	var out strings.Builder
-	for row := range rows {
-		for column := range columns {
-			index := column*rows + row
-			if index >= len(matches) {
-				break
-			}
-			out.WriteString(matches[index])
-			// No padding after the last column, so a row that fills the terminal
-			// does not wrap into an empty one.
-			if index+rows < len(matches) {
-				out.WriteString(strings.Repeat(" ", columnWidth-textColumns(matches[index])))
-			}
-		}
-		out.WriteString("\n")
-	}
-	return out.String(), rows
-}
-
-// textColumns is how many cells a candidate occupies, which is not its length
-// once a name holds a wide character.
-func textColumns(text string) int {
-	total := 0
-	for _, r := range text {
-		total += runeColumns(r)
-	}
-	return total
+	return strings.Join(lines, "\n") + "\n", rows
 }

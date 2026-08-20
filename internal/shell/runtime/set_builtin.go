@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+// shellOptionLine is how both option listings print a row, and it is one constant because the
+// two were not the same: `shopt` padded the name to twelve and then added a tab, `set -o`
+// padded to twelve and added nothing at all. Two listings of the same shell's own options did
+// not line up with each other. bash pads to fifteen and adds a tab; twelve fits every name
+// here, and the tab is what bash and busybox both put there.
+const shellOptionLine = "%-12s\t%s\n"
+
 // set implements the POSIX `set` builtin. With no arguments it lists the shell
 // variables; `-o` or `+o` with no name lists the options; a `-` or `+` followed
 // by letters, or by `o name`, turns those options on and off; and whatever is
@@ -151,7 +158,7 @@ func (r Runtime) listShellOptions(long bool) {
 			if enabled {
 				state = "on"
 			}
-			fmt.Fprintf(r.streams.Stdout, "%-12s%s\n", spec.name, state)
+			fmt.Fprintf(r.streams.Stdout, shellOptionLine, spec.name, state)
 			continue
 		}
 		sign := "+o"

@@ -50,7 +50,7 @@ const (
 
 // formatLongEntry builds one `ls -l` line. path is where the file really is, which is what the
 // link count and owner have to be asked about; name is what gets printed.
-func formatLongEntry(path, name string, info os.FileInfo, size string) string {
+func formatLongEntry(path, name string, info os.FileInfo, size string, sizeField int) string {
 	links := 1
 	if count, ok := fileLinkCount(path); ok {
 		links = count
@@ -68,8 +68,8 @@ func formatLongEntry(path, name string, info os.FileInfo, size string) string {
 		size = strconv.Itoa(len(target))
 		name += " -> " + target
 	}
-	return fmt.Sprintf("%s%5d %-8s %-8s%10s %s %s",
-		mode, links, owner, owner, size,
+	return fmt.Sprintf("%s%5d %-8s %-8s%*s %s %s",
+		mode, links, owner, owner, sizeField, size,
 		lsTimeColumn(info.ModTime(), time.Now()), name)
 }
 
@@ -88,8 +88,8 @@ func linkTarget(path string, info os.FileInfo) (string, bool) {
 	return filepath.ToSlash(target), true
 }
 
-func writeLongEntry(stdout io.Writer, path, name string, info os.FileInfo, size string) error {
-	_, err := fmt.Fprintln(stdout, formatLongEntry(path, name, info, size))
+func writeLongEntry(stdout io.Writer, path, name string, info os.FileInfo, size string, sizeField int) error {
+	_, err := fmt.Fprintln(stdout, formatLongEntry(path, name, info, size, sizeField))
 	return err
 }
 

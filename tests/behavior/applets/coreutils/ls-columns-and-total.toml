@@ -1,0 +1,25 @@
+id = "applet.coreutils.ls.columns-and-total"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "posix"]
+files = { "alpha" = "", "beta" = "", "delta" = "", "epsilon" = "" }
+script = '''
+ls
+echo ---
+ls -C -w 30
+echo ---
+ls -1 | wc -l
+echo ---
+ls -l | head -n 1
+'''
+
+[expect]
+status = 0
+stdout = "alpha\nbeta\ndelta\nepsilon\n---\nalpha    delta\nbeta     epsilon\n---\n4\n---\ntotal 0\n"
+stderr = ""
+
+[notes]
+standard = "POSIX ls: one entry per line when the output is not a terminal, columns when it is"
+why = "`ls` wrote one name per line unconditionally and refused -C by name, with a comment saying columns were the thing it could not do. The cell measuring needed for a grid was in cmd/nemosh where an applet could not reach it; it is in internal/textgrid now. The first block shows the rule that matters for scripts -- a pipe still gets one name per line, so `ls | wc -l` counts files -- and -C is what makes the layout visible from a test at all, since a test's destination is never a terminal. The layout is column-major with a field of the widest name plus two, measured against busybox's own -C output. `total 0` heads a long listing, which busybox prints and this did not."

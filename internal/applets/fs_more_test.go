@@ -154,11 +154,17 @@ func TestDefaultRegistry_alignsNames_whenLsRunsWithLongHumanFlags(t *testing.T) 
 		t.Fatalf("ls -alh: %v", err)
 	}
 	lines := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\n")
-	if len(lines) != 2 {
-		t.Fatalf("lines = %q, want two entries", lines)
+	// The listing now opens with `total N` and, under -a, lists `.` and `..` -- both of which
+	// every other ls prints and this one did not. The two entries this test is about are the
+	// last two lines.
+	if len(lines) != 5 {
+		t.Fatalf("lines = %q, want total, . , .. and two entries", lines)
 	}
-	largeColumn := strings.Index(lines[0], "large.bin")
-	smallColumn := strings.Index(lines[1], "small.bin")
+	if !strings.HasPrefix(lines[0], "total ") {
+		t.Fatalf("first line = %q, want a total", lines[0])
+	}
+	largeColumn := strings.Index(lines[3], "large.bin")
+	smallColumn := strings.Index(lines[4], "small.bin")
 	if largeColumn < 0 || smallColumn < 0 || largeColumn != smallColumn {
 		t.Fatalf("name columns = (%d, %d) in %q, want equal", largeColumn, smallColumn, lines)
 	}

@@ -154,5 +154,5 @@ func (r Runtime) printShoptOption(option shoptOption) {
 	if *option.field(r.options) {
 		state = "on"
 	}
-	fmt.Fprintf(r.streams.Stdout, "%-12s\t%s\n", option.name, state)
+	fmt.Fprintf(r.streams.Stdout, shellOptionLine, option.name, state)
 }

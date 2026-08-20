@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"unicode"
+
+	"github.com/xiongnemo/nemosh/internal/textgrid"
 )
 
 func newWcApplet() Applet {
@@ -63,8 +65,11 @@ type wcFlags struct {
 	// what everything else here measures in: the line editor's widths, `rev`,
 	// `expr length`.
 	chars bool
-	// longest is -L, the width of the longest line. GNU counts characters, not
-	// bytes, and does not count the newline.
+	// longest is -L, the width of the longest line, and width means *cells*: GNU
+	// documents it as "the maximum display width" and 中文测试 is four characters
+	// drawn in eight columns. This counted characters and answered 4, which is
+	// neither reference's answer -- busybox says 3, having its own trouble with
+	// multibyte input. The newline does not count.
 	longest bool
 }
 
@@ -176,7 +181,7 @@ func countBytes(input io.Reader) (wcCounts, error) {
 			counts.longest = max(counts.longest, lineWidth)
 			lineWidth = 0
 		} else if size > 0 {
-			lineWidth++
+			lineWidth += textgrid.RuneCells(r)
 		}
 		if size > 0 && unicode.IsSpace(r) {
 			inWord = false

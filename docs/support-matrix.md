@@ -367,7 +367,7 @@ column that matters is the third one.
 | `head` | `-n -c`, and the `-N` form | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
-| `ls` | `-a -h -l -1`, `--color[=always\|never\|auto]` | refused by name |
+| `ls` | `-a -h -l -1 -C -w N`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |

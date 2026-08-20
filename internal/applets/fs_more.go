@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -38,12 +39,18 @@ func newLsApplet() Applet {
 }
 
 type lsOptions struct {
-	all       bool
-	long      bool
-	human     bool
-	color     colorWhen
-	colored   bool
-	sizeWidth int
+	all     bool
+	long    bool
+	human   bool
+	color   colorWhen
+	colored bool
+	// onePerLine is -1 and forceColumns is -C. Neither decides the layout on its own:
+	// the destination does, and these override it. See ls_columns.go.
+	onePerLine   bool
+	forceColumns bool
+	// width is -w, which implies columns because asking how wide they should be is
+	// asking for them.
+	width int
 }
 
 func lsArgs(args []string) (lsOptions, []string, error) {
@@ -74,6 +81,24 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 			index++
 			continue
 		}
+		// -w takes a number, so it cannot be read letter by letter with the rest.
+		if strings.HasPrefix(arg, "-w") {
+			value := arg[2:]
+			if value == "" {
+				if index+1 >= len(args) {
+					return lsOptions{}, nil, fmt.Errorf("ls: -w requires a width")
+				}
+				index++
+				value = args[index]
+			}
+			parsed, err := strconv.Atoi(value)
+			if err != nil || parsed <= 0 {
+				return lsOptions{}, nil, fmt.Errorf("ls: invalid width: %s", value)
+			}
+			options.width = parsed
+			index++
+			continue
+		}
 		for _, flag := range arg[1:] {
 			switch flag {
 			case 'a':
@@ -83,14 +108,11 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 			case 'h':
 				options.human = true
 			case '1':
-				// One entry per line is what this ls always writes -- it never
-				// lays out columns -- so -1 asks for the format already in use.
-				// Accepting it is not pretending to do something: it is the
-				// output that comes out either way, and busybox agrees on the
-				// interaction, where -l wins whichever order the two are given.
-				//
-				// -C is the opposite case and stays refused, because columns are
-				// the thing this cannot do.
+				// -l wins over -1 whichever order the two are given, which is
+				// what busybox does.
+				options.onePerLine = true
+			case 'C':
+				options.forceColumns = true
 			default:
 				return lsOptions{}, nil, fmt.Errorf("unsupported ls option: -%c", flag)
 			}
@@ -106,15 +128,16 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 		return operandFailure(display, err)
 	}
 	if !info.IsDir() {
-		item := lsEntry{name: display, info: info, path: target}
-		options.sizeWidth = lsEntrySizeWidth([]lsEntry{item}, options)
-		return printLsEntry(stdout, item, options)
+		return printLsEntry(stdout, lsEntry{name: display, info: info, path: target}, options)
 	}
 	entries, err := os.ReadDir(target)
 	if err != nil {
 		return operandFailure(display, err)
 	}
-	items := make([]lsEntry, 0, len(entries))
+	items := make([]lsEntry, 0, len(entries)+2)
+	if options.all {
+		items = append(items, lsDotEntries(target)...)
+	}
 	for _, entry := range entries {
 		name := entry.Name()
 		if !options.all && strings.HasPrefix(name, ".") {
@@ -129,13 +152,46 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].name < items[j].name
 	})
-	options.sizeWidth = lsEntrySizeWidth(items, options)
+	if !options.long {
+		return writeLsNames(stdout, items, options, lsWantsColumns(options, stdout))
+	}
+	// `total N` heads a directory listing and not a list of file operands, which is what
+	// both references do.
+	//
+	// The blocks are the *apparent* size rounded up, not du's allocated size, and that is
+	// measured rather than chosen: busybox says `total 4` for a directory holding only `.`
+	// and `..`, which is the 4096 it reports for `..` divided by the block size -- while
+	// busybox's own `du` says 0 for the same directory. The two answers come from different
+	// rules in the reference itself, and this follows each where it is used.
+	total := int64(0)
+	for _, item := range items {
+		total += (item.info.Size() + duBlock - 1) / duBlock
+	}
+	if _, err := fmt.Fprintf(stdout, "total %d\n", total); err != nil {
+		return err
+	}
 	for _, item := range items {
 		if err := printLsEntry(stdout, item, options); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// lsDotEntries are `.` and `..`, which -a lists and which this omitted entirely.
+//
+// os.ReadDir does not report them -- it is a directory *contents* call -- so they are added
+// back. Both references list them, and `ls -la` without them cannot show a directory's own mode.
+func lsDotEntries(target string) []lsEntry {
+	var entries []lsEntry
+	for name, path := range map[string]string{".": target, "..": filepath.Dir(target)} {
+		info, err := os.Stat(path)
+		if err != nil {
+			continue
+		}
+		entries = append(entries, lsEntry{name: name, info: info, path: path})
+	}
+	return entries
 }
 
 type lsEntry struct {
@@ -150,21 +206,21 @@ func printLsEntry(stdout io.Writer, entry lsEntry, options lsOptions) error {
 	name := paintLsName(entry.name, entry.info, options.colored)
 	if options.long {
 		// The whole line is busybox-w32's layout; see ls_long.go.
-		return writeLongEntry(stdout, entry.path, name, entry.info, lsSize(entry.info.Size(), options))
+		return writeLongEntry(stdout, entry.path, name, entry.info,
+			lsSize(entry.info.Size(), options), lsSizeField(options))
 	}
 	_, err := fmt.Fprintln(stdout, name)
 	return err
 }
 
-func lsEntrySizeWidth(entries []lsEntry, options lsOptions) int {
-	width := 0
+// lsSizeField is how wide the size column is. Ten for a number and eight for a human size,
+// both measured from busybox -- `1.5K` sits two columns further left there than a count of
+// bytes would.
+func lsSizeField(options lsOptions) int {
 	if options.human {
-		width = 7
+		return 8
 	}
-	for _, entry := range entries {
-		width = max(width, len(lsSize(entry.info.Size(), options)))
-	}
-	return width
+	return 10
 }
 
 func lsSize(size int64, options lsOptions) string {
