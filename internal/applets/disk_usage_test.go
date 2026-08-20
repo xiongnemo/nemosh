@@ -105,9 +105,23 @@ func TestDu(t *testing.T) {
 		if err != nil {
 			t.Fatalf("du -sh: %v", err)
 		}
+		// The rule rather than a number, because the number is the volume's: this tree
+		// costs 4 blocks on NTFS, where a directory is free, and 16 on ext4, where each
+		// of the two directories has a block of its own. Below ten the decimal is kept
+		// and above it goes, and only the first half is what this used to get wrong.
 		field := strings.Fields(got)[0]
-		if !strings.HasSuffix(field, ".0K") {
-			t.Fatalf("du -sh = %q, want a whole number of kilobytes with its decimal kept", got)
+		if !strings.HasSuffix(field, "K") {
+			t.Fatalf("du -sh = %q, want a size in kilobytes", got)
+		}
+		blocks, err := strconv.ParseFloat(strings.TrimSuffix(field, "K"), 64)
+		if err != nil {
+			t.Fatalf("du -sh = %q, want a number before the K", got)
+		}
+		if blocks < 10 && !strings.Contains(field, ".") {
+			t.Fatalf("du -sh = %q, want the decimal kept below ten -- both references print 4.0K", got)
+		}
+		if blocks >= 10 && strings.Contains(field, ".") {
+			t.Fatalf("du -sh = %q, want no decimal at ten or above -- GNU prints 97K", got)
 		}
 	})
 }
