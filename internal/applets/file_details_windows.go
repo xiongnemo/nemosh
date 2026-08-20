@@ -116,3 +116,31 @@ func fileLinkCount(path string) (int, bool) {
 	}
 	return int(info.NumberOfLinks), true
 }
+
+// fileOwnerName is the account that owns the file, mapped the way busybox-w32 maps it.
+//
+// The rule is measured from two observations: a file owned by my account prints `nemo`, and one
+// owned by NT SERVICE\TrustedInstaller prints `root`. So a real user account gives its name and
+// anything else -- a service identity, Administrators, SYSTEM -- gives `root`, which is
+// busybox's uid-0 emulation and the same rule currentUserID already applies to the process.
+//
+// A failure gives `root` too, because a listing that stops because one file's owner could not
+// be read would be worse than a listing with one pessimistic column.
+func fileOwnerName(path string) string {
+	descriptor, err := windows.GetNamedSecurityInfo(path, windows.SE_FILE_OBJECT,
+		windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		return "root"
+	}
+	owner, _, err := descriptor.Owner()
+	if err != nil {
+		return "root"
+	}
+	return cachedOwnerName(owner.String(), func() string {
+		account, _, kind, err := owner.LookupAccount("")
+		if err != nil || kind != windows.SidTypeUser {
+			return "root"
+		}
+		return account
+	})
+}

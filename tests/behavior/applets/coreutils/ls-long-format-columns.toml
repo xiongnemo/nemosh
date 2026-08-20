@@ -1,0 +1,27 @@
+id = "applet.coreutils.ls.long-format-columns"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+files = { "one.txt" = "0123456789" }
+script = '''
+set -- $(ls -l one.txt)
+echo "fields=$#"
+echo "links=$2"
+echo "size=$5"
+echo "name=$9"
+case "$8" in
+??:??) echo "time column" ;;
+*) echo "unexpected time column: $8" ;;
+esac
+'''
+
+[expect]
+status = 0
+stdout = "fields=9\nlinks=1\nsize=10\nname=one.txt\ntime column\n"
+stderr = ""
+
+[notes]
+standard = "The ls -l field list: mode, links, owner, group, size, month, day, time, name"
+why = "`ls -l` printed three fields -- mode, size, name -- so the column people actually read was missing. The layout is busybox-w32's, derived from its output: the link count right-aligned in five, owner and group left-aligned in eight, the size right-aligned in ten, then MMM DD HH:MM. The owner and group are not asserted here because they are the machine's; the Windows mapping is pinned in ls-long-owner.toml. The group repeats the owner, which is what busybox does and is not what Windows would say -- the real primary group of a file owned by a local account is `None`, measured, and a column reading None would look like a fault."

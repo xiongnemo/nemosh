@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -105,7 +106,7 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 		return operandFailure(display, err)
 	}
 	if !info.IsDir() {
-		item := lsEntry{name: display, info: info}
+		item := lsEntry{name: display, info: info, path: target}
 		options.sizeWidth = lsEntrySizeWidth([]lsEntry{item}, options)
 		return printLsEntry(stdout, item, options)
 	}
@@ -123,7 +124,7 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 		if err != nil {
 			return err
 		}
-		items = append(items, lsEntry{name: name, info: info})
+		items = append(items, lsEntry{name: name, info: info, path: filepath.Join(target, name)})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].name < items[j].name
@@ -140,13 +141,16 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 type lsEntry struct {
 	name string
 	info os.FileInfo
+	// path is where the file really is. The long form has to ask the filesystem two more
+	// questions -- the link count and the owner -- and neither can be asked of a name.
+	path string
 }
 
 func printLsEntry(stdout io.Writer, entry lsEntry, options lsOptions) error {
 	name := paintLsName(entry.name, entry.info, options.colored)
 	if options.long {
-		_, err := fmt.Fprintf(stdout, "%s %*s %s\n", entry.info.Mode().String(), options.sizeWidth, lsSize(entry.info.Size(), options), name)
-		return err
+		// The whole line is busybox-w32's layout; see ls_long.go.
+		return writeLongEntry(stdout, entry.path, name, entry.info, lsSize(entry.info.Size(), options))
 	}
 	_, err := fmt.Fprintln(stdout, name)
 	return err
