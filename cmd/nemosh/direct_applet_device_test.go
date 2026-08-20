@@ -14,8 +14,8 @@ func TestP05WaveA_directCatAndWc_readDeviceOperands_inBothEntryForms(t *testing.
 	}{
 		{name: "explicit cat stdin", args: []string{"nemosh", "cat", "/dev/stdin"}, stdin: "bounded\n", want: "bounded\n"},
 		{name: "multicall cat stdin", args: []string{directAppletInvocationName("cat"), "/dev/stdin"}, stdin: "bounded\n", want: "bounded\n"},
-		{name: "explicit wc null", args: []string{"nemosh", "wc", "/dev/null"}, want: "0 0 0 /dev/null\n"},
-		{name: "multicall wc null", args: []string{directAppletInvocationName("wc"), "/dev/null"}, want: "0 0 0 /dev/null\n"},
+		{name: "explicit wc null", args: []string{"nemosh", "wc", "/dev/null"}, want: "        0         0         0 /dev/null\n"},
+		{name: "multicall wc null", args: []string{directAppletInvocationName("wc"), "/dev/null"}, want: "        0         0         0 /dev/null\n"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

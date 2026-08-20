@@ -21,9 +21,9 @@ func TestP05WaveA_catAndWc_readRuntimeDeviceOperands(t *testing.T) {
 		want   string
 	}{
 		{name: "cat stdin", script: "cat /dev/stdin\n", stdin: "alpha\nbeta\n", want: "alpha\nbeta\n"},
-		{name: "wc stdin", script: "wc /dev/stdin\n", stdin: "alpha\nbeta\n", want: "2 2 11 /dev/stdin\n"},
+		{name: "wc stdin", script: "wc /dev/stdin\n", stdin: "alpha\nbeta\n", want: "        2         2        11 /dev/stdin\n"},
 		{name: "cat null", script: "cat /dev/null\n", want: ""},
-		{name: "wc null", script: "wc /dev/null\n", want: "0 0 0 /dev/null\n"},
+		{name: "wc null", script: "wc /dev/null\n", want: "        0         0         0 /dev/null\n"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -102,7 +102,7 @@ func TestP05WaveA_deviceCapability_survivesEnvAndXargs(t *testing.T) {
 		name, script, stdin, want string
 	}{
 		{name: "env cat", script: "env CHILD=value cat /dev/stdin\n", stdin: "nested\n", want: "nested\n"},
-		{name: "env wc", script: "env -i wc /dev/null\n", want: "0 0 0 /dev/null\n"},
+		{name: "env wc", script: "env -i wc /dev/null\n", want: "        0         0         0 /dev/null\n"},
 		{name: "env xargs cat", script: "env CHILD=value xargs cat\n", stdin: "/dev/null\n", want: ""},
 	}
 	for _, test := range tests {
@@ -142,7 +142,9 @@ func TestP05WaveA_mixedAndRepeatedDeviceOperands_preserveOrderLabelsAndOwnership
 	status := rt.RunScript(context.Background(), script)
 
 	// Then
-	want := "host\ndevice\n1 input.txt\n0 /dev/null\n0 /dev/null\n"
+	// Three operands, so wc ends with a total, which both references print and this
+	// shell did not until the padding work. `-l` is one count, so it stays unpadded.
+	want := "host\ndevice\n1 input.txt\n0 /dev/null\n0 /dev/null\n1 total\n"
 	if status != 0 || stdout.String() != want || stderr.Len() != 0 {
 		t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
 	}

@@ -24,6 +24,10 @@ func newWcApplet() Applet {
 			return err
 		}
 		view := ProcessViewFromContext(ctx)
+		// More than one operand ends with a total, which both references print and this
+		// did not: `wc a b` stopped after the second line, so a script adding up a
+		// directory of files got no answer and no indication that it was missing.
+		var total wcCounts
 		for _, path := range paths {
 			file, err := OpenProcessInput(ctx, view, path)
 			if err != nil {
@@ -34,9 +38,13 @@ func newWcApplet() Applet {
 			if err := errors.Join(countErr, closeErr); err != nil {
 				return err
 			}
+			total = total.add(counts)
 			if err := printWcCounts(stdout, flags, counts, path); err != nil {
 				return err
 			}
+		}
+		if len(paths) > 1 {
+			return printWcCounts(stdout, flags, total, "total")
 		}
 		return nil
 	}}
@@ -66,6 +74,20 @@ type wcCounts struct {
 	bytes   int
 	chars   int
 	longest int
+}
+
+// wcColumnWidth is busybox-w32's field width for an aligned count.
+const wcColumnWidth = 9
+
+// add accumulates one file's counts into a running total. `-L` is the exception and it is
+// busybox's: the longest line of several files is the longest of them, not their sum.
+func (c wcCounts) add(other wcCounts) wcCounts {
+	c.lines += other.lines
+	c.words += other.words
+	c.bytes += other.bytes
+	c.chars += other.chars
+	c.longest = max(c.longest, other.longest)
+	return c
 }
 
 // An unknown letter used to be dropped on the floor after clearing the
@@ -109,13 +131,21 @@ func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string
 	if flags.longest {
 		values = append(values, counts.longest)
 	}
+	// Padded only when there is more than one count, which is the rule busybox-w32
+	// applies: `wc -l f` prints `0 f` and `wc f` aligns its three columns. Measured,
+	// because the references disagree on the width -- busybox pads to nine and GNU to
+	// seven -- and the primary reference settles it.
+	width := 0
+	if len(values) > 1 {
+		width = wcColumnWidth
+	}
 	for i, value := range values {
 		if i > 0 {
 			if _, err := fmt.Fprint(stdout, " "); err != nil {
 				return err
 			}
 		}
-		if _, err := fmt.Fprint(stdout, value); err != nil {
+		if _, err := fmt.Fprintf(stdout, "%*d", width, value); err != nil {
 			return err
 		}
 	}

@@ -1,0 +1,21 @@
+id = "applet.coreutils.wc.columns-and-total"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+files = { "a.txt" = "one two\n", "b.txt" = "three\n" }
+script = '''
+wc a.txt
+wc -l a.txt
+wc a.txt b.txt
+'''
+
+[expect]
+status = 0
+stdout = "        1         2         8 a.txt\n1 a.txt\n        1         2         8 a.txt\n        1         1         6 b.txt\n        2         3        14 total\n"
+stderr = ""
+
+[notes]
+standard = "POSIX wc output format; the field width is the implementation's own choice"
+why = "Two gaps, both measured against busybox-w32. The counts were never aligned, so `wc f` printed `1 2 8 f` where both references pad the columns; and more than one operand never ended with a `total` line, so a script adding up several files got no answer and no sign that one was missing. The width is nine because that is what busybox-w32 uses, and the references disagree -- GNU and uutils pad to seven. A single count is not padded at all, which is also busybox's rule and why the `-l` line here is bare."

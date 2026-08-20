@@ -70,8 +70,11 @@ func TestDefaultRegistry_countsLinesWordsBytes_whenWcRunsFromStdin(t *testing.T)
 	if err != nil {
 		t.Fatalf("expected wc to succeed, got %v", err)
 	}
-	if got := stdout.String(); got != "2 3 14\n" {
-		t.Fatalf("expected wc output %q, got %q", "2 3 14\n", got)
+	// Padded to nine per column, which is busybox-w32's alignment when more than one
+	// count is printed. The unpadded spelling this expected is not what either
+	// reference prints.
+	if want := "        2         3        14\n"; stdout.String() != want {
+		t.Fatalf("expected wc output %q, got %q", want, stdout.String())
 	}
 }
 
@@ -154,7 +157,10 @@ func TestDefaultRegistry_countsSelectedMetric_whenWcRunsWithFlags(t *testing.T) 
 	if err != nil {
 		t.Fatalf("expected wc to succeed, got %v", err)
 	}
-	if got := stdout.String(); got != "2 3 14\n" {
-		t.Fatalf("expected wc output %q, got %q", "2 3 14\n", got)
+	// Padded to nine per column, which is busybox-w32's alignment when more than one
+	// count is printed. The unpadded spelling this expected is not what either
+	// reference prints.
+	if want := "        2         3        14\n"; stdout.String() != want {
+		t.Fatalf("expected wc output %q, got %q", want, stdout.String())
 	}
 }
