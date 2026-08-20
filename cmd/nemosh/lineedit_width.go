@@ -1,6 +1,10 @@
 package main
 
-import "unicode"
+import (
+	"unicode"
+
+	"golang.org/x/text/width"
+)
 
 // runeColumns reports how many terminal cells a rune occupies.
 //
@@ -9,9 +13,21 @@ import "unicode"
 // character leaves half of itself on screen. Editing counts characters; drawing
 // counts columns; they are different numbers and the buffer keeps them apart.
 //
-// No dependency for this: the East Asian Wide and Fullwidth ranges are stable,
-// and pulling in a module for a table this size would be the project's first
-// runtime dependency (AGENTS.md, Builds And Packaging).
+// The wide test used to be a table written out by hand here, on the grounds that the East
+// Asian Wide and Fullwidth ranges are stable and a module for a table that size would not pay
+// for itself. The ranges are stable; the transcription was not. Measured in a real console:
+// U+231A WATCH and U+1F680 ROCKET are both drawn two cells wide by conhost and by Windows
+// Terminal, and both were absent from the table, so the cursor drifted by one cell for every
+// one of them on the line. Unicode adds wide code points every year, so the table was going to
+// keep being wrong in a way nobody would notice until it bit them.
+//
+// x/text/width answers from the Unicode data instead, for 22 KiB of binary -- measured, against
+// 870 KiB of headroom under the size ceiling. It is the same authors and the same 3-Clause BSD
+// as x/sys and x/term, which are already linked.
+//
+// EastAsianAmbiguous stays at one cell. Those code points -- Latin-1 punctuation, Greek,
+// Cyrillic -- are drawn wide only in a CJK-locale terminal and narrow everywhere else, and
+// one cell is what the hand table gave them and what wcwidth defaults to.
 func runeColumns(r rune) int {
 	switch {
 	case r == 0:
@@ -31,39 +47,14 @@ func runeColumns(r rune) int {
 	}
 }
 
-// wideRanges are the Unicode East Asian Wide (W) and Fullwidth (F) blocks that
-// a terminal draws in two cells.
-var wideRanges = [...][2]rune{
-	{0x1100, 0x115F},   // Hangul Jamo initial consonants
-	{0x2E80, 0x303E},   // CJK radicals, Kangxi, CJK symbols and punctuation
-	{0x3041, 0x33FF},   // Hiragana, Katakana, Bopomofo, Hangul Compatibility
-	{0x3400, 0x4DBF},   // CJK Unified Ideographs Extension A
-	{0x4E00, 0x9FFF},   // CJK Unified Ideographs
-	{0xA000, 0xA4CF},   // Yi
-	{0xA960, 0xA97F},   // Hangul Jamo Extended-A
-	{0xAC00, 0xD7A3},   // Hangul syllables
-	{0xF900, 0xFAFF},   // CJK Compatibility Ideographs
-	{0xFE10, 0xFE19},   // Vertical forms
-	{0xFE30, 0xFE6F},   // CJK Compatibility Forms, small form variants
-	{0xFF00, 0xFF60},   // Fullwidth ASCII variants
-	{0xFFE0, 0xFFE6},   // Fullwidth signs
-	{0x1F300, 0x1F64F}, // Miscellaneous symbols and pictographs, emoticons
-	{0x1F900, 0x1F9FF}, // Supplemental symbols and pictographs
-	{0x20000, 0x2FFFD}, // CJK Extension B and beyond
-	{0x30000, 0x3FFFD},
-}
-
+// isWideRune reports whether a terminal draws the rune in two cells.
 func isWideRune(r rune) bool {
-	for _, span := range wideRanges {
-		if r < span[0] {
-			// The table is ascending, so nothing later can match.
-			return false
-		}
-		if r <= span[1] {
-			return true
-		}
+	switch width.LookupRune(r).Kind() {
+	case width.EastAsianWide, width.EastAsianFullwidth:
+		return true
+	default:
+		return false
 	}
-	return false
 }
 
 // promptColumns measures what a prompt draws, skipping the escape sequences

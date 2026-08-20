@@ -5,8 +5,9 @@ incorporates the third-party software listed here. Each entry reproduces the
 copyright notice and license text that redistribution of that component
 requires.
 
-The **binary** ships the Go standard library, `golang.org/x/term`, and
-`golang.org/x/sys/windows`; all three are 3-Clause BSD. `github.com/BurntSushi/toml`
+The **binary** ships the Go standard library, `golang.org/x/term`,
+`golang.org/x/sys/windows`, and `golang.org/x/text/width`; all four are 3-Clause
+BSD. `github.com/BurntSushi/toml`
 is used only by the behavior-test harness under `internal/testutil` and is not
 linked into `nemosh`; it is listed anyway so the module's full dependency set is
 accounted for.
@@ -18,7 +19,7 @@ file is limited to notices that redistribution obligates.
 
 ---
 
-## The Go Authors — Go standard library, `golang.org/x/term`, `golang.org/x/sys`
+## The Go Authors — Go standard library, `golang.org/x/term`, `golang.org/x/sys`, `golang.org/x/text`
 
 3-Clause BSD License.
 
