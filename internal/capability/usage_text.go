@@ -64,7 +64,12 @@ var usageText = map[string]Usage{
 	"rev":       {Summary: "Reverse the characters of every line.", Operands: "[FILE]..."},
 	"rm":        {Summary: "Remove files and directories.", Operands: "FILE...", Options: map[string]string{"f": "do not complain about what is not there", "r": "remove directories and their contents"}},
 	"rmdir":     {Summary: "Remove empty directories.", Operands: "DIRECTORY...", Options: map[string]string{"p": "remove each parent that becomes empty too", "v": "print a line per directory removed"}},
-	"sed":       {Summary: "Edit a stream of text by script.", Operands: "SCRIPT [FILE]..."},
+	"sed": {Summary: "Edit a stream of text by script.", Operands: "SCRIPT [FILE]...", Notes: []string{
+		"Only the s command: s/PATTERN/REPLACEMENT/[g][N].",
+		"PATTERN is a POSIX basic regular expression, with the GNU \\+ \\? \\| extensions.",
+		"REPLACEMENT takes & for the whole match and \\1 to \\9 for a group.",
+		"A backreference in the PATTERN is refused: this build matches with RE2, which has none.",
+	}},
 	"seq":       {Summary: "Print a sequence of numbers.", Operands: "[FIRST [INCREMENT]] LAST"},
 	"sha256sum": {Summary: "Print or check SHA-256 digests.", Operands: "[FILE]...", Options: map[string]string{"b": "read in binary mode, and mark it with a * in the output", "c": "read the operands as lists of digests and check them", "t": "read in text mode, which is the default", "w": "with -c, warn about lines that are not a digest"}},
 	"sleep":     {Summary: "Wait for a while.", Operands: "SECONDS"},

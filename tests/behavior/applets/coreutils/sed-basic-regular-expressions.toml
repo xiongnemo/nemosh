@@ -1,0 +1,30 @@
+id = "applet.coreutils.sed.basic-regular-expressions"
+area = "applet"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "posix"]
+files = { "in.txt" = "hello world\nfoo123bar\naaa\nx.y\na|b\nxzy\n" }
+script = '''
+sed 's|.*world|W|' in.txt | head -n 1
+sed 's/[0-9][0-9]*/#/' in.txt | head -n 2 | tail -n 1
+sed 's/\(a\+\)/[\1]/' in.txt | head -n 3 | tail -n 1
+sed 's/x.y/ANY/g' in.txt | tail -n 3 | tr '\n' ' '
+echo
+sed 's/x\.y/DOT/g' in.txt | tail -n 3 | tr '\n' ' '
+echo
+sed 's/a|b/PIPE/' in.txt | tail -n 2 | head -n 1
+sed 's/[[:digit:]]/#/g' in.txt | head -n 2 | tail -n 1
+sed 's/\(.\)\(.\)/\2\1/' in.txt | head -n 1
+sed 's/o/0/g' in.txt | head -n 1
+sed 's/foo/[&]/' in.txt | head -n 2 | tail -n 1
+'''
+
+[expect]
+status = 0
+stdout = "W\nfoo#bar\n[aaa]\nANY a|b ANY \nDOT a|b xzy \nPIPE\nfoo###bar\nehllo world\nhell0 w0rld\n[foo]123bar\n"
+stderr = ""
+
+[notes]
+standard = "POSIX sed: BRE, with the GNU \\+ \\? \\| extensions both references implement"
+why = "sed matched a literal string before this: `s/[0-9]*//` replaced nothing and reported nothing, because the substitution was a strings.Index search and every metacharacter stood for itself. Nothing in the matrix or --help admitted it. Every line here was measured against busybox-w32 and agrees. Note what the last two prove: `.` is any character while `\\.` is a dot, and a group captured with \\( \\) is available as \\1 -- the three places where BRE needs the opposite backslashes from Go's own syntax, which is why the pattern is translated rather than passed through. One divergence is deliberate: `s/a/X/2g` means the second match onward here, as it does in GNU and uutils, where busybox-w32 ignores the number when g is present and replaces every match."
