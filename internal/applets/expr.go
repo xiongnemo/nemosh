@@ -268,10 +268,9 @@ func (p *exprParser) parseFunction(name string) (string, error) {
 	}
 	start, startOk := exprNumber(position)
 	count, countOk := exprNumber(length)
-	runes := []rune(value)
-	if !startOk || !countOk || start < 1 || count < 1 || int(start) > len(runes) {
+	if !startOk || !countOk || start < 1 || count < 1 {
 		return "", nil
 	}
-	end := min(int(start-1+count), len(runes))
-	return string(runes[start-1 : end]), nil
+	// Characters for UTF-8, bytes otherwise; see text_encoding.go.
+	return substringText(value, int(start-1), int(count)), nil
 }

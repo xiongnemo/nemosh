@@ -69,11 +69,10 @@ func newRevApplet() Applet {
 		}
 		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
 			return eachLine(reader, func(line string, ending string) error {
-				runes := []rune(line)
-				for left, right := 0, len(runes)-1; left < right; left, right = left+1, right-1 {
-					runes[left], runes[right] = runes[right], runes[left]
-				}
-				_, err := io.WriteString(stdout, string(runes)+ending)
+				// By character for UTF-8 and by byte for anything else, because
+				// rewriting bytes it cannot read is how this destroyed a GBK file.
+				// See text_encoding.go.
+				_, err := io.WriteString(stdout, reverseText(line)+ending)
 				return err
 			})
 		})

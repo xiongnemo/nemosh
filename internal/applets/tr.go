@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 // tr is the applet this bundle most needed and did not have, and on Windows it
@@ -145,12 +146,32 @@ func (t trTable) run(ctx context.Context, stdout io.Writer, stdin io.Reader) err
 	writer := bufio.NewWriter(stdout)
 	previous := rune(-1)
 	for {
-		r, _, err := reader.ReadRune()
+		r, size, err := reader.ReadRune()
 		if err != nil {
 			if err == io.EOF {
 				return writer.Flush()
 			}
 			return err
+		}
+		// A byte that is not UTF-8 arrives as U+FFFD of width one, and writing that
+		// rune back out is what turned a GBK file into replacement characters -- even
+		// for `tr q q`, which changes nothing. Put it back and copy the byte instead:
+		// a set given in UTF-8 cannot name it, so it cannot be a match. See
+		// text_encoding.go.
+		if r == utf8.RuneError && size == 1 {
+			if err := reader.UnreadRune(); err != nil {
+				return err
+			}
+			raw, err := reader.ReadByte()
+			if err != nil {
+				return err
+			}
+			if err := writer.WriteByte(raw); err != nil {
+				return err
+			}
+			// It also breaks a squeeze run, since nothing here matched.
+			previous = -1
+			continue
 		}
 		mapped, keep := t.apply(r)
 		if !keep {

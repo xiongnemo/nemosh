@@ -588,6 +588,7 @@ of `$(`, so the first `)` belonging to anything else ended the body early.
 | two heredocs on one line -- `cat <<A; cat <<B` | put them on separate lines | The delimiter scan collects one per line |
 | `select name in ...; do ... done` | a `while` loop with `read` and a `case` | Not implemented. It is an interactive menu construct, and the loop it expands to is three lines someone can write |
 | `coproc` | a named pipe, or two redirections | Not implemented. It needs a bidirectional child, which on Windows means deciding on pipes before deciding on this |
+| `tee` cannot write to `/dev/null` | redirect instead: `> /dev/null` | `tee /dev/null` is a common idiom for discarding one copy, and it fails with `tee: /dev/null is not a host path`. The device paths are wired for *reading* -- `wc /dev/null` works -- and tee resolves its operands as host files. busybox-w32 accepts it. Found while sweeping the text filters for encoding damage |
 | `trap -l` | `kill -l`, which works | The signal list is only wired to kill |
 | `ls -l` shows the same name for owner and group | none needed | busybox-w32 does the same, and Windows disagrees with both: the real primary group of a file owned by a local account is `None`. A column reading None would look like a fault and carries nothing a script can use. The mode string is still Go's `-rw-rw-rw-` where busybox says `-rw-rw-r--` and uutils expects `(r[w-]x){3}` -- three answers to a question Windows has not got, and this one at least follows from os.FileMode |
 
