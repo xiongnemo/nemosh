@@ -377,7 +377,7 @@ column that matters is the third one.
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
-| `ps` | none; `PID` and `COMMAND` only | refused by name |
+| `ps` | none; `PID PPID THR RSS TIME COMMAND` | refused by name |
 | `printf` | format string | treated as the format, which is correct |
 | `pwd` | `-L -P` both accepted | accepted |
 | `readlink` | `-n` | refused by name |

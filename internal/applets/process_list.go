@@ -5,28 +5,31 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"time"
 
 	"github.com/xiongnemo/nemosh/internal/proc"
 )
 
 // ps lists processes.
 //
-// Nearly free, which is why it is here: `internal/proc` already lists them for
-// `pgrep`, `pkill` and the `kill` builtin, so this is a formatter over a list
-// three other things depend on. Doing it any other way would have meant a second
-// CreateToolhelp32Snapshot, and two copies of a lookup drift.
+// It printed two columns, PID and COMMAND, and a comment explained that TTY, STAT, TIME and the
+// rest were absent because Windows either has not got them or hides them behind a handle this
+// session may not open. Half of that was right and half was a limit of how the list was being
+// read: CreateToolhelp32Snapshot answers with a name and a pid, so a name and a pid was all there
+// was to print.
 //
-// The columns are `PID` and `COMMAND`, which is the intersection of what every
-// ps prints and what this can actually see. Notably absent: TTY, STAT, TIME and
-// the full command line. Those are not omissions of effort -- Windows has no
-// controlling terminal in the POSIX sense, and reading another process's command
-// line means opening it and walking its PEB, which an ordinary session may not do
-// for anything it does not own. A column of `?` per row would be worse than no
-// column.
+// The system table answers with rather more for no more privilege -- see internal/proc -- so the
+// columns busybox-w32's ps prints are available now: `PID PPID USER TIME ELAPSED COMMAND` there,
+// and `PID PPID THR RSS TIME COMMAND` here.
 //
-// busybox-w32's ps prints more than this by reading the snapshot's parent and
-// thread fields; those are available and are not printed here for the same reason
-// its own output is mostly `?` on Windows: a number nobody can act on is noise.
+// Two of busybox's columns are still missing and the reasons differ. USER needs a handle on each
+// process and is refused for anything this session does not own -- measured, 176 of 436 -- and a
+// column that is right for a third of its rows is worse than no column. ELAPSED could be computed
+// from the creation time, and is left out only because TIME is what people sort by.
+//
+// TTY and STAT remain absent for the original reason: Windows has no controlling terminal, and
+// while a process state can be *derived* from its threads, `ps` is the wrong place to introduce an
+// approximation. `top` shows it, where a monitor's reader expects one.
 func newPsApplet() Applet {
 	return simpleApplet{name: "ps", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
 		if _, _, err := parseAppletOptions(args, "", ""); err != nil {
@@ -40,7 +43,8 @@ func newPsApplet() Applet {
 			return err
 		}
 		sort.Slice(processes, func(i, j int) bool { return processes[i].PID < processes[j].PID })
-		if _, err := fmt.Fprintf(stdout, "%7s %s\n", "PID", "COMMAND"); err != nil {
+		if _, err := fmt.Fprintf(stdout, "%7s %7s %5s %9s %9s %s\n",
+			"PID", "PPID", "THR", "RSS", "TIME", "COMMAND"); err != nil {
 			return err
 		}
 		for _, process := range processes {
@@ -49,10 +53,26 @@ func newPsApplet() Applet {
 				return ctx.Err()
 			default:
 			}
-			if _, err := fmt.Fprintf(stdout, "%7d %s\n", process.PID, process.Name); err != nil {
+			if _, err := fmt.Fprintf(stdout, "%7d %7d %5d %9s %9s %s\n",
+				process.PID, process.PPID, process.Threads,
+				humanBlocks(int64(process.WorkingSet+duBlock-1)/duBlock),
+				processCPUTime(process.Kernel+process.User),
+				process.Name); err != nil {
 				return err
 			}
 		}
 		return nil
 	}}
+}
+
+// processCPUTime is cumulative CPU as `H:MM:SS`, which is what every ps prints and what a person
+// reads to see which process has been busy since boot.
+//
+// Hours rather than days, because a process that has used more than a day of CPU is better shown
+// as three digits of hours than in a second unit the column would have to widen for.
+func processCPUTime(used time.Duration) string {
+	hours := int(used / time.Hour)
+	minutes := int(used/time.Minute) % 60
+	seconds := int(used/time.Second) % 60
+	return fmt.Sprintf("%d:%02d:%02d", hours, minutes, seconds)
 }

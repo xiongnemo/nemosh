@@ -187,12 +187,14 @@ func TestStat(t *testing.T) {
 	})
 }
 
-// ps is a formatter over the process list internal/proc already keeps for pgrep,
-// pkill and the kill builtin. The columns are the intersection of what every ps
-// prints and what this can actually see: no TTY, no STAT, no TIME, and not the
-// command line -- Windows has no controlling terminal in the POSIX sense, and
-// reading another process's command line means walking its PEB, which an ordinary
-// session may not do for anything it does not own.
+// ps is a formatter over the process list internal/proc already keeps for pgrep, pkill and the
+// kill builtin. It printed two columns until the list moved onto the system table, which answers
+// with parents, thread counts, memory and CPU time for no more privilege than a name cost.
+//
+// Still absent, for two different reasons. TTY and the command line: Windows has no controlling
+// terminal, and a command line means opening the process, which is refused for anything this
+// session does not own. STAT: derivable from the process's threads, but an approximation belongs
+// in `top`, where a monitor's reader expects one, rather than in `ps`.
 func TestPs(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		// internal/proc lists processes on Windows only, and refuses elsewhere
@@ -215,8 +217,24 @@ func TestPs(t *testing.T) {
 	if len(lines) < 2 {
 		t.Fatalf("ps printed %d lines, want a header and at least one process", len(lines))
 	}
-	if fields := strings.Fields(lines[0]); len(fields) != 2 || fields[0] != "PID" || fields[1] != "COMMAND" {
-		t.Fatalf("header = %q, want PID and COMMAND", lines[0])
+	// The header used to be two columns, because CreateToolhelp32Snapshot answered with a name
+	// and a pid and there was nothing else to print. The system table answers with rather more
+	// for no more privilege, so ps prints what busybox-w32's does.
+	want := []string{"PID", "PPID", "THR", "RSS", "TIME", "COMMAND"}
+	fields := strings.Fields(lines[0])
+	if len(fields) != len(want) {
+		t.Fatalf("header = %q, want %v", lines[0], want)
+	}
+	for index, column := range want {
+		if fields[index] != column {
+			t.Fatalf("header = %q, want %v", lines[0], want)
+		}
+	}
+	// A row must carry a real thread count and a real parent, which is what proves the row
+	// came from the system table rather than from a snapshot that could not answer.
+	row := strings.Fields(lines[1])
+	if len(row) < 3 || row[2] == "0" {
+		t.Fatalf("first row = %q, want a thread count", lines[1])
 	}
 	// This process is running, so it has to be in the list -- an empty or
 	// fabricated list would pass a weaker assertion.

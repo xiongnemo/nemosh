@@ -5,7 +5,6 @@ package proc
 import (
 	"fmt"
 	"os"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -56,30 +55,26 @@ func Terminate(pid, signal int) error {
 
 // List reports every process this session can see, excluding the caller.
 //
-// Excluding self is what busybox's pgrep does, and it is not tidiness: `pkill
-// nemosh` that matched the shell running it would kill the thing being asked for
-// the favour, and a pattern broad enough to match a shell is broad enough to be
-// typed by accident.
+// Excluding self is what busybox's pgrep does, and it is not tidiness: `pkill nemosh` that
+// matched the shell running it would kill the thing being asked for the favour, and a pattern
+// broad enough to match a shell is broad enough to be typed by accident.
+//
+// A projection of the system table now, rather than its own CreateToolhelp32Snapshot. That is
+// what this package exists for -- one lookup, not one per caller -- and the table costs no more
+// than the snapshot did while answering a great deal more. `top` does not come through here: it
+// wants every process including this one, and it wants two samples to compare.
 func List() ([]Process, error) {
-	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	snapshot, err := NewSampler().Sample(false)
 	if err != nil {
-		return nil, fmt.Errorf("listing processes: %w", err)
+		return nil, err
 	}
-	defer windows.CloseHandle(snapshot)
-
 	self := os.Getpid()
-	var entry windows.ProcessEntry32
-	entry.Size = uint32(unsafe.Sizeof(entry))
-	var processes []Process
-	for err = windows.Process32First(snapshot, &entry); err == nil; err = windows.Process32Next(snapshot, &entry) {
-		pid := int(entry.ProcessID)
-		if pid == self || pid == 0 {
+	processes := make([]Process, 0, len(snapshot.Processes))
+	for _, process := range snapshot.Processes {
+		if process.PID == self || process.PID == 0 {
 			continue
 		}
-		processes = append(processes, Process{PID: pid, Name: windows.UTF16ToString(entry.ExeFile[:])})
-	}
-	if err != nil && err != windows.ERROR_NO_MORE_FILES {
-		return nil, fmt.Errorf("listing processes: %w", err)
+		processes = append(processes, process)
 	}
 	return processes, nil
 }
