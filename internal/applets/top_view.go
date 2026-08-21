@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -86,23 +85,45 @@ func runTopApplication(ctx context.Context, options topOptions, screen tcell.Scr
 	application := tview.NewApplication().SetScreen(screen)
 	table := tview.NewTable().SetFixed(1, 0).SetSelectable(true, false)
 	table.SetSelectedStyle(tcell.StyleDefault.Reverse(true))
-	summary := tview.NewTextView().SetDynamicColors(true)
+	// No wrapping: this is a fixed-height header, so an overlong line must be cut off rather
+	// than reflowed into the space a processor meter was going to use.
+	summary := tview.NewTextView().SetDynamicColors(true).SetWrap(false)
 	status := tview.NewTextView().SetDynamicColors(true)
 	layout := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(summary, topSummaryLines, 0, false).
+		AddItem(summary, topSummaryFixedLines, 0, false).
 		AddItem(table, 0, 1, true).
 		AddItem(status, 1, 0, false)
 	application.SetRoot(layout, true)
 
+	width, height := screen.Size()
 	view := &topView{
-		session:     session,
-		application: application,
-		table:       table,
-		summary:     summary,
-		status:      status,
-		stderr:      stderr,
-		root:        layout,
+		session:       session,
+		application:   application,
+		table:         table,
+		summary:       summary,
+		status:        status,
+		stderr:        stderr,
+		root:          layout,
+		summaryWidth:  width,
+		summaryHeight: height,
 	}
+	// Where the meters learn the terminal's size. Asking the widget was the obvious thing and it
+	// was wrong: a tview Box reports a default 15x10 rect until it has been laid out, so a
+	// GetInnerRect before the first draw answers 15 rather than answering zero -- a plausible
+	// number, silently, which drew every meter four cells wide. The screen knows its own size
+	// before anything is drawn, and the layout's draw function keeps up with a resize.
+	layout.SetDrawFunc(func(_ tcell.Screen, x, y, width, height int) (int, int, int, int) {
+		if width != view.summaryWidth || height != view.summaryHeight {
+			view.summaryWidth, view.summaryHeight = width, height
+			view.drawSummary()
+		}
+		return x, y, width, height
+	})
+	// The cursor's own movement keys are tview's -- arrows, page up and down, home and end are
+	// handled by the table and never reach the input capture. So this is the only place the model
+	// can learn where the cursor went, and without it the selection was remembered only when some
+	// *other* key was pressed. See rememberSelection for what that cost.
+	table.SetSelectionChangedFunc(view.selectionChanged)
 	view.refresh()
 	application.SetInputCapture(view.key)
 	if ready != nil {
@@ -134,10 +155,6 @@ func runTopApplication(ctx context.Context, options topOptions, screen tcell.Scr
 	return err
 }
 
-// topSummaryLines is how many rows the header occupies: the four lines writeTopSummary prints,
-// plus one per processor bar, capped so a 64-core machine does not fill the screen with meters.
-const topSummaryLines = 6
-
 // topView is the drawn state, and the only place tview types appear.
 type topView struct {
 	session     *topSession
@@ -146,9 +163,21 @@ type topView struct {
 	summary     *tview.TextView
 	status      *tview.TextView
 	stderr      io.Writer
-	// root is the main layout, kept so a modal can be swapped in and back out again.
-	root tview.Primitive
-	rows []topRow
+	// root is the main layout, kept so a modal can be swapped in and back out again and so the
+	// header can be resized to the machine.
+	root *tview.Flex
+	// filling is set while the table is being rebuilt, so the selection callback ignores the
+	// row numbers it sees in the middle of that.
+	filling bool
+	// summaryWidth and summaryHeight are the terminal's, so the meters fill the window and
+	// follow a resize.
+	summaryWidth  int
+	summaryHeight int
+	// snapshot and rates are the last sample, kept so the header can be redrawn at a new width
+	// without taking another one.
+	snapshot proc.Snapshot
+	rates    proc.Rates
+	rows     []topRow
 }
 
 // refresh takes a sample and redraws.
@@ -166,9 +195,19 @@ func (v *topView) refresh() {
 		return
 	}
 	v.rows = rows
-	v.summary.SetText(topSummaryText(snapshot, rates))
+	v.snapshot, v.rates = snapshot, rates
+	v.drawSummary()
 	v.fillTable()
 	v.status.SetText(topStatusText(v.session.model, len(rows)))
+}
+
+// drawSummary writes the header at the current width.
+func (v *topView) drawSummary() {
+	v.summary.SetText(topSummaryText(v.snapshot, v.rates, v.summaryWidth, v.summaryHeight))
+	// The header is as tall as the machine needs, so the layout is resized rather than the
+	// meters being cropped to a constant. htop grows its header for the same reason.
+	v.root.ResizeItem(v.summary,
+		topSummaryHeight(len(v.rates.CPUs), v.summaryWidth, v.summaryHeight), 0)
 }
 
 // fillTable writes the rows into the widget, keeping the selection on the same process.
@@ -178,22 +217,35 @@ func (v *topView) refresh() {
 // arrived under it.
 func (v *topView) fillTable() {
 	selected := v.session.model.Selected
+	// The callback fires while the table is being rebuilt, with row numbers that mean nothing
+	// yet, and letting it record one would overwrite the selection this is trying to restore.
+	v.filling = true
+	defer func() { v.filling = false }()
 	v.table.Clear()
 	for index, column := range v.session.model.Columns {
-		cell := tview.NewTableCell(column.Header).
-			SetStyle(tcell.StyleDefault.Bold(true).Reverse(true)).
-			SetSelectable(false)
+		cell := topStyleCell(tview.NewTableCell(column.Header),
+			topHeaderStyle(column.Key == v.session.model.Sort)).SetSelectable(false)
 		if column.Right {
 			cell.SetAlign(tview.AlignRight)
+		}
+		// Width zero is the column table's way of saying "the rest of the line", which is
+		// the command and nothing else. Expanding it is what makes the table fill the
+		// window: tview sizes a column to its widest cell, so without this a table of short
+		// names sat in the left third of a maximised terminal.
+		if column.Width == 0 {
+			cell.SetExpansion(1)
 		}
 		v.table.SetCell(0, index, cell)
 	}
 	selectedRow := 0
 	for rowIndex, row := range v.rows {
 		for columnIndex, column := range v.session.model.Columns {
-			cell := tview.NewTableCell(column.Cell(row))
+			cell := topStyleCell(tview.NewTableCell(column.Cell(row)), topCellStyle(column.Key, row))
 			if column.Right {
 				cell.SetAlign(tview.AlignRight)
+			}
+			if column.Width == 0 {
+				cell.SetExpansion(1)
 			}
 			v.table.SetCell(rowIndex+1, columnIndex, cell)
 		}
@@ -206,37 +258,21 @@ func (v *topView) fillTable() {
 	}
 }
 
-// topSummaryText is the header, with a bar per processor.
-func topSummaryText(snapshot proc.Snapshot, rates proc.Rates) string {
-	var out strings.Builder
-	writeTopSummary(&out, snapshot, rates)
-	for index, cpu := range rates.CPUs {
-		if index >= topSummaryLines-4 {
-			// Out of room. A machine with more processors than the header has lines
-			// gets the total and the first few, which beats a header that pushes the
-			// table off the screen.
-			break
-		}
-		fmt.Fprintf(&out, "CPU%-3d %s\n", index, topBar(cpu.Busy, 40))
+// selectionChanged records which process the cursor moved onto.
+//
+// This is the fix for a cursor that jumped back to the top row every second. The selection was
+// only recorded when a key the model handled was pressed, so plain arrow movement left it at the
+// zero value -- and zero is a real pid here, Idle's, so every refresh dutifully found Idle and put
+// the cursor back on it. Hence topSelectionAbsent rather than zero for "nothing selected": on a
+// platform where pid 0 is a process you can see, zero cannot mean absent.
+func (v *topView) selectionChanged(row, _ int) {
+	if v.filling {
+		return
 	}
-	return out.String()
-}
-
-// topBar is a meter, drawn the way htop draws one.
-func topBar(fraction float64, width int) string {
-	filled := int(fraction * float64(width))
-	if filled > width {
-		filled = width
+	if row < 1 || row-1 >= len(v.rows) {
+		return
 	}
-	colour := "green"
-	switch {
-	case fraction > 0.9:
-		colour = "red"
-	case fraction > 0.6:
-		colour = "yellow"
-	}
-	return fmt.Sprintf("[%s]%s[white]%s %s%%", colour, strings.Repeat("|", filled),
-		strings.Repeat(" ", width-filled), strings.TrimSpace(topPercent(fraction)))
+	v.session.model.Selected = v.rows[row-1].Process.PID
 }
 
 // topStatusText is the key hint line, which is what makes a monitor discoverable at all.

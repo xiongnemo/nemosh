@@ -145,6 +145,24 @@ type Memory struct {
 	Threads int
 }
 
+// Share is the fraction of physical memory in use, which is what a meter draws.
+func (m Memory) Share() float64 {
+	if m.TotalPhysical == 0 {
+		return 0
+	}
+	return float64(m.UsedPhysical()) / float64(m.TotalPhysical)
+}
+
+// CommitShare is the promised memory against the ceiling on promises. Worth a meter of its own
+// because it is the number that says whether the machine is about to refuse an allocation --
+// commit can be exhausted while physical memory still looks free.
+func (m Memory) CommitShare() float64 {
+	if m.CommitLimit == 0 {
+		return 0
+	}
+	return float64(m.CommitTotal) / float64(m.CommitLimit)
+}
+
 // UsedPhysical is what is not available. Reported rather than computed by callers, because
 // "used" on Windows is a subtraction and not a counter.
 func (m Memory) UsedPhysical() uint64 {

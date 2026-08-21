@@ -131,7 +131,7 @@ func TestTopApplication_drawsAndQuits(t *testing.T) {
 	if !ok {
 		t.Fatalf("nothing was drawn; screen was:\n%s", drawn)
 	}
-	for _, want := range []string{"top - up", "processes", "Mem:", "PID", "COMMAND"} {
+	for _, want := range []string{"top - up", "processes", "CPU", "Mem", "Cmt", "PID", "COMMAND"} {
 		if !strings.Contains(drawn, want) {
 			t.Fatalf("screen does not mention %q:\n%s", want, drawn)
 		}
@@ -166,4 +166,176 @@ func TestTopApplication_sortKeyReordersTheTable(t *testing.T) {
 	if screen, ok := harness.waitFor(t, "Idle"); !ok {
 		t.Fatalf("sorting by pid did not bring Idle into view:\n%s", screen)
 	}
+}
+
+// selectedPID is the pid text of the row under the cursor, read from tview's goroutine.
+//
+// The pid rather than the row number, because the row number is *supposed* to move: the list is
+// sorted by CPU and reorders every second, and following the process rather than the row is the
+// whole point of remembering a selection.
+func (h *topHarness) selectedPID(t *testing.T) string {
+	t.Helper()
+	reply := make(chan string, 1)
+	h.application.QueueUpdate(func() {
+		table, ok := h.application.GetFocus().(*tview.Table)
+		if !ok {
+			reply <- ""
+			return
+		}
+		row, _ := table.GetSelection()
+		cell := table.GetCell(row, 0)
+		if cell == nil {
+			reply <- ""
+			return
+		}
+		reply <- strings.TrimSpace(cell.Text)
+	})
+	select {
+	case pid := <-reply:
+		return pid
+	case <-time.After(10 * time.Second):
+		t.Fatal("the application stopped answering")
+		return ""
+	}
+}
+
+// cells reads the raw screen, styles included.
+func (h *topHarness) cells(t *testing.T) ([]tcell.SimCell, int, int) {
+	t.Helper()
+	type contents struct {
+		cells         []tcell.SimCell
+		width, height int
+	}
+	reply := make(chan contents, 1)
+	h.application.QueueUpdate(func() {
+		cells, width, height := h.screen.GetContents()
+		reply <- contents{cells: cells, width: width, height: height}
+	})
+	select {
+	case got := <-reply:
+		return got.cells, got.width, got.height
+	case <-time.After(10 * time.Second):
+		t.Fatal("the application stopped answering")
+		return nil, 0, 0
+	}
+}
+
+// The cursor stays on the process it was put on, across a refresh.
+//
+// The bug this pins was mine and it made the thing unusable: pressing Down moved the cursor and one
+// second later it was back on the top row. Nothing to do with the key -- arrow keys are tview's and
+// worked -- but the model only recorded the selection when some *other* key was pressed, so it sat
+// at its zero value, and zero is a real pid here. Every refresh looked up pid 0, found Idle, and put
+// the cursor obediently back on it.
+func TestTopApplication_theCursorStaysOnTheProcessItWasPutOn(t *testing.T) {
+	harness := startTop(t)
+	defer harness.quit(t)
+	if _, ok := harness.waitFor(t, "top - up"); !ok {
+		t.Fatal("nothing drawn")
+	}
+
+	// When -- three rows down. InjectKey is asynchronous and QueueUpdate is not ordered against
+	// it, so the move is waited for rather than assumed: reading the selection straight after
+	// injecting saw the cursor still on the first row and failed for the wrong reason.
+	before := harness.selectedPID(t)
+	for range 3 {
+		harness.screen.InjectKey(tcell.KeyDown, 0, tcell.ModNone)
+	}
+	moved := ""
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if pid := harness.selectedPID(t); pid != "" && pid != before {
+			moved = pid
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if moved == "" {
+		t.Fatalf("the cursor never moved off pid %q", before)
+	}
+
+	// Then -- it is still on that process several refreshes later. With the bug it was back on
+	// the top row within one.
+	settle := time.Now().Add(3 * time.Second)
+	for time.Now().Before(settle) {
+		if now := harness.selectedPID(t); now != moved {
+			t.Fatalf("the cursor moved from pid %s to pid %s on its own", moved, now)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// The table fills the window rather than sitting in a column on the left.
+//
+// Asserted through the header's background, which is the only way to see it: the drawn *text* is
+// short either way, and what was wrong was the width of the columns underneath it. tview sizes a
+// column to its widest cell, so without an expanding last column a table of short process names
+// left two thirds of a wide terminal empty.
+func TestTopApplication_theTableFillsTheWidth(t *testing.T) {
+	harness := startTop(t)
+	defer harness.quit(t)
+	if _, ok := harness.waitFor(t, "COMMAND"); !ok {
+		t.Fatal("nothing drawn")
+	}
+
+	// When
+	cells, width, height := harness.cells(t)
+
+	// Then -- the header row is styled to the last column
+	header := topHeaderRow(t, cells, width, height)
+	last := cells[header*width+width-1]
+	_, background, _ := last.Style.Decompose()
+	if background != tcell.ColorAqua && background != tcell.ColorGreen {
+		t.Fatalf("the header stops short of the right edge: column %d has background %v",
+			width-1, background)
+	}
+}
+
+// The table is coloured, which is most of what makes four hundred rows readable.
+func TestTopApplication_theTableIsColoured(t *testing.T) {
+	harness := startTop(t)
+	defer harness.quit(t)
+	if _, ok := harness.waitFor(t, "COMMAND"); !ok {
+		t.Fatal("nothing drawn")
+	}
+
+	// When
+	cells, width, height := harness.cells(t)
+
+	// Then -- something in the body of the table is drawn in a colour, and the meters above it
+	// are too. A monochrome screen here means the styles were built and then dropped.
+	foregrounds := map[tcell.Color]bool{}
+	for row := 0; row < height; row++ {
+		for column := 0; column < width; column++ {
+			foreground, _, _ := cells[row*width+column].Style.Decompose()
+			if foreground != tcell.ColorDefault {
+				foregrounds[foreground] = true
+			}
+		}
+	}
+	if len(foregrounds) < 3 {
+		t.Fatalf("the screen uses %d colours, want a scheme: %v", len(foregrounds), foregrounds)
+	}
+}
+
+// topHeaderRow finds the table's header line on the screen.
+//
+// Searched for rather than computed from a constant: the header's height follows the machine now,
+// since every processor gets a meter, so a test that assumed a fixed offset would be asserting
+// against the wrong row on a machine with a different number of cores.
+func topHeaderRow(t *testing.T, cells []tcell.SimCell, width, height int) int {
+	t.Helper()
+	for row := 0; row < height; row++ {
+		line := ""
+		for column := 0; column < width; column++ {
+			if runes := cells[row*width+column].Runes; len(runes) > 0 {
+				line += string(runes[0])
+			}
+		}
+		if strings.Contains(line, "COMMAND") {
+			return row
+		}
+	}
+	t.Fatal("no header row on screen")
+	return 0
 }

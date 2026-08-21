@@ -46,7 +46,8 @@ type topModel struct {
 	Threads bool
 	// Selected is the pid under the cursor, remembered across refreshes by identity rather
 	// than by row number -- a list that reorders under a fixed cursor is how someone kills
-	// the wrong process.
+	// the wrong process. topSelectionAbsent, not zero, means nothing is selected: pid 0 is
+	// Idle and is a row you can put the cursor on.
 	Selected int
 	// KernelProcesses includes PID 0 and 4, which htop hides behind a toggle and which are
 	// worth seeing on Windows: Idle holds the machine's spare capacity and System holds its
@@ -62,6 +63,7 @@ func newTopModel(columns []topColumn) topModel {
 		Descending:      true,
 		Collapsed:       map[int]bool{},
 		Tagged:          map[int]bool{},
+		Selected:        topSelectionAbsent,
 		KernelProcesses: true,
 	}
 }
@@ -220,7 +222,7 @@ func (m *topModel) applyKey(key string) topAction {
 		return topActionNone
 	case "space":
 		// Tag, as htop does. Tagged processes are what a multiple kill acts on.
-		if m.Selected != 0 {
+		if m.Selected != topSelectionAbsent {
 			if m.Tagged == nil {
 				m.Tagged = map[int]bool{}
 			}
@@ -231,7 +233,7 @@ func (m *topModel) applyKey(key string) topAction {
 		m.Tagged = map[int]bool{}
 		return topActionNone
 	case "+", "-", "=":
-		if m.Tree && m.Selected != 0 {
+		if m.Tree && m.Selected != topSelectionAbsent {
 			m.Collapsed[m.Selected] = !m.Collapsed[m.Selected]
 		}
 		return topActionNone
