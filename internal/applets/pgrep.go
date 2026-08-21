@@ -75,7 +75,6 @@ func newPkillApplet() Applet {
 
 type processMatcher struct {
 	pattern *regexp.Regexp
-	exact   bool
 	long    bool
 }
 
@@ -106,7 +105,9 @@ func parseProcessPattern(applet string, args []string, short string) (processMat
 	if err != nil {
 		return processMatcher{}, fmt.Errorf("invalid pattern: %s", operands[0])
 	}
-	return processMatcher{pattern: compiled, exact: options.has('x'), long: options.has('l')}, nil
+	// -x is already in the pattern, anchored above; keeping a copy of the answer beside it
+	// invited the two to disagree.
+	return processMatcher{pattern: compiled, long: options.has('l')}, nil
 }
 
 // find lists the matches. The executable suffix is matched with or without,

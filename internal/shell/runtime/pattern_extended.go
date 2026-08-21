@@ -83,7 +83,7 @@ func extendedGroupAt(pattern []rune, index int) (extendedGroup, bool) {
 	if index+1 >= len(pattern) || pattern[index+1] != '(' {
 		return extendedGroup{}, false
 	}
-	if strings.IndexRune(extendedOpeners, pattern[index]) < 0 {
+	if !strings.ContainsRune(extendedOpeners, pattern[index]) {
 		return extendedGroup{}, false
 	}
 	depth := 0

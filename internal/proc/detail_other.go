@@ -11,7 +11,6 @@ type Details struct {
 	Path        string
 	CommandLine string
 	User        string
-	Denied      bool
 }
 
 // Command is the best available description of what is running.
@@ -28,8 +27,8 @@ type DetailCache struct{}
 // NewDetailCache returns an empty cache.
 func NewDetailCache() *DetailCache { return &DetailCache{} }
 
-// Lookup knows nothing here, which is what Denied says.
-func (c *DetailCache) Lookup(process Process) Details { return Details{Denied: true} }
+// Lookup knows nothing here, and an empty Details is how that is said.
+func (c *DetailCache) Lookup(process Process) Details { return Details{} }
 
 // Forget has nothing to forget.
 func (c *DetailCache) Forget(live map[int]bool) {}

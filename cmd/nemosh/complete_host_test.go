@@ -62,6 +62,50 @@ func TestOperandTargetFor(t *testing.T) {
 		{name: "a subcommand that takes nothing", prefix: "adb devices ", want: targetUnknown},
 		{name: "after a pipe, the new command decides", prefix: "ls | ssh ", want: targetHost},
 		{name: "nothing typed yet", prefix: "", want: targetPath},
+		// The long spellings, and every one of these is chosen so that the right
+		// answer differs from the wrong one. The specs have carried value-long
+		// and file-long since they were written -- curl declares a hundred and
+		// eighty of the first and thirty of the second -- the loader validates
+		// them, and nothing read them: detachedValueOption required a word of
+		// exactly two characters, so `-o` was recognised and `--output` was not.
+		//
+		// The first five cases written here were useless and are worth naming as
+		// a warning. They used wget, whose operand is a path, so "offer this
+		// directory's files" is the right answer whether the option is
+		// understood or falls through as an operand. Four of the five passed
+		// against the broken code.
+		{
+			// fastboot takes no operand, so the fallthrough answer is nothing
+			// at all -- and --dtb is file-long, so the answer is files.
+			name:   "a long option whose argument is a file",
+			prefix: "fastboot --dtb ", want: targetPath,
+		},
+		{
+			// value-long but not file-long: it takes a header, and offering
+			// files for one is an answer from the wrong universe, exactly as
+			// it is for ssh -p.
+			name:   "a long option whose argument is neither",
+			prefix: "wget --header ", want: targetUnknown,
+		},
+		{
+			// The value belongs to the option and is not an operand. adb's
+			// first operand is a subcommand, so miscounting the value costs
+			// the subcommand list -- the long spelling of `ssh -i key`.
+			name:   "after a long option and its value",
+			prefix: "adb --one-device serial ", want: targetSubcommand,
+		},
+		{
+			// `--name=value` carries its own value, so the word after it is an
+			// operand again: `install` is the subcommand, and its own operand
+			// kind is a path. The long form of `ssh -ikey`.
+			name:   "an attached long option value",
+			prefix: "adb --one-device=serial install ", want: targetPath,
+		},
+		{
+			// A long option that takes nothing leaves the operand where it was.
+			name:   "a long flag with no value",
+			prefix: "wget --spider ", want: targetPath,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -41,11 +41,11 @@ func operandTargetFor(specs *completionspec.Registry, prefix string) operandTarg
 	}
 	operands := 0
 	for index := 1; index < len(words); index++ {
-		flag, takesValue := detachedValueOption(surface, words[index])
+		file, takesValue := detachedValueOption(surface, words[index])
 		if takesValue {
 			if index+1 == len(words) {
 				// The word being typed is this option's value.
-				if surface.takesFile(flag) {
+				if file {
 					return targetPath
 				}
 				return targetUnknown
@@ -85,17 +85,38 @@ func operandTargetFor(specs *completionspec.Registry, prefix string) operandTarg
 }
 
 // detachedValueOption reports whether the word is an option whose value is the
-// *next* word, and which option it is.
+// *next* word, and whether that value is a file.
 //
 // Only the detached spelling counts. `ssh -i key` has the value in the following
 // word; `ssh -ikey` carries it already, so what comes after that is an operand
-// again. The length is enough to tell them apart.
-func detachedValueOption(surface commandSurface, word string) (rune, bool) {
-	if len(word) != 2 || word[0] != '-' {
-		return 0, false
+// again. For a short option the length is enough to tell them apart, and for a
+// long one it is the `=`.
+//
+// Both spellings, which is the fix rather than a tidy-up: this tested
+// `len(word) != 2`, so it only ever saw short options. Every spec's value-long
+// and file-long lists were dead, and the two failures were the ones this
+// function exists to prevent -- `curl --output ` offered no files, and the word
+// after `adb --one-device serial` was counted as an operand, which cost adb its
+// subcommand list exactly as `ssh -i key` once cost ssh its hosts.
+//
+// It returns whether the value is a file rather than which option it was,
+// because that is all either caller wanted, and a rune cannot name a long one.
+func detachedValueOption(surface commandSurface, word string) (file bool, takesValue bool) {
+	if !strings.HasPrefix(word, "-") || word == "-" || word == "--" {
+		return false, false
+	}
+	if name, ok := strings.CutPrefix(word, "--"); ok {
+		if strings.Contains(name, "=") {
+			// Carries its own value, so the next word is an operand again.
+			return false, false
+		}
+		return surface.takesFileLong(name), surface.takesValueLong(name)
+	}
+	if len(word) != 2 {
+		return false, false
 	}
 	flag := rune(word[1])
-	return flag, surface.takesValue(flag)
+	return surface.takesFile(flag), surface.takesValue(flag)
 }
 
 // commandSegment is the current command and the words already typed after it,

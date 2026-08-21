@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/completions"
@@ -30,6 +31,19 @@ type commandSurface struct {
 	// subcommands is offered for the word that selects a surface, and is empty
 	// for everything that has none.
 	subcommands []string
+}
+
+// takesValueLong and takesFileLong are the long-option counterparts, and their absence was a
+// defect rather than an omission: valueLong and fileLong were loaded from every spec, validated by
+// completionspec (which even enforces that fileLong is a subset of valueLong), and read by nothing.
+// So `curl --output ` offered no files while `curl -o ` did, and curl's spec names a hundred and
+// eighty long options that take a value.
+func (s commandSurface) takesValueLong(name string) bool {
+	return slices.Contains(s.valueLong, name)
+}
+
+func (s commandSurface) takesFileLong(name string) bool {
+	return slices.Contains(s.fileLong, name)
 }
 
 func (s commandSurface) takesValue(flag rune) bool {

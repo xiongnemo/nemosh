@@ -40,8 +40,10 @@ func (v *topView) key(event *tcell.EventKey) *tcell.EventKey {
 		v.refresh()
 	case topActionKill:
 		v.confirmKill()
-	case topActionLowerPriority, topActionRaisePriority:
-		v.status.SetText("[yellow]priority: not yet wired; see docs/design/process-view.md")
+	case topActionLowerPriority:
+		v.adjustPriority(-1)
+	case topActionRaisePriority:
+		v.adjustPriority(1)
 	case topActionHelp:
 		v.status.SetText(topHelpText)
 	case topActionFilterPrompt:
@@ -125,6 +127,28 @@ func (v *topView) confirmKill() {
 	// this, the `k` that opened it would be read again as another kill.
 	v.prompting = true
 	v.application.SetRoot(modal, true)
+}
+
+// adjustPriority moves the selected process one step along the priority ladder.
+//
+// One step, because that is what F7 and F8 mean in htop. The result goes to the status line either
+// way: most processes on a Windows machine cannot be opened for this at all -- they belong to
+// SYSTEM or to another user -- and a keypress that silently does nothing is the failure this whole
+// applet is written against.
+func (v *topView) adjustPriority(step int) {
+	v.rememberSelection()
+	row, found := v.selectedRow()
+	if !found {
+		return
+	}
+	name, err := proc.AdjustPriority(row.Process.PID, step)
+	if err != nil {
+		v.status.SetText(fmt.Sprintf("[red]%v", err))
+		return
+	}
+	v.status.SetText(fmt.Sprintf("[green]%s (pid %d) is now %s",
+		row.Process.Name, row.Process.PID, name))
+	v.refresh()
 }
 
 // promptFilter takes a filter interactively.
@@ -224,5 +248,5 @@ func (v *topView) selectedRow() (topRow, bool) {
 
 // topHelpText is the key list, shown in the status line rather than in a page of its own: a
 // monitor's help is six words long and a full-screen help panel hides the thing being explained.
-const topHelpText = "[white]q quit  / search  n next  F4 filter  F5/t tree  H threads  K kernel  " +
+const topHelpText = "[white]q quit  / search  n next  F7/F8 priority  F4 filter  F5/t tree  H threads  K kernel  " +
 	"I reverse  P/M/T/N sort  space tag  +/- fold  Z pause  p path  F9/k kill  r refresh"

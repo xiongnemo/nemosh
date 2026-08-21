@@ -21,6 +21,9 @@ patch number is the commits since that tag.
 - A drawn table with per-processor meters, sorting by any column, a tree by
   parentage, `/` to search, F4 to filter, tagging, and F9 to kill. `-b` prints
   one plain sample instead, which is what a pipe, a script and a test get.
+- F7 and F8 step a process one place along the priority ladder -- `idle` through
+  `high`. Realtime is not reachable by keypress: a process there outranks the
+  kernel's own input threads. Processes this session does not own refuse by name.
 - `-H` shows a row per thread, with each thread's own id, priority, state and
   CPU. The columns that describe a process -- memory, handles, IO -- are blank on
   a thread row rather than repeated.
@@ -33,6 +36,15 @@ patch number is the commits since that tag.
 - `ps` moves onto the same data source and grows `PID PPID THR RSS TIME COMMAND`.
 
 ### Fixed
+
+- **Long options were invisible to completion.** Every spec has carried
+  `value-long` and `file-long` since it was written -- curl declares a hundred and
+  eighty of the first and thirty of the second -- and the loader validated them,
+  and nothing read them: the check for "does this option take the next word"
+  required a word of exactly two characters. So `curl -o ` offered files and
+  `curl --output ` did not, and the word after `adb --one-device serial` was
+  counted as an operand, which cost adb its subcommand list.
+- `split` now stops when interrupted part-way through writing its parts.
 
 - **Process start times were reported in 1811.** A Windows FILETIME counts from
   1601 and the conversion treated it as counting from 1970. Every reader used the

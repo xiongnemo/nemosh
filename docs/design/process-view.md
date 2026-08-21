@@ -53,7 +53,7 @@ process in turn.
 | SHR | `statm` | no equivalent split | **substitute**: private working set |
 | swap per process | `status` `VmSwap` | `PagefileUsage`, commit charge | **different measure**, labelled `COMMIT` |
 | state R/S/D/Z | `/proc/pid/stat` | derived from thread state and wait reason | **approximation**, no zombie |
-| nice / renice | `getpriority`/`setpriority` | `BasePriority`, `SetPriorityClass` | **coarse**: six classes, own processes only |
+| nice / renice | `getpriority`/`setpriority` | `BasePriority`, `SetPriorityClass` | **coarse**: a five-step ladder, own processes only |
 | kill | `kill(2)` | `TerminateProcess` | **partial**: never graceful |
 | user column | `status` Uid + `getpwuid` | `OpenProcessToken`, refused for other users | **partial**, ~40% of rows |
 | command line | `/proc/pid/cmdline` | `NtQueryInformationProcess(ProcessCommandLineInformation)` | **partial**, same-user only |
@@ -210,6 +210,25 @@ tell them apart -- which is why `IOPS` is in the wide layout and why `topCount`
 scales in thousands rather than in units of 1024: a thousand operations is
 `1.0k`, and dividing a count of things by 1024 is wrong in a way nobody would
 notice for a long time.
+
+## Priority, And The Class This Will Not Set
+
+F7 and F8 step one place along a ladder of five: `idle`, `below`, `norm`,
+`above`, `high`. There is no arithmetic to do because Windows has no nice value
+-- it has priority *classes*, and the honest interface to a ladder is a step.
+
+**REALTIME is deliberately unreachable.** It is the sixth class, and a process in
+it outranks the kernel's own input and disk threads, so promoting one by keypress
+is how a machine stops responding to the keyboard that did it. Windows gates it
+behind `SeIncreaseBasePriorityPrivilege`; htop cannot do the equivalent without
+root either. Stepping *down* out of realtime is allowed, because that direction
+only ever helps.
+
+Own processes only, and that is a handle limit rather than a policy: changing a
+priority needs `PROCESS_SET_INFORMATION`, which a session does not get on another
+user's process or on SYSTEM's. The refusal names the reason -- most rows in the
+table will refuse, and "cannot change the priority of a process this session does
+not own" is a different fact from a Win32 error code.
 
 ## Thread Counts
 

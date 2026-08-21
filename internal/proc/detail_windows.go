@@ -42,9 +42,6 @@ type Details struct {
 	// maps a file owner: a real user account gives its name and a service identity gives
 	// root, which is busybox-w32's uid-0 emulation.
 	User string
-	// Denied records that a handle could not be opened at all, so a caller can say why a
-	// column is empty rather than leaving the reader to guess.
-	Denied bool
 }
 
 // Command is the best available description of what is running: the command line if it could be
@@ -112,11 +109,11 @@ func (c *DetailCache) Forget(live map[int]bool) {
 func readDetails(pid int) Details {
 	if pid <= 0 {
 		// The idle process is not a process anything can be asked about.
-		return Details{Denied: true}
+		return Details{}
 	}
 	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
 	if err != nil {
-		return Details{Denied: true}
+		return Details{}
 	}
 	defer windows.CloseHandle(handle)
 	return Details{
