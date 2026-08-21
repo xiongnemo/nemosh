@@ -33,12 +33,17 @@ func (v *topView) key(event *tcell.EventKey) *tcell.EventKey {
 		v.refresh()
 	case topActionKill:
 		v.confirmKill()
-	case topActionNice:
+	case topActionLowerPriority, topActionRaisePriority:
 		v.status.SetText("[yellow]priority: not yet wired; see docs/design/process-view.md")
 	case topActionHelp:
 		v.status.SetText(topHelpText)
 	case topActionFilterPrompt:
 		v.promptFilter()
+	case topActionSearchPrompt:
+		// Searching is not filtering, and until it can jump to a match it says so rather
+		// than quietly doing the other thing -- which is what it did before reading how
+		// htop separates the two.
+		v.status.SetText("[yellow]search jumps to a match and is not wired yet; F4 filters instead")
 	default:
 		// The model absorbed it -- a sort, a toggle -- so redraw with the new
 		// arrangement rather than waiting for the next tick.
@@ -63,6 +68,8 @@ func topKeyName(event *tcell.EventKey) string {
 		return "F7"
 	case tcell.KeyF8:
 		return "F8"
+	case tcell.KeyF4:
+		return "F4"
 	case tcell.KeyF9:
 		return "F9"
 	case tcell.KeyRune:
@@ -134,5 +141,5 @@ func (v *topView) selectedRow() (topRow, bool) {
 
 // topHelpText is the key list, shown in the status line rather than in a page of its own: a
 // monitor's help is six words long and a full-screen help panel hides the thing being explained.
-const topHelpText = "[white]q quit  F3// filter  F5/t tree  H threads  K kernel procs  " +
-	"I reverse  space fold  1-9 sort by column  F9/k kill  r refresh now"
+const topHelpText = "[white]q quit  F4 filter  F5/t tree  H threads  K kernel  I reverse  " +
+	"P/M/T/N sort  space tag  +/- fold  Z pause  p path  F9/k kill  r refresh"

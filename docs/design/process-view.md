@@ -158,8 +158,47 @@ for the `msys-…-pty` pattern that Cygwin gives its ptys -- and it is not done 
 Drawing escape sequences into something that turns out to be `| head` is a worse
 failure than printing text into something that turns out to be a terminal.
 
+## What Reading htop's Source Corrected
+
+htop is GPL-2.0, so it stands here exactly as busybox does: read to learn what a
+monitor *does*, never copied. `docs/design/reference-methodology.md` draws that
+line, and this is the second subsystem to sit on the read-only side of it.
+
+Its `Action.c` holds the real key table, and reading it corrected three things
+that had been guessed:
+
+- **`space` tags a process; it does not fold a branch.** Folding is `+`, `-` and
+  `=`. Having `space` fold is precisely the kind of error that makes a familiar
+  tool feel broken, and no amount of testing our own behaviour would have found
+  it.
+- **Searching and filtering are different commands.** `/` and F3 search, jumping
+  to a match and leaving the list whole; `\` and F4 filter, hiding what does not
+  match. One key was doing both here.
+- **The sort keys people actually use are letters**: `P` for CPU, `M` for memory,
+  `T` for time, `N` for pid. Digits are top's convention; both are accepted now.
+
+Three more bindings were adopted because their reasons apply here too. `Z` pauses
+updates -- a list that reorders every second cannot be read carefully, and reading
+carefully is what someone does immediately before killing something. `[` and `]`
+change priority alongside F7 and F8. And `p` toggles the full path against the bare
+name, which lands exactly on this platform's split between what a handle answered
+and what the process table always knows.
+
+Two pieces of htop's architecture are worth recording as roads not taken. Its
+`Machine` struct keeps a monotonic clock reading *and* the previous sample's, so
+rates never depend on the wall clock; Go's `time.Time` carries a monotonic reading
+and `Sub` uses it, so `Snapshot.Taken` is already safe in the same way, for free.
+And htop's platform layer is an explicit interface of some forty
+`Platform_*` functions -- `Platform_getLoadAverage` among them -- which is what a
+port implements. `internal/proc` is that interface here, and the difference is
+instructive: htop requires every platform to answer `getLoadAverage`, so a port
+without one has to invent a number. Being a single-platform tool means being
+allowed to say there isn't one.
+
 ## What Is Not Done
 
-- `F7`/`F8` priority change is recognised and reports that it is not wired.
+- `F7`/`F8`/`[`/`]` priority change is recognised and reports that it is not wired.
+- `/` search is recognised and says that it is not wired; F4 filtering works.
+- Tagging with `space` marks rows, and a multiple kill does not act on them yet.
 - No configuration file yet, so the column layout is the default one.
 - Per-thread rows are sampled under `-H` but not yet rendered as rows.

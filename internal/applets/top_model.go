@@ -30,6 +30,18 @@ type topModel struct {
 	Tree bool
 	// Collapsed holds the pids whose children are folded away in tree mode.
 	Collapsed map[int]bool
+	// Tagged holds the pids `space` has marked, which is what a multiple kill acts on. htop
+	// calls this tagging and it is what `space` does there -- not folding, which was the
+	// binding this had wrong.
+	Tagged map[int]bool
+	// Paused stops the list reordering under the cursor. htop's Z, and worth having for its
+	// reason: a list that moves every second cannot be read carefully, and reading carefully
+	// is what someone does just before killing something.
+	Paused bool
+	// FullPath shows the executable's path rather than its bare name. htop's `p`, and on
+	// this platform it lands exactly on the split between what needs a handle and what does
+	// not.
+	FullPath bool
 	// Threads shows one row per thread beneath each process.
 	Threads bool
 	// Selected is the pid under the cursor, remembered across refreshes by identity rather
@@ -49,6 +61,7 @@ func newTopModel(columns []topColumn) topModel {
 		Sort:            "cpu",
 		Descending:      true,
 		Collapsed:       map[int]bool{},
+		Tagged:          map[int]bool{},
 		KernelProcesses: true,
 	}
 }
@@ -64,9 +77,11 @@ func (m topModel) rows(snapshot proc.Snapshot, rates proc.Rates, details *proc.D
 			continue
 		}
 		row := topRow{
-			Process: process,
-			Rate:    rates.Processes[process.PID],
-			Details: details.Lookup(process),
+			Process:  process,
+			Rate:     rates.Processes[process.PID],
+			Details:  details.Lookup(process),
+			FullPath: m.FullPath,
+			Tagged:   m.Tagged[process.PID],
 		}
 		if snapshot.Memory.TotalPhysical > 0 {
 			row.MemoryShare = float64(process.WorkingSet) / float64(snapshot.Memory.TotalPhysical)
@@ -158,30 +173,67 @@ const (
 	topActionNone topAction = iota
 	topActionQuit
 	topActionKill
-	topActionNice
+	topActionLowerPriority
+	topActionRaisePriority
 	topActionHelp
+	// Searching and filtering are different things, which htop is right about and this had
+	// conflated: a search jumps to a match and leaves the list whole, a filter hides what does
+	// not match.
+	topActionSearchPrompt
 	topActionFilterPrompt
 	topActionRefresh
 )
 
 // applyKey folds a key press into the model, answering what the caller must do about it.
 //
-// A key that only changes how the list is arranged is handled entirely here and answers None,
-// which is what keeps the rendering layer from growing a copy of the view's rules.
+// The bindings are htop's, read out of its Action.c rather than guessed at, and reading them
+// corrected three things I had wrong. **`space` tags a process in htop; it does not fold a
+// branch** -- folding is `+`, `-` and `=`, and getting that backwards is the kind of thing that
+// makes a familiar tool feel broken. htop also has direct sort keys, `P` `M` `T` `N` for CPU,
+// memory, time and pid, which are the ones a habitual user reaches for before any function key.
+// And it separates *searching* from *filtering*: `/` jumps to a match and leaves the list whole,
+// while `\` and F4 hide everything that does not match. This had one thing doing both.
+//
+// The digits are top's convention rather than htop's, and are kept alongside because this is
+// named `top` and someone typing `1` should get something.
+//
+// htop is GPL-2.0, so it is read for behaviour and nothing is copied from it -- the same standing
+// busybox has here. See docs/design/reference-methodology.md.
 func (m *topModel) applyKey(key string) topAction {
 	switch key {
 	case "q", "esc":
 		return topActionQuit
 	case "F9", "k":
 		return topActionKill
-	case "F7", "F8":
-		return topActionNice
+	case "F7", "[":
+		return topActionLowerPriority
+	case "F8", "]":
+		return topActionRaisePriority
 	case "F1", "h", "?":
 		return topActionHelp
 	case "F3", "/":
+		return topActionSearchPrompt
+	case "F4", "\\":
 		return topActionFilterPrompt
 	case "F5", "t":
 		m.Tree = !m.Tree
+		return topActionNone
+	case "space":
+		// Tag, as htop does. Tagged processes are what a multiple kill acts on.
+		if m.Selected != 0 {
+			if m.Tagged == nil {
+				m.Tagged = map[int]bool{}
+			}
+			m.Tagged[m.Selected] = !m.Tagged[m.Selected]
+		}
+		return topActionNone
+	case "U":
+		m.Tagged = map[int]bool{}
+		return topActionNone
+	case "+", "-", "=":
+		if m.Tree && m.Selected != 0 {
+			m.Collapsed[m.Selected] = !m.Collapsed[m.Selected]
+		}
 		return topActionNone
 	case "H":
 		m.Threads = !m.Threads
@@ -192,16 +244,33 @@ func (m *topModel) applyKey(key string) topAction {
 	case "I":
 		m.Descending = !m.Descending
 		return topActionNone
-	case "space":
-		if m.Tree && m.Selected != 0 {
-			m.Collapsed[m.Selected] = !m.Collapsed[m.Selected]
-		}
+	case "Z":
+		// Pausing is worth having for the reason htop has it: a list that reorders every
+		// second cannot be read carefully, and reading carefully is what someone does
+		// just before killing something.
+		m.Paused = !m.Paused
+		return topActionNone
+	case "p":
+		// Full path against bare name -- htop's `p`, and it lands on exactly the
+		// distinction this platform forces: the path needs a handle and the name never
+		// does. See internal/proc/detail_windows.go.
+		m.FullPath = !m.FullPath
+		return topActionNone
+	case "P":
+		m.sortBy("cpu")
+		return topActionNone
+	case "M":
+		m.sortBy("mem")
+		return topActionNone
+	case "T":
+		m.sortBy("time")
+		return topActionNone
+	case "N":
+		m.sortBy("pid")
 		return topActionNone
 	case "r":
 		return topActionRefresh
 	}
-	// A digit selects a column to sort by, which is how top does it and is faster than
-	// hunting for a function key.
 	if index, err := strconv.Atoi(key); err == nil && index >= 1 && index <= len(m.Columns) {
 		m.sortBy(m.Columns[index-1].Key)
 		return topActionNone

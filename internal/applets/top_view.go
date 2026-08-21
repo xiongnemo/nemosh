@@ -152,7 +152,14 @@ type topView struct {
 }
 
 // refresh takes a sample and redraws.
+//
+// Paused means paused: the sample is not taken at all, rather than taken and hidden. Taking it
+// would keep the rates moving underneath, so unpausing would jump.
 func (v *topView) refresh() {
+	if v.session.model.Paused {
+		v.status.SetText(topStatusText(v.session.model, len(v.rows)))
+		return
+	}
 	snapshot, rates, rows, err := v.session.sample()
 	if err != nil {
 		v.status.SetText(fmt.Sprintf("[red]sampling failed: %v", err))
@@ -242,9 +249,14 @@ func topStatusText(model topModel, rows int) string {
 	if model.Filter != "" {
 		filter = fmt.Sprintf("  filter=%q", model.Filter)
 	}
-	return fmt.Sprintf("[white]%d rows  sort=%s%s  %s%s   [yellow]q[white] quit  "+
-		"[yellow]F3[white] filter  [yellow]F5[white] tree  [yellow]F9[white] kill  [yellow]1-9[white] sort",
-		rows, model.Sort, sortArrow(model.Descending), arrangement, filter)
+	paused := ""
+	if model.Paused {
+		paused = "  [red]PAUSED"
+	}
+	return fmt.Sprintf("[white]%d rows  sort=%s%s  %s%s%s   [yellow]q[white] quit  "+
+		"[yellow]F4[white] filter  [yellow]F5[white] tree  [yellow]P/M/T[white] sort  "+
+		"[yellow]F9[white] kill  [yellow]F1[white] help",
+		rows, model.Sort, sortArrow(model.Descending), arrangement, filter, paused)
 }
 
 func sortArrow(descending bool) string {

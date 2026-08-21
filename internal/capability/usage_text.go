@@ -104,6 +104,8 @@ var usageText = map[string]Usage{
 			"No load average: Windows has no such measure. The nearest analogue is the",
 			"processor queue length, which counts something else, so nothing is shown.",
 			"No TTY column either, for the reason ps gives: there is no controlling terminal.",
+			"Keys follow htop: P M T N sort, space tags, +/- fold, Z pauses, p shows the",
+			"full path, F4 filters, F9 kills. F1 lists them while it is running.",
 		},
 	},
 	"touch":   {Summary: "Set a file's timestamps, creating it if it is absent.", Operands: "FILE...", Options: map[string]string{"c": "do not create anything that is not already there"}},

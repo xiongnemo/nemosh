@@ -21,6 +21,12 @@ type topRow struct {
 	Process proc.Process
 	Rate    proc.ProcessRate
 	Details proc.Details
+	// FullPath asks for the executable's path rather than its bare name -- htop's `p`, and
+	// on this platform the toggle between what a handle answered and what the table always
+	// knows.
+	FullPath bool
+	// Tagged marks a row `space` has picked out.
+	Tagged bool
 	// Depth is the indent in tree mode, and zero in every other.
 	Depth int
 	// MemoryShare is the working set over the machine's physical memory.
@@ -131,7 +137,17 @@ var topColumns = []topColumn{
 		// Width zero means the rest of the line. The command is last for that reason, and
 		// because it is the only column whose length nobody can predict.
 		Cell: func(r topRow) string {
-			return strings.Repeat(" ", r.Depth*2) + r.Details.Command(r.Process.Name)
+			indent := strings.Repeat(" ", r.Depth*2)
+			tag := ""
+			if r.Tagged {
+				tag = "* "
+			}
+			if r.FullPath {
+				return indent + tag + r.Details.Command(r.Process.Name)
+			}
+			// The bare name by default, because a full Chrome command line is two
+			// thousand characters and buries every other row's name.
+			return indent + tag + r.Process.Name
 		},
 		Less: func(a, b topRow) bool { return a.Process.Name < b.Process.Name },
 	},

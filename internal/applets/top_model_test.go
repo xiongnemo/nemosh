@@ -173,9 +173,10 @@ func TestTopModel_foldingABranchHidesItsChildren(t *testing.T) {
 		testProcess(3, 2, "hidden", 100),
 	)
 
-	// When -- space folds the selected branch
-	if action := model.applyKey("space"); action != topActionNone {
-		t.Fatalf("space asked for %v, want nothing but a redraw", action)
+	// When -- `-` folds the selected branch. Not space: space *tags* in htop, and having
+	// space fold was the binding this got wrong before its Action.c was read.
+	if action := model.applyKey("-"); action != topActionNone {
+		t.Fatalf("- asked for %v, want nothing but a redraw", action)
 	}
 
 	// Then
@@ -207,8 +208,15 @@ func TestTopModel_keysThatAskTheCallerForSomething(t *testing.T) {
 		{key: "esc", want: topActionQuit},
 		{key: "F9", want: topActionKill},
 		{key: "k", want: topActionKill},
-		{key: "F3", want: topActionFilterPrompt},
-		{key: "/", want: topActionFilterPrompt},
+		// htop separates these and this had them conflated: `/` searches, leaving the
+		// list whole, and F4 or backslash filters, hiding what does not match.
+		{key: "F3", want: topActionSearchPrompt},
+		{key: "/", want: topActionSearchPrompt},
+		{key: "F4", want: topActionFilterPrompt},
+		{key: "F7", want: topActionLowerPriority},
+		{key: "[", want: topActionLowerPriority},
+		{key: "F8", want: topActionRaisePriority},
+		{key: "]", want: topActionRaisePriority},
 		{key: "F1", want: topActionHelp},
 		{key: "r", want: topActionRefresh},
 		// Handled entirely by the model, so the caller is told to do nothing but redraw.
@@ -216,6 +224,10 @@ func TestTopModel_keysThatAskTheCallerForSomething(t *testing.T) {
 		{key: "H", want: topActionNone},
 		{key: "I", want: topActionNone},
 		{key: "1", want: topActionNone},
+		{key: "space", want: topActionNone},
+		{key: "Z", want: topActionNone},
+		{key: "p", want: topActionNone},
+		{key: "P", want: topActionNone},
 		// Not a key this knows, and not an error either: tview's own table keys arrive
 		// here too and must be passed through untouched.
 		{key: "z", want: topActionNone},
@@ -288,4 +300,62 @@ func columnKeys(columns []topColumn) []string {
 		keys = append(keys, column.Key)
 	}
 	return keys
+}
+
+// The bindings htop is known for, which this had wrong or missing until its Action.c was read.
+func TestTopModel_htopBindings(t *testing.T) {
+	t.Run("space tags rather than folding", func(t *testing.T) {
+		model := newTopModel(mustColumns(t))
+		model.Tree = true
+		model.Selected = 42
+
+		// When
+		model.applyKey("space")
+
+		// Then -- tagged, and the branch is *not* folded
+		if !model.Tagged[42] {
+			t.Fatal("space did not tag the selected process")
+		}
+		if model.Collapsed[42] {
+			t.Fatal("space folded the branch; that is what +, - and = do")
+		}
+
+		// And U clears every tag, which is how htop undoes a wrong selection.
+		model.applyKey("U")
+		if len(model.Tagged) != 0 {
+			t.Fatalf("U left %d tags", len(model.Tagged))
+		}
+	})
+
+	t.Run("direct sort keys", func(t *testing.T) {
+		tests := map[string]string{"P": "cpu", "M": "mem", "T": "time", "N": "pid"}
+		for key, want := range tests {
+			model := newTopModel(mustColumns(t))
+
+			// When
+			model.applyKey(key)
+
+			// Then -- these are the keys a habitual user reaches for before any
+			// function key, and none of them existed here before.
+			if model.Sort != want {
+				t.Fatalf("%s sorted by %q, want %q", key, model.Sort, want)
+			}
+		}
+	})
+
+	t.Run("Z pauses and p switches to the full path", func(t *testing.T) {
+		model := newTopModel(mustColumns(t))
+
+		// When
+		model.applyKey("Z")
+		model.applyKey("p")
+
+		// Then
+		if !model.Paused {
+			t.Fatal("Z did not pause")
+		}
+		if !model.FullPath {
+			t.Fatal("p did not switch to the full path")
+		}
+	})
 }
