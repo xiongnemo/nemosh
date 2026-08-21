@@ -1,0 +1,24 @@
+id = "applet.nemosh.top.batch-sample"
+area = "applet"
+kind = "golden"
+semantics = "nemosh"
+platforms = ["windows"]
+references = ["nemosh"]
+script = '''
+top -b -n 1 | head -n 5 | cut -c1-4
+echo ---
+top -b -n 1 | sed 's/[0-9]//g' | head -n 1
+echo ---
+top -b -n 1 | wc -l | xargs test 20 -lt && echo "many rows"
+echo ---
+top -s nope -b 2>&1 | head -n 1
+'''
+
+[expect]
+status = 0
+stdout = "top \nCPU:\nMem:\nComm\n    \n---\ntop - up  days, :,  processes,  threads,  running\n---\nmany rows\n---\ntop: unknown sort column: nope\n"
+stderr = ""
+
+[notes]
+standard = "Nemosh process monitor; top -b is the plain form every top has"
+why = "The drawn form needs a terminal and cannot be tested here at all, so the plain form is written first and the interactive view is built from the same rows -- a monitor whose two forms disagree is a monitor with two bugs. The numbers themselves are the machine's and cannot be pinned, so the shape is: four header lines in a fixed order, a column header row, and more than twenty processes on any real Windows machine. The digits are stripped from the header line so its wording is checked without its values. An unknown sort column is refused by name rather than silently ignored, because a script asking for a column that has been renamed should hear about it."

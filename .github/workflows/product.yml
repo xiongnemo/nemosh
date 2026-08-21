@@ -171,16 +171,28 @@ jobs:
       # the new ceiling), and go.mod is unchanged at toml, term and sys. So the
       # growth is code that was written on purpose.
       #
-      # 5.5 MiB leaves about 21% for growth and stays below what an unstripped
+      # 5.5 MiB left about 21% for growth and stayed below what an unstripped
       # build measures, which is the property that keeps the flag regression
       # catchable.
+      #
+      # Raised to 7 MiB on 2026-08-21 for tview and tcell, which `top` draws with.
+      # Measured: 4,885,504 before, 6,127,104 after -- 1.18 MiB, and the same
+      # proportion of headroom as before.
+      #
+      # The number I first reported for this was 85 KiB, and it was wrong for a
+      # reason worth writing down. The spike that produced it built the widgets in
+      # a function nothing called, so the linker dropped the lot; the 85 KiB was
+      # two package-level variables. I even "checked" it against a second, fuller
+      # spike, which measured 2 KiB *smaller* -- and that should have been the
+      # tell, because more code cannot be less binary. A spike has to be reachable
+      # from main to measure anything at all.
       - name: binary size ceiling
         shell: bash
         run: |
           binary="dist/nemosh"
           [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
           size=$(wc -c < "$binary")
-          ceiling=5767168
+          ceiling=7340032
           echo "$binary is $size bytes, ceiling $ceiling"
           if [ "$size" -gt "$ceiling" ]; then
             echo "the binary grew past the ceiling; check the release flags and go.mod before raising it"

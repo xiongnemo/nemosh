@@ -233,17 +233,24 @@ it was going to be charged to `nemosh -c true` as much as to `top`.
 
 | | before | after | ceiling |
 | --- | --- | --- | --- |
-| stripped binary | 4,885,504 B | 4,972,544 B (+85 KiB) | 5,767,168 — still under |
+| stripped binary | 4,885,504 B | **6,127,104 B (+1.18 MiB)** | 5,767,168 → raised to 7,340,032 |
 | package init allocations | 440 | 1,710 (+1,270) | 900 → **raised to 2,100** |
 | package init clock | 0.00 ms | 0.00 ms | — |
 | `nemosh -c true` | 9.4 ms min | 9.1 ms min | — |
 
-The size estimate that went into the decision was wrong by a factor of about
-twenty: tview and tcell were expected to add 1.5–2.5 MiB and added 85 KiB. They
-are compact pure Go, and the linker drops what is not reached. That was checked
-rather than assumed — a second spike constructing `Table`, `Flex`, `TextView`,
-`InputField`, `Modal`, `Pages`, `Application.Run` and `tcell.NewScreen` measured
-2 KiB *smaller* than a trivial one, which is the same number within noise.
+**The 85 KiB first reported here was wrong, and the mistake is worth keeping.**
+The spike that measured it built `Table`, `Flex`, `TextView`, `InputField`,
+`Modal`, `Pages`, `Application.Run` and `tcell.NewScreen` inside a function that
+nothing called. The linker dropped all of it, and the 85 KiB was two
+package-level variables holding a function value and a style. The real cost, once
+the widgets are reachable from an applet the registry lists, is 1.18 MiB — which
+is roughly the 1.5–2.5 MiB originally estimated and then argued away.
+
+It was even "verified": a second, fuller spike measured 2 KiB *smaller* than the
+trivial one, and that was read as agreement within noise. It should have been read
+as the tell, because more code cannot produce less binary. **A spike has to be
+reachable from main to measure anything**, and dead code measures the linker's
+diligence rather than the dependency's weight.
 
 The allocation count is the one that moved, and it is worth naming where it went:
 **1,103 of the 1,270 are `gdamore/encoding`**, building 66 KB of legacy

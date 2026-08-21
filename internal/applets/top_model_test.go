@@ -1,0 +1,291 @@
+package applets
+
+import (
+	"testing"
+	"time"
+
+	"github.com/xiongnemo/nemosh/internal/proc"
+)
+
+// Everything a key press does to the view, tested by pressing keys at a struct.
+//
+// This is the whole reason the model has no terminal in it. A tview application needs a console,
+// and a console is the one thing a test has not got -- so if the sorting, filtering and folding
+// lived in the widget callbacks, none of it would be checked by anything but a person looking at a
+// screen.
+
+var modelEpoch = time.Date(2026, time.August, 21, 12, 0, 0, 0, time.UTC)
+
+func testProcess(pid, ppid int, name string, working uint64) proc.Process {
+	return proc.Process{
+		PID: pid, PPID: ppid, Name: name, WorkingSet: working,
+		Created: modelEpoch.Add(time.Duration(pid) * time.Second), Threads: 1,
+	}
+}
+
+// testRows builds a snapshot and its rates so the model can be asked for rows.
+func testSnapshot(processes ...proc.Process) (proc.Snapshot, proc.Rates) {
+	snapshot := proc.Snapshot{
+		Taken:     modelEpoch,
+		Processes: processes,
+		CPUs:      make([]proc.CPUTime, 1),
+		Memory:    proc.Memory{TotalPhysical: 1 << 30},
+	}
+	rates := proc.Rates{Interval: time.Second, Processes: map[int]proc.ProcessRate{}}
+	for index, process := range processes {
+		// A descending CPU order that is *not* the pid order, so a sort that quietly does
+		// nothing cannot pass.
+		rates.Processes[process.PID] = proc.ProcessRate{CPU: float64(len(processes)-index) / 100}
+	}
+	return snapshot, rates
+}
+
+func rowNames(rows []topRow) []string {
+	names := make([]string, 0, len(rows))
+	for _, row := range rows {
+		names = append(names, row.Process.Name)
+	}
+	return names
+}
+
+func assertNames(t *testing.T, rows []topRow, want ...string) {
+	t.Helper()
+	got := rowNames(rows)
+	if len(got) != len(want) {
+		t.Fatalf("rows = %v, want %v", got, want)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("rows = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestTopModel_sortsByCPUDescendingByDefault(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+	snapshot, rates := testSnapshot(
+		testProcess(1, 0, "first", 100),
+		testProcess(2, 0, "second", 200),
+		testProcess(3, 0, "third", 300),
+	)
+
+	// When
+	rows := model.rows(snapshot, rates, proc.NewDetailCache())
+
+	// Then -- busiest first, which is the only default that makes a monitor useful at a glance
+	assertNames(t, rows, "first", "second", "third")
+}
+
+func TestTopModel_sortByReversesOnASecondPress(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+
+	// When
+	model.sortBy("rss")
+
+	// Then -- a new column starts descending, because the reason to sort by one is to see its
+	// largest values
+	if model.Sort != "rss" || !model.Descending {
+		t.Fatalf("sort = %q descending = %v, want rss descending", model.Sort, model.Descending)
+	}
+
+	// When pressed again
+	model.sortBy("rss")
+
+	// Then
+	if model.Descending {
+		t.Fatal("a second press on the same column did not reverse the order")
+	}
+}
+
+func TestTopModel_sortsByTheChosenColumn(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+	model.sortBy("rss")
+	snapshot, rates := testSnapshot(
+		testProcess(1, 0, "small", 100),
+		testProcess(2, 0, "large", 900),
+		testProcess(3, 0, "middle", 500),
+	)
+
+	// When
+	rows := model.rows(snapshot, rates, proc.NewDetailCache())
+
+	// Then
+	assertNames(t, rows, "large", "middle", "small")
+}
+
+func TestTopModel_filterMatchesNameAndPID(t *testing.T) {
+	snapshot, rates := testSnapshot(
+		testProcess(11, 0, "chrome.exe", 100),
+		testProcess(12, 0, "nemosh.exe", 100),
+		testProcess(13, 0, "CHROME.EXE", 100),
+	)
+	tests := []struct {
+		filter string
+		want   []string
+	}{
+		// Case-insensitively, because nobody types a Windows executable's case correctly.
+		{filter: "chrome", want: []string{"chrome.exe", "CHROME.EXE"}},
+		{filter: "nemosh", want: []string{"nemosh.exe"}},
+		// A pid typed in, which is what someone with a number from elsewhere tries first.
+		{filter: "12", want: []string{"nemosh.exe"}},
+		{filter: "nothing here", want: nil},
+	}
+	for _, test := range tests {
+		t.Run(test.filter, func(t *testing.T) {
+			model := newTopModel(mustColumns(t))
+			model.Filter = test.filter
+
+			// When
+			rows := model.rows(snapshot, rates, proc.NewDetailCache())
+
+			// Then
+			assertNames(t, rows, test.want...)
+		})
+	}
+}
+
+func TestTopModel_treeShowsParentage(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+	model.Tree = true
+	snapshot, rates := testSnapshot(
+		testProcess(1, 0, "root", 100),
+		testProcess(2, 1, "child", 100),
+		testProcess(3, 2, "grandchild", 100),
+	)
+
+	// When
+	rows := model.rows(snapshot, rates, proc.NewDetailCache())
+
+	// Then
+	assertNames(t, rows, "root", "child", "grandchild")
+	if rows[0].Depth != 0 || rows[1].Depth != 1 || rows[2].Depth != 2 {
+		t.Fatalf("depths = %d %d %d, want 0 1 2", rows[0].Depth, rows[1].Depth, rows[2].Depth)
+	}
+}
+
+func TestTopModel_foldingABranchHidesItsChildren(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+	model.Tree = true
+	model.Selected = 2
+	snapshot, rates := testSnapshot(
+		testProcess(1, 0, "root", 100),
+		testProcess(2, 1, "folded", 100),
+		testProcess(3, 2, "hidden", 100),
+	)
+
+	// When -- space folds the selected branch
+	if action := model.applyKey("space"); action != topActionNone {
+		t.Fatalf("space asked for %v, want nothing but a redraw", action)
+	}
+
+	// Then
+	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "root", "folded")
+}
+
+func TestTopModel_kernelProcessesCanBeHidden(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+	snapshot, rates := testSnapshot(
+		testProcess(0, 0, "Idle", 0),
+		testProcess(4, 0, "System", 0),
+		testProcess(500, 4, "svchost.exe", 100),
+	)
+
+	// When
+	model.applyKey("K")
+
+	// Then -- Idle and System are the two worth a toggle: Idle holds the machine's spare
+	// capacity, and on an idle machine it is the top row for ever.
+	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "svchost.exe")
+}
+
+func TestTopModel_keysThatAskTheCallerForSomething(t *testing.T) {
+	tests := []struct {
+		key  string
+		want topAction
+	}{
+		{key: "q", want: topActionQuit},
+		{key: "esc", want: topActionQuit},
+		{key: "F9", want: topActionKill},
+		{key: "k", want: topActionKill},
+		{key: "F3", want: topActionFilterPrompt},
+		{key: "/", want: topActionFilterPrompt},
+		{key: "F1", want: topActionHelp},
+		{key: "r", want: topActionRefresh},
+		// Handled entirely by the model, so the caller is told to do nothing but redraw.
+		{key: "F5", want: topActionNone},
+		{key: "H", want: topActionNone},
+		{key: "I", want: topActionNone},
+		{key: "1", want: topActionNone},
+		// Not a key this knows, and not an error either: tview's own table keys arrive
+		// here too and must be passed through untouched.
+		{key: "z", want: topActionNone},
+	}
+	for _, test := range tests {
+		t.Run(test.key, func(t *testing.T) {
+			model := newTopModel(mustColumns(t))
+
+			// When
+			got := model.applyKey(test.key)
+
+			// Then
+			if got != test.want {
+				t.Fatalf("applyKey(%q) = %v, want %v", test.key, got, test.want)
+			}
+		})
+	}
+}
+
+func TestTopModel_digitSortsByThatColumn(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+
+	// When -- the first column is pid in the default layout
+	model.applyKey("1")
+
+	// Then
+	if model.Sort != "pid" {
+		t.Fatalf("sort = %q, want pid after pressing 1", model.Sort)
+	}
+
+	// And a digit past the end of the layout changes nothing rather than panicking.
+	model.applyKey("99")
+	if model.Sort != "pid" {
+		t.Fatalf("sort = %q, want it unchanged by an out-of-range digit", model.Sort)
+	}
+}
+
+func TestResolveColumns_unknownNameFallsBackRatherThanFailing(t *testing.T) {
+	// A configuration file written against a later version should still produce a table.
+	columns, unknown := resolveColumns([]string{"pid", "not-a-column", "cpu"})
+
+	// Then
+	if len(columns) != 2 || columns[0].Key != "pid" || columns[1].Key != "cpu" {
+		t.Fatalf("columns = %v, want pid and cpu", columnKeys(columns))
+	}
+	if len(unknown) != 1 || unknown[0] != "not-a-column" {
+		t.Fatalf("unknown = %v, want the one bad name reported", unknown)
+	}
+
+	// And a layout with nothing usable in it falls back to the default rather than to an
+	// empty table, which would be a monitor showing nothing at all.
+	fallback, _ := resolveColumns([]string{"nope"})
+	if len(fallback) != len(topDefaultColumns) {
+		t.Fatalf("fallback = %v, want the default layout", columnKeys(fallback))
+	}
+}
+
+func mustColumns(t *testing.T) []topColumn {
+	t.Helper()
+	columns, unknown := resolveColumns(topDefaultColumns)
+	if len(unknown) != 0 {
+		t.Fatalf("the default layout names columns this build has not got: %v", unknown)
+	}
+	return columns
+}
+
+func columnKeys(columns []topColumn) []string {
+	keys := make([]string, 0, len(columns))
+	for _, column := range columns {
+		keys = append(keys, column.Key)
+	}
+	return keys
+}
