@@ -158,6 +158,41 @@ for the `msys-…-pty` pattern that Cygwin gives its ptys -- and it is not done 
 Drawing escape sequences into something that turns out to be `| head` is a worse
 failure than printing text into something that turns out to be a terminal.
 
+## The Wrapper That Hid The Console
+
+The first run of this in a real PowerShell window printed
+
+```
+top: standard input is not a terminal, so no key can be read; printing one sample
+```
+
+in a console with a keyboard attached. Nothing was wrong with the console, the
+lease, or the detection: `Registry` wraps every applet's stdin in a
+`contextReader` so a long read can be cancelled, that wrapper forwarded `Read`
+and nothing else, and the request for the console stopped there. The applet then
+reported, accurately, what it had been told.
+
+**This is the third time the same shape has bitten**, and the pattern is worth
+naming because it will keep happening as long as streams are wrapped:
+
+| wrapper | added for | hid | symptom |
+| --- | --- | --- | --- |
+| `descriptorWriter` | fd redirection | `TerminalFile` | `ls` never gridded, `--color=auto` never coloured |
+| `synchronizedWriter` | concurrent writes | `TerminalFile` again | the same, after the first fix |
+| `contextReader` | cancelling a parked read | `LeaseStdinFile` | `top` never drew |
+
+Each failure is silent by construction. The wrapper answers a capability question
+with "no" rather than with an error, the caller does something reasonable with the
+wrong answer, and the result looks like a deliberate choice. That is why
+`terminalFileOf` walks a chain instead of testing one hop, and why
+`contextReader` now forwards the lease.
+
+The rule this leaves: **a stream wrapper must forward every capability of what it
+wraps, not only the method it was written for.** `internal/applets/stdin_lease_test.go`
+holds it in place for stdin, including an assertion that the type the registry
+actually hands an applet can be asked for the console -- the check that would have
+caught all three.
+
 ## What Reading htop's Source Corrected
 
 htop is GPL-2.0, so it stands here exactly as busybox does: read to learn what a

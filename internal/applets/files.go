@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 )
 
 type catApplet struct{}
@@ -19,6 +20,30 @@ func (r contextReader) Read(buffer []byte) (int, error) {
 
 func (r contextReader) ReadContext(ctx context.Context, buffer []byte) (int, error) {
 	return readWithContext(ctx, r.reader, buffer)
+}
+
+// LeaseStdinFile passes the request through to whatever is underneath.
+//
+// Every applet's stdin arrives wrapped in one of these -- the registry does it, so a long read can
+// be cancelled -- and a wrapper that forwards only Read hides everything else the reader could do.
+// That is what stopped `top` from ever drawing: it asks for the console so tcell can read keys,
+// the request reached this wrapper, and the wrapper did not know how to pass it on. The applet
+// then reported, correctly and uselessly, that standard input was not a terminal.
+//
+// Third time this shape has appeared. descriptorWriter needed TerminalFile for the same reason,
+// and then synchronizedWriter needed to forward it, which is why terminalFileOf walks a chain
+// rather than checking one hop. A wrapper has to forward what it does not implement.
+func (r contextReader) LeaseStdinFile(ctx context.Context) (*os.File, func(), bool) {
+	if file, ok := r.reader.(*os.File); ok {
+		return file, func() {}, true
+	}
+	leaser, ok := r.reader.(interface {
+		LeaseStdinFile(context.Context) (*os.File, func(), bool)
+	})
+	if !ok {
+		return nil, func() {}, false
+	}
+	return leaser.LeaseStdinFile(ctx)
 }
 
 func readWithContext(ctx context.Context, reader io.Reader, buffer []byte) (int, error) {
