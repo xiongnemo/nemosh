@@ -3,6 +3,7 @@ package applets
 import (
 	"context"
 	"io"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -35,9 +36,22 @@ func screenText(screen tcell.SimulationScreen) string {
 	return out.String()
 }
 
+// requireSampling skips where the process table is not implemented.
+//
+// internal/proc samples on Windows only and refuses elsewhere rather than guessing, so on Linux
+// and macOS the application draws a sampling failure and nothing else -- which is correct
+// behaviour and not what these tests are about. TestPs takes the same guard for the same reason.
+func requireSampling(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		t.Skip("the process table is implemented on Windows only")
+	}
+}
+
 // The whole drawn form, end to end: it starts, samples the real machine, fills a table, and quits
 // when told to.
 func TestTopApplication_drawsAndQuits(t *testing.T) {
+	requireSampling(t)
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("simulation screen: %v", err)
@@ -101,6 +115,7 @@ func TestTopApplication_drawsAndQuits(t *testing.T) {
 // A sort key changes the order on screen, which is the whole of what the interactive form adds
 // over the plain one.
 func TestTopApplication_sortKeyReordersTheTable(t *testing.T) {
+	requireSampling(t)
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("simulation screen: %v", err)
