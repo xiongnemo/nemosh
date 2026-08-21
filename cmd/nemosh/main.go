@@ -173,6 +173,12 @@ func (c command) runDirectApplet(ctx context.Context, controller *interruptContr
 	if err == nil {
 		return nil
 	}
+	// `nemosh seq 1 100000 | head -1` succeeded and then had nowhere left to write. That is
+	// how the idiom ends, not a failure of seq, and Windows reports it as a write error only
+	// because it has no SIGPIPE to deliver instead.
+	if runtime.IsClosedPipe(err) {
+		return nil
+	}
 	// The same mapping the shell uses, so a direct invocation and the same
 	// command inside the shell fail identically. The error itself travels on
 	// unchanged, because a caller testing it for a sentinel has to keep finding

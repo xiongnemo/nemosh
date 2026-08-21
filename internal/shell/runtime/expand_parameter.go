@@ -86,7 +86,10 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 	}
 	child = child.withFDTable(table)
 	child.traps = map[trapName]string{}
-	child.executeTypedScriptFrom(ctx, script, savedStatus)
+	status, _ := child.executeTypedScriptFrom(ctx, script, savedStatus)
+	// The status was discarded here, which is where `out=$(false) || handler` lost its failure.
+	// The child runs with its own expansion state, so it is recorded on the parent's.
+	r.expansion.recordSubstitution(status)
 	child.jobScope.cancelAndDrain()
 	if err := table.closeAll(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)

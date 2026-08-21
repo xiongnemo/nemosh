@@ -235,7 +235,12 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
 		return contextStatus(ctx)
 	}
-	if errors.Is(err, errPipelineDownstreamClosed) {
+	// Normalized first, which is what this was missing: an applet returns the raw
+	// *fs.PathError from the failed write, and that is not the sentinel. external.go
+	// already normalizes on its own path; this one compared against the sentinel and
+	// never matched, so every `producer | head -1` where the producer was an applet
+	// reported a write failure that POSIX would have passed over in silence.
+	if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
 		return 0
 	}
 	status, message := AppletFailure(args[0], err)
@@ -256,6 +261,12 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 // carries a status without a diagnostic, and so does ErrExitFalse.
 func AppletFailure(name string, err error) (int, string) {
 	if err == nil {
+		return 0, ""
+	}
+	// A reader that went away ends the output; it does not fail the command. Here rather than
+	// at the two call sites, because the whole point of this function is that a direct
+	// invocation and the same command inside the shell answer identically.
+	if isClosedPipeError(err) {
 		return 0, ""
 	}
 	if status, ok := applets.StatusCode(err); ok {

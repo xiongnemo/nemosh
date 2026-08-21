@@ -16,6 +16,15 @@ type expansionState struct {
 	// already been complained about, so the complaint does not bury the
 	// diagnostics it is attached to.
 	warnedDebugChannels map[string]bool
+	// substitutionStatus is what the last command substitution of the command being expanded
+	// exited with, and substitutions counts how many there were.
+	//
+	// Kept because POSIX makes an assignment-only command exit with it: `out=$(cmd)` completes
+	// with cmd's status, which is what makes `out=$(cmd) || handler` work. Without this the
+	// status was thrown away and every such assignment reported success -- so the commonest
+	// error check in shell never fired.
+	substitutionStatus int
+	substitutions      int
 	// processSubstitutions are the temporary files `<(cmd)` created for the command being
 	// expanded. Held until the command has run, because the consumer opens them in
 	// between; see process_substitution.go.
@@ -81,4 +90,23 @@ func (r Runtime) expansionFailed() bool {
 // unset parameter fatal to a non-interactive shell.
 func unsetParameterResult() lineResult {
 	return lineResult{status: 2, control: flowExit}
+}
+
+// recordSubstitution notes what a command substitution exited with.
+func (state *expansionState) recordSubstitution(status int) {
+	state.substitutions++
+	state.substitutionStatus = status
+}
+
+// substitutionMark is the substitution count before a command is expanded, so the caller can tell
+// whether *this* command performed one rather than inheriting an older answer.
+func (state *expansionState) substitutionMark() int { return state.substitutions }
+
+// substitutionStatusSince reports the status of the last substitution performed since the mark, and
+// whether there was one at all.
+func (state *expansionState) substitutionStatusSince(mark int) (int, bool) {
+	if state.substitutions == mark {
+		return 0, false
+	}
+	return state.substitutionStatus, true
 }

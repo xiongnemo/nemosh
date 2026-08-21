@@ -175,12 +175,8 @@ func printfEscape(rest string) (string, int, bool) {
 	if rest[0] == 'c' {
 		return "", 1, true
 	}
-	if rest[0] == '0' {
-		value, digits := octalEscape(rest[1:])
-		if digits > 0 {
-			return string([]byte{value}), digits + 1, false
-		}
-		return "\x00", 1, false
+	if value, width, ok := numericEscape(rest, false); ok {
+		return string([]byte{value}), width, false
 	}
 	if replacement, ok := simpleEscape(rest[0]); ok {
 		return string([]byte{replacement}), 1, false

@@ -29,7 +29,18 @@ func TestPrintf_rendersTheConversions(t *testing.T) {
 		{name: "character", args: []string{"%c%c\n", "ab", "cd"}, want: "ac\n"},
 		{name: "literal percent", args: []string{"100%%\n"}, want: "100%\n"},
 		{name: "escapes in the format", args: []string{`a\tb\nc\n`}, want: "a\tb\nc\n"},
-		{name: "octal escape in the format", args: []string{`\0101\n`}, want: "A\n"},
+		{
+			// Bare octal, and at most three digits, which is what POSIX gives printf's
+			// format and what busybox-w32 does: `\0101` is octal 010 and then a
+			// literal 1, not octal 101. This asserted the `A` that XSI echo produces,
+			// so it had been pinning a divergence from the reference. Measured:
+			// `busybox printf '\0101' | xxd -p` is 0831.
+			name: "bare octal in the format", args: []string{"\0101\n"}, want: "\b1\n",
+		},
+		{
+			// And hex, which neither applet had at all.
+			name: "hex in the format", args: []string{"\x41\x42\n"}, want: "AB\n",
+		},
 		{name: "b processes the operand's escapes", args: []string{"%b\n", `x\ty`}, want: "x\ty\n"},
 		{name: "s does not", args: []string{"%s\n", `x\ty`}, want: `x\ty` + "\n"},
 		{name: "format is reused for extra operands", args: []string{"%s\n", "a", "b", "c"}, want: "a\nb\nc\n"},

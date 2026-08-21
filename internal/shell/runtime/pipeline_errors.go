@@ -29,3 +29,15 @@ func isClosedPipeError(err error) bool {
 	}
 	return errno == 109 || errno == 232
 }
+
+// IsClosedPipe reports whether an error is a write to a pipe whose reader has gone away.
+//
+// Exported because the direct-dispatch path in cmd/nemosh has to reach the same conclusion, and it
+// is a conclusion rather than a detail: `producer | head -1` is not a failure of the producer.
+// POSIX kills the writer with SIGPIPE and it says nothing; Windows has no SIGPIPE, so the write
+// simply fails and whoever gets that error has to recognise it for what it is.
+//
+// Measured, because this diverged: with a child shell producing and `grep -q` consuming,
+// busybox-w32 printed nothing and this printed "seq: write /dev/stdout: The pipe is being closed."
+// The classifier below already existed and this path had not been given it.
+func IsClosedPipe(err error) bool { return isClosedPipeError(err) }

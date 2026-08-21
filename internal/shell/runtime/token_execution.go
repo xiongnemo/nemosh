@@ -136,6 +136,9 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		command = remaining
 	}
 	expanded := make([]shellToken, 0, len(command))
+	// Where this command's own substitutions begin, so an assignment-only command can exit
+	// with the status of the last one *it* performed rather than one from an earlier line.
+	mark := r.expansion.substitutionMark()
 	// Leading assignments are expanded unsplit. Recognised on the word rather than
 	// on its expansion, which is the only place the distinction still exists: see
 	// assignment_expand.go for what `d=$(date)` did without this.
@@ -161,7 +164,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	}
 	assignments, commandArgs := leadingAssignments(args)
 	if len(assignments) > 0 && len(commandArgs) == 0 {
-		return lineResult{status: r.assignVars(assignments)}
+		return lineResult{status: r.assignmentStatus(assignments, mark)}
 	}
 	// Alias substitution goes here rather than during tokenization, because
 	// parsing completes before anything runs; see substituteAliases. A quoted
@@ -186,6 +189,29 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		return result
 	}
 	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
+}
+
+// assignmentStatus is what a command consisting only of assignments exits with.
+//
+// POSIX: "If there is no command name, but the command contains a command substitution, the command
+// shall complete with the exit status of the last command substitution performed." So `out=$(false)`
+// is a failure, and that is what makes the commonest error check in shell work:
+//
+//	out=$(command) || die "command failed"
+//
+// This returned the assignment's own status, which is zero unless the *variable* refused the write,
+// so that line never fired. bash, dash, ash and busybox-w32 all report the substitution's status;
+// measured against bash while fixing it.
+//
+// A failed assignment still wins: `readonly x; x=$(true)` is an error about x, not a success.
+func (r Runtime) assignmentStatus(assignments []assignment, mark int) int {
+	if status := r.assignVars(assignments); status != 0 {
+		return status
+	}
+	if status, performed := r.expansion.substitutionStatusSince(mark); performed {
+		return status
+	}
+	return 0
 }
 
 // replaceCommandTokens swaps the command and its arguments for a new word list,

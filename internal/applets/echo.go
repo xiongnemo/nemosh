@@ -71,10 +71,9 @@ func expandEchoEscapes(text string) (string, bool) {
 		if text[index] == 'c' {
 			return out.String(), true
 		}
-		if text[index] == '0' {
-			value, width := octalEscape(text[index+1:])
+		if value, width, ok := numericEscape(text[index:], true); ok {
 			out.WriteByte(value)
-			index += width
+			index += width - 1
 			continue
 		}
 		if replacement, ok := simpleEscape(text[index]); ok {
@@ -113,11 +112,66 @@ func simpleEscape(char byte) (byte, bool) {
 	return 0, false
 }
 
-// octalEscape reads the digits after the `\0` SUSv3 requires, at most three of
-// them, and reports how many it consumed.
-func octalEscape(rest string) (byte, int) {
+// numericEscape reads `\NNN` and `\xHH`, reporting the byte and how much of rest it consumed.
+//
+// rest begins at the character *after* the backslash. Both forms exist in busybox-w32's
+// bb_process_escape_sequence, which is the reference here, and both were missing: `printf '\x41'`
+// and `echo -e '\x41'` printed the four characters back rather than an `A`, and bare octal did the
+// same. Measured against busybox before and after -- `\x41\x42` is AB, `\101\102` is AB.
+//
+// leadingZero picks between the two octal forms, and they differ on purpose rather than by anyone's
+// mistake. XSI specifies `\0NNN` for echo and POSIX specifies `\NNN` for printf's format, so
+// busybox-w32 implements both and the two disagree about the same characters. Measured:
+//
+//	busybox echo -e '\0101'  ->  A     the zero is a marker, 101 is the value
+//	busybox printf  '\0101'  ->  \b1   three digits is 010, and the 1 is literal
+//
+// Unifying them broke echo, and the test that caught it was already there and already right. The
+// printf test beside it was not: it asserted echo's answer for printf, so it had been pinning a
+// divergence from the reference since the day it was written.
+//
+// Hex takes at most two digits, so `\xABC` is 0xAB then a literal `C`, and a form with no digits
+// at all (`\x`, `\xg`) is not an escape -- the caller leaves both bytes as they were written.
+func numericEscape(rest string, leadingZero bool) (byte, int, bool) {
+	if rest == "" {
+		return 0, 0, false
+	}
+	if leadingZero && rest[0] == '0' {
+		// XSI echo's form: the zero is a marker, and up to three digits follow it.
+		value, digits := octalDigits(rest[1:], 3)
+		if digits == 0 {
+			return 0, 1, true
+		}
+		return value, digits + 1, true
+	}
+	if rest[0] == 'x' {
+		digits := 0
+		for digits < 2 && digits+1 < len(rest)+0 && isHexDigit(rest[digits+1]) {
+			digits++
+		}
+		if digits == 0 {
+			return 0, 0, false
+		}
+		value, err := strconv.ParseUint(rest[1:1+digits], 16, 16)
+		if err != nil {
+			return 0, 0, false
+		}
+		return byte(value), digits + 1, true
+	}
+	// Both forms in echo, which is the last thing measurement corrected here: busybox accepts
+	// the XSI `\0NNN` *and* a bare `\NNN`, so `echo -e '\101'` is an A as well. Only the
+	// leading-zero reading belongs to echo alone, and it is taken above.
+	value, digits := octalDigits(rest, 3)
+	if digits == 0 {
+		return 0, 0, false
+	}
+	return value, digits, true
+}
+
+// octalDigits reads at most limit octal digits and reports how many it used.
+func octalDigits(rest string, limit int) (byte, int) {
 	digits := 0
-	for digits < 3 && digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '7' {
+	for digits < limit && digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '7' {
 		digits++
 	}
 	if digits == 0 {
@@ -128,4 +182,16 @@ func octalEscape(rest string) (byte, int) {
 		return 0, 0
 	}
 	return byte(value), digits
+}
+
+func isHexDigit(char byte) bool {
+	switch {
+	case char >= '0' && char <= '9':
+		return true
+	case char >= 'a' && char <= 'f':
+		return true
+	case char >= 'A' && char <= 'F':
+		return true
+	}
+	return false
 }
