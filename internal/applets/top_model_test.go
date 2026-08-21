@@ -435,3 +435,92 @@ func TestTopSession_theRequestedSortKeepsItsOwnDirection(t *testing.T) {
 		}
 	}
 }
+
+// Searching: which row the cursor should land on. The walking is pure, so it is tested here rather
+// than through a terminal.
+func TestFindTopMatch_walksThroughTheMatches(t *testing.T) {
+	rows := []topRow{
+		{Process: proc.Process{PID: 1, Name: "Idle"}},
+		{Process: proc.Process{PID: 2, Name: "svchost.exe"}},
+		{Process: proc.Process{PID: 3, Name: "chrome.exe"}},
+		{Process: proc.Process{PID: 4, Name: "SVCHOST.EXE"}},
+	}
+	tests := []struct {
+		name  string
+		term  string
+		after int
+		want  int
+		found bool
+	}{
+		// From the top, which is what every keystroke of an incremental search does.
+		{name: "from the top", term: "svchost", after: -1, want: 1, found: true},
+		// After the cursor, which is what makes a repeat key walk rather than stick.
+		{name: "walks on", term: "svchost", after: 1, want: 3, found: true},
+		// And wraps, so the last match is not a dead end.
+		{name: "wraps", term: "svchost", after: 3, want: 1, found: true},
+		{name: "case insensitive", term: "SVChost", after: -1, want: 1, found: true},
+		{name: "by pid", term: "3", after: -1, want: 2, found: true},
+		{name: "no match", term: "nothing", after: -1, found: false},
+		// An empty term matches nothing rather than everything: an empty search box should
+		// leave the cursor alone, not move it to row one.
+		{name: "empty", term: "", after: 2, found: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, found := findTopMatch(rows, test.term, test.after)
+			if found != test.found {
+				t.Fatalf("findTopMatch(%q, %d) found = %v, want %v",
+					test.term, test.after, found, test.found)
+			}
+			if found && got != test.want {
+				t.Fatalf("findTopMatch(%q, %d) = %d, want %d",
+					test.term, test.after, got, test.want)
+			}
+		})
+	}
+	// Nothing to search is not a crash.
+	if _, found := findTopMatch(nil, "anything", -1); found {
+		t.Fatal("found a match in no rows")
+	}
+}
+
+// F3 is two keys in one, as it is in htop: ask for a term, then walk to the next match.
+func TestTopModel_searchNextOnlyOnceThereIsSomethingToSearchFor(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+
+	// When -- F3 with nothing searched for yet
+	if got := model.applyKey("F3"); got != topActionSearchPrompt {
+		t.Fatalf("F3 with no term asked for %v, want a prompt", got)
+	}
+
+	// And once there is a term
+	model.Search = "chrome"
+	if got := model.applyKey("F3"); got != topActionSearchNext {
+		t.Fatalf("F3 with a term asked for %v, want the next match", got)
+	}
+	// n is the same thing, and / always asks again -- a new search rather than a repeat.
+	if got := model.applyKey("n"); got != topActionSearchNext {
+		t.Fatalf("n asked for %v, want the next match", got)
+	}
+	if got := model.applyKey("/"); got != topActionSearchPrompt {
+		t.Fatalf("/ asked for %v, want a prompt", got)
+	}
+}
+
+// The filter and the search must agree about what a match is, or the same word typed into each
+// finds different processes.
+func TestRowMatches_isSharedByTheFilterAndTheSearch(t *testing.T) {
+	row := topRow{
+		Process: proc.Process{PID: 4321, Name: "svchost.exe"},
+		Details: proc.Details{CommandLine: `C:\Windows\system32\svchost.exe -k netsvcs`},
+	}
+	for _, term := range []string{"svchost", "SVCHOST", "netsvcs", "4321"} {
+		model := newTopModel(mustColumns(t))
+		model.Filter = term
+		filtered := model.matches(row)
+		_, searched := findTopMatch([]topRow{row}, term, -1)
+		if !filtered || !searched {
+			t.Fatalf("%q: filter matched %v but search matched %v", term, filtered, searched)
+		}
+	}
+}

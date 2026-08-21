@@ -46,6 +46,32 @@ func topRate(value float64) string {
 	return topBytes(uint64(value))
 }
 
+// topCount is a rate of things rather than of bytes, in at most five characters: `1234`, `12.3k`.
+//
+// Separate from topBytes because the units are not the same: a thousand operations is 1.0k and not
+// 1000, and dividing by 1024 would be wrong in a way nobody would notice for a long time.
+func topCount(value float64) string {
+	if value < 1 {
+		// A dash, as topRate does, because a column that is mostly zeroes is easier to read
+		// with the zeroes quiet.
+		return "-"
+	}
+	if value < 1000 {
+		return fmt.Sprintf("%.0f", value)
+	}
+	scaled := value
+	for _, suffix := range []string{"k", "M", "G"} {
+		scaled /= 1000
+		if scaled < 1000 {
+			if scaled < 10 {
+				return fmt.Sprintf("%.1f%s", scaled, suffix)
+			}
+			return fmt.Sprintf("%.0f%s", scaled, suffix)
+		}
+	}
+	return fmt.Sprintf("%.0fT", scaled)
+}
+
 // topPercent is a percentage in five characters, `  0.0` to `100.0`.
 func topPercent(fraction float64) string {
 	return fmt.Sprintf("%5.1f", fraction*100)

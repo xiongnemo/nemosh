@@ -50,7 +50,7 @@ var commands = []Command{
 	{Name: "printenv", Operand: AnyPath},
 	{Name: "printf", Operand: AnyPath},
 	{Name: "ps", Operand: AnyPath},
-	{Name: "top", Short: "bndsfHt", ValueShort: "ndsf", Operand: AnyPath},
+	{Name: "top", Short: "bndsfoHt", ValueShort: "ndsfo", Operand: AnyPath},
 	{Name: "pwd", Short: "LP", Operand: AnyPath},
 	{Name: "readlink", Short: "n", Operand: AnyPath},
 	{Name: "rev", Operand: AnyPath},

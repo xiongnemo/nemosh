@@ -48,7 +48,7 @@ process in turn.
 | per-core meters | `/proc/stat` | `SystemProcessorPerformanceInformation` | **full+**, also DPC and interrupt time |
 | memory / commit | `/proc/meminfo` | `GlobalMemoryStatusEx`, `GetPerformanceInfo` | **full** |
 | uptime | `/proc/uptime` | `GetTickCount64` | **full** |
-| IO rates | `/proc/pid/io`, often restricted | the table's transfer counts | **full+**, better than Linux |
+| IO rates | `/proc/pid/io`, often restricted | the table's transfer and operation counts | **full+** for total IO, **impossible** for disk-only |
 | handle count | — | `HandleCount` | Windows-only, and the commonest Windows leak |
 | SHR | `statm` | no equivalent split | **substitute**: private working set |
 | swap per process | `status` `VmSwap` | `PagefileUsage`, commit charge | **different measure**, labelled `COMMIT` |
@@ -157,6 +157,71 @@ ask the pipe its name through `GetFileInformationByHandleEx(FileNameInfo)` and l
 for the `msys-…-pty` pattern that Cygwin gives its ptys -- and it is not done here.
 Drawing escape sequences into something that turns out to be `| head` is a worse
 failure than printing text into something that turns out to be a terminal.
+
+## What "Disk R/W" Would Be Lying About
+
+ntop shows a `Disk R/W` column and htop shows `DISKREAD`, and this shows `IORD/s`
+and `IOWR/s` instead. The rename is not fussiness -- the numbers are not the same
+number, and only one of the three tools can honestly use the word.
+
+The process table carries six counters, all of them unelevated, all cumulative,
+so all six give a rate from two samples:
+
+| counter | what it is | column |
+| --- | --- | --- |
+| `ReadTransferCount` | bytes read through any handle | `IORD/s` |
+| `WriteTransferCount` | bytes written through any handle | `IOWR/s` |
+| `OtherTransferCount` | bytes moved by anything that is neither | `IOOT/s` |
+| `ReadOperationCount` | number of read calls | `RDOP/s` |
+| `WriteOperationCount` | number of write calls | `WROP/s` |
+| `OtherOperationCount` | number of other calls | `IOPS`, with the two above |
+
+**Any handle** is the whole point. On Linux `/proc/pid/io` distinguishes `rchar`,
+every byte the process read, from `read_bytes`, the bytes that reached a block
+device -- and htop's disk columns use the latter, so htop's `DISKREAD` really is
+disk. Windows draws no such line here. A file read, a pipe read, a socket recv
+and a console read all land in `ReadTransferCount` together.
+
+The measurement that settled it came out of testing this: running
+`top -b -n 2 -o pid,iops,read,write,other,command | awk ...` and sorting by
+operations put **`awk.exe` at the top with 32k IOPS and 1.2 MB/s of "other"**.
+awk was reading a pipe. Under a column headed `Disk R/W` that reads as a process
+hammering the drive, which it was not, and the number that would have been shown
+is the correct number for a different question.
+
+So the columns say IO. What they cannot say is disk, and that is a genuine gap
+rather than a naming choice:
+
+- **Per-process disk-only IO needs ETW**, the `Microsoft-Windows-Kernel-Disk`
+  provider, and starting a kernel-provider session requires
+  `SeSystemProfilePrivilege` -- administrator. That is the whole premise of this
+  applet given away for one column.
+- `Win32_PerfRawData_PerfProc_Process` does not help: its `IOReadBytesPerSec` is
+  the same `IO_COUNTERS` value under another name.
+- Task Manager's own **Processes** tab shows a real disk figure and its
+  **Details** tab shows `I/O reads`. Those are two different measurements, and
+  the elevated one is the one with the word disk on it. Task Manager is not
+  running unelevated when it shows you that column.
+
+The operation counts are worth having for their own sake and not only as a
+substitute. A process moving ten megabytes in one read and one moving it in ten
+thousand cost the machine very different amounts, and the byte columns cannot
+tell them apart -- which is why `IOPS` is in the wide layout and why `topCount`
+scales in thousands rather than in units of 1024: a thousand operations is
+`1.0k`, and dividing a count of things by 1024 is wrong in a way nobody would
+notice for a long time.
+
+## Thread Counts
+
+Already there, and worth stating because it is easy to miss: `THR` is in the
+default layout and shows `NumberOfThreads` straight from the record, and the
+header counts the machine's threads by summing it. Neither costs a handle, and
+the inline thread array means Windows answers this *more* cheaply than Linux,
+where htop has to read a directory per process.
+
+What `-H` will add is a row per thread rather than a count, and that is still
+unwired. The data is already sampled -- `Sample(withThreads)` walks the thread
+records for state and wait reason -- so it is a view problem, not an access one.
 
 ## The Wrapper That Hid The Console
 

@@ -55,8 +55,17 @@ func UsageFor(name string) (string, bool) {
 	if options := renderOptions(command, usage); options != "" {
 		fmt.Fprintf(&out, "\nOptions:\n%s", options)
 	}
-	for _, note := range usage.Notes {
-		fmt.Fprintf(&out, "\n%s\n", note)
+	// One blank line before the notes, then one line each.
+	//
+	// A note is a line of prose rather than a paragraph, which is how all three applets with
+	// more than one are written: ps and top both split a sentence across two entries. A blank
+	// line between every note put a paragraph break in the middle of a sentence, and top's help
+	// -- the longest of them -- read as a list of disconnected fragments.
+	if len(usage.Notes) > 0 {
+		out.WriteString("\n")
+		for _, note := range usage.Notes {
+			fmt.Fprintf(&out, "%s\n", note)
+		}
 	}
 	return out.String(), true
 }

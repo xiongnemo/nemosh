@@ -43,6 +43,9 @@ type topOptions struct {
 	filter  string
 	threads bool
 	tree    bool
+	// columns overrides the layout, which is how a script asks for exactly the figures it
+	// wants rather than whatever fits the window it was given.
+	columns []string
 }
 
 func newTopApplet() Applet {
@@ -72,8 +75,9 @@ func newTopApplet() Applet {
 // topArgs reads the options.
 //
 // The letters are top's and htop's where they agree: -b batch, -n iterations, -d delay, -H
-// threads, -t tree, -s sort, -f filter. Nothing here invents a letter that either of them uses
-// for something else.
+// threads, -t tree, -s sort, -f filter, -o columns. Nothing here invents a letter that either of
+// them uses for something else -- -o is top's own, which names the sort field there and the field
+// list here, the nearest thing to it this has.
 func topArgs(args []string) (topOptions, error) {
 	options := topOptions{iterations: 1, delay: topRefresh, sort: "cpu"}
 	for index := 0; index < len(args); index++ {
@@ -121,6 +125,15 @@ func topArgs(args []string) (topOptions, error) {
 				return options, fmt.Errorf("unknown sort column: %s", text)
 			}
 			options.sort = text
+		case "-o":
+			text, err := value()
+			if err != nil {
+				return options, err
+			}
+			options.columns = strings.Split(text, ",")
+			if _, unknown := resolveColumns(options.columns); len(unknown) > 0 {
+				return options, fmt.Errorf("unknown column: %s", strings.Join(unknown, ", "))
+			}
 		case "-f":
 			text, err := value()
 			if err != nil {
@@ -147,19 +160,27 @@ type topSession struct {
 	details  *proc.DetailCache
 	previous proc.Snapshot
 	model    topModel
+	// layoutFixed says the columns were named on the command line, so widening the window must
+	// not silently replace them: -o is an instruction, and the width rule is only a default.
+	layoutFixed bool
 }
 
 func newTopSession(options topOptions) *topSession {
 	columns, _ := resolveColumns(topDefaultColumns)
+	fixed := options.columns != nil
+	if fixed {
+		columns, _ = resolveColumns(options.columns)
+	}
 	model := newTopModel(columns)
 	model.setSort(options.sort)
 	model.Filter = options.filter
 	model.Tree = options.tree
 	model.Threads = options.threads
 	return &topSession{
-		sampler: proc.NewSampler(),
-		details: proc.NewDetailCache(),
-		model:   model,
+		sampler:     proc.NewSampler(),
+		details:     proc.NewDetailCache(),
+		model:       model,
+		layoutFixed: fixed,
 	}
 }
 

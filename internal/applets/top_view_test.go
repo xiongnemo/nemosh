@@ -416,3 +416,136 @@ func TestTopApplication_theColumnsDoNotMoveWhileScrolling(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
+
+// typing sends a word to whatever has focus, one key at a time as a person would.
+func (h *topHarness) typing(text string) {
+	for _, r := range text {
+		h.screen.InjectKey(tcell.KeyRune, r, tcell.ModNone)
+	}
+}
+
+// The whole search, driven from the keyboard: press /, type a name, and the cursor is on it.
+//
+// End to end on purpose, because the part most likely to break is not the matching -- that is tested
+// against a struct -- but the keyboard. The input capture is on the *application*, so it sees every
+// key before the input field does, and the letters of a process name are also commands: the `q` in
+// `sqlservr` quit, the `k` asked to kill, the `/` re-opened the prompt. A search that cannot be
+// typed is not a search.
+func TestTopApplication_slashSearchMovesTheCursorToTheMatch(t *testing.T) {
+	harness := startTop(t)
+	defer harness.quit(t)
+	if _, ok := harness.waitFor(t, "COMMAND"); !ok {
+		t.Fatal("nothing drawn")
+	}
+
+	// When -- / then a name that is on every Windows machine and is not the first row
+	harness.screen.InjectKey(tcell.KeyRune, '/', tcell.ModNone)
+	harness.typing("winlogon")
+
+	// Then -- the prompt is in the footer, so the table is still visible while typing
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		drawn := harness.draw(t)
+		footer := drawn.line(drawn.height - 1)
+		if strings.Contains(footer, "search: winlogon") && strings.Contains(drawn.line(drawn.headerRow(t)), "COMMAND") {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// And Enter leaves the cursor on the match
+	harness.screen.InjectKey(tcell.KeyEnter, 0, tcell.ModNone)
+	for time.Now().Before(deadline) {
+		if strings.Contains(harness.selectedRowText(t), "winlogon") {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("the cursor is on %q, not on winlogon", strings.TrimSpace(harness.selectedRowText(t)))
+}
+
+// selectedRowText is the whole row under the cursor.
+func (h *topHarness) selectedRowText(t *testing.T) string {
+	t.Helper()
+	reply := make(chan string, 1)
+	h.application.QueueUpdate(func() {
+		table, ok := h.application.GetFocus().(*tview.Table)
+		if !ok {
+			reply <- ""
+			return
+		}
+		row, _ := table.GetSelection()
+		line := ""
+		for column := 0; column < table.GetColumnCount(); column++ {
+			if cell := table.GetCell(row, column); cell != nil {
+				line += cell.Text
+			}
+		}
+		reply <- line
+	})
+	select {
+	case line := <-reply:
+		return line
+	case <-time.After(10 * time.Second):
+		t.Fatal("the application stopped answering")
+		return ""
+	}
+}
+
+// A search is not a filter: the list stays whole, which is the distinction htop draws and the one
+// this had wrong.
+func TestTopApplication_searchLeavesTheListWhole(t *testing.T) {
+	harness := startTop(t)
+	defer harness.quit(t)
+	if _, ok := harness.waitFor(t, "COMMAND"); !ok {
+		t.Fatal("nothing drawn")
+	}
+	before := harness.rowCount(t)
+
+	// When
+	harness.screen.InjectKey(tcell.KeyRune, '/', tcell.ModNone)
+	harness.typing("winlogon")
+	harness.screen.InjectKey(tcell.KeyEnter, 0, tcell.ModNone)
+
+	// Then -- every process is still listed. A filter would have cut it to one.
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if after := harness.rowCount(t); after < before/2 {
+			t.Fatalf("searching cut the list from %d rows to %d; that is what F4 does", before, after)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// rowCount is how many rows the table holds, once the table has the keyboard back.
+//
+// Waiting for focus rather than reading straight away, because "the table is not focused" and "the
+// table is empty" are different facts and the first must not be reported as the second. It was: a
+// count taken while the search prompt was still closing came back as zero rows, and the test called
+// that a list cut to nothing. Under -race the window is wide enough to hit every time.
+func (h *topHarness) rowCount(t *testing.T) int {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		reply := make(chan int, 1)
+		h.application.QueueUpdate(func() {
+			table, ok := h.application.GetFocus().(*tview.Table)
+			if !ok {
+				reply <- -1
+				return
+			}
+			reply <- table.GetRowCount()
+		})
+		select {
+		case count := <-reply:
+			if count >= 0 {
+				return count
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatal("the application stopped answering")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("the table never got the keyboard back")
+	return 0
+}

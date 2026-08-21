@@ -116,6 +116,7 @@ func runTopApplication(ctx context.Context, options topOptions, screen tcell.Scr
 		if width != view.summaryWidth || height != view.summaryHeight {
 			view.summaryWidth, view.summaryHeight = width, height
 			view.drawSummary()
+			view.resolveLayout()
 		}
 		return x, y, width, height
 	})
@@ -169,6 +170,9 @@ type topView struct {
 	// filling is set while the table is being rebuilt, so the selection callback ignores the
 	// row numbers it sees in the middle of that.
 	filling bool
+	// prompting is set while a prompt or a modal owns the keyboard, so the application's input
+	// capture lets keys through to it instead of reading them as commands.
+	prompting bool
 	// summaryWidth and summaryHeight are the terminal's, so the meters fill the window and
 	// follow a resize.
 	summaryWidth  int
@@ -204,6 +208,23 @@ func (v *topView) refresh() {
 // statusText is the bottom bar for the view's current state.
 func (v *topView) statusText() string {
 	return topStatusText(v.session.model, len(v.rows), v.rates.Interval <= 0)
+}
+
+// resolveLayout picks the columns for the current width, and refills the table if they changed.
+//
+// The columns follow the window because there is nowhere else for the IO figures to live yet: with
+// a fixed default they exist and are unreachable. Compared against the current layout rather than
+// applied blindly, because rebuilding a five-hundred-row table on every draw would be visible.
+func (v *topView) resolveLayout() {
+	if v.session.layoutFixed {
+		return
+	}
+	columns, _ := resolveColumns(topLayoutForWidth(v.summaryWidth))
+	if len(columns) == len(v.session.model.Columns) {
+		return
+	}
+	v.session.model.Columns = columns
+	v.fillTable()
 }
 
 // drawSummary writes the header at the current width.
@@ -306,6 +327,11 @@ func topStatusText(model topModel, rows int, sampling bool) string {
 	filter := ""
 	if model.Filter != "" {
 		filter = fmt.Sprintf("  filter=%q", model.Filter)
+	}
+	if model.Search != "" {
+		// Shown because it is what `n` will act on, and a repeat key whose target is
+		// invisible is a repeat key nobody presses.
+		filter += fmt.Sprintf("  search=%q", model.Search)
 	}
 	state := ""
 	switch {

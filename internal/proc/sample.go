@@ -63,6 +63,14 @@ type Process struct {
 	Commit     uint64
 	PageFaults uint64
 	HardFaults uint64
+	// ReadOps, WriteOps and OtherOps are cumulative counts of IO *calls*, where the three
+	// below count bytes. Both are worth having and they answer different questions: a process
+	// moving ten megabytes in one read and one moving it in ten thousand cost the machine very
+	// different amounts, and only the operation count can tell them apart. This is the number
+	// Task Manager shows as "I/O reads" in its details pane.
+	ReadOps  uint64
+	WriteOps uint64
+	OtherOps uint64
 	// ReadBytes, WriteBytes and OtherBytes are cumulative. Their deltas are the IO rates,
 	// which on Windows need no privilege at all -- on Linux `/proc/<pid>/io` often does.
 	ReadBytes  uint64

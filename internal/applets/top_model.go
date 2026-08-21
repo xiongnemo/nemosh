@@ -26,6 +26,10 @@ type topModel struct {
 	Descending bool
 	// Filter narrows the list to names and command lines containing it, case-insensitively.
 	Filter string
+	// Search is the last thing searched for, which is what makes a repeat key possible: F3 and
+	// n walk to the next match without asking again. Searching leaves the list whole, unlike
+	// the filter -- htop is right to separate them, and this had them conflated.
+	Search string
 	// Tree arranges by parentage instead of sorting flat.
 	Tree bool
 	// Collapsed holds the pids whose children are folded away in tree mode.
@@ -101,23 +105,50 @@ func (m topModel) rows(snapshot proc.Snapshot, rates proc.Rates, details *proc.D
 }
 
 // matches is the filter: a substring of the name or of the command line, case-insensitively.
-//
-// The command line is included because it is the only way to tell four `svchost.exe` apart, and
-// telling them apart is most of why anyone filters on Windows.
 func (m topModel) matches(row topRow) bool {
 	if m.Filter == "" {
 		return true
 	}
-	needle := strings.ToLower(m.Filter)
+	return rowMatches(row, strings.ToLower(m.Filter))
+}
+
+// rowMatches is what counts as a match, for the filter and the search alike.
+//
+// One function for both, because htop keeps them as separate operations -- a filter hides what does
+// not match, a search jumps to what does -- and two operations that disagree about what a match *is*
+// would be a trap: typing the same word into each would find different processes.
+//
+// The command line is included because it is the only way to tell four `svchost.exe` apart, and
+// telling them apart is most of why anyone searches on Windows. needle must already be lowercase.
+func rowMatches(row topRow, needle string) bool {
 	if strings.Contains(strings.ToLower(row.Process.Name), needle) {
 		return true
 	}
 	if strings.Contains(strings.ToLower(row.Details.CommandLine), needle) {
 		return true
 	}
-	// A pid typed into the filter should find that process, which is what someone who has a
-	// number from somewhere else will try first.
-	return strconv.Itoa(row.Process.PID) == m.Filter
+	// A pid typed in should find that process, which is what someone who has a number from
+	// somewhere else will try first.
+	return strconv.Itoa(row.Process.PID) == needle
+}
+
+// findTopMatch is the next row matching term, starting after the given index and wrapping.
+//
+// Wrapping, and starting *after* rather than at, because that is what makes repeated presses walk
+// through the matches instead of sticking on the first one. Pass -1 to start from the top, which is
+// what an incremental search does on every keystroke.
+func findTopMatch(rows []topRow, term string, after int) (int, bool) {
+	if term == "" || len(rows) == 0 {
+		return 0, false
+	}
+	needle := strings.ToLower(term)
+	for offset := 1; offset <= len(rows); offset++ {
+		index := ((after+offset)%len(rows) + len(rows)) % len(rows)
+		if rowMatches(rows[index], needle) {
+			return index, true
+		}
+	}
+	return 0, false
 }
 
 // sortRows orders the list by the chosen column.
@@ -182,6 +213,9 @@ const (
 	// conflated: a search jumps to a match and leaves the list whole, a filter hides what does
 	// not match.
 	topActionSearchPrompt
+	// topActionSearchNext walks to the match after the cursor, which needs the drawn row list
+	// and so cannot be done by the model alone.
+	topActionSearchNext
 	topActionFilterPrompt
 	topActionRefresh
 )
@@ -213,8 +247,17 @@ func (m *topModel) applyKey(key string) topAction {
 		return topActionRaisePriority
 	case "F1", "h", "?":
 		return topActionHelp
-	case "F3", "/":
+	case "/":
 		return topActionSearchPrompt
+	case "F3":
+		// htop's F3 is "search next" once there is something to search for, and asking
+		// again for a term you have already typed is the wrong answer to that key.
+		if m.Search == "" {
+			return topActionSearchPrompt
+		}
+		return topActionSearchNext
+	case "n":
+		return topActionSearchNext
 	case "F4", "\\":
 		return topActionFilterPrompt
 	case "F5", "t":

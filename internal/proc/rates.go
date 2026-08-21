@@ -39,6 +39,12 @@ type ProcessRate struct {
 	ReadBytesPerSecond  float64
 	WriteBytesPerSecond float64
 	OtherBytesPerSecond float64
+	// The same three in operations rather than bytes, which is what a monitor needs to explain a
+	// machine that is busy without moving much data -- a process making thousands of tiny reads
+	// is invisible in the byte columns and obvious here.
+	ReadOpsPerSecond  float64
+	WriteOpsPerSecond float64
+	OtherOpsPerSecond float64
 	// HardFaultsPerSecond is page-ins from disk -- the number that tells you a machine is
 	// thrashing rather than merely busy.
 	HardFaultsPerSecond float64
@@ -96,6 +102,9 @@ func Between(earlier, later Snapshot) Rates {
 			ReadBytesPerSecond:  perSecond(before.ReadBytes, process.ReadBytes, seconds),
 			WriteBytesPerSecond: perSecond(before.WriteBytes, process.WriteBytes, seconds),
 			OtherBytesPerSecond: perSecond(before.OtherBytes, process.OtherBytes, seconds),
+			ReadOpsPerSecond:    perSecond(before.ReadOps, process.ReadOps, seconds),
+			WriteOpsPerSecond:   perSecond(before.WriteOps, process.WriteOps, seconds),
+			OtherOpsPerSecond:   perSecond(before.OtherOps, process.OtherOps, seconds),
 			HardFaultsPerSecond: perSecond(before.HardFaults, process.HardFaults, seconds),
 		}
 	}

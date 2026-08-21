@@ -137,15 +137,49 @@ var topColumns = []topColumn{
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.Handles) },
 		Less: func(a, b topRow) bool { return a.Process.Handles < b.Process.Handles },
 	},
+	// The IO columns are named IO and not DISK, and the difference is not pedantry.
+	//
+	// ntop calls its equivalent "Disk R/W" and htop calls its own DISKREAD, but on Linux htop
+	// reads /proc/pid/io's read_bytes, which really is block IO that reached a device. The
+	// Windows process table has no such split: ReadTransferCount is every byte the process read
+	// through any handle -- a file, a pipe, a socket, the console -- and calling that "disk"
+	// would make a chatty network client look like it was thrashing the drive. Per-process
+	// disk-only figures come from ETW's Kernel-Disk provider, which needs a privilege this
+	// deliberately does not ask for. See docs/design/process-view.md.
 	{
-		Key: "read", Header: "READ/s", Width: 6, Right: true,
+		Key: "read", Header: "IORD/s", Width: 6, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.ReadBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.ReadBytesPerSecond < b.Rate.ReadBytesPerSecond },
 	},
 	{
-		Key: "write", Header: "WRITE/s", Width: 7, Right: true,
+		Key: "write", Header: "IOWR/s", Width: 6, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.WriteBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.WriteBytesPerSecond < b.Rate.WriteBytesPerSecond },
+	},
+	{
+		// Other is ioctls and device control -- everything that is neither a read nor a
+		// write. Small for most processes and the whole story for a few, which is why the
+		// table reports it separately rather than folding it into the other two.
+		Key: "other", Header: "IOOT/s", Width: 6, Right: true,
+		Cell: func(r topRow) string { return topRate(r.Rate.OtherBytesPerSecond) },
+		Less: func(a, b topRow) bool { return a.Rate.OtherBytesPerSecond < b.Rate.OtherBytesPerSecond },
+	},
+	{
+		// Operations rather than bytes: the count that explains a machine which is busy
+		// without moving much data.
+		Key: "iops", Header: "IOPS", Width: 6, Right: true,
+		Cell: func(r topRow) string { return topCount(topRowIOPS(r)) },
+		Less: func(a, b topRow) bool { return topRowIOPS(a) < topRowIOPS(b) },
+	},
+	{
+		Key: "readops", Header: "RDOP/s", Width: 6, Right: true,
+		Cell: func(r topRow) string { return topCount(r.Rate.ReadOpsPerSecond) },
+		Less: func(a, b topRow) bool { return a.Rate.ReadOpsPerSecond < b.Rate.ReadOpsPerSecond },
+	},
+	{
+		Key: "writeops", Header: "WROP/s", Width: 6, Right: true,
+		Cell: func(r topRow) string { return topCount(r.Rate.WriteOpsPerSecond) },
+		Less: func(a, b topRow) bool { return a.Rate.WriteOpsPerSecond < b.Rate.WriteOpsPerSecond },
 	},
 	{
 		Key: "time", Header: "TIME+", Width: 10, Right: true,
@@ -175,11 +209,43 @@ var topColumns = []topColumn{
 	},
 }
 
-// topDefaultColumns is the layout used when no configuration says otherwise.
+// topRowIOPS is every IO operation a second, which is the one number a person means by "is this
+// process hammering the disk".
+func topRowIOPS(r topRow) float64 {
+	return r.Rate.ReadOpsPerSecond + r.Rate.WriteOpsPerSecond + r.Rate.OtherOpsPerSecond
+}
+
+// topDefaultColumns is the layout for a narrow terminal, and the base of the wider ones.
 //
-// Not every column: thirteen of them do not fit on an eighty-column terminal, and a default that
-// needs a wide window is a default that looks broken. The rest are available by configuration.
+// Not every column: nineteen of them do not fit on an eighty-column terminal, and a default that
+// needs a wide window is a default that looks broken.
 var topDefaultColumns = []string{"pid", "user", "pri", "state", "cpu", "mem", "rss", "thr", "time", "command"}
+
+// topLayoutForWidth is what to show in a terminal this wide.
+//
+// The columns follow the window, which is what `ls` here already does with its grid and is the only
+// way the IO figures are ever seen: there is no configuration file yet, so a fixed default means the
+// six IO columns exist and nobody can look at them. Widen the window and they appear.
+//
+// The thresholds are the widths at which the added columns still leave the command room to be read
+// -- TestTopLayout_everyTierLeavesRoomForTheCommand pins that rather than trusting the arithmetic.
+func topLayoutForWidth(width int) []string {
+	layout := topDefaultColumns
+	if width >= topIOLayoutWidth {
+		layout = append(append([]string{}, layout[:len(layout)-1]...), "read", "write", "command")
+	}
+	if width >= topFullLayoutWidth {
+		layout = append(append([]string{}, layout[:len(layout)-1]...), "iops", "handles", "command")
+	}
+	return layout
+}
+
+const (
+	// topIOLayoutWidth is where the two IO byte columns fit, and topFullLayoutWidth where the
+	// operation count and the handle count do as well.
+	topIOLayoutWidth   = 104
+	topFullLayoutWidth = 124
+)
 
 // columnByKey finds a column by name, which is how a configuration file names one.
 func columnByKey(key string) (topColumn, bool) {

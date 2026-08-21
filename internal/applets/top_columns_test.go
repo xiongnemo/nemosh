@@ -40,7 +40,15 @@ func extremeRow() topRow {
 			State:  proc.StateRunning,
 		},
 		Rate: proc.ProcessRate{
-			CPU: 1, ReadBytesPerSecond: 1023 << 40, WriteBytesPerSecond: 1023 << 40,
+			CPU:                 1,
+			ReadBytesPerSecond:  1023 << 40,
+			WriteBytesPerSecond: 1023 << 40,
+			OtherBytesPerSecond: 1023 << 40,
+			// A million million operations a second, which no machine can do and which
+			// therefore proves the column cannot be overflowed by one that could.
+			ReadOpsPerSecond:  1e12,
+			WriteOpsPerSecond: 1e12,
+			OtherOpsPerSecond: 1e12,
 		},
 		MemoryShare: 1,
 		Details:     proc.Details{User: "nemo"},
@@ -166,21 +174,79 @@ func TestTopCPUTime_scalesRatherThanOverflowing(t *testing.T) {
 	}
 }
 
-// The default layout fits an eighty-column terminal, which is what makes it the default.
-func TestTopDefaultColumns_fitEightyCells(t *testing.T) {
-	columns, unknown := resolveColumns(topDefaultColumns)
-	if len(unknown) != 0 {
-		t.Fatalf("the default layout names columns this build has not got: %v", unknown)
+// Every width tier leaves the command room to be read, which is the point of the tiers.
+//
+// Named in topLayoutForWidth's comment as the thing that checks its thresholds, because the
+// arithmetic is exactly the kind that is right when written and wrong after one column changes.
+func TestTopLayout_everyTierLeavesRoomForTheCommand(t *testing.T) {
+	for _, width := range []int{80, 100, topIOLayoutWidth, 120, topFullLayoutWidth, 200} {
+		columns, unknown := resolveColumns(topLayoutForWidth(width))
+		if len(unknown) != 0 {
+			t.Fatalf("at %d columns the layout names %v, which this build has not got", width, unknown)
+		}
+		fixed := 0
+		keys := []string{}
+		for _, column := range columns {
+			fixed += column.Width + 1
+			keys = append(keys, column.Key)
+		}
+		// Sixteen cells, which holds `svchost.exe` and most Windows executable names. The
+		// narrow tier is the binding one at seventeen: eighty columns is a cramped terminal
+		// and something has to give, and it should not be the column being read.
+		if room := width - fixed; room < 16 {
+			t.Fatalf("at %d columns the layout %s leaves %d cells for COMMAND",
+				width, strings.Join(keys, " "), room)
+		}
+		// And the command is last, because it is the only column that takes what is left.
+		if columns[len(columns)-1].Key != "command" {
+			t.Fatalf("at %d columns the layout ends with %q", width, columns[len(columns)-1].Key)
+		}
 	}
-	total := 0
-	names := []string{}
-	for _, column := range columns {
-		total += column.Width + 1
-		names = append(names, column.Key)
+}
+
+// The IO columns appear as the window grows, which is the only way they are reachable without a
+// configuration file.
+func TestTopLayout_theIOColumnsArriveWithTheRoomForThem(t *testing.T) {
+	narrow := strings.Join(topLayoutForWidth(80), " ")
+	if strings.Contains(narrow, "read") {
+		t.Fatalf("an eighty-column layout includes the IO columns: %s", narrow)
 	}
-	// Room left for the command, which is the column anyone is actually reading.
-	if room := lsDefaultWidth - total; room < 12 {
-		t.Fatalf("the default layout %s leaves %d cells for COMMAND at %d columns",
-			strings.Join(names, " "), room, lsDefaultWidth)
+	wide := strings.Join(topLayoutForWidth(topIOLayoutWidth), " ")
+	for _, key := range []string{"read", "write"} {
+		if !strings.Contains(wide, key) {
+			t.Fatalf("a %d-column layout has no %s: %s", topIOLayoutWidth, key, wide)
+		}
+	}
+	widest := strings.Join(topLayoutForWidth(topFullLayoutWidth), " ")
+	for _, key := range []string{"read", "write", "iops", "handles"} {
+		if !strings.Contains(widest, key) {
+			t.Fatalf("a %d-column layout has no %s: %s", topFullLayoutWidth, key, widest)
+		}
+	}
+}
+
+// topCount counts things, and a thousand things is 1.0k rather than 1.0K.
+//
+// Worth its own test because the mistake is invisible: dividing operations by 1024 gives a number
+// that looks entirely reasonable and is four per cent wrong for ever.
+func TestTopCount_scalesInThousands(t *testing.T) {
+	tests := []struct {
+		value float64
+		want  string
+	}{
+		{value: 0, want: "-"},
+		{value: 0.4, want: "-"},
+		{value: 1, want: "1"},
+		{value: 999, want: "999"},
+		{value: 1000, want: "1.0k"},
+		{value: 1024, want: "1.0k"},
+		{value: 32000, want: "32k"},
+		{value: 999999, want: "1000k"},
+		{value: 1500000, want: "1.5M"},
+	}
+	for _, test := range tests {
+		if got := topCount(test.value); got != test.want {
+			t.Fatalf("topCount(%v) = %q, want %q", test.value, got, test.want)
+		}
 	}
 }

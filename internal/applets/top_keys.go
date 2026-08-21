@@ -22,6 +22,13 @@ import (
 // returning the event, which is why there is no movement code here. What this handles is
 // everything a monitor adds on top.
 func (v *topView) key(event *tcell.EventKey) *tcell.EventKey {
+	if v.prompting {
+		// Something else owns the keyboard -- a prompt, or the kill confirmation. This
+		// capture is on the *application*, so it sees every key before any widget does, and
+		// without this a filter typed into an input field was read as commands: the `q` in
+		// `sqlservr` quit the program.
+		return event
+	}
 	name := topKeyName(event)
 	if name == "" {
 		return event
@@ -40,10 +47,9 @@ func (v *topView) key(event *tcell.EventKey) *tcell.EventKey {
 	case topActionFilterPrompt:
 		v.promptFilter()
 	case topActionSearchPrompt:
-		// Searching is not filtering, and until it can jump to a match it says so rather
-		// than quietly doing the other thing -- which is what it did before reading how
-		// htop separates the two.
-		v.status.SetText("[yellow]search jumps to a match and is not wired yet; F4 filters instead")
+		v.promptSearch()
+	case topActionSearchNext:
+		v.searchNext()
 	default:
 		// The model absorbed it -- a sort, a toggle -- so redraw with the new
 		// arrangement rather than waiting for the next tick.
@@ -104,6 +110,7 @@ func (v *topView) confirmKill() {
 		row.Process.Name, row.Process.PID)
 	modal := tview.NewModal().SetText(message).AddButtons([]string{"Cancel", "Terminate"})
 	modal.SetDoneFunc(func(index int, label string) {
+		v.prompting = false
 		if label == "Terminate" {
 			if err := proc.Terminate(row.Process.PID, 15); err != nil {
 				v.status.SetText(fmt.Sprintf("[red]kill %d: %v", row.Process.PID, err))
@@ -114,20 +121,96 @@ func (v *topView) confirmKill() {
 		v.application.SetRoot(v.root, true)
 		v.refresh()
 	})
+	// The modal owns the keyboard too, and for the sharper version of the same reason: without
+	// this, the `k` that opened it would be read again as another kill.
+	v.prompting = true
 	v.application.SetRoot(modal, true)
 }
 
 // promptFilter takes a filter interactively.
 func (v *topView) promptFilter() {
-	field := tview.NewInputField().SetLabel("filter: ").SetText(v.session.model.Filter)
+	before := v.session.model.Filter
+	field := tview.NewInputField().SetLabel("filter: ").SetText(before)
 	field.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {
 			v.session.model.Filter = field.GetText()
+		} else {
+			v.session.model.Filter = before
 		}
-		v.application.SetRoot(v.root, true)
+		v.hidePrompt(field)
 		v.refresh()
 	})
-	v.application.SetRoot(field, true)
+	v.showPrompt(field)
+}
+
+// promptSearch searches as it is typed, leaving the list whole.
+//
+// Incremental, because that is what makes a search worth having over a filter: the table stays
+// where it is and the cursor walks to the match, so the process is found *in context* -- with its
+// neighbours, its parent, and its share of the machine still on screen.
+func (v *topView) promptSearch() {
+	before := v.session.model.Selected
+	field := tview.NewInputField().SetLabel("search: ").SetText(v.session.model.Search)
+	field.SetChangedFunc(func(text string) {
+		v.session.model.Search = text
+		// From the top on every keystroke, so the answer depends on what was typed and
+		// not on how it was typed. Searching onwards from the cursor as the word grew
+		// would walk forward through the table on every letter.
+		v.moveToMatch(findTopMatch(v.rows, text, -1))
+	})
+	field.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEscape {
+			// Escape puts the cursor back, which is what makes trying a search free.
+			v.session.model.Selected = before
+			v.fillTable()
+		}
+		v.hidePrompt(field)
+		v.refresh()
+	})
+	v.showPrompt(field)
+}
+
+// searchNext walks to the match after the cursor.
+func (v *topView) searchNext() {
+	term := v.session.model.Search
+	if term == "" {
+		v.promptSearch()
+		return
+	}
+	row, _ := v.table.GetSelection()
+	if !v.moveToMatch(findTopMatch(v.rows, term, row-1)) {
+		v.status.SetText(fmt.Sprintf("[yellow]no process matches %q", term))
+	}
+}
+
+// moveToMatch puts the cursor on a found row.
+func (v *topView) moveToMatch(index int, found bool) bool {
+	if !found {
+		return false
+	}
+	v.session.model.Selected = v.rows[index].Process.PID
+	v.table.Select(index+1, 0)
+	return true
+}
+
+// showPrompt puts an input field where the status line is.
+//
+// In the footer rather than over the whole screen, which is how this started: SetRoot on the field
+// replaced the table with a single line, so a filter or a search was typed blind. The point of a
+// search is to see where the cursor went.
+func (v *topView) showPrompt(field *tview.InputField) {
+	v.prompting = true
+	v.root.RemoveItem(v.status)
+	v.root.AddItem(field, 1, 0, true)
+	v.application.SetFocus(field)
+}
+
+// hidePrompt puts the status line back.
+func (v *topView) hidePrompt(field *tview.InputField) {
+	v.prompting = false
+	v.root.RemoveItem(field)
+	v.root.AddItem(v.status, 1, 0, false)
+	v.application.SetFocus(v.table)
 }
 
 // selectedRow is the row under the cursor.
@@ -141,5 +224,5 @@ func (v *topView) selectedRow() (topRow, bool) {
 
 // topHelpText is the key list, shown in the status line rather than in a page of its own: a
 // monitor's help is six words long and a full-screen help panel hides the thing being explained.
-const topHelpText = "[white]q quit  F4 filter  F5/t tree  H threads  K kernel  I reverse  " +
-	"P/M/T/N sort  space tag  +/- fold  Z pause  p path  F9/k kill  r refresh"
+const topHelpText = "[white]q quit  / search  n next  F4 filter  F5/t tree  H threads  K kernel  " +
+	"I reverse  P/M/T/N sort  space tag  +/- fold  Z pause  p path  F9/k kill  r refresh"
