@@ -72,7 +72,6 @@ matrix.
   `curl --output ` did not, and the word after `adb --one-device serial` was
   counted as an operand, which cost adb its subcommand list.
 - `split` now stops when interrupted part-way through writing its parts.
-
 - **Process start times were reported in 1811.** A Windows FILETIME counts from
   1601 and the conversion treated it as counting from 1970. Every reader used the
   value relatively -- a cache key, an identity check against pid reuse, and "is
