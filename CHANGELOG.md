@@ -37,6 +37,23 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`out=$(cmd)` reported success whatever cmd did.** POSIX gives a command that
+  is nothing but assignments the exit status of its last command substitution,
+  which is what makes `out=$(cmd) || die` work. The status was discarded, so the
+  commonest error check in shell never fired, in any script. Checked against bash
+  across nine shapes, including `x=$(false) y=$(true)` where the last
+  substitution wins and a readonly target where the assignment failure wins.
+- **A pipe whose reader leaves early no longer complains.** `cmd | head -1`
+  printed `write /dev/stdout: The pipe is being closed` when the producer was a
+  separate process. POSIX delivers SIGPIPE and the writer dies quietly; Windows
+  has no SIGPIPE, so the write fails and the error has to be recognised for what
+  it is. The classifier already existed and one path had not been given it.
+  busybox-w32 is silent here; measured in the same nested shape.
+- **`printf` and `echo -e` had no hex escapes**, so `printf` of an ANSI sequence
+  emitted the characters back. Octal is corrected too, and the two applets differ
+  on purpose: XSI specifies the zero-prefixed form for echo and POSIX specifies
+  the bare form for printf, so busybox implements both and the same characters
+  mean different things in the two commands. Thirteen escape forms now match it.
 - **Long options were invisible to completion.** Every spec has carried
   `value-long` and `file-long` since it was written -- curl declares a hundred and
   eighty of the first and thirty of the second -- and the loader validated them,

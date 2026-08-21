@@ -435,6 +435,39 @@ Three of these diverge from GNU on purpose, and say so where it matters:
   ordinary session may not do for anything it does not own. A column of `?` per
   row would be worse than no column.
 
+### Text Encodings
+
+Measured 2026-08-21 against busybox-w32 on the same files, because "supports
+Unicode" is not a claim anyone can check.
+
+| encoding | read | `grep` matches | `wc -m` | verdict |
+| --- | --- | --- | --- | --- |
+| UTF-8 | yes | yes | characters | **full**, and better than the reference: busybox counts bytes for `-m` |
+| UTF-8 with BOM | yes | yes | characters, BOM counted as one | **full**; the BOM is a character, which is what GNU `wc` says too |
+| GBK, Big5, Shift-JIS, EUC-KR | byte-exact | bytes | bytes | **passthrough**: nothing is decoded, so nothing is corrupted. See internal/applets/text_encoding.go |
+| UTF-16 LE or BE, with or without BOM | byte-exact | **no** | bytes | **not supported**, and neither by busybox-w32: identical answers from both |
+
+The last row is the one to know about. A UTF-16 file survives `cat`, `head`,
+`tail`, `sort` and a redirect unchanged -- it is never corrupted -- but nothing
+*interprets* it, so `grep hello` over a UTF-16 file finds nothing and `wc -m`
+counts bytes. Windows produces such files constantly: Notepad's "Unicode",
+PowerShell 5.1's `>` redirection, and most registry exports.
+
+Supporting them means transcoding on input, and that is a design decision rather
+than a missing line of code, which is why it is recorded here rather than done in
+passing:
+
+- BOM sniffing can corrupt a binary that happens to begin with `FF FE`.
+- Transcoding breaks `cat`'s byte-exactness, which is load-bearing: `cat a > b`
+  must copy a file rather than reinterpret it.
+- A filter that writes back -- `sed -i` on a UTF-16 file -- has to decide whether
+  the output is UTF-16 or UTF-8, and either answer surprises somebody.
+
+busybox-w32, the primary reference, does none of it. So this is a feature beyond
+the reference rather than a divergence from it, and it belongs to a release that
+can weigh those three questions properly.
+
+
 ### Options a script is most likely to reach for and not find
 
 The list used to be `xargs -0`, `xargs -n`, `sort -k`, `grep -r` and `tail -c`.
