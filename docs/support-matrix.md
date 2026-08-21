@@ -367,9 +367,18 @@ by the shell rather than by a driver.
 one can block waiting for entropy; Windows has one source that does not block, so
 the distinction has nothing to represent.
 
-`ls /dev` does not list yet, and neither does busybox. A name under `/dev` that is
-not in the table -- `/dev/nosuchthing` -- does not exist, so the namespace has not
-been made to swallow everything.
+**`ls /dev` lists, and busybox answers `No such file or directory`.** This is the
+one deliberate divergence in the device model, and the reason is discoverability:
+without a listing the only way to learn which devices exist is to read this table,
+and a shell whose own features are documented rather than visible has hidden them.
+`echo /dev/*` expands for the same reason, and `/dev/<TAB>` completes.
+
+`/dev` is read-only -- mode `dr-xr-xr-x` -- because nothing can be created in it.
+`/dev/fd` is listed as a name and not enumerated: its contents change with every
+redirect, and a listing that depends on how it was invoked is one nobody can rely
+on. A name under `/dev` that is not a device -- `/dev/nosuchthing` -- does not
+exist, so the namespace has not been made to swallow everything, and nothing lives
+under a device: `/dev/null/x` is not a path.
 
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |

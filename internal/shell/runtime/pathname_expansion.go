@@ -99,15 +99,35 @@ func (r Runtime) readDirectory(base string) ([]os.DirEntry, error) {
 		return nil, err
 	}
 	if resolved.Device {
-		return nil, os.ErrInvalid
+		// `/dev/*` expands, which is the other half of making the devices
+		// discoverable: `echo /dev/*` is how somebody finds out what is there
+		// without knowing which applet to ask. A device path that is not the
+		// directory has nothing to list, and an unmatched pattern is left literal
+		// by the caller, which is what a shell does with one.
+		entries, ok := ReadDeviceDir(string(resolved.Canonical))
+		if !ok {
+			return nil, os.ErrInvalid
+		}
+		return entries, nil
 	}
 	return os.ReadDir(resolved.Native)
 }
 
 func (r Runtime) pathExists(candidate string) bool {
 	resolved, err := r.ResolveNemoshPath(candidate)
-	if err != nil || resolved.Device {
+	if err != nil {
 		return false
+	}
+	if resolved.Device {
+		// A device exists for globbing as it does for `test -e`. Answering no here
+		// made `echo /dev/null*` refuse to expand a pattern whose match was right
+		// there.
+		name := string(resolved.Canonical)
+		if _, ok := StatDeviceDir(name); ok {
+			return true
+		}
+		_, ok := StatDevice(name)
+		return ok
 	}
 	_, statErr := os.Lstat(resolved.Native)
 	return statErr == nil

@@ -26,7 +26,9 @@ type lineEditor struct {
 	workingDirectory string
 	// home is the native home directory, so `~/` can be completed. Cached beside the working
 	// directory and refreshed with it, because the completion functions hold no Runtime to ask.
-	home    string
+	home string
+	// devices are the names under /dev, for the same reason and refreshed at the same time.
+	devices []string
 	buffer  *lineBuffer
 	pending []byte
 	history []string
@@ -265,5 +267,14 @@ func (e *lineEditor) nextKey() (key, error) {
 			err = io.EOF
 		}
 		return key{}, err
+	}
+}
+
+// paths is the editor's snapshot of the shell's path view, as the completion wants it.
+func (e *lineEditor) paths() completionPaths {
+	return completionPaths{
+		workingDirectory: e.workingDirectory,
+		home:             e.home,
+		devices:          e.devices,
 	}
 }

@@ -68,13 +68,31 @@ func completeCommand(prefix string, candidates []string) []string {
 // dash-leading *path* is rewritten to `./name` so the command does not read it as
 // options, and doing that to an actual option turns `--color` into `./--color`.
 // One rule for making a name usable, applied to the one kind of word it is about.
-func completeOperand(workingDirectory, home, command, prefix string) (matches []string, areOptions bool) {
+func completeOperand(where completionPaths, command, prefix string) (matches []string, areOptions bool) {
 	if strings.HasPrefix(prefix, "-") {
 		if options := completeOption(command, prefix); len(options) > 0 {
 			return options, true
 		}
 	}
-	return completePathsFrom(workingDirectory, home, prefix, completesDirectoriesOnly(command)), false
+	return completePathsIn(where, prefix, completesDirectoriesOnly(command)), false
+}
+
+// completionPaths is what the completion needs to know about the shell's own view of paths.
+//
+// A struct rather than a growing parameter list. It began as one working directory, gained a home
+// directory when `~/` turned out not to complete, and gains the devices here; a fourth positional
+// string would be the point at which two of them get swapped by mistake.
+//
+// Every field is a *snapshot* taken from the runtime, refreshed each time the editor draws a
+// prompt, because all three can move while a session runs: `cd` moves the directory, HOME can be
+// exported to, and whether `/dev` exists at all is a path-model setting.
+type completionPaths struct {
+	workingDirectory string
+	home             string
+	// devices are the names under /dev, empty when the path model has it switched off. Taken
+	// from the runtime rather than from a list here, so completion cannot offer a device the
+	// shell would then refuse to open.
+	devices []string
 }
 
 // completeOption offers the options the command accepts, from the capability
@@ -115,6 +133,40 @@ func completePaths(workingDirectory, prefix string, directoriesOnly bool) []stri
 // The home directory is passed in rather than looked up, for the same reason the working directory
 // already is: the editor caches both from the runtime, and neither this function nor its callers
 // hold a Runtime to ask.
+func completePathsIn(where completionPaths, prefix string, directoriesOnly bool) []string {
+	if names, ok := completeDevicePath(where, prefix, directoriesOnly); ok {
+		return names
+	}
+	return completePathsFrom(where.workingDirectory, where.home, prefix, directoriesOnly)
+}
+
+// completeDevicePath offers the devices when the word being typed is under /dev.
+//
+// The devices have no host directory to read, so this answers from the names the runtime reported
+// rather than from os.ReadDir. Directories-only takes nothing: every device is a character device,
+// so `cd /dev/<TAB>` offering one would propose something `cd` cannot do.
+func completeDevicePath(where completionPaths, prefix string, directoriesOnly bool) ([]string, bool) {
+	if len(where.devices) == 0 || directoriesOnly {
+		return nil, strings.HasPrefix(prefix, "/dev/") && directoriesOnly
+	}
+	stem, found := strings.CutPrefix(prefix, "/dev/")
+	if !found {
+		return nil, false
+	}
+	if strings.Contains(stem, "/") {
+		// Something under a device, which cannot exist: a device is not a directory.
+		return nil, true
+	}
+	var matches []string
+	for _, name := range where.devices {
+		if completionMatches(name, stem) {
+			matches = append(matches, "/dev/"+name)
+		}
+	}
+	sort.Strings(matches)
+	return matches, true
+}
+
 func completePathsFrom(workingDirectory, home, prefix string, directoriesOnly bool) []string {
 	if prefix == "~" && home != "" {
 		// The one candidate is the home directory itself, which is what bash offers: `~`

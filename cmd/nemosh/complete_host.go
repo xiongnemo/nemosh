@@ -180,7 +180,7 @@ func (e *lineEditor) completeOperandWord(prefix, stem string) ([]string, bool) {
 	case targetUnknown:
 		return nil, false
 	}
-	return completeOperand(e.workingDirectory, e.home, commandInProgress(prefix), stem)
+	return completeOperand(e.paths(), commandInProgress(prefix), stem)
 }
 
 func matchingOptions(surface commandSurface, stem string) []string {

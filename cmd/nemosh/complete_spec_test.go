@@ -42,7 +42,7 @@ func TestCompleteOperand_offersOnlyDirectories_forCommandsThatTakeThem(t *testin
 		{command: "", want: []string{"alpha/", "alpine.txt", "beta/", "notes.txt"}},
 	} {
 		t.Run(test.command, func(t *testing.T) {
-			if got, _ := completeOperand(directory, "", test.command, ""); !slices.Equal(got, test.want) {
+			if got, _ := completeOperand(completionPaths{workingDirectory: directory}, test.command, ""); !slices.Equal(got, test.want) {
 				t.Fatalf("completeOperand(%q) = %v, want %v", test.command, got, test.want)
 			}
 		})
@@ -58,8 +58,8 @@ func TestCompleteOperand_sharedPrefixIgnoresImpossibleCandidates(t *testing.T) {
 	directory := seedCompletionTree(t)
 
 	// When
-	forCd, _ := completeOperand(directory, "", "cd", "al")
-	forLs, _ := completeOperand(directory, "", "ls", "al")
+	forCd, _ := completeOperand(completionPaths{workingDirectory: directory}, "cd", "al")
+	forLs, _ := completeOperand(completionPaths{workingDirectory: directory}, "ls", "al")
 
 	// Then
 	if !slices.Equal(forCd, []string{"alpha/"}) {

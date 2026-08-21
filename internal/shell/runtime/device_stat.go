@@ -29,6 +29,11 @@ func (r Runtime) StatProcessPath(path string) (fs.FileInfo, bool, error) {
 		return nil, false, nil
 	}
 	name := string(resolved.Canonical)
+	if info, ok := StatDeviceDir(name); ok {
+		// The directory itself, so `test -d /dev` is true and `ls /dev` knows to list
+		// rather than to print one name.
+		return info, true, nil
+	}
 	if info, ok := StatDevice(name); ok {
 		return info, true, nil
 	}
@@ -49,4 +54,20 @@ func (r Runtime) StatProcessPath(path string) (fs.FileInfo, bool, error) {
 	// host path either, so the caller's fall-through will refuse it -- which is the same answer
 	// a name that does not exist gets anywhere else.
 	return nil, false, nil
+}
+
+// ReadDirProcessPath lists a directory when the path names one this shell provides.
+//
+// The same three-answer shape as StatProcessPath: `false, nil` means "not mine, ask the
+// filesystem", so the caller does not have to know how to reach a disk.
+func (r Runtime) ReadDirProcessPath(path string) ([]fs.DirEntry, bool, error) {
+	resolved, err := r.ResolveNemoshPath(path)
+	if err != nil {
+		return nil, false, err
+	}
+	if !resolved.Device {
+		return nil, false, nil
+	}
+	entries, ok := ReadDeviceDir(string(resolved.Canonical))
+	return entries, ok, nil
 }

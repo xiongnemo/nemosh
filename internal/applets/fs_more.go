@@ -32,6 +32,15 @@ func newLsApplet() Applet {
 			if info, err := statDeviceOperand(view, target); err != nil {
 				return err
 			} else if info != nil {
+				if info.IsDir() {
+					// `/dev` itself, which is listed rather than printed as one
+					// name. See docs/design/device-filesystem.md for why this
+					// lists at all when the reference does not.
+					if err := listDeviceDirectory(stdout, view, target, options); err != nil {
+						return err
+					}
+					continue
+				}
 				if err := printLsEntry(stdout, lsEntry{name: target, info: info, path: target}, options); err != nil {
 					return err
 				}
@@ -160,6 +169,15 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 		}
 		items = append(items, lsEntry{name: name, info: info, path: filepath.Join(target, name)})
 	}
+	return writeLsEntries(stdout, items, options)
+}
+
+// writeLsEntries lays out a directory's worth of entries.
+//
+// Extracted so that a directory the shell provides and a directory on disk are laid out by the same
+// code. Two copies of a layout is two layouts eventually, and `ls /dev` looking unlike `ls .` would
+// suggest the entries were a different kind of thing than they are.
+func writeLsEntries(stdout io.Writer, items []lsEntry, options lsOptions) error {
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].name < items[j].name
 	})
@@ -252,4 +270,30 @@ func lsSize(size int64, options lsOptions) string {
 		return fmt.Sprintf("%.0f%s", value, unit)
 	}
 	return fmt.Sprintf("%.1f%s", value, unit)
+}
+
+// listDeviceDirectory prints the contents of a directory the shell provides rather than the disk.
+//
+// Separate from listPath because there is no native path to walk: the entries come from the view,
+// and each already knows what it is. The layout is the same one listPath uses, so `ls /dev` and
+// `ls .` look alike -- a listing that laid itself out differently would suggest the entries were a
+// different kind of thing than they are.
+func listDeviceDirectory(stdout io.Writer, view ProcessView, target string, options lsOptions) error {
+	entries, err := readDirProcessPath(view, target)
+	if err != nil {
+		return operandFailure(target, err)
+	}
+	items := make([]lsEntry, 0, len(entries))
+	for _, entry := range entries {
+		name := entry.Name()
+		if !options.all && strings.HasPrefix(name, ".") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return operandFailure(target, err)
+		}
+		items = append(items, lsEntry{name: name, info: info, path: target + "/" + name})
+	}
+	return writeLsEntries(stdout, items, options)
 }

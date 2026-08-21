@@ -288,3 +288,22 @@ func statDeviceOperand(view ProcessView, path string) (fs.FileInfo, error) {
 	}
 	return info, nil
 }
+
+// processReadDirView is what a view implements when it can list a directory of its own.
+type processReadDirView interface {
+	ReadDirProcessPath(string) ([]fs.DirEntry, bool, error)
+}
+
+// readDirProcessPath lists a shell-provided directory, and answers nil for anything else so the
+// caller can go on to the filesystem.
+func readDirProcessPath(view ProcessView, path string) ([]fs.DirEntry, error) {
+	reader, ok := view.(processReadDirView)
+	if !ok {
+		return nil, nil
+	}
+	entries, provided, err := reader.ReadDirProcessPath(path)
+	if err != nil || !provided {
+		return nil, err
+	}
+	return entries, nil
+}

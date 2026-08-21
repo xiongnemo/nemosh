@@ -46,6 +46,8 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// And the home directory, for the same reason and on the same round: HOME can be
 		// exported to while the session runs.
 		editor.home = completionHome(rt)
+		// And the devices, which the path model can switch off entirely.
+		editor.devices = completionDevices(rt)
 		// What this session can run changes while it runs: an rc file defines
 		// aliases, a script defines functions, and PATH can be exported to. All
 		// three decide the colour a command is drawn in and what a suggestion may

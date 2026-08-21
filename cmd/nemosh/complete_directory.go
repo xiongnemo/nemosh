@@ -69,3 +69,20 @@ func completionHome(rt runtime.Runtime) string {
 	}
 	return native
 }
+
+// completionDevices are the names under /dev, or none when the path model has it switched off.
+//
+// Asked of the runtime rather than listed here, so completion cannot offer a device the shell would
+// refuse to open: whether `/dev` exists at all is a path-model setting, and a completion carrying
+// its own list would ignore it.
+func completionDevices(rt runtime.Runtime) []string {
+	entries, provided, err := rt.ReadDirProcessPath("/dev")
+	if err != nil || !provided {
+		return nil
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	return names
+}
