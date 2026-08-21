@@ -46,8 +46,21 @@ func (s pathState) resolve(input string) (pathmodel.ResolvedPath, error) {
 		return pathmodel.ResolvedPath{}, err
 	}
 	text := string(canonical)
-	// `/dev` is *not* intercepted here, and that is the whole point of this being the
-	// non-Windows file.
+	// The descriptor aliases are the shell's business on every platform, and they are the only
+	// part of /dev this file claims.
+	//
+	// `/dev/stdin`, `/dev/stdout`, `/dev/stderr` and `/dev/fd/N` do not name hardware. They name
+	// *this shell's* descriptors, and the shell's fd table can hold something that is not an
+	// operating-system file at all -- a pipe it made, a buffer, the clipboard. The system's
+	// /dev/stdout is descriptor 1 of the process, which is not the same thing once a redirect
+	// has moved the shell's. bash documents both routes: it uses the platform's special files
+	// where they exist and emulates them where they do not, and emulating is what keeps the fd
+	// table authoritative.
+	if isDescriptorAliasPath(text) {
+		return pathmodel.ResolvedPath{Canonical: canonical, Device: true}, nil
+	}
+	// Everything else under `/dev` is *not* intercepted, and that is the point of this being
+	// the non-Windows file.
 	//
 	// These systems have a real /dev with hundreds of entries in it, so a synthetic one would
 	// shadow the genuine article: `ls /dev` would answer with the eight names this shell
@@ -100,7 +113,11 @@ func (s pathState) isPolicyPath(input string) bool {
 	if s.config.EnableTmp && (path == "/tmp" || strings.HasPrefix(path, "/tmp/")) {
 		return true
 	}
-	// No /dev here either, for the reason resolve gives: this platform has its own.
+	if isDescriptorAliasPath(filepath.ToSlash(input)) {
+		// A policy path, so it is canonicalised as one rather than being joined onto the
+		// working directory. The rest of /dev belongs to the platform; see resolve.
+		return true
+	}
 	prefix := s.config.MountPrefix
 	if prefix == "" {
 		prefix = "/mnt"

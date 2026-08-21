@@ -41,9 +41,17 @@ func TestResolveNemoshPath_returnsAbsoluteNativePathForSuccessfulNonDeviceResult
 			t.Fatalf("resolve %q: got %+v, want non-device absolute native path", input, resolved)
 		}
 	}
-	device, err := runtime.ResolveNemoshPath("/dev/null")
-	if err != nil || !device.Device || device.Native != "" {
-		t.Fatalf("resolve device: got %+v error=%v", device, err)
+	// `/dev/null` is the *system's* here, so it resolves to a native path like any other file.
+	// This platform has a real /dev and the shell does not shadow it.
+	nullDev, err := runtime.ResolveNemoshPath("/dev/null")
+	if err != nil || nullDev.Device || nullDev.Native == "" {
+		t.Fatalf("resolve /dev/null: got %+v error=%v, want the system's own", nullDev, err)
+	}
+	// A descriptor alias is the shell's on every platform, because it names this shell's
+	// descriptor rather than hardware. See device_alias_path.go.
+	alias, err := runtime.ResolveNemoshPath("/dev/stdout")
+	if err != nil || !alias.Device || alias.Native != "" {
+		t.Fatalf("resolve /dev/stdout: got %+v error=%v, want the shell's own", alias, err)
 	}
 }
 

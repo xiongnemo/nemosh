@@ -347,11 +347,20 @@ column that matters is the third one.
 
 ### Devices
 
-**Windows only.** The device model exists because Windows has no `/dev`; on Linux
-and macOS the system has a real one with hundreds of entries, and that is the right
-answer, so those builds reach it through the ordinary filesystem and this shell
-provides nothing under it. `/dev/clipboard` is therefore a Windows facility and
-simply a path that does not exist elsewhere.
+**Windows only, with one exception.** The device model exists because Windows has
+no `/dev`; on Linux and macOS the system has a real one with the machine's devices
+in it, and that is the right answer, so those builds reach it through the ordinary
+filesystem and this shell provides nothing under it. `/dev/clipboard` is therefore
+a Windows facility and simply a path that does not exist elsewhere.
+
+The exception is the **descriptor aliases** -- `/dev/stdin`, `/dev/stdout`,
+`/dev/stderr`, `/dev/fd/N` -- which the shell answers for on every platform,
+because they are not hardware. They name *this shell's* descriptors, which after a
+redirect are not the process's, and which its fd table may hold as something that
+is not an operating-system file at all: a pipe it made, a buffer, the clipboard.
+bash documents both routes for itself, using the platform's special files where
+they exist and emulating them where they do not; emulating is what keeps the fd
+table authoritative.
 
 That constraint is held by a pair of tests that fail on opposite platforms --
 `device_platform_windows_test.go` and `device_platform_other_test.go` -- rather

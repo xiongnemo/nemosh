@@ -16,6 +16,9 @@ patch number is the commits since that tag.
   this shell provides nothing under it -- a synthetic eight-entry directory would
   shadow the machine's own devices. Held by a pair of tests that fail on opposite
   platforms rather than by a comment.
+- The exception is `/dev/stdin`, `/dev/stdout`, `/dev/stderr` and `/dev/fd/N`,
+  which every platform gets: they name this shell's descriptors rather than
+  hardware, and after a redirect those are not the process's.
 - **`/dev` is a directory.** `ls /dev` lists the devices, `echo /dev/*` expands,
   `/dev/<TAB>` completes, and `find /dev`, `du -s /dev` and `grep -r /dev` all
   work. busybox-w32 answers `No such file or directory` for `ls /dev`; listing is

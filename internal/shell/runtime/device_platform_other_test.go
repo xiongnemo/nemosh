@@ -64,3 +64,19 @@ func TestDevicePlatform_clipboardIsNotOffered(t *testing.T) {
 		t.Fatalf("/dev/clipboard resolved to %q, want an ordinary path", resolved.Native)
 	}
 }
+
+// The descriptor aliases are the exception, and the reason is that they are not devices: they name
+// this shell's descriptors, which after a redirect are not the process's and which the fd table may
+// hold as something that is not an operating-system file at all.
+func TestDevicePlatform_descriptorAliasesAreStillTheShellsOwn(t *testing.T) {
+	rt := New(applets.DefaultRegistry, Streams{})
+	for _, path := range []string{"/dev/stdin", "/dev/stdout", "/dev/stderr", "/dev/fd/1"} {
+		resolved, err := rt.ResolveNemoshPath(path)
+		if err != nil {
+			t.Fatalf("resolving %s: %v", path, err)
+		}
+		if !resolved.Device {
+			t.Fatalf("%s resolved to the system's file; it names this shell's descriptor", path)
+		}
+	}
+}
