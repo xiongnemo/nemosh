@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Devices
 
+- **Windows only.** Linux and macOS have a real `/dev`, so those builds use it and
+  this shell provides nothing under it -- a synthetic eight-entry directory would
+  shadow the machine's own devices. Held by a pair of tests that fail on opposite
+  platforms rather than by a comment.
 - **`/dev` is a directory.** `ls /dev` lists the devices, `echo /dev/*` expands,
   `/dev/<TAB>` completes, and `find /dev`, `du -s /dev` and `grep -r /dev` all
   work. busybox-w32 answers `No such file or directory` for `ls /dev`; listing is

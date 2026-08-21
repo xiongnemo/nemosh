@@ -46,9 +46,18 @@ func (s pathState) resolve(input string) (pathmodel.ResolvedPath, error) {
 		return pathmodel.ResolvedPath{}, err
 	}
 	text := string(canonical)
-	if s.config.EnableDev && (text == "/dev" || strings.HasPrefix(text, "/dev/")) {
-		return pathmodel.ResolvedPath{Canonical: canonical, Device: true}, nil
-	}
+	// `/dev` is *not* intercepted here, and that is the whole point of this being the
+	// non-Windows file.
+	//
+	// These systems have a real /dev with hundreds of entries in it, so a synthetic one would
+	// shadow the genuine article: `ls /dev` would answer with the eight names this shell
+	// invents instead of the machine's devices, and `cat /dev/sda` would stop working. The
+	// device model exists because *Windows* has no /dev; where the platform provides one, the
+	// platform's is the right answer and the ordinary filesystem path reaches it.
+	//
+	// CI made the case better than the argument: with this interception in place, the
+	// completion tests listed the real /dev on ubuntu and macos -- /dev/loop0, /dev/nvme0n1,
+	// three hundred ttys -- through a code path meant to serve eight synthetic names.
 	native := filepath.Clean(input)
 	if !filepath.IsAbs(input) && !policyPath {
 		native = filepath.Join(s.nativeCwd, input)
@@ -91,9 +100,7 @@ func (s pathState) isPolicyPath(input string) bool {
 	if s.config.EnableTmp && (path == "/tmp" || strings.HasPrefix(path, "/tmp/")) {
 		return true
 	}
-	if s.config.EnableDev && (path == "/dev" || strings.HasPrefix(path, "/dev/")) {
-		return true
-	}
+	// No /dev here either, for the reason resolve gives: this platform has its own.
 	prefix := s.config.MountPrefix
 	if prefix == "" {
 		prefix = "/mnt"

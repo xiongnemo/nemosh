@@ -347,6 +347,19 @@ column that matters is the third one.
 
 ### Devices
 
+**Windows only.** The device model exists because Windows has no `/dev`; on Linux
+and macOS the system has a real one with hundreds of entries, and that is the right
+answer, so those builds reach it through the ordinary filesystem and this shell
+provides nothing under it. `/dev/clipboard` is therefore a Windows facility and
+simply a path that does not exist elsewhere.
+
+That constraint is held by a pair of tests that fail on opposite platforms --
+`device_platform_windows_test.go` and `device_platform_other_test.go` -- rather
+than by a comment. CI made the case for it: with the interception left in place,
+the completion tests listed the real `/dev` on ubuntu and macos, three hundred
+ttys and every loop device, through a code path written to serve eight synthetic
+names.
+
 `/dev` is a set of names rather than a directory. Each is openable, and since
 Stage 1 of `docs/design/device-filesystem.md` each is also *observable*: `test -e`
 and `ls -l` answer for it.
