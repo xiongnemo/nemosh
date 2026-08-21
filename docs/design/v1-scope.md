@@ -1,7 +1,55 @@
 # V1 Scope
 
-**V1.0 does not add shell semantics. It turns the finished v0 into something a
-person can install, trust, and report bugs against.**
+**V1.0 turns the finished v0 into something a person can install, trust, and
+report bugs against — and, as it turned out, ships two of the features this
+document had deferred.**
+
+That second clause is a correction, made 2026-08-21, and it is written here
+rather than buried because the sentence it replaces was load-bearing: *"V1.0 does
+not add shell semantics."* Two things landed on `master` after it was written.
+
+- **Line editing** — arrows, history, Ctrl-D/Ctrl-Z, the Meta bindings — which
+  this document places in v1.1 below, and which is already in the Unreleased
+  changelog.
+- **`top`**, an interactive process monitor, which the plan it was built from
+  called a v1.1 item *by this document's own rule*.
+
+`master` is the nightly channel: every push publishes a prerelease, and Scoop
+has been installing them on the development machine for weeks. So the features
+are already in a user's hands, and "v1.0 excludes them" was never a description
+of anything — it was a description of a branch nobody was going to cut.
+
+**The decision, 2026-08-21: v1.0 is what is on master.** The alternative was
+branching v1.0 from before those landed, which means shipping a first stable
+release that is worse than the nightly people are already running, or tagging a
+v1.0 whose binary contains features its own scope document excludes. Neither is
+honest. The rule below is amended rather than quietly broken.
+
+### The amended rule
+
+The rule was never really "no features". It was **no feature that can destabilise
+the shell's semantics before a release**, and that is what both of these respect:
+
+- Line editing is confined to how a line is *read*, not what a line *means*. A
+  pipe or a file still takes the previous line-at-a-time path, so every
+  non-interactive behaviour — the whole differential corpus — runs through
+  unchanged code.
+- `top` is one applet. It reads and it draws; the only thing it can do to the
+  system is `TerminateProcess`, which `kill` already did. It cannot change how a
+  script parses or what a redirection means.
+
+What the rule still forbids, and what stays deferred: new shell semantics —
+completion, PTY, job control, `~user`. Those are v1.1 and beyond, unchanged.
+
+### One premise this invalidated
+
+The argument below for an in-house line editor is that it "avoids adding **this
+project's first runtime dependency**". That is now moot: `top` draws with tview
+and tcell, so the binary already carries them, along with `gdamore/encoding`,
+`lucasb-eyer/go-colorful` and `rivo/uniseg`. The in-house editor shipped anyway
+and works, so nothing needs undoing — but anyone revisiting the editor decision
+should know that building on tcell is now nearly free, and that the reason not to
+has gone.
 
 ## Where This Came From, Including One Correction
 
@@ -199,10 +247,15 @@ correctness rather than features, and neither should cross a release boundary.
 
 Deferring these is what makes v1.0 shippable. Each has a home.
 
-**v1.1 — line editing, then applet option matrices and `~user`.**
+**v1.1 — applet option matrices and `~user`.**
 
-Line editing was moved here from v2 on 2026-08-08, and the reason is that three
-things a user asks for separately turn out to be one thing:
+Line editing was in this list and has shipped; it is in v1.0 by the correction at
+the top of this document. The reasoning that moved it here from v2 on 2026-08-08
+is kept below because it is still the argument for why it had to come before
+completion, and because the double-width acceptance requirement it names is still
+an acceptance requirement.
+
+The three things a user asks for separately turn out to be one thing:
 
 - arrow keys and history recall,
 - Ctrl-D and Ctrl-Z exiting the shell,
@@ -300,21 +353,38 @@ refusing rather than pretending.
 ## Critical Path
 
 ```text
-V1-A  release contract, licence, --version/--list
-  +   two folded correctness debts
+V1-A  release contract, licence, --version/--list          done
+  +   two folded correctness debts                         done
   ↓
-V1-B  CI hardening, govulncheck, fuzz, pinned actions, baselines
+V1-B  CI hardening, govulncheck, fuzz, pinned actions       done
   ↓
-V1-C  reproducible build, Scoop manifest, SBOM, signing
+V1-C  reproducible build, Scoop manifest, provenance        done
   ↓
-V1-RC clean-machine acceptance
+      line editing, and top                                done, unplanned
+  ↓
+V1-RC clean-machine acceptance                              the remaining gate
   ↓
 v1.0.0
   ↓
-v1.1  line editing (arrows, history, Ctrl-D/Ctrl-Z, Tab)
-      applet option matrices, ~user
+v1.1  applet option matrices, ~user
   ↓
 v1.2  completion M0–M2
   ↓
 v2    PTY, /dev/tty, history suggestions, bounded job control
 ```
+
+### What V1-RC has to cover that it did not when it was written
+
+The acceptance list below says "every command in the documentation, executed as
+written". Two additions now fall under that, and neither existed when it was
+drafted:
+
+- **`top`'s help and the process-view document.** The IO columns, the `-o` field
+  list, the width tiers, and the claim that `-H` shows threads. That last one was
+  false until 2026-08-21: the flag was accepted, documented, sampled the thread
+  records, and produced identical output. It is the shape of defect this gate
+  exists to catch, and it was caught by reading the scope document rather than by
+  any test.
+- **The line editor on a real console**, including the double-width backspace
+  over CJK that breaks busybox's own editor. That was already named as an
+  acceptance requirement; it is now an acceptance requirement for *this* release.
