@@ -87,7 +87,14 @@ func (r Runtime) cd(args []string) int {
 		return 1
 	}
 	if resolved.Device {
-		fmt.Fprintf(r.streams.Stderr, "cd: %s: not a directory\n", target)
+		// Refused, and not as "not a directory" -- `test -d /dev` is true, and a shell
+		// contradicting its own answer is worse than a refusal. The reason is that a working
+		// directory needs a native form: launching a child process sets one, and /dev has
+		// none. A cd that succeeded would leave every external command running in the
+		// directory the shell was in before while `pwd` said /dev, which is a silent
+		// disagreement rather than an error. /tmp is the contrast that makes this a rule
+		// rather than an inconsistency: `cd /tmp` works because /tmp has a native mapping.
+		fmt.Fprintf(r.streams.Stderr, "cd: %s: a device directory cannot be a working directory\n", target)
 		return 1
 	}
 	info, err := os.Stat(resolved.Native)

@@ -20,7 +20,20 @@ func newRealpathApplet() Applet {
 		for _, arg := range args {
 			resolved, err := ResolveProcessPath(view, arg)
 			if err == nil && resolved.Device {
-				err = fmt.Errorf("%s is not a host path", resolved.Canonical)
+				// A device is a real path with a canonical spelling, which is exactly
+				// what realpath is for: `/dev/../dev/zero` answers `/dev/zero`. There
+				// is no host path to hand to realpath() below, and none is needed --
+				// the canonical form *is* the answer.
+				if info, statErr := statDeviceOperand(view, arg); statErr == nil && info != nil {
+					if _, writeErr := fmt.Fprintln(stdout, resolved.Canonical); writeErr != nil {
+						return writeErr
+					}
+					continue
+				}
+				// Under /dev and not a device this shell has. No such path, which is
+				// what the message should say rather than blaming the host for a name
+				// the host was never asked about.
+				err = fmt.Errorf("No such file or directory")
 			}
 			native := resolved.Native
 			if err == nil {
