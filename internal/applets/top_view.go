@@ -39,7 +39,9 @@ func runTopInteractive(ctx context.Context, options topOptions, stdin io.Reader,
 	input, release, ok := leaseTopStdin(ctx, stdin)
 	if !ok {
 		// stdout is a terminal but stdin is not -- `top < /dev/null` on a terminal. There
-		// is no way to take a key press, so the plain form is the honest answer.
+		// is no way to take a key press, so the plain form is the honest answer, and the
+		// reason is worth a line: this is the case that looks most like a bug.
+		fmt.Fprintln(stderr, "top: standard input is not a terminal, so no key can be read; printing one sample")
 		return runTopBatch(ctx, options, stdout)
 	}
 	// The lease is taken for its side effect as much as for the file: the shell's own reader

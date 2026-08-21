@@ -140,6 +140,24 @@ table rather than in the callers. The lease matters for a second reason: the
 shell's own reader thread may be parked on a console read, and two readers on one
 console input handle means keys go to whichever asked first.
 
+## Where The Drawn Form Will Not Appear
+
+`top` draws when its output is a Windows console and prints one plain sample
+otherwise, saying which it chose. One case surprises people and is worth naming:
+
+**Git Bash / mintty gets the plain form.** mintty is a Cygwin pseudo-terminal,
+which is implemented as a *named pipe* rather than as a console, and Go's
+`term.IsTerminal` asks `GetConsoleMode`, which fails on a pipe. So from a mintty
+window the answer is honestly "not a terminal" even though a person is plainly
+looking at one. Windows Terminal, conhost, `cmd.exe` and PowerShell all provide a
+real console and get the drawn form.
+
+Distinguishing a mintty pty from an ordinary pipe is possible -- the trick is to
+ask the pipe its name through `GetFileInformationByHandleEx(FileNameInfo)` and look
+for the `msys-…-pty` pattern that Cygwin gives its ptys -- and it is not done here.
+Drawing escape sequences into something that turns out to be `| head` is a worse
+failure than printing text into something that turns out to be a terminal.
+
 ## What Is Not Done
 
 - `F7`/`F8` priority change is recognised and reports that it is not wired.

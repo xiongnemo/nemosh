@@ -54,7 +54,15 @@ func newTopApplet() Applet {
 		// The destination decides the form, exactly as it does for `ls`: a terminal gets
 		// the interactive table, anything else gets plain text. -b forces the plain form
 		// even on a terminal, which is what a script running under a terminal needs.
-		if options.batch || !stdoutIsTerminal(stdout) {
+		if options.batch {
+			return runTopBatch(ctx, options, stdout)
+		}
+		if !stdoutIsTerminal(stdout) {
+			// Said out loud, because the silence was the real defect: someone who
+			// typed `top` expecting a drawn table and got four lines of text has no
+			// way to tell a deliberate choice from a broken one. This is the one
+			// sentence that distinguishes them.
+			fmt.Fprintln(stderr, "top: output is not a terminal, printing one sample; -b to silence this")
 			return runTopBatch(ctx, options, stdout)
 		}
 		return runTopInteractive(ctx, options, stdin, stdout, stderr)
