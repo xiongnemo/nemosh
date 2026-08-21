@@ -206,3 +206,74 @@ func TestBetween_withNoEarlierSnapshotThereAreNoRates(t *testing.T) {
 			len(rates.Processes), len(rates.CPUs), rates.TotalBusy)
 	}
 }
+
+// Per-thread CPU, which `top -H` draws a row from.
+func TestBetween_perThreadCPU(t *testing.T) {
+	start := time.Date(2026, time.August, 21, 12, 0, 0, 0, time.UTC)
+	born := start.Add(-time.Hour)
+	before := proc.Snapshot{
+		Taken: start,
+		CPUs:  make([]proc.CPUTime, 4),
+		Processes: []proc.Process{{
+			PID: 100, Created: born,
+			ThreadDetail: []proc.Thread{
+				{ID: 1001, Created: born},
+				{ID: 1002, Created: born},
+			},
+		}},
+	}
+	after := proc.Snapshot{
+		Taken: start.Add(time.Second),
+		CPUs:  make([]proc.CPUTime, 4),
+		Processes: []proc.Process{{
+			PID: 100, Created: born,
+			// One thread busy for the whole second, one for a quarter of it. On four
+			// processors that is 25% and 6.25% of the machine.
+			Kernel: 1250 * time.Millisecond,
+			ThreadDetail: []proc.Thread{
+				{ID: 1001, Created: born, Kernel: time.Second},
+				{ID: 1002, Created: born, Kernel: 250 * time.Millisecond},
+			},
+		}},
+	}
+
+	// When
+	rates := proc.Between(before, after)
+
+	// Then
+	if got := rates.Threads[1001].CPU; got < 0.24 || got > 0.26 {
+		t.Fatalf("thread 1001 = %v, want a quarter of a four-processor machine", got)
+	}
+	if got := rates.Threads[1002].CPU; got < 0.06 || got > 0.07 {
+		t.Fatalf("thread 1002 = %v, want a sixteenth", got)
+	}
+	// And the threads account for the process, which is the property that makes the rows worth
+	// reading: a process's CPU should be its threads' CPU.
+	total := rates.Threads[1001].CPU + rates.Threads[1002].CPU
+	if process := rates.Processes[100].CPU; total < process-0.01 || total > process+0.01 {
+		t.Fatalf("the threads add to %v and the process reports %v", total, process)
+	}
+}
+
+// A reused thread id gets no rate, for the reason a reused process id does not.
+func TestBetween_ignoresAReusedThreadID(t *testing.T) {
+	start := time.Date(2026, time.August, 21, 12, 0, 0, 0, time.UTC)
+	born := start.Add(-time.Hour)
+	process := func(created time.Time, used time.Duration) proc.Process {
+		return proc.Process{PID: 100, Created: born,
+			ThreadDetail: []proc.Thread{{ID: 1001, Created: created, Kernel: used}}}
+	}
+	before := proc.Snapshot{Taken: start, CPUs: make([]proc.CPUTime, 1),
+		Processes: []proc.Process{process(born, 10*time.Hour)}}
+	// The same id, a different thread: it started later and has no CPU of its own yet.
+	after := proc.Snapshot{Taken: start.Add(time.Second), CPUs: make([]proc.CPUTime, 1),
+		Processes: []proc.Process{process(start, 0)}}
+
+	// When
+	rates := proc.Between(before, after)
+
+	// Then -- no rate at all, rather than the ten hours of a thread that has gone
+	if _, ok := rates.Threads[1001]; ok {
+		t.Fatalf("a reused thread id was given a rate of %v", rates.Threads[1001].CPU)
+	}
+}

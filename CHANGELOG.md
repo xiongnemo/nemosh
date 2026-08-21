@@ -10,6 +10,42 @@ patch number is the commits since that tag.
 
 ## Unreleased
 
+### Process monitor
+
+- **`top`.** An htop-shaped process monitor that needs no administrator rights,
+  which is the gap on this platform: `ntop` shows a list, `btop++` refuses to run
+  unelevated, and Task Manager is not a terminal program. One system call --
+  `NtQuerySystemInformation(SystemProcessInformation)` -- answers with CPU,
+  memory, threads, handles, parentage and IO for every process on the machine
+  without opening one of them, and opening handles is what costs privilege.
+- A drawn table with per-processor meters, sorting by any column, a tree by
+  parentage, `/` to search, F4 to filter, tagging, and F9 to kill. `-b` prints
+  one plain sample instead, which is what a pipe, a script and a test get.
+- `-H` shows a row per thread, with each thread's own id, priority, state and
+  CPU. The columns that describe a process -- memory, handles, IO -- are blank on
+  a thread row rather than repeated.
+- The IO columns are named IO and not disk. Windows counts every byte a process
+  moves through any handle in one set of counters, so a process reading a pipe
+  would read as one thrashing the drive; per-process disk figures need ETW and an
+  administrator. See `docs/design/process-view.md`.
+- No load average, and no CPU temperature: Windows has neither, and the nearest
+  analogues measure something else.
+- `ps` moves onto the same data source and grows `PID PPID THR RSS TIME COMMAND`.
+
+### Fixed
+
+- **Process start times were reported in 1811.** A Windows FILETIME counts from
+  1601 and the conversion treated it as counting from 1970. Every reader used the
+  value relatively -- a cache key, an identity check against pid reuse, and "is
+  this parent older than its child" -- so all three were correct with a constant
+  369-year offset and no test could see it.
+- The earliest kernel threads report a boot-relative tick count rather than a
+  date, because they are created before the clock is set. They are reported as
+  unknown rather than as the year 2185.
+- An input field in `top` read its own keystrokes as commands -- the `q` in
+  `sqlservr` quit the shell -- because the key handler was registered on the
+  application rather than on the table.
+
 ### Interactive shell
 
 - **Line editing.** A real terminal now gets arrows, history recall, Home/End,

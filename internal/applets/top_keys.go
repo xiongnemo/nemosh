@@ -188,7 +188,7 @@ func (v *topView) moveToMatch(index int, found bool) bool {
 	if !found {
 		return false
 	}
-	v.session.model.Selected = v.rows[index].Process.PID
+	v.session.model.Selected = v.rows[index].id()
 	v.table.Select(index+1, 0)
 	return true
 }

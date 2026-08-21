@@ -27,6 +27,12 @@ type topRow struct {
 	FullPath bool
 	// Tagged marks a row `space` has picked out.
 	Tagged bool
+	// Thread is set when this row is one thread beneath its process, which is what -H asks
+	// for. Process stays the owning process, so every column that describes the process --
+	// its name, its user -- keeps working without knowing about threads.
+	Thread *proc.Thread
+	// ThreadRate is that thread's own CPU.
+	ThreadRate proc.ThreadRate
 	// Depth is the indent in tree mode, and zero in every other.
 	Depth int
 	// MemoryShare is the working set over the machine's physical memory.
@@ -48,6 +54,10 @@ type topColumn struct {
 	Width  int
 	// Right says the cell is right-aligned, which every number is and no name is.
 	Right bool
+	// ProcessOnly says the figure exists per process and not per thread, so a thread row
+	// leaves it blank. Repeating the process's memory on each of its thirty threads would
+	// read as thirty processes using that much.
+	ProcessOnly bool
 	// Ascending says a first press sorts this column upwards.
 	//
 	// The rule is the difference between a magnitude and a name. Sorting by CPU or memory is
@@ -69,8 +79,10 @@ type topColumn struct {
 var topColumns = []topColumn{
 	{
 		Key: "pid", Header: "PID", Width: 7, Right: true, Ascending: true,
-		Cell: func(r topRow) string { return strconv.Itoa(r.Process.PID) },
-		Less: func(a, b topRow) bool { return a.Process.PID < b.Process.PID },
+		// The thread id on a thread row, which is what htop puts here too. Windows draws
+		// process and thread ids from one pool, so the two can never collide.
+		Cell: func(r topRow) string { return strconv.Itoa(r.id()) },
+		Less: func(a, b topRow) bool { return a.id() < b.id() },
 	},
 	{
 		Key: "ppid", Header: "PPID", Width: 7, Right: true, Ascending: true,
@@ -86,12 +98,15 @@ var topColumns = []topColumn{
 	},
 	{
 		Key: "pri", Header: "PRI", Width: 5,
-		Cell: func(r topRow) string { return topPriority(r.Process.Priority) },
-		Less: func(a, b topRow) bool { return a.Process.Priority < b.Process.Priority },
+		Cell: func(r topRow) string { return topPriority(r.priority()) },
+		Less: func(a, b topRow) bool { return a.priority() < b.priority() },
 	},
 	{
 		Key: "state", Header: "S", Width: 1, Ascending: true,
 		Cell: func(r topRow) string {
+			if r.Thread != nil {
+				return string(rune(r.state()))
+			}
 			if r.Process.State == 0 {
 				// Never from a real sample -- stateFromThreads answers StateUnknown
 				// when it cannot tell -- but a zero here writes a NUL byte to the
@@ -104,36 +119,36 @@ var topColumns = []topColumn{
 	},
 	{
 		Key: "cpu", Header: "CPU%", Width: 5, Right: true,
-		Cell: func(r topRow) string { return topPercent(r.Rate.CPU) },
-		Less: func(a, b topRow) bool { return a.Rate.CPU < b.Rate.CPU },
+		Cell: func(r topRow) string { return topPercent(r.cpu()) },
+		Less: func(a, b topRow) bool { return a.cpu() < b.cpu() },
 	},
 	{
-		Key: "mem", Header: "MEM%", Width: 5, Right: true,
+		Key: "mem", Header: "MEM%", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topPercent(r.MemoryShare) },
 		Less: func(a, b topRow) bool { return a.MemoryShare < b.MemoryShare },
 	},
 	{
-		Key: "rss", Header: "RSS", Width: 5, Right: true,
+		Key: "rss", Header: "RSS", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.WorkingSet) },
 		Less: func(a, b topRow) bool { return a.Process.WorkingSet < b.Process.WorkingSet },
 	},
 	{
-		Key: "private", Header: "PRIV", Width: 5, Right: true,
+		Key: "private", Header: "PRIV", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.PrivateWorkingSet) },
 		Less: func(a, b topRow) bool { return a.Process.PrivateWorkingSet < b.Process.PrivateWorkingSet },
 	},
 	{
-		Key: "commit", Header: "COMMIT", Width: 6, Right: true,
+		Key: "commit", Header: "COMMIT", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.Commit) },
 		Less: func(a, b topRow) bool { return a.Process.Commit < b.Process.Commit },
 	},
 	{
-		Key: "thr", Header: "THR", Width: 5, Right: true,
+		Key: "thr", Header: "THR", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.Threads) },
 		Less: func(a, b topRow) bool { return a.Process.Threads < b.Process.Threads },
 	},
 	{
-		Key: "handles", Header: "HND", Width: 6, Right: true,
+		Key: "handles", Header: "HND", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.Handles) },
 		Less: func(a, b topRow) bool { return a.Process.Handles < b.Process.Handles },
 	},
@@ -147,12 +162,12 @@ var topColumns = []topColumn{
 	// disk-only figures come from ETW's Kernel-Disk provider, which needs a privilege this
 	// deliberately does not ask for. See docs/design/process-view.md.
 	{
-		Key: "read", Header: "IORD/s", Width: 6, Right: true,
+		Key: "read", Header: "IORD/s", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.ReadBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.ReadBytesPerSecond < b.Rate.ReadBytesPerSecond },
 	},
 	{
-		Key: "write", Header: "IOWR/s", Width: 6, Right: true,
+		Key: "write", Header: "IOWR/s", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.WriteBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.WriteBytesPerSecond < b.Rate.WriteBytesPerSecond },
 	},
@@ -160,33 +175,31 @@ var topColumns = []topColumn{
 		// Other is ioctls and device control -- everything that is neither a read nor a
 		// write. Small for most processes and the whole story for a few, which is why the
 		// table reports it separately rather than folding it into the other two.
-		Key: "other", Header: "IOOT/s", Width: 6, Right: true,
+		Key: "other", Header: "IOOT/s", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.OtherBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.OtherBytesPerSecond < b.Rate.OtherBytesPerSecond },
 	},
 	{
 		// Operations rather than bytes: the count that explains a machine which is busy
 		// without moving much data.
-		Key: "iops", Header: "IOPS", Width: 6, Right: true,
+		Key: "iops", Header: "IOPS", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topCount(topRowIOPS(r)) },
 		Less: func(a, b topRow) bool { return topRowIOPS(a) < topRowIOPS(b) },
 	},
 	{
-		Key: "readops", Header: "RDOP/s", Width: 6, Right: true,
+		Key: "readops", Header: "RDOP/s", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topCount(r.Rate.ReadOpsPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.ReadOpsPerSecond < b.Rate.ReadOpsPerSecond },
 	},
 	{
-		Key: "writeops", Header: "WROP/s", Width: 6, Right: true,
+		Key: "writeops", Header: "WROP/s", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topCount(r.Rate.WriteOpsPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.WriteOpsPerSecond < b.Rate.WriteOpsPerSecond },
 	},
 	{
 		Key: "time", Header: "TIME+", Width: 10, Right: true,
-		Cell: func(r topRow) string { return topCPUTime(r.Process.Kernel + r.Process.User) },
-		Less: func(a, b topRow) bool {
-			return a.Process.Kernel+a.Process.User < b.Process.Kernel+b.Process.User
-		},
+		Cell: func(r topRow) string { return topCPUTime(r.cpuTime()) },
+		Less: func(a, b topRow) bool { return a.cpuTime() < b.cpuTime() },
 	},
 	{
 		Key: "command", Header: "COMMAND", Width: 0, Ascending: true,

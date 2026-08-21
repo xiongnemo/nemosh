@@ -45,7 +45,7 @@ func processFromRecord(record *windows.SYSTEM_PROCESS_INFORMATION, tail []byte, 
 		PID:               int(record.UniqueProcessID),
 		PPID:              int(record.InheritedFromUniqueProcessID),
 		Name:              processName(record),
-		Created:           time.Unix(0, record.CreateTime*100).UTC(),
+		Created:           fromFiletime(record.CreateTime),
 		Kernel:            time.Duration(record.KernelTime) * hundredNanoseconds,
 		User:              time.Duration(record.UserTime) * hundredNanoseconds,
 		Cycles:            record.CycleTime,
@@ -90,6 +90,41 @@ func processName(record *windows.SYSTEM_PROCESS_INFORMATION) string {
 
 // threadsFromRecord reads the thread array that follows the process record.
 //
+// fromFiletime converts a Windows FILETIME to a time.
+//
+// A FILETIME counts hundred-nanosecond ticks from **1601-01-01 UTC**, not from the Unix epoch, and
+// this was written as time.Unix(0, ticks*100) -- which put every process's start in 1811. Nothing
+// showed it: the three things that read Created all use it relatively, as a cache key, as an
+// equality test for pid reuse, and as "is this parent older than its child". All three work
+// perfectly with a consistent 369-year offset, so every test passed and every answer was right.
+// It would have become wrong the first time a column printed it or compared it against time.Now().
+//
+// Ticks below the epoch offset are not times at all, and this is not a defensive maybe: **four
+// threads on this machine report one**. The System process's first kernel threads -- tids 12, 16, 20
+// and 24 -- carry a raw CreateTime of about 1,982,727, a fifth of a second, because they are created
+// during boot before the clock is set, so the kernel records a tick count rather than a date. The
+// first version of this subtracted the epoch from that, overflowed int64, and reported the year
+// 2185. They are reported as unknown instead, which tree.go and the identity checks already handle.
+//
+// The seconds and nanoseconds are split rather than multiplied out for the same reason: ticks*100
+// overflows an int64 two centuries earlier than time.Time needs to.
+func fromFiletime(ticks int64) time.Time {
+	if ticks < filetimeUnixEpoch {
+		return time.Time{}
+	}
+	ticks -= filetimeUnixEpoch
+	return time.Unix(ticks/ticksPerSecond, (ticks%ticksPerSecond)*100).UTC()
+}
+
+const (
+	// filetimeUnixEpoch is the hundred-nanosecond ticks between 1601-01-01 and 1970-01-01:
+	// 11,644,473,600 seconds.
+	filetimeUnixEpoch = 116444736000000000
+	ticksPerSecond    = 10000000
+)
+
+// threadsFromRecord reads the thread array that follows the process record.
+//
 // This is where Windows is cheaper than Linux rather than dearer: htop opens and reads a
 // directory per process to count threads, and here they arrive in the same buffer as the
 // process, already filled in.
@@ -113,6 +148,7 @@ func threadsFromRecord(record *windows.SYSTEM_PROCESS_INFORMATION, tail []byte) 
 		raw := (*systemThreadInformation)(unsafe.Pointer(&tail[header+index*size]))
 		threads = append(threads, Thread{
 			ID:         int(raw.ClientID.UniqueThread),
+			Created:    fromFiletime(raw.CreateTime),
 			Kernel:     time.Duration(raw.KernelTime) * hundredNanoseconds,
 			User:       time.Duration(raw.UserTime) * hundredNanoseconds,
 			Priority:   int(raw.Priority),

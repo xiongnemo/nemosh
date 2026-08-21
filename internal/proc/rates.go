@@ -23,6 +23,9 @@ type Rates struct {
 	// that has just started has no delta yet, which is honest: htop shows 0.0 for its first
 	// sample too.
 	Processes map[int]ProcessRate
+	// Threads is keyed by thread id, holding only threads present in both snapshots. Populated
+	// only when the snapshots were taken with thread detail, which is what `top -H` asks for.
+	Threads map[int]ThreadRate
 	// CPUs is per logical processor, in the same order as the snapshot.
 	CPUs []CPURate
 	// TotalBusy is the machine as a whole, which is not the mean of CPUs when a processor
@@ -51,6 +54,16 @@ type ProcessRate struct {
 }
 
 // CPURate is one processor's occupancy, each field a fraction of that processor.
+// ThreadRate is what can be measured for one thread across two samples.
+//
+// CPU and nothing else, because that is all the table carries per thread: there are no per-thread
+// IO counters, no per-thread working set, and no per-thread handle count. A thread row therefore
+// leaves those columns blank rather than repeating its process's figures, which would read as each
+// thread owning the whole process's memory.
+type ThreadRate struct {
+	CPU float64
+}
+
 type CPURate struct {
 	Busy      float64
 	User      float64
@@ -71,7 +84,7 @@ type CPURate struct {
 // happening" from "not measured yet". Now Interval means what its comment says: zero, and no rates,
 // when there was nothing to compare against.
 func Between(earlier, later Snapshot) Rates {
-	rates := Rates{Processes: map[int]ProcessRate{}}
+	rates := Rates{Processes: map[int]ProcessRate{}, Threads: map[int]ThreadRate{}}
 	if earlier.Taken.IsZero() {
 		return rates
 	}
@@ -97,6 +110,7 @@ func Between(earlier, later Snapshot) Rates {
 		if !ok || !before.Created.Equal(process.Created) {
 			continue
 		}
+		threadRates(rates.Threads, before.ThreadDetail, process.ThreadDetail, interval, processors)
 		rates.Processes[process.PID] = ProcessRate{
 			CPU:                 cpuFraction(before, process, interval, processors),
 			ReadBytesPerSecond:  perSecond(before.ReadBytes, process.ReadBytes, seconds),
@@ -113,6 +127,35 @@ func Between(earlier, later Snapshot) Rates {
 }
 
 // cpuFraction is a process's share of the whole machine.
+// threadRates fills in the per-thread CPU for one process's threads.
+//
+// Identity is the thread id *and* its start time, for the reason the process loop gives: Windows
+// reuses thread ids, and subtracting one thread's CPU time from another's produces a wild
+// percentage rather than an obviously wrong one.
+func threadRates(into map[int]ThreadRate, before, after []Thread, interval time.Duration, processors int) {
+	if len(after) == 0 {
+		return
+	}
+	previous := make(map[int]Thread, len(before))
+	for _, thread := range before {
+		previous[thread.ID] = thread
+	}
+	for _, thread := range after {
+		was, ok := previous[thread.ID]
+		if !ok || !was.Created.Equal(thread.Created) {
+			continue
+		}
+		used := (thread.Kernel + thread.User) - (was.Kernel + was.User)
+		if used <= 0 {
+			into[thread.ID] = ThreadRate{}
+			continue
+		}
+		into[thread.ID] = ThreadRate{
+			CPU: clampFraction(float64(used) / float64(interval) / float64(processors)),
+		}
+	}
+}
+
 func cpuFraction(before, after Process, interval time.Duration, processors int) float64 {
 	used := (after.Kernel + after.User) - (before.Kernel + before.User)
 	if used <= 0 {

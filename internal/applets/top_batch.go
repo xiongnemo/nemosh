@@ -137,7 +137,7 @@ func topHeaderLine(columns []topColumn) string {
 func topRowLine(columns []topColumn, row topRow) string {
 	cells := make([]string, 0, len(columns))
 	for _, column := range columns {
-		cells = append(cells, padTopCell(column.Cell(row), column.Width, column.Right))
+		cells = append(cells, padTopCell(topCellText(column, row), column.Width, column.Right))
 	}
 	return strings.Join(cells, " ")
 }

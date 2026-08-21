@@ -269,7 +269,7 @@ func (v *topView) fillTable() {
 	selectedRow := 0
 	for rowIndex, row := range v.rows {
 		for columnIndex, column := range v.session.model.Columns {
-			text := padTopCell(column.Cell(row), column.Width, column.Right)
+			text := padTopCell(topCellText(column, row), column.Width, column.Right)
 			cell := topStyleCell(tview.NewTableCell(text), topCellStyle(column.Key, row))
 			if column.Width == 0 {
 				cell.SetExpansion(1)
@@ -286,7 +286,7 @@ func (v *topView) fillTable() {
 			}
 			v.table.SetCell(rowIndex+1, columnIndex, cell)
 		}
-		if row.Process.PID == selected {
+		if row.id() == selected {
 			selectedRow = rowIndex + 1
 		}
 	}
@@ -309,7 +309,7 @@ func (v *topView) selectionChanged(row, _ int) {
 	if row < 1 || row-1 >= len(v.rows) {
 		return
 	}
-	v.session.model.Selected = v.rows[row-1].Process.PID
+	v.session.model.Selected = v.rows[row-1].id()
 }
 
 // topStatusText is the key hint line, which is what makes a monitor discoverable at all.

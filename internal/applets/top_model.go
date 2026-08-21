@@ -98,10 +98,10 @@ func (m topModel) rows(snapshot proc.Snapshot, rates proc.Rates, details *proc.D
 		rows = append(rows, row)
 	}
 	if m.Tree {
-		return m.treeRows(rows)
+		return m.withThreads(m.treeRows(rows), rates)
 	}
 	m.sortRows(rows)
-	return rows
+	return m.withThreads(rows, rates)
 }
 
 // matches is the filter: a substring of the name or of the command line, case-insensitively.

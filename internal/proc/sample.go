@@ -87,7 +87,11 @@ type Process struct {
 
 // Thread is one thread, from the array the system table carries inline after each process.
 type Thread struct {
-	ID       int
+	ID int
+	// Created is the thread's start time, and it is here for the reason a process has one:
+	// Windows reuses thread ids as readily as process ids, so a rate taken across two samples
+	// has to check that the id still means the same thread.
+	Created  time.Time
 	Kernel   time.Duration
 	User     time.Duration
 	Priority int

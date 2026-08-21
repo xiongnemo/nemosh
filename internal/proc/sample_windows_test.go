@@ -154,3 +154,43 @@ func TestBetween_onTheRunningMachine(t *testing.T) {
 		}
 	}
 }
+
+// A process's start time is a real time, which is the check that was missing.
+//
+// It read 1811-01-17 for every process, because a Windows FILETIME counts from 1601 and the code
+// treated it as counting from 1970. Nothing caught it: the three callers use Created relatively --
+// a cache key, an equality test for pid reuse, and "is this parent older than its child" -- and all
+// three are perfectly correct with a consistent 369-year offset. A range check is what was needed,
+// and it is not a machine fact: no process on a running Windows machine started before Windows
+// existed or will start in the future.
+func TestSample_startTimesAreRealTimes(t *testing.T) {
+	snapshot, err := proc.NewSampler().Sample(true)
+	if err != nil {
+		t.Fatalf("Sample: %v", err)
+	}
+	earliest := time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)
+	latest := snapshot.Taken.Add(time.Minute)
+	checked, threads := 0, 0
+	for _, process := range snapshot.Processes {
+		if process.Created.IsZero() {
+			continue
+		}
+		checked++
+		if process.Created.Before(earliest) || process.Created.After(latest) {
+			t.Fatalf("%s (pid %d) started %v, which is not a time a process can start",
+				process.Name, process.PID, process.Created)
+		}
+		for _, thread := range process.ThreadDetail {
+			if thread.Created.IsZero() {
+				continue
+			}
+			threads++
+			if thread.Created.Before(earliest) || thread.Created.After(latest) {
+				t.Fatalf("thread %d of %s started %v", thread.ID, process.Name, thread.Created)
+			}
+		}
+	}
+	if checked == 0 || threads == 0 {
+		t.Fatalf("checked %d processes and %d threads; the fields are not being read", checked, threads)
+	}
+}
