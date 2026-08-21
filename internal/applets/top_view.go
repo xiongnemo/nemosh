@@ -228,10 +228,13 @@ func (v *topView) fillTable() {
 	defer func() { v.filling = false }()
 	v.table.Clear()
 	for index, column := range v.session.model.Columns {
-		cell := topStyleCell(tview.NewTableCell(column.Header),
+		// The header is what pins the column's width, and it does the whole job on its own:
+		// tview takes the widest cell in the column, the header is always one of them, and it
+		// is padded to the declared width. So the floor is the width whatever is on screen.
+		cell := topStyleCell(tview.NewTableCell(padTopCell(column.Header, column.Width, column.Right)),
 			topHeaderStyle(column.Key == v.session.model.Sort)).SetSelectable(false)
-		if column.Right {
-			cell.SetAlign(tview.AlignRight)
+		if column.Width > 0 {
+			cell.SetMaxWidth(column.Width)
 		}
 		// Width zero is the column table's way of saying "the rest of the line", which is
 		// the command and nothing else. Expanding it is what makes the table fill the
@@ -245,12 +248,20 @@ func (v *topView) fillTable() {
 	selectedRow := 0
 	for rowIndex, row := range v.rows {
 		for columnIndex, column := range v.session.model.Columns {
-			cell := topStyleCell(tview.NewTableCell(column.Cell(row)), topCellStyle(column.Key, row))
-			if column.Right {
-				cell.SetAlign(tview.AlignRight)
-			}
+			text := padTopCell(column.Cell(row), column.Width, column.Right)
+			cell := topStyleCell(tview.NewTableCell(text), topCellStyle(column.Key, row))
 			if column.Width == 0 {
 				cell.SetExpansion(1)
+			} else {
+				// The ceiling. The header sets the floor above; this stops a value
+				// wider than the column from lifting it, which is the case that made
+				// the table shift while it was being scrolled.
+				//
+				// The padding on the text is what aligns the cell inside the column,
+				// in place of tview's own SetAlign. Deliberately: the plain form pads
+				// the same way through the same function, so the two forms cannot
+				// disagree about where a column starts.
+				cell.SetMaxWidth(column.Width)
 			}
 			v.table.SetCell(rowIndex+1, columnIndex, cell)
 		}

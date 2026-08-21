@@ -35,6 +35,13 @@ type topRow struct {
 
 // topColumn is one column: what it is called, how wide, how to render a row, and how to order
 // two rows by it.
+//
+// Width is exact, not a hint, and both forms honour it. That is the whole of what makes the table
+// readable: tview sizes a column to the widest cell it can *see*, so scrolling past a process with
+// a long name used to shift every column to its right, and scrolling back shifted them back. A
+// table that reflows while being read cannot be read. So each width is chosen to hold the widest
+// value its formatter can produce -- TestTopColumns_widthsHoldEveryValue checks that claim rather
+// than trusting it -- and anything wider is cut and marked with a `+`, which is top's convention.
 type topColumn struct {
 	Key    string
 	Header string
@@ -84,7 +91,15 @@ var topColumns = []topColumn{
 	},
 	{
 		Key: "state", Header: "S", Width: 1, Ascending: true,
-		Cell: func(r topRow) string { return string(rune(r.Process.State)) },
+		Cell: func(r topRow) string {
+			if r.Process.State == 0 {
+				// Never from a real sample -- stateFromThreads answers StateUnknown
+				// when it cannot tell -- but a zero here writes a NUL byte to the
+				// terminal, which draws as nothing and takes the column with it.
+				return string(rune(proc.StateUnknown))
+			}
+			return string(rune(r.Process.State))
+		},
 		Less: func(a, b topRow) bool { return a.Process.State < b.Process.State },
 	},
 	{
@@ -98,12 +113,12 @@ var topColumns = []topColumn{
 		Less: func(a, b topRow) bool { return a.MemoryShare < b.MemoryShare },
 	},
 	{
-		Key: "rss", Header: "RSS", Width: 6, Right: true,
+		Key: "rss", Header: "RSS", Width: 5, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.WorkingSet) },
 		Less: func(a, b topRow) bool { return a.Process.WorkingSet < b.Process.WorkingSet },
 	},
 	{
-		Key: "private", Header: "PRIV", Width: 6, Right: true,
+		Key: "private", Header: "PRIV", Width: 5, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.PrivateWorkingSet) },
 		Less: func(a, b topRow) bool { return a.Process.PrivateWorkingSet < b.Process.PrivateWorkingSet },
 	},
@@ -113,7 +128,7 @@ var topColumns = []topColumn{
 		Less: func(a, b topRow) bool { return a.Process.Commit < b.Process.Commit },
 	},
 	{
-		Key: "thr", Header: "THR", Width: 4, Right: true,
+		Key: "thr", Header: "THR", Width: 5, Right: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.Threads) },
 		Less: func(a, b topRow) bool { return a.Process.Threads < b.Process.Threads },
 	},
@@ -123,7 +138,7 @@ var topColumns = []topColumn{
 		Less: func(a, b topRow) bool { return a.Process.Handles < b.Process.Handles },
 	},
 	{
-		Key: "read", Header: "READ/s", Width: 7, Right: true,
+		Key: "read", Header: "READ/s", Width: 6, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.ReadBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.ReadBytesPerSecond < b.Rate.ReadBytesPerSecond },
 	},
@@ -133,7 +148,7 @@ var topColumns = []topColumn{
 		Less: func(a, b topRow) bool { return a.Rate.WriteBytesPerSecond < b.Rate.WriteBytesPerSecond },
 	},
 	{
-		Key: "time", Header: "TIME+", Width: 9, Right: true,
+		Key: "time", Header: "TIME+", Width: 10, Right: true,
 		Cell: func(r topRow) string { return topCPUTime(r.Process.Kernel + r.Process.User) },
 		Less: func(a, b topRow) bool {
 			return a.Process.Kernel+a.Process.User < b.Process.Kernel+b.Process.User

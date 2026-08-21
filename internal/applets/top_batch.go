@@ -151,9 +151,15 @@ func padTopCell(text string, width int, right bool) string {
 	if width <= 0 {
 		return text
 	}
+	if width == 1 {
+		return truncateToCells(text, 1)
+	}
 	cells := textgrid.Cells(text)
 	if cells > width {
-		return truncateToCells(text, width)
+		// Marked with a `+`, which is top's convention and worth keeping: without it a
+		// truncated name is indistinguishable from a short one, and a reader has no way to
+		// tell that there is more of it. The mark costs one cell of the value to say so.
+		return padTopCell(truncateToCells(text, width-1), width-1, right) + "+"
 	}
 	padding := strings.Repeat(" ", width-cells)
 	if right {

@@ -51,16 +51,29 @@ func topPercent(fraction float64) string {
 	return fmt.Sprintf("%5.1f", fraction*100)
 }
 
-// topCPUTime is cumulative CPU as htop writes it: `MMM:SS.cc`, minutes without a ceiling.
+// topCPUTime is cumulative CPU as htop writes it: `MMM:SS.cc`, minutes and hundredths.
 //
-// Minutes rather than hours, because that is what top and htop both print and what anyone
-// reading the column expects -- a process with two days of CPU shows as `2880:00`, which is
-// odd-looking and correct, and is how every other monitor says it.
+// Minutes rather than hours, because that is what top and htop both print and what anyone reading
+// the column expects -- a process with two days of CPU shows as `2880:00.00`, which is odd-looking
+// and correct, and is how every other monitor says it.
+//
+// Past ten thousand minutes it switches to hours and then to days, which htop never has to do and
+// this platform does. Windows has an Idle process, its CPU time is every idle moment on every
+// processor, and on this machine that is `264482:43.25` -- twelve characters in a column sized for
+// nine. The choice was between a column three cells wider than anything else needs, cutting digits
+// off a number, and changing the unit. Only the last of those is both aligned and true.
 func topCPUTime(used time.Duration) string {
 	minutes := int64(used / time.Minute)
-	seconds := int64(used/time.Second) % 60
-	hundredths := int64(used/(10*time.Millisecond)) % 100
-	return fmt.Sprintf("%d:%02d.%02d", minutes, seconds, hundredths)
+	if minutes < 10000 {
+		seconds := int64(used/time.Second) % 60
+		hundredths := int64(used/(10*time.Millisecond)) % 100
+		return fmt.Sprintf("%d:%02d.%02d", minutes, seconds, hundredths)
+	}
+	hours := int64(used / time.Hour)
+	if hours < 10000 {
+		return fmt.Sprintf("%dh%02dm", hours, minutes%60)
+	}
+	return fmt.Sprintf("%dd%02dh", int64(used/(24*time.Hour)), hours%24)
 }
 
 // topUptime is how long the machine has been up, in the shape uptime(1) uses.
