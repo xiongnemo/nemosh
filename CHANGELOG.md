@@ -10,6 +10,18 @@ patch number is the commits since that tag.
 
 ## Unreleased
 
+### Interactive shell
+
+- **`~/` completes.** Tab offered nothing for a tilde: completion works on the
+  text as typed, tilde expansion belongs to word expansion, and there was no
+  route between them, so `~/` was read as a directory literally called `~`.
+  `~` alone completes to `~/`; `~user` still offers nothing, because this shell
+  does not resolve another account's profile directory.
+- What Tab inserts stays spelled `~/` rather than being rewritten to an absolute
+  path, which is what bash does. The escaping that protects a blank in
+  `Program Files` no longer escapes that leading tilde -- it did, which produced
+  a line that looked completed and could not run.
+
 ### Process monitor
 
 - **F1 opens a panel instead of writing a line in the status bar.** The line was

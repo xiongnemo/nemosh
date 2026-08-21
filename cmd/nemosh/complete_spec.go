@@ -81,6 +81,21 @@ const shellSpecialCharacters = " `'\"\\#$~?*[{()&;|<>"
 
 func escapeForInsertion(text string) string {
 	var escaped strings.Builder
+	// A leading `~/` is the one exception, and leaving it out nearly undid the
+	// tilde completion entirely. busybox is right to have `~` in the list above:
+	// a tilde inside a filename is literal and needs protecting, which is why
+	// `back~up.txt` still comes back escaped. But the `~/` at the front of a
+	// candidate is not part of a name -- it is the home-directory reference the
+	// completion deliberately produced -- and escaping it inserts `\~/`, which
+	// the shell then reads as a directory literally called `~`. Tab would look
+	// like it had worked and leave behind a line that cannot run.
+	//
+	// Only `~/`, and only at the front. `~root/` keeps its backslash because this
+	// shell does not resolve another account's tilde, so there it *is* a filename.
+	if rest, found := strings.CutPrefix(text, "~/"); found {
+		escaped.WriteString("~/")
+		text = rest
+	}
 	for _, r := range text {
 		if r < 0x80 && strings.ContainsRune(shellSpecialCharacters, r) {
 			escaped.WriteByte('\\')

@@ -48,3 +48,24 @@ func nativePath(rt runtime.Runtime, path string) (string, bool) {
 	}
 	return resolved.Native, true
 }
+
+// completionHome is the home directory in native form, so `~/` can be completed.
+//
+// HOME then USERPROFILE, which is the order Runtime.expandHomeTilde uses -- the two must agree,
+// because a `~/` that completes against one directory and expands to another is worse than one that
+// does not complete at all.
+//
+// Native form for the reason completionDirectory gives above: the shell's own view of a path is not
+// something os.ReadDir can open on Windows. Empty when there is no home, which the completion treats
+// as "offer nothing for a tilde" rather than falling back to the working directory.
+func completionHome(rt runtime.Runtime) string {
+	value, ok := rt.LookupEnv("HOME")
+	if !ok || value == "" {
+		value, _ = rt.LookupEnv("USERPROFILE")
+	}
+	native, ok := nativePath(rt, value)
+	if !ok {
+		return ""
+	}
+	return native
+}

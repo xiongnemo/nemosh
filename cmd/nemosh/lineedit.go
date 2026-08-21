@@ -24,9 +24,12 @@ type lineEditor struct {
 	input            io.Reader
 	screen           io.Writer
 	workingDirectory string
-	buffer           *lineBuffer
-	pending          []byte
-	history          []string
+	// home is the native home directory, so `~/` can be completed. Cached beside the working
+	// directory and refreshed with it, because the completion functions hold no Runtime to ask.
+	home    string
+	buffer  *lineBuffer
+	pending []byte
+	history []string
 	// recall is the index into history being shown, counted from the end.
 	// Zero means the line being typed rather than a remembered one.
 	recall int
