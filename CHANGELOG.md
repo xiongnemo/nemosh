@@ -8,7 +8,17 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
-## Unreleased
+## v1.0.0 - 2026-08-21
+
+The first stable release. What it contains beyond v0.1.0 is below; what it
+promises is in `docs/support-matrix.md`, which states the divergences from
+busybox-w32 rather than leaving them to be discovered.
+
+Two features landed after `docs/design/v1-scope.md` had deferred them, and that
+document records the decision rather than hiding it: line editing and `top`.
+UTF-16 input is deliberately not here -- byte-exact, never corrupted, and not
+interpreted, which is also what busybox-w32 does. Measured; see the support
+matrix.
 
 ### Process monitor
 
