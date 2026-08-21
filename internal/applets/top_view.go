@@ -60,7 +60,7 @@ func runTopInteractive(ctx context.Context, options topOptions, stdin io.Reader,
 		fmt.Fprintf(stderr, "top: cannot drive this terminal (%v); printing one sample\n", err)
 		return runTopBatch(ctx, options, stdout)
 	}
-	return runTopApplication(ctx, options, screen, stderr)
+	return runTopApplication(ctx, options, screen, stderr, nil)
 }
 
 // leaseTopStdin borrows the real console for as long as the monitor runs.
@@ -76,7 +76,12 @@ func leaseTopStdin(ctx context.Context, stdin io.Reader) (*os.File, func(), bool
 }
 
 // runTopApplication is the event loop: a ticker samples, key presses change the view.
-func runTopApplication(ctx context.Context, options topOptions, screen tcell.Screen, stderr io.Writer) error {
+//
+// ready, when given, receives the application once it is built. Only the headless test uses it,
+// and it uses it for a reason that is not a convenience: the screen may only be read from tview's
+// own goroutine, so a test needs the application in order to queue a read onto it.
+func runTopApplication(ctx context.Context, options topOptions, screen tcell.Screen, stderr io.Writer,
+	ready chan<- *tview.Application) error {
 	session := newTopSession(options)
 	application := tview.NewApplication().SetScreen(screen)
 	table := tview.NewTable().SetFixed(1, 0).SetSelectable(true, false)
@@ -100,6 +105,9 @@ func runTopApplication(ctx context.Context, options topOptions, screen tcell.Scr
 	}
 	view.refresh()
 	application.SetInputCapture(view.key)
+	if ready != nil {
+		ready <- application
+	}
 
 	// The ticker is stopped by the application returning, and the goroutine ends with the
 	// context: a monitor that leaves a timer running after `q` would keep the shell awake.
