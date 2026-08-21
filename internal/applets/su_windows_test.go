@@ -4,7 +4,6 @@ package applets
 
 import (
 	"context"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,7 +63,7 @@ func TestRunElevated_launchesWaitsAndReportsStatus(t *testing.T) {
 	}
 
 	// When
-	err = runElevated(context.Background(), plan, io.Discard)
+	err = runElevated(context.Background(), plan)
 
 	// Then: the child's status, carried back rather than swallowed.
 	status, ok := StatusCode(err)
@@ -106,7 +105,7 @@ func TestRunElevated_returnsImmediatelyWithoutWait(t *testing.T) {
 	}
 
 	// When
-	err = runElevated(context.Background(), plan, io.Discard)
+	err = runElevated(context.Background(), plan)
 
 	// Then
 	if err != nil {

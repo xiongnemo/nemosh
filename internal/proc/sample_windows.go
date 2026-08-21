@@ -29,9 +29,6 @@ import (
 // per-processor records, which is a trap: subtracting idle is what leaves system time.
 
 const (
-	// statusInfoLengthMismatch is STATUS_INFO_LENGTH_MISMATCH: the buffer was too small, and
-	// the size needed is written back. It is the documented way to size this call.
-	statusInfoLengthMismatch = 0xC0000004
 	// hundredNanoseconds is the unit every Windows time in this file uses.
 	hundredNanoseconds = 100 * time.Nanosecond
 	// initialSampleBuffer is enough for a few hundred processes with their threads. It grows

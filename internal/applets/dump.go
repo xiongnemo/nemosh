@@ -135,13 +135,23 @@ func newSplitApplet() Applet {
 
 func writeSplitParts(ctx context.Context, view ProcessView, prefix string, lines []string, perPart int) error {
 	for start, part := 0, 0; start < len(lines); start, part = start+perPart, part+1 {
+		// Once per part, which is where the interruptible boundary actually is.
+		//
+		// Reading the input is already cancellable and writing one part is bounded, but
+		// the *loop* is not bounded by anything a person can see: `split -l 1` over a
+		// million lines writes a million files, and Ctrl-C could not stop it. The context
+		// was already being passed down to the write, which ignored it -- carrying a
+		// context you do not honour advertises cancellation you do not provide.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		suffix, err := splitSuffix(part)
 		if err != nil {
 			return err
 		}
 		end := min(start+perPart, len(lines))
 		body := strings.Join(lines[start:end], "\n") + "\n"
-		if err := writeProcessFile(ctx, view, prefix+suffix, body); err != nil {
+		if err := writeProcessFile(view, prefix+suffix, body); err != nil {
 			return err
 		}
 	}
@@ -162,7 +172,7 @@ func splitSuffix(part int) (string, error) {
 // writeProcessFile creates a file named the way the shell names it, crossing the
 // path seam once. os.Create on the operand as given would write to the host's
 // idea of `/c/...`, which is a real path in the wrong place.
-func writeProcessFile(ctx context.Context, view ProcessView, path, body string) error {
+func writeProcessFile(view ProcessView, path, body string) error {
 	native, err := resolveHostPath(view, path)
 	if err != nil {
 		return err

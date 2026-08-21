@@ -88,8 +88,6 @@ func processName(record *windows.SYSTEM_PROCESS_INFORMATION) string {
 	return record.ImageName.String()
 }
 
-// threadsFromRecord reads the thread array that follows the process record.
-//
 // fromFiletime converts a Windows FILETIME to a time.
 //
 // A FILETIME counts hundred-nanosecond ticks from **1601-01-01 UTC**, not from the Unix epoch, and
@@ -247,7 +245,7 @@ func (s *Sampler) processors() ([]CPUTime, error) {
 	}
 	count := len(data) / size
 	cpus := make([]CPUTime, 0, count)
-	for index := 0; index < count; index++ {
+	for index := range count {
 		raw := (*systemProcessorPerformanceInformation)(unsafe.Pointer(&data[index*size]))
 		if raw.KernelTime == 0 && raw.UserTime == 0 {
 			// Past the end of the real processors: the buffer is sized generously and

@@ -33,7 +33,7 @@ func newSuApplet() Applet {
 		if err != nil {
 			return err
 		}
-		return runElevated(ctx, plan, stderr)
+		return runElevated(ctx, plan)
 	}}
 }
 

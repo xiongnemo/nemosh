@@ -147,9 +147,6 @@ func copyTail(stdout io.Writer, input io.Reader, count int) error {
 	return nil
 }
 
-// lineCountArgs consumes `-n COUNT` and then refuses anything else that looks
-// like an option, rather than letting it reach the file opener and be reported
-// as a missing file.
 // bareCountOption reads the `-3` form, and only that: a dash followed by digits
 // and nothing else. `-n` and `-c` are handled by name, and anything with a
 // letter in it is an option this build does not have rather than a count.
@@ -162,11 +159,6 @@ func bareCountOption(arg string) (int, bool) {
 		return 0, false
 	}
 	return count, true
-}
-
-func lineCountArgs(applet string, args []string, defaultCount int) (int, []string, error) {
-	spec, paths, err := countArgs(applet, args, defaultCount, false)
-	return spec.count, paths, err
 }
 
 // countArgs reads -n, and for head also -c, which counts bytes rather than

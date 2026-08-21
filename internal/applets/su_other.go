@@ -5,7 +5,6 @@ package applets
 import (
 	"context"
 	"errors"
-	"io"
 )
 
 // su is not registered off Windows, so this exists only to keep su.go compiling
@@ -17,6 +16,6 @@ import (
 // setuid, reads no user database, and answers only to `root`. Leaving the name
 // alone lets PATH find the real one, which is the correct behaviour and the same
 // choice busybox-w32 makes by building suw32 only under PLATFORM_MINGW32.
-func runElevated(context.Context, elevationPlan, io.Writer) error {
+func runElevated(context.Context, elevationPlan) error {
 	return errors.New("su elevates a Windows process and has no meaning here")
 }

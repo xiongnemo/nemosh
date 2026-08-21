@@ -5,7 +5,6 @@ package applets
 import (
 	"context"
 	"fmt"
-	"io"
 	"syscall"
 	"time"
 	"unsafe"
@@ -57,7 +56,10 @@ type shellExecuteInfo struct {
 }
 
 // runElevated launches the planned shell and, if asked, waits for it.
-func runElevated(ctx context.Context, plan elevationPlan, stderr io.Writer) error {
+//
+// No stderr: every failure here is returned, and the caller is what writes. It took one for a
+// while and never used it, which reads as though some failures are reported here and some there.
+func runElevated(ctx context.Context, plan elevationPlan) error {
 	verb := "runas"
 	mask := uint32(0)
 	if plan.test {
