@@ -38,6 +38,12 @@ jobs:
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ${{ matrix.runner }}
+    # The version the artifacts were built with, so the publish job does not have
+    # to work it out a second time. Every matrix entry computes the same string
+    # from the same commit, so last-writer-wins is not a race here -- and the
+    # alternative is what shipped v1.0.0 with ten mislabelled files attached.
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
     strategy:
       fail-fast: false
       matrix:
@@ -202,10 +208,45 @@ jobs:
       - id: meta
         name: Compute release metadata
         shell: bash
+        env:
+          # From the build job, not from scripts/version.sh again.
+          #
+          # This job used to re-derive it, and pushing a commit and then a tag on
+          # that same commit is all it took to break: the branch run's build jobs
+          # computed v0.1.148 and stamped it into their artifacts, and by the time
+          # this job ran the v1.0.0 tag existed, so version.sh answered v1.0.0.
+          # GITHUB_REF_TYPE was still `branch`, so the else branch below named the
+          # release v1.0.0 and uploaded the v0.1.148 files into it. The v1.0.0
+          # release carried ten artifacts labelled as a dev prerelease, and no
+          # v0.1.148 release existed at all.
+          #
+          # Two derivations of one fact, which is the shape of bug this repository
+          # keeps writing down. There is one now.
+          BUILT_VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -euo pipefail
-          version=$(bash scripts/version.sh --version)
+          version="${BUILT_VERSION}"
+          if [ -z "$version" ]; then
+            echo "the build job reported no version; refusing to guess one"
+            exit 1
+          fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+          # A branch run publishes a prerelease under a marker tag, and a marker
+          # tag always carries a dash. If the version it built has none, the base
+          # tag was created underneath this run and the artifacts are already
+          # stale -- publishing them anywhere is wrong, and publishing them into
+          # the release for that tag is what happened.
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            case "$version" in
+              *-*) ;;
+              *)
+                echo "a branch run built $version, which is an exact release tag."
+                echo "the tag was pushed while this run was building; the tag's own"
+                echo "run publishes it. Stopping rather than attaching stale files."
+                exit 1
+                ;;
+            esac
+          fi
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             # An exact semver tag already exists; publish under it as a full
             # release rather than inventing a second name for the same commit.
