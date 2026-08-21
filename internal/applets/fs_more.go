@@ -26,6 +26,17 @@ func newLsApplet() Applet {
 		}
 		view := ProcessViewFromContext(ctx)
 		for _, target := range paths {
+			// A device is described from the table rather than resolved to a host
+			// path it has not got. `ls -l /dev/null` answered "is not a host path"
+			// before this, where busybox prints a character device.
+			if info, err := statDeviceOperand(view, target); err != nil {
+				return err
+			} else if info != nil {
+				if err := printLsEntry(stdout, lsEntry{name: target, info: info, path: target}, options); err != nil {
+					return err
+				}
+				continue
+			}
 			native, err := resolveHostPath(view, target)
 			if err != nil {
 				return err

@@ -235,3 +235,56 @@ func resolveViewPath(cwd, path string) string {
 	}
 	return cwd + string(os.PathSeparator) + path
 }
+
+// processStatView is what a view implements when it can describe a device.
+//
+// The mirror of processInputView above, and for the same reason: an applet asks the view rather than
+// carrying its own idea of which names are devices. The runtime's implementation is
+// runtime.Runtime.StatProcessPath.
+type processStatView interface {
+	StatProcessPath(string) (fs.FileInfo, bool, error)
+}
+
+// statProcessPath stats a path, answering from the device table where the path names a device.
+//
+// keepLink is Lstat rather than Stat, which is what `test -h` and `test -L` want: a symlink reported
+// as a symlink rather than as whatever it points at. It was called followLink and meant the
+// opposite, which is the sort of name that survives until somebody adds a caller.
+//
+// Devices have no links, so the flag only reaches the filesystem branch.
+func statProcessPath(view ProcessView, path string, keepLink bool) (fs.FileInfo, error) {
+	if stat, ok := view.(processStatView); ok {
+		info, isDevice, err := stat.StatProcessPath(path)
+		if err != nil {
+			return nil, err
+		}
+		if isDevice {
+			return info, nil
+		}
+	}
+	native, err := resolveHostPath(view, path)
+	if err != nil {
+		return nil, err
+	}
+	if keepLink {
+		return os.Lstat(native)
+	}
+	return os.Stat(native)
+}
+
+// statDeviceOperand describes an operand that names a device, and answers nil for anything else.
+//
+// Separate from statProcessPath because the callers differ in what they want from a non-device: this
+// one hands the question back so the caller can go on to resolve a host path its own way, which is
+// what `ls` needs -- it lists a directory rather than stat-ing a file.
+func statDeviceOperand(view ProcessView, path string) (fs.FileInfo, error) {
+	stat, ok := view.(processStatView)
+	if !ok {
+		return nil, nil
+	}
+	info, isDevice, err := stat.StatProcessPath(path)
+	if err != nil || !isDevice {
+		return nil, err
+	}
+	return info, nil
+}

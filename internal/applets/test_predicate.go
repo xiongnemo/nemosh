@@ -132,15 +132,10 @@ func (e *testEvaluator) fileMode(operator, operand string, info os.FileInfo) boo
 	}
 }
 
-func (e *testEvaluator) stat(operand string, followLink bool) (os.FileInfo, error) {
-	native, err := resolveHostPath(e.view, operand)
-	if err != nil {
-		return nil, err
-	}
-	if followLink {
-		return os.Lstat(native)
-	}
-	return os.Stat(native)
+// keepLink asks for the link itself rather than its target, which is what -h and -L want. The
+// parameter was called followLink and meant the opposite.
+func (e *testEvaluator) stat(operand string, keepLink bool) (os.FileInfo, error) {
+	return statProcessPath(e.view, operand, keepLink)
 }
 
 // -t asks about a descriptor rather than a path, so it can only answer for the

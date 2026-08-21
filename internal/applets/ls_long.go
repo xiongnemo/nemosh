@@ -55,12 +55,19 @@ func formatLongEntry(path, name string, info os.FileInfo, size string, sizeField
 	if count, ok := fileLinkCount(path); ok {
 		links = count
 	}
-	owner := fileOwnerName(path)
+	owner := longEntryOwner(path, info)
 	mode := lsModeString(info)
 	// A link says so in the first column and names its target, which is what busybox does
 	// and what this did not: the ten junctions in a home directory came out as
 	// `?rw-rw-rw-` with a size of 0 and no target at all. A link's size is the length of
 	// that target, which is POSIX and which busybox also prints.
+	if info.Mode()&os.ModeDevice != 0 {
+		// A device has no size, and busybox and GNU ls both put its major and minor
+		// numbers in that column instead. Ours are zero and honestly so: these devices
+		// are provided by the shell rather than by a driver, so there is no pair of
+		// numbers to report. `0,   0` is exactly what busybox prints for /dev/null.
+		size = "0,   0"
+	}
 	if target, ok := linkTarget(path, info); ok {
 		// `lrwxrwxrwx`, not the target's own bits: a link's permissions are not
 		// consulted for anything, and every ls prints them wide open.
@@ -148,4 +155,21 @@ func lsModeString(info os.FileInfo) string {
 	default:
 		return "-" + permissions
 	}
+}
+
+// longEntryOwner names the account in the owner column.
+//
+// A device is not on disk, so there is no security descriptor to read and the lookup would fall back
+// to `root` -- which put `root` beside a device and `nemo` beside every real file in the same
+// listing, which reads as a fault rather than as a distinction. busybox fills its synthetic stat
+// with the current uid and prints the current user for both; the current account is also the honest
+// answer, since it is the one that can read and write the device.
+func longEntryOwner(path string, info os.FileInfo) string {
+	if info.Mode()&os.ModeDevice != 0 {
+		if name := accountName(); name != "" {
+			return name
+		}
+		return "root"
+	}
+	return fileOwnerName(path)
 }

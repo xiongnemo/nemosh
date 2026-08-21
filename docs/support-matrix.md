@@ -345,6 +345,32 @@ silently shift every later index), and negative indices.
 All 63 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
 column that matters is the third one.
 
+### Devices
+
+`/dev` is a set of names rather than a directory. Each is openable, and since
+Stage 1 of `docs/design/device-filesystem.md` each is also *observable*: `test -e`
+and `ls -l` answer for it.
+
+| path | read | write | `ls -l` |
+| --- | --- | --- | --- |
+| `/dev/null` | end of file | discards | `crw-rw-rw- 0,   0` |
+| `/dev/zero` | endless zero bytes | refused | as above |
+| `/dev/random`, `/dev/urandom` | random bytes | refused | as above |
+| `/dev/clipboard` | the Windows clipboard as text | sets it; `>>` appends | as above |
+| `/dev/stdin`, `/dev/stdout`, `/dev/stderr`, `/dev/fd/N` | this process's own descriptor | same | reported as a device |
+
+`ls -l /dev/null` matches busybox-w32 to the column, including the major and minor
+numbers where a size would be. Both are zero and honestly so: these are provided
+by the shell rather than by a driver.
+
+`/dev/random` and `/dev/urandom` are the same source. They differ on Linux because
+one can block waiting for entropy; Windows has one source that does not block, so
+the distinction has nothing to represent.
+
+`ls /dev` does not list yet, and neither does busybox. A name under `/dev` that is
+not in the table -- `/dev/nosuchthing` -- does not exist, so the namespace has not
+been made to swallow everything.
+
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
