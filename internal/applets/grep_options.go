@@ -137,6 +137,16 @@ func grepTargets(ctx context.Context, flags grepFlags, paths []string, stderr io
 		// resolves through the process view and has no host stat at all. So a
 		// failure here means "not a directory", and the open below reports the
 		// real error -- including a cancellation, which stat-ing first hid.
+		// A device directory is walked from the table, and every device in it is
+		// *skipped* rather than read. That skip is the whole point: /dev/zero returns
+		// bytes for ever, so a grep that read it would never return. GNU grep skips
+		// devices when recursing for exactly this reason -- and only when recursing, so
+		// a device named directly is still read.
+		if handled, err := collectDeviceTargets(view, path, flags.recursive, &targets); err != nil {
+			return nil, err
+		} else if handled {
+			continue
+		}
 		if native, err := resolveHostPath(view, path); err == nil {
 			if info, statErr := os.Stat(native); statErr == nil && info.IsDir() && flags.recursive {
 				walked, walkErr := walkGrepTargets(ctx, flags, path, filepath.Clean(native), stderr)
@@ -229,4 +239,30 @@ func parseMaxCount(value string) (int, error) {
 		return 0, fmt.Errorf("invalid max count: %s", value)
 	}
 	return parsed, nil
+}
+
+// collectDeviceTargets handles an operand under /dev, and reports whether it did.
+//
+// Recursing over the directory collects nothing: every entry is a device, and reading one is what
+// this exists to avoid. `grep -r x /dev` therefore finds no matches and says nothing, which is the
+// honest report for a set of files it declined to read -- and is what GNU grep does, silently, for
+// the same reason.
+//
+// Without -r the path is left to the ordinary opener, so `grep x /dev/clipboard` still reads the
+// clipboard. The skip is about traversal, not about devices being unreadable.
+func collectDeviceTargets(view ProcessView, path string, recursive bool, targets *[]grepTarget) (bool, error) {
+	info, err := statDeviceOperand(view, path)
+	if err != nil || info == nil {
+		return false, err
+	}
+	if !info.IsDir() {
+		// A device named directly: not handled here, so the ordinary path opens it.
+		return false, nil
+	}
+	if !recursive {
+		// A directory without -r is an error the opener reports, exactly as it is for a
+		// directory on disk.
+		return false, nil
+	}
+	return true, nil
 }

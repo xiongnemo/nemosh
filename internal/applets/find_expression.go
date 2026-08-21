@@ -26,7 +26,12 @@ type findPredicate struct {
 // findTypeLetters are the entries this walk can classify. busybox also accepts
 // b, c, s, and p; refusing them by name is better than answering as though a
 // block device could never match.
-const findTypeLetters = "fdl"
+// c joined f, d and l when /dev became listable: the shell now produces character devices, so
+// `-type c` is a question with a real answer and refusing it would state a limitation that is no
+// longer true. b, p and s stay out deliberately -- Windows has no block devices, and pipes and
+// sockets are not reached as entries by any walk here, so a predicate for them would always answer
+// "none" where the honest answer is "this shell cannot classify that".
+const findTypeLetters = "fdlc"
 
 // parseFindArguments splits paths from the expression and validates the whole
 // expression before any walking starts. That ordering is the point: the old
@@ -87,7 +92,7 @@ func findOperandArgument(args []string, index int, operand string) (string, erro
 }
 
 func describeFindTypes() string {
-	return "f (regular file), d (directory), l (symbolic link)"
+	return "f (regular file), d (directory), l (symbolic link), c (character device)"
 }
 
 // matches reports whether one walked entry satisfies every predicate.
@@ -125,6 +130,8 @@ func matchesFindType(letter byte, entry fs.DirEntry) bool {
 		return mode.IsDir()
 	case 'l':
 		return mode&fs.ModeSymlink != 0
+	case 'c':
+		return mode&fs.ModeCharDevice != 0
 	}
 	return false
 }

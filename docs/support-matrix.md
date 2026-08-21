@@ -380,6 +380,19 @@ on. A name under `/dev` that is not a device -- `/dev/nosuchthing` -- does not
 exist, so the namespace has not been made to swallow everything, and nothing lives
 under a device: `/dev/null/x` is not a path.
 
+`find /dev`, `du -s /dev` and `grep -r /dev` all work, and `find -type c` selects
+the devices. Two notes on the walkers:
+
+- **`grep -r` never reads a device.** `/dev/zero` returns bytes for ever, so a
+  recursive grep that read it would not return. GNU grep skips devices when
+  recursing for the same reason, and only when recursing: `grep x /dev/clipboard`
+  still reads the clipboard.
+- **`find /` does not reach `/dev`**, because `/` here is the current drive's root
+  -- it resolves to `/c` -- so `/dev` is a sibling top-level name rather than a
+  directory inside `/`. On Linux `/dev` is under `/` and a root walk descends into
+  it; this is a platform difference rather than a decision, and it is why walking
+  the device tree needed no traversal of the real filesystem.
+
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |

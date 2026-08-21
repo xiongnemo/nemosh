@@ -21,6 +21,23 @@ func newFindApplet() Applet {
 		}
 		view := ProcessViewFromContext(ctx)
 		for _, root := range paths {
+			// A device path has no host root to walk, so it is walked from the
+			// table instead. The callback is the same one: an entry is an
+			// fs.DirEntry either way, which is what makes `find /dev -type c`
+			// work without find knowing what a device is.
+			handled, err := walkDeviceRoot(view, root, func(path string, entry fs.DirEntry) error {
+				if !expression.matches(path, entry) {
+					return nil
+				}
+				_, printErr := fmt.Fprintln(stdout, path)
+				return printErr
+			})
+			if err != nil {
+				return err
+			}
+			if handled {
+				continue
+			}
 			hostRoot, err := resolveHostPath(view, root)
 			if err != nil {
 				return err

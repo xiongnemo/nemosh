@@ -46,6 +46,15 @@ func newDuApplet() Applet {
 		}
 		view := ProcessViewFromContext(ctx)
 		for _, path := range paths {
+			// A device tree has no blocks: every entry is synthetic, so the total is
+			// zero and saying so is more useful than refusing the path. `du -s /dev`
+			// answering 0 is also what `du` on a real /dev reports, since a device
+			// occupies no data blocks there either.
+			if handled, err := reportDeviceUsage(ctx, stdout, view, path, options.has('h')); err != nil {
+				return err
+			} else if handled {
+				continue
+			}
 			native, err := resolveHostPath(view, path)
 			if err != nil {
 				return err
@@ -251,4 +260,21 @@ func statFileType(info os.FileInfo) string {
 		return "special file"
 	}
 	return "regular file"
+}
+
+// reportDeviceUsage answers for a device path, and reports whether it was one.
+//
+// One line, whether or not -s was given: there are no subdirectories under /dev to report
+// separately, so the summary and the full walk have the same answer and printing it twice would
+// only suggest otherwise.
+func reportDeviceUsage(ctx context.Context, stdout io.Writer, view ProcessView, path string, human bool) (bool, error) {
+	counted := false
+	handled, err := walkDeviceRoot(view, path, func(string, fs.DirEntry) error {
+		counted = true
+		return ctx.Err()
+	})
+	if err != nil || !handled || !counted {
+		return handled, err
+	}
+	return true, writeUsageLine(stdout, 0, path, human)
 }
