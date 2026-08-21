@@ -8,6 +8,21 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## Unreleased
+
+### Text encodings
+
+- **`grep` reads the UTF-16 that Windows writes.** A byte-order mark is honoured
+  on a named file, on stdin, and through the `-r` walk, in both byte orders, and a
+  UTF-8 BOM is consumed rather than left to break `grep '^first'` on the first
+  line of anything Notepad saved.
+- Only on a BOM: no heuristics. A file that declares nothing is left alone,
+  because guessing an encoding is how a binary gets rewritten. UTF-16 without a
+  mark stays unread, which is where ripgrep draws the line too.
+- Only in `grep`: `cat`, `head`, `tail` and the rest stay byte-exact, because
+  `cat a > b` copies a file rather than reinterpreting one. `sed` and `wc -m` are
+  named in `docs/support-matrix.md` as still outstanding, with the reason.
+
 ## v1.0.0 - 2026-08-21
 
 The first stable release. What it contains beyond v0.1.0 is below; what it

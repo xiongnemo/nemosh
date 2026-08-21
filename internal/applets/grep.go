@@ -74,7 +74,10 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 }
 
 func readerTarget(stdin io.Reader) func() (io.ReadCloser, error) {
-	return func() (io.ReadCloser, error) { return io.NopCloser(stdin), nil }
+	// Decoded here too: `grep hello < notepad.txt` and `type x | nemosh grep hello` are the
+	// same question as naming the file, and a BOM arrives down a pipe exactly as it does off
+	// a disk.
+	return func() (io.ReadCloser, error) { return io.NopCloser(decodeTextInput(stdin)), nil }
 }
 
 // grepOne searches one target and reports whether anything matched.

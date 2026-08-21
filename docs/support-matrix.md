@@ -437,36 +437,51 @@ Three of these diverge from GNU on purpose, and say so where it matters:
 
 ### Text Encodings
 
-Measured 2026-08-21 against busybox-w32 on the same files, because "supports
-Unicode" is not a claim anyone can check.
+Measured against busybox-w32 on the same files, because "supports Unicode" is not
+a claim anyone can check.
 
-| encoding | read | `grep` matches | `wc -m` | verdict |
-| --- | --- | --- | --- | --- |
-| UTF-8 | yes | yes | characters | **full**, and better than the reference: busybox counts bytes for `-m` |
-| UTF-8 with BOM | yes | yes | characters, BOM counted as one | **full**; the BOM is a character, which is what GNU `wc` says too |
-| GBK, Big5, Shift-JIS, EUC-KR | byte-exact | bytes | bytes | **passthrough**: nothing is decoded, so nothing is corrupted. See internal/applets/text_encoding.go |
-| UTF-16 LE or BE, with or without BOM | byte-exact | **no** | bytes | **not supported**, and neither by busybox-w32: identical answers from both |
+| encoding | `grep` matches | `wc -m` | copied byte-exact |
+| --- | --- | --- | --- |
+| UTF-8 | yes | characters | yes |
+| UTF-8 with BOM | yes, and the mark is consumed | characters, mark counted | yes |
+| UTF-16 LE or BE **with a BOM** | **yes** | bytes | yes |
+| UTF-16 LE or BE **without a BOM** | no | bytes | yes |
+| GBK, Big5, Shift-JIS, EUC-KR | bytes | bytes | yes |
 
-The last row is the one to know about. A UTF-16 file survives `cat`, `head`,
-`tail`, `sort` and a redirect unchanged -- it is never corrupted -- but nothing
-*interprets* it, so `grep hello` over a UTF-16 file finds nothing and `wc -m`
-counts bytes. Windows produces such files constantly: Notepad's "Unicode",
-PowerShell 5.1's `>` redirection, and most registry exports.
+`wc -m` counts characters where the reference counts bytes -- busybox answers 22
+for a file this answers 18 for -- which is a deliberate divergence and the reason
+the column is there at all.
 
-Supporting them means transcoding on input, and that is a design decision rather
-than a missing line of code, which is why it is recorded here rather than done in
-passing:
+Three decisions are worth stating, because each is a refusal as much as a feature.
 
-- BOM sniffing can corrupt a binary that happens to begin with `FF FE`.
-- Transcoding breaks `cat`'s byte-exactness, which is load-bearing: `cat a > b`
-  must copy a file rather than reinterpret it.
-- A filter that writes back -- `sed -i` on a UTF-16 file -- has to decide whether
-  the output is UTF-16 or UTF-8, and either answer surprises somebody.
+**A byte-order mark, and no heuristics.** Windows writes UTF-16LE constantly:
+Notepad's "Unicode", PowerShell 5.1's `>` redirection, registry exports. All of
+them write a BOM, which is the writer declaring what it wrote, and that can be
+trusted. Deciding an encoding for a file that declared nothing is how a binary
+eventually gets rewritten, so UTF-16 without a BOM stays unread. ripgrep draws
+this line in the same place.
 
-busybox-w32, the primary reference, does none of it. So this is a feature beyond
-the reference rather than a divergence from it, and it belongs to a release that
-can weigh those three questions properly.
+**Only the applets that interpret text.** `grep` decodes, because a regular
+expression cannot match across UTF-16 code units and finding nothing in a file
+full of the word you searched for is the least useful answer available. `cat`,
+`head`, `tail`, `base64` and the rest stay byte-exact, because `cat a > b` has to
+copy a file rather than reinterpret one.
 
+**What `grep` prints is UTF-8.** A decoded line comes back decoded, so
+`grep x u16.txt > out.txt` writes UTF-8 rather than UTF-16. That is the only
+answer that does not require every applet to remember what it read, and it is
+better said here than discovered.
+
+Still outstanding, and both for the same reason -- they would have to choose an
+output encoding for a file they rewrite, which needs deciding rather than
+defaulting:
+
+- `sed` over a UTF-16 file matches nothing, so it copies the file through.
+- `wc -m` counts bytes for UTF-16, because `wc -c` in the same run must count the
+  file's real size and one pass cannot honestly do both.
+
+busybox-w32 reads none of these, so this is a feature beyond the reference rather
+than a divergence from it.
 
 ### Options a script is most likely to reach for and not find
 

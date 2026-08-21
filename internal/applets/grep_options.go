@@ -187,13 +187,19 @@ func walkGrepTargets(ctx context.Context, flags grepFlags, shown, native string,
 
 func namedTarget(ctx context.Context, view ProcessView, path string) grepTarget {
 	return grepTarget{name: path, opener: func() (io.ReadCloser, error) {
-		return OpenProcessInput(ctx, view, path)
+		// A pattern is matched against characters, so a declared encoding is decoded.
+		return openProcessTextInput(ctx, view, path)
 	}}
 }
 
 func fileTarget(shown, native string) grepTarget {
+	// The -r walk, which reaches files by host path rather than through the process view.
 	return grepTarget{name: shown, opener: func() (io.ReadCloser, error) {
-		return os.Open(native)
+		file, err := os.Open(native)
+		if err != nil {
+			return nil, err
+		}
+		return decodedCloser{Reader: decodeTextInput(file), closer: file}, nil
 	}}
 }
 
