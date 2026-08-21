@@ -112,6 +112,23 @@ the entire suite: `times` reported 215 years because its test asserted only the
 Assert values, not just shapes, and re-measure claims against a built binary
 rather than against the suite.
 
+**The clipboard tests fail at random on the development machine, and it is not
+your change.** Windows 10 and later run a clipboard history service that opens the
+clipboard on every change, and any clipboard manager does the same, so
+`/dev/clipboard` loses the race whenever something else is holding it. The failure
+is `Thread does not have a clipboard open` and it is almost perfectly random:
+measured 2026-08-21, the same test at the same commit passed once and failed four
+times in five runs, while `v0.1.0` -- which predates every change that day --
+failed five times out of five. **A single bisect run per commit will lie to you.**
+It did: it identified an unrelated UTF-16 commit as the cause, convincingly,
+because each commit was tried once.
+
+If a clipboard test fails, run it five times at HEAD and five times at a commit
+from before your work before concluding anything. What was actually wrong -- the
+read not retrying, where the open already did -- was found by measuring the write
+and read separately: with no pause between them the read failed 30 times out of
+30, and with one millisecond it succeeded 20 times out of 20.
+
 **A capability that is absent must fail loudly.** `hash`, `ulimit`, `fg`, `bg`,
 and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather than
 approximating. Anything landing partially refuses the part it cannot do.
