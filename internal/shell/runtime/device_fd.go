@@ -34,11 +34,12 @@ func deviceAlias(path string) (int, bool, error) {
 	return fd, true, nil
 }
 
+// isVirtualDevice reports whether the path names one of the devices with contents.
+//
+// From the table now, rather than a fourth copy of the same list of names. A name in the opener and
+// missing here was openable and unrecognised; missing there and present here, recognised and
+// unopenable. Neither can happen with one list.
 func isVirtualDevice(path string) bool {
-	switch path {
-	case "/dev/null", "/dev/zero", "/dev/random", "/dev/urandom", "/dev/clipboard":
-		return true
-	default:
-		return false
-	}
+	_, found := lookupDevice(path)
+	return found
 }
