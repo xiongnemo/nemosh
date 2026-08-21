@@ -1,3 +1,17 @@
+//go:build windows
+
+// The device model is Windows-only, so these are too.
+//
+// They were cross-platform, and passed everywhere, because the shell used to invent a /dev on every
+// platform -- and for null, zero and random an invented device behaves like the real one, so nothing
+// looked wrong. It was wrong: on a system with its own /dev the invention shadows it. Now that only
+// Windows gets one, these assertions describe Windows.
+//
+// Two of them show why the old arrangement could not stay. `cat /dev` reported "unsupported device"
+// where macOS answers "Is a directory", the real answer for a real directory. And `cat /dev/stdin`
+// returned this harness's injected buffer, where on a platform with a real /dev it reads the
+// process's actual descriptor 0 -- which is what every other program there does.
+
 package main
 
 import (

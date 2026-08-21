@@ -54,8 +54,18 @@ func TestP05WaveA_RuntimePathState_resolvesWindowsAliasesAndVirtualRoots(t *test
 	if deviceErr != nil {
 		t.Fatalf("resolve device path: %v", deviceErr)
 	}
-	if device.Canonical != "/dev/null" || device.Native != "" || !device.Device {
+	// `/dev` is the shell's own on Windows and the system's everywhere else, so what a device
+	// path resolves to depends on the platform. The two halves are asserted in full by
+	// device_platform_windows_test.go and device_platform_other_test.go; here it is enough that
+	// the resolution succeeded and named the path, which is what this test is about.
+	if device.Canonical != "/dev/null" {
 		t.Fatalf("unexpected device resolution: %+v", device)
+	}
+	if runtimeProvidesDev && (device.Native != "" || !device.Device) {
+		t.Fatalf("on this platform /dev/null should be shell-provided: %+v", device)
+	}
+	if !runtimeProvidesDev && (device.Native == "" || device.Device) {
+		t.Fatalf("on this platform /dev/null should be the system's: %+v", device)
 	}
 	if !errors.Is(cygdriveErr, pathmodel.ErrCygdriveDisabled) {
 		t.Fatalf("expected disabled cygdrive error, got %v", cygdriveErr)
