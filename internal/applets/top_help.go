@@ -2,6 +2,7 @@ package applets
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -69,6 +70,11 @@ func topHelpPanel(model topModel) string {
 			shown, column.Header, column.Key, column.Description)
 	}
 
+	out.WriteString("\n[aqua]THE METERS AT THE TOP[white]\n")
+	for _, meter := range topMeterLegend {
+		fmt.Fprintf(&out, "  [yellow]%-6s[white] %s\n", meter.label, meter.what)
+	}
+
 	out.WriteString("\n[aqua]COLOUR[white]\n")
 	out.WriteString("  [gray]grey[white]    nothing measured: a rate of zero, or a figure this row has not got\n")
 	out.WriteString("  [green]green[white]   under a tenth of the machine\n")
@@ -92,6 +98,22 @@ func columnShown(model topModel, key string) bool {
 		}
 	}
 	return false
+}
+
+// topMeterLegend explains the header, which htop explains on its own help screen and this did not.
+//
+// htop draws a live mock bar there with each coloured segment labelled -- low, normal, kernel, irq,
+// steal, guest, io-wait for the processor, and used, shared, compressed, buffers, cache for memory.
+// That is the right idea and the wrong shape to copy: those segments exist because Linux reports CPU
+// time split seven ways and memory split six, and the Windows process table does not. A bar here is
+// one figure, so what needs explaining is not which colour is which but *what the number is a
+// fraction of* -- and for the third one, that it is not swap.
+var topMeterLegend = []struct{ label, what string }{
+	{"CPU", "how much of every processor was busy since the last sample, then how many there are"},
+	{"Mem", "physical memory in use, then the figures: used of total, and how much of it is cache the system can reclaim"},
+	{"Cmt", "commit charge -- memory the system has *promised*, against the ceiling on promises. Not swap: Windows has no measure that means what swap means, and this can run out while physical memory still looks free"},
+	{"0 1 2", "the same busy fraction per processor, one meter each. Every processor gets one, so the header grows on a machine with many"},
+	{"--", "no rate yet. The first sample has nothing to compare against, so the figure is unknown rather than zero"},
 }
 
 // topKeyGroups is the keyboard, grouped by what someone is trying to do rather than alphabetically.
@@ -126,4 +148,25 @@ var topAbsent = []struct{ what, why string }{
 	{"disk-only IO", "the IO counters cover every handle -- file, pipe, socket. Per-process disk figures need ETW and an administrator, which this deliberately does not ask for"},
 	{"a signal to kill", "Windows has no gentle one. F9 terminates, and the confirmation says so"},
 	{"CPU temperature", "needs WMI or a driver, and neither belongs in an unprivileged monitor"},
+}
+
+// writeTopGlossary prints the columns and what they mean, with no terminal involved.
+//
+// `top -o help` and `top -s help`, after htop's `--sort-key help`. The same descriptions the F1
+// panel shows, which is the point: one set of words, so a glossary that can be grepped cannot
+// disagree with the one on screen. htop's own man page has drifted from its source this way -- it
+// still documents IO column headers its code renamed several versions ago.
+func writeTopGlossary(stdout io.Writer) error {
+	if _, err := fmt.Fprintf(stdout, "%-10s %-8s %s\n", "NAME", "HEADER", "MEANING"); err != nil {
+		return err
+	}
+	for _, column := range topColumns {
+		if _, err := fmt.Fprintf(stdout, "%-10s %-8s %s\n",
+			column.Key, column.Header, column.Description); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprintf(stdout, "\nName these with -o, comma separated, or sort by one with -s.\n"+
+		"The drawn form shows more of them in a wider window; F1 explains the meters and the colours.\n")
+	return err
 }

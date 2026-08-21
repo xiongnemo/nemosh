@@ -70,6 +70,21 @@ func openClipboard() error {
 }
 
 func readClipboardTextRaw() (string, error) {
+	var callErr error
+	for attempt := range clipboardOpenAttempts {
+		if attempt > 0 {
+			time.Sleep(clipboardOpenBackoff)
+		}
+		text, err := readClipboardTextOnce()
+		if err == nil {
+			return text, nil
+		}
+		callErr = err
+	}
+	return "", callErr
+}
+
+func readClipboardTextOnce() (string, error) {
 	var text string
 	err := withClipboard(func() error {
 		available, _, _ := procIsClipboardFormatAvailable.Call(cfUnicodeText)
@@ -80,6 +95,17 @@ func readClipboardTextRaw() (string, error) {
 		}
 		handle, _, callErr := procGetClipboardData.Call(cfUnicodeText)
 		if handle == 0 {
+			// The format is on the clipboard -- checked just above -- and fetching it
+			// still failed, which on this platform means something else is mid-change.
+			// Measured: writing and then reading back with no pause at all fails every
+			// time, and with a one-millisecond pause succeeds every time. Windows 10 and
+			// later run a clipboard history service that opens the clipboard on every
+			// change, so "just written" is exactly when a read is most likely to lose.
+			//
+			// So the same remedy the open path already uses, for the same reason: try
+			// again. Without it `printf x > /dev/clipboard && cat /dev/clipboard` in one
+			// script could fail, and the failure would look like the clipboard being
+			// empty rather than busy.
 			return clipboardError("read clipboard", callErr)
 		}
 		pointer, _, callErr := procGlobalLock.Call(handle)

@@ -23,6 +23,15 @@ patch number is the commits since that tag.
 - The panel also explains the colours, and what is deliberately absent with the
   reason -- load average, TTY, nice values, disk-only IO, a gentle kill signal.
 
+### Fixed
+
+- **Reading `/dev/clipboard` immediately after writing it could fail.** Windows 10
+  and later run a clipboard history service that opens the clipboard on every
+  change, so the moment just after a write is when a read is most likely to lose
+  the race. Measured: with no pause at all the read-back failed 30 times out of
+  30; with one millisecond it succeeded every time. The read now retries, which is
+  the remedy the open path already used for the same reason.
+
 ### Text encodings
 
 - **`grep` reads the UTF-16 that Windows writes.** A byte-order mark is honoured

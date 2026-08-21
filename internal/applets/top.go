@@ -46,6 +46,8 @@ type topOptions struct {
 	// columns overrides the layout, which is how a script asks for exactly the figures it
 	// wants rather than whatever fits the window it was given.
 	columns []string
+	// glossary asks for the columns and what they mean, on standard output.
+	glossary bool
 }
 
 func newTopApplet() Applet {
@@ -53,6 +55,11 @@ func newTopApplet() Applet {
 		options, err := topArgs(args)
 		if err != nil {
 			return err
+		}
+		// Before anything is sampled: the glossary answers a question about the table
+		// rather than about the machine.
+		if options.glossary {
+			return writeTopGlossary(stdout)
 		}
 		// The destination decides the form, exactly as it does for `ls`: a terminal gets
 		// the interactive table, anything else gets plain text. -b forces the plain form
@@ -121,6 +128,15 @@ func topArgs(args []string) (topOptions, error) {
 			if err != nil {
 				return options, err
 			}
+			// `help` in place of a column name prints the glossary, which is htop's
+			// `--sort-key help` and worth having for the same reason: it puts the
+			// terminology where it can be read, grepped and pasted without opening the
+			// drawn form. That matters more here than on Linux, because the drawn form
+			// needs a real console and several terminals on this platform are not one.
+			if text == "help" {
+				options.glossary = true
+				return options, nil
+			}
 			if _, ok := columnByKey(text); !ok {
 				return options, fmt.Errorf("unknown sort column: %s", text)
 			}
@@ -129,6 +145,10 @@ func topArgs(args []string) (topOptions, error) {
 			text, err := value()
 			if err != nil {
 				return options, err
+			}
+			if text == "help" {
+				options.glossary = true
+				return options, nil
 			}
 			options.columns = strings.Split(text, ",")
 			if _, unknown := resolveColumns(options.columns); len(unknown) > 0 {
