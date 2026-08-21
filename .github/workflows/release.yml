@@ -212,10 +212,18 @@ jobs:
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
             echo "name=nemosh ${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            # The headline has to follow the flag. It did not: the body below
+            # opened with a hardcoded "**Pre-release.**" on every publish, so an
+            # exact tag would have produced a release marked as full by the API
+            # and announcing itself as a prerelease in its own notes. Nothing
+            # would have failed; the first release of the version line would
+            # simply have contradicted itself in writing.
+            echo "headline=**Release.** See [CHANGELOG.md](https://github.com/xiongnemo/nemosh/blob/${GITHUB_REF_NAME}/CHANGELOG.md) for what changed." >> "$GITHUB_OUTPUT"
           else
             echo "tag=${version}" >> "$GITHUB_OUTPUT"
             echo "name=Dev prerelease ${version}" >> "$GITHUB_OUTPUT"
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "headline=**Pre-release**, published automatically from a push to master." >> "$GITHUB_OUTPUT"
           fi
 
       # Attested before publishing, so a release can never carry an artifact that
@@ -247,7 +255,9 @@ jobs:
           body: |
             Nemosh ${{ steps.meta.outputs.version }}
 
-            **Pre-release.** `windows/amd64` is the supported target; see
+            ${{ steps.meta.outputs.headline }}
+
+            `windows/amd64` is the supported target; see
             [`docs/support-matrix.md`](https://github.com/xiongnemo/nemosh/blob/master/docs/support-matrix.md)
             for what is implemented and what is refused, measured rather than
             claimed.
