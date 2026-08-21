@@ -54,6 +54,14 @@ type topColumn struct {
 	Width  int
 	// Right says the cell is right-aligned, which every number is and no name is.
 	Right bool
+	// Description is one line explaining what the figure means, shown in the help panel.
+	//
+	// Every column has one, and the reason is a report from someone using it: the headers are
+	// four letters each and several of them name Windows concepts that have no POSIX
+	// counterpart. A monitor whose columns can only be understood by reading its source is a
+	// monitor with a legend missing, and RSS against PRIV against COMMIT is the clearest case
+	// -- three memory numbers, all different, none of them self-explanatory.
+	Description string
 	// ProcessOnly says the figure exists per process and not per thread, so a thread row
 	// leaves it blank. Repeating the process's memory on each of its thirty threads would
 	// read as thirty processes using that much.
@@ -78,31 +86,36 @@ type topColumn struct {
 // misbehaves, and nothing else in the shell can show it.
 var topColumns = []topColumn{
 	{
-		Key: "pid", Header: "PID", Width: 7, Right: true, Ascending: true,
+		Key: "pid", Header: "PID",
+		Description: "Process id. Windows reuses these, so a row is really identified by id *and* start time", Width: 7, Right: true, Ascending: true,
 		// The thread id on a thread row, which is what htop puts here too. Windows draws
 		// process and thread ids from one pool, so the two can never collide.
 		Cell: func(r topRow) string { return strconv.Itoa(r.id()) },
 		Less: func(a, b topRow) bool { return a.id() < b.id() },
 	},
 	{
-		Key: "ppid", Header: "PPID", Width: 7, Right: true, Ascending: true,
+		Key: "ppid", Header: "PPID",
+		Description: "Id of the process that started this one. Windows never reparents, so a dead parent leaves a stale number", Width: 7, Right: true, Ascending: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.PPID) },
 		Less: func(a, b topRow) bool { return a.Process.PPID < b.Process.PPID },
 	},
 	{
-		Key: "user", Header: "USER", Width: 10, Ascending: true,
+		Key: "user", Header: "USER",
+		Description: "Account that owns the process. Blank where the handle was refused, which is most rows that are not yours", Width: 10, Ascending: true,
 		// Empty rather than a guess where the handle was refused; the header stays so the
 		// reader can see the column exists and that this row would not answer.
 		Cell: func(r topRow) string { return r.Details.User },
 		Less: func(a, b topRow) bool { return a.Details.User < b.Details.User },
 	},
 	{
-		Key: "pri", Header: "PRI", Width: 5,
+		Key: "pri", Header: "PRI",
+		Description: "Windows priority class, not a nice value: idle, below, norm, above, high, real. F7 and F8 step it", Width: 5,
 		Cell: func(r topRow) string { return topPriority(r.priority()) },
 		Less: func(a, b topRow) bool { return a.priority() < b.priority() },
 	},
 	{
-		Key: "state", Header: "S", Width: 1, Ascending: true,
+		Key: "state", Header: "S",
+		Description: "State, derived from the threads because Windows has none for a process. R running, S sleeping, D in an uninterruptible wait, T suspended, ? unknown", Width: 1, Ascending: true,
 		Cell: func(r topRow) string {
 			if r.Thread != nil {
 				return string(rune(r.state()))
@@ -118,37 +131,44 @@ var topColumns = []topColumn{
 		Less: func(a, b topRow) bool { return a.Process.State < b.Process.State },
 	},
 	{
-		Key: "cpu", Header: "CPU%", Width: 5, Right: true,
+		Key: "cpu", Header: "CPU%",
+		Description: "Share of the *whole machine* since the last sample, so 100% means every processor at once", Width: 5, Right: true,
 		Cell: func(r topRow) string { return topPercent(r.cpu()) },
 		Less: func(a, b topRow) bool { return a.cpu() < b.cpu() },
 	},
 	{
-		Key: "mem", Header: "MEM%", Width: 5, ProcessOnly: true, Right: true,
+		Key: "mem", Header: "MEM%",
+		Description: "Working set as a share of physical memory", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topPercent(r.MemoryShare) },
 		Less: func(a, b topRow) bool { return a.MemoryShare < b.MemoryShare },
 	},
 	{
-		Key: "rss", Header: "RSS", Width: 5, ProcessOnly: true, Right: true,
+		Key: "rss", Header: "RSS",
+		Description: "Working set: physical memory mapped now, shared pages included. Sums to more than the machine has", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.WorkingSet) },
 		Less: func(a, b topRow) bool { return a.Process.WorkingSet < b.Process.WorkingSet },
 	},
 	{
-		Key: "private", Header: "PRIV", Width: 5, ProcessOnly: true, Right: true,
+		Key: "private", Header: "PRIV",
+		Description: "Private working set: physical memory not shared with anything. This is what Task Manager calls Memory", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.PrivateWorkingSet) },
 		Less: func(a, b topRow) bool { return a.Process.PrivateWorkingSet < b.Process.PrivateWorkingSet },
 	},
 	{
-		Key: "commit", Header: "COMMIT", Width: 6, ProcessOnly: true, Right: true,
+		Key: "commit", Header: "COMMIT",
+		Description: "Private committed memory: what the system has promised this process, resident or paged out", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topBytes(r.Process.Commit) },
 		Less: func(a, b topRow) bool { return a.Process.Commit < b.Process.Commit },
 	},
 	{
-		Key: "thr", Header: "THR", Width: 5, ProcessOnly: true, Right: true,
+		Key: "thr", Header: "THR",
+		Description: "Threads. -H puts each one on a row of its own", Width: 5, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.Threads) },
 		Less: func(a, b topRow) bool { return a.Process.Threads < b.Process.Threads },
 	},
 	{
-		Key: "handles", Header: "HND", Width: 6, ProcessOnly: true, Right: true,
+		Key: "handles", Header: "HND",
+		Description: "Open handles. A number that only ever climbs is the commonest Windows leak, and nothing else here shows it", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.Handles) },
 		Less: func(a, b topRow) bool { return a.Process.Handles < b.Process.Handles },
 	},
@@ -162,12 +182,14 @@ var topColumns = []topColumn{
 	// disk-only figures come from ETW's Kernel-Disk provider, which needs a privilege this
 	// deliberately does not ask for. See docs/design/process-view.md.
 	{
-		Key: "read", Header: "IORD/s", Width: 6, ProcessOnly: true, Right: true,
+		Key: "read", Header: "IORD/s",
+		Description: "Bytes read per second through *any* handle: file, pipe, socket, console. Not disk-only -- Windows does not separate them", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.ReadBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.ReadBytesPerSecond < b.Rate.ReadBytesPerSecond },
 	},
 	{
-		Key: "write", Header: "IOWR/s", Width: 6, ProcessOnly: true, Right: true,
+		Key: "write", Header: "IOWR/s",
+		Description: "Bytes written per second, through any handle. See IORD/s", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.WriteBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.WriteBytesPerSecond < b.Rate.WriteBytesPerSecond },
 	},
@@ -175,34 +197,40 @@ var topColumns = []topColumn{
 		// Other is ioctls and device control -- everything that is neither a read nor a
 		// write. Small for most processes and the whole story for a few, which is why the
 		// table reports it separately rather than folding it into the other two.
-		Key: "other", Header: "IOOT/s", Width: 6, ProcessOnly: true, Right: true,
+		Key: "other", Header: "IOOT/s",
+		Description: "Bytes moved per second by anything that is neither a read nor a write, such as device control", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topRate(r.Rate.OtherBytesPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.OtherBytesPerSecond < b.Rate.OtherBytesPerSecond },
 	},
 	{
 		// Operations rather than bytes: the count that explains a machine which is busy
 		// without moving much data.
-		Key: "iops", Header: "IOPS", Width: 6, ProcessOnly: true, Right: true,
+		Key: "iops", Header: "IOPS",
+		Description: "IO operations per second, all three kinds together. High with low byte rates means many small calls", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topCount(topRowIOPS(r)) },
 		Less: func(a, b topRow) bool { return topRowIOPS(a) < topRowIOPS(b) },
 	},
 	{
-		Key: "readops", Header: "RDOP/s", Width: 6, ProcessOnly: true, Right: true,
+		Key: "readops", Header: "RDOP/s",
+		Description: "Read calls per second, however small each one was", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topCount(r.Rate.ReadOpsPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.ReadOpsPerSecond < b.Rate.ReadOpsPerSecond },
 	},
 	{
-		Key: "writeops", Header: "WROP/s", Width: 6, ProcessOnly: true, Right: true,
+		Key: "writeops", Header: "WROP/s",
+		Description: "Write calls per second", Width: 6, ProcessOnly: true, Right: true,
 		Cell: func(r topRow) string { return topCount(r.Rate.WriteOpsPerSecond) },
 		Less: func(a, b topRow) bool { return a.Rate.WriteOpsPerSecond < b.Rate.WriteOpsPerSecond },
 	},
 	{
-		Key: "time", Header: "TIME+", Width: 10, Right: true,
+		Key: "time", Header: "TIME+",
+		Description: "CPU used since it started, as minutes:seconds.hundredths. Switches to hours and then days rather than overflow", Width: 10, Right: true,
 		Cell: func(r topRow) string { return topCPUTime(r.cpuTime()) },
 		Less: func(a, b topRow) bool { return a.cpuTime() < b.cpuTime() },
 	},
 	{
-		Key: "command", Header: "COMMAND", Width: 0, Ascending: true,
+		Key: "command", Header: "COMMAND",
+		Description: "Executable name. `p` swaps it for the full path, which needs a handle and is blank where that was refused", Width: 0, Ascending: true,
 		// Width zero means the rest of the line. The command is last for that reason, and
 		// because it is the only column whose length nobody can predict.
 		Cell: func(r topRow) string {

@@ -549,3 +549,85 @@ func (h *topHarness) rowCount(t *testing.T) int {
 	t.Fatal("the table never got the keyboard back")
 	return 0
 }
+
+// F1 opens a panel that explains the table, not a line that lists keys.
+//
+// The line came first and was the wrong shape: enough to remind someone of a binding they knew, no
+// use for the terms. The headers are four letters each and several name Windows concepts with no
+// POSIX counterpart -- RSS, PRIV and COMMIT are three different memory numbers -- so what a legend
+// has to carry is the columns.
+//
+// The content is checked against topHelpPanel rather than against the screen, because the panel is
+// deliberately longer than a terminal: the first version of this asserted on what was drawn and
+// failed on the sections below the fold, which is the panel working as intended.
+func TestTopHelpPanel_explainsTheTable(t *testing.T) {
+	panel := topHelpPanel(newTopModel(mustColumns(t)))
+
+	for _, want := range []string{"KEYS", "COLUMNS", "COLOUR", "WHAT IS NOT HERE"} {
+		if !strings.Contains(panel, want) {
+			t.Fatalf("the panel has no %s section", want)
+		}
+	}
+	// Every column, not only the ones on screen: the layout widens with the window and -o can
+	// name any of them.
+	for _, column := range topColumns {
+		if !strings.Contains(panel, column.Header) {
+			t.Fatalf("the panel does not mention the %s column", column.Header)
+		}
+		if !strings.Contains(panel, column.Description) {
+			t.Fatalf("the panel does not carry %s's description", column.Header)
+		}
+	}
+	// The three memory numbers, which is the case that prompted this.
+	for _, want := range []string{"Working set", "Private working set", "Private committed"} {
+		if !strings.Contains(panel, want) {
+			t.Fatalf("the panel does not distinguish %q from the other memory columns", want)
+		}
+	}
+	// And the questions people arrive with.
+	for _, want := range []string{"load average", "TTY", "nice value", "disk-only IO"} {
+		if !strings.Contains(panel, want) {
+			t.Fatalf("the panel does not say why %q is absent", want)
+		}
+	}
+}
+
+// F1 draws it, and a key puts the table back.
+func TestTopApplication_f1OpensAndClosesThePanel(t *testing.T) {
+	harness := startTop(t)
+	if _, ok := harness.waitFor(t, "COMMAND"); !ok {
+		t.Fatal("nothing drawn")
+	}
+
+	// When
+	harness.screen.InjectKey(tcell.KeyF1, 0, tcell.ModNone)
+
+	// Then
+	if drawn, ok := harness.waitFor(t, "KEYS"); !ok {
+		t.Fatalf("F1 drew no panel:\n%s", drawn)
+	}
+
+	// And an ordinary key returns, so the panel cannot trap anyone. `q` closes it too rather
+	// than quitting, which is htop's behaviour and why this test quits explicitly afterwards
+	// rather than through the usual deferred helper.
+	harness.screen.InjectKey(tcell.KeyRune, 'x', tcell.ModNone)
+	if back, ok := harness.waitFor(t, "COMMAND"); !ok {
+		t.Fatalf("the panel would not close:\n%s", back)
+	}
+	if err := harness.quit(t); err != nil {
+		t.Fatalf("application returned %v", err)
+	}
+}
+
+// Every column carries its own explanation, so the legend cannot fall behind the table.
+func TestTopColumns_everyColumnIsExplained(t *testing.T) {
+	for _, column := range topColumns {
+		if strings.TrimSpace(column.Description) == "" {
+			t.Fatalf("column %q has no description, so the help panel shows a blank beside it",
+				column.Key)
+		}
+	}
+	// No length rule. The first version of this demanded twenty-five characters and flagged
+	// "Write calls per second", which is short because it is clear -- length is a bad proxy for
+	// whether a sentence explains anything.
+}

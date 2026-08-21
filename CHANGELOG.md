@@ -10,6 +10,19 @@ patch number is the commits since that tag.
 
 ## Unreleased
 
+### Process monitor
+
+- **F1 opens a panel instead of writing a line in the status bar.** The line was
+  enough to remind someone of a binding they already knew and no use at all for
+  the terms, which is what people actually ask about: the headers are four letters
+  each and several name Windows concepts with no POSIX counterpart.
+- **Every column now carries a one-line explanation**, kept beside the column
+  itself so the legend cannot fall behind the table, and the panel lists all of
+  them rather than only the ones the current window is wide enough to show. RSS,
+  PRIV and COMMIT are three different memory numbers and now say so.
+- The panel also explains the colours, and what is deliberately absent with the
+  reason -- load average, TTY, nice values, disk-only IO, a gentle kill signal.
+
 ### Text encodings
 
 - **`grep` reads the UTF-16 that Windows writes.** A byte-order mark is honoured

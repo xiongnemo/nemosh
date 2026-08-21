@@ -45,7 +45,7 @@ func (v *topView) key(event *tcell.EventKey) *tcell.EventKey {
 	case topActionRaisePriority:
 		v.adjustPriority(1)
 	case topActionHelp:
-		v.status.SetText(topHelpText)
+		v.showHelp()
 	case topActionFilterPrompt:
 		v.promptFilter()
 	case topActionSearchPrompt:
@@ -245,8 +245,3 @@ func (v *topView) selectedRow() (topRow, bool) {
 	}
 	return v.rows[row-1], true
 }
-
-// topHelpText is the key list, shown in the status line rather than in a page of its own: a
-// monitor's help is six words long and a full-screen help panel hides the thing being explained.
-const topHelpText = "[white]q quit  / search  n next  F7/F8 priority  F4 filter  F5/t tree  H threads  K kernel  " +
-	"I reverse  P/M/T/N sort  space tag  +/- fold  Z pause  p path  F9/k kill  r refresh"
