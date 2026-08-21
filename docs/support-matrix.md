@@ -393,6 +393,27 @@ the devices. Two notes on the walkers:
   it; this is a platform difference rather than a decision, and it is why walking
   the device tree needed no traversal of the real filesystem.
 
+`realpath` answers for a device -- `realpath /dev/../dev/zero` is `/dev/zero` --
+because a device has a canonical spelling and canonicalising one is what realpath
+is for. A name under `/dev` that is not a device reports `No such file or
+directory`.
+
+**`cd /dev` is refused**, and it is the one place this model says no to something a
+Linux user can do. A working directory needs a native form, because launching a
+child process sets one, and `/dev` has none; a `cd` that succeeded would leave
+every external command running in the previous directory while `pwd` said `/dev`.
+`/tmp` is the contrast that makes this a rule rather than an inconsistency --
+`cd /tmp` works, because `/tmp` has a native mapping behind it. The message gives
+that reason rather than saying "not a directory", which would contradict
+`test -d /dev`.
+
+A device is not a program: `/dev/null` as a command is refused as not executable,
+and a device entry in `PATH` is skipped. A device path passed as an *argument* to
+an external program goes through unconverted, which is the argv rule
+`docs/design/v0-scope.md` states -- what a Windows program makes of
+`/dev/clipboard` is its own business, and converting it would be the MSYS2
+behaviour this shell deliberately does not have.
+
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |

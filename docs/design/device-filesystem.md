@@ -4,6 +4,35 @@ Whether `/dev` should be a filesystem rather than a set of magic strings, what
 that would buy, and what it would cost. Written 2026-08-21 in answer to the
 question directly; the measurements are from this machine on that date.
 
+**Built 2026-08-22.** Option C was chosen and is done: `/dev` is a directory that
+lists, globs, completes and can be walked, and every device answers `stat` from
+the same table the opener reads. `docs/support-matrix.md` is the contract; this
+document is the reasoning, kept because two of its decisions were reversed by
+measurement while the work was under way.
+
+Three things turned out differently from the estimate, and they are worth reading
+before planning anything similar here:
+
+- **`find /` never meets `/dev`.** The plan put an `fs.FS` spanning the real and
+  synthetic namespaces at the centre of the work, on the assumption that a root
+  walk would descend into `/dev` as it does on Linux. It cannot: `/` resolves to
+  `/c`, the current drive's root, so `/dev` is a *sibling* top-level name.
+  Measured with `ls / | grep -c '^dev$'`, which answers zero. That removed the
+  splicing, the per-entry path translation and the performance risk together --
+  about two thirds of the estimated cost of Option C, and the whole of its risk.
+  What the walkers needed instead was a walk of one directory with no
+  subdirectories.
+- **`resolveHostPath` was already the choke point**, which is why Stage 1 reached
+  `test` and `ls` through one helper rather than nineteen call sites.
+- **`cd /dev` is refused**, where the plan said it should succeed. A working
+  directory needs a native form for launching a child, and `/dev` has none; the
+  reasoning is in the support matrix beside the behaviour.
+
+The abstraction the plan named -- one `fs.FS` over the whole namespace -- was
+therefore *not* built, and deliberately. Building it for a single one-level tree
+that no real walk can reach would be the abstraction-for-one-tenant mistake this
+document warns about below. It waits for `/proc`, which is when it starts paying.
+
 ## What exists now
 
 `/dev` is a **namespace of exact string matches**, not a directory. Two things

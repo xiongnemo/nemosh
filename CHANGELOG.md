@@ -10,6 +10,28 @@ patch number is the commits since that tag.
 
 ## Unreleased
 
+### Devices
+
+- **`/dev` is a directory.** `ls /dev` lists the devices, `echo /dev/*` expands,
+  `/dev/<TAB>` completes, and `find /dev`, `du -s /dev` and `grep -r /dev` all
+  work. busybox-w32 answers `No such file or directory` for `ls /dev`; listing is
+  a deliberate divergence, because without it the only way to learn which devices
+  exist is to read a document.
+- **A device is observable, not only openable.** `test -e /dev/null` was false
+  while `cat /dev/null` worked, and `ls -l /dev/null` refused the path. Both now
+  answer, and the long listing matches busybox to the column -- `crw-rw-rw-`, the
+  current user, and the major and minor numbers where a size would be.
+- `find -type c` selects character devices, which the shell can now produce.
+  `realpath /dev/../dev/zero` answers `/dev/zero`.
+- **`grep -r` never reads a device.** `/dev/zero` returns bytes for ever, so a
+  recursive grep that read it would not return; GNU grep skips devices when
+  recursing for the same reason. A device named directly is still read.
+- `cd /dev` is refused with the reason: a working directory needs a native form
+  and `/dev` has none. The message no longer says "not a directory", which would
+  contradict `test -d /dev`.
+- One list drives opening, stat and listing, so `test -e /dev/zero` cannot
+  disagree with `cat /dev/zero`. See `docs/design/device-filesystem.md`.
+
 ### Interactive shell
 
 - **`~/` completes.** Tab offered nothing for a tilde: completion works on the
