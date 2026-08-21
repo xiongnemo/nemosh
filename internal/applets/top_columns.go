@@ -41,7 +41,14 @@ type topColumn struct {
 	Width  int
 	// Right says the cell is right-aligned, which every number is and no name is.
 	Right bool
-	Cell  func(row topRow) string
+	// Ascending says a first press sorts this column upwards.
+	//
+	// The rule is the difference between a magnitude and a name. Sorting by CPU or memory is
+	// asking "what is using the most", so the largest comes first; sorting by pid or by command
+	// is asking to read the list in order, so it goes in reading order. Without this, pressing
+	// N put pid 65000 at the top and looked as though nothing useful had happened.
+	Ascending bool
+	Cell      func(row topRow) string
 	// Less orders two rows ascending. Sorting descending is the view's business, not the
 	// column's, so there is one comparator per column rather than two.
 	Less func(a, b topRow) bool
@@ -54,17 +61,17 @@ type topColumn struct {
 // misbehaves, and nothing else in the shell can show it.
 var topColumns = []topColumn{
 	{
-		Key: "pid", Header: "PID", Width: 7, Right: true,
+		Key: "pid", Header: "PID", Width: 7, Right: true, Ascending: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.PID) },
 		Less: func(a, b topRow) bool { return a.Process.PID < b.Process.PID },
 	},
 	{
-		Key: "ppid", Header: "PPID", Width: 7, Right: true,
+		Key: "ppid", Header: "PPID", Width: 7, Right: true, Ascending: true,
 		Cell: func(r topRow) string { return strconv.Itoa(r.Process.PPID) },
 		Less: func(a, b topRow) bool { return a.Process.PPID < b.Process.PPID },
 	},
 	{
-		Key: "user", Header: "USER", Width: 10,
+		Key: "user", Header: "USER", Width: 10, Ascending: true,
 		// Empty rather than a guess where the handle was refused; the header stays so the
 		// reader can see the column exists and that this row would not answer.
 		Cell: func(r topRow) string { return r.Details.User },
@@ -76,7 +83,7 @@ var topColumns = []topColumn{
 		Less: func(a, b topRow) bool { return a.Process.Priority < b.Process.Priority },
 	},
 	{
-		Key: "state", Header: "S", Width: 1,
+		Key: "state", Header: "S", Width: 1, Ascending: true,
 		Cell: func(r topRow) string { return string(rune(r.Process.State)) },
 		Less: func(a, b topRow) bool { return a.Process.State < b.Process.State },
 	},
@@ -133,7 +140,7 @@ var topColumns = []topColumn{
 		},
 	},
 	{
-		Key: "command", Header: "COMMAND", Width: 0,
+		Key: "command", Header: "COMMAND", Width: 0, Ascending: true,
 		// Width zero means the rest of the line. The command is last for that reason, and
 		// because it is the only column whose length nobody can predict.
 		Cell: func(r topRow) string {

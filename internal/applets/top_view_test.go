@@ -162,10 +162,20 @@ func TestTopApplication_sortKeyReordersTheTable(t *testing.T) {
 	// When -- 1 sorts by the first column, the pid in the default layout
 	harness.screen.InjectKey(tcell.KeyRune, '1', tcell.ModNone)
 
-	// Then -- ascending pid brings pid 0, which is Idle, to the top
-	if screen, ok := harness.waitFor(t, "Idle"); !ok {
-		t.Fatalf("sorting by pid did not bring Idle into view:\n%s", screen)
+	// Then -- pid 0, which is Idle, is on the *first row*. Asserted as the first row rather than
+	// as "somewhere on screen", which is how this test used to be written: Idle is on screen in
+	// the default CPU order too, so the weaker form passed whether or not the key did anything.
+	deadline := time.Now().Add(10 * time.Second)
+	last := ""
+	for time.Now().Before(deadline) {
+		cells, width, height := harness.cells(t)
+		last = screenLine(cells, width, topHeaderRow(t, cells, width, height)+1)
+		if strings.Contains(last, "Idle") {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
+	t.Fatalf("sorting by pid did not put Idle on the first row; it holds %q", strings.TrimSpace(last))
 }
 
 // selectedPID is the pid text of the row under the cursor, read from tview's goroutine.
@@ -234,13 +244,12 @@ func TestTopApplication_theCursorStaysOnTheProcessItWasPutOn(t *testing.T) {
 		t.Fatal("nothing drawn")
 	}
 
-	// When -- three rows down. InjectKey is asynchronous and QueueUpdate is not ordered against
-	// it, so the move is waited for rather than assumed: reading the selection straight after
-	// injecting saw the cursor still on the first row and failed for the wrong reason.
+	// When -- one row down. InjectKey is asynchronous and QueueUpdate is not ordered against it,
+	// so the move is waited for rather than assumed. One press rather than three for the same
+	// reason: with three, the poll below saw the selection change after the first had landed and
+	// then reported the other two arriving as the cursor "moving on its own".
 	before := harness.selectedPID(t)
-	for range 3 {
-		harness.screen.InjectKey(tcell.KeyDown, 0, tcell.ModNone)
-	}
+	harness.screen.InjectKey(tcell.KeyDown, 0, tcell.ModNone)
 	moved := ""
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
@@ -326,16 +335,21 @@ func TestTopApplication_theTableIsColoured(t *testing.T) {
 func topHeaderRow(t *testing.T, cells []tcell.SimCell, width, height int) int {
 	t.Helper()
 	for row := 0; row < height; row++ {
-		line := ""
-		for column := 0; column < width; column++ {
-			if runes := cells[row*width+column].Runes; len(runes) > 0 {
-				line += string(runes[0])
-			}
-		}
-		if strings.Contains(line, "COMMAND") {
+		if strings.Contains(screenLine(cells, width, row), "COMMAND") {
 			return row
 		}
 	}
 	t.Fatal("no header row on screen")
 	return 0
+}
+
+// screenLine is one row of the simulated screen as text.
+func screenLine(cells []tcell.SimCell, width, row int) string {
+	line := ""
+	for column := 0; column < width; column++ {
+		if runes := cells[row*width+column].Runes; len(runes) > 0 {
+			line += string(runes[0])
+		}
+	}
+	return line
 }

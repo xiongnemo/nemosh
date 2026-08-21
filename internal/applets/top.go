@@ -152,7 +152,7 @@ type topSession struct {
 func newTopSession(options topOptions) *topSession {
 	columns, _ := resolveColumns(topDefaultColumns)
 	model := newTopModel(columns)
-	model.Sort = options.sort
+	model.setSort(options.sort)
 	model.Filter = options.filter
 	model.Tree = options.tree
 	model.Threads = options.threads

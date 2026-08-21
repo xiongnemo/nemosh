@@ -359,3 +359,79 @@ func TestTopModel_htopBindings(t *testing.T) {
 		}
 	})
 }
+
+// Which way a first press sorts, which is the difference between a useful key and one that looks
+// broken. Pressing N put pid 65000 at the top before this: sorting by pid had always worked, and
+// had always answered a question nobody asks.
+func TestTopModel_aFirstPressSortsTheWayTheColumnWants(t *testing.T) {
+	tests := []struct {
+		key        string
+		want       string
+		descending bool
+	}{
+		// Magnitudes: the reason to sort by one is to see the largest.
+		{key: "P", want: "cpu", descending: true},
+		{key: "M", want: "mem", descending: true},
+		{key: "T", want: "time", descending: true},
+		// Names and identities: the reason to sort by one is to read the list in order.
+		{key: "N", want: "pid", descending: false},
+	}
+	for _, test := range tests {
+		t.Run(test.key, func(t *testing.T) {
+			model := newTopModel(mustColumns(t))
+			// Sorted by something else first, so this is a first press rather than a
+			// second one. A second press on the selected column reverses it, which is
+			// right and is what this would otherwise be measuring: the default sort is
+			// already cpu, so pressing P from a fresh model reverses instead of choosing.
+			model.setSort("handles")
+
+			// When
+			model.applyKey(test.key)
+
+			// Then
+			if model.Sort != test.want || model.Descending != test.descending {
+				t.Fatalf("%s sorted by %q descending=%v, want %q descending=%v",
+					test.key, model.Sort, model.Descending, test.want, test.descending)
+			}
+		})
+	}
+}
+
+func TestTopModel_sortsByPIDInReadingOrder(t *testing.T) {
+	model := newTopModel(mustColumns(t))
+	snapshot, rates := testSnapshot(
+		testProcess(900, 0, "last", 100),
+		testProcess(4, 0, "first", 100),
+		testProcess(500, 0, "middle", 100),
+	)
+
+	// When
+	model.applyKey("N")
+
+	// Then
+	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "first", "middle", "last")
+
+	// And a second press reverses it, as it does for any column.
+	model.applyKey("N")
+	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "last", "middle", "first")
+}
+
+// `-s pid` gets pid's direction too, which is why setSort exists apart from sortBy.
+func TestTopSession_theRequestedSortKeepsItsOwnDirection(t *testing.T) {
+	tests := map[string]bool{"pid": false, "cpu": true, "rss": true, "command": false}
+	for key, descending := range tests {
+		options, err := topArgs([]string{"-s", key})
+		if err != nil {
+			t.Fatalf("topArgs -s %s: %v", key, err)
+		}
+
+		// When
+		session := newTopSession(options)
+
+		// Then
+		if session.model.Sort != key || session.model.Descending != descending {
+			t.Fatalf("-s %s gave sort=%q descending=%v, want descending=%v",
+				key, session.model.Sort, session.model.Descending, descending)
+		}
+	}
+}

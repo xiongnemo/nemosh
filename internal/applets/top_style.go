@@ -153,19 +153,54 @@ func topBars(fraction float64, width int) string {
 		strings.Repeat("|", filled), strings.Repeat(".", width-filled))
 }
 
+// topUnknownBars is the bar for a rate that does not exist yet.
+//
+// An empty bar rather than no bar, and a dash rather than a zero. The first sample has nothing to
+// take a rate against, so every CPU figure is *unknown* -- and 0.0% would be a lie that looks
+// exactly like an idle machine, which is the worst available answer. Drawing the bars empty also
+// keeps the header the height it is about to be, so the table does not jump down a line a second
+// after it appears.
+func topUnknownBars(width int) string {
+	if width < 4 {
+		width = 4
+	}
+	return "[gray]" + strings.Repeat(".", width)
+}
+
 // topMeter is one of the three meters for the machine as a whole, with its figures beside it.
 func topMeter(label string, fraction float64, width int, note string) string {
-	return fmt.Sprintf("[white]%-4s%s [white]%5s%%  [silver]%s", label,
-		topBars(fraction, width-topMeterOverhead), strings.TrimSpace(topPercent(fraction)), note)
+	return topMeterText(label, topBars(fraction, width-topMeterOverhead),
+		strings.TrimSpace(topPercent(fraction))+"%", note)
+}
+
+// topUnknownMeter is the same meter before there is a rate to put in it.
+func topUnknownMeter(label string, width int, note string) string {
+	return topMeterText(label, topUnknownBars(width-topMeterOverhead), "--", note)
+}
+
+// topMeterText lays out a wide meter. One place, so the known and unknown forms cannot drift into
+// different widths and make the header ripple when the first rate arrives.
+func topMeterText(label, bars, percent, note string) string {
+	out := fmt.Sprintf("[white]%-4s%s [white]%6s", label, bars, percent)
+	if note != "" {
+		out += "  [silver]" + note
+	}
+	return out
 }
 
 // topSmallMeter is the compact per-processor form.
 //
-// Compact so that a sixteen-core machine's meters fit in the two lines the header spends on them.
-// The wide form would fit two to a line, which would show four cores out of sixteen.
+// Compact so that a sixteen-core machine's meters fit in the lines the header spends on them. The
+// wide form fits two to a line, which would show four cores out of sixteen.
 func topSmallMeter(label string, fraction float64, width int) string {
-	return fmt.Sprintf("[white]%-3s%s [white]%5s%%", label, topBars(fraction, width),
-		strings.TrimSpace(topPercent(fraction)))
+	return fmt.Sprintf("[white]%-3s%s [white]%6s", label, topBars(fraction, width),
+		strings.TrimSpace(topPercent(fraction))+"%")
+}
+
+// topSmallUnknownMeter is the compact form before its rate exists. Same width as topSmallMeter,
+// so nothing moves sideways when the figures arrive.
+func topSmallUnknownMeter(label string, width int) string {
+	return fmt.Sprintf("[white]%-3s%s [gray]%6s", label, topUnknownBars(width), "--")
 }
 
 // topProcessorLayout is how the per-processor meters are arranged.
@@ -208,32 +243,47 @@ func topSummaryText(snapshot proc.Snapshot, rates proc.Rates, width, height int)
 	var out strings.Builder
 	fmt.Fprintf(&out, "[white]top - up [aqua]%s[white], [aqua]%d[white] processes, [aqua]%d[white] threads, [aqua]%d[white] running\n",
 		topUptime(snapshot.Uptime), len(snapshot.Processes), threads, running)
-	fmt.Fprintln(&out, topMeter("CPU", rates.TotalBusy, width,
-		fmt.Sprintf("%d processors", len(snapshot.CPUs))))
+	// Interval zero means there was no usable pair of samples to take a rate from, which is
+	// always true of the first one. Said out loud rather than drawn as zero: an idle-looking
+	// machine and an unmeasured one are different claims.
+	note := fmt.Sprintf("%d processors", len(snapshot.CPUs))
+	if rates.Interval <= 0 {
+		fmt.Fprintln(&out, topUnknownMeter("CPU", width, note+"  [yellow]sampling..."))
+	} else {
+		fmt.Fprintln(&out, topMeter("CPU", rates.TotalBusy, width, note))
+	}
 	fmt.Fprintln(&out, topMeter("Mem", memory.Share(), width, fmt.Sprintf("%s of %s, %s cached",
 		topBytes(memory.UsedPhysical()), topBytes(memory.TotalPhysical), topBytes(memory.Cached))))
 	// Commit rather than swap, as the plain form also says: Windows promises memory rather than
 	// paging it out in a way that can be counted the way Linux counts swap.
 	fmt.Fprintln(&out, topMeter("Cmt", memory.CommitShare(), width, fmt.Sprintf("%s of %s",
 		topBytes(memory.CommitTotal), topBytes(memory.CommitLimit))))
-	writeTopProcessorMeters(&out, rates, width, height)
+	writeTopProcessorMeters(&out, snapshot, rates, width, height)
 	return out.String()
 }
 
 // writeTopProcessorMeters packs one meter per processor into the lines it was given.
-func writeTopProcessorMeters(out *strings.Builder, rates proc.Rates, width, height int) {
-	if len(rates.CPUs) == 0 {
-		// The first sample has nothing to take a rate against, so there is nothing to draw
-		// here for one tick. The three meters above are absolute and do appear.
+//
+// The count comes from the snapshot rather than from the rates, because the snapshot knows how many
+// processors there are on its first call while a rate needs two. So the meters are all present from
+// the start, empty until there is something to put in them.
+func writeTopProcessorMeters(out *strings.Builder, snapshot proc.Snapshot, rates proc.Rates, width, height int) {
+	count := len(snapshot.CPUs)
+	if count == 0 {
 		return
 	}
-	perLine, lines := topProcessorLayout(len(rates.CPUs), width, height)
-	for index, cpu := range rates.CPUs {
+	bar := topMeterCells - topSmallOverhead
+	perLine, lines := topProcessorLayout(count, width, height)
+	for index := range count {
 		if index >= perLine*lines {
 			break
 		}
-		fmt.Fprint(out, topSmallMeter(strconv.Itoa(index), cpu.Busy, topMeterCells-topSmallOverhead))
-		if index%perLine == perLine-1 || index == len(rates.CPUs)-1 {
+		if index < len(rates.CPUs) {
+			fmt.Fprint(out, topSmallMeter(strconv.Itoa(index), rates.CPUs[index].Busy, bar))
+		} else {
+			fmt.Fprint(out, topSmallUnknownMeter(strconv.Itoa(index), bar))
+		}
+		if index%perLine == perLine-1 || index == count-1 {
 			fmt.Fprintln(out)
 			continue
 		}

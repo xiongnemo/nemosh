@@ -289,8 +289,18 @@ func (m *topModel) sortBy(key string) {
 		m.Descending = !m.Descending
 		return
 	}
+	m.setSort(key)
+}
+
+// setSort selects a column and the direction it wants, without the toggle sortBy applies.
+//
+// Separate from sortBy because the command line needs it: `top -s pid` must get pid's own
+// direction, and routing that through sortBy would have reversed it whenever the requested column
+// happened to be the one already selected.
+func (m *topModel) setSort(key string) {
 	m.Sort = key
-	// A new column starts descending, because the reason to sort by a column is almost always
-	// to see the largest values in it.
 	m.Descending = true
+	if column, ok := columnByKey(key); ok {
+		m.Descending = !column.Ascending
+	}
 }

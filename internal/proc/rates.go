@@ -57,9 +57,20 @@ type CPURate struct {
 //
 // A zero or negative interval yields empty rates rather than dividing by it, which happens more
 // often than it sounds: two samples inside one clock tick, or a clock that stepped backwards.
+//
+// So does the absence of an earlier snapshot, which is a distinct case and was reported as an
+// interval of two thousand years: subtracting the zero time gives a large positive number, so the
+// arithmetic went ahead and produced rates of almost exactly zero from nothing at all. Every figure
+// came out plausible -- an idle machine -- and the caller had no way to tell "measured, nothing
+// happening" from "not measured yet". Now Interval means what its comment says: zero, and no rates,
+// when there was nothing to compare against.
 func Between(earlier, later Snapshot) Rates {
+	rates := Rates{Processes: map[int]ProcessRate{}}
+	if earlier.Taken.IsZero() {
+		return rates
+	}
 	interval := later.Taken.Sub(earlier.Taken)
-	rates := Rates{Interval: interval, Processes: map[int]ProcessRate{}}
+	rates.Interval = interval
 	if interval <= 0 {
 		return rates
 	}

@@ -179,3 +179,30 @@ func TestBetween_newProcessHasNoRateYet(t *testing.T) {
 		t.Fatal("a process seen once produced a rate")
 	}
 }
+
+// The first sample of a run has nothing behind it, and must say so rather than inventing an answer.
+//
+// This was wrong in a way that could not be seen: the earlier snapshot's Taken is the zero time, so
+// the interval came out as roughly two thousand years, the guard against a non-positive interval let
+// it through, and every rate divided by it landed on almost exactly zero. The screen showed an idle
+// machine. It is the difference between "nothing is happening" and "nothing has been measured", and
+// only one of them is true one second into a run.
+func TestBetween_withNoEarlierSnapshotThereAreNoRates(t *testing.T) {
+	later := proc.Snapshot{
+		Taken:     time.Date(2026, time.August, 21, 12, 0, 1, 0, time.UTC),
+		Processes: []proc.Process{{PID: 4, Kernel: time.Minute, User: time.Minute}},
+		CPUs:      []proc.CPUTime{{Kernel: time.Minute, User: time.Minute}},
+	}
+
+	// When
+	rates := proc.Between(proc.Snapshot{}, later)
+
+	// Then
+	if rates.Interval != 0 {
+		t.Fatalf("interval = %v, want zero: there was no earlier sample to measure from", rates.Interval)
+	}
+	if len(rates.Processes) != 0 || len(rates.CPUs) != 0 || rates.TotalBusy != 0 {
+		t.Fatalf("rates were computed from a single sample: %d processes, %d cpus, %v busy",
+			len(rates.Processes), len(rates.CPUs), rates.TotalBusy)
+	}
+}

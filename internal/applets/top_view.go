@@ -88,7 +88,7 @@ func runTopApplication(ctx context.Context, options topOptions, screen tcell.Scr
 	// No wrapping: this is a fixed-height header, so an overlong line must be cut off rather
 	// than reflowed into the space a processor meter was going to use.
 	summary := tview.NewTextView().SetDynamicColors(true).SetWrap(false)
-	status := tview.NewTextView().SetDynamicColors(true)
+	status := tview.NewTextView().SetDynamicColors(true).SetWrap(false)
 	layout := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(summary, topSummaryFixedLines, 0, false).
 		AddItem(table, 0, 1, true).
@@ -186,7 +186,7 @@ type topView struct {
 // would keep the rates moving underneath, so unpausing would jump.
 func (v *topView) refresh() {
 	if v.session.model.Paused {
-		v.status.SetText(topStatusText(v.session.model, len(v.rows)))
+		v.status.SetText(v.statusText())
 		return
 	}
 	snapshot, rates, rows, err := v.session.sample()
@@ -198,7 +198,12 @@ func (v *topView) refresh() {
 	v.snapshot, v.rates = snapshot, rates
 	v.drawSummary()
 	v.fillTable()
-	v.status.SetText(topStatusText(v.session.model, len(rows)))
+	v.status.SetText(v.statusText())
+}
+
+// statusText is the bottom bar for the view's current state.
+func (v *topView) statusText() string {
+	return topStatusText(v.session.model, len(v.rows), v.rates.Interval <= 0)
 }
 
 // drawSummary writes the header at the current width.
@@ -207,7 +212,7 @@ func (v *topView) drawSummary() {
 	// The header is as tall as the machine needs, so the layout is resized rather than the
 	// meters being cropped to a constant. htop grows its header for the same reason.
 	v.root.ResizeItem(v.summary,
-		topSummaryHeight(len(v.rates.CPUs), v.summaryWidth, v.summaryHeight), 0)
+		topSummaryHeight(len(v.snapshot.CPUs), v.summaryWidth, v.summaryHeight), 0)
 }
 
 // fillTable writes the rows into the widget, keeping the selection on the same process.
@@ -276,7 +281,13 @@ func (v *topView) selectionChanged(row, _ int) {
 }
 
 // topStatusText is the key hint line, which is what makes a monitor discoverable at all.
-func topStatusText(model topModel, rows int) string {
+// topStatusText is the bottom bar: what state the monitor is in, then the keys.
+//
+// sampling says there is no rate yet, which is true for the first second of every run and is worth
+// a word there rather than only a dash in the meters. Until it said so, the first thing anyone saw
+// was a column of empty CPU figures and no explanation -- and the bottom bar was the one part of
+// the screen with nothing on it to read.
+func topStatusText(model topModel, rows int, sampling bool) string {
 	arrangement := "flat"
 	if model.Tree {
 		arrangement = "tree"
@@ -285,14 +296,17 @@ func topStatusText(model topModel, rows int) string {
 	if model.Filter != "" {
 		filter = fmt.Sprintf("  filter=%q", model.Filter)
 	}
-	paused := ""
-	if model.Paused {
-		paused = "  [red]PAUSED"
+	state := ""
+	switch {
+	case model.Paused:
+		state = "  [red]PAUSED"
+	case sampling:
+		state = "  [yellow]sampling, no rates until the next tick"
 	}
 	return fmt.Sprintf("[white]%d rows  sort=%s%s  %s%s%s   [yellow]q[white] quit  "+
-		"[yellow]F4[white] filter  [yellow]F5[white] tree  [yellow]P/M/T[white] sort  "+
+		"[yellow]F4[white] filter  [yellow]F5[white] tree  [yellow]P/M/T/N[white] sort  "+
 		"[yellow]F9[white] kill  [yellow]F1[white] help",
-		rows, model.Sort, sortArrow(model.Descending), arrangement, filter, paused)
+		rows, model.Sort, sortArrow(model.Descending), arrangement, filter, state)
 }
 
 func sortArrow(descending bool) string {
