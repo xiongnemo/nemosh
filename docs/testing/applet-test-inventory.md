@@ -75,18 +75,22 @@ No applet should be marked done without at least Smoke and Negative tests.
 
 ## Later BusyBox-Style Roadmap
 
-These applets are useful but should not block the first runtime unless tests or
-scripts require them:
+Written before v0 as a list of what should not block the first runtime. **Almost all
+of it has since landed**, so it is kept here as the record of what each group's test
+focus turned out to be -- the "initial test focus" column was a prediction, and
+where it was right it is worth saying so.
 
-| Group | Applets | Initial test focus |
-| --- | --- | --- |
-| Checksums | `cksum`, `md5sum`, `sha1sum`, `sha256sum`, `sha512sum` | known vectors, stdin/file, binary mode. |
-| Archiving | `tar`, `gzip`, `gunzip`, `bzip2`, `bunzip2`, `xz`, `unxz`, `zcat` | simple archives, stdin/stdout, path traversal safety. |
-| Text transforms | `cut`, `tr`, `sort`, `uniq`, `comm`, `paste`, `join`, `expand`, `unexpand` | POSIX option subsets, locale/UTF-8 policy. |
-| File inspection | `stat`, `readlink`, `realpath`, `du`, `df` | Windows path roots, symlink/junction/reparse points, volume mounts. |
-| Process | `ps`, `kill`, `sleep`, `timeout`, `yes` | Windows process model, Ctrl-C/TERM limitations. |
-| Networking | `wget`, `nc`, `ftpget`, `ftpput` | post-v0 unless needed for scripts. |
-| Editors/calculators | `vi`, `ed`, `awk`, `bc`, `dc` | substantial standalone projects; defer unless explicitly prioritized. |
+| Group | Applets | Test focus, as it turned out | |
+| --- | --- | --- | --- |
+| Checksums | `cksum`, `md5sum`, `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum`, `sha3sum`, `crc32`, `sum` | known vectors, stdin/file, binary mode -- as predicted. 58 of 58 measured forms agree with busybox. | done |
+| Archiving | `tar`, `unzip`, `cpio`, `ar`, `gzip`, `gunzip`, `zcat`, `bunzip2`, `bzcat` | **path traversal safety was the right call and became the largest test file in the group**: one containment helper, fifteen hostile names, each asserting nothing was written outside the root. | done |
+| Text transforms | `cut`, `tr`, `sort`, `uniq`, `comm`, `paste`, `join`, `expand`, `unexpand`, `fold`, `tsort`, `shuf`, `strings`, `factor`, `base32`, `ascii`, `od`, `hexdump`, `hd`, `diff`, `patch`, `dos2unix`, `unix2dos`, `iconv` | POSIX option subsets, yes; the UTF-8 policy turned out to need an applet of its own, and `iconv` is where it now lives. | done |
+| File inspection | `stat`, `readlink`, `realpath`, `du` | Windows path roots and reparse points, as predicted. `df` is not implemented. | mostly |
+| Process | `ps`, `kill`, `sleep`, `timeout`, `yes`, `pgrep`, `pkill`, `top`, `free` | the Windows process model and the Ctrl-C limits, as predicted. | done |
+| Networking | `wget`, `nc`, `whois`, `ssl_client`, `httpd`, `ftpget`, `ftpput` | not "post-v0 unless needed for scripts" in the end. The focus is containment -- a URL and a request path are untrusted names, so both go through the *archive* helper above -- and every test runs against a server the test starts. | done |
+| Editors | `nano`, `micro` | one implementation under two names, keyed by `argv[0]`, on the reading that busybox's own `vi` is a from-scratch clone. Headless tests over a tcell simulation screen. | done |
+| Interpreters | `vi`, `ed`, `awk`, `bc`, `dc` | still substantial standalone projects, and still deferred. This is the one row that has not moved. | deferred |
+| No Go support | `xz`, `unxz`, `lzma`, `lzop`, `bzip2` (compressing) | **not implemented and deliberately not registered**, so PATH still finds a real one. The reasons are in `docs/support-matrix.md`. | out |
 
 ## Per-Applet Test File Rule
 

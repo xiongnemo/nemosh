@@ -297,8 +297,9 @@ column deleted for a two-column character -- is an acceptance requirement here,
 not something to discover afterwards.
 
 Then, as before:
-39 applets are registered (`internal/applets/registry.go:52-92`) and every
-initial candidate name resolves, but *name presence is not semantic parity*. The
+111 applets are registered (`internal/applets/registry.go`) -- 39 of them added
+after v1.1 -- and every initial candidate name resolves, but *name presence is not
+semantic parity*. The
 per-applet tables in `docs/testing/applet-test-inventory.md` are the
 specification, and the options they name (`ls -l`, `head -c`, `grep -r`,
 `find -name`, `xargs -0`, `sort -k`, `cut -f`) are largely uncovered. v0 already
