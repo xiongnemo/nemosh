@@ -221,3 +221,73 @@ func TestHeadTail_quietAndVerbose(t *testing.T) {
 		t.Fatalf("head -qn1 gave %q, want %q", stdout, want)
 	}
 }
+
+// POSIX specifies head's header shape exactly:
+//
+//	"\n==> %s <==\n", <pathname>
+//
+// "except that the first header written shall not include the initial
+// <newline>", and only "when more than one file operand is specified". So the
+// blank line belongs to the following header rather than trailing the previous
+// block, which is why there is none after the last file -- and why the rule keys
+// off the number of *operands*.
+//
+// POSIX's tail takes a single file operand and says nothing about headers, so the
+// multi-file form is an extension; it follows head here rather than busybox,
+// whose tail counts the files it managed to open instead and so prints no header
+// at all when one of two operands is unreadable.
+func TestHeadTail_headerFollowsPosix(t *testing.T) {
+	dir := headTailFixture(t)
+
+	// The exact bytes, first header without the leading newline and no trailing
+	// blank line after the last block.
+	stdout, _, err := runHeadTail(t, dir, "head", "-n1", "a.txt", "b.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "==> a.txt <==\n1\n\n==> b.txt <==\nx\n"; stdout != want {
+		t.Fatalf("head header bytes = %q, want %q", stdout, want)
+	}
+
+	// One operand is not "more than one", so no header -- even under -q's
+	// opposite, which is what -v is for.
+	stdout, _, err = runHeadTail(t, dir, "head", "-n1", "a.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "1\n" {
+		t.Fatalf("head on one operand = %q, want no header", stdout)
+	}
+
+	// A lone `-` is spelled `standard input`, which is what both references
+	// print. `-` there would read as a file of that name.
+	stdout, _, err = runHeadTail(t, dir, "head", "-n1", "a.txt", "-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "==> a.txt <==\n1\n\n==> standard input <==\ns1\n"; stdout != want {
+		t.Fatalf("head with a dash operand = %q, want %q", stdout, want)
+	}
+
+	// tail follows the same rule, being unspecified by POSIX.
+	stdout, _, err = runHeadTail(t, dir, "tail", "-n1", "a.txt", "b.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "==> a.txt <==\n3\n\n==> b.txt <==\ny\n"; stdout != want {
+		t.Fatalf("tail header bytes = %q, want %q", stdout, want)
+	}
+
+	// The operand count decides, not how many opened, so an unreadable first
+	// operand still leaves the second with its blank separator.
+	stdout, stderr, err := runHeadTail(t, dir, "head", "-n1", "nosuch", "a.txt")
+	if err == nil {
+		t.Fatal("expected status 1 for an unreadable operand")
+	}
+	if want := "\n==> a.txt <==\n1\n"; stdout != want {
+		t.Fatalf("head after a failed operand = %q, want %q", stdout, want)
+	}
+	if !strings.Contains(stderr, "nosuch") {
+		t.Fatalf("stderr = %q, want it to name the unreadable operand", stderr)
+	}
+}

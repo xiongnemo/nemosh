@@ -172,9 +172,22 @@ func bareCountOption(arg string) (int, bool, error) {
 // headTailHeader is the `==> name <==` line, with the blank line that separates
 // one file's block from the next.
 //
+// POSIX specifies the shape exactly, for head:
+//
+//	"\n==> %s <==\n", <pathname>
+//
+// "except that the first header written shall not include the initial
+// <newline>". So the blank line belongs to the *following* header rather than
+// trailing the previous block, which is why there is none after the last file.
+//
 // The name is the operand as spelled rather than a resolved path, so a caller
-// that passed `./a.txt` sees `./a.txt` back.
+// that passed `./a.txt` sees `./a.txt` back -- except for a lone `-`, which both
+// references spell `standard input`. That is not the operand, and it is right:
+// `-` in a header would read as a file of that name.
 func headTailHeader(name string, first bool) string {
+	if name == "-" {
+		name = "standard input"
+	}
 	if first {
 		return fmt.Sprintf("==> %s <==\n", name)
 	}

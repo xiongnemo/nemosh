@@ -757,12 +757,31 @@ silently dropped `b.txt`. The `==> name <==` header is written after the open
 succeeds, so a file that could not be read no longer gets a header above the
 error saying it is missing.
 
-One divergence stays, and it is busybox's inconsistency rather than a rule:
-busybox's `tail` decides headers from the number of files it *opened*, so
-`tail -n1 good bad` prints no header at all, while its `head` uses the operand
-count and does print one. Both here use the operand count, because `head` and
-`tail` disagreeing with each other is worse than one of them disagreeing with the
-reference.
+**The header rule is POSIX's**, taken from `head`, which specifies the shape
+exactly:
+
+> `"\n==> %s <==\n", <pathname>` — "except that the first header written shall
+> not include the initial &lt;newline&gt;", and only "when more than one *file
+> operand* is specified".
+
+So the blank line belongs to the *following* header rather than trailing the
+previous block, which is why there is none after the last file; and the rule keys
+off how many operands were named, not how many opened. POSIX's `tail` takes a
+single file operand and says nothing about headers, so the multi-file form is an
+extension and follows `head`.
+
+That leaves two places where busybox's own `head` and `tail` disagree with **each
+other**, and this follows the consistent answer — which is GNU's, and busybox
+`head`'s — in both:
+
+| | busybox `head` | busybox `tail` | GNU, and here |
+| --- | --- | --- | --- |
+| header when one of two operands is unreadable | prints it | **prints none** | prints it |
+| a `-` operand in a header | `standard input` | **`-`** | `standard input` |
+
+`head` and `tail` disagreeing with each other is worse than one of them
+disagreeing with a reference, and a bare `-` in a header would read as a file of
+that name.
 
 ### `sed`
 

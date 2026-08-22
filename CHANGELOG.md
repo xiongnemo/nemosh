@@ -47,6 +47,12 @@ patch number is the commits since that tag.
   1 either way.
 - **`head`/`tail` no longer print a `==> name <==` header for a file they then
   fail to open**, which put the header above the error saying the file was missing.
+- **A `-` operand in a `head`/`tail` header is spelled `standard input`**, which is
+  what GNU prints and what busybox's own `head` prints. It said `-`, which reads as
+  a file of that name. busybox's `tail` says `-` too, so this follows the
+  consistent answer rather than the reference's inconsistency -- as it already
+  does for the header rule itself, which is POSIX's and keys off the number of
+  operands named rather than the number opened.
 - **`sed s///i` folds case.** busybox has it, and this refused it incoherently: the
   flag splitter consumed the letter and the flag parser then rejected it, so the
   two halves of one parser disagreed about which flags exist.
