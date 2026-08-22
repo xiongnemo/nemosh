@@ -477,7 +477,7 @@ behaviour this shell deliberately does not have.
 | `realpath` | none | treated as a path operand |
 | `rm` | `-f -r` | refused by name |
 | `rmdir` | `-p -v` | refused by name |
-| `sed` | `s///` substitution | refused by name |
+| `sed` | `s///`, the `p d q` commands, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
@@ -588,7 +588,10 @@ All five are implemented, measured against GNU. What is still absent:
   silently stops following is worse than one that says it cannot.
 - **`xargs -P`.** Running batches in parallel needs a scheduler this does not
   have, and pretending to accept it would serialise silently.
-- **`sed` beyond `s///`.**
+- **`sed -i`, `-f`, and the `a i c y` commands and hold space.** Addresses,
+  `-n`, `p`, `d`, `q` and `-E` landed on 2026-08-22; `-i` still has to choose an
+  *output* encoding for the file it rewrites, which is the same decision already
+  deferred for sed's UTF-16 reading.
 - **`find -exec` and `-delete`.** The operators, `-size`, `-mtime`, `-newer`,
   `-empty`, `-maxdepth` and `-print0` landed on 2026-08-22; these two did not,
   because one needs the execution model and quoting rules and the other needs a
@@ -686,6 +689,49 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### `sed`
+
+**Addresses**, which is what turned `sed` from an `s///` filter into sed:
+
+```console
+$ sed -n '2,4p' s.txt      # a line range
+$ sed '/x/d'               # delete every matching line
+$ sed -n '$p'              # the last line
+$ sed '2,$d'               # line two to the end
+$ sed -n '/a/,/b/p'        # from a match on a to the next on b
+$ sed -n '2!p'             # every line except two
+```
+
+Commands: `s///`, `p`, `d`, `q`, separated by `;` or a newline. Options: `-n`,
+`-e` (repeatable), `-E`/`-r`. Before 2026-08-22 none of that existed — `sed -n`
+was refused as an unsupported *script*, since the first argument was assumed to
+be one.
+
+Three things are worth knowing because they are not guessable:
+
+- **Several file operands are ONE stream.** Line numbers run on across the
+  boundary and `$` is the last line of the last file: `sed -n '3p' f1 f2` answers
+  the third line overall. Measured. This is why the old per-file loop had to go —
+  it did not matter while sed had no addresses and would have been silently wrong
+  the moment it had.
+- **`$` needs one line of lookahead**, not the whole input. sed is a filter, and
+  reading a log into memory to find out where it ends is not what a filter does.
+- **`p` without `-n` prints twice**, because the pattern space is also written at
+  the end of the script. That is the reference behaviour and the reason `-n`
+  exists.
+- **A range whose closing address never matches runs to the end**, and one whose
+  numeric end has already passed is a single line: `sed -n '$,1p'` answers the
+  last line.
+
+Diagnostics match busybox to the character: `no address after comma`,
+`unmatched '/'`, `unsupported command ,`. 30 of 30 measured forms agree.
+
+Still refused: `-i`, `-f`, the `a i c y` commands, `{}` blocks, hold space,
+branching, and GNU's `first~step` addresses. `-i` is the one worth naming: it has
+to choose an **output** encoding for the file it rewrites, which is the same
+decision already deferred for sed's UTF-16 *reading*, and settling it inside a
+convenience flag would settle it by accident.
 
 ### `grep`
 

@@ -1,7 +1,6 @@
 package applets
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -23,15 +22,124 @@ func newSedApplet() Applet {
 		if len(args) == 0 {
 			return missingOperand()
 		}
-		substitute, err := parseSedSubstitute(args[0])
+		scripts, operands, quiet, extended, err := sedArgs(args)
 		if err != nil {
 			return err
 		}
-		if len(args) == 1 {
-			return substitute.apply(stdin, stdout)
+		// Parsed whole before a line is read, so a caller piping sed into
+		// something else never receives half an answer.
+		program, err := parseSedProgram(scripts, quiet, extended)
+		if err != nil {
+			return err
 		}
-		return substitute.applyToFiles(ctx, args[1:], stdout, stderr)
+		return program.run(ctx, operands, stdin, stdout, stderr)
 	}}
+}
+
+// run applies the program to the operands as one stream.
+func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	failed := false
+	stream := &sedStream{onOpenError: func(err error) {
+		fmt.Fprintf(stderr, "sed: %v\n", err)
+		failed = true
+	}}
+	if len(operands) == 0 {
+		stream.openers = []func() (io.ReadCloser, error){
+			func() (io.ReadCloser, error) { return io.NopCloser(stdin), nil },
+		}
+	} else {
+		view := ProcessViewFromContext(ctx)
+		for _, operand := range operands {
+			name := operand
+			stream.openers = append(stream.openers, func() (io.ReadCloser, error) {
+				file, err := OpenProcessInput(ctx, view, name)
+				if err != nil {
+					return nil, cannotOpen(name, err)
+				}
+				return file, nil
+			})
+		}
+	}
+	runErr := p.execute(stream, stdout)
+	closeErr := stream.Close()
+	if runErr != nil {
+		return runErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	// An unreadable operand is warned about and skipped, leaving status 1 behind,
+	// which is what busybox does with fopen_or_warn and G.exitcode
+	// (editors/sed.c:1061-1063).
+	if failed {
+		return ExitStatus(1)
+	}
+	return nil
+}
+
+// execute runs the script over every line.
+//
+// The pattern space is one line: there is no N, D or hold space here, so each
+// line is read, transformed, and either printed or not.
+func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
+	number := 0
+	for {
+		line, _, ok, err := stream.Next()
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+		number++
+		isLast := stream.AtLast()
+		printed, quit, err := p.applyLine(&line, number, isLast, stdout)
+		if err != nil {
+			return err
+		}
+		// Without -n the pattern space is printed at the end of the script, which
+		// is why `p` without -n duplicates a line rather than printing it once.
+		if !printed && !p.quiet {
+			if _, err := fmt.Fprintln(stdout, line); err != nil {
+				return err
+			}
+		}
+		if quit {
+			return nil
+		}
+	}
+}
+
+// applyLine runs every command against one line, reporting whether the line was
+// deleted (so the automatic print must not happen) and whether `q` ended the run.
+func (p *sedProgram) applyLine(line *string, number int, isLast bool, stdout io.Writer) (bool, bool, error) {
+	for _, command := range p.commands {
+		if !command.address.selects(*line, number, isLast) {
+			continue
+		}
+		switch command.action {
+		case 's':
+			*line = command.substitute.replace(*line)
+		case 'p':
+			if _, err := fmt.Fprintln(stdout, *line); err != nil {
+				return true, false, err
+			}
+		case 'd':
+			// The pattern space is discarded and the rest of the script is
+			// skipped, which is what makes `sed '2d;s/a/b/'` leave line two
+			// untouched rather than substituting into a line it dropped.
+			return true, false, nil
+		case 'q':
+			// The line is still printed unless -n, then the run ends.
+			if !p.quiet {
+				if _, err := fmt.Fprintln(stdout, *line); err != nil {
+					return true, true, err
+				}
+			}
+			return true, true, nil
+		}
+	}
+	return false, false, nil
 }
 
 type sedSubstitute struct {
@@ -41,41 +149,6 @@ type sedSubstitute struct {
 	replacement string
 	global      bool
 	occurrence  int
-}
-
-func (s sedSubstitute) applyToFiles(ctx context.Context, operands []string, stdout, stderr io.Writer) error {
-	view := ProcessViewFromContext(ctx)
-	failed := false
-	for _, operand := range operands {
-		file, err := OpenProcessInput(ctx, view, operand)
-		if err != nil {
-			fmt.Fprintf(stderr, "sed: %s\n", cannotOpen(operand, err))
-			failed = true
-			continue
-		}
-		applyErr := s.apply(file, stdout)
-		closeErr := file.Close()
-		if applyErr != nil {
-			return applyErr
-		}
-		if closeErr != nil {
-			return closeErr
-		}
-	}
-	if failed {
-		return ExitStatus(1)
-	}
-	return nil
-}
-
-func (s sedSubstitute) apply(input io.Reader, output io.Writer) error {
-	scanner := bufio.NewScanner(input)
-	for scanner.Scan() {
-		if _, err := fmt.Fprintln(output, s.replace(scanner.Text())); err != nil {
-			return err
-		}
-	}
-	return scanner.Err()
 }
 
 // replace does what the s/// flags say: the Nth match when a number is given, every match
@@ -108,66 +181,53 @@ func (s sedSubstitute) replace(line string) string {
 	return out.String()
 }
 
-func parseSedSubstitute(script string) (sedSubstitute, error) {
+// parseSedSubstituteCommand reads one `s///` starting at the `s`, and returns
+// what is left of the script so a `;` can bring another command after it.
+func parseSedSubstituteCommand(script string, extended bool) (sedSubstitute, string, error) {
 	if len(script) < 3 || script[0] != 's' {
-		return sedSubstitute{}, fmt.Errorf("unsupported sed script: %s", script)
+		return sedSubstitute{}, "", fmt.Errorf("unsupported sed script: %s", script)
 	}
 	delimiter := script[1]
-	parts, err := splitSedScript(script[2:], delimiter)
+	pattern, rest, err := readSedDelimited(script[2:], delimiter)
 	if err != nil {
-		return sedSubstitute{}, err
+		return sedSubstitute{}, "", fmt.Errorf("unterminated `s' command")
 	}
-	global, occurrence, err := parseSedSubstituteFlags(parts[2])
+	replacement, rest, err := readSedDelimited(rest, delimiter)
 	if err != nil {
-		return sedSubstitute{}, err
+		return sedSubstitute{}, "", fmt.Errorf("unterminated `s' command")
 	}
-	translated, err := translateBasicRegex(parts[0])
-	if err != nil {
-		return sedSubstitute{}, err
+	if pattern == "" {
+		return sedSubstitute{}, "", fmt.Errorf("malformed sed substitute: s%c%s", delimiter, script[2:])
 	}
-	expression, err := regexp.Compile(translated)
+	flags, rest := splitSedSubstituteFlags(rest)
+	global, occurrence, err := parseSedSubstituteFlags(flags)
 	if err != nil {
-		return sedSubstitute{}, fmt.Errorf("bad pattern '%s': %v", parts[0], err)
+		return sedSubstitute{}, "", err
+	}
+	expression, err := compileSedPattern(pattern, extended)
+	if err != nil {
+		return sedSubstitute{}, "", err
 	}
 	return sedSubstitute{
 		pattern:     expression,
-		replacement: translateReplacement(parts[1]),
+		replacement: translateReplacement(replacement),
 		global:      global,
 		occurrence:  occurrence,
-	}, nil
+	}, rest, nil
 }
 
-// splitSedScript cuts `pattern DELIM replacement DELIM flags` at its unescaped delimiters.
+// splitSedSubstituteFlags takes the flag letters that follow the closing
+// delimiter, stopping at whatever ends the command.
 //
-// strings.SplitN cannot: `s/a\/b/x/` escapes the delimiter, and splitting on every one of
-// them left the tail of the pattern to be read as flags -- `sed: unknown option to 's': /`
-// for a pattern that was perfectly well formed. The escape is removed as it is passed over,
-// because POSIX says an escaped delimiter stands for itself.
-func splitSedScript(script string, delimiter byte) ([3]string, error) {
-	var parts [3]string
-	field := 0
-	var current strings.Builder
-	for index := 0; index < len(script); index++ {
-		switch {
-		case script[index] == '\\' && index+1 < len(script) && script[index+1] == delimiter:
-			current.WriteByte(delimiter)
-			index++
-		case script[index] == delimiter:
-			if field == 2 {
-				return parts, fmt.Errorf("malformed sed substitute: too many %c", delimiter)
-			}
-			parts[field] = current.String()
-			current.Reset()
-			field++
-		default:
-			current.WriteByte(script[index])
-		}
+// This is why the substitution parser had to be rewritten to report a remainder:
+// with `;` separating commands, the tail after `s/a/b/` may be another command
+// rather than the end of the script, and the old splitter consumed everything.
+func splitSedSubstituteFlags(rest string) (string, string) {
+	end := 0
+	for end < len(rest) && (rest[end] == 'g' || rest[end] == 'i' || rest[end] == 'I' || (rest[end] >= '0' && rest[end] <= '9')) {
+		end++
 	}
-	parts[field] = current.String()
-	if field < 2 || parts[0] == "" {
-		return parts, fmt.Errorf("malformed sed substitute: s%c%s", delimiter, script)
-	}
-	return parts, nil
+	return rest[:end], rest[end:]
 }
 
 func parseSedSubstituteFlags(flags string) (bool, int, error) {

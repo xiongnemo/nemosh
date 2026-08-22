@@ -1,0 +1,58 @@
+id = "applet.busybox-w32.sed.addresses"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "gnu-sed"]
+script = """
+sed -n '2,4p' s.txt
+echo --
+sed '/b/d' s.txt
+echo --
+sed -n '$p' s.txt
+echo --
+sed -n '2!p' s.txt
+echo --
+sed -n '1p;3p' s.txt
+echo --
+sed -n '$p' f1.txt f2.txt
+echo --
+sed -n '3p' f1.txt f2.txt
+"""
+
+[files]
+"s.txt" = "a1\nb2\nc3\nd4\ne5\n"
+"f1.txt" = "a1\na2\n"
+"f2.txt" = "b1\nb2\n"
+
+[expect]
+status = 0
+stdout = """
+b2
+c3
+d4
+--
+a1
+c3
+d4
+e5
+--
+e5
+--
+a1
+c3
+d4
+e5
+--
+a1
+c3
+--
+b2
+--
+b1
+"""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 editors/sed.c, POSIX sed"
+why = "sed was an s/// filter and nothing else until 2026-08-22: no -n, no addresses, no p, no d. `sed -n '5,10p'` and `sed '/x/d'` are the two idioms people actually type, and neither ran -- `-n` was refused as an unsupported *script*, the first argument being assumed to be one. The last two commands pin the property that made the old shape unsalvageable rather than merely incomplete: several file operands are ONE stream, so line numbers run on across the boundary and `$` is the last line of the last file. `sed -n '3p' f1.txt f2.txt` answers b1, the third line overall. Applying the script per file would have answered a differently and silently. All measured against busybox-w32 v1.38.0 on 2026-08-22."
