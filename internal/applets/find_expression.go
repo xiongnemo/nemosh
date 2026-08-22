@@ -1,137 +1,117 @@
 package applets
 
 import (
-	"fmt"
+	"io"
 	"io/fs"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
-// findExpression is the parsed form of everything after the paths. Predicates
-// combine with an implicit AND, which is the only operator POSIX requires and
-// the only one implemented here.
+// findExpression is the parsed form of everything after the paths: a tree, and
+// the two global options that bound the walk rather than filter it.
+//
+// It was a flat list of predicates joined by an implicit AND, which is the only
+// operator POSIX requires. That made `find` a single-predicate filter rather
+// than find: `-name a -o -name b` is a day-one idiom, and `!` was not merely
+// missing but read as a *path operand*, so `find . ! -name x` answered
+// `find: !: No such file or directory` and blamed a file for an operator.
 type findExpression struct {
-	predicates []findPredicate
+	root findNode
+	// minDepth and maxDepth are the -mindepth/-maxdepth global options.
+	// maxDepth is -1 when unbounded. They are not predicates: they bound the
+	// traversal, so -maxdepth 1 must stop the walk from *reading* a
+	// subdirectory rather than filter its entries out afterwards.
+	minDepth int
+	maxDepth int
 }
 
-type findPredicate struct {
-	// name is the operand's spelling, kept so a diagnostic can name what the
-	// user actually wrote rather than an internal enum.
-	name    string
-	pattern string
-	letter  byte
+// findNode is one node of the expression tree. It reports whether the candidate
+// satisfied it, and an action node writes on the way through.
+type findNode interface {
+	eval(candidate findCandidate, run *findRun) bool
 }
 
-// findTypeLetters are the entries this walk can classify. busybox also accepts
-// b, c, s, and p; refusing them by name is better than answering as though a
-// block device could never match.
-// c joined f, d and l when /dev became listable: the shell now produces character devices, so
-// `-type c` is a question with a real answer and refusing it would state a limitation that is no
-// longer true. b, p and s stay out deliberately -- Windows has no block devices, and pipes and
-// sockets are not reached as entries by any walk here, so a predicate for them would always answer
-// "none" where the honest answer is "this shell cannot classify that".
-const findTypeLetters = "fdlc"
+// findCandidate is one entry the walk has reached. Predicates that need more
+// than a name take it from here rather than re-resolving a path.
+type findCandidate struct {
+	// display is the path as find prints it: the operand as spelled, then the
+	// rest. -path matches against this, and an action writes it.
+	display string
+	// host is the native path, empty for a synthetic device entry. -empty needs
+	// it to read a directory.
+	host  string
+	entry fs.DirEntry
+	depth int
+}
 
-// parseFindArguments splits paths from the expression and validates the whole
-// expression before any walking starts. That ordering is the point: the old
-// implementation walked first and reported `-name` as a missing file
-// afterwards, so a caller had already received every path in the tree.
-func parseFindArguments(args []string) ([]string, findExpression, error) {
-	var paths []string
-	index := 0
-	for ; index < len(args); index++ {
-		if strings.HasPrefix(args[index], "-") {
-			break
-		}
-		paths = append(paths, args[index])
+func (c findCandidate) info() (fs.FileInfo, error) {
+	if c.entry == nil {
+		return nil, fs.ErrInvalid
 	}
-	if len(paths) == 0 {
-		paths = []string{"."}
-	}
-
-	var expression findExpression
-	for ; index < len(args); index++ {
-		operand := args[index]
-		switch operand {
-		case "-print":
-			// The default action. Accepted so an explicit spelling works, and
-			// otherwise a no-op, because there is no other action to suppress.
-		case "-name":
-			pattern, err := findOperandArgument(args, index, operand)
-			if err != nil {
-				return nil, expression, err
-			}
-			if _, err := path.Match(pattern, ""); err != nil {
-				return nil, expression, fmt.Errorf("-name: bad pattern %q: %w", pattern, err)
-			}
-			expression.predicates = append(expression.predicates, findPredicate{name: operand, pattern: pattern})
-			index++
-		case "-type":
-			letter, err := findOperandArgument(args, index, operand)
-			if err != nil {
-				return nil, expression, err
-			}
-			if len(letter) != 1 || !strings.Contains(findTypeLetters, letter) {
-				return nil, expression, fmt.Errorf("-type: unsupported type %q; this shell classifies only %s", letter, describeFindTypes())
-			}
-			expression.predicates = append(expression.predicates, findPredicate{name: operand, letter: letter[0]})
-			index++
-		default:
-			return nil, expression, fmt.Errorf("unsupported expression: %s", operand)
-		}
-	}
-	return paths, expression, nil
+	return c.entry.Info()
 }
 
-func findOperandArgument(args []string, index int, operand string) (string, error) {
-	if index+1 >= len(args) {
-		return "", fmt.Errorf("%s: requires an argument", operand)
+// findRun carries what an action needs across one walk. The first write error is
+// kept rather than returned through every eval signature, and checked by the
+// caller once per entry -- an expression is a predicate tree, and threading an
+// error return through AND and OR would make short-circuiting mean two things.
+type findRun struct {
+	stdout io.Writer
+	err    error
+}
+
+// evaluate applies the expression to one entry, and reports whether the walk
+// should keep going.
+func (e findExpression) evaluate(candidate findCandidate, run *findRun) error {
+	if candidate.depth < e.minDepth {
+		return nil
 	}
-	return args[index+1], nil
+	e.root.eval(candidate, run)
+	return run.err
 }
 
-func describeFindTypes() string {
-	return "f (regular file), d (directory), l (symbolic link), c (character device)"
+// prunes reports whether the walk should stop descending here, which is the
+// whole value of -maxdepth: `find . -maxdepth 1` must not read a subdirectory
+// only to discard what it finds.
+func (e findExpression) prunes(candidate findCandidate) bool {
+	return e.maxDepth >= 0 && candidate.depth >= e.maxDepth
 }
 
-// matches reports whether one walked entry satisfies every predicate.
-func (e findExpression) matches(displayPath string, entry fs.DirEntry) bool {
-	for _, predicate := range e.predicates {
-		if !predicate.matches(displayPath, entry) {
-			return false
-		}
+// Go's && and || short-circuit, which is exactly what find specifies for -a and
+// -o: the right side is not evaluated when the left settles the answer. That
+// matters for more than speed once an action can appear on either side.
+type findAnd struct{ left, right findNode }
+
+func (n findAnd) eval(c findCandidate, run *findRun) bool {
+	return n.left.eval(c, run) && n.right.eval(c, run)
+}
+
+type findOr struct{ left, right findNode }
+
+func (n findOr) eval(c findCandidate, run *findRun) bool {
+	return n.left.eval(c, run) || n.right.eval(c, run)
+}
+
+type findNot struct{ inner findNode }
+
+func (n findNot) eval(c findCandidate, run *findRun) bool { return !n.inner.eval(c, run) }
+
+// findTrue is what a global option evaluates to. -maxdepth is an option rather
+// than a test, so `find . -maxdepth 1` must still print, and it does so by
+// contributing a true term to the implicit AND.
+type findTrue struct{}
+
+func (findTrue) eval(findCandidate, *findRun) bool { return true }
+
+// findPrint is the default action and the only one implemented. It answers true
+// so that `-print -a -name x` behaves, and it stops writing once the stream has
+// failed rather than reporting the same broken pipe once per entry.
+type findPrint struct{ terminator byte }
+
+func (n findPrint) eval(c findCandidate, run *findRun) bool {
+	if run.err != nil {
+		return true
+	}
+	if _, err := run.stdout.Write(append([]byte(c.display), n.terminator)); err != nil {
+		run.err = err
 	}
 	return true
-}
-
-func (p findPredicate) matches(displayPath string, entry fs.DirEntry) bool {
-	switch p.name {
-	case "-name":
-		// The basename, never the path: busybox uses fnmatch without
-		// FNM_PATHNAME, and a basename carries no separator for `*` to cross.
-		matched, err := path.Match(p.pattern, path.Base(filepath.ToSlash(displayPath)))
-		return err == nil && matched
-	case "-type":
-		return matchesFindType(p.letter, entry)
-	}
-	return true
-}
-
-func matchesFindType(letter byte, entry fs.DirEntry) bool {
-	if entry == nil {
-		return false
-	}
-	mode := entry.Type()
-	switch letter {
-	case 'f':
-		return mode.IsRegular()
-	case 'd':
-		return mode.IsDir()
-	case 'l':
-		return mode&fs.ModeSymlink != 0
-	case 'c':
-		return mode&fs.ModeCharDevice != 0
-	}
-	return false
 }

@@ -4,7 +4,7 @@ kind = "golden"
 semantics = "nemosh"
 platforms = ["windows", "linux", "darwin"]
 references = ["busybox-w32"]
-script = "find . -mtime 1\n"
+script = "find . -perm 644\n"
 
 [files]
 "a.txt" = ""
@@ -13,8 +13,8 @@ script = "find . -mtime 1\n"
 [expect]
 status = 1
 stdout = ""
-stderr = "find: unsupported expression: -mtime\n"
+stderr = "find: unsupported expression: -perm\n"
 
 [notes]
 standard = "BusyBox-w32 findutils/find.c"
-why = "An expression find cannot evaluate is refused before the first directory is read, so no path is ever written. This case exists because the opposite used to happen: find walked the whole tree, printed every path, and only then reported the predicate as a missing file, which made `find . -name '*.tmp' | xargs rm` receive every file rather than the matching ones. busybox also refuses without walking, though it follows the message with its usage text, which Nemosh does not carry."
+why = "An expression find cannot evaluate is refused before the first directory is read, so no path is ever written. This case exists because the opposite used to happen: find walked the whole tree, printed every path, and only then reported the predicate as a missing file, which made `find . -name '*.tmp' | xargs rm` receive every file rather than the matching ones. busybox also refuses without walking, though it follows the message with its usage text, which Nemosh does not carry. The operand was -mtime until 2026-08-22, when -mtime was implemented; -perm replaces it because it is still genuinely absent and for a reason that will not change soon -- Windows has no POSIX mode bits to compare, so any answer would be invented. What this case asserts is the refusal, not the operand carrying it."

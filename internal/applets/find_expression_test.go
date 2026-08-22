@@ -143,7 +143,11 @@ func TestFind_refusesAnUnsupportedExpression_beforeWritingAnything(t *testing.T)
 		wantWord string
 	}{
 		{name: "an unknown predicate", args: []string{".", "-nosuchpred"}, wantWord: "-nosuchpred"},
-		{name: "a predicate busybox has but this does not", args: []string{".", "-mtime", "1"}, wantWord: "-mtime"},
+		// -mtime held this slot until 2026-08-22, when it was implemented.
+		// -perm replaces it because it is still genuinely absent: Windows has no
+		// POSIX mode bits to compare, so any answer would be a guess. The case
+		// is about the refusal, not about which operand carries it.
+		{name: "a predicate busybox has but this does not", args: []string{".", "-perm", "644"}, wantWord: "-perm"},
 		{name: "name without its pattern", args: []string{".", "-name"}, wantWord: "-name"},
 		{name: "type without its letter", args: []string{".", "-type"}, wantWord: "-type"},
 		{name: "a type letter that is not supported", args: []string{".", "-type", "s"}, wantWord: "type"},

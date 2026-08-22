@@ -1,0 +1,38 @@
+id = "applet.busybox-w32.find.operators"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = """
+find . -name '*.txt' -o -name '*.log'
+echo --
+find . ! -name '*.txt' -a -type f
+echo --
+find . \\( -name '*.txt' -o -name '*.log' \\) -a -maxdepth 1
+"""
+
+[files]
+"a.txt" = ""
+"b.log" = ""
+"notes.md" = ""
+"d/inner.txt" = ""
+
+[expect]
+status = 0
+stdout = """
+./a.txt
+./b.log
+./d/inner.txt
+--
+./b.log
+./notes.md
+--
+./a.txt
+./b.log
+"""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 findutils/find.c, POSIX find"
+why = "The operators, which is what separates find from a single-predicate filter. -a binds tighter than -o and ! binds tighter than both, so the second command is `(NOT *.txt) AND (type f)` and not `NOT (*.txt AND type f)`. Every line here was measured against busybox-w32 v1.38.0 in a tree of this shape on 2026-08-22. Before this, none of the three ran: -o and -a were refused as unsupported expressions, and `!` did not even reach the expression parser -- it does not begin with a dash, so path collection took it as a path operand and find answered `!: No such file or directory`, blaming a file for an operator."

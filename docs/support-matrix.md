@@ -453,7 +453,7 @@ behaviour this shell deliberately does not have.
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
-| `find` | `-name`, `-type f\|d\|l`, `-print`, implicit AND | refused **before the walk** |
+| `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep` | `-i -n -v -r -R -l -c -q -w -x -F -o -s -h -H -E -m`, `--color[=WHEN]` accepted and ignored | refused by name |
 | `head` | `-n -c`, and the `-N` form | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
@@ -585,7 +585,12 @@ All five are implemented, measured against GNU. What is still absent:
   silently stops following is worse than one that says it cannot.
 - **`xargs -P`.** Running batches in parallel needs a scheduler this does not
   have, and pretending to accept it would serialise silently.
-- **`sed` beyond `s///`**, and **`find` beyond `-name`, `-type` and `-print`**.
+- **`sed` beyond `s///`.**
+- **`find -exec` and `-delete`.** The operators, `-size`, `-mtime`, `-newer`,
+  `-empty`, `-maxdepth` and `-print0` landed on 2026-08-22; these two did not,
+  because one needs the execution model and quoting rules and the other needs a
+  deliberate decision about a destructive default. `| xargs -0` covers most of
+  what `-exec` is reached for, and now has `-print0` to pair with.
 - **`grep -A -B -C`.** Context lines need a ring buffer of preceding lines; the
   option is refused rather than approximated.
 
@@ -608,19 +613,40 @@ Filling in the rest is v1.1; see
 
 ### `find`
 
-`-name`, `-type`, and `-print` are implemented, combining with the implicit AND
-POSIX specifies. `-name` matches the basename, not the path, because busybox
-uses `fnmatch` without `FNM_PATHNAME` and a basename carries no separator for
-`*` to cross. `-type` classifies `f`, `d`, and `l`; busybox also accepts `b`,
-`c`, `s`, and `p`, which are refused by name here rather than answered as though
-a block device could never match.
+**Operators.** `-a`, `-o`, `!`, their long spellings `-and`, `-or`, `-not`, and
+parentheses, with POSIX precedence: `-a` binds tighter than `-o`, `!` binds
+tighter than both, and adjacency is an implicit `-a`.
 
-Every other predicate — `-mtime`, `-size`, `-perm`, `-exec`, `-prune`, `-regex`,
-`-maxdepth`, and the rest — is **refused before the first directory is read**:
+Until 2026-08-22 there were none, which made `find` a single-predicate filter
+rather than find. `!` was worse than absent: it does not begin with a dash, so
+path collection took it as a *path operand* and `find . ! -name x` answered
+`find: !: No such file or directory` — blaming a file for an operator, the same
+failure shape `stream_options.go` exists to prevent for `cat -n f.txt`. Path
+collection now stops at `!`, `(` and `)`.
+
+**Tests.** `-name`, `-iname`, `-path`, `-ipath`, `-type`, `-size`, `-mtime`,
+`-newer`, `-empty`. `-name` matches the basename, not the path, because busybox
+uses `fnmatch` without `FNM_PATHNAME` and a basename carries no separator for
+`*` to cross; `-path` matches the whole path *with* the separator crossable, for
+the same reason in reverse — which is why `-name` uses Go's `path.Match` and
+`-path` cannot, since `path.Match` hard-codes a non-crossing `*`.
+`-type` classifies `f`, `d`, `l`, and `c`; busybox also accepts `b`, `s`, and
+`p`, refused by name here rather than answered as though a block device could
+never match.
+
+**Actions.** `-print` and `-print0`. An action anywhere suppresses the implicit
+`-print`, which is what stops `find . -name x -print` printing twice.
+
+**Global options.** `-maxdepth` and `-mindepth`, which bound the traversal rather
+than filter it: `-maxdepth 1` stops the walk from *reading* a subdirectory
+instead of reading it and discarding the entries.
+
+Still **refused before the first directory is read**: `-exec`, `-delete`,
+`-perm`, `-prune`, `-regex`, `-depth`, `-user`, `-group`, and the rest.
 
 ```console
-$ find . -mtime 1
-find: unrecognized: -mtime
+$ find . -perm 644
+find: unsupported expression: -perm
 $ echo $?
 1
 ```
@@ -628,10 +654,31 @@ $ echo $?
 That ordering is the fix, not a detail. Until 2026-08-07 `find` honoured no
 expression at all: it walked the whole tree, printed every path, and only then
 reported the predicate as a missing file. `find . -name '*.tmp' | xargs rm`
-therefore received every file. Both halves were measured, and twelve forms —
-`.`, `./`, `sub`, `sub/`, and each predicate combination — now match busybox-w32
-byte for byte.
+therefore received every file.
 
 Output follows POSIX rather than being cleaned: the path operand is written
 exactly as given, then a slash, then the rest. `find .` yields `./a.txt`, not
 `a.txt`.
+
+#### Two deliberate divergences from busybox-w32
+
+**`-size` divides and rounds up; busybox compares raw bytes.** POSIX states it
+outright — the size "divided by 512 and rounded up to the next integer" — and GNU
+applies the same rounding to every unit suffix. busybox-w32 compares
+`st_size` against `N * unit` instead. Measured 2026-08-22 in a tree holding files
+of 0, 1, 100 and 3000 bytes:
+
+| | busybox-w32 | nemosh (POSIX/GNU) |
+| --- | --- | --- |
+| `-size 1c` | the 1-byte file | the 1-byte file |
+| `-size 1k` | **nothing** | the 1-byte and 100-byte files |
+| `-size +1` | the 3000-byte file | the 3000-byte file |
+
+busybox's reading makes an exact-match `-size` with a unit suffix nearly
+unusable, since it demands a file of exactly 1024 bytes. `+` and `-`
+comparisons agree either way, which is most real use.
+
+**`-newer` keeps NTFS's full timestamp precision; busybox truncates to whole
+seconds.** Measured 2026-08-22: files created within one second of each other
+are all "not newer" under busybox, while nemosh orders them. Given a file
+clearly older, the two agree exactly. GNU find also compares at full precision.
