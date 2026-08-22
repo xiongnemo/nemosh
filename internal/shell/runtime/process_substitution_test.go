@@ -23,9 +23,16 @@ func TestProcessSubstitution_readsACommandAsAFile(t *testing.T) {
 		{
 			// The point of the form: two commands compared without two files written
 			// by hand. Exit 1 is diff's answer to differing input.
+			//
+			// This asserted GNU's "normal" output -- `2c2 / < b / > c` -- until
+			// 2026-08-23, because until then `diff` was not an applet here and the
+			// substitution ran whatever diff was on PATH. Now the bundle's own diff
+			// shadows it, which is what a busybox-style bundle is *for*, and its
+			// output is unified because busybox's is. The temporary file names in
+			// the header are why only the hunk is compared.
 			name:   "diff, the form it exists for",
-			script: "diff <(printf 'a\\nb\\n') <(printf 'a\\nc\\n')\necho status=$?\n",
-			want:   "2c2\n< b\n---\n> c\nstatus=1\n",
+			script: "diff <(printf 'a\\nb\\n') <(printf 'a\\nc\\n') | tail -n 4\necho status=$?\n",
+			want:   "@@ -1,2 +1,2 @@\n a\n-b\n+c\nstatus=0\n",
 		},
 		{
 			name:   "as a redirect target",

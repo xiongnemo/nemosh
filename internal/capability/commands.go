@@ -95,6 +95,8 @@ var commands = []Command{
 	{Name: "hd", Short: "bcCdoxvAt", ValueShort: "At", Operand: AnyPath},
 	{Name: "uuencode", Short: "m", Operand: AnyPath},
 	{Name: "uudecode", Short: "o", ValueShort: "o", Operand: AnyPath},
+	{Name: "diff", Short: "uqiwBNsrabdTtUL", ValueShort: "UL", Operand: AnyPath},
+	{Name: "patch", Short: "RNEflpi", ValueShort: "pi", Operand: AnyPath},
 	{Name: "seq", Operand: AnyPath},
 	{Name: "sleep", Operand: AnyPath},
 	{Name: "sort", Short: "nrufbkt", ValueShort: "kt", Operand: AnyPath},

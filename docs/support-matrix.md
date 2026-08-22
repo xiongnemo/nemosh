@@ -457,6 +457,7 @@ behaviour this shell deliberately does not have.
 | `cp` | `-r`, `-R` | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
+| `diff` | `-u -U -q -s -i -w -B -N -L`; unified always | refused by name |
 | `dirname` | none needed | refused by name |
 | `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
 | `du` | `-s -h`; **apparent** sizes in 1024-byte blocks, not allocation | refused by name |
@@ -483,6 +484,7 @@ behaviour this shell deliberately does not have.
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
+| `patch` | `-i -p -R`; no fuzz | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
 | `ps` | none; `PID PPID THR RSS TIME COMMAND` | refused by name |
@@ -718,6 +720,43 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### `diff` and `patch`
+
+Added 2026-08-23, and kept as a pair: shipping `patch` against a `diff` whose
+output shape later changed would break it silently, so the tests round-trip the
+two against each other rather than testing each alone. They also interoperate in
+both directions with busybox's own `diff` and `patch`.
+
+`diff` completes a family that was already half here -- `cmp` compares bytes,
+`comm` compares sorted lines -- and is absent from stock Windows entirely.
+
+- **The output is unified always**, which is busybox's default and *not* GNU's:
+  GNU prints the older "normal" format unless asked. 8 of 8 measured forms agree
+  with busybox byte for byte.
+- **No timestamps in the header**, again following busybox, so two runs over
+  unchanged files produce identical output.
+- Common prefix and suffix are stripped before the
+  longest-common-subsequence table is built. That is not tidiness: the table is
+  O(n*m), and two versions of a real file usually differ in a few lines out of
+  thousands, so without it a large pair costs gigabytes.
+- `-i`, `-w` and `-B` change what "the same line" *means* rather than how the diff
+  is computed.
+
+`patch` **refuses a hunk that does not match, naming the hunk, the line, and the
+text it found instead.** There is deliberately no fuzz: shifting a hunk up and
+down until the context happens to line up is how a patch lands somewhere it was
+never meant to, and the wrong place usually still compiles. A failed patch leaves
+the file untouched.
+
+The names in a diff come from whoever wrote it, so `patch` checks them with the
+same containment helper the archivers use -- `--- ../../etc/passwd` is the same
+attack a tar entry would be.
+
+One consequence worth naming: **adding `diff` shadows the system's.** A test of
+process substitution had been asserting GNU's normal-format output, because until
+now `diff <(…) <(…)` ran whatever was on PATH. Shadowing is what a busybox-style
+bundle is for, but it does change what an existing script sees.
 
 ### The dump formats, and the uu pair
 

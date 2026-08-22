@@ -170,6 +170,8 @@ func portableApplets() []Applet {
 		newHdApplet(),
 		newUuencodeApplet(),
 		newUudecodeApplet(),
+		newDiffApplet(),
+		newPatchApplet(),
 		newCmpApplet(),
 		newCommApplet(),
 		newPasteApplet(),
