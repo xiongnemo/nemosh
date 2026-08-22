@@ -147,7 +147,6 @@ func TestSed_refusesWhatItCannotDo(t *testing.T) {
 		args     []string
 		wantWord string
 	}{
-		{args: []string{"1a\\text", "s.txt"}, wantWord: "a"},
 		{args: []string{"-n", "1~2p", "s.txt"}, wantWord: "~"},
 		{args: []string{"-n", "1,2h", "s.txt"}, wantWord: "h"},
 		// A word of nonsense is reported by its first unimplemented letter,
@@ -507,5 +506,83 @@ func TestSed_inPlace(t *testing.T) {
 	}
 	if got := read("keep.txt"); got != "X1\n" {
 		t.Fatalf("keep.txt = %q", got)
+	}
+}
+
+// a appends after the line, i inserts before it, c replaces it. Their argument is
+// the one thing in sed that is not delimited: it runs to the end of the line or
+// the end of the script fragment, so a `;` inside it is text rather than a
+// separator.
+func TestSed_textCommands(t *testing.T) {
+	dir := sedFixture(t)
+	for _, test := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "append", args: []string{`1a\hello`, "s.txt"}, want: "a1\nhello\nb2\nc3\nd4\ne5\n"},
+		{name: "append without a backslash", args: []string{"1a hello", "s.txt"}, want: "a1\nhello\nb2\nc3\nd4\ne5\n"},
+		{name: "insert", args: []string{`2i\before`, "s.txt"}, want: "a1\nbefore\nb2\nc3\nd4\ne5\n"},
+		{name: "change", args: []string{`2c\changed`, "s.txt"}, want: "a1\nchanged\nc3\nd4\ne5\n"},
+		// On a range, c prints once as the range closes rather than once per line.
+		{name: "change over a range", args: []string{`1,2c\once`, "s.txt"}, want: "once\nc3\nd4\ne5\n"},
+		{name: "append after the last line", args: []string{`$a\end`, "s.txt"}, want: "a1\nb2\nc3\nd4\ne5\nend\n"},
+		{name: "append on every line", args: []string{`a\tail`, "s.txt"}, want: "a1\ntail\nb2\ntail\nc3\ntail\nd4\ntail\ne5\ntail\n"},
+		{name: "a newline escape splits the text", args: []string{`1a\one\ntwo`, "s.txt"}, want: "a1\none\ntwo\nb2\nc3\nd4\ne5\n"},
+		{name: "a tab escape", args: []string{`1a\x\ty`, "s.txt"}, want: "a1\nx\ty\nb2\nc3\nd4\ne5\n"},
+		// A backslash protects the leading whitespace that would otherwise be a
+		// separator.
+		{name: "a backslash keeps leading blanks", args: []string{`1a\  spaced`, "s.txt"}, want: "a1\n  spaced\nb2\nc3\nd4\ne5\n"},
+		{name: "a semicolon is text, not a separator", args: []string{`1a\x;p`, "s.txt"}, want: "a1\nx;p\nb2\nc3\nd4\ne5\n"},
+		{name: "under a pattern address", args: []string{`/b/a\after`, "s.txt"}, want: "a1\nb2\nafter\nc3\nd4\ne5\n"},
+		{name: "in a block", args: []string{"2{i\\A\na\\B\n}", "s.txt"}, want: "a1\nA\nb2\nB\nc3\nd4\ne5\n"},
+		{name: "no text appends an empty line", args: []string{"1a", "s.txt"}, want: "a1\n\nb2\nc3\nd4\ne5\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stdout, stderr, err := runSedIn(t, dir, "", test.args...)
+			if err != nil {
+				t.Fatalf("sed %v: %v (%s)", test.args, err, stderr)
+			}
+			if stdout != test.want {
+				t.Fatalf("sed %v\n  got  %q\n  want %q", test.args, stdout, test.want)
+			}
+		})
+	}
+
+	// -n suppresses the pattern space, not the inserted or appended text: both
+	// belong to the script rather than to the line.
+	stdout, _, err := runSedIn(t, dir, "", "-n", `1a\text`, "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "text\n" {
+		t.Fatalf("sed -n with a = %q, want just the appended text", stdout)
+	}
+	stdout, _, err = runSedIn(t, dir, "", "-n", `1i\top`, "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "top\n" {
+		t.Fatalf("sed -n with i = %q, want just the inserted text", stdout)
+	}
+
+	// And `a` survives a `d` that discards the line, because the text belongs
+	// after the line whether or not the line itself is printed.
+	stdout, _, err = runSedIn(t, dir, "", "1{a\\X\nd}", "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "X\nb2\nc3\nd4\ne5\n"; stdout != want {
+		t.Fatalf("sed with a and d = %q, want %q", stdout, want)
+	}
+
+	// Separate -e scripts end the text, which is how a multi-command script with
+	// an append is written.
+	stdout, _, err = runSedIn(t, dir, "", "-e", `1a\x`, "-e", "p", "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "a1\na1\nx\nb2\nb2\nc3\nc3\nd4\nd4\ne5\ne5\n"; stdout != want {
+		t.Fatalf("sed -e a -e p = %q, want %q", stdout, want)
 	}
 }

@@ -115,6 +115,12 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 				return err
 			}
 		}
+		// What `a` queued goes out after the pattern space, and regardless of how
+		// the cycle ended: the text belongs after the line whether or not the line
+		// itself was printed.
+		if err := cycle.flushAppended(); err != nil {
+			return err
+		}
 		if control == sedQuit {
 			return nil
 		}

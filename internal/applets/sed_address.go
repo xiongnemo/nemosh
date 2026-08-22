@@ -99,6 +99,18 @@ func (a *sedAddress) selectsBeforeNegation(line string, number int, isLast bool)
 	return false
 }
 
+// atRangeEnd reports whether the line just selected is the last of a consecutive
+// run this address will select.
+//
+// Only `c` needs it, and it needs it for a real reason: on a range, `c` prints its
+// text once as the range closes rather than once per line, so
+// `sed '1,2c\once'` answers a single `once`. A non-ranged address selects one
+// line at a time, so every selection is its own end.
+//
+// Called after selects(), which is what leaves `active` describing the range's
+// state *after* this line.
+func (a *sedAddress) atRangeEnd() bool { return !a.ranged || !a.active }
+
 // parseSedAddress reads the address in front of a command, returning what is
 // left of the script.
 func parseSedAddress(script string, extended bool) (sedAddress, string, error) {

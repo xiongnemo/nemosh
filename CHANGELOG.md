@@ -31,7 +31,7 @@ patch number is the commits since that tag.
   trailing space, which is GNU's output. busybox prints a stray trailing space
   there.
 
-- **`sed` gained `{}` blocks, `y///`, `=`, `-f` and `-i`.** Blocks group commands
+- **`sed` gained `{}` blocks, `y///`, `=`, `a`, `i`, `c`, `-f` and `-i`.** Blocks group commands
   under one address, so `sed -n '/x/{p;q}'` works; `d` and `q` inside one end the
   whole cycle rather than just the block. `y///` transliterates by rune, not byte,
   and **refuses unequal lengths** where busybox silently ignores the unpaired
@@ -39,6 +39,11 @@ patch number is the commits since that tag.
   keeps the original, and each file is its own stream -- line numbers restart and
   an address range does not leak into the next file, which is GNU's behaviour
   where busybox leaks it.
+- `a`, `i` and `c` append, insert and replace. Their text is the one undelimited
+  argument in sed, so a `;` inside it is text rather than a separator; `-n` does
+  not suppress it, since it belongs to the script rather than the line; `a`
+  survives a `d` that discards the line; and `c` on a range prints once as the
+  range closes rather than once per line.
 - `-i` had been deferred on the grounds that rewriting a file forces a choice of
   output encoding. It does not: sed here is byte-exact, so the bytes written back
   are the bytes read, transformed. That question arrives only if sed starts

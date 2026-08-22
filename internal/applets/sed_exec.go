@@ -38,6 +38,8 @@ type sedCycle struct {
 	// printed records whether anything was written for this line, so `q` can
 	// avoid printing the pattern space twice.
 	printed bool
+	// appended holds what `a` queued, written at the end of the cycle.
+	appended []string
 }
 
 // runSedCommands walks a command list, recursing into blocks.
@@ -69,6 +71,8 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 	case '=':
 		// The line number, on a line of its own, before the line itself.
 		return sedNext, cycle.write(fmt.Sprintf("%d", cycle.number))
+	case 'a', 'i', 'c':
+		return runSedTextCommand(command, cycle)
 	case 'd':
 		return sedDeleted, nil
 	case 'q':

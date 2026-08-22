@@ -25,20 +25,23 @@ type sedProgram struct {
 
 type sedCommand struct {
 	address sedAddress
-	// action is one of 'p', 'd', 'q', 's', 'y', '=', or '{' for a block.
+	// action is one of 'p', 'd', 'q', 's', 'y', '=', 'a', 'i', 'c', or '{' for
+	// a block.
 	action     byte
 	substitute sedSubstitute
 	translate  sedTranslate
+	// text is the argument of a, i and c.
+	text string
 	// block is the command list of a `{...}` group, run under this command's
 	// address.
 	block []*sedCommand
 }
 
 // sedSupportedCommands are the actions this build implements. Everything else is
-// refused by name, including the ones busybox has: a/i/c need a text argument
-// with its own continuation rules, and the hold-space commands need a second
-// buffer. Answering any of them by guessing would be worse than saying so.
-const sedSupportedCommands = "pdqsy={"
+// refused by name, including the ones busybox has: the hold-space commands need a
+// second buffer and the branching ones need a program counter. Answering either
+// by guessing would be worse than saying so.
+const sedSupportedCommands = "pdqsy={aic"
 
 // parseSedProgram reads every -e script, and the first operand when there was
 // no -e.
@@ -136,6 +139,9 @@ func parseSedCommand(script string, extended bool) (*sedCommand, string, error) 
 			return nil, "", err
 		}
 		return &sedCommand{address: address, action: 'y', translate: translate}, remainder, nil
+	case 'a', 'i', 'c':
+		text, remainder := parseSedTextCommand(rest)
+		return &sedCommand{address: address, action: action, text: text}, remainder, nil
 	}
 	// p, d, q and = take no argument, so whatever follows is the next command.
 	return &sedCommand{address: address, action: action}, rest[1:], nil
