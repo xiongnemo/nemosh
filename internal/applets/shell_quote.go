@@ -58,16 +58,29 @@ func shellQuote(value string) string {
 
 // isShellSafeByte reports whether a byte means itself to a shell, unquoted.
 //
-// Letters, digits, and the punctuation that no shell treats specially anywhere: a
-// dot in a file name, a dash in an option, an underscore, a slash in a path, a
-// colon in a PATH, a plus, a comma, a percent, an at sign.
+// Letters, digits, and the punctuation that no shell treats specially in any
+// position: a dot in a file name, a dash in an option, an underscore, a slash in a
+// path, a colon in a PATH, a plus, a percent, an at sign.
+//
+// **The comma was in this list and should not have been.** bash escapes it --
+// measured, `printf %q a,b` answers `a\,b` -- because a comma separates a brace
+// expansion. Including it was the one direction this function is not allowed to
+// err in: the doc above says the cost of an unnecessary backslash is nothing and
+// the cost of a missing one is a command that does something else.
+//
+// Three characters go the other way on purpose. bash leaves `=`, `~` and `#`
+// unescaped *in the middle* of a word and escapes them at the start, where a tilde
+// is expansion and a hash is a comment. That position-sensitivity is not copied:
+// escaping them everywhere is always valid shell and always reads back the same
+// string, and matching bash byte for byte here would buy nothing but a second rule
+// about where a byte sits.
 func isShellSafeByte(char byte) bool {
 	switch {
 	case char >= 'a' && char <= 'z', char >= 'A' && char <= 'Z', char >= '0' && char <= '9':
 		return true
 	}
 	switch char {
-	case '.', '-', '_', '/', ':', '+', ',', '%', '@':
+	case '.', '-', '_', '/', ':', '+', '%', '@':
 		return true
 	}
 	return false
