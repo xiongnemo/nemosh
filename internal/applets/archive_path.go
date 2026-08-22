@@ -71,9 +71,12 @@ func safeArchivePath(name string) (string, error) {
 	if cleaned == ".." || strings.HasPrefix(cleaned, "../") {
 		return "", fmt.Errorf("entry name escapes the archive root: %s", name)
 	}
-	if strings.HasPrefix(cleaned, "/") {
-		return "", fmt.Errorf("absolute entry name: %s", name)
-	}
+	// There is no second absolute check here, and that is deliberate rather than an
+	// omission. A leading separator is refused above, *before* cleaning, and
+	// path.Clean cannot introduce one into a name that did not have one -- so a
+	// check here would be unreachable, and an unreachable guard in security code
+	// reads as though it were doing work. The property it would have covered is
+	// pinned by a test instead: TestPathClean_cannotIntroduceALeadingSeparator.
 	for _, element := range strings.Split(cleaned, "/") {
 		if err := checkArchiveElement(element, name); err != nil {
 			return "", err
