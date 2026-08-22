@@ -142,6 +142,28 @@ wc -c < dist/nemosh.exe                                  # against product.yml's
 GODEBUG=inittrace=1 dist/nemosh.exe --version 2>&1 | grep '^init '
 ```
 
+**The specific trap, a third time, on 2026-08-23: a test that samples the machine.**
+`internal/proc` implements listing on Windows only and answers
+`ErrListUnsupported` elsewhere rather than guessing, so *any* test that reaches
+`top`, `ps` or `free` for real passes here and fails on both other runners. The guard
+already exists and is worth copying rather than reinventing --
+`startTop` in `top_view_test.go` skips on `runtime.GOOS != "windows"`, and
+`top_batch_test.go` now has `requireProcessSampling` for the same reason. Before
+writing a test that reads the process table, ask which of the three machines can
+answer it.
+
+Cross-compiling the tests catches the *build* half of this and nothing else:
+
+```bash
+GOOS=linux go test -c -o /dev/null ./internal/applets/    # compiles, says nothing about behaviour
+GOOS=darwin go test -c -o /dev/null ./internal/applets/
+```
+
+Running the suite under WSL was tried and does not work here: the Debian image has
+Go 1.23 against this module's 1.26, and fetching a toolchain needs network the
+sandbox does not have. So CI is the only real cross-platform check, which is the
+reason to read the run list rather than to assume.
+
 **The clipboard tests fail at random on the development machine, and it is not
 your change.** Windows 10 and later run a clipboard history service that opens the
 clipboard on every change, and any clipboard manager does the same, so
