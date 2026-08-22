@@ -167,6 +167,15 @@ func writeArHeader(writer io.Writer, member arMember) error {
 	if len(stored) > arNameColumns {
 		return fmt.Errorf("member name %q is too long for an ar header; this build does not write the long-name table", member.name)
 	}
+	// The writer refuses what the reader will not accept, which FuzzWriteArHeader
+	// found it was not doing: a negative size formatted into the column fine and
+	// then came back as "claims a negative size". Neither value can come from
+	// os.Stat, so this is not a reachable bug -- it is the writer and the reader
+	// agreeing on what an archive can hold, which is the property the fuzz target
+	// checks and the reason it is worth stating in code rather than in a comment.
+	if member.size < 0 || member.mode < 0 {
+		return fmt.Errorf("member %q has a negative size or mode (%d, %d)", member.name, member.size, member.mode)
+	}
 	header := fmt.Sprintf("%-16s%-12d%-6d%-6d%-8o%-10d%s",
 		stored, member.mtime, member.uid, member.gid, member.mode, member.size, arEndMarker)
 	if len(header) != arHeaderSize {

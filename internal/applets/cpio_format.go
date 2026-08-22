@@ -94,9 +94,15 @@ func readCpioHeader(reader io.Reader) (*cpioEntry, error) {
 	if err := skipCpioPadding(reader, cpioHeaderSize+nameSize); err != nil {
 		return nil, err
 	}
+	stored, _, _ := strings.Cut(string(name), "\x00")
 	entry := &cpioEntry{
-		// The NUL is part of the stored length and not part of the name.
-		name:  strings.TrimRight(string(name), "\x00"),
+		// Cut at the *first* NUL, not trimmed from the right. The terminator is part
+		// of the stored length and not part of the name, and a name holding a second
+		// NUL is malformed -- cutting is what a C reader does with it, so this reads
+		// the same name every other cpio reader would. Trimming from the right left
+		// an embedded NUL in place, which safeArchivePath now refuses outright as
+		// well; both ends of that are worth having.
+		name:  stored,
 		ino:   fields[0],
 		mode:  fields[1],
 		nlink: fields[4],
@@ -107,6 +113,15 @@ func readCpioHeader(reader io.Reader) (*cpioEntry, error) {
 	}
 	if entry.name == cpioTrailer {
 		return nil, nil
+	}
+	// A name field that is entirely NUL: the size says there is a name and cutting
+	// at the first NUL leaves nothing. Found by the fuzzer after the cut was
+	// introduced, and it is a malformed header rather than a nameless entry -- the
+	// containment check would refuse the empty string downstream, but `cpio -t`
+	// would already have printed a blank line for it, and skipBody would have been
+	// asked to advance past a body belonging to nothing.
+	if entry.name == "" {
+		return nil, fmt.Errorf("cpio entry claims a %d-byte name that is empty", nameSize)
 	}
 	if entry.size < 0 {
 		return nil, fmt.Errorf("cpio entry %s claims a negative size", entry.name)

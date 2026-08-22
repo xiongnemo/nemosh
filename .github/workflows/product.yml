@@ -109,8 +109,17 @@ jobs:
       # Fuzz seeds are run as ordinary tests on every platform: the corpus in
       # testdata holds the inputs that have already broken something, so a
       # regression is caught without spending CI time exploring.
+      #
+      # internal/applets joined this on 2026-08-23. Archive headers are the second
+      # surface fuzzing is for after parsing, for the same reasons: arbitrary bytes
+      # from somewhere else, read before anything is created, by code doing its own
+      # fixed-width field arithmetic -- cpio and ar have no library behind them here.
+      # A one-minute exploration found three real defects, and the two inputs that
+      # broke it are in the corpus below.
       - name: fuzz corpus regression
-        run: go test ./internal/shell/runtime/ -run 'Fuzz' -count=1
+        run: |
+          go test ./internal/shell/runtime/ -run 'Fuzz' -count=1
+          go test ./internal/applets/ -run 'Fuzz' -count=1
 
       # A short exploration on Linux only. Long enough to be worth having, short
       # enough not to make every push wait; anything it finds is written to
@@ -120,6 +129,9 @@ jobs:
         run: |
           go test ./internal/shell/runtime/ -run FuzzParseScript$ -fuzz 'FuzzParseScript$' -fuzztime 60s
           go test ./internal/shell/runtime/ -run 'FuzzMatchShellPattern$' -fuzz 'FuzzMatchShellPattern$' -fuzztime 30s
+          go test ./internal/applets/ -run 'FuzzReadCpioHeader$' -fuzz 'FuzzReadCpioHeader$' -fuzztime 30s
+          go test ./internal/applets/ -run 'FuzzReadArHeader$' -fuzz 'FuzzReadArHeader$' -fuzztime 30s
+          go test ./internal/applets/ -run 'FuzzWriteArHeader$' -fuzz 'FuzzWriteArHeader$' -fuzztime 20s
 
       - name: applet manifest freshness
         run: go test ./internal/appletmanifest/ -count=1

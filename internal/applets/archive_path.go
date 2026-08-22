@@ -39,6 +39,23 @@ func safeArchivePath(name string) (string, error) {
 	if name == "" {
 		return "", fmt.Errorf("empty entry name")
 	}
+	// A NUL anywhere in the name, refused before anything else is examined.
+	//
+	// Found by FuzzReadCpioHeader in six seconds, and it defeated two of the checks
+	// below rather than one. `NUL\x00.txt` passed the reserved-device test, because
+	// the stem it compares is `nul\x00` and that is not in the table; `evil.\x00`
+	// passed the trailing-dot test, because the name ends in a NUL and not in a dot.
+	// Both are names a caller could then act on.
+	//
+	// Nothing has been exploited through this, and the reason is not the check: Go's
+	// syscall layer refuses a path containing a NUL outright, so it failed closed by
+	// accident. That is a property of the layer below rather than of this function,
+	// and it is not one to depend on -- `httpd` decodes `%00` in a request path into
+	// a real NUL, so the input is reachable from the network, and anything that ever
+	// sanitises by truncating at the NUL would turn `NUL\x00.txt` back into `NUL`.
+	if strings.ContainsRune(name, 0) {
+		return "", fmt.Errorf("entry name contains a NUL byte: %q", name)
+	}
 	// `C:\x`, `C:/x` and the drive-relative `C:x`, which resolves against the
 	// *current directory of that drive* and is the sneakiest of the three.
 	// Checked before separators are normalised, since normalising does not change
