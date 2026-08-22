@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // httpd's request paths, driven through a real ServeHTTP rather than through the
@@ -333,4 +334,105 @@ func readAndClose(t *testing.T, response *http.Response) string {
 		}
 	}
 	return string(body)
+}
+
+// The applet end to end: it binds, announces the address it bound, serves, and
+// stops when its context is cancelled.
+//
+// This is the only test that runs serveHTTP, which is why it exists -- every other
+// httpd test drives the handler directly. Port 0 so the OS chooses and nothing
+// collides on a CI runner with many jobs; the announced line is how the test finds
+// out which port it got, which is also the line a user relies on.
+func TestHttpd_bindsServesAndStopsOnCancel(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "f.txt"), []byte("through the applet\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr syncBuilder
+	ctx, cancel := contextWithCancel(t)
+	finished := make(chan error, 1)
+	go func() {
+		finished <- newHttpdApplet().Run(ctx,
+			[]string{"-p", "0", "-v", "-h", root}, strings.NewReader(""), &stdout, &stderr)
+	}()
+
+	// "serving ROOT on http://127.0.0.1:PORT/" is the announcement, and it is on
+	// stdout because it is the answer to the command rather than a diagnostic.
+	base := waitForServingLine(t, &stdout)
+	response, err := http.Get(base + "f.txt")
+	if err != nil {
+		t.Fatalf("cannot reach the server at %s: %v", base, err)
+	}
+	if body := readAndClose(t, response); body != "through the applet\n" {
+		t.Fatalf("GET f.txt = %q", body)
+	}
+	// -v logged the request, which is the option's whole effect.
+	if !strings.Contains(stderr.String(), "GET") {
+		t.Fatalf("-v logged nothing: %q", stderr.String())
+	}
+
+	// Cancelling stops it, and cleanly: ErrServerClosed is not an error to report.
+	cancel()
+	select {
+	case err := <-finished:
+		if err != nil {
+			t.Fatalf("httpd reported an error on shutdown: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("httpd did not stop when its context was cancelled")
+	}
+}
+
+// -h has to name a directory that exists. Serving something that is not there
+// would bind a port and answer 404 to everything, which looks like a working
+// server with an empty directory.
+func TestHttpd_refusesARootThatIsNotADirectory(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "f.txt"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ctx := WithProcessView(t.Context(), hostProcessView{cwd: root})
+	for _, home := range []string{"nope", "f.txt"} {
+		var stdout, stderr strings.Builder
+		err := newHttpdApplet().Run(ctx, []string{"-p", "0", "-h", home},
+			strings.NewReader(""), &stdout, &stderr)
+		if err == nil {
+			t.Fatalf("httpd -h %q was accepted", home)
+		}
+		if !strings.Contains(err.Error(), home) {
+			t.Fatalf("the error does not name %q: %v", home, err)
+		}
+	}
+}
+
+// An address that cannot be bound is reported rather than hung on.
+func TestHttpd_reportsAnAddressItCannotBind(t *testing.T) {
+	var stdout, stderr strings.Builder
+	err := newHttpdApplet().Run(t.Context(), []string{"-a", "240.0.0.1", "-p", "9"},
+		strings.NewReader(""), &stdout, &stderr)
+	if err == nil {
+		t.Fatal("httpd bound an address that is not on this machine")
+	}
+	if !strings.Contains(err.Error(), "240.0.0.1") {
+		t.Fatalf("the error does not name the address: %v", err)
+	}
+}
+
+// waitForServingLine reads the base URL out of httpd's announcement.
+func waitForServingLine(t *testing.T, stdout *syncBuilder) string {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		written := stdout.String()
+		if index := strings.Index(written, "http://"); index >= 0 {
+			rest := written[index:]
+			if line, _, found := strings.Cut(rest, "\n"); found {
+				return strings.TrimSpace(line)
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("httpd never announced an address: %q", written)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
