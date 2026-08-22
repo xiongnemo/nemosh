@@ -482,7 +482,7 @@ behaviour this shell deliberately does not have.
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
 | `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
-| `sed` | `s///`, the `p d q y = {}` commands, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
+| `sed` | `s///`, the `p d q y = a i c {}` commands, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
@@ -796,8 +796,8 @@ $ sed -n '/a/,/b/p'        # from a match on a to the next on b
 $ sed -n '2!p'             # every line except two
 ```
 
-Commands: `s///`, `p`, `d`, `q`, `y///`, `=`, and `{}` blocks, separated by `;`
-or a newline. Options: `-n`, `-e` (repeatable), `-E`/`-r`, `-f FILE` and
+Commands: `s///`, `p`, `d`, `q`, `y///`, `=`, `a`, `i`, `c`, and `{}` blocks,
+separated by `;` or a newline. Options: `-n`, `-e` (repeatable), `-E`/`-r`, `-f FILE` and
 `-i[SUFFIX]`. `s///` takes `g`, a repeat count, and `i`/`I` for
 case-insensitive matching. An **empty script is a valid no-op** rather than an
 error, so `sed "$expr" file` still copies the file when the variable is empty. Before 2026-08-22 none of that existed — `sed -n`
@@ -851,8 +851,25 @@ so a script that fails halfway leaves the file as it was.
 back are the bytes read, transformed. That question only arrives if sed starts
 *decoding* UTF-16 on input, and it is still deferred until then.
 
-Still refused: the `a i c` commands, hold space, branching, `n`/`N`/`D`/`P`, and
-GNU's `first~step` addresses.
+**`a`, `i` and `c`** append after the line, insert before it, and replace it.
+Their argument is the one thing in sed that is not delimited, so it has its own
+reader: the text runs to the end of the line or the end of the `-e` fragment, and
+a `;` inside it is text — `sed '1a\x;p'` appends the literal `x;p`, where every
+other command would have taken `p` as the next one. A leading backslash protects
+the text's own leading whitespace; without one, blanks are separators. `\n` and
+`\t` are interpreted, which is how a multi-line insert fits in one argument.
+
+Three of their rules are not guessable, and each is pinned:
+
+- **`-n` does not suppress them.** The text belongs to the script rather than to
+  the line, so `sed -n '1a\text'` prints `text` and nothing else.
+- **`a` survives a `d`.** The text belongs *after* the line whether or not the
+  line is printed, so it is queued and flushed at the end of the cycle.
+- **`c` on a range prints once**, as the range closes, not once per line:
+  `sed '1,2c\once'` answers a single `once`.
+
+Still refused: hold space, branching, `n`/`N`/`D`/`P`, and GNU's `first~step`
+addresses.
 
 ### `grep`
 
