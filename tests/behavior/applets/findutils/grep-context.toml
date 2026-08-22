@@ -1,0 +1,61 @@
+id = "applet.busybox-w32.grep.context-lines"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "gnu-grep"]
+script = """
+grep -A1 M g.txt
+echo --------
+grep -C1 -n M g.txt
+echo --------
+grep -A1 M g.txt h.txt
+echo --------
+grep -e M1 -e M3 g.txt
+echo --------
+grep -L M g.txt z.txt
+"""
+
+[files]
+"g.txt" = "l1\nM1\nl3\nM2\nl5\nl6\nl7\nl8\nM3\n"
+"h.txt" = "other\nM1\n"
+"z.txt" = "nomatch\n"
+
+[expect]
+status = 0
+stdout = """
+M1
+l3
+M2
+l5
+--
+M3
+--------
+1-l1
+2:M1
+3-l3
+4:M2
+5-l5
+--
+8-l8
+9:M3
+--------
+g.txt:M1
+g.txt-l3
+g.txt:M2
+g.txt-l5
+--
+g.txt:M3
+--
+h.txt:M1
+--------
+M1
+M3
+--------
+z.txt
+"""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 findutils/grep.c, GNU grep"
+why = "Context lines are most of why anyone reaches for grep on a log, and -A/-B/-C were refused by name until 2026-08-22. Four properties are pinned here rather than the options merely existing. The `--` separator appears between groups that are not contiguous, and it spans files -- one sits between g.txt's last group and h.txt's first -- so the printer's state has to outlive a single file. A match and a context line are told apart by their separator for both prefixes: `g.txt:M1` against `g.txt-l3`, and `2:M1` against `3-l3`. -e supplies patterns, so the first operand is then a file rather than the pattern. And -L is -l inverted, listing the file that did not match. All measured against busybox-w32 v1.38.0 on 2026-08-22, whose usage text names exactly this surface."

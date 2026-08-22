@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strings"
 )
 
 func newGrepApplet() Applet {
@@ -30,23 +29,23 @@ func grepStatus(err error) error {
 }
 
 func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	flags, pattern, paths, err := grepArgs(args)
+	flags, paths, err := grepArgs(ctx, args)
 	if err != nil {
 		return err
 	}
-	expr, err := flags.compile(pattern)
+	expr, err := flags.compile()
 	if err != nil {
 		return err
 	}
+	// One printer for the whole run, because the group separator spans files: a
+	// `--` belongs between the last group of one file and the first of the next.
+	printer := &grepPrinter{stdout: stdout, flags: flags}
 	if len(paths) == 0 {
-		matched, err := grepOne(grepTarget{opener: readerTarget(stdin)}, expr, flags, false, stdout)
+		matched, err := grepOne(grepTarget{opener: readerTarget(stdin)}, expr, flags, false, printer)
 		if err != nil {
 			return err
 		}
-		if !matched {
-			return ErrExitFalse
-		}
-		return nil
+		return grepMatchStatus(flags, matched, printer)
 	}
 	targets, err := grepTargets(ctx, flags, paths, stderr)
 	if err != nil {
@@ -55,7 +54,7 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 	withNames := flags.showNames(len(targets))
 	matched := false
 	for _, target := range targets {
-		found, err := grepOne(target, expr, flags, withNames, stdout)
+		found, err := grepOne(target, expr, flags, withNames, printer)
 		if err != nil {
 			return err
 		}
@@ -66,6 +65,21 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 			// asked for.
 			return nil
 		}
+	}
+	return grepMatchStatus(flags, matched, printer)
+}
+
+// grepMatchStatus turns what happened into an exit status.
+//
+// -L inverts the question: it exits 0 when it *listed* something, which is when
+// some file did not match. Measured -- `grep -L M z.txt` prints z.txt and exits
+// 0 where the match status alone would say 1.
+func grepMatchStatus(flags grepFlags, matched bool, printer *grepPrinter) error {
+	if flags.withoutMatch {
+		if printer.wrote {
+			return nil
+		}
+		return ErrExitFalse
 	}
 	if !matched {
 		return ErrExitFalse
@@ -81,7 +95,7 @@ func readerTarget(stdin io.Reader) func() (io.ReadCloser, error) {
 }
 
 // grepOne searches one target and reports whether anything matched.
-func grepOne(target grepTarget, expr *regexp.Regexp, flags grepFlags, withNames bool, stdout io.Writer) (bool, error) {
+func grepOne(target grepTarget, expr *regexp.Regexp, flags grepFlags, withNames bool, printer *grepPrinter) (bool, error) {
 	input, err := target.opener()
 	if err != nil {
 		if flags.noMessages {
@@ -92,18 +106,19 @@ func grepOne(target grepTarget, expr *regexp.Regexp, flags grepFlags, withNames 
 	// Closed explicitly and joined rather than deferred: a close error is a real
 	// failure -- a truncated read on a device -- and swallowing it would report a
 	// clean search over a file that was not fully read. A test pins this.
-	matched, err := grepScan(input, expr, flags, withNames, target.name, stdout)
+	matched, err := grepScan(input, expr, flags, withNames, target.name, printer)
 	return matched, errors.Join(err, input.Close())
 }
 
-func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames bool, name string, stdout io.Writer) (bool, error) {
+func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames bool, name string, printer *grepPrinter) (bool, error) {
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	matched, count, lineNumber := false, 0, 0
-	prefix := ""
-	if withNames {
-		prefix = name + ":"
-	}
+	// before holds the lines that were read and not printed, because -B cannot
+	// know a line is context until something below it matches. after counts the
+	// trailing lines still owed to the last match.
+	before := &grepRing{limit: flags.beforeContext}
+	after := 0
 	for scanner.Scan() {
 		lineNumber++
 		line := scanner.Text()
@@ -112,6 +127,20 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 			hit = !hit
 		}
 		if !hit {
+			if !flags.reportsPerLine() {
+				continue
+			}
+			if after > 0 {
+				// Trailing context. Printed now, so it never enters the ring and
+				// cannot be printed a second time as another match's leading
+				// context.
+				after--
+				if err := printer.emit(name, lineNumber, line, false, withNames); err != nil {
+					return matched, err
+				}
+				continue
+			}
+			before.push(lineNumber, line)
 			continue
 		}
 		matched = true
@@ -120,143 +149,92 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 		case flags.quiet:
 			// Nothing printed, and the caller stops.
 			return true, nil
-		case flags.countOnly, flags.filesOnly:
-			// Both are reported after the file rather than per line.
-		case flags.onlyMatching:
-			// Each match on its own line, which is what makes -o useful for
-			// pulling values out.
-			//
-			// With -v there is nothing to print: the line was selected for *not*
-			// matching, so it has no matched text. Measured -- GNU prints nothing
-			// and exits 0, where falling through to the whole line would have
-			// printed it.
-			if flags.invert {
-				break
-			}
-			for _, found := range expr.FindAllString(line, -1) {
-				if err := writeGrepLine(stdout, prefix, flags, lineNumber, found); err != nil {
-					return matched, err
-				}
-			}
+		case flags.countOnly, flags.filesOnly, flags.withoutMatch:
+			// All three are reported after the file rather than per line, and
+			// context does not apply to them.
 		default:
-			if err := writeGrepLine(stdout, prefix, flags, lineNumber, line); err != nil {
+			if err := printer.flushBefore(before, name, withNames); err != nil {
 				return matched, err
 			}
+			if err := grepEmitMatch(printer, expr, flags, name, lineNumber, line, withNames); err != nil {
+				return matched, err
+			}
+			after = flags.afterContext
 		}
 		if flags.maxCount > 0 && count >= flags.maxCount {
-			break
+			// The trailing context of the last match is still owed, which is what
+			// busybox does: `grep -A1 -m1 M` prints the match and the line after
+			// it. Measured.
+			if err := grepDrainAfter(scanner, printer, name, &lineNumber, after, withNames); err != nil {
+				return matched, err
+			}
+			return matched, scanner.Err()
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return matched, err
 	}
+	return matched, grepReportFile(printer, flags, name, matched, count, withNames)
+}
+
+// grepEmitMatch writes a matching line, whole or in pieces under -o.
+func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, name string, lineNumber int, line string, withNames bool) error {
+	if !flags.onlyMatching {
+		return printer.emit(name, lineNumber, line, true, withNames)
+	}
+	// Each match on its own line, which is what makes -o useful for pulling
+	// values out.
+	//
+	// With -v there is nothing to print: the line was selected for *not*
+	// matching, so it has no matched text. Measured -- GNU prints nothing and
+	// exits 0, where falling through to the whole line would have printed it.
+	if flags.invert {
+		return nil
+	}
+	for _, found := range expr.FindAllString(line, -1) {
+		if err := printer.emit(name, lineNumber, found, true, withNames); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// grepDrainAfter writes the trailing context still owed when -m stopped the scan.
+func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, name string, lineNumber *int, after int, withNames bool) error {
+	for ; after > 0 && scanner.Scan(); after-- {
+		*lineNumber++
+		if err := printer.emit(name, *lineNumber, scanner.Text(), false, withNames); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// grepReportFile writes the per-file answer that -l, -L and -c give instead of
+// lines.
+func grepReportFile(printer *grepPrinter, flags grepFlags, name string, matched bool, count int, withNames bool) error {
 	switch {
 	case flags.filesOnly:
 		if matched {
-			_, err := fmt.Fprintln(stdout, name)
-			return matched, err
+			_, err := fmt.Fprintln(printer.stdout, name)
+			printer.wrote = true
+			return err
+		}
+	case flags.withoutMatch:
+		// -L is -l inverted: the files that did not match.
+		if !matched {
+			_, err := fmt.Fprintln(printer.stdout, name)
+			printer.wrote = true
+			return err
 		}
 	case flags.countOnly:
-		_, err := fmt.Fprintf(stdout, "%s%d\n", prefix, count)
-		return matched, err
-	}
-	return matched, nil
-}
-
-func writeGrepLine(stdout io.Writer, prefix string, flags grepFlags, lineNumber int, text string) error {
-	if flags.lineNumber {
-		_, err := fmt.Fprintf(stdout, "%s%d:%s\n", prefix, lineNumber, text)
+		prefix := ""
+		if withNames {
+			prefix = name + ":"
+		}
+		_, err := fmt.Fprintf(printer.stdout, "%s%d\n", prefix, count)
+		printer.wrote = true
 		return err
 	}
-	_, err := fmt.Fprintf(stdout, "%s%s\n", prefix, text)
-	return err
-}
-
-func grepArgs(args []string) (grepFlags, string, []string, error) {
-	flags := grepFlags{}
-	index := 0
-	for index < len(args) {
-		arg := args[index]
-		if arg == "--" {
-			index++
-			break
-		}
-		if len(arg) <= 1 || arg[0] != '-' {
-			break
-		}
-		// A long option is one word, matched whole rather than letter by letter.
-		// Without this `--color=auto` was read as the flags `-`, `-c`, `-o`, ...
-		// and refused as the bare `-` it began with, so the diagnostic said
-		// `unsupported grep option: --` and named nothing the user had typed.
-		if strings.HasPrefix(arg, "--") {
-			name, value, present := strings.Cut(arg[2:], "=")
-			if name != "color" {
-				return grepFlags{}, "", nil, fmt.Errorf("unsupported grep option: %s", arg)
-			}
-			// Accepted and ignored, which is exactly what busybox does: its option
-			// table maps --color to a pseudo-flag with a NULL sink
-			// (findutils/grep.c:728) and nothing reads it. The option exists so
-			// that `alias grep='grep --color=auto'`, which everyone copies from a
-			// GNU system, does not break the shell it is pasted into.
-			//
-			// The value is still checked, unlike busybox, so a typo is refused
-			// rather than silently swallowed by an option that does nothing.
-			if _, err := parseColorWhen(value, present); err != nil {
-				return grepFlags{}, "", nil, err
-			}
-			index++
-			continue
-		}
-		// -m takes a value, either attached or as the next word, so it is settled
-		// before the remaining letters are walked.
-		letters, consumed, err := grepValueOption(args, index, &flags)
-		if err != nil {
-			return grepFlags{}, "", nil, err
-		}
-		if consumed > 0 {
-			index += consumed
-			if err := parseGrepFlags(letters, &flags); err != nil {
-				return grepFlags{}, "", nil, err
-			}
-			continue
-		}
-		if err := parseGrepFlags(arg[1:], &flags); err != nil {
-			return grepFlags{}, "", nil, err
-		}
-		index++
-	}
-	if index >= len(args) {
-		// The shell prefixes the applet name; grep must not add its own.
-		return grepFlags{}, "", nil, errors.New("missing pattern")
-	}
-	return flags, args[index], args[index+1:], nil
-}
-
-// grepValueOption handles -m, reporting how many arguments it consumed and any
-// letters that preceded it in the same word.
-func grepValueOption(args []string, index int, flags *grepFlags) (string, int, error) {
-	arg := args[index]
-	position := strings.IndexByte(arg, 'm')
-	if position < 1 {
-		return "", 0, nil
-	}
-	before := arg[1:position]
-	rest := arg[position+1:]
-	if rest != "" {
-		count, err := parseMaxCount(rest)
-		if err != nil {
-			return "", 0, err
-		}
-		flags.maxCount = count
-		return before, 1, nil
-	}
-	if index+1 >= len(args) {
-		return "", 0, fmt.Errorf("option requires an argument -- 'm'")
-	}
-	count, err := parseMaxCount(args[index+1])
-	if err != nil {
-		return "", 0, err
-	}
-	flags.maxCount = count
-	return before, 2, nil
+	return nil
 }

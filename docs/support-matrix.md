@@ -454,7 +454,7 @@ behaviour this shell deliberately does not have.
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
-| `grep` | `-i -n -v -r -R -l -c -q -w -x -F -o -s -h -H -E -m`, `--color[=WHEN]` accepted and ignored | refused by name |
+| `grep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
@@ -594,8 +594,9 @@ All five are implemented, measured against GNU. What is still absent:
   because one needs the execution model and quoting rules and the other needs a
   deliberate decision about a destructive default. `| xargs -0` covers most of
   what `-exec` is reached for, and now has `-print0` to pair with.
-- **`grep -A -B -C`.** Context lines need a ring buffer of preceding lines; the
-  option is refused rather than approximated.
+- **`grep --include`, `--exclude` and `-z`.** The first two need a name filter
+  threaded through the `-r` walk; `-z` is a NUL-terminated-line mode. `-A -B -C
+  -e -f -L` landed on 2026-08-22.
 
 Every one of them is refused by name, so a script asking for it fails rather than
 quietly getting something else.
@@ -685,6 +686,46 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### `grep`
+
+**Context lines** — `-A N`, `-B N`, `-C N` — with `--` between groups that are
+not contiguous. `-A` is straightforward; `-B` is the reason it needs state, since
+whether a line is context is not known when it is read but only once a *later*
+line matches. A line already printed as trailing context never enters the
+holding ring, which is what stops an overlapping group printing anything twice.
+
+A match and a context line are told apart by their separator, for both prefixes:
+`g.txt:2:M1` against `g.txt-3-l3`.
+
+Two rules were measured rather than chosen:
+
+- **`-A0` prints no separator at all**, even between groups several lines apart.
+  GNU does print one there; busybox does not, and busybox is the reference.
+- **The separator spans files.** A `--` belongs between the last group of one
+  file and the first of the next, so the printer's state has to outlive a single
+  file.
+- **`-c`, `-l`, `-L` and `-q` ignore context entirely** — `grep -c -A1` counts
+  matches. But `-o` does *not*: it prints the matched part for a match and the
+  whole line for context.
+- **`-m` still owes the trailing context of its last match**, so
+  `grep -A1 -m1 M` prints the match and the line after it.
+
+**`-e` and `-f`** supply patterns, so several can be given and a pattern starting
+with a dash stops looking like an option. With either present the first operand
+is a file rather than the pattern. Each pattern is escaped and anchored
+*separately* before being joined into an alternation, which is a correctness
+matter and not a style one: `-F -e a.c` escaped as one string would escape the
+`|` that joins them, and `-x -e a -e b` anchored as one alternation would give
+`^a|b$`, matching any line containing `b`. An empty `-f` file means no pattern,
+which matches nothing and exits 1 — the measured answer, and the opposite of
+treating "no pattern" as "empty pattern".
+
+**`-L`** is `-l` inverted, and it inverts the exit status with it: it exits 0 when
+it listed something, which is when some file did *not* match.
+
+30 of 30 measured forms agree with busybox-w32 byte for byte, exit statuses
+included. Diagnostics match too: `grep -A x` answers `invalid number 'x'`.
 
 ### `head` and `tail`
 

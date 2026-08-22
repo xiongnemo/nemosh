@@ -47,29 +47,61 @@ type grepFlags struct {
 	noFilename   bool
 	withFilename bool
 	maxCount     int
+	// withoutMatch is -L: the files that did *not* match, which is -l inverted.
+	withoutMatch bool
+	// afterContext and beforeContext are -A and -B; -C sets both.
+	afterContext  int
+	beforeContext int
+	// patterns holds every pattern, whether it came from the operand, from -e,
+	// or from a -f file. patternsGiven records that -e or -f was used at all, so
+	// that an empty -f file means "no pattern" rather than letting the first
+	// operand become one.
+	patterns      []string
+	patternsGiven bool
 }
 
-// compile turns the pattern into a regular expression, honouring -F, -w and -x.
+// compile turns the patterns into one regular expression, honouring -F, -w and
+// -x.
 //
-// -F is not "escape the pattern and carry on": with -w or -x it still has to be
-// anchored, so the escaping happens first and the anchors wrap it.
-func (f grepFlags) compile(pattern string) (*regexp.Regexp, error) {
-	if f.fixedString {
-		pattern = regexp.QuoteMeta(pattern)
+// Several patterns are an alternation, and each is escaped and anchored
+// *separately* before being joined. Doing it the other way round is a real bug
+// rather than a style choice: `-F -e a.c -e b` escaped as one string would
+// escape the `|` this builds, and `-x -e a -e b` anchored as one alternation
+// would give `^a|b$`, which matches any line containing b.
+//
+// -F is likewise not "escape and carry on": with -w or -x the escaped pattern
+// still has to be anchored, so the escaping happens first and the anchors wrap
+// it.
+func (f grepFlags) compile() (*regexp.Regexp, error) {
+	if len(f.patterns) == 0 {
+		// No pattern matches nothing, which is what an empty -f file asks for.
+		// A regexp that cannot match is clearer here than a nil to guard at every
+		// use.
+		return regexp.Compile(`$.^`)
 	}
-	switch {
-	case f.lineMatch:
-		pattern = "^(?:" + pattern + ")$"
-	case f.wordMatch:
-		// GNU's definition: the match must not be adjacent to a word character
-		// on either side. \b would be close but is wrong for a pattern that
-		// starts or ends with a non-word character.
-		pattern = `(?:\A|\W)(?:` + pattern + `)(?:\z|\W)`
+	parts := make([]string, 0, len(f.patterns))
+	for _, pattern := range f.patterns {
+		if f.fixedString {
+			pattern = regexp.QuoteMeta(pattern)
+		}
+		switch {
+		case f.lineMatch:
+			pattern = "^(?:" + pattern + ")$"
+		case f.wordMatch:
+			// GNU's definition: the match must not be adjacent to a word
+			// character on either side. \b would be close but is wrong for a
+			// pattern that starts or ends with a non-word character.
+			pattern = `(?:\A|\W)(?:` + pattern + `)(?:\z|\W)`
+		default:
+			pattern = "(?:" + pattern + ")"
+		}
+		parts = append(parts, pattern)
 	}
+	joined := strings.Join(parts, "|")
 	if f.ignoreCase {
-		pattern = "(?i)" + pattern
+		joined = "(?i)" + joined
 	}
-	return regexp.Compile(pattern)
+	return regexp.Compile(joined)
 }
 
 // parseGrepFlags reads the letters this file adds, leaving the long options and
@@ -87,6 +119,8 @@ func parseGrepFlags(flags string, into *grepFlags) error {
 			into.recursive = true
 		case 'l':
 			into.filesOnly = true
+		case 'L':
+			into.withoutMatch = true
 		case 'c':
 			into.countOnly = true
 		case 'q':
