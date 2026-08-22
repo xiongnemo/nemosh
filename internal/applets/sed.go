@@ -86,6 +86,7 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 // line is read, transformed, and either printed or not.
 func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 	number := 0
+	hold := ""
 	for {
 		line, _, ok, err := stream.Next()
 		if err != nil {
@@ -101,11 +102,16 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 			isLast: stream.AtLast(),
 			stdout: stdout,
 			quiet:  p.quiet,
+			hold:   hold,
+			stream: stream,
 		}
-		control, err := runSedCommands(p.commands, cycle)
+		control, err := runSedProgram(p, cycle)
 		if err != nil {
 			return err
 		}
+		// The hold space survives the cycle; the pattern space does not. `n` and
+		// `N` may also have advanced the line counter past this cycle's start.
+		hold, number = cycle.hold, cycle.number
 		// Without -n the pattern space is printed at the end of the script, which
 		// is why `p` without -n duplicates a line rather than printing it once.
 		// `d` and `q` both skip it: `d` discarded the line, and `q` already wrote

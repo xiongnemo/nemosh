@@ -148,11 +148,12 @@ func TestSed_refusesWhatItCannotDo(t *testing.T) {
 		wantWord string
 	}{
 		{args: []string{"-n", "1~2p", "s.txt"}, wantWord: "~"},
-		{args: []string{"-n", "1,2h", "s.txt"}, wantWord: "h"},
-		// A word of nonsense is reported by its first unimplemented letter,
-		// which is what busybox does too: it answers `unsupported command o`
-		// here, `n` being a command it has and this does not.
-		{args: []string{"nosuchcommand", "s.txt"}, wantWord: "n"},
+		// `l` is still absent, so a word beginning with it is refused by that
+		// letter. `nosuchcommand` no longer serves: `n` is implemented now, so
+		// the first unimplemented letter in it is `o`, which is what busybox
+		// answers too.
+		{args: []string{"1,2l", "s.txt"}, wantWord: "l"},
+		{args: []string{"nosuchcommand", "s.txt"}, wantWord: "o"},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {
 			dir := sedFixture(t)
@@ -584,5 +585,72 @@ func TestSed_textCommands(t *testing.T) {
 	}
 	if want := "a1\na1\nx\nb2\nb2\nc3\nc3\nd4\nd4\ne5\ne5\n"; stdout != want {
 		t.Fatalf("sed -e a -e p = %q, want %q", stdout, want)
+	}
+}
+
+// The hold space, the multiline commands and branching, tested through the
+// one-liners they exist for. Each was measured against busybox-w32 on
+// 2026-08-22; each is also the idiom people actually copy.
+func TestSed_holdSpaceAndBranching(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "abc.txt"), []byte("a\nb\nc\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		// tac, in one line: hold the reversed accumulation and print it at the end.
+		{name: "reverse a file", args: []string{"-n", "1!G;h;$p", "abc.txt"}, want: "c\nb\na\n"},
+		// Join pairs of lines.
+		{name: "join with N", args: []string{"N;s/\n/ /", "abc.txt"}, want: "a b\nc\n"},
+		// A sliding two-line window.
+		{name: "N P D window", args: []string{"-n", "N;P;D", "abc.txt"}, want: "a\nb\n"},
+		{name: "exchange", args: []string{"x", "abc.txt"}, want: "\na\nb\n"},
+		// The hold space starts empty, so the first H leaves a leading newline --
+		// which is why this answers with a leading comma. Reference behaviour, not
+		// an off-by-one.
+		{name: "collect with H", args: []string{"-n", "H;${x;s/\n/,/g;p}", "abc.txt"}, want: ",a,b,c\n"},
+		// The loop that joins a whole file, and the reason branching has to work
+		// across a label: `ba` jumps backwards to `:a`.
+		{name: "join every line", args: []string{":a;N;$!ba;s/\n/ /g", "abc.txt"}, want: "a b c\n"},
+		{name: "n then delete", args: []string{"n;d", "abc.txt"}, want: "a\nc\n"},
+		{name: "a block inside the loop", args: []string{"-n", "$!{N};P;D", "abc.txt"}, want: "a\nb\nc\n"},
+		// t branches when a substitution happened, so the second one is skipped
+		// on the line the first matched.
+		{name: "t branches after a substitution", args: []string{"s/a/X/;t;s/b/Y/", "abc.txt"}, want: "X\nY\nc\n"},
+		// T is the inverse.
+		{name: "T branches without one", args: []string{"s/a/X/;T;s/1/9/", "abc.txt"}, want: "X\nb\nc\n"},
+		{name: "g overwrites from the hold space", args: []string{"1h;2g", "abc.txt"}, want: "a\na\nc\n"},
+		{name: "G appends the hold space", args: []string{"1h;2G", "abc.txt"}, want: "a\nb\na\nc\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stdout, stderr, err := runSedIn(t, dir, "", test.args...)
+			if err != nil {
+				t.Fatalf("sed %v: %v (%s)", test.args, err, stderr)
+			}
+			if stdout != test.want {
+				t.Fatalf("sed %v\n  got  %q\n  want %q", test.args, stdout, test.want)
+			}
+		})
+	}
+
+	// A branch to a label that is not there is refused before any line is read,
+	// rather than silently falling through to the end of the script.
+	if _, stderr, err := runSedIn(t, dir, "", "b nosuch", "abc.txt"); err == nil {
+		t.Fatal("sed with a missing label succeeded")
+	} else if !strings.Contains(stderr+err.Error(), "nosuch") {
+		t.Fatalf("sed with a missing label said %q, want it named", stderr+err.Error())
+	}
+
+	// `N` advances the line counter, so `$` still names the real last line. A
+	// consumed line that was not counted would make `$` name the wrong one.
+	stdout, _, err := runSedIn(t, dir, "", "-n", "N;$p", "abc.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "" {
+		t.Fatalf("sed -n 'N;$p' = %q; with three lines the pair ends at 2, so $ never matches", stdout)
 	}
 }

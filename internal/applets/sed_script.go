@@ -18,6 +18,11 @@ import (
 // sedProgram is a parsed script together with the options that shape its output.
 type sedProgram struct {
 	commands []*sedCommand
+	// instructions is commands flattened, which is what branching needs: a label
+	// can sit inside a block a jump comes from outside, and a tree has nowhere
+	// for such a jump to land. See sed_flow.go.
+	instructions []*sedCommand
+	labels       map[string]int
 	// quiet is -n: the pattern space is not printed at the end of the script, so
 	// only an explicit p writes anything.
 	quiet bool
@@ -32,16 +37,20 @@ type sedCommand struct {
 	translate  sedTranslate
 	// text is the argument of a, i and c.
 	text string
+	// label is the name on `:`, `b`, `t` and `T`; jump is where a branch lands,
+	// or the instruction past a block's body.
+	label string
+	jump  int
 	// block is the command list of a `{...}` group, run under this command's
 	// address.
 	block []*sedCommand
 }
 
-// sedSupportedCommands are the actions this build implements. Everything else is
-// refused by name, including the ones busybox has: the hold-space commands need a
-// second buffer and the branching ones need a program counter. Answering either
-// by guessing would be worse than saying so.
-const sedSupportedCommands = "pdqsy={aic"
+// sedSupportedCommands are the actions this build implements. What is left out is
+// `l` and `w`/`r`, plus GNU's `first~step` addresses and `e`: `l` needs an
+// unambiguous-print escaping table, and the file commands need a second decision
+// about where output goes.
+const sedSupportedCommands = "pdqsy={aichHgGxnNPDbtT:"
 
 // parseSedProgram reads every -e script, and the first operand when there was
 // no -e.
@@ -56,6 +65,9 @@ func parseSedProgram(scripts []string, quiet, extended bool) (*sedProgram, error
 	// file and `sed -n '' file` prints nothing, which is what busybox does.
 	// Refusing it made `sed "$expr" file` fail when the variable was empty,
 	// where every reference passes the input through.
+	if err := flattenSedProgram(program); err != nil {
+		return nil, err
+	}
 	return program, nil
 }
 
@@ -142,6 +154,12 @@ func parseSedCommand(script string, extended bool) (*sedCommand, string, error) 
 	case 'a', 'i', 'c':
 		text, remainder := parseSedTextCommand(rest)
 		return &sedCommand{address: address, action: action, text: text}, remainder, nil
+	case ':', 'b', 't', 'T':
+		// A label runs to the end of the command, and `;` does end it -- unlike
+		// the text commands, where a `;` is text. That is what lets `:a;N;$!ba`
+		// be written on one line.
+		label, remainder := parseSedLabel(rest[1:])
+		return &sedCommand{address: address, action: action, label: label}, remainder, nil
 	}
 	// p, d, q and = take no argument, so whatever follows is the next command.
 	return &sedCommand{address: address, action: action}, rest[1:], nil
@@ -275,4 +293,18 @@ func readSedScriptFile(ctx context.Context, path string) (string, error) {
 		return "", operandFailure(path, err)
 	}
 	return string(data), nil
+}
+
+// parseSedLabel reads the name after `:`, `b`, `t` or `T`.
+//
+// Leading blanks are separators and a `;` or newline ends it, which is what makes
+// `:a;N;$!ba` a one-liner. A label may be absent on a branch, where it means the
+// end of the script.
+func parseSedLabel(rest string) (string, string) {
+	rest = strings.TrimLeft(rest, " \t")
+	end := 0
+	for end < len(rest) && rest[end] != ';' && rest[end] != '\n' && rest[end] != '}' {
+		end++
+	}
+	return strings.TrimRight(rest[:end], " \t"), rest[end:]
 }

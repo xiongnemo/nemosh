@@ -482,7 +482,7 @@ behaviour this shell deliberately does not have.
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
 | `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
-| `sed` | `s///`, the `p d q y = a i c {}` commands, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
+| `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {}`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
@@ -796,8 +796,9 @@ $ sed -n '/a/,/b/p'        # from a match on a to the next on b
 $ sed -n '2!p'             # every line except two
 ```
 
-Commands: `s///`, `p`, `d`, `q`, `y///`, `=`, `a`, `i`, `c`, and `{}` blocks,
-separated by `;` or a newline. Options: `-n`, `-e` (repeatable), `-E`/`-r`, `-f FILE` and
+Commands: `s///`, `p`, `d`, `q`, `y///`, `=`, `a`, `i`, `c`, the hold-space five
+`h H g G x`, the multiline `n N P D`, the branches `b t T` with `:` labels, and
+`{}` blocks, separated by `;` or a newline. Options: `-n`, `-e` (repeatable), `-E`/`-r`, `-f FILE` and
 `-i[SUFFIX]`. `s///` takes `g`, a repeat count, and `i`/`I` for
 case-insensitive matching. An **empty script is a valid no-op** rather than an
 error, so `sed "$expr" file` still copies the file when the variable is empty. Before 2026-08-22 none of that existed — `sed -n`
@@ -868,8 +869,36 @@ Three of their rules are not guessable, and each is pinned:
 - **`c` on a range prints once**, as the range closes, not once per line:
   `sed '1,2c\once'` answers a single `once`.
 
-Still refused: hold space, branching, `n`/`N`/`D`/`P`, and GNU's `first~step`
-addresses.
+**The hold space and branching** are what make sed more than a line filter, and
+they are tested through the one-liners they exist for — each measured against
+busybox:
+
+```console
+$ sed -n '1!G;h;$p' file          # reverse it, which is tac
+$ sed ':a;N;$!ba;s/\n/ /g' file   # join every line
+$ sed -n 'N;P;D' file             # a sliding two-line window
+$ sed -n 'H;${x;s/\n/,/g;p}'      # collect into one comma-separated line
+```
+
+Branching forced a restructure worth naming: **the command tree is flattened into
+one instruction list**, because a label can sit inside a block that a jump comes
+from outside, and a recursive walk over a tree gives such a jump nowhere to land.
+That is what sed itself does, and it is why `:a;N;$!ba` works. `D` uses the same
+machinery — it restarts the script *without* reading a line, which is a jump to
+instruction zero.
+
+Two details that are easy to get wrong, both pinned:
+
+- **`N` at end of input still prints the pattern space**, so
+  `sed 'N;s/\n/ /'` over three lines answers `a b` and then a bare `c`. It is
+  printed by `N` rather than left to the end-of-cycle print, because ending the
+  run has to skip that print for `q`'s sake.
+- **`N` advances the line counter**, so `$` still names the real last line. A
+  consumed line that was not counted would make `$` name the wrong one.
+
+Still refused: `l`, the `w`/`r` file commands, `e`, and GNU's `first~step`
+addresses. `l` needs an unambiguous-print escaping table and the file commands
+need a second decision about where output goes.
 
 ### `grep`
 

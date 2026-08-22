@@ -26,6 +26,9 @@ const (
 	sedDeleted
 	// sedQuit is `q`: as above, and no further line is read.
 	sedQuit
+	// sedRestart is `D` with a newline left in the pattern space: begin the
+	// script again *without* reading a line, which is the loop `N;P;D` is.
+	sedRestart
 )
 
 // sedCycle is the state one line is processed with.
@@ -40,6 +43,29 @@ type sedCycle struct {
 	printed bool
 	// appended holds what `a` queued, written at the end of the cycle.
 	appended []string
+	// hold is the hold space, which survives between lines. It is what makes
+	// `1!G;h;$p` reverse a file.
+	hold string
+	// substituted records whether an s/// has matched since the last line was
+	// read or the last t/T ran, which is the condition those two test.
+	substituted bool
+	// stream is where `n` and `N` get another line from.
+	stream *sedStream
+}
+
+// readNext takes another input line, for `n` and `N`.
+//
+// The line number advances with it, so `$` and a numeric address still mean what
+// they did -- `N` consuming a line without counting it would make `$` name the
+// wrong one.
+func (c *sedCycle) readNext() (string, bool, error) {
+	line, _, ok, err := c.stream.Next()
+	if err != nil || !ok {
+		return "", false, err
+	}
+	c.number++
+	c.isLast = c.stream.AtLast()
+	return line, true, nil
 }
 
 // runSedCommands walks a command list, recursing into blocks.
@@ -63,7 +89,11 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 		// whole point: `/x/{p;q}` applies both to the matching line only.
 		return runSedCommands(command.block, cycle)
 	case 's':
-		cycle.line = command.substitute.replace(cycle.line)
+		replaced := command.substitute.replace(cycle.line)
+		if replaced != cycle.line {
+			cycle.substituted = true
+		}
+		cycle.line = replaced
 	case 'y':
 		cycle.line = command.translate.apply(cycle.line)
 	case 'p':
@@ -73,6 +103,12 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 		return sedNext, cycle.write(fmt.Sprintf("%d", cycle.number))
 	case 'a', 'i', 'c':
 		return runSedTextCommand(command, cycle)
+	case 'h', 'H', 'g', 'G', 'x':
+		return runSedHoldCommand(command, cycle), nil
+	case 'n', 'N':
+		return runSedNextCommand(command, cycle)
+	case 'P', 'D':
+		return runSedFirstLineCommand(command, cycle)
 	case 'd':
 		return sedDeleted, nil
 	case 'q':

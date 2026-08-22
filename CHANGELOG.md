@@ -31,7 +31,9 @@ patch number is the commits since that tag.
   trailing space, which is GNU's output. busybox prints a stray trailing space
   there.
 
-- **`sed` gained `{}` blocks, `y///`, `=`, `a`, `i`, `c`, `-f` and `-i`.** Blocks group commands
+- **`sed` is now essentially complete**: `{}` blocks, `y///`, `=`, `a`, `i`, `c`,
+  the hold space (`h H g G x`), the multiline commands (`n N P D`), branching
+  (`b t T` with `:` labels), `-f` and `-i`. Blocks group commands
   under one address, so `sed -n '/x/{p;q}'` works; `d` and `q` inside one end the
   whole cycle rather than just the block. `y///` transliterates by rune, not byte,
   and **refuses unequal lengths** where busybox silently ignores the unpaired
@@ -44,6 +46,14 @@ patch number is the commits since that tag.
   not suppress it, since it belongs to the script rather than the line; `a`
   survives a `d` that discards the line; and `c` on a range prints once as the
   range closes rather than once per line.
+- The hold space and branching are what make sed more than a line filter, and
+  every classic one-liner now works: `sed -n '1!G;h;$p'` reverses a file,
+  `sed ':a;N;$!ba;s/
+/ /g'` joins one, `sed -n 'N;P;D'` slides a two-line window.
+- Branching forced the command tree to be flattened into one instruction list,
+  because a label can sit inside a block a jump comes from outside and a recursive
+  walk gives such a jump nowhere to land. That is what sed itself does. `D` uses
+  the same machinery: it restarts the script without reading a line.
 - `-i` had been deferred on the grounds that rewriting a file forces a choice of
   output encoding. It does not: sed here is byte-exact, so the bytes written back
   are the bytes read, transformed. That question arrives only if sed starts
