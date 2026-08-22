@@ -88,6 +88,8 @@ var commands = []Command{
 	{Name: "bzcat", Short: "cdfkt123456789", Operand: AnyPath},
 	{Name: "tar", Short: "ctxvzjaOfC", ValueShort: "fC", Operand: AnyPath},
 	{Name: "unzip", Short: "lnojptqKdx", ValueShort: "dx", Operand: AnyPath},
+	{Name: "nano", Short: "HR", Operand: AnyPath},
+	{Name: "micro", Short: "HR", Operand: AnyPath},
 	{Name: "seq", Operand: AnyPath},
 	{Name: "sleep", Operand: AnyPath},
 	{Name: "sort", Short: "nrufbkt", ValueShort: "kt", Operand: AnyPath},

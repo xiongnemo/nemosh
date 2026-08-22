@@ -163,6 +163,8 @@ func portableApplets() []Applet {
 		newBzcatApplet(),
 		newTarApplet(),
 		newUnzipApplet(),
+		newNanoApplet(),
+		newMicroApplet(),
 		newCmpApplet(),
 		newCommApplet(),
 		newPasteApplet(),

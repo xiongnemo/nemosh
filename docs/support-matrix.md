@@ -472,9 +472,11 @@ behaviour this shell deliberately does not have.
 | `iconv` | `-f -t -l -c -o` | refused by name |
 | `join` | `-1 -2 -j -t` | refused by name |
 | `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |
+| `micro` | `-H -R`; one file at a time | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |
+| `nano` | `-H -R`; one file at a time | refused by name |
 | `nl` | `-b t\|a\|n` | refused by name |
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
@@ -712,6 +714,62 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### The editor: `nano` and `micro`
+
+One editor under two names, added 2026-08-23. The key map is chosen by the name
+it was invoked as -- how busybox varies behaviour by `argv[0]` -- because calling
+something `nano` and then binding `^S` to save would be a name that lies.
+
+| | save | quit | search | cut | paste | go to line |
+| --- | --- | --- | --- | --- | --- | --- |
+| `nano` | `^O` | `^X` | `^W` | `^K` | `^U` | `^_` |
+| `micro` | `^S` | `^Q` | `^F` | `^K` | `^V` | `^L` |
+
+**`-H` lists exactly what is implemented, and what is not**, in the manner of
+`busybox vi -H`. The list is generated from the binding table, so it cannot claim
+a key the editor does not bind -- a test walks both to check. It also names the
+absences (no syntax highlighting, no multiple buffers, no replace, no mouse, no
+configuration file), because an editor that silently lacks replace is worse than
+one that says so.
+
+**Writing it here was not a compromise.** micro's editing core lives entirely
+under `internal/`, which Go forbids importing across modules -- only
+`pkg/highlight` is reachable -- and it depends on a *fork* of tcell where this
+build uses upstream, and two tcells driving one Windows console is the conflict
+`top_view.go:46` already documents. busybox does the same thing with `vi`: its
+header reads *"tiny vi.c: A small 'vi' clone"*, about 3000 lines from scratch,
+keeping the name and the key language. `nano` itself is a clone of `pico` for the
+same kind of reason.
+
+The buffer is tview's `TextArea`, which already handles a cursor, selection,
+double-width characters and undo. Two things came out of using it:
+
+- **Its offsets are byte positions, not runes.** `GetTextLength` answers 10 for
+  two CJK characters plus `ab` and two newlines. Counting runes put the cursor in
+  the wrong place on any line holding a multibyte character.
+- `Replace` is used rather than `SetText` for the line commands, because
+  `SetText` discards the undo history.
+
+Other behaviours worth knowing:
+
+- **Bytes are saved as they arrived.** The editor does not decode, so it cannot
+  re-encode, and a UTF-16 or Latin-1 file keeps its encoding -- the same rule
+  `sed -i` follows.
+- **`^X`/`^Q` with unsaved changes warns once and leaves on the second press.** A
+  yes/no prompt needs a reader this does not have, and losing a buffer to one
+  keystroke is the outcome worth preventing.
+- **A terminal is required, and merely having a file on stdin is not enough.**
+  `nano file < /dev/null` leased successfully and then hung waiting for keys that
+  would never arrive; the check is now whether stdin is a terminal.
+- A file that does not exist opens as a new buffer rather than failing. More than
+  one file is refused, since there are no buffers to put the second in.
+
+The interactive path is tested headlessly over tcell's simulation screen, typing
+keys and asserting the file on disk. That needs polling rather than assuming
+synchrony: an injected key and a `QueueUpdate` callback share one select loop with
+no ordering between them, so a read taken straight after a key press can see the
+frame *before* it was handled.
 
 ### The archivers, and where an entry may land
 
