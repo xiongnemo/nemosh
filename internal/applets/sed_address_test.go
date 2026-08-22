@@ -147,15 +147,8 @@ func TestSed_refusesWhatItCannotDo(t *testing.T) {
 		args     []string
 		wantWord string
 	}{
-		// -i has to choose an output encoding for the file it rewrites, which is
-		// the same decision already deferred for sed's UTF-16 reading. Bundling
-		// it into a convenience flag would bury that.
-		{args: []string{"-i", "s/a/X/", "s.txt"}, wantWord: "i"},
-		{args: []string{"-f", "script.sed", "s.txt"}, wantWord: "f"},
-		{args: []string{"y/a/b/", "s.txt"}, wantWord: "y"},
 		{args: []string{"1a\\text", "s.txt"}, wantWord: "a"},
 		{args: []string{"-n", "1~2p", "s.txt"}, wantWord: "~"},
-		{args: []string{"-n", "/a/{p}", "s.txt"}, wantWord: "{"},
 		{args: []string{"-n", "1,2h", "s.txt"}, wantWord: "h"},
 		// A word of nonsense is reported by its first unimplemented letter,
 		// which is what busybox does too: it answers `unsupported command o`
@@ -263,5 +256,256 @@ func TestSed_refusesLineAddressZero(t *testing.T) {
 	}
 	if message := stderr + err.Error(); !strings.Contains(message, "address 0") {
 		t.Fatalf("sed -n 0p said %q, want it to name the address", message)
+	}
+}
+
+// `{}` groups commands under one address, which is what makes `/x/{p;q}` apply
+// both to the matching line and neither to any other. It also turns the walk over
+// the commands into a recursive one, so `d` and `q` inside a block have to end the
+// whole cycle rather than just the block.
+func TestSed_blocks(t *testing.T) {
+	dir := sedFixture(t)
+	for _, test := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "two commands under one address", args: []string{"-n", "/b/{p;p}", "s.txt"}, want: "b2\nb2\n"},
+		{name: "substitutions in a block", args: []string{"2{s/b/X/;s/2/Y/}", "s.txt"}, want: "a1\nXY\nc3\nd4\ne5\n"},
+		{name: "an address inside a range", args: []string{"-n", "/a/,/c/{/b/p}", "s.txt"}, want: "b2\n"},
+		// d inside a block ends the cycle, so the automatic print does not happen.
+		{name: "delete inside a block", args: []string{"2{d}", "s.txt"}, want: "a1\nc3\nd4\ne5\n"},
+		// q inside a block stops the run, printing the line on the way out.
+		{name: "quit inside a block", args: []string{"-n", "2{p;q}", "s.txt"}, want: "b2\n"},
+		{name: "nested blocks", args: []string{"-n", "/a/,/c/{/b/{p}}", "s.txt"}, want: "b2\n"},
+		{name: "a block with spaces", args: []string{"-n", "2 { p }", "s.txt"}, want: "b2\n"},
+		{name: "a block with no address runs on every line", args: []string{"-n", "{p}", "s.txt"}, want: "a1\nb2\nc3\nd4\ne5\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stdout, stderr, err := runSedIn(t, dir, "", test.args...)
+			if err != nil {
+				t.Fatalf("sed %v: %v (%s)", test.args, err, stderr)
+			}
+			if stdout != test.want {
+				t.Fatalf("sed %v\n  got  %q\n  want %q", test.args, stdout, test.want)
+			}
+		})
+	}
+	// An unbalanced brace is named for which one it is.
+	for _, script := range []string{"2{p", "2p}", "/a/{p;{q}"} {
+		if _, _, err := runSedIn(t, dir, "", "-n", script, "s.txt"); err == nil {
+			t.Fatalf("sed -n %q succeeded, want a refusal", script)
+		}
+	}
+}
+
+// y transliterates, character for character.
+func TestSed_translate(t *testing.T) {
+	dir := sedFixture(t)
+	for _, test := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "one for one", args: []string{"y/abc/xyz/", "s.txt"}, want: "x1\ny2\nz3\nd4\ne5\n"},
+		{name: "with another command after it", args: []string{"y/ab/xy/;s/1/9/", "s.txt"}, want: "x9\ny2\nc3\nd4\ne5\n"},
+		{name: "under an address", args: []string{"2y/b/X/", "s.txt"}, want: "a1\nX2\nc3\nd4\ne5\n"},
+		{name: "another delimiter", args: []string{"y,ab,xy,", "s.txt"}, want: "x1\ny2\nc3\nd4\ne5\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stdout, stderr, err := runSedIn(t, dir, "", test.args...)
+			if err != nil {
+				t.Fatalf("sed %v: %v (%s)", test.args, err, stderr)
+			}
+			if stdout != test.want {
+				t.Fatalf("sed %v = %q, want %q", test.args, stdout, test.want)
+			}
+		})
+	}
+
+	// Runes, not bytes: transliterating by byte would replace half a character
+	// and corrupt the output.
+	stdout, _, err := runSedIn(t, dir, "\u00e1\u00e9\n", "y/\u00e1\u00e9/ae/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "ae\n" {
+		t.Fatalf("y over multibyte input = %q, want ae", stdout)
+	}
+
+	// Unequal lengths are refused. busybox transliterates the pairs it has and
+	// silently ignores the rest -- `y/abc/xy/` leaves every c alone, measured --
+	// which is a wrong answer with no diagnostic. GNU refuses it, and so does this.
+	_, stderr, err := runSedIn(t, dir, "", "y/abc/xy/", "s.txt")
+	if err == nil {
+		t.Fatal("sed y with unequal lengths succeeded, want a refusal")
+	}
+	if !strings.Contains(stderr+err.Error(), "different lengths") {
+		t.Fatalf("sed y with unequal lengths said %q, want it to name the cause", stderr+err.Error())
+	}
+}
+
+// = writes the line number on a line of its own, before the line.
+func TestSed_lineNumber(t *testing.T) {
+	dir := sedFixture(t)
+	stdout, stderr, err := runSedIn(t, dir, "", "-n", "=", "s.txt")
+	if err != nil {
+		t.Fatalf("sed -n =: %v (%s)", err, stderr)
+	}
+	if want := "1\n2\n3\n4\n5\n"; stdout != want {
+		t.Fatalf("sed -n = %q, want %q", stdout, want)
+	}
+	stdout, _, err = runSedIn(t, dir, "", "-n", "2=", "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "2\n" {
+		t.Fatalf("sed -n 2= = %q, want 2", stdout)
+	}
+	// Without -n the number precedes the line, which is what makes `sed =` a
+	// crude `nl`.
+	stdout, _, err = runSedIn(t, dir, "", "=", "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "1\na1\n2\nb2\n3\nc3\n4\nd4\n5\ne5\n"; stdout != want {
+		t.Fatalf("sed = %q, want %q", stdout, want)
+	}
+}
+
+// -f takes the script from a file, whose lines are commands exactly as a
+// `;`-separated script's are.
+func TestSed_scriptFile(t *testing.T) {
+	dir := sedFixture(t)
+	if err := os.WriteFile(filepath.Join(dir, "script.sed"), []byte("1d\n3d\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, err := runSedIn(t, dir, "", "-f", "script.sed", "s.txt")
+	if err != nil {
+		t.Fatalf("sed -f: %v (%s)", err, stderr)
+	}
+	if want := "b2\nd4\ne5\n"; stdout != want {
+		t.Fatalf("sed -f = %q, want %q", stdout, want)
+	}
+
+	// -f and -e combine, in the order given.
+	stdout, _, err = runSedIn(t, dir, "", "-f", "script.sed", "-e", "s/b/X/", "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "X2\nd4\ne5\n"; stdout != want {
+		t.Fatalf("sed -f -e = %q, want %q", stdout, want)
+	}
+
+	// A missing script file is an error about that file, not about a script.
+	_, stderr, err = runSedIn(t, dir, "", "-f", "nosuch.sed", "s.txt")
+	if err == nil {
+		t.Fatal("sed -f with a missing file succeeded")
+	}
+	if !strings.Contains(stderr+err.Error(), "nosuch.sed") {
+		t.Fatalf("sed -f said %q, want it to name the file", stderr+err.Error())
+	}
+}
+
+// -i edits in place. Each file is its own stream: line numbers restart, `$` is
+// that file's last line, and an address range does not leak into the next file.
+//
+// That last part is GNU's behaviour and the coherent reading of what -i means.
+// busybox restarts the numbering but leaves an open range running across the
+// boundary, so `sed -i -n '2,3p' a b` keeps b's first line because a's range
+// never closed -- measured 2026-08-22, and state reuse rather than a rule.
+func TestSed_inPlace(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	read := func(name string) string {
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+
+	// The plain form writes nothing to stdout.
+	write("t.txt", "a1\nb2\nc3\n")
+	stdout, stderr, err := runSedIn(t, dir, "", "-i", "s/a/X/", "t.txt")
+	if err != nil {
+		t.Fatalf("sed -i: %v (%s)", err, stderr)
+	}
+	if stdout != "" {
+		t.Fatalf("sed -i wrote %q to stdout", stdout)
+	}
+	if got := read("t.txt"); got != "X1\nb2\nc3\n" {
+		t.Fatalf("sed -i left %q", got)
+	}
+
+	// -i.bak keeps the original under that suffix.
+	write("u.txt", "a1\nb2\n")
+	if _, _, err := runSedIn(t, dir, "", "-i.bak", "s/a/X/", "u.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if got := read("u.txt"); got != "X1\nb2\n" {
+		t.Fatalf("sed -i.bak left %q", got)
+	}
+	if got := read("u.txt.bak"); got != "a1\nb2\n" {
+		t.Fatalf("backup holds %q, want the original", got)
+	}
+
+	// Each file is its own stream, so `$d` drops the last line of both.
+	write("f1.txt", "a1\na2\n")
+	write("f2.txt", "b1\nb2\n")
+	if _, _, err := runSedIn(t, dir, "", "-i", "$d", "f1.txt", "f2.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if got := read("f1.txt"); got != "a1\n" {
+		t.Fatalf("f1 = %q, want its last line dropped", got)
+	}
+	if got := read("f2.txt"); got != "b1\n" {
+		t.Fatalf("f2 = %q, want its last line dropped", got)
+	}
+
+	// And a range does not leak: f2 keeps only its own line 2.
+	write("h1.txt", "a1\na2\n")
+	write("h2.txt", "b1\nb2\n")
+	if _, _, err := runSedIn(t, dir, "", "-i", "-n", "2,3p", "h1.txt", "h2.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if got := read("h1.txt"); got != "a2\n" {
+		t.Fatalf("h1 = %q, want a2", got)
+	}
+	if got := read("h2.txt"); got != "b2\n" {
+		t.Fatalf("h2 = %q, want b2 -- a range leaked from the previous file", got)
+	}
+
+	// A missing operand is reported and the others still edited.
+	write("ok.txt", "a1\n")
+	_, stderr, err = runSedIn(t, dir, "", "-i", "s/a/X/", "nosuch.txt", "ok.txt")
+	if err == nil {
+		t.Fatal("sed -i on a missing file succeeded, want status 1")
+	}
+	if !strings.Contains(stderr, "nosuch.txt") {
+		t.Fatalf("stderr = %q, want it to name the missing file", stderr)
+	}
+	if got := read("ok.txt"); got != "X1\n" {
+		t.Fatalf("ok.txt = %q, want it edited despite the earlier failure", got)
+	}
+
+	// There is nothing to edit in place when the input is a stream.
+	if _, _, err := runSedIn(t, dir, "a\n", "-i", "s/a/X/"); err == nil {
+		t.Fatal("sed -i with no operands succeeded, want a refusal")
+	}
+
+	// A failing script leaves the file alone rather than truncating it.
+	write("keep.txt", "a1\n")
+	if _, _, err := runSedIn(t, dir, "", "-i", "s/a/X/", "keep.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if got := read("keep.txt"); got != "X1\n" {
+		t.Fatalf("keep.txt = %q", got)
 	}
 }

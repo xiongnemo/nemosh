@@ -482,7 +482,7 @@ behaviour this shell deliberately does not have.
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
 | `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
-| `sed` | `s///`, the `p d q` commands, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r` | refused by name |
+| `sed` | `s///`, the `p d q y = {}` commands, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
@@ -796,8 +796,9 @@ $ sed -n '/a/,/b/p'        # from a match on a to the next on b
 $ sed -n '2!p'             # every line except two
 ```
 
-Commands: `s///`, `p`, `d`, `q`, separated by `;` or a newline. Options: `-n`,
-`-e` (repeatable), `-E`/`-r`. `s///` takes `g`, a repeat count, and `i`/`I` for
+Commands: `s///`, `p`, `d`, `q`, `y///`, `=`, and `{}` blocks, separated by `;`
+or a newline. Options: `-n`, `-e` (repeatable), `-E`/`-r`, `-f FILE` and
+`-i[SUFFIX]`. `s///` takes `g`, a repeat count, and `i`/`I` for
 case-insensitive matching. An **empty script is a valid no-op** rather than an
 error, so `sed "$expr" file` still copies the file when the variable is empty. Before 2026-08-22 none of that existed — `sed -n`
 was refused as an unsupported *script*, since the first argument was assumed to
@@ -827,11 +828,31 @@ answer: line numbering starts at 1. busybox instead lets `0` parse as *no*
 address, so its `sed -n '0p'` prints every line — measured, and a quirk rather
 than a rule worth copying.
 
-Still refused: `-i`, `-f`, the `a i c y` commands, `{}` blocks, hold space,
-branching, and GNU's `first~step` addresses. `-i` is the one worth naming: it has
-to choose an **output** encoding for the file it rewrites, which is the same
-decision already deferred for sed's UTF-16 *reading*, and settling it inside a
-convenience flag would settle it by accident.
+**`{}` blocks** group commands under one address, which is what makes
+`sed -n '/x/{p;q}'` apply both to the matching line and neither to any other. `d`
+and `q` inside a block end the whole cycle rather than just the block.
+
+**`y///`** transliterates, by rune rather than by byte — `y/áé/ae/` works, where
+indexing bytes would replace half a character. Unequal lengths are **refused**:
+busybox transliterates the pairs it has and silently ignores the rest, so its
+`y/abc/xy/` leaves every `c` alone, which is a wrong answer with no diagnostic.
+GNU refuses it and so does this.
+
+**`-i`** edits in place, with `-i.bak` keeping the original. Each file is its own
+stream: line numbers restart, `$` is that file's last line, and an address range
+does not leak into the next file — GNU's behaviour, and the coherent reading of
+what `-i` means. busybox restarts the numbering but leaves an open range running
+across the boundary, so its `sed -i -n '2,3p' a b` keeps `b`'s first line because
+`a`'s range never closed. The whole result is built before anything is written,
+so a script that fails halfway leaves the file as it was.
+
+`-i` had been deferred on the grounds that rewriting a file forces a choice of
+**output** encoding. It does not: sed here is byte-exact, so the bytes written
+back are the bytes read, transformed. That question only arrives if sed starts
+*decoding* UTF-16 on input, and it is still deferred until then.
+
+Still refused: the `a i c` commands, hold space, branching, `n`/`N`/`D`/`P`, and
+GNU's `first~step` addresses.
 
 ### `grep`
 

@@ -22,17 +22,20 @@ func newSedApplet() Applet {
 		if len(args) == 0 {
 			return missingOperand()
 		}
-		scripts, operands, quiet, extended, err := sedArgs(args)
+		options, err := sedArgs(ctx, args)
 		if err != nil {
 			return err
 		}
 		// Parsed whole before a line is read, so a caller piping sed into
 		// something else never receives half an answer.
-		program, err := parseSedProgram(scripts, quiet, extended)
+		program, err := parseSedProgram(options.scripts, options.quiet, options.extended)
 		if err != nil {
 			return err
 		}
-		return program.run(ctx, operands, stdin, stdout, stderr)
+		if options.inPlace {
+			return runSedInPlace(ctx, program, options.operands, options.suffix, stderr)
+		}
+		return program.run(ctx, options.operands, stdin, stdout, stderr)
 	}}
 }
 
@@ -92,54 +95,30 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 			return nil
 		}
 		number++
-		isLast := stream.AtLast()
-		printed, quit, err := p.applyLine(&line, number, isLast, stdout)
+		cycle := &sedCycle{
+			line:   line,
+			number: number,
+			isLast: stream.AtLast(),
+			stdout: stdout,
+			quiet:  p.quiet,
+		}
+		control, err := runSedCommands(p.commands, cycle)
 		if err != nil {
 			return err
 		}
 		// Without -n the pattern space is printed at the end of the script, which
 		// is why `p` without -n duplicates a line rather than printing it once.
-		if !printed && !p.quiet {
-			if _, err := fmt.Fprintln(stdout, line); err != nil {
+		// `d` and `q` both skip it: `d` discarded the line, and `q` already wrote
+		// it on the way out.
+		if control == sedNext && !p.quiet {
+			if _, err := fmt.Fprintln(stdout, cycle.line); err != nil {
 				return err
 			}
 		}
-		if quit {
+		if control == sedQuit {
 			return nil
 		}
 	}
-}
-
-// applyLine runs every command against one line, reporting whether the line was
-// deleted (so the automatic print must not happen) and whether `q` ended the run.
-func (p *sedProgram) applyLine(line *string, number int, isLast bool, stdout io.Writer) (bool, bool, error) {
-	for _, command := range p.commands {
-		if !command.address.selects(*line, number, isLast) {
-			continue
-		}
-		switch command.action {
-		case 's':
-			*line = command.substitute.replace(*line)
-		case 'p':
-			if _, err := fmt.Fprintln(stdout, *line); err != nil {
-				return true, false, err
-			}
-		case 'd':
-			// The pattern space is discarded and the rest of the script is
-			// skipped, which is what makes `sed '2d;s/a/b/'` leave line two
-			// untouched rather than substituting into a line it dropped.
-			return true, false, nil
-		case 'q':
-			// The line is still printed unless -n, then the run ends.
-			if !p.quiet {
-				if _, err := fmt.Fprintln(stdout, *line); err != nil {
-					return true, true, err
-				}
-			}
-			return true, true, nil
-		}
-	}
-	return false, false, nil
 }
 
 type sedSubstitute struct {
