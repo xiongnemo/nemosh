@@ -439,6 +439,8 @@ behaviour this shell deliberately does not have.
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
+| `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
+| `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
 | `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
 | `cat` | `-n` | refused by name |
 | `chmod` | numeric mode | refused by name |
@@ -477,6 +479,9 @@ behaviour this shell deliberately does not have.
 | `realpath` | none | treated as a path operand |
 | `rm` | `-f -r` | refused by name |
 | `rmdir` | `-p -v` | refused by name |
+| `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
+| `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |
+| `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
 | `sed` | `s///`, the `p d q` commands, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
@@ -689,6 +694,41 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### The checksum family
+
+`md5sum` and `sha256sum` were the only two. busybox-w32 also has `sha1sum`,
+`sha384sum`, `sha512sum`, `sha3sum`, `cksum`, `crc32` and `sum`, and a clean
+Windows machine has none of them — which is most of why anyone reaches for a
+checksum tool at all. All seven landed on 2026-08-22. 58 of 58 measured forms
+agree with busybox byte for byte, over `hello
+`, an empty file, a single byte,
+1500 zero bytes and 100 KB of random data.
+
+Three of them are easy to get plausibly wrong, so each is stated:
+
+- **`sha3sum` defaults to 224 bits**, not 512. Measured. And SHA-3 is not SHA-2
+  truncated — SHA3-224 and SHA-224 are different functions over different
+  permutations — so it cannot share a constructor with the others. All four
+  widths were cross-checked against Go's `crypto/sha3` as well as against
+  busybox, because a wrong constant yields a digest that looks fine and is
+  useless.
+- **`cksum` is not `crc32`.** POSIX's CRC walks a different polynomial
+  most-significant-bit first, feeds the file *length* through the register
+  afterwards, and complements the result. It cannot come from Go's `hash/crc32`,
+  whose tables are all reflected: handing that package cksum's polynomial gives a
+  plausible number that is not cksum. The clearest single check is an empty file,
+  which answers 4294967295 — the complement of an untouched register.
+- **`sum` has two incompatible algorithms.** BSD (`-r`, the default) rotates the
+  accumulator right before adding each byte and counts 1024-byte blocks; System V
+  (`-s`) folds a plain byte total twice into sixteen bits and counts 512-byte
+  blocks. The fold is done twice because the first can itself carry out of sixteen
+  bits, which is a real difference above about a megabyte.
+
+One deliberate divergence: **`sum` omits the file name for a single operand and
+prints no trailing space**, which is GNU's output. busybox prints its format's
+trailing space with an empty name — `36979     1 ` — a stray byte rather than a
+behaviour. With more than one operand all three agree.
 
 ### A lone `-` is standard input
 

@@ -10,6 +10,27 @@ patch number is the commits since that tag.
 
 ## Unreleased
 
+### Added
+
+- **Seven more checksum applets**: `sha1sum`, `sha384sum`, `sha512sum`, `sha3sum`,
+  `cksum`, `crc32` and `sum`. `md5sum` and `sha256sum` were the only two, and a
+  clean Windows machine has none -- which is most of why anyone reaches for a
+  checksum tool. 58 of 58 measured forms agree with busybox byte for byte, over
+  six inputs including 100 KB of random data.
+- `sha3sum` defaults to **224** bits, which is what busybox does; `-a` takes 224,
+  256, 384 or 512 and refuses anything else rather than rounding to a width SHA-3
+  has. SHA-3 is a different function from SHA-2, not a truncation of it, so all
+  four widths were cross-checked against Go's `crypto/sha3` as well.
+- `cksum` is not `crc32`: POSIX's CRC is a different polynomial walked the other
+  way round, with the file length fed through afterwards and the result
+  complemented. It cannot come from `hash/crc32`, whose tables are all reflected.
+- `sum` carries both historical algorithms, which disagree for the same file:
+  BSD rotates its accumulator and counts 1024-byte blocks, System V folds a byte
+  total twice into sixteen bits and counts 512-byte blocks.
+- One divergence: `sum` omits the name for a single operand and prints no
+  trailing space, which is GNU's output. busybox prints a stray trailing space
+  there.
+
 ### Fixed
 
 - **A lone `-` operand now means standard input.** POSIX gives it that meaning for

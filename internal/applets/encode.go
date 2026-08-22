@@ -108,8 +108,9 @@ func isBase64Rune(r rune) bool {
 	return r == '+' || r == '/' || r == '='
 }
 
-// The checksum pair. One implementation, two names, because the only difference
-// is which hash is constructed -- and two copies of the -c parser would drift.
+// The checksum family. One implementation, several names, because the only
+// difference is which hash is constructed -- and several copies of the -c parser
+// would drift. The rest of the names are in checksum_family.go.
 func newSha256sumApplet() Applet { return newChecksumApplet("sha256sum", sha256.New) }
 
 func newMd5sumApplet() Applet { return newChecksumApplet("md5sum", md5.New) }
@@ -126,8 +127,21 @@ func newMd5sumApplet() Applet { return newChecksumApplet("md5sum", md5.New) }
 // `-c` accepts either form for exactly that reason, since a file of sums may well
 // have been produced by the build that writes the asterisk.
 func newChecksumApplet(name string, newHash func() hash.Hash) Applet {
+	return newChecksumAppletWith(name, "", func(appletOptions) (func() hash.Hash, error) {
+		return newHash, nil
+	})
+}
+
+// newChecksumAppletWith is the same applet for a name whose hash depends on an
+// option: sha3sum picks its width with -a. valued lists the letters that take an
+// argument, and resolve turns the parsed options into a hash.
+func newChecksumAppletWith(name, valued string, resolve func(appletOptions) (func() hash.Hash, error)) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "bctw", "")
+		options, paths, err := parseAppletOptions(args, "bctw", valued)
+		if err != nil {
+			return err
+		}
+		newHash, err := resolve(options)
 		if err != nil {
 			return err
 		}
