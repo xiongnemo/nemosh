@@ -444,6 +444,7 @@ behaviour this shell deliberately does not have.
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
 | `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
+| `bunzip2`, `bzcat` | `-c -d -f -k -t`; **decompress only** | refused by name |
 | `cat` | `-n` | refused by name |
 | `chmod` | numeric mode | refused by name |
 | `clear` | none | refused by name |
@@ -464,6 +465,7 @@ behaviour this shell deliberately does not have.
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored | refused by name |
+| `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
@@ -708,6 +710,40 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### The compression filters
+
+`gzip`, `gunzip`, `zcat`, `bunzip2` and `bzcat`, added 2026-08-22. Round trips
+verified in both directions against busybox-made archives.
+
+**These are stream filters, and that is why `tar.exe` does not cover them.**
+Stock Windows ships `tar.exe` and `curl.exe` and neither `gzip` nor `unzip`
+(measured). `... | gzip > x.gz` and `zcat log.gz | grep` are pipelines; bsdtar
+cannot stand in for either.
+
+- **A file operand is replaced and the original removed**, unless `-k` or `-c`.
+  That is both references' default and the behaviour that surprises people.
+- **Removing the original is where Windows differs from Unix**: a file cannot be
+  deleted while a handle to it is open. The first draft here held the source open
+  across the remove and failed with *"The process cannot access the file because
+  it is being used by another process"* — and would have passed silently on Linux,
+  where the unlink succeeds regardless. The source is now closed first.
+- An existing companion is not overwritten without `-f`, so a second run cannot
+  silently destroy an archive; and a half-written companion is deleted on failure,
+  so a truncated archive never looks like a real one.
+- `.tgz` and `.tbz` stand for `.tar.gz` and `.tar.bz2`, so decompressing one
+  restores the `.tar` rather than losing the extension.
+
+**`bzip2` compression is absent and the name is not registered.** The standard
+library decompresses bzip2 but cannot compress it. Leaving the name unregistered
+rather than refusing it means PATH lookup still finds a real `bzip2.exe` if the
+machine has one — more useful than a refusal, and the same reasoning applies to
+`xz`, `lzma`, `lzop` and the Linux package formats, none of which are provided.
+
+One divergence where the reference is broken: **busybox's `zcat` cannot read a
+pipe.** `cat x.gz | busybox zcat` answers `lseek(...): Invalid seek` while
+`busybox zcat < x.gz` works — it seeks on its input, which a redirect allows and a
+pipe does not. This reads sequentially, so both work.
 
 ### The encoding tools, and the policy they settle
 
