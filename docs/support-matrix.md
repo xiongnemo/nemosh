@@ -505,6 +505,7 @@ behaviour this shell deliberately does not have.
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
 | `tsort` | none; a cycle is reported rather than truncated | refused by name |
+| `tar` | `-c -t -x -v -z -j -a -O -f -C` | refused by name |
 | `tail` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`, `-n+2`) | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |
@@ -515,6 +516,7 @@ behaviour this shell deliberately does not have.
 | `uniq` | `-c -d -u -i` | refused by name |
 | `unexpand` | `-t -a` | refused by name |
 | `unix2dos` | `-d -u`; converts **in place** with a file operand | refused by name |
+| `unzip` | `-l -t -p -j -n -o -q -K -d -x` | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
@@ -710,6 +712,52 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### The archivers, and where an entry may land
+
+`tar` and `unzip`, added 2026-08-22. Interoperability verified in both directions
+against busybox, Windows' own `tar.exe`, and PowerShell's `Compress-Archive`.
+
+**An archive is untrusted input that names its own destinations**, so extraction
+checks every entry before creating anything, through one helper the archivers
+share. `applet-test-inventory.md` names "path traversal safety" as this group's
+test focus; the Windows hazard list is longer than the Unix one. An entry is
+refused when it is:
+
+| hazard | why it matters here |
+| --- | --- |
+| `../escape`, `a/b/../../../escape` | checked *after* cleaning, so a prefix test cannot be fooled |
+| `/absolute`, `C:\x`, `C:/x` | absolute or drive-qualified |
+| `C:relative` | drive-*relative*: resolved against that drive's own current directory |
+| `NUL`, `nul.txt`, `sub/CON`, `COM1.tar.gz` | Windows resolves these in **every** directory, so extracting one writes to the device and silently loses the data |
+| `evil.`, `evil ` | Windows strips a trailing dot or space, so these collide with `evil` |
+| `FOO` beside `foo` | NTFS is case-insensitive, so the second silently overwrites the first |
+| a link whose target leaves the root | a later entry writing *through* the link escapes |
+
+Each hazard has a test with a hand-built archive, and each asserts two things: the
+entry was refused **and nothing was written outside the root**. The second is the
+one that matters -- a refusal reported after the file was created is no refusal. A
+hostile entry is skipped rather than aborting, so one bad name does not cost the
+honest ones.
+
+**Backslashes are normalised, not refused**, and that is an interoperability
+decision with a measurement behind it: PowerShell's `Compress-Archive` writes
+backslash-separated names -- `src\a.txt` -- against the zip specification, which
+mandates `/`. Refusing them made every PowerShell-made zip completely
+unextractable, and PowerShell is the most likely producer of a zip on this
+platform. Normalising is not a weakening, because `a\..\..\evil` becomes
+`a/../../evil` and the escape check still catches it; what it costs is that a Unix
+file *literally* named `a\b` becomes `a/b`, a rare misreading with no security
+consequence and the same thing every Windows unzip does.
+
+**Listing does not check**, deliberately: `tar -t` is how somebody inspects an
+archive they do not trust, so hiding the hostile entry would defeat the purpose.
+
+`tar` reuses this build's own gzip, so `tar -czf` needs no second program.
+`unzip` requires a file operand and says why: zip keeps its central directory at
+the *end* of the file, so it cannot be read from a pipe. With neither `-o` nor
+`-n`, an existing file is left alone and said so -- busybox prompts, and there is
+no prompt here.
 
 ### The compression filters
 
