@@ -143,6 +143,14 @@ func parseSedEndpoint(script string, extended bool) (sedEndpoint, string, bool, 
 	case script[0] == '$':
 		endpoint.last = true
 		return endpoint, script[1:], true, nil
+	case script[0] == '0':
+		// Line numbering starts at 1, so there is no line zero to select. GNU
+		// says `invalid usage of line address 0`; busybox instead lets `0`
+		// parse as no address at all, so `sed -n '0p'` prints *every* line --
+		// measured, and a quirk rather than a rule worth copying. The refusal
+		// here names the address, where falling through to the command check
+		// reported `unsupported command 0` and blamed the wrong thing.
+		return endpoint, "", false, fmt.Errorf("invalid usage of line address 0")
 	case script[0] >= '1' && script[0] <= '9':
 		end := 0
 		for end < len(script) && script[end] >= '0' && script[end] <= '9' {
@@ -165,7 +173,8 @@ func parseSedEndpoint(script string, extended bool) (sedEndpoint, string, bool, 
 		if err != nil {
 			return endpoint, "", false, err
 		}
-		compiled, err := compileSedPattern(pattern, extended)
+		// An address pattern has no i flag to carry, so it never folds case.
+		compiled, err := compileSedPattern(pattern, extended, false)
 		if err != nil {
 			return endpoint, "", false, err
 		}
@@ -197,13 +206,20 @@ func readSedDelimited(script string, delimiter byte) (string, string, error) {
 
 // compileSedPattern honours -E: without it the pattern is BRE and goes through
 // the translator sed_regex.go already has for `s///`.
-func compileSedPattern(pattern string, extended bool) (*regexp.Regexp, error) {
+//
+// ignoreCase is the `s///i` flag. It is applied after any translation, so the
+// case-folding wraps the finished expression rather than a BRE that has not been
+// rewritten yet.
+func compileSedPattern(pattern string, extended, ignoreCase bool) (*regexp.Regexp, error) {
 	if !extended {
 		translated, err := translateBasicRegex(pattern)
 		if err != nil {
 			return nil, err
 		}
 		pattern = translated
+	}
+	if ignoreCase {
+		pattern = "(?i)" + pattern
 	}
 	compiled, err := regexp.Compile(pattern)
 	if err != nil {

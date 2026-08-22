@@ -47,7 +47,7 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 		}
 		return grepMatchStatus(flags, matched, printer)
 	}
-	targets, err := grepTargets(ctx, flags, paths, stderr)
+	targets, err := grepTargets(ctx, flags, paths, stdin, stderr)
 	if err != nil {
 		return err
 	}

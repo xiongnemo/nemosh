@@ -162,7 +162,7 @@ type grepTarget struct {
 //
 // A directory named without -r is skipped with a diagnostic rather than read,
 // because reading one yields bytes that are not lines and GNU says so too.
-func grepTargets(ctx context.Context, flags grepFlags, paths []string, stderr io.Writer) ([]grepTarget, error) {
+func grepTargets(ctx context.Context, flags grepFlags, paths []string, stdin io.Reader, stderr io.Writer) ([]grepTarget, error) {
 	view := ProcessViewFromContext(ctx)
 	var targets []grepTarget
 	for _, path := range paths {
@@ -195,6 +195,12 @@ func grepTargets(ctx context.Context, flags grepFlags, paths []string, stderr io
 		// reports it as the error it is. GNU prints `Is a directory` and exits 2;
 		// warning and carrying on would have turned that into a success, and a
 		// test already pinned the stricter answer.
+		// A lone `-` is the stdin, decoded the same way a named file is:
+		// `grep -r pattern . | grep -v x -` is the same question either way.
+		if path == "-" {
+			targets = append(targets, grepTarget{name: path, opener: readerTarget(stdin)})
+			continue
+		}
 		targets = append(targets, namedTarget(ctx, view, path))
 	}
 	return targets, nil

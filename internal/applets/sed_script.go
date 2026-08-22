@@ -43,9 +43,10 @@ func parseSedProgram(scripts []string, quiet, extended bool) (*sedProgram, error
 			return nil, err
 		}
 	}
-	if len(program.commands) == 0 {
-		return nil, fmt.Errorf("no script")
-	}
+	// An empty script is a valid no-op, not an error: `sed '' file` copies the
+	// file and `sed -n '' file` prints nothing, which is what busybox does.
+	// Refusing it made `sed "$expr" file` fail when the variable was empty,
+	// where every reference passes the input through.
 	return program, nil
 }
 

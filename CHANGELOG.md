@@ -8,6 +8,33 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## Unreleased
+
+### Fixed
+
+- **A lone `-` operand now means standard input.** POSIX gives it that meaning for
+  every utility taking file operands, and it is how a script mixes a stream into a
+  list of files -- `cat header.txt - footer.txt`. Eleven applets answered
+  `No such file or directory` instead: `cat`, `head`, `tail`, `wc`, `grep`, `sed`,
+  `sort`, `nl`, `rev`, `base64` and the checksums. `cut`, `uniq`, `paste` and
+  `comm` each had their own private check for it; there is now one shared seam.
+- Closing that operand does not close the shell's stdin, and the wrapper forwards
+  cancellation rather than hiding it behind an `io.NopCloser` -- otherwise `cat -`
+  alone would have stopped being interruptible.
+- **`head` and `tail` carry on past an unreadable operand** instead of stopping at
+  it, so `head -n1 a.txt nosuch b.txt` no longer silently drops `b.txt`. Status is
+  1 either way.
+- **`head`/`tail` no longer print a `==> name <==` header for a file they then
+  fail to open**, which put the header above the error saying the file was missing.
+- **`sed s///i` folds case.** busybox has it, and this refused it incoherently: the
+  flag splitter consumed the letter and the flag parser then rejected it, so the
+  two halves of one parser disagreed about which flags exist.
+- **`sed ''` is a valid no-op**, as it is in every reference. Refusing an empty
+  script made `sed "$expr" file` fail whenever the variable was empty.
+- **`sed` refuses line address 0 by name.** It reported `unsupported command 0`,
+  blaming the command for a bad address. GNU's wording is used; busybox instead
+  lets `0` parse as *no* address, so its `sed -n '0p'` prints every line.
+
 ## v1.1.0 - 2026-08-22
 
 The applet option matrices `v1-scope.md` deferred to v1.1, chosen by measuring

@@ -11,6 +11,25 @@ import (
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
+// visibleDiagnostic is the line a user actually sees, whichever way the applet
+// carried it.
+//
+// Most applets return the error and let the shell prefix the applet name. One
+// that has to keep going past a bad operand cannot: head and tail report an
+// unreadable file and carry on to the next, so they write the prefixed line to
+// stderr themselves and return a bare status. Both routes must produce the same
+// text, and that text is what these tests are about -- asserting on err.Error()
+// alone was asserting the mechanism.
+func visibleDiagnostic(applet string, stderr string, err error) string {
+	if trimmed := strings.TrimSuffix(stderr, "\n"); trimmed != "" {
+		return trimmed
+	}
+	if err == nil {
+		return ""
+	}
+	return applet + ": " + err.Error()
+}
+
 // The shell prints "<applet>: <error>", so an applet's error text must not
 // repeat the applet name. What it must not do either is leak the resolved host
 // path or Windows phrasing: busybox names the operand exactly as the user wrote
@@ -47,8 +66,8 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheFileIsMissing(t *testi
 			if err == nil {
 				t.Fatalf("expected %s to fail on a missing operand", tt.applet)
 			}
-			if got := err.Error(); got != tt.want {
-				t.Fatalf("expected %s diagnostic %q, got %q", tt.applet, tt.want, got)
+			if got := visibleDiagnostic(tt.applet, stderr.String(), err); got != tt.applet+": "+tt.want {
+				t.Fatalf("expected %s diagnostic %q, got %q", tt.applet, tt.applet+": "+tt.want, got)
 			}
 		})
 	}
@@ -215,8 +234,8 @@ func TestAppletDiagnostics_rejectADirectoryOperandAsEISDIR(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected %s to refuse a directory operand", tt.applet)
 			}
-			if got := err.Error(); got != tt.want {
-				t.Fatalf("expected %s diagnostic %q, got %q", tt.applet, tt.want, got)
+			if got := visibleDiagnostic(tt.applet, stderr.String(), err); got != tt.applet+": "+tt.want {
+				t.Fatalf("expected %s diagnostic %q, got %q", tt.applet, tt.applet+": "+tt.want, got)
 			}
 		})
 	}

@@ -201,3 +201,67 @@ func TestSed_refusesABadAddress(t *testing.T) {
 		}
 	}
 }
+
+// `s///i` folds case, which busybox has and this refused -- incoherently, since
+// splitSedSubstituteFlags consumed the letter and parseSedSubstituteFlags then
+// rejected it, so the two halves of one parser disagreed about which flags exist.
+func TestSed_substituteIgnoresCase(t *testing.T) {
+	dir := sedFixture(t)
+	for _, test := range []struct {
+		args []string
+		want string
+	}{
+		{args: []string{"s/A/X/i", "s.txt"}, want: "X1\nb2\nc3\nd4\ne5\n"},
+		{args: []string{"s/A/X/I", "s.txt"}, want: "X1\nb2\nc3\nd4\ne5\n"},
+		{args: []string{"s/[ABC]/X/gi", "s.txt"}, want: "X1\nX2\nX3\nd4\ne5\n"},
+		// Without the flag the pattern stays case-sensitive.
+		{args: []string{"s/A/X/", "s.txt"}, want: "a1\nb2\nc3\nd4\ne5\n"},
+	} {
+		stdout, stderr, err := runSedIn(t, dir, "", test.args...)
+		if err != nil {
+			t.Fatalf("sed %v: %v (%s)", test.args, err, stderr)
+		}
+		if stdout != test.want {
+			t.Fatalf("sed %v = %q, want %q", test.args, stdout, test.want)
+		}
+	}
+}
+
+// An empty script is a valid no-op, not an error. Refusing it made
+// `sed "$expr" file` fail whenever the variable was empty, where every reference
+// passes the input through.
+func TestSed_emptyScriptIsANoOp(t *testing.T) {
+	dir := sedFixture(t)
+	stdout, stderr, err := runSedIn(t, dir, "", "", "s.txt")
+	if err != nil {
+		t.Fatalf("sed '': %v (%s)", err, stderr)
+	}
+	if want := "a1\nb2\nc3\nd4\ne5\n"; stdout != want {
+		t.Fatalf("sed '' = %q, want the file unchanged", stdout)
+	}
+	stdout, _, err = runSedIn(t, dir, "", "-n", "", "s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout != "" {
+		t.Fatalf("sed -n '' = %q, want nothing", stdout)
+	}
+}
+
+// Line numbering starts at 1, so address 0 names no line. GNU refuses it; busybox
+// lets it parse as *no address*, so `sed -n '0p'` prints every line, which is a
+// quirk rather than a rule worth copying. The refusal has to name the address --
+// it used to report `unsupported command 0` and blame the wrong thing.
+func TestSed_refusesLineAddressZero(t *testing.T) {
+	dir := sedFixture(t)
+	stdout, stderr, err := runSedIn(t, dir, "", "-n", "0p", "s.txt")
+	if err == nil {
+		t.Fatal("sed -n 0p succeeded, want a refusal")
+	}
+	if stdout != "" {
+		t.Fatalf("sed -n 0p wrote %q", stdout)
+	}
+	if message := stderr + err.Error(); !strings.Contains(message, "address 0") {
+		t.Fatalf("sed -n 0p said %q, want it to name the address", message)
+	}
+}

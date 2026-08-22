@@ -139,7 +139,7 @@ func newChecksumApplet(name string, newHash func() hash.Hash) Applet {
 		}
 		view := ProcessViewFromContext(ctx)
 		for _, path := range paths {
-			file, err := OpenProcessInput(ctx, view, path)
+			file, err := OpenProcessOperand(ctx, view, path, stdin)
 			if err != nil {
 				return cannotOpen(path, err)
 			}

@@ -115,7 +115,7 @@ func readSortInputs(ctx context.Context, view ProcessView, options sortOptions, 
 	}
 	var lines []string
 	for _, path := range options.paths {
-		input, err := OpenProcessInput(ctx, view, path)
+		input, err := OpenProcessOperand(ctx, view, path, stdin)
 		if err != nil {
 			return nil, inputFailure(path, err)
 		}

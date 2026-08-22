@@ -59,17 +59,6 @@ func OpenProcessInput(ctx context.Context, view ProcessView, path string) (io.Re
 	return &contextReadCloser{ctx: ctx, input: input}, nil
 }
 
-func openProcessInput(view ProcessView, path string) (io.ReadCloser, error) {
-	if opener, ok := view.(processInputView); ok {
-		return opener.OpenProcessInput(path)
-	}
-	native, err := resolveHostPath(view, path)
-	if err != nil {
-		return nil, err
-	}
-	return OpenHostInput(native)
-}
-
 // OpenHostInput opens a resolved host path for reading. It is exported because
 // the runtime resolves device paths itself and would otherwise reach os.Open
 // directly, skipping the check below.

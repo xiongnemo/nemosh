@@ -80,7 +80,9 @@ func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 	}
 	view := ProcessViewFromContext(ctx)
 	for _, path := range paths {
-		file, err := OpenProcessInput(ctx, view, path)
+		// A lone `-` is the stdin, which is how `cat header.txt - footer.txt`
+		// mixes a stream into a list of files. See OpenProcessOperand.
+		file, err := OpenProcessOperand(ctx, view, path, stdin)
 		if err != nil {
 			return cannotOpen(path, err)
 		}

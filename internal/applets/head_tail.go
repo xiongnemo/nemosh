@@ -9,8 +9,8 @@ import (
 )
 
 func newHeadApplet() Applet {
-	return simpleApplet{name: "head", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		return runHeadTail(ctx, "head", args, stdin, stdout, copyHeadOf)
+	return simpleApplet{name: "head", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+		return runHeadTail(ctx, "head", args, stdin, stdout, stderr, copyHeadOf)
 	}}
 }
 
@@ -22,7 +22,7 @@ func newHeadApplet() Applet {
 // copies of "print a name above the lines, but only when it helps" is two
 // answers eventually, and the pair already disagreed once -- -c was head's alone
 // for a while.
-func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Reader, stdout io.Writer, copy func(io.Writer, io.Reader, countSpec) error) error {
+func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Reader, stdout, stderr io.Writer, copy func(io.Writer, io.Reader, countSpec) error) error {
 	spec, headers, paths, err := headTailArgs(applet, args, 10, true)
 	if err != nil {
 		return err
@@ -33,27 +33,46 @@ func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Rea
 	}
 	view := ProcessViewFromContext(ctx)
 	headed := wantsHeader(headers, len(paths))
+	failed := false
 	for index, path := range paths {
+		file, err := OpenProcessOperand(ctx, view, path, stdin)
+		if err != nil {
+			// An unreadable operand does not stop the rest. busybox reports it
+			// and carries on to the next file, leaving status 1 behind -- so
+			// `head -n1 a.txt nosuch b.txt` still prints b.txt, where returning
+			// here silently dropped it.
+			//
+			// head names a missing operand one way and tail another, which is
+			// what each reference does; operandFailure and cannotOpen differ only
+			// in wording.
+			reason := operandFailure(path, err)
+			if applet == "tail" {
+				reason = cannotOpen(path, err)
+			}
+			fmt.Fprintf(stderr, "%s: %v\n", applet, reason)
+			failed = true
+			continue
+		}
+		// The header comes *after* the open, so a file that could not be read
+		// does not get one. It did, which put `==> nosuch <==` above the error
+		// saying the file was not there.
+		//
+		// The blank separator still keys off the operand index rather than off
+		// how many files succeeded, which is what busybox does: with the first of
+		// two operands unreadable, the second still opens with a blank line.
 		if headed {
 			if _, err := io.WriteString(stdout, headTailHeader(path, index == 0)); err != nil {
 				return err
 			}
-		}
-		file, err := OpenProcessInput(ctx, view, path)
-		if err != nil {
-			// head reports a missing operand one way and tail another, which is
-			// what each reference does; operandFailure and cannotOpen differ only
-			// in wording.
-			if applet == "tail" {
-				return cannotOpen(path, err)
-			}
-			return operandFailure(path, err)
 		}
 		copyErr := copy(stdout, file, spec)
 		closeErr := file.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
 			return err
 		}
+	}
+	if failed {
+		return ExitStatus(1)
 	}
 	return nil
 }
@@ -94,12 +113,12 @@ func copyHead(stdout io.Writer, input io.Reader, count int) error {
 }
 
 func newTailApplet() Applet {
-	return simpleApplet{name: "tail", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "tail", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		// -c counts bytes here too now. It was head-only, and the asymmetry was
 		// documented as deliberate -- claiming both without implementing both
 		// would have been the kind of thing a script discovers the hard way. This
 		// implements it instead.
-		return runHeadTail(ctx, "tail", args, stdin, stdout, copyTailOf)
+		return runHeadTail(ctx, "tail", args, stdin, stdout, stderr, copyTailOf)
 	}}
 }
 

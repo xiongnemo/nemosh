@@ -187,7 +187,7 @@ func eachTextInput(ctx context.Context, paths []string, stdin io.Reader, body fu
 	}
 	view := ProcessViewFromContext(ctx)
 	for _, path := range paths {
-		file, err := OpenProcessInput(ctx, view, path)
+		file, err := OpenProcessOperand(ctx, view, path, stdin)
 		if err != nil {
 			return cannotOpen(path, err)
 		}

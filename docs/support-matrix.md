@@ -690,6 +690,40 @@ seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
 
+### A lone `-` is standard input
+
+POSIX gives `-` that meaning for every utility taking file operands, and it is
+how a script mixes a stream into a list of files:
+
+```console
+$ cat header.txt - footer.txt
+```
+
+**Eleven applets answered `No such file or directory` for it** until 2026-08-22 —
+`cat`, `head`, `tail`, `wc`, `grep`, `sed`, `sort`, `nl`, `rev`, `base64` and the
+checksums — while `cut`, `uniq`, `paste` and `comm` each carried their own
+`operand == "-"` check. Four private answers and eleven omissions is what one
+shared seam is for; it is `OpenProcessOperand`.
+
+Closing the operand does not close the shell's stdin, so `cat - -` finds the
+stream empty rather than closed. The wrapper forwards `ReadContext` rather than
+using `io.NopCloser`, because a `NopCloser` would hide the cancellation the shell
+puts there and `cat -` alone would stop being interruptible — the same
+wrapper-hides-capability bug this package has had three times.
+
+`head` and `tail` also **carry on past an unreadable operand** now, reporting it
+and leaving status 1 behind, where they used to stop: `head -n1 a.txt nosuch b.txt`
+silently dropped `b.txt`. The `==> name <==` header is written after the open
+succeeds, so a file that could not be read no longer gets a header above the
+error saying it is missing.
+
+One divergence stays, and it is busybox's inconsistency rather than a rule:
+busybox's `tail` decides headers from the number of files it *opened*, so
+`tail -n1 good bad` prints no header at all, while its `head` uses the operand
+count and does print one. Both here use the operand count, because `head` and
+`tail` disagreeing with each other is worse than one of them disagreeing with the
+reference.
+
 ### `sed`
 
 **Addresses**, which is what turned `sed` from an `s///` filter into sed:
@@ -704,7 +738,9 @@ $ sed -n '2!p'             # every line except two
 ```
 
 Commands: `s///`, `p`, `d`, `q`, separated by `;` or a newline. Options: `-n`,
-`-e` (repeatable), `-E`/`-r`. Before 2026-08-22 none of that existed — `sed -n`
+`-e` (repeatable), `-E`/`-r`. `s///` takes `g`, a repeat count, and `i`/`I` for
+case-insensitive matching. An **empty script is a valid no-op** rather than an
+error, so `sed "$expr" file` still copies the file when the variable is empty. Before 2026-08-22 none of that existed — `sed -n`
 was refused as an unsupported *script*, since the first argument was assumed to
 be one.
 
@@ -726,6 +762,11 @@ Three things are worth knowing because they are not guessable:
 
 Diagnostics match busybox to the character: `no address after comma`,
 `unmatched '/'`, `unsupported command ,`. 30 of 30 measured forms agree.
+
+Address `0` is refused with `invalid usage of line address 0`, which is GNU's
+answer: line numbering starts at 1. busybox instead lets `0` parse as *no*
+address, so its `sed -n '0p'` prints every line — measured, and a quirk rather
+than a rule worth copying.
 
 Still refused: `-i`, `-f`, the `a i c y` commands, `{}` blocks, hold space,
 branching, and GNU's `first~step` addresses. `-i` is the one worth naming: it has

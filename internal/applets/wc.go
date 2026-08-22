@@ -31,7 +31,7 @@ func newWcApplet() Applet {
 		// directory of files got no answer and no indication that it was missing.
 		var total wcCounts
 		for _, path := range paths {
-			file, err := OpenProcessInput(ctx, view, path)
+			file, err := OpenProcessOperand(ctx, view, path, stdin)
 			if err != nil {
 				return operandFailure(path, err)
 			}

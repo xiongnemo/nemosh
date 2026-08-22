@@ -52,7 +52,7 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 		for _, operand := range operands {
 			name := operand
 			stream.openers = append(stream.openers, func() (io.ReadCloser, error) {
-				file, err := OpenProcessInput(ctx, view, name)
+				file, err := OpenProcessOperand(ctx, view, name, stdin)
 				if err != nil {
 					return nil, cannotOpen(name, err)
 				}
@@ -200,11 +200,11 @@ func parseSedSubstituteCommand(script string, extended bool) (sedSubstitute, str
 		return sedSubstitute{}, "", fmt.Errorf("malformed sed substitute: s%c%s", delimiter, script[2:])
 	}
 	flags, rest := splitSedSubstituteFlags(rest)
-	global, occurrence, err := parseSedSubstituteFlags(flags)
+	global, occurrence, ignoreCase, err := parseSedSubstituteFlags(flags)
 	if err != nil {
 		return sedSubstitute{}, "", err
 	}
-	expression, err := compileSedPattern(pattern, extended)
+	expression, err := compileSedPattern(pattern, extended, ignoreCase)
 	if err != nil {
 		return sedSubstitute{}, "", err
 	}
@@ -230,16 +230,27 @@ func splitSedSubstituteFlags(rest string) (string, string) {
 	return rest[:end], rest[end:]
 }
 
-func parseSedSubstituteFlags(flags string) (bool, int, error) {
+// parseSedSubstituteFlags reads the letters after the closing delimiter.
+//
+// `i` and `I` are case-insensitive matching, which busybox has and this refused
+// -- and refused incoherently: splitSedSubstituteFlags *consumed* the letter and
+// then this rejected it, so the two halves of one parser disagreed about which
+// flags exist. Either the splitter should have stopped at `i` or this should have
+// accepted it; busybox accepts it, so this does.
+func parseSedSubstituteFlags(flags string) (bool, int, bool, error) {
 	global := false
 	occurrence := 0
+	ignoreCase := false
 	for index := 0; index < len(flags); index++ {
-		if flags[index] == 'g' {
+		switch {
+		case flags[index] == 'g':
 			global = true
 			continue
-		}
-		if flags[index] < '0' || flags[index] > '9' {
-			return false, 0, fmt.Errorf("unknown option to `s': %c", flags[index])
+		case flags[index] == 'i' || flags[index] == 'I':
+			ignoreCase = true
+			continue
+		case flags[index] < '0' || flags[index] > '9':
+			return false, 0, false, fmt.Errorf("unknown option to `s': %c", flags[index])
 		}
 		end := index
 		for end < len(flags) && flags[end] >= '0' && flags[end] <= '9' {
@@ -247,10 +258,10 @@ func parseSedSubstituteFlags(flags string) (bool, int, error) {
 		}
 		value, err := strconv.Atoi(flags[index:end])
 		if err != nil || value == 0 {
-			return false, 0, fmt.Errorf("number option to `s' command may not be zero")
+			return false, 0, false, fmt.Errorf("number option to `s' command may not be zero")
 		}
 		occurrence = value
 		index = end - 1
 	}
-	return global, occurrence, nil
+	return global, occurrence, ignoreCase, nil
 }
