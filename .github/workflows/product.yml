@@ -186,13 +186,39 @@ jobs:
       # spike, which measured 2 KiB *smaller* -- and that should have been the
       # tell, because more code cannot be less binary. A spike has to be reachable
       # from main to measure anything at all.
+      #
+      # Raised to 14 MiB on 2026-08-23, after 39 applets -- the editor, the archive
+      # tools, the text tools and the networking group -- took the stripped build
+      # from 6.13 MiB to 11.36 MiB on Windows.
+      #
+      # This one caught a real lapse rather than a surprise: it had been failing
+      # since the gzip commit and six pushes went red before anyone read the run
+      # list, which is exactly what AGENTS.md says to check after pushing.
+      #
+      # Measured, largest first, so the number is informed rather than picked:
+      #
+      #   net/http           2.07 MiB  (1.67 -> 3.84 MiB in an isolated probe; it
+      #                                 pulls in crypto/tls and the FIPS module)
+      #   golang.org/x/text  ~1.0 MiB  (iconv's codecs, by symbol size)
+      #   tview + tcell      1.18 MiB  (measured for `top`, above; the editor
+      #                                 reuses them and adds no dependency)
+      #   nemosh's own code  ~1.1 MiB  (by symbol size, across 111 applets)
+      #   archive/* compress/*  ~0.12 MiB together
+      #
+      # Both regressions this exists to catch were checked again and are absent:
+      # `-s -w` is in force -- an unstripped build of the same tree is 15.81 MiB,
+      # which is *above* the new ceiling, so dropping the flags still trips it --
+      # and go.mod gained nothing for any of this work.
+      #
+      # 14 MiB leaves about 23% for growth, the same proportion as every raise
+      # before it.
       - name: binary size ceiling
         shell: bash
         run: |
           binary="dist/nemosh"
           [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
           size=$(wc -c < "$binary")
-          ceiling=7340032
+          ceiling=14680064
           echo "$binary is $size bytes, ceiling $ceiling"
           if [ "$size" -gt "$ceiling" ]; then
             echo "the binary grew past the ceiling; check the release flags and go.mod before raising it"
@@ -232,6 +258,27 @@ jobs:
       # reason above -- a clock threshold flaps on a shared runner -- and the
       # honest reading is that it now catches *size* of init work rather than
       # cost. A future overrun still deserves the same investigation this one got.
+      #
+      # Raised to 2750 on 2026-08-23, at 2275 measured, and the investigation it
+      # asks for says this is proportion rather than regression:
+      #
+      #   gdamore/encoding    1103 allocs   48% of the total, and it predates all of
+      #                                     this work -- tcell builds its charmap
+      #                                     tables eagerly, and `top` already pulled
+      #                                     tcell in months ago
+      #   internal/applets     266 allocs   the registry, one entry per applet
+      #   internal/capability  257 allocs   the three tables, one row per command
+      #   tview                 93 allocs
+      #   tcell                 56 allocs
+      #   net/http              54 allocs
+      #
+      # The two nemosh entries are the only ones that moved, and they moved with the
+      # applet count: 72 applets to 111. That is a table getting longer, not a new
+      # package doing work before main, which is what this gate is worded to catch.
+      #
+      # Making either lazy was considered and rejected: both are needed by almost
+      # every invocation -- running an applet, `--list`, completion -- so laziness
+      # moves the cost behind a mutex on a hot path rather than removing it.
       - name: package init ceiling
         shell: bash
         run: |
@@ -243,7 +290,7 @@ jobs:
             exit 1
           fi
           allocs=$(printf '%s\n' "$trace" | awk '{for (i = 1; i <= NF; i++) if ($i == "allocs") s += $(i - 1)} END {print s + 0}')
-          ceiling=2100
+          ceiling=2750
           echo "package init makes $allocs allocations, ceiling $ceiling"
           printf '%s\n' "$trace" | sort -t, -k4 -rn | head -5
           if [ "$allocs" -gt "$ceiling" ]; then

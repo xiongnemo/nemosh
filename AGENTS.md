@@ -127,6 +127,21 @@ expect a different answer per platform — and **check `gh run list` after pushi
 rather than after four pushes. Anything reading `os.FileInfo` off a directory
 deserves the same suspicion: size, mode bits, and link count all differ.
 
+It happened again on 2026-08-23, worse and for a different reason: **six** pushes
+went red on the same step, the binary size ceiling, and the local gate cannot see
+it because the ceilings live only in `product.yml`. The full gate in this file
+runs `gofmt`, `vet`, the cross-platform vet, the darwin build, the suite and the
+250-line loop — it does **not** build a release binary or measure one. So a stage
+that adds a dependency (`net/http` cost 2.07 MiB on its own) passes locally every
+time and fails on every runner. After a stage that adds an import nothing in this
+tree had before, measure it:
+
+```bash
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w $(bash scripts/version.sh --ldflags)"   -o dist/nemosh.exe ./cmd/nemosh
+wc -c < dist/nemosh.exe                                  # against product.yml's ceiling
+GODEBUG=inittrace=1 dist/nemosh.exe --version 2>&1 | grep '^init '
+```
+
 **The clipboard tests fail at random on the development machine, and it is not
 your change.** Windows 10 and later run a clipboard history service that opens the
 clipboard on every change, and any clipboard manager does the same, so
