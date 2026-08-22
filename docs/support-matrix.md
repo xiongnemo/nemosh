@@ -849,6 +849,32 @@ synchrony: an injected key and a `QueueUpdate` callback share one select loop wi
 no ordering between them, so a read taken straight after a key press can see the
 frame *before* it was handled.
 
+**And polling for the right thing.** A second version of that trap cost a real
+finding: a test of `^G` waited for a key label, matched it in frame zero because the
+*footer* already shows every label, and then asserted against a frame that predated
+the help message. Waiting for a string that was already true is not waiting. It now
+waits on `Keys:`, which only the help line produces.
+
+**The prompt is a second input mode, and that is where the tests concentrate.**
+While one is open every key means something different, so search, go-to-line and
+help are asserted for the thing that would be silently wrong: that the typed term
+goes into the prompt and *not into the file*, that Escape restores editing and the
+abandoned term never reaches disk, that Backspace edits the prompt rather than the
+document behind it, and that an action key -- `^X`, which quits -- is swallowed
+rather than fired.
+
+**One defect came out of it, in line counting.**
+`strings.Split("a
+b
+", "
+")` answers three elements, because a newline is a
+terminator and Split treats it as a separator. So every file ending in a newline --
+which is every well-formed text file -- had one line more than it has, and
+`^_ 9999` on a sixty-line file answered "Line 61". One helper now does the splitting
+for both the line count and the cursor's byte arithmetic; an empty buffer stays one
+empty line rather than zero, because zero would divide by the line count in the
+search wrap.
+
 ### The archivers, and where an entry may land
 
 `tar` and `unzip`, added 2026-08-22. Interoperability verified in both directions

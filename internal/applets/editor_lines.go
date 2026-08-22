@@ -17,10 +17,28 @@ type editorPromptState struct {
 	promptText  string
 }
 
+// editorLines splits the buffer into the lines a *reader* would count.
+//
+// strings.Split("a\nb\n", "\n") answers three elements, the last empty, because a
+// newline is a terminator and Split treats it as a separator. So every file ending
+// in a newline -- which is every well-formed text file -- had one line more than it
+// has, and `^_ 9999` on a sixty-line file answered "Line 61". A test asserting the
+// clamp is what found it.
+//
+// The trailing empty element is dropped, and only when there is something else to
+// keep: an empty buffer is one empty line rather than zero lines, and zero would
+// divide by len(lines) in the search wrap.
+func editorLines(text string) []string {
+	lines := strings.Split(text, "\n")
+	if len(lines) > 1 && lines[len(lines)-1] == "" {
+		return lines[:len(lines)-1]
+	}
+	return lines
+}
+
 // lines is the buffer split by line, and which line the cursor is on.
 func (v *editorView) lines() ([]string, int) {
-	text := v.area.GetText()
-	lines := strings.Split(text, "\n")
+	lines := editorLines(v.area.GetText())
 	row, _, _, _ := v.area.GetCursor()
 	if row < 0 {
 		row = 0
@@ -45,7 +63,7 @@ func (v *editorView) setText(text string, row int) {
 
 // moveToLine puts the cursor at the beginning of a line, counted from zero.
 func (v *editorView) moveToLine(row int) {
-	lines := strings.Split(v.area.GetText(), "\n")
+	lines := editorLines(v.area.GetText())
 	if row < 0 {
 		row = 0
 	}
