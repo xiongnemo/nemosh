@@ -55,9 +55,16 @@ func encodeBase64(reader io.Reader, stdout io.Writer, width int) error {
 	if err != nil {
 		return err
 	}
-	encoded := base64.StdEncoding.EncodeToString(data)
+	return writeWrapped(stdout, base64.StdEncoding.EncodeToString(data), width)
+}
+
+// writeWrapped emits text in lines of at most width characters.
+//
+// Shared with base32, which wraps identically. Width zero means no newline at
+// all, matching GNU: `base64 -w0 | wc -l` is 0, and anyone piping the output
+// onward is relying on that.
+func writeWrapped(stdout io.Writer, encoded string, width int) error {
 	if width == 0 {
-		// No newline at all with -w0, matching GNU: `base64 -w0 | wc -l` is 0.
 		_, err := io.WriteString(stdout, encoded)
 		return err
 	}

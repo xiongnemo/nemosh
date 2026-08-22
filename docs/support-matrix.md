@@ -439,6 +439,8 @@ behaviour this shell deliberately does not have.
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
+| `ascii` | none; the character table, read down in eight columns | refused by name |
+| `base32` | `-d -i -w`; wraps at 76 like `base64` | refused by name |
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
 | `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
@@ -447,6 +449,10 @@ behaviour this shell deliberately does not have.
 | `clear` | none | refused by name |
 | `cmp` | `-s -l`; the message goes to stdout, as GNU's does | refused by name |
 | `comm` | `-1 -2 -3` | refused by name |
+| `expand` | `-t -i` | refused by name |
+| `factor` | none; numbers from operands or stdin | refused by name |
+| `fold` | `-w -s -b` | refused by name |
+| `free` | `-b -k -m -g`; `-h` accepted | refused by name |
 | `cp` | `-r`, `-R` | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
@@ -460,6 +466,7 @@ behaviour this shell deliberately does not have.
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
+| `join` | `-1 -2 -j -t` | refused by name |
 | `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
@@ -482,6 +489,8 @@ behaviour this shell deliberately does not have.
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
 | `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
+| `shuf` | `-n -e -i -z` | refused by name |
+| `strings` | `-n -t -o -a -f` | refused by name |
 | `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {}`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
@@ -491,6 +500,7 @@ behaviour this shell deliberately does not have.
 | `split` | `-l`; two-letter suffixes, `aa` upwards | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
+| `tsort` | none; a cycle is reported rather than truncated | refused by name |
 | `tail` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`, `-n+2`) | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |
@@ -499,6 +509,7 @@ behaviour this shell deliberately does not have.
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
 | `uniq` | `-c -d -u -i` | refused by name |
+| `unexpand` | `-t -a` | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
@@ -694,6 +705,44 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### The small text tools, and `free`
+
+Eleven applets added on 2026-08-22: `free`, `factor`, `fold`, `tsort`, `strings`,
+`ascii`, `expand`, `unexpand`, `join`, `base32`, `shuf`. **30 of 31 measured forms
+agree with busybox-w32 byte for byte**; the exception is a stray operand, where
+busybox silently ignores `ascii extra` and this refuses it — the same laxness
+already diverged from for `find )`.
+
+Four things here are not guessable:
+
+- **`free`'s Swap row is Windows' commit charge**, not a swap file. There is no
+  swap partition to measure, and commit is the number that says whether the next
+  allocation will be refused. The `shared` column is always zero because Windows
+  has no equivalent counter, and inventing one from working-set overlap would be a
+  guess presented as a measurement. `free` reads the same sampler `top` draws its
+  meters from, so the two cannot disagree about the machine's memory — and it
+  refuses off Windows with `ErrListUnsupported` rather than reporting zeros.
+- **`tsort`'s order among independent items is unspecified, and all three
+  implementations differ.** For `a b / b c / d e`, busybox answers `a b d e c`,
+  GNU answers `a d b e c`, and this answers `a b c d e`. All three satisfy the
+  constraints. The input-stable order is chosen because it is the only
+  reproducible one: two runs over one file agree, so a diff between them means
+  something.
+- **`join -1` and `-2` are per-file fields.** `join -1 2 -2 1` joins the second
+  field of the first file to the first of the second. Collapsing them into one
+  number silently answers nothing for every asymmetric join, which is what the
+  first draft here did. `-j` sets both; it is GNU's and busybox does not have it,
+  offered because refusing a standard option is the worse divergence.
+- **`ascii`'s column spacing is busybox's hand-tuned layout** — the gaps are 11,
+  11, 9, 9, 9, 10, 10 characters, so it cannot come from one format string. The
+  table is read *down*: the first column is 0–15, not 0,1,2 across. Reading it
+  across is the obvious implementation and gives a completely different table.
+
+`expand`, `unexpand` and `fold` all count **runes**, so a tab after CJK text lands
+where it looks like it should and a wrapped line is never cut through a character.
+`shuf` is the one applet whose output is deliberately not reproducible, so its
+tests assert the multiset and the count rather than an order.
 
 ### The checksum family
 
