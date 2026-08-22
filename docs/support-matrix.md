@@ -439,6 +439,7 @@ behaviour this shell deliberately does not have.
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
+| `ar` | verbs `x p t r`, plus `-o -v`; the long-name table is read, never written | refused by name |
 | `ascii` | none; the character table, read down in eight columns | refused by name |
 | `base32` | `-d -i -w`; wraps at 76 like `base64` | refused by name |
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
@@ -456,6 +457,7 @@ behaviour this shell deliberately does not have.
 | `factor` | none; numbers from operands or stdin | refused by name |
 | `fold` | `-w -s -b` | refused by name |
 | `free` | `-b -k -m -g`; `-h` accepted | refused by name |
+| `cpio` | `-t -i -o -d -m -v -u -0 -F -H`; only `newc` is read or written | refused by name |
 | `cp` | `-r`, `-R` | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
@@ -892,6 +894,58 @@ archive they do not trust, so hiding the hostile entry would defeat the purpose.
 the *end* of the file, so it cannot be read from a pipe. With neither `-o` nor
 `-n`, an existing file is left alone and said so -- busybox prompts, and there is
 no prompt here.
+
+### `cpio` and `ar`, the two with no library behind them
+
+Added 2026-08-23. Go has no package for either format, so both headers are read
+and written byte by byte here -- which is why the tests are unusually specific
+about columns and padding.
+
+**Both go through the same containment helper `tar` and `unzip` use**, and both are
+run against the whole hostile-name table for exactly that reason: a shared helper
+is only shared if every caller reaches it.
+
+- **`cpio` archives a *list*, not a tree.** That is the whole reason it still
+  exists: `find . -name '*.go' | cpio -o -H newc > src.cpio` takes exactly the
+  names on stdin, where `tar` would descend them. It is the pair to `find`, and
+  `-0` reads the NUL-separated form `find -print0` writes -- the same splitter
+  `xargs -0` uses, because it means the same thing.
+- **Only `newc` and its CRC variant are read.** The magic is checked on its own
+  *before* the rest of the header, so an `odc` (76-byte) or old-binary (26-byte)
+  archive is named rather than reported as truncated -- the first version asked for
+  110 bytes first and answered `unexpected EOF` for every small archive in either.
+- **A missing trailer is reported.** cpio ends with an explicit `TRAILER!!!` entry,
+  so truncation is knowable rather than a guess.
+- **`ar`'s operation is a verb**, not an option: `ar t lib.a`. Only the *first word*
+  is examined, and that is a fix rather than a preference -- scanning every argument
+  meant a Windows temporary path, which contains a `p` in `AppData`, was read as the
+  verb, had a letter removed from its middle, and came back to the option parser as
+  `-C:\Users\...`. Every letter of that first word must also be one `ar` knows, which
+  is what makes `ar libtest.a` refuse on its `l` the way GNU does instead of finding
+  the `t` in the file name.
+- **`ar r` creates and refuses an archive that already exists.** Adding to one means
+  reading every existing header, deciding which member each operand replaces, and
+  rewriting the long-name table; a half-done version of that silently corrupts the
+  archive it was handed. The long-name table *is* read, because a `.deb` or a
+  GNU-made library has one.
+- **A name too long for the sixteen-column header is refused, not truncated**, and
+  the half-written archive is deleted: a truncated name is a different file written
+  silently.
+- **A member whose name cannot be resolved is skipped, not fatal.** A stored
+  `/absolute.txt` arrives here as an unreadable long-name *offset* rather than a
+  path, and aborting on it would cost every honest member after it. The header gave
+  the size, so the stream stays aligned across the skip.
+- Two fields are synthesised rather than invented: **uid and gid are written as
+  zero**, because Windows has no numeric owner and busybox-w32's own answer of 4095
+  is not a user either; and the **mode is 0644, 0755 or 0444**, because Windows has
+  no execute bit and writing Go's `os.FileMode` bits into a Unix mode field would be
+  a misreport rather than a translation.
+
+Interoperability verified in both directions against busybox-w32 v1.38.0: `cpio -t`
+and `-tv` match byte for byte including the `N blocks` line, each reads the other's
+archives, and a nemosh-made archive is the same 388 bytes as busybox's for the same
+input -- differing only in the inode serial, the owner, and the mode, all three
+documented above. `ar t`, `ar tv` and `ar p` are byte-identical.
 
 ### The compression filters
 

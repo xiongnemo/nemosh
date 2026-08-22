@@ -12,6 +12,31 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`cpio` and `ar`**, the last two of the archive set and the two with no library
+  behind them: Go has no package for either format, so both headers are read and
+  written here byte by byte. Both go through the same containment helper `tar` and
+  `unzip` use, and both are run against the whole hostile-name table -- a shared
+  helper is only shared if every caller reaches it.
+- `cpio` archives a *list* rather than a tree, which is why it still exists:
+  `find . -name '*.go' | cpio -o -H newc` takes exactly the names on stdin. `-0`
+  reads `find -print0`'s output through the same splitter `xargs -0` uses. Only
+  `newc` and its CRC variant are read, and the magic is checked *before* the rest of
+  the header so an `odc` archive is named rather than reported as truncated.
+- `ar`'s operation is a verb, and **only the first word is examined** -- which is a
+  fix, not a preference. Scanning every argument meant a Windows temporary path,
+  which contains a `p` in `AppData`, was read as the verb, had a letter removed from
+  its middle, and came back to the option parser as `-C:\Users\...`. Every letter of
+  that first word must also be one `ar` knows, so `ar libtest.a` refuses on its `l`
+  the way GNU does instead of finding the `t` in the file name.
+- `ar r` creates and refuses an existing archive rather than half-appending to it; a
+  name too long for the sixteen-column header is refused and the partial archive
+  deleted; a member whose name cannot be resolved is skipped rather than fatal,
+  since aborting would cost every honest member after it. The long-name table is
+  read, because a `.deb` has one.
+- Verified in both directions against busybox-w32 v1.38.0: `cpio -t`, `-tv`, `ar t`,
+  `ar tv` and `ar p` all match byte for byte, including cpio's `N blocks` line, and
+  each build reads the other's archives.
+
 - **The networking group, all seven of it**: `wget`, `nc`, `whois`,
   `ssl_client`, `httpd`, `ftpget` and `ftpput`. busybox-w32 keeps only these seven
   out of the dozens busybox has, because Windows lacks the APIs for the rest, so

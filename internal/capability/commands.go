@@ -72,6 +72,8 @@ var commands = []Command{
 	{Name: "fold", Short: "bsw", ValueShort: "w", Operand: AnyPath},
 	{Name: "tsort", Operand: AnyPath},
 	{Name: "strings", Short: "afont", ValueShort: "nt", Operand: AnyPath},
+	{Name: "ar", Short: "xptrov", Operand: AnyPath},
+	{Name: "cpio", Short: "tiodmvu0FH", ValueShort: "FH", FileShort: "F", Operand: AnyPath},
 	{Name: "ascii", Operand: AnyPath},
 	{Name: "expand", Short: "it", ValueShort: "t", Operand: AnyPath},
 	{Name: "unexpand", Short: "at", ValueShort: "t", Operand: AnyPath},
