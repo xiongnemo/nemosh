@@ -976,6 +976,13 @@ rather than refusing it means PATH lookup still finds a real `bzip2.exe` if the
 machine has one — more useful than a refusal, and the same reasoning applies to
 `xz`, `lzma`, `lzop` and the Linux package formats, none of which are provided.
 
+**`bunzip2` and `bzcat` had no test at all until 2026-08-23** -- registered,
+documented here, and run by nothing, with `tar -j` untested alongside them. They
+worked when finally tried by hand, which is the bad kind of luck: a silent
+regression had nowhere to be caught. Their fixtures have to be *literals*, because
+Go has no bzip2 writer -- the same fact that keeps the `bzip2` name unregistered --
+so the input cannot come from the code under test and comes from busybox instead.
+
 One divergence where the reference is broken: **busybox's `zcat` cannot read a
 pipe.** `cat x.gz | busybox zcat` answers `lseek(...): Invalid seek` while
 `busybox zcat < x.gz` works — it seeks on its input, which a redirect allows and a
@@ -1011,6 +1018,13 @@ than a selection from it.
 - **FTP is passive-only.** Active mode asks the server to connect *back*, which no
   machine behind a router or a Windows firewall can accept, so offering it would be
   offering something that mostly fails.
+- **The two FTP argument orders are mirrors, and getting that wrong was invisible.**
+  `ftpget HOST [LOCAL] REMOTE` against `ftpput HOST [REMOTE] LOCAL` -- in both, the
+  file being *written* is named first. `ftpput` had them reversed, so
+  `ftpput host remote.txt local.txt` read `remote.txt` from disk and uploaded it as
+  `local.txt`. With one file operand the two names collapse to the same string, and
+  every test that existed passed one operand or none, so nothing caught it until the
+  applets were run against an FTP server the tests start.
 - **`httpd` binds 127.0.0.1 unless `-a` says otherwise**, where busybox binds every
   interface, and it runs **no CGI**. Reaching the network is a decision; CGI turns a
   file server into an execution service. Both defaults are asserted by tests.
@@ -1028,6 +1042,17 @@ than a selection from it.
   a receive from one never returns (`context.AfterFunc` now); and `httpd` served a
   directory's `index.html` **twice**, once through `http.ServeFile` with a
   fabricated request and once by writing the bytes.
+
+**Three of these had no end-to-end test until 2026-08-23**, and saying so is more
+useful than the fix: `ftpget` and `ftpput` had only a unit test on the passive-mode
+reply parser, `whois` only on its server table, and `ssl_client` none at all. All
+three now run against a server the test starts -- including a written-out FTP server
+that answers USER, PASS, TYPE, PASV, RETR and STOR, and whose greeting is
+deliberately multi-line so a client that reads only the first line of a reply goes
+out of step and fails. `ssl_client` is asserted in the only direction its own design
+allows: a Go test server's certificate is signed by a CA no trust store knows, so a
+*successful* handshake would need the verification-skipping option this build
+refuses to have, and the refusal is what gets tested.
 
 **The bundled `completions/wget.toml` was removed in the same change.** It
 described GNU wget, and its own comment said the point of the file was that one

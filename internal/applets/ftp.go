@@ -48,8 +48,15 @@ func newFtpApplet(name string) Applet {
 			verbose: options.has('v'),
 			log:     stderr,
 		}
-		// `ftpget HOST [LOCAL] REMOTE` and `ftpput HOST [REMOTE] LOCAL`: with one
-		// file operand both names are the same, which is busybox's shape.
+		// The two argument orders are *mirrors* of each other, which is the trap:
+		//
+		//   ftpget HOST [LOCAL]  REMOTE
+		//   ftpput HOST [REMOTE] LOCAL
+		//
+		// so in both cases the file being *written* is named first. With one file
+		// operand the two collapse to the same name, which is busybox's shape and
+		// also why having them reversed for ftpput went unnoticed -- every test that
+		// existed passed either one operand or none.
 		first := operands[1]
 		second := first
 		if len(operands) > 2 {
@@ -60,9 +67,11 @@ func newFtpApplet(name string) Applet {
 		}
 		defer session.close()
 		if name == "ftpget" {
+			// first is local, second is remote.
 			return session.retrieve(ctx, second, first)
 		}
-		return session.store(ctx, second, first)
+		// first is remote, second is local.
+		return session.store(ctx, first, second)
 	}}
 }
 

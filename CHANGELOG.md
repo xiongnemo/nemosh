@@ -8,6 +8,35 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+### Fixed
+
+- **`ftpput` had its two file names reversed.** `ftpget HOST [LOCAL] REMOTE` and
+  `ftpput HOST [REMOTE] LOCAL` are mirrors -- in both, the file being *written* is
+  named first -- and `ftpput` read the remote name off disk and uploaded it under the
+  local one. With a single file operand the two names collapse to the same string,
+  and every test that existed passed one operand or none, so nothing caught it until
+  the applets were run against an FTP server the tests start.
+
+### Tested
+
+- **Three network applets had no end-to-end test, and `bunzip2`/`bzcat` had none at
+  all.** Worth listing rather than quietly filling in, because the gap is the
+  interesting part: `ftpget` and `ftpput` were covered only by a unit test on the
+  passive-mode reply parser, `whois` only by its server-selection table,
+  `ssl_client` not at all, and `bunzip2`, `bzcat` and `tar -j` by nothing -- the
+  compression test file names them in its header comment and then tests only gzip.
+- The FTP tests now run against a written-out server answering USER, PASS, TYPE,
+  PASV, RETR and STOR, whose greeting is deliberately multi-line so that a client
+  reading only the first line of a reply goes out of step and fails.
+- `ssl_client` is asserted in the only direction its own design allows. A Go test
+  server's certificate is signed by a throwaway CA no trust store knows, so a
+  *successful* handshake would need the verification-skipping option this build
+  refuses to have; the refusal is the property, so the refusal is the test. A second
+  test drives the SNI name through and checks the server saw what `-n` gave.
+- The bzip2 fixtures are byte literals from busybox, because Go has no bzip2 writer
+  -- the same fact that keeps the `bzip2` name unregistered here -- so the input
+  cannot be produced by the code under test.
+
 ## Unreleased
 
 ### Added
