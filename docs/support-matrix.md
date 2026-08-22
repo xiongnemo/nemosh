@@ -457,6 +457,7 @@ behaviour this shell deliberately does not have.
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
 | `dirname` | none needed | refused by name |
+| `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
 | `du` | `-s -h`; **apparent** sizes in 1024-byte blocks, not allocation | refused by name |
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
@@ -466,6 +467,7 @@ behaviour this shell deliberately does not have.
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
+| `iconv` | `-f -t -l -c -o` | refused by name |
 | `join` | `-1 -2 -j -t` | refused by name |
 | `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
@@ -510,6 +512,7 @@ behaviour this shell deliberately does not have.
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
 | `uniq` | `-c -d -u -i` | refused by name |
 | `unexpand` | `-t -a` | refused by name |
+| `unix2dos` | `-d -u`; converts **in place** with a file operand | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
@@ -705,6 +708,45 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### The encoding tools, and the policy they settle
+
+`dos2unix`, `unix2dos` and `iconv`, added 2026-08-22. All seven measured forms
+agree with busybox byte for byte.
+
+**`iconv` settles a question two other applets were waiting on.** `sed -i` and
+`wc -m` were both recorded as outstanding on UTF-16 input, and the blocker was
+the same for each: neither had a policy for which encoding to *write*. `iconv` is
+the tool whose entire job is that choice, so the policy lives there and the others
+can follow it:
+
+- **An encoding is named, never guessed.** `-f` and `-t` are explicit and there is
+  no detection step — the same rule `grep` follows in honouring only a byte-order
+  mark and never sniffing. Guessing is how a binary gets rewritten.
+- **Both default to UTF-8**, so a bare `iconv file` is a no-op rather than a
+  surprise.
+- **No byte-order mark is written** unless the named encoding is one of the
+  explicit BOM forms. An uninvited BOM breaks `#!` lines and CSV headers.
+- **A character the target cannot represent is an error**, not a silent
+  substitution. `-c` is how a caller asks for the lossy behaviour on purpose.
+
+`iconv -l` lists only encodings this build can actually construct, and a test
+converts to every name it prints — a name that appeared and then failed would be
+worse than one that never appeared.
+
+`dos2unix` and `unix2dos` are one implementation, the direction chosen by the name
+and overridable with `-u`/`-d`. Two behaviours are worth knowing:
+
+- **A file operand is converted in place** and nothing goes to stdout. That is
+  busybox's default and it is the trap in this applet.
+- **A lone carriage return survives.** Only the CR of a CRLF is removed, because
+  on an old Mac file a bare CR is the line ending itself and dropping it would
+  join every line into one. Binary data with a stray CR is likewise untouched.
+- **Running `unix2dos` twice is safe.** The input is normalised to LF first, so no
+  CR is ever doubled — a bare LF-to-CRLF replacement produces CRCRLF on its second
+  run.
+- An unchanged file is not rewritten, so its modification time survives and a
+  build system is not told it changed.
 
 ### The small text tools, and `free`
 
