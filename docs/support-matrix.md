@@ -976,6 +976,21 @@ rather than refusing it means PATH lookup still finds a real `bzip2.exe` if the
 machine has one — more useful than a refusal, and the same reasoning applies to
 `xz`, `lzma`, `lzop` and the Linux package formats, none of which are provided.
 
+Two divergences from busybox that writing these tests found, both in `tar` and both
+cases of doing something quietly instead of refusing:
+
+- **`tar -c -x` chose an operation instead of refusing.** A switch on the three
+  letters in order meant `tar -c -x -f a.tar src` created the archive and ignored
+  the `-x`, and somebody who typed both meant one of them and got the other half the
+  time. busybox refuses the same invocation by printing its usage. Exactly one of
+  `-c -t -x` is now required, which is also what this applet's own sibling `cpio`
+  already did for `-t -i -o`.
+- **`-C DIR` created the directory instead of requiring it.** The directory appeared
+  as a side effect of writing the first entry into it, so `tar -xf a.tar -C /tpm`
+  made a new directory rather than reporting the misspelling. The option is spelled
+  "change to this directory", and changing to one that is not there is an error;
+  busybox says `can't change directory to 'nope'` and GNU agrees.
+
 **`bunzip2` and `bzcat` had no test at all until 2026-08-23** -- registered,
 documented here, and run by nothing, with `tar -j` untested alongside them. They
 worked when finally tried by hand, which is the bad kind of luck: a silent

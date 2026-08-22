@@ -38,15 +38,28 @@ func newTarApplet() Applet {
 			operands:   operands,
 			autoDetect: options.has('a'),
 		}
+		// Exactly one operation, counted rather than fallen through. A switch on the
+		// three letters in order silently *chose* one when several were given, so
+		// `tar -c -x -f a.tar src` created the archive and ignored the -x -- and
+		// somebody who typed both meant one of them and got the other half the time.
+		// busybox refuses the same invocation by printing its usage, and this
+		// applet's own sibling cpio already requires exactly one of -t -i -o.
+		operations := 0
+		for _, letter := range "ctx" {
+			if options.has(byte(letter)) {
+				operations++
+			}
+		}
+		if operations != 1 {
+			return fmt.Errorf("exactly one of -c, -t or -x is required")
+		}
 		switch {
 		case options.has('c'):
 			return request.create(ctx, stdout, stderr)
 		case options.has('t'):
 			return request.list(ctx, stdin, stdout)
-		case options.has('x'):
-			return request.extract(ctx, stdin, stdout, stderr)
 		}
-		return fmt.Errorf("one of -c, -t or -x is required")
+		return request.extract(ctx, stdin, stdout, stderr)
 	}}
 }
 
@@ -173,6 +186,19 @@ func (r tarRequest) extractionRoot(ctx context.Context) (string, error) {
 	native, err := resolveHostPath(ProcessViewFromContext(ctx), target)
 	if err != nil {
 		return "", operandFailure(target, err)
+	}
+	// -C has to *exist*. Without this check the directory was created as a side
+	// effect of writing the first entry into it, so `tar -xf a.tar -C /tpm` made a
+	// new directory instead of reporting the misspelling -- and the option is
+	// spelled "change to this directory", which is an error for a directory that is
+	// not there. busybox says "can't change directory to 'nope'" and refuses; GNU
+	// does the same.
+	info, err := os.Stat(native)
+	if err != nil {
+		return "", fmt.Errorf("cannot change directory to '%s': %v", target, err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("cannot change directory to '%s': not a directory", target)
 	}
 	return native, nil
 }
