@@ -236,22 +236,26 @@ func TestFind_size(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// Every case carries -type f, and that is not incidental: **a directory's
+	// apparent size is platform-dependent.** Windows reports 0, Linux and macOS
+	// report the directory block (4096 and 96 here). A size test that lets the
+	// root operand through therefore answers differently on each platform, which
+	// is exactly how the first version of this test passed on Windows and failed
+	// on both CI runners.
 	for _, test := range []struct {
 		name string
 		args []string
 		want []string
 	}{
-		{name: "exact bytes", args: []string{".", "-size", "1c"}, want: []string{"./one"}},
-		{name: "greater than", args: []string{".", "-size", "+100c"}, want: []string{"./big"}},
-		// A directory reports size 0 here as it does under busybox, so the root
-		// operand matches too -- the measured reference prints `.` for this.
-		{name: "less than", args: []string{".", "-size", "-1c"}, want: []string{".", "./empty"}},
-		{name: "kilobytes round up", args: []string{".", "-size", "1k"}, want: []string{"./one", "./small"}},
-		{name: "blocks are the default unit", args: []string{".", "-size", "+1"}, want: []string{"./big"}},
-		{name: "words are two bytes", args: []string{".", "-size", "50w"}, want: []string{"./small"}},
+		{name: "exact bytes", args: []string{".", "-type", "f", "-size", "1c"}, want: []string{"./one"}},
+		{name: "greater than", args: []string{".", "-type", "f", "-size", "+100c"}, want: []string{"./big"}},
+		{name: "less than", args: []string{".", "-type", "f", "-size", "-1c"}, want: []string{"./empty"}},
+		{name: "kilobytes round up", args: []string{".", "-type", "f", "-size", "1k"}, want: []string{"./one", "./small"}},
+		{name: "blocks are the default unit", args: []string{".", "-type", "f", "-size", "+1"}, want: []string{"./big"}},
+		{name: "words are two bytes", args: []string{".", "-type", "f", "-size", "50w"}, want: []string{"./small"}},
 		// Every non-empty file here rounds up to exactly one megabyte, which is
 		// the clearest demonstration that the rounding is real.
-		{name: "megabytes", args: []string{".", "-size", "1M"}, want: []string{"./big", "./one", "./small"}},
+		{name: "megabytes", args: []string{".", "-type", "f", "-size", "1M"}, want: []string{"./big", "./one", "./small"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got := findLines(t, dir, test.args...)

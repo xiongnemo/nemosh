@@ -92,16 +92,6 @@ func TestLs_sortOptions(t *testing.T) {
 			want: []string{"a.txt", "b.txt", "c.txt", "sub"},
 		},
 		{
-			name: "-S is largest first",
-			args: []string{"-1", "-S"},
-			want: []string{"c.txt", "a.txt", "b.txt", "sub"},
-		},
-		{
-			name: "-Sr is smallest first",
-			args: []string{"-1", "-S", "-r"},
-			want: []string{"sub", "b.txt", "a.txt", "c.txt"},
-		},
-		{
 			// Measured: busybox honours whichever sort arrived last, as GNU
 			// documents. -S then -t sorts by time.
 			name: "the last sort option wins, time last",
@@ -109,15 +99,57 @@ func TestLs_sortOptions(t *testing.T) {
 			want: []string{"sub", "c.txt", "b.txt", "a.txt"},
 		},
 		{
-			name: "the last sort option wins, size last",
-			args: []string{"-1", "-t", "-S"},
-			want: []string{"c.txt", "a.txt", "b.txt", "sub"},
-		},
-		{
 			name: "clustered with the long form",
 			args: []string{"-1tr"},
 			want: []string{"a.txt", "b.txt", "c.txt", "sub"},
 		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := lsNames(t, append(test.args, dir)...)
+			if strings.Join(got, "|") != strings.Join(test.want, "|") {
+				t.Fatalf("ls %v\n  got  %v\n  want %v", test.args, got, test.want)
+			}
+		})
+	}
+}
+
+// -S gets its own fixture, with no subdirectory in it, because **a directory's
+// apparent size is platform-dependent**: Windows reports 0 and Linux and macOS
+// report the directory block. So a size-ordered listing that contains a
+// directory puts it last on one platform and first on another, which is exactly
+// how the first version of this test passed here and failed on both CI runners.
+//
+// The three files have distinct sizes *and* distinct times, so this still pins
+// which key was used and the fact that the last option given wins.
+func TestLs_sortsBySize(t *testing.T) {
+	dir := t.TempDir()
+	base := time.Date(2026, 8, 10, 10, 0, 0, 0, time.UTC)
+	for name, file := range map[string]struct {
+		content string
+		age     time.Duration
+	}{
+		"a.txt": {content: "aaa", age: 0},
+		"b.txt": {content: "b", age: 8 * 24 * time.Hour},
+		"c.txt": {content: "cccccccc", age: 11 * 24 * time.Hour},
+	} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(file.content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		when := base.Add(file.age)
+		if err := os.Chtimes(path, when, when); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, test := range []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{name: "-S is largest first", args: []string{"-1", "-S"}, want: []string{"c.txt", "a.txt", "b.txt"}},
+		{name: "-Sr is smallest first", args: []string{"-1", "-S", "-r"}, want: []string{"b.txt", "a.txt", "c.txt"}},
+		{name: "size last wins over time", args: []string{"-1", "-t", "-S"}, want: []string{"c.txt", "a.txt", "b.txt"}},
+		{name: "time last wins over size", args: []string{"-1", "-S", "-t"}, want: []string{"c.txt", "b.txt", "a.txt"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got := lsNames(t, append(test.args, dir)...)

@@ -112,6 +112,21 @@ the entire suite: `times` reported 215 years because its test asserted only the
 Assert values, not just shapes, and re-measure claims against a built binary
 rather than against the suite.
 
+**The local gate is Windows-only, and CI is not.** A green run here says nothing
+about ubuntu and macos, which run the same suite. Four commits went in on
+2026-08-22 before anyone looked, and all four failed CI for one reason:
+
+> **A directory's apparent size is platform-dependent.** Windows reports 0,
+> Linux and macOS report the directory block — 4096 and 96 respectively.
+
+So `find . -size -1c` matched the walk root on Windows and not elsewhere, and
+`ls -S` put a subdirectory last here and first there. Both were assertions that
+had quietly encoded a Windows fact as the answer. When a test compares sizes,
+either constrain it to files (`-type f`, a fixture with no subdirectory) or
+expect a different answer per platform — and **check `gh run list` after pushing**
+rather than after four pushes. Anything reading `os.FileInfo` off a directory
+deserves the same suspicion: size, mode bits, and link count all differ.
+
 **The clipboard tests fail at random on the development machine, and it is not
 your change.** Windows 10 and later run a clipboard history service that opens the
 clipboard on every change, and any clipboard manager does the same, so
