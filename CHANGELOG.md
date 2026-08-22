@@ -8,7 +8,111 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
-## Unreleased
+## v1.1.0 - 2026-08-22
+
+The applet option matrices `v1-scope.md` deferred to v1.1, chosen by measuring
+what a script actually reaches for and finds missing rather than by working down
+a list. Every expectation was checked against busybox-w32 v1.38.0, and the
+per-applet counts below are forms that now agree with it byte for byte, exit
+statuses and diagnostics included.
+
+One thing that did *not* need doing is worth recording: the shell language is
+finished. Of 46 constructs probed, 45 work — including process substitution,
+`${!x}` indirection, arrays, `getopts`, `{1..3}`, `set -C` and arithmetic `for`.
+The only absentee is `select`, which `v0-readiness.md` already argues is three
+lines someone can write. Every remaining gap was in an applet.
+
+### `find` — the operators
+
+- **`-a`, `-o`, `!`, `-and`, `-or`, `-not` and parentheses**, with POSIX
+  precedence. Without them `find` was a single-predicate filter rather than find:
+  `find . -name a -o -name b` is a day-one idiom and it was refused.
+- `!` was worse than refused. It does not begin with a dash, so path collection
+  took it as a *path operand* and `find . ! -name x` answered
+  `!: No such file or directory` — blaming a file for an operator. Path
+  collection now stops at `!`, `(` and `)`.
+- Where busybox is lax, this is not. `find . )` prints the whole tree there and
+  then complains; an unpaired paren, a dangling `-o` and an empty group are all
+  refused here, as GNU refuses them.
+- **New tests:** `-iname`, `-path`, `-ipath`, `-size`, `-mtime`, `-newer`,
+  `-empty`. **New actions:** `-print0`, to pair with `xargs -0`. **New global
+  options:** `-maxdepth` and `-mindepth`, which bound the traversal rather than
+  filter it, so `-maxdepth 1` stops the walk reading a subdirectory at all.
+- Two deliberate divergences, both measured. `-size` divides by the unit and
+  rounds up, which POSIX states outright and GNU does for every suffix, where
+  busybox compares raw bytes against `N*unit` — so busybox's `-size 1k` finds
+  only a file of exactly 1024 bytes. And `-newer` keeps NTFS's full timestamp
+  precision where busybox truncates to whole seconds.
+- `-exec` and `-delete` stay refused: one needs the execution model and quoting
+  rules, the other a decision about a destructive default. 24 forms agree.
+
+### `ls` — sorting and descending
+
+- **`-t`, `-S`, `-r`, `-R`, `-d`, `-F` and `-A`**, all previously refused by
+  name, which meant `ls -ltr` failed on its options.
+- Three rules were measured rather than chosen: the **last** sort option wins, so
+  `ls -S -t` orders by time; **`-a` beats `-A`** in either order, where GNU lets
+  the later one win; and the name is the tie-break for every key, with `-r`
+  reversing the tie-break too, so two listings of an unchanged directory cannot
+  differ.
+- `-R`'s header path is built from the operand as spelled, so `ls -R .` says
+  `./sub` exactly as `find .` says `./a.txt`, with a forward slash even on
+  Windows. That settles a question a golden case had held open since the uutils
+  port, whose Windows branch asserts a backslash.
+- 18 forms agree. The 19th, `ls -d -l` on a directory, differs only by the mode
+  bits and link count that `ls -l` already differed by. `-i`, `-n`, `-u` and `-c`
+  stay refused.
+
+### `head` and `tail` — attached values and file headers
+
+- **`head -n2` works.** It was refused while `head -2` and `head -n 2` both
+  worked — the worst shape a gap can take, since a user cannot predict which of
+  three spellings the shell has. The cause was two option parsers in one package;
+  head and tail were on the one that matches whole argument strings and so cannot
+  express a letter carrying a value. Also `-c2`, `-n+2`, `-c+3`, `-n-2`.
+- **More than one file operand now gets a `==> name <==` header.** There were
+  none, so `head *.log` gave lines with no way to tell which file each came from.
+  `-q` suppresses them, `-v` forces one for a single file, and stdin gets none.
+- Diagnostics match the reference to the character: `head -n2c` answers
+  `invalid number '2c'` where this said `invalid count: 2c`. 24 forms agree.
+
+### `grep` — context lines
+
+- **`-A`, `-B`, `-C`**, with `--` between non-contiguous groups. `-B` is why this
+  needs state: whether a line is context is not known when it is read, only once
+  a later line matches.
+- Measured rules: `-A0` prints no separator at all, even between distant groups,
+  where GNU does print one; and the separator **spans files**, so the printer's
+  state has to outlive a single file. `-c`, `-l`, `-L` and `-q` ignore context,
+  but `-o` does not.
+- **`-e` and `-f`** supply patterns, so several can be given and a pattern
+  starting with a dash stops looking like an option. Each is escaped and anchored
+  separately before being joined — `-F -e a.c` escaped as one string would escape
+  the `|` doing the joining, and `-x -e a -e b` anchored as one alternation would
+  match any line containing `b`.
+- **`-L`** is `-l` inverted, and inverts the exit status with it. 30 forms agree.
+  `--include`, `--exclude` and `-z` stay refused.
+
+### `sed` — addresses
+
+- **Addresses**: `N`, `$`, `/re/`, the ranges `N,M` and `/a/,/b/`, and a trailing
+  `!`. **Commands**: `p`, `d`, `q` beside the existing `s///`, separated by `;` or
+  a newline. **Options**: `-n`, `-e`, `-E`/`-r`. None of it existed — `sed -n` was
+  refused as an unsupported *script*, the first argument being assumed to be one.
+- One measurement made the old shape unsalvageable rather than incomplete:
+  **several file operands are one stream.** Line numbers run on across the
+  boundary and `$` is the last line of the last file, so `sed -n '3p' f1 f2`
+  answers the third line overall. sed was applying the script per file, which did
+  not matter while it had no addresses and would have been silently wrong the
+  moment it had.
+- `$` needs one line of lookahead, not the whole input: sed is a filter, and
+  reading a log into memory to find where it ends is not what a filter does.
+- 30 forms agree, including `no address after comma` and `unmatched '/'`.
+- `-i` stays refused, and it is the one worth naming: it has to choose an
+  **output** encoding for the file it rewrites, which is the same decision already
+  deferred for sed's UTF-16 reading, and settling it inside a convenience flag
+  would settle it by accident. `-f`, `a`/`i`/`c`, `y///`, `{}`, hold space and
+  branching stay refused too.
 
 ### Devices
 

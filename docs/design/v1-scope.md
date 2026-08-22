@@ -247,7 +247,27 @@ correctness rather than features, and neither should cross a release boundary.
 
 Deferring these is what makes v1.0 shippable. Each has a home.
 
-**v1.1 — applet option matrices and `~user`.**
+**v1.1 — applet option matrices and `~user`. Shipped 2026-08-22, less `~user`.**
+
+The option matrices are done, and were chosen by measurement rather than by
+working down the list below: the shell was probed for 46 language constructs and
+each applet for the options a script actually reaches for. **45 of the 46
+constructs already worked**, `select` being the only absentee, so there was no
+shell work to do at all and every remaining gap was in an applet. What the probe
+found, in the order it was fixed: `find` had no boolean operators and read `!` as
+a path operand; `ls` refused `-t -S -r -R -d -F -A`, so `ls -ltr` failed on its
+options; `head -n2` was refused while `head -2` and `head -n 2` worked, and
+multi-file `head` printed no `==> name <==` headers at all; `grep` had no context
+lines; `sed` was an `s///` filter with no `-n`, no addresses, no `p` and no `d`.
+See `CHANGELOG.md` for what each answers now and `docs/support-matrix.md` for the
+contract.
+
+**`~user` did not ship and is not scheduled.** `echo ~root` prints `~root`, as it
+did; resolving another account's profile directory needs `SHGetKnownFolderPath`
+per SID or `ProfileImagePath`, with no portable equivalent, and nothing measured
+in the probe asked for it. It waits for someone who wants it.
+
+The list of what remained, kept as written before the work:
 
 Line editing was in this list and has shipped; it is in v1.0 by the correction at
 the top of this document. The reasoning that moved it here from v2 on 2026-08-08
@@ -364,9 +384,12 @@ V1-C  reproducible build, Scoop manifest, provenance        done
   ↓
 V1-RC clean-machine acceptance                              the remaining gate
   ↓
-v1.0.0
+v1.0.0                                                      released 2026-08-21
   ↓
-v1.1  applet option matrices, ~user
+      /dev as a directory, ~/ completion, top's F1 panel     done, unplanned
+  ↓
+v1.1  applet option matrices                                released 2026-08-22
+      (~user dropped: nothing measured asked for it)
   ↓
 v1.2  completion M0–M2
   ↓

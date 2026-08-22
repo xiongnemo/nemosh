@@ -21,9 +21,11 @@ sits in between.
 `docs/design/v0-readiness.md` for the evidence ledger behind the v0 claim.
 
 Read [`docs/support-matrix.md`](docs/support-matrix.md) before depending on
-anything. It is measured, not aspirational, and it names the gaps. `find` implements
-`-name`, `-type`, and `-print`; every other predicate is refused before the walk
-begins, so a pipeline never receives paths the expression did not select.
+anything. It is measured, not aspirational, and it names the gaps. `find`
+implements the operators `-a -o !` and parentheses, the tests `-name -iname -path
+-type -size -mtime -newer -empty`, and `-maxdepth`; `-exec` and `-delete` are
+refused before the walk begins, so a pipeline never receives paths the expression
+did not select.
 
 ## Platforms
 
