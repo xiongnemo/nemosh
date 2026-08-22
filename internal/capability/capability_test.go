@@ -86,16 +86,20 @@ func TestDeclaredOptionsAreAccepted(t *testing.T) {
 
 // Applets this test must not run, because running them starts a process.
 //
-// su is the only one. Every option in its row would launch something: -t starts
-// a shell and waits for it, and -W or -c under the runas verb raises a consent
-// dialog that no test can answer. Its options are held instead by
-// TestPlanElevation_assemblesTheCommandLine and TestPlanElevation_refuses in
-// internal/applets, which measure the same claims -- every option accepted,
-// -Z refused -- against the same code, without starting anything.
+// su launches something: -t starts a shell and waits for it, and -W or -c under
+// the runas verb raises a consent dialog that no test can answer. Its options are
+// held instead by TestPlanElevation_assemblesTheCommandLine and
+// TestPlanElevation_refuses in internal/applets, which measure the same claims --
+// every option accepted, -Z refused -- against the same code, without starting
+// anything. The registry only carries su on Windows, so that entry is never
+// consulted elsewhere.
 //
-// The registry only carries su on Windows, so elsewhere this map is never
-// consulted.
-var launchesSomething = map[string]bool{"su": true}
+// httpd does not launch a process; it *becomes* a server. `httpd -h DIR` is a
+// complete, valid invocation, so with a directory as its operand it bound 8080
+// and served until the 10-minute test timeout killed the package. Its options are
+// held instead by TestHttpd_acceptsItsDeclaredOptions in internal/applets, which
+// runs the same code against a context that is already cancelled.
+var launchesSomething = map[string]bool{"su": true, "httpd": true}
 
 // And an option the table does not claim must be refused, or the claim is not
 // saying anything. An applet that accepts everything would pass the test above
@@ -255,6 +259,11 @@ func TestValueAndFileOptionsAreSubsetsOfTheAcceptedOnes(t *testing.T) {
 			for _, flag := range command.FileShort {
 				if !command.TakesValue(flag) {
 					t.Errorf("%s claims -%c takes a file but not a value", name, flag)
+				}
+			}
+			for _, long := range command.ValueLong {
+				if !command.AcceptsLong(long) {
+					t.Errorf("%s claims --%s takes a value but does not accept it", name, long)
 				}
 			}
 		})

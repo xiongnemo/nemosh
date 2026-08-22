@@ -386,36 +386,42 @@ func TestComplete_usesABundledSpec(t *testing.T) {
 }
 
 // A user's own file wins. That is the whole answer to a bundled spec being wrong
-// for a particular machine, which `wget` already is -- busybox's applet here,
-// GNU wget elsewhere, one name.
+// for a particular machine -- a curl built without a feature, or one new enough
+// to have grown an option since the bundled file was measured.
+//
+// This used to be written with wget, on the reading that one name can be two
+// programs. It cannot be any more: wget is an applet now, so capability.Lookup
+// answers for it before any spec is consulted, and the bundled wget.toml was
+// removed for the same reason. curl is still external, which is what this test
+// needs.
 func TestComplete_prefersTheUsersOwnSpec(t *testing.T) {
-	// Given: a directory holding a wget spec that claims an option the bundled
-	// busybox one does not have
+	// Given: a directory holding a curl spec that claims an option the bundled
+	// one does not have
 	directory := t.TempDir()
 	spec := `[meta]
-derived-from = "wget --help"
-tool-version = "GNU Wget 1.24.5"
+derived-from = "curl --help all"
+tool-version = "curl 8.99.0"
 measured-on = "2026-08-16"
 
 [command]
-name = "wget"
+name = "curl"
 operand = "path"
 long = ["mirror"]
 `
-	if err := os.WriteFile(filepath.Join(directory, "wget.toml"), []byte(spec), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(directory, "curl.toml"), []byte(spec), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	_, editor := newStyledEditor(t, 80, "", nil)
 	editor.specs = completionspec.NewRegistry(completions.Files, directory)
 
 	// When
-	for _, r := range "wget --mir" {
+	for _, r := range "curl --mir" {
 		editor.buffer.insert(r)
 	}
 	editor.complete("$ ")
 
 	// Then
-	if got := editor.buffer.String(); got != "wget --mirror " {
+	if got := editor.buffer.String(); got != "curl --mirror " {
 		t.Fatalf("buffer = %q, want the user's spec to have won", got)
 	}
 }

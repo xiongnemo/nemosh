@@ -83,6 +83,7 @@ func surfaceFor(specs *completionspec.Registry, words []string) (commandSurface,
 			valueShort: command.ValueShort,
 			fileShort:  command.FileShort,
 			long:       command.Long,
+			valueLong:  command.ValueLong,
 		}, true
 	}
 	if specs == nil {

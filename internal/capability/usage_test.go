@@ -89,6 +89,12 @@ func TestUsage_namesTheArgumentOfEveryOptionThatTakesOne(t *testing.T) {
 					command.Name, letter)
 			}
 		}
+		for _, long := range command.ValueLong {
+			if _, ok := valuePlaceholders[command.Name+long]; !ok {
+				t.Errorf("%s --%s takes a value and does not name it; add it to valuePlaceholders",
+					command.Name, long)
+			}
+		}
 	}
 }
 
@@ -101,8 +107,12 @@ func TestUsage_hasNoUnusedPlaceholders(t *testing.T) {
 			if !strings.HasPrefix(key, command.Name) {
 				continue
 			}
-			letter := strings.TrimPrefix(key, command.Name)
-			if len(letter) == 1 && strings.Contains(command.ValueShort, letter) {
+			spelling := strings.TrimPrefix(key, command.Name)
+			if len(spelling) == 1 && strings.Contains(command.ValueShort, spelling) {
+				found = true
+				break
+			}
+			if containsName(command.ValueLong, spelling) {
 				found = true
 				break
 			}

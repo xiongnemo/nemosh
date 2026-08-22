@@ -67,6 +67,11 @@ type Command struct {
 	// declares an argument type per option; bash-completion hand-writes a
 	// `case $prev in` per command. This is the same knowledge as data.
 	FileShort string
+	// ValueLong is the subset of Long that takes the next word as its argument.
+	// `wget --header` is the first here: every long option before it either took
+	// nothing or carried its value after an `=`, which needs no declaring
+	// because the word boundary already says where the value ends.
+	ValueLong []string
 }
 
 // TakesValue reports whether the option letter consumes the following word.

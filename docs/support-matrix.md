@@ -451,6 +451,8 @@ behaviour this shell deliberately does not have.
 | `cmp` | `-s -l`; the message goes to stdout, as GNU's does | refused by name |
 | `comm` | `-1 -2 -3` | refused by name |
 | `expand` | `-t -i` | refused by name |
+| `ftpget` | `-u -p -P -v`; `-c` accepted, resuming is not implemented | refused by name |
+| `ftpput` | `-u -p -P -v -c` | refused by name |
 | `factor` | none; numbers from operands or stdin | refused by name |
 | `fold` | `-w -s -b` | refused by name |
 | `free` | `-b -k -m -g`; `-h` accepted | refused by name |
@@ -468,6 +470,7 @@ behaviour this shell deliberately does not have.
 | `grep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored | refused by name |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
 | `hd`, `hexdump` | `-b -c -C -d -o -x -v -A -t` | refused by name |
+| `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
@@ -479,6 +482,7 @@ behaviour this shell deliberately does not have.
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |
 | `nano` | `-H -R`; one file at a time | refused by name |
+| `nc` | `-l -p -w`; `-e` **refused by name** | refused by name |
 | `nl` | `-b t\|a\|n` | refused by name |
 | `od` | `-b -c -C -d -o -x -v -A -t` | refused by name |
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
@@ -504,6 +508,7 @@ behaviour this shell deliberately does not have.
 | `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {}`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
+| `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
 | `sort` | `-n -r -u -f -b -k -t` | refused by name |
 | `stat` | `-c FORMAT` with `%n %s %F %f %y %Y`; the default output is refused | refused by name |
@@ -525,7 +530,9 @@ behaviour this shell deliberately does not have.
 | `unzip` | `-l -t -p -j -n -o -q -K -d -x` | refused by name |
 | `uudecode` | `-o`; `-o -` writes to stdout | refused by name |
 | `uuencode` | `[FILE] NAME`; `-m` refused | refused by name |
+| `wget` | `-O -P -U -T -q -S --header --spider`; `-c` and `-o` accepted | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
+| `whois` | `-h -p`; `-i` accepted | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
 | `xargs` | `-0 -n -I -r -t` | refused by name |
@@ -919,6 +926,62 @@ One divergence where the reference is broken: **busybox's `zcat` cannot read a
 pipe.** `cat x.gz | busybox zcat` answers `lseek(...): Invalid seek` while
 `busybox zcat < x.gz` works — it seeks on its input, which a redirect allows and a
 pipe does not. This reads sequentially, so both work.
+
+### The network clients
+
+`wget`, `nc`, `whois`, `ssl_client`, `httpd`, `ftpget` and `ftpput`, added
+2026-08-23. Every test runs against a server started by the test: a test that
+needs a name resolved is a test that fails on a train.
+
+**busybox-w32 keeps only these seven**, out of the dozens busybox has, because
+Windows lacks the APIs for the rest — so this is the whole networking group rather
+than a selection from it.
+
+- **TLS is native, so there is no `ssl_client` helper in the pipeline.** busybox's
+  `wget` cannot speak TLS and shells out to `ssl_client` for it; Go's `net/http`
+  can. `ssl_client` is still here, for what the name actually means — `openssl
+  s_client` on a machine with no openssl — and `wget` does not use it.
+- **A name that came from the server is checked like an archive entry.** `wget`
+  takes its output name from the URL's last path element, and a redirect chooses
+  that; so it goes through `safeArchivePath`, the same helper `tar` and `unzip`
+  use. `httpd` puts every request path through it too. A URL is untrusted input
+  naming a destination, which is exactly what a tar entry is.
+- **A 4xx or 5xx is a failed download**, not a file whose contents are the error
+  page. Writing the body would leave something that looks like a success.
+- **`--spider` is a HEAD**, not a GET with the body discarded — the caller said not
+  to download it.
+- **`nc -e` is refused by name.** Running a program on a connection is a remote
+  shell, and this build does not offer one.
+- **`ssl_client` always verifies the certificate**, with no option to skip: a TLS
+  pipe that does not check the certificate is a plaintext pipe wearing a costume.
+- **FTP is passive-only.** Active mode asks the server to connect *back*, which no
+  machine behind a router or a Windows firewall can accept, so offering it would be
+  offering something that mostly fails.
+- **`httpd` binds 127.0.0.1 unless `-a` says otherwise**, where busybox binds every
+  interface, and it runs **no CGI**. Reaching the network is a decision; CGI turns a
+  file server into an execution service. Both defaults are asserted by tests.
+- **`nc` waits for the reply, and getting that wrong was invisible.** Copying both
+  ways and returning on whichever direction finished first looks symmetric and is
+  not: for a request and a response, which is most of what `nc` is for, the *write*
+  side always finishes first, so `nc` exited before reading a byte. Go's `select`
+  chooses uniformly among ready cases, so the passing test was a coin flip per run
+  -- it took a manual `nc 127.0.0.1 8231` against this build's own `httpd` to see
+  the empty output. The read side is now what ends the session, and the test's
+  server reads to EOF before replying, so the old behaviour cannot pass by luck.
+- Two more found in the writing, both Go-shaped rather than protocol-shaped:
+  `<-ctx.Done()` in a goroutine **leaks that goroutine forever** when the context is
+  never cancelled, because an uncancellable context's `Done()` is a nil channel and
+  a receive from one never returns (`context.AfterFunc` now); and `httpd` served a
+  directory's `index.html` **twice**, once through `http.ServeFile` with a
+  fabricated request and once by writing the bytes.
+
+**The bundled `completions/wget.toml` was removed in the same change.** It
+described GNU wget, and its own comment said the point of the file was that one
+name can be two programs. A nemosh `wget` makes it three, and `internal/capability`
+— which a test binds to behaviour by running the applet — now answers for the name,
+so keeping a second unverified description of it was the one thing the completions
+rule forbids. `NEMOSH_OVERRIDE_APPLETS=wget` still reaches a real `wget.exe`;
+`scripts/completions/generate.py wget` writes a spec for the one installed.
 
 ### The encoding tools, and the policy they settle
 

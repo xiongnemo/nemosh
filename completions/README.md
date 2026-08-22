@@ -18,7 +18,13 @@ the rest of this file is about.
 | this directory | bundled, compiled into the binary |
 
 Yours wins. That is the whole fix for a bundled spec that is wrong for your
-machine, and it is not hypothetical — see `wget.toml`.
+machine, and it is not hypothetical — see `curl.toml`, measured against one build
+of a program that ships in several.
+
+**A spec cannot name an applet or a builtin.** Those are described by
+`internal/capability`, which a test binds to behaviour by *running* each applet;
+a file that could override `ls` would replace that guarantee with data nobody
+checked, so the two sources are not allowed to overlap and a test enforces it.
 
 Bundled specs are **embedded**, not installed beside the executable. Nemosh is
 one static binary with no runtime sidecars, and a directory that had to travel
@@ -65,10 +71,14 @@ read off, and when.
 
 Two measurements from the day this directory was created make the point:
 
-- **`wget` is not one program.** On the machine this was written on it resolves
-  to *busybox's* applet — four long options — not GNU wget, which has some two
-  hundred. A spec for either is wrong for the other, and the name does not say
-  which is installed.
+- **`wget` was not one program**, and there used to be a `wget.toml` here saying
+  so: on the machine this directory was created on the name resolved to
+  *busybox's* applet — four long options — not GNU wget, which has some two
+  hundred. It is now a *third* thing, nemosh's own applet, and that settled the
+  file's fate rather than sharpening it. An applet is described by
+  `internal/capability`, so the spec was removed; `NEMOSH_OVERRIDE_APPLETS=wget`
+  still reaches whichever `wget.exe` is on PATH, and generating a spec for it
+  (below) is how to complete that one.
 - **`curl` is not one build.** `/mingw64/bin/curl` is 8.16.0; `curl` resolved
   through the system PATH is Windows' own 8.13.0. Same program, different
   vintage, different option set at the edges.

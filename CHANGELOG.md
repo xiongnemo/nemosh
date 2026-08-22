@@ -12,6 +12,50 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **The networking group, all seven of it**: `wget`, `nc`, `whois`,
+  `ssl_client`, `httpd`, `ftpget` and `ftpput`. busybox-w32 keeps only these seven
+  out of the dozens busybox has, because Windows lacks the APIs for the rest, so
+  this is the whole group rather than a selection from it. Stock Windows has
+  `curl.exe` and none of the others.
+- **TLS is native**, so `wget` needs no `ssl_client` in its pipeline the way
+  busybox's does. `ssl_client` is still here for what the name means -- `openssl
+  s_client` without openssl -- and `wget` does not use it.
+- **A name the server chose is checked like a tar entry.** `wget` takes its output
+  name from the URL, and a redirect chooses that URL; `httpd` takes its path from
+  the request. Both go through `safeArchivePath`, the same helper `tar` and `unzip`
+  use, so neither can write outside the working directory, reach a Windows device
+  name, or land on a `..` after normalisation.
+- `httpd` binds **127.0.0.1** unless `-a` says otherwise, where busybox binds every
+  interface, and runs **no CGI**. `nc -e` is refused by name: running a program on a
+  connection is a remote shell. FTP is passive-only, because active mode asks the
+  server to connect back and nothing behind a router or a Windows firewall can
+  accept that.
+- `wget --header` is repeatable and `--spider` is a real HEAD rather than a GET
+  with the body thrown away. These are the first long options in
+  `internal/capability` that take a *detached* value, so `Command.ValueLong` was
+  added alongside `ValueShort` and completion now knows the word after
+  `wget --header` is nobody's operand.
+- **`completions/wget.toml` was removed.** Its own comment said the point of the
+  file was that one name can be two programs; a nemosh `wget` makes it three, and
+  `internal/capability` -- which a test binds to behaviour by running the applet --
+  now answers for the name. A second, unverified description of the same command is
+  the one thing the completions rule forbids.
+  `NEMOSH_OVERRIDE_APPLETS=wget` still reaches a real `wget.exe`, and
+  `scripts/completions/generate.py wget` writes a spec for the one installed.
+- **`nc` waits for the reply.** Returning as soon as either direction finished
+  looks symmetric and is not: for a request and a response the write side always
+  finishes first, so `nc` exited before reading a byte. Go's `select` chooses
+  uniformly among ready cases, so the test that covered it was a coin flip per run;
+  a manual `nc` against this build's own `httpd` is what showed the empty output.
+- Two more bugs worth naming, because neither is about networking. **`<-ctx.Done()` in a
+  goroutine leaks that goroutine forever** when the context is never cancelled: an
+  uncancellable context's `Done()` is a nil channel and receiving from one never
+  returns. The capability drift test found it by running `httpd -h DIR` with
+  `context.Background()`, which also **bound port 8080 and served until the package
+  timed out ten minutes later** -- so `httpd` joins `su` in the set of applets that
+  test must not run, with its option claims measured by a test that gives it a
+  second operand instead.
+
 - **Seven more checksum applets**: `sha1sum`, `sha384sum`, `sha512sum`, `sha3sum`,
   `cksum`, `crc32` and `sum`. `md5sum` and `sha256sum` were the only two, and a
   clean Windows machine has none -- which is most of why anyone reaches for a
