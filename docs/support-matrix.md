@@ -455,7 +455,7 @@ behaviour this shell deliberately does not have.
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep` | `-i -n -v -r -R -l -c -q -w -x -F -o -s -h -H -E -m`, `--color[=WHEN]` accepted and ignored | refused by name |
-| `head` | `-n -c`, and the `-N` form | refused by name |
+| `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
 | `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |
@@ -486,7 +486,7 @@ behaviour this shell deliberately does not have.
 | `split` | `-l`; two-letter suffixes, `aa` upwards | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
-| `tail` | `-n -c`, and the `-N` form | refused by name |
+| `tail` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`, `-n+2`) | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |
 | `touch` | `-c` | refused by name |
@@ -685,6 +685,50 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### `head` and `tail`
+
+**An attached value works now**: `head -n2`, `head -c2`, `tail -n+2`,
+`tail -c+3`. Before 2026-08-22 `head -2` worked, `head -n 2` worked, and
+`head -n2` was refused — the worst shape a gap can take, because a user cannot
+predict which of three spellings the shell has.
+
+The cause is worth recording, because it is a fork this package still has. There
+are two option readers: `parseAppletOptions` is a real getopt and takes an
+attached value like `chmod -m755`, while `streamOptionsAndOperands` matches whole
+argument strings against a whitelist and therefore cannot express "this letter
+carries a value". `head` and `tail` were built on the second. Only those two
+were affected — `grep -m1` and `sort -k1` already worked, being on the first —
+so the fix is `head` and `tail`'s own reader rather than a merge of the two:
+neither the bare `-N` form nor the signed counts `+2` and `-2` is a getopt shape.
+
+**More than one file operand now gets a header**, which is the other half of the
+same commit:
+
+```console
+$ head -n1 a.txt b.txt
+==> a.txt <==
+1
+
+==> b.txt <==
+x
+```
+
+`-q` suppresses it and `-v` forces it for a single file. Before this there were
+no headers at all, so `head *.log` produced lines with no way to tell which file
+each came from. A single file and stdin still get none; stdin has no name to
+print. The header names the operand **as spelled**, so `./a.txt` comes back as
+`./a.txt`.
+
+Diagnostics match the reference to the character, single quotes included:
+`head -n2c` answers `head: invalid number '2c'` where this used to say
+`invalid count: 2c`, and once a sign is taken off it is the digits that are
+reported, so `head -n-x` answers `'x'` and not `'-x'`. 24 of 24 measured forms
+now agree with busybox-w32 byte for byte.
+
+`tail -f` and `head -z` stay refused: following a file needs a polling loop and a
+decision about truncation, and `-z` is a GNU-only NUL-terminated-line mode that
+is a real choice rather than an oversight.
 
 ### `ls`
 

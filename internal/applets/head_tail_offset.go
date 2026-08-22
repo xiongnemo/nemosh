@@ -43,7 +43,15 @@ func parseCountSpec(text string, bytes bool) (countSpec, error) {
 	}
 	value, err := strconv.Atoi(digits)
 	if err != nil || value < 0 || strings.HasPrefix(digits, "+") || strings.HasPrefix(digits, "-") {
-		return countSpec{}, fmt.Errorf("invalid count: %s", text)
+		// busybox's exact wording, single quotes included: `head -n2c` answers
+		// `head: invalid number '2c'`. Measured 2026-08-22. This said
+		// `invalid count: 2c`, which named the same problem in different words --
+		// and a script matching on the reference's text would miss it.
+		//
+		// The digits rather than the whole operand, because that is what busybox
+		// reports once a sign has been taken off: `head -n-x` answers
+		// `invalid number 'x'`, not `'-x'`.
+		return countSpec{}, fmt.Errorf("invalid number '%s'", digits)
 	}
 	spec.count = value
 	return spec, nil

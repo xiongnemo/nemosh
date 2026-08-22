@@ -16,10 +16,14 @@ import (
 // failure was loud but named the wrong cause, sending the reader after a file
 // that was never meant to be one.
 //
-// `cat -n`, `head -c` and now `tail -c` were on this list until they were
-// implemented, which is the right way for a row to leave it -- the asymmetry
-// between head and tail was documented as deliberate for exactly as long as it
-// took to implement the missing half.
+// `cat -n`, `head -c`, `tail -c` and now `head -q` were on this list until they
+// were implemented, which is the right way for a row to leave it -- the
+// asymmetry between head and tail was documented as deliberate for exactly as
+// long as it took to implement the missing half.
+//
+// `-q` left on 2026-08-22 along with `-v` and the file headers the two switch
+// between. `-z` replaces it: GNU has it, busybox does not, and NUL-terminated
+// lines are a real decision rather than an oversight.
 //
 // `tail -f` stays: following a file needs a polling loop and a decision about
 // what to do when it is truncated or replaced, and an implementation that
@@ -31,7 +35,7 @@ func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 	}{
 		{applet: "cat", args: []string{"-b"}},
 		{applet: "cat", args: []string{"-A", "f.txt"}},
-		{applet: "head", args: []string{"-q", "f.txt"}},
+		{applet: "head", args: []string{"-z", "f.txt"}},
 		{applet: "tail", args: []string{"-f", "f.txt"}},
 	} {
 		t.Run(test.applet+" "+strings.Join(test.args, " "), func(t *testing.T) {

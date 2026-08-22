@@ -1,0 +1,49 @@
+id = "applet.busybox-w32.head-tail.attached-values-and-headers"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "coreutils"]
+script = """
+head -n2 five.txt
+echo --
+tail -n2 five.txt
+echo --
+tail -n+4 five.txt
+echo --
+head -n1 a.txt b.txt
+echo --
+head -q -n1 a.txt b.txt
+"""
+
+[files]
+"five.txt" = "1\n2\n3\n4\n5\n"
+"a.txt" = "1\n2\n3\n"
+"b.txt" = "x\ny\n"
+
+[expect]
+status = 0
+stdout = """
+1
+2
+--
+4
+5
+--
+4
+5
+--
+==> a.txt <==
+1
+
+==> b.txt <==
+x
+--
+1
+x
+"""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/head.c and coreutils/tail.c, POSIX head/tail"
+why = "Two gaps that turned out to be one commit. An attached option value was refused while both other spellings worked -- `head -2` and `head -n 2` were accepted and `head -n2` was not -- because this package has two option readers and head and tail used the one that matches whole argument strings against a whitelist and so cannot express a letter that carries a value. And a multi-file run printed no `==> name <==` headers at all, so `head *.log` gave lines with no way to tell which file each came from. -q suppresses the headers, -v forces one for a single file, and a lone file or stdin gets none. All measured against busybox-w32 v1.38.0 on 2026-08-22."

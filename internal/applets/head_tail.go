@@ -6,32 +6,56 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 )
 
 func newHeadApplet() Applet {
 	return simpleApplet{name: "head", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		spec, paths, err := countArgs("head", args, 10, true)
-		if err != nil {
-			return err
-		}
-		if len(paths) == 0 {
-			return copyHeadOf(stdout, stdin, spec)
-		}
-		view := ProcessViewFromContext(ctx)
-		for _, path := range paths {
-			file, err := OpenProcessInput(ctx, view, path)
-			if err != nil {
-				return operandFailure(path, err)
-			}
-			copyErr := copyHeadOf(stdout, file, spec)
-			closeErr := file.Close()
-			if err := errors.Join(copyErr, closeErr); err != nil {
+		return runHeadTail(ctx, "head", args, stdin, stdout, copyHeadOf)
+	}}
+}
+
+// runHeadTail is the shape head and tail share once their counts are parsed:
+// stdin when there are no operands, and otherwise each file in turn under a
+// header when there is more than one to tell apart.
+//
+// Shared because the header rule is the part worth having in one place. Two
+// copies of "print a name above the lines, but only when it helps" is two
+// answers eventually, and the pair already disagreed once -- -c was head's alone
+// for a while.
+func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Reader, stdout io.Writer, copy func(io.Writer, io.Reader, countSpec) error) error {
+	spec, headers, paths, err := headTailArgs(applet, args, 10, true)
+	if err != nil {
+		return err
+	}
+	if len(paths) == 0 {
+		// stdin has no name, so -v cannot print one for it either.
+		return copy(stdout, stdin, spec)
+	}
+	view := ProcessViewFromContext(ctx)
+	headed := wantsHeader(headers, len(paths))
+	for index, path := range paths {
+		if headed {
+			if _, err := io.WriteString(stdout, headTailHeader(path, index == 0)); err != nil {
 				return err
 			}
 		}
-		return nil
-	}}
+		file, err := OpenProcessInput(ctx, view, path)
+		if err != nil {
+			// head reports a missing operand one way and tail another, which is
+			// what each reference does; operandFailure and cannotOpen differ only
+			// in wording.
+			if applet == "tail" {
+				return cannotOpen(path, err)
+			}
+			return operandFailure(path, err)
+		}
+		copyErr := copy(stdout, file, spec)
+		closeErr := file.Close()
+		if err := errors.Join(copyErr, closeErr); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // copyHeadOf takes the first count lines, or bytes under -c.
@@ -75,26 +99,7 @@ func newTailApplet() Applet {
 		// documented as deliberate -- claiming both without implementing both
 		// would have been the kind of thing a script discovers the hard way. This
 		// implements it instead.
-		spec, paths, err := countArgs("tail", args, 10, true)
-		if err != nil {
-			return err
-		}
-		if len(paths) == 0 {
-			return copyTailOf(stdout, stdin, spec)
-		}
-		view := ProcessViewFromContext(ctx)
-		for _, path := range paths {
-			file, err := OpenProcessInput(ctx, view, path)
-			if err != nil {
-				return cannotOpen(path, err)
-			}
-			copyErr := copyTailOf(stdout, file, spec)
-			closeErr := file.Close()
-			if err := errors.Join(copyErr, closeErr); err != nil {
-				return err
-			}
-		}
-		return nil
+		return runHeadTail(ctx, "tail", args, stdin, stdout, copyTailOf)
 	}}
 }
 
@@ -145,60 +150,4 @@ func copyTail(stdout io.Writer, input io.Reader, count int) error {
 		}
 	}
 	return nil
-}
-
-// bareCountOption reads the `-3` form, and only that: a dash followed by digits
-// and nothing else. `-n` and `-c` are handled by name, and anything with a
-// letter in it is an option this build does not have rather than a count.
-func bareCountOption(arg string) (int, bool) {
-	if len(arg) < 2 || arg[0] != '-' {
-		return 0, false
-	}
-	count, err := strconv.Atoi(arg[1:])
-	if err != nil || count < 0 {
-		return 0, false
-	}
-	return count, true
-}
-
-// countArgs reads -n, and for head also -c, which counts bytes rather than
-// lines.
-//
-// -c is what a script reaches for to take the first kilobyte of something, and
-// the two are exclusive by nature: the last one given wins, as it does in
-// busybox, because both write into the same count.
-func countArgs(applet string, args []string, defaultCount int, allowBytes bool) (countSpec, []string, error) {
-	spec := countSpec{count: defaultCount}
-	supported := []string{"-n"}
-	if allowBytes {
-		supported = append(supported, "-c")
-	}
-	for len(args) > 0 {
-		// `-3` is the obsolete form POSIX still lists, and it is what everybody
-		// types. busybox takes it; refusing it made `head -3` an error in a shell
-		// whose whole point is that the muscle memory works.
-		if digits, ok := bareCountOption(args[0]); ok {
-			spec, args = countSpec{count: digits}, args[1:]
-			continue
-		}
-		if args[0] != "-n" && !(allowBytes && args[0] == "-c") {
-			break
-		}
-		flag := args[0]
-		if len(args) < 2 {
-			return countSpec{}, nil, fmt.Errorf("%s: requires a count", flag)
-		}
-		// parseCountSpec rather than Atoi: the sign is part of the request. See
-		// head_tail_offset.go.
-		parsed, parseErr := parseCountSpec(args[1], flag == "-c")
-		if parseErr != nil {
-			return countSpec{}, nil, parseErr
-		}
-		spec, args = parsed, args[2:]
-	}
-	paths, err := streamOperands(applet, args, supported...)
-	if err != nil {
-		return countSpec{}, nil, err
-	}
-	return spec, paths, nil
 }
