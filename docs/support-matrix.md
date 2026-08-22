@@ -466,6 +466,7 @@ behaviour this shell deliberately does not have.
 | `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored | refused by name |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
+| `hd`, `hexdump` | `-b -c -C -d -o -x -v -A -t` | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
@@ -478,6 +479,7 @@ behaviour this shell deliberately does not have.
 | `mv` | `-f`, accepted and already in force | refused by name |
 | `nano` | `-H -R`; one file at a time | refused by name |
 | `nl` | `-b t\|a\|n` | refused by name |
+| `od` | `-b -c -C -d -o -x -v -A -t` | refused by name |
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
@@ -519,6 +521,8 @@ behaviour this shell deliberately does not have.
 | `unexpand` | `-t -a` | refused by name |
 | `unix2dos` | `-d -u`; converts **in place** with a file operand | refused by name |
 | `unzip` | `-l -t -p -j -n -o -q -K -d -x` | refused by name |
+| `uudecode` | `-o`; `-o -` writes to stdout | refused by name |
+| `uuencode` | `[FILE] NAME`; `-m` refused | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
@@ -714,6 +718,32 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### The dump formats, and the uu pair
+
+`od`, `hexdump`, `hd`, `uuencode` and `uudecode`, added 2026-08-23. `xxd` already
+existed, so these shapes were pinned by differential rather than invented: 21 of
+21 measured forms agree with busybox byte for byte, over "hello", an
+84-character line and 300 random bytes.
+
+Three defaults distinguish the three dumpers, which is the whole reason all three
+exist: `od` uses octal offsets and octal words, `hexdump` hex offsets and hex
+words, and `hd` is `hexdump -C` -- hex bytes with an ASCII gutter.
+
+Two details are worth stating:
+
+- **The word forms read each byte pair little-endian.** `he` is `0x68 0x65` and
+  prints as `6568`, not `6865`. It is the most surprising thing about either tool.
+- **`hexdump` pads a short line to eight slots and `od` does not.** Trimming
+  trailing whitespace is the obvious tidy-up and it silently broke `hexdump` while
+  leaving `od` correct.
+
+`uuencode` and `uudecode` carry the pre-base64 wire format. The lone backtick that
+ends the body is a zero-length line spelled with a backtick rather than a space,
+because trailing spaces do not survive mail. **The name in the header came from
+the sender, so `uudecode` checks it with the same containment helper the archivers
+use** -- `begin 644 ../../evil` is the same attack a tar entry would be, and
+`-o -` is how the bytes go to stdout instead of to whatever file the sender chose.
 
 ### The editor: `nano` and `micro`
 
