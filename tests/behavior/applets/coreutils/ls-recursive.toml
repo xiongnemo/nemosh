@@ -1,0 +1,32 @@
+id = "applet.busybox-w32.ls.recursive"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32", "uutils"]
+script = "ls -1 -R\n"
+
+[files]
+"a.txt" = ""
+"sub/n.txt" = ""
+"sub/nested/x.txt" = ""
+
+[expect]
+status = 0
+stdout = """
+.:
+a.txt
+sub
+
+./sub:
+n.txt
+nested
+
+./sub/nested:
+x.txt
+"""
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/ls.c, POSIX ls -R"
+why = "-R descends, heading each directory with its path and a colon and separating the blocks with one blank line. There is no blank line after the last block, and an empty directory contributes a header and nothing else. Measured against busybox-w32 v1.38.0 on 2026-08-22. This case replaces one that pinned -R as refused by name, which it was until that date; that case was pinned while porting uutils tests/by-util/test_ls.rs (MIT, commit e275cd5), whose Windows branch asserts that `ls -1 -R` separates its directory headers with a BACKSLASH, and it deferred the question because -R did not exist here. The answer is a forward slash, for two reasons that agree: busybox-w32 is the primary reference and uses forward slashes even on Windows, and nemosh's canonical paths are slash-separated throughout, so `ls -R .` writing `./sub` matches `find .` writing `./a.txt`. A caller stripping the prefix it passed in finds it there."

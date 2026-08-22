@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -58,109 +56,38 @@ func newLsApplet() Applet {
 	}}
 }
 
-type lsOptions struct {
-	all     bool
-	long    bool
-	human   bool
-	color   colorWhen
-	colored bool
-	// onePerLine is -1 and forceColumns is -C. Neither decides the layout on its own:
-	// the destination does, and these override it. See ls_columns.go.
-	onePerLine   bool
-	forceColumns bool
-	// width is -w, which implies columns because asking how wide they should be is
-	// asking for them.
-	width int
-}
-
-func lsArgs(args []string) (lsOptions, []string, error) {
-	var options lsOptions
-	index := 0
-	for index < len(args) {
-		arg := args[index]
-		if arg == "--" {
-			index++
-			break
-		}
-		if len(arg) <= 1 || arg[0] != '-' {
-			break
-		}
-		// A long option is one word, so it is matched whole rather than letter
-		// by letter -- `--color` used to be read as `-`, `-c`, `-o` and refused
-		// as the bare `-` it started with.
-		if strings.HasPrefix(arg, "--") {
-			name, value, present := strings.Cut(arg[2:], "=")
-			if name != "color" {
-				return lsOptions{}, nil, fmt.Errorf("unsupported ls option: %s", arg)
-			}
-			when, err := parseColorWhen(value, present)
-			if err != nil {
-				return lsOptions{}, nil, err
-			}
-			options.color = when
-			index++
-			continue
-		}
-		// -w takes a number, so it cannot be read letter by letter with the rest.
-		if strings.HasPrefix(arg, "-w") {
-			value := arg[2:]
-			if value == "" {
-				if index+1 >= len(args) {
-					return lsOptions{}, nil, fmt.Errorf("ls: -w requires a width")
-				}
-				index++
-				value = args[index]
-			}
-			parsed, err := strconv.Atoi(value)
-			if err != nil || parsed <= 0 {
-				return lsOptions{}, nil, fmt.Errorf("ls: invalid width: %s", value)
-			}
-			options.width = parsed
-			index++
-			continue
-		}
-		for _, flag := range arg[1:] {
-			switch flag {
-			case 'a':
-				options.all = true
-			case 'l':
-				options.long = true
-			case 'h':
-				options.human = true
-			case '1':
-				// -l wins over -1 whichever order the two are given, which is
-				// what busybox does.
-				options.onePerLine = true
-			case 'C':
-				options.forceColumns = true
-			default:
-				return lsOptions{}, nil, fmt.Errorf("unsupported ls option: -%c", flag)
-			}
-		}
-		index++
-	}
-	return options, args[index:], nil
-}
-
 func listPath(stdout io.Writer, target, display string, options lsOptions) error {
 	info, err := os.Stat(target)
 	if err != nil {
 		return operandFailure(display, err)
 	}
-	if !info.IsDir() {
+	// -d says a directory operand names itself rather than its contents, which
+	// is what makes `ls -d */` a list of directories instead of their entries.
+	if !info.IsDir() || options.directoryItself {
 		return printLsEntry(stdout, lsEntry{name: display, info: info, path: target}, options)
 	}
+	// -R heads every directory it lists, the operand included, which is how the
+	// blocks are told apart once there is more than one.
+	return listDirectory(stdout, target, display, options, options.recursive)
+}
+
+// listDirectory reads one directory and lays it out, descending afterwards when
+// -R asked for it.
+//
+// headed says whether a `path:` header belongs above the entries. Only -R sets
+// it, so a plain `ls dir` is unchanged.
+func listDirectory(stdout io.Writer, target, display string, options lsOptions, headed bool) error {
 	entries, err := os.ReadDir(target)
 	if err != nil {
 		return operandFailure(display, err)
 	}
 	items := make([]lsEntry, 0, len(entries)+2)
-	if options.all {
+	if options.lsShowsDotEntries() {
 		items = append(items, lsDotEntries(target)...)
 	}
 	for _, entry := range entries {
 		name := entry.Name()
-		if !options.all && strings.HasPrefix(name, ".") {
+		if !options.lsShowsHidden() && strings.HasPrefix(name, ".") {
 			continue
 		}
 		info, err := entry.Info()
@@ -169,7 +96,18 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 		}
 		items = append(items, lsEntry{name: name, info: info, path: filepath.Join(target, name)})
 	}
-	return writeLsEntries(stdout, items, options)
+	if headed {
+		if _, err := fmt.Fprintf(stdout, "%s:\n", display); err != nil {
+			return err
+		}
+	}
+	if err := writeLsEntries(stdout, items, options); err != nil {
+		return err
+	}
+	if !options.recursive {
+		return nil
+	}
+	return descendLsDirectories(stdout, display, items, options)
 }
 
 // writeLsEntries lays out a directory's worth of entries.
@@ -178,9 +116,7 @@ func listPath(stdout io.Writer, target, display string, options lsOptions) error
 // code. Two copies of a layout is two layouts eventually, and `ls /dev` looking unlike `ls .` would
 // suggest the entries were a different kind of thing than they are.
 func writeLsEntries(stdout io.Writer, items []lsEntry, options lsOptions) error {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].name < items[j].name
-	})
+	sortLsEntries(items, options)
 	if !options.long {
 		return writeLsNames(stdout, items, options, lsWantsColumns(options, stdout))
 	}
@@ -232,7 +168,7 @@ type lsEntry struct {
 }
 
 func printLsEntry(stdout io.Writer, entry lsEntry, options lsOptions) error {
-	name := paintLsName(entry.name, entry.info, options.colored)
+	name := lsDisplayName(entry, options)
 	if options.long {
 		// The whole line is busybox-w32's layout; see ls_long.go.
 		return writeLongEntry(stdout, entry.path, name, entry.info,

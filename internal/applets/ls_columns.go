@@ -36,7 +36,7 @@ const lsDefaultWidth = 80
 func writeLsNames(stdout io.Writer, entries []lsEntry, options lsOptions, columns bool) error {
 	if !columns {
 		for _, entry := range entries {
-			if _, err := fmt.Fprintln(stdout, paintLsName(entry.name, entry.info, options.colored)); err != nil {
+			if _, err := fmt.Fprintln(stdout, lsDisplayName(entry, options)); err != nil {
 				return err
 			}
 		}
@@ -45,8 +45,8 @@ func writeLsNames(stdout io.Writer, entries []lsEntry, options lsOptions, column
 	items := make([]textgrid.Item, len(entries))
 	for index, entry := range entries {
 		items[index] = textgrid.Item{
-			Text:  paintLsName(entry.name, entry.info, options.colored),
-			Cells: textgrid.Cells(entry.name),
+			Text:  lsDisplayName(entry, options),
+			Cells: textgrid.Cells(lsMeasuredName(entry, options)),
 		}
 	}
 	lines, _ := textgrid.GridOf(items, lsTerminalWidth(stdout, options))

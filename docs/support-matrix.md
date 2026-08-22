@@ -458,7 +458,7 @@ behaviour this shell deliberately does not have.
 | `head` | `-n -c`, and the `-N` form | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
 | `ln` | `-s` | refused by name |
-| `ls` | `-a -h -l -1 -C -w N`, `--color[=always\|never\|auto]` | refused by name |
+| `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f`, accepted and already in force | refused by name |
@@ -579,7 +579,10 @@ than a divergence from it.
 The list used to be `xargs -0`, `xargs -n`, `sort -k`, `grep -r` and `tail -c`.
 All five are implemented, measured against GNU. What is still absent:
 
-- **`ls -l` beyond the basic long form** -- no `-R`, `-t`, `-S`, `-r`.
+- **`ls -i -n -u -c`.** `-i` wants an inode number Windows does not keep, `-n` a
+  numeric owner this build does not resolve, and `-u`/`-c` the access and change
+  times, which NTFS records but which no sort here reads yet. `-t -S -r -R -d -F
+  -A` landed on 2026-08-22, so `ls -ltr` works.
 - **`tail -f`.** Following a file needs a polling loop and a decision about what
   to do when it is truncated or replaced under you, and an implementation that
   silently stops following is worse than one that says it cannot.
@@ -682,3 +685,43 @@ comparisons agree either way, which is most real use.
 seconds.** Measured 2026-08-22: files created within one second of each other
 are all "not newer" under busybox, while nemosh orders them. Given a file
 clearly older, the two agree exactly. GNU find also compares at full precision.
+
+### `ls`
+
+Beyond the long form and the layout options, `ls` sorts and descends: `-t` by
+time, `-S` by size, `-r` reversing whichever key is in force, `-R` descending,
+`-d` naming a directory instead of listing it, `-F` marking what each entry is,
+and `-A` for the hidden entries without `.` and `..`. All seven were refused by
+name until 2026-08-22, which meant `ls -ltr` — about as well-worn a command as
+there is — failed on its options.
+
+Three rules are worth stating because they are not guessable, and all three were
+measured against busybox-w32 rather than chosen:
+
+- **The last sort option wins.** `ls -S -t` orders by time and `ls -t -S` by
+  size. GNU documents this; busybox does it.
+- **`-a` beats `-A` in either order.** `ls -A -a` and `ls -a -A` both list `.`
+  and `..`. GNU instead lets whichever came last win, so this follows busybox.
+- **The name is the tie-break for every key**, and `-r` reverses the tie-break
+  along with the key. Without that, two files of the same size in the same second
+  could come out in either order and a diff between two listings of an unchanged
+  directory would mean nothing.
+
+`-R` heads each directory with its path and a colon, separates blocks with one
+blank line, writes no blank line after the last block, and gives an empty
+directory a header and nothing else. The header path is built from the operand
+**as spelled**, so `ls -R .` says `./sub`, matching `find .` writing `./a.txt`;
+`.` and `..` are listed under `-a` but never descended into. The separator is a
+forward slash even on Windows, which is busybox's answer and also nemosh's
+canonical path form — uutils' Windows tests assert a backslash there, and that
+divergence is deliberate.
+
+`-F` marks a directory `/`, a symlink `@`, and an executable `*`. Windows has no
+execute bit, so the executable test is the same suffix list the shell uses for
+command lookup. The indicator sits outside the colour escapes, where busybox puts
+it, so a filter stripping the colour does not keep a stray marker.
+
+`ls -d -l` on a directory prints exactly the line a directory listing prints for
+it, including the same two pre-existing Windows differences from busybox: the
+mode reads `drwxrwxrwx` where busybox says `drwxrwxr-x`, and the link count is 1.
+Neither is `-d`'s doing.
