@@ -36,10 +36,22 @@ func TestEditor_dashHNeedsNoTerminal(t *testing.T) {
 				}
 			}
 			// And what is absent is named, because an editor that silently lacks
-			// undo is worse than one that says so.
-			for _, absence := range []string{"No syntax highlighting", "No multiple buffers", "No mouse"} {
+			// undo is worse than one that says so. Syntax highlighting left this list
+			// when it was implemented and soft wrap joined it -- highlighting needs
+			// one screen row to be one buffer line, so wrapping had to go.
+			for _, absence := range []string{"No multiple buffers", "No mouse", "No soft wrap"} {
 				if !strings.Contains(written, absence) {
 					t.Errorf("-H does not admit %q", absence)
+				}
+			}
+			// And the languages it does highlight, generated from the tables so the
+			// list cannot claim one that has no rules.
+			if !strings.Contains(written, "Syntax highlighting for") {
+				t.Errorf("-H does not say which languages it highlights: %q", written)
+			}
+			for _, language := range []string{"go", "haskell", "prolog", "python", "c++"} {
+				if !strings.Contains(written, language) {
+					t.Errorf("-H does not mention %s", language)
 				}
 			}
 			// Nothing on stderr: -H succeeded, so there is nothing to report.

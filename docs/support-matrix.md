@@ -876,9 +876,69 @@ something `nano` and then binding `^S` to save would be a name that lies.
 **`-H` lists exactly what is implemented, and what is not**, in the manner of
 `busybox vi -H`. The list is generated from the binding table, so it cannot claim
 a key the editor does not bind -- a test walks both to check. It also names the
-absences (no syntax highlighting, no multiple buffers, no replace, no mouse, no
-configuration file), because an editor that silently lacks replace is worse than
-one that says so.
+absences (no multiple buffers, no replace, no mouse, no configuration file, no soft
+wrap), because an editor that silently lacks replace is worse than one that says so,
+and it names the languages it highlights for the same reason.
+
+### Syntax highlighting, and why it is written here
+
+Added 2026-08-24 for eleven languages: **Go, C, C++, Python, shell, Haskell, Prolog,
+JSON, YAML, TOML and Markdown**. `nano -H` lists them, generated from the tables so the
+list cannot claim a language with no rules.
+
+**The alternative was measured before it was rejected.** micro's `pkg/highlight` is
+importable -- three files, MIT, and no tcell at all, which corrects what the editor's
+own plan assumed -- and inside this binary it costs 283 KiB plus a 44 KiB YAML corpus.
+The 14 MiB ceiling has room for that. What settled it was the *other* ceiling:
+`gopkg.in/yaml.v2` does **262 allocations in its own package init**, which would take
+the total from 2275 to 2545 against a limit of 2750 and leave 205 for everything after.
+
+Generating Go tables from micro's YAML at build time, keeping its rules and dropping
+its parser, is not possible: `Def.rules` and the `rules`, `region` and `pattern` types
+are all unexported, so a `Def` can only be built by `ParseDef`, which needs the YAML.
+
+Measured after: **114 KiB and no init allocations at all** -- 2275, unchanged, because
+the tables compile behind a `sync.Once` on first use. A third of A's size for none of
+its startup cost.
+
+**Wrapping is off, and that is a requirement rather than a preference.** tview's
+TextArea has one `SetTextStyle` for all of its text and no per-run styling, so
+highlighting happens *after* `Draw` by re-colouring cells -- which needs a screen-cell
+to buffer-line map. With wrapping off, `line = rowOffset + row`. With it on, a screen
+row is a *display* row and tview's line-start table is unexported, so there is no
+mapping at all. The feasibility test that guards this includes the negative control.
+micro does not wrap either.
+
+Two things that would fail silently and so are asserted on a drawn frame:
+
+- **The advance is `uniseg`'s**, the same package and rule tview uses: cluster width
+  from `boundaries >> ShiftWidth`, except a tab, which is a flat `TabSize` and *not* an
+  alignment to the next stop. Anything else and the colours slip a column on every
+  indented line, or on every line after a CJK character -- which on this platform is a
+  common line. uniseg was already linked, so using it directly cost a line in `go.mod`
+  and no bytes.
+- **A cell the widget styled differently is left alone**, read back with `Get`. That is
+  how the selection and the cursor stay visible without this code knowing either
+  exists.
+
+Two engine decisions worth knowing. A **line comment is a pattern, not a region**: as a
+region ending at `^$` it never closed, because the scan stops at the end of the line
+before an empty match can happen, so the comment carried into every following line.
+Measured before the tables were written. And **regions nest where the language says
+so** -- Haskell's `{- {- -} -}` is one comment and C's `/* /* */` is not.
+
+The two languages with a trap, both of which had a sample file written before their
+rules. Haskell's character literal is a bounded pattern rather than a region, because a
+prime is a legal identifier character and `f x' = x'` would otherwise open a string and
+swallow the file; `{-#` is a pragma and not a comment. Prolog's `0'a` is the integer for
+`a`, and the quote in it is not a delimiter -- it works because the scan is left to
+right and the number rule matches at the `0`, one character before a quoted-atom region
+could start.
+
+**Go's regexp is RE2 and has no lookahead**, which the YAML and TOML key rules found by
+panicking at `MustCompile`. They match the delimiter too, which reads fine; the
+imperfection that leaves is that in `msg: hello: world` the second `hello:` also matches,
+and telling them apart needs a parser rather than a rule.
 
 **Writing it here was not a compromise.** micro's editing core lives entirely
 under `internal/`, which Go forbids importing across modules -- only

@@ -21,10 +21,12 @@ type editorView struct {
 	keys        editorKeyMap
 	application *tview.Application
 	layout      *tview.Flex
-	area        *tview.TextArea
-	title       *tview.TextView
-	message     *tview.TextView
-	legend      *tview.TextView
+	// area is a TextArea that colours itself. The type embeds tview's, so every call
+	// through it is unchanged; what it adds is a Draw that re-colours what tview drew.
+	area    *highlightedArea
+	title   *tview.TextView
+	message *tview.TextView
+	legend  *tview.TextView
 	// cut holds the last line taken by the cut key, so paste can put it back.
 	cut string
 	// modified is tracked here rather than read from the area, because "has this
@@ -37,10 +39,17 @@ type editorView struct {
 
 func newEditorView(session *editorSession, keys editorKeyMap, application *tview.Application) *editorView {
 	view := &editorView{session: session, keys: keys, application: application}
-	view.area = tview.NewTextArea()
+	// The language comes from the file name, and a name that matches nothing gets no
+	// highlighting rather than a guess -- `notes.txt` should look like text.
+	view.area = newHighlightedArea(highlightSyntaxFor(session.path))
 	view.area.SetText(session.text, false)
+	// Lexed once for the file as opened, and again on every change. Not on scroll:
+	// scrolling cannot change what a line means, and re-lexing on it would make
+	// paging through a large file cost a full pass per keystroke.
+	view.area.relex()
 	view.area.SetChangedFunc(func() {
 		view.modified = true
+		view.area.relex()
 		view.refreshTitle()
 	})
 	view.title = tview.NewTextView().SetDynamicColors(true)

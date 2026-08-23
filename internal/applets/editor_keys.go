@@ -144,11 +144,21 @@ func (m editorKeyMap) writeFeatures(stdout io.Writer) error {
 	// worse than one that says it lacks it. tview's TextArea does provide undo,
 	// which is why it is not on this list.
 	absent := []string{
-		"No syntax highlighting",
 		"No multiple buffers",
 		"No replace; search only",
 		"No mouse",
 		"No configuration file",
+		// Long lines scroll sideways instead. Not a preference: highlighting needs one
+		// screen row to be one buffer line, because tview's line-start table for a
+		// wrapped row is unexported and there is no other way to know which line a row
+		// is showing. micro does the same.
+		"No soft wrap; long lines scroll",
+	}
+	// And what is present, since it is new and a reader has no other way to find out
+	// which languages have rules.
+	if _, err := fmt.Fprintf(stdout, "\tSyntax highlighting for %s\n",
+		strings.Join(highlightLanguageNames(), ", ")); err != nil {
+		return err
 	}
 	for _, line := range absent {
 		if _, err := fmt.Fprintf(stdout, "\t%s\n", line); err != nil {

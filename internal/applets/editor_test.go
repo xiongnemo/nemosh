@@ -349,8 +349,10 @@ func TestEditor_featureListMatchesTheBindings(t *testing.T) {
 			}
 		}
 		// And it says what is absent, because an editor that silently lacks
-		// replace is worse than one that says it lacks it.
-		for _, absent := range []string{"No syntax highlighting", "No multiple buffers", "No replace"} {
+		// replace is worse than one that says it lacks it. Highlighting was on this
+		// list until it was implemented; soft wrap replaced it, because highlighting
+		// needs one screen row to be one buffer line.
+		for _, absent := range []string{"No multiple buffers", "No replace", "No soft wrap"} {
 			if !strings.Contains(text, absent) {
 				t.Fatalf("%s -H does not admit %q", name, absent)
 			}

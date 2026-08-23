@@ -2,6 +2,7 @@ package applets
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -148,4 +149,16 @@ func highlightSyntaxFor(name string) *highlightSyntax {
 		}
 	}
 	return best
+}
+
+// highlightLanguageNames is the list `-H` prints, generated from the tables so it
+// cannot claim a language that has no rules -- the same property the key list has.
+func highlightLanguageNames() []string {
+	syntaxes := highlightSyntaxList()
+	names := make([]string, 0, len(syntaxes))
+	for _, syntax := range syntaxes {
+		names = append(names, syntax.name)
+	}
+	sort.Strings(names)
+	return names
 }
