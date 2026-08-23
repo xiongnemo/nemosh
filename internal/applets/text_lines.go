@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -109,16 +110,22 @@ func newNlApplet() Applet {
 		}
 		number := 0
 		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
-			return eachLine(reader, func(line, ending string) error {
+			// A newline rather than the ending the input had, which is the one
+			// place here that deliberately does *not* preserve it. nl produces a
+			// new document -- every line gains a number and a tab -- rather than
+			// reproducing the input, so normalising its own output is reasonable,
+			// and it is what busybox does: measured, `nl` on a CRLF file answers LF
+			// and on a file with no final newline adds one.
+			return eachLine(reader, func(line, _ string) error {
 				if style == "n" || (style != "a" && strings.TrimSpace(line) == "") {
 					// A skipped line gets the number field's width in blanks plus
 					// its tab, so the text still starts in one column. Measured
 					// from GNU: `printf 'a\nb\n' | nl -bn` writes seven spaces.
-					_, err := io.WriteString(stdout, "       "+line+ending)
+					_, err := io.WriteString(stdout, "       "+line+"\n")
 					return err
 				}
 				number++
-				_, err := fmt.Fprintf(stdout, "%6d\t%s%s", number, line, ending)
+				_, err := fmt.Fprintf(stdout, "%6d\t%s\n", number, line)
 				return err
 			})
 		})
@@ -143,31 +150,72 @@ func readLinesWithEnding(reader io.Reader) ([]string, bool, error) {
 	return strings.Split(text, "\n"), finalNewline, nil
 }
 
-// eachLine calls back once per line with the line and the newline that followed
-// it, so a file with no trailing newline round-trips unchanged.
+// eachLine calls back once per line with the line and the ending that followed
+// it, so a file round-trips unchanged.
+//
+// That promise is the whole point of handing the ending out separately, and for a
+// long time it was not kept. The scanner used bufio.ScanLines, which throws the
+// terminator away, so this reported `"\n"` for every line -- including a final
+// line that had none, and including a CRLF line whose `\r` ScanLines had already
+// eaten. The old comment here said the final line's ending "is not knowable from
+// Scanner", and that was the mistake: it is knowable, by keeping the terminator in
+// the token, which is what scanLineWithEnding does.
+//
+// Both halves were measured wrong against busybox *and* GNU on a three-byte file
+// with no final newline and on a CRLF file:
+//
+//	rev head tail fold expand unexpand  --  added a newline, and turned CRLF into LF
+//
+// The second half matters more on this platform than the first. A Windows-first
+// shell that rewrites every CRLF file it filters is corrupting the common case:
+// `head build.log > first.txt` should not change the line endings of the copy.
+//
+// `line` is unchanged by the fix, only `ending` -- for CRLF the line was already
+// `\r`-free, and for an unterminated final line it was already the bare text. So
+// the callers that discard the ending (nl, shuf, tsort, strings, join, diff) are
+// untouched, and they were the ones already agreeing with busybox.
 func eachLine(reader io.Reader, handle func(line, ending string) error) error {
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
-	first := true
-	var pending string
+	scanner.Split(scanLineWithEnding)
 	for scanner.Scan() {
-		if !first {
-			if err := handle(pending, "\n"); err != nil {
-				return err
-			}
+		line, ending := splitLineEnding(scanner.Text())
+		if err := handle(line, ending); err != nil {
+			return err
 		}
-		pending, first = scanner.Text(), false
 	}
-	if err := scanner.Err(); err != nil {
-		return err
+	return scanner.Err()
+}
+
+// scanLineWithEnding is bufio.ScanLines except that the token keeps its
+// terminator. Keeping it is the only way the *last* line's ending is knowable,
+// because at end of input there is nothing left to ask.
+func scanLineWithEnding(data []byte, atEOF bool) (int, []byte, error) {
+	if index := bytes.IndexByte(data, '\n'); index >= 0 {
+		return index + 1, data[:index+1], nil
 	}
-	if first {
-		return nil
+	if atEOF && len(data) > 0 {
+		// The final line, unterminated. Handing it back with no ending is what
+		// lets a caller reproduce the file exactly.
+		return len(data), data, nil
 	}
-	// The final line's ending is not knowable from Scanner, so it is asked of
-	// the raw bytes by the caller that cares. Everything here treats the stream
-	// as newline-terminated, which is what a text filter's output should be.
-	return handle(pending, "\n")
+	return 0, nil, nil
+}
+
+// splitLineEnding separates a line from the terminator scanLineWithEnding kept.
+//
+// A lone `\r` is *not* an ending: classic Mac OS used one and nothing has for
+// twenty years, while a bare `\r` inside a line is a real character -- a progress
+// bar written into a log, for instance -- and eating it would lose data.
+func splitLineEnding(token string) (line, ending string) {
+	switch {
+	case strings.HasSuffix(token, "\r\n"):
+		return token[:len(token)-2], "\r\n"
+	case strings.HasSuffix(token, "\n"):
+		return token[:len(token)-1], "\n"
+	default:
+		return token, ""
+	}
 }
 
 // maxTextLine is generous rather than unlimited: a line longer than this is more

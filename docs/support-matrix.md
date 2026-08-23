@@ -566,6 +566,70 @@ Three of these diverge from GNU on purpose, and say so where it matters:
   ordinary session may not do for anything it does not own. A column of `?` per
   row would be worse than no column.
 
+### Line endings, and which applets keep them
+
+Settled on 2026-08-23, after seven applets were found wrong at once. Every
+expectation below was measured against busybox **and** GNU, which agree with each
+other.
+
+**The rule is per applet and it has two halves.** An applet whose output is a *copy*
+of its input keeps the endings it was given; one whose output is a *new document*
+normalises to LF and terminates the last line.
+
+| Keeps the input's endings | Normalises to LF |
+| --- | --- |
+| `cat` `rev` `head` `tail` `fold` `expand` `unexpand` | `nl` `sort` `uniq` `cut` `grep` |
+
+`tac` is in neither column because it reorders: an unterminated final line becomes
+the *first* output line and the terminator lands at the end, so `a\nb` answers
+`ba\n`. The endings stay where the endings were rather than travelling with their
+lines. Odd, and what busybox does.
+
+**What was wrong.** `sed`, `rev`, `head`, `tail`, `fold`, `expand` and `unexpand`
+added a newline to a file whose last line had none, and six of them turned every
+CRLF into LF. The root cause was one shared helper: `eachLine` used
+`bufio.ScanLines`, which throws the terminator away, so it reported `"\n"` for every
+line -- including a final line that had none and a CRLF line whose `\r` had already
+been eaten. Its own comment claimed "the final line's ending is not knowable from
+Scanner", and that was the mistake: it is knowable, by keeping the terminator in the
+token.
+
+**The second half mattered more on this platform than the first.** A Windows-first
+shell that rewrites every CRLF file it filters is corrupting the common case --
+`head build.log > first.txt` should not change the line endings of the copy.
+
+**Nothing caught it because no fixture in the suite lacked a trailing newline.**
+There is now one property test over every line-oriented applet and all three ending
+shapes. Its fixtures are written as bytes from Go rather than by a shell, and that
+is not fussiness: Git Bash turns `printf 'a\nb' > f` into `a\r\nb`, and measuring
+against that fixture produced two wrong conclusions before it was noticed.
+
+**`sed`'s rule is not per line**, which is why it has its own writer. The newline is
+omitted only on the very last thing written:
+
+```console
+$ printf 'a\nb' | sed p
+a
+a
+b
+b      <- no newline here, but the duplicate b above has one
+```
+
+The same line is written twice with two different endings, so what distinguishes
+them is only that one is last. The terminator therefore belongs to the *write* and
+carries which input line produced it -- `sed 2d` on `a\nb` deletes the second line,
+so the last output came from the first, which *was* terminated, and both references
+answer `a\n`.
+
+One case where the references disagree: on `a\nb`, `sed 2q` gives `a\nb` from busybox
+and `a\nb\n` from GNU. **busybox is followed** -- it is the primary reference, and
+adding a byte to a file that did not have one is the behaviour this change removes.
+
+And one measured behaviour that is *not* a defect, recorded because it surprises:
+**`sed -i` on a CRLF file rewrites it as LF**, six bytes to four. GNU and busybox do
+exactly the same. So `sed -i 's/x/y/' notes.txt` changes every line ending in the
+file even when nothing matched.
+
 ### Text Encodings
 
 Measured against busybox-w32 on the same files, because "supports Unicode" is not
@@ -607,7 +671,12 @@ Still outstanding, and both for the same reason -- they would have to choose an
 output encoding for a file they rewrite, which needs deciding rather than
 defaulting:
 
-- `sed` over a UTF-16 file matches nothing, so it copies the file through.
+- `sed` over a UTF-16 file matches nothing, so it copies the file through. **That
+  sentence was false until 2026-08-23**: it copied the file through and appended a
+  byte, because a UTF-16 file's last byte is a NUL rather than a newline and every
+  line-oriented filter here terminated its output unconditionally. `sed -i` wrote
+  that byte to the file. A 24-byte file came back as 25. It now round-trips
+  byte-identical, and a test asserts it.
 - `wc -m` counts bytes for UTF-16, because `wc -c` in the same run must count the
   file's real size and one pass cannot honestly do both.
 
@@ -628,10 +697,10 @@ All five are implemented, measured against GNU. What is still absent:
   silently stops following is worse than one that says it cannot.
 - **`xargs -P`.** Running batches in parallel needs a scheduler this does not
   have, and pretending to accept it would serialise silently.
-- **`sed -i`, `-f`, and the `a i c y` commands and hold space.** Addresses,
-  `-n`, `p`, `d`, `q` and `-E` landed on 2026-08-22; `-i` still has to choose an
-  *output* encoding for the file it rewrites, which is the same decision already
-  deferred for sed's UTF-16 reading.
+- **Nothing of `sed`.** This bullet listed `-i`, `-f`, `a i c y` and the hold space
+  as absent and was simply stale: all of them landed on 2026-08-22 along with `{}`
+  blocks, the multiline commands and branching. Measured against the built binary
+  rather than trusted.
 - **`find -exec` and `-delete`.** The operators, `-size`, `-mtime`, `-newer`,
   `-empty`, `-maxdepth` and `-print0` landed on 2026-08-22; these two did not,
   because one needs the execution model and quoting rules and the other needs a
@@ -654,9 +723,9 @@ Two deliberate near-misses worth naming:
   character is a byte, and under `LC_ALL=C.UTF-8` GNU says 18 too. Runes are what
   everything else here measures in.
 
-Filling in the rest is v1.1; see
-`docs/design/v1-scope.md` and the per-applet tables in
-`docs/testing/applet-test-inventory.md`.
+v1.1 shipped on 2026-08-22 and the applet work after it closed the archive,
+compression, text and networking groups; see `docs/design/v1-scope.md` and the
+per-applet tables in `docs/testing/applet-test-inventory.md` for what is left.
 
 ### `find`
 

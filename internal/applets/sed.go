@@ -85,22 +85,36 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 // The pattern space is one line: there is no N, D or hold space here, so each
 // line is read, transformed, and either printed or not.
 func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
+	// The writer holds each newline back until it knows something follows, so the
+	// last one can be withheld if the input's last line had none. See sed_output.go
+	// for why the rule cannot be per line.
+	output := newSedOutput(stdout)
+	// Settled once, on every way out of the loop -- including `q`, which returns
+	// from the middle. An error path leaves it unsettled on purpose: half a line
+	// plus a newline is no better than half a line.
+	finish := func(err error) error {
+		if err != nil {
+			return err
+		}
+		return output.close()
+	}
 	number := 0
 	hold := ""
 	for {
-		line, _, ok, err := stream.Next()
+		line, ended, ok, err := stream.Next()
 		if err != nil {
 			return err
 		}
 		if !ok {
-			return nil
+			return finish(nil)
 		}
 		number++
 		cycle := &sedCycle{
 			line:   line,
+			ended:  ended,
 			number: number,
 			isLast: stream.AtLast(),
-			stdout: stdout,
+			output: output,
 			quiet:  p.quiet,
 			hold:   hold,
 			stream: stream,
@@ -117,7 +131,7 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 		// `d` and `q` both skip it: `d` discarded the line, and `q` already wrote
 		// it on the way out.
 		if control == sedNext && !p.quiet {
-			if _, err := fmt.Fprintln(stdout, cycle.line); err != nil {
+			if err := output.writeLine(cycle.line, cycle.ended); err != nil {
 				return err
 			}
 		}
@@ -128,7 +142,7 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 			return err
 		}
 		if control == sedQuit {
-			return nil
+			return finish(nil)
 		}
 	}
 }

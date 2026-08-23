@@ -28,8 +28,12 @@ func newExpandApplet() Applet {
 			return err
 		}
 		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
-			return eachLine(reader, func(line, _ string) error {
-				_, err := fmt.Fprintln(stdout, expandTabs(line, stop, options.has('i')))
+			// The ending is written back rather than replaced by a newline:
+			// expand changes tabs to spaces and nothing else, so a CRLF file stays
+			// CRLF and a file with no final newline stays that way. Measured
+			// against busybox and GNU, which both preserve both.
+			return eachLine(reader, func(line, ending string) error {
+				_, err := io.WriteString(stdout, expandTabs(line, stop, options.has('i'))+ending)
 				return err
 			})
 		})
@@ -80,8 +84,9 @@ func newUnexpandApplet() Applet {
 			return err
 		}
 		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
-			return eachLine(reader, func(line, _ string) error {
-				_, err := fmt.Fprintln(stdout, unexpandTabs(line, stop, options.has('a')))
+			// The ending preserved, for the same reason as expand above.
+			return eachLine(reader, func(line, ending string) error {
+				_, err := io.WriteString(stdout, unexpandTabs(line, stop, options.has('a'))+ending)
 				return err
 			})
 		})

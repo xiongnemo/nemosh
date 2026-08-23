@@ -93,9 +93,20 @@ func newFoldApplet() Applet {
 			width = parsed
 		}
 		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
-			return eachLine(reader, func(line, _ string) error {
-				for _, piece := range foldLine(line, width, options.has('s')) {
-					if _, err := fmt.Fprintln(stdout, piece); err != nil {
+			// The breaks fold *inserts* are newlines; the ending the input had goes
+			// on the last piece only. Measured against busybox, which is the only
+			// way to know: folding a CRLF line at width three answers three pieces,
+			// the first two ended by a bare newline and the last keeping the CRLF --
+			// so the file keeps its endings at the real ends of lines and gets plain
+			// newlines only where a line was cut.
+			return eachLine(reader, func(line, ending string) error {
+				pieces := foldLine(line, width, options.has('s'))
+				for index, piece := range pieces {
+					terminator := "\n"
+					if index == len(pieces)-1 {
+						terminator = ending
+					}
+					if _, err := io.WriteString(stdout, piece+terminator); err != nil {
 						return err
 					}
 				}

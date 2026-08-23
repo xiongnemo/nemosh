@@ -2,7 +2,6 @@ package applets
 
 import (
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -35,8 +34,11 @@ const (
 type sedCycle struct {
 	line   string
 	number int
+	// ended is whether this cycle's input line was terminated. It rides along so
+	// every write can say which line it came from; see sed_output.go.
+	ended  bool
 	isLast bool
-	stdout io.Writer
+	output *sedOutput
 	quiet  bool
 	// printed records whether anything was written for this line, so `q` can
 	// avoid printing the pattern space twice.
@@ -59,7 +61,12 @@ type sedCycle struct {
 // they did -- `N` consuming a line without counting it would make `$` name the
 // wrong one.
 func (c *sedCycle) readNext() (string, bool, error) {
-	line, _, ok, err := c.stream.Next()
+	line, ended, ok, err := c.stream.Next()
+	if ok {
+		// n and N replace the pattern space with a later line, so the cycle's answer
+		// to "was my source terminated" has to move with it.
+		c.ended = ended
+	}
 	if err != nil || !ok {
 		return "", false, err
 	}
@@ -122,7 +129,7 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 }
 
 func (c *sedCycle) write(text string) error {
-	if _, err := fmt.Fprintln(c.stdout, text); err != nil {
+	if err := c.output.writeLine(text, c.ended); err != nil {
 		return err
 	}
 	c.printed = true

@@ -28,26 +28,37 @@ type sedStream struct {
 	head    string
 	hasHead bool
 	primed  bool
+	// headEnded is whether the buffered head line had a terminator. It travels out
+	// with the line, because the stream reads one ahead -- so asking the stream
+	// after the fact answers about the *lookahead* and not about the line just
+	// emitted.
+	headEnded bool
 	// onOpenError is how an unreadable operand is reported. busybox warns and
 	// carries on with status 1 (editors/sed.c:1061), so the stream keeps going.
 	onOpenError func(error)
 }
 
-func (s *sedStream) Next() (string, int, bool, error) {
+// Next answers the line, whether that line was terminated in the input, and
+// whether there was a line at all.
+//
+// The ending comes out *with* the line rather than being asked for afterwards: the
+// stream reads one ahead so that the `$` address can be answered, so by the time a
+// caller could ask, the buffered ending belongs to the next line.
+func (s *sedStream) Next() (string, bool, bool, error) {
 	if !s.primed {
 		if err := s.fill(); err != nil {
-			return "", 0, false, err
+			return "", false, false, err
 		}
 		s.primed = true
 	}
 	if !s.hasHead {
-		return "", 0, false, nil
+		return "", false, false, nil
 	}
-	line := s.head
+	line, ended := s.head, s.headEnded
 	if err := s.fill(); err != nil {
-		return "", 0, false, err
+		return "", false, false, err
 	}
-	return line, 0, true, nil
+	return line, ended, true, nil
 }
 
 // fill reads the next line into head, crossing into the following input when the
@@ -56,7 +67,13 @@ func (s *sedStream) fill() error {
 	for {
 		if s.scanner != nil {
 			if s.scanner.Scan() {
-				s.head, s.hasHead = s.scanner.Text(), true
+				// The token keeps its terminator, so the line is split off it here
+				// and the terminator remembered. sed follows busybox in dropping a
+				// carriage return -- measured, both turn a CRLF file into LF -- so
+				// only
+				// whether there *was* an ending is kept, not which one.
+				line, ending := splitLineEnding(s.scanner.Text())
+				s.head, s.hasHead, s.headEnded = line, true, ending != ""
 				return nil
 			}
 			if err := s.scanner.Err(); err != nil {
@@ -81,6 +98,9 @@ func (s *sedStream) fill() error {
 		s.current = input
 		s.scanner = bufio.NewScanner(input)
 		s.scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+		// The terminator stays in the token, so fill can tell an unterminated final
+		// line from a terminated one -- which is what sed's last newline turns on.
+		s.scanner.Split(scanLineWithEnding)
 	}
 }
 

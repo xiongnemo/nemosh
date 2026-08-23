@@ -102,10 +102,23 @@ func copyHeadOf(stdout io.Writer, input io.Reader, spec countSpec) error {
 	return err
 }
 
+// copyHead writes the first count lines, each with the ending it arrived with.
+//
+// Fprintln here wrote a newline whatever the input had, so `head` added one to a
+// file whose last line lacked it and turned every CRLF into LF. Both were measured
+// against busybox and GNU, which preserve both; the second matters more on this
+// platform, because `head build.log > first.txt` changing the line endings of the
+// copy is a Windows-first shell corrupting the common case.
+//
+// scanLineWithEnding is eachLine's splitter, reused rather than reinvented -- head
+// cannot use eachLine itself because it stops after count lines and eachLine reads
+// to the end.
 func copyHead(stdout io.Writer, input io.Reader, count int) error {
 	scanner := bufio.NewScanner(input)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	scanner.Split(scanLineWithEnding)
 	for i := 0; i < count && scanner.Scan(); i++ {
-		if _, err := fmt.Fprintln(stdout, scanner.Text()); err != nil {
+		if _, err := io.WriteString(stdout, scanner.Text()); err != nil {
 			return err
 		}
 	}
@@ -151,8 +164,14 @@ func copyTailOf(stdout io.Writer, input io.Reader, spec countSpec) error {
 	return err
 }
 
+// copyTail writes the last count lines, each with the ending it arrived with. See
+// copyHead for why the ending is kept rather than replaced.
 func copyTail(stdout io.Writer, input io.Reader, count int) error {
 	scanner := bufio.NewScanner(input)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	scanner.Split(scanLineWithEnding)
+	// The tokens keep their endings, so this holds whole lines rather than lines
+	// plus an assumption about how they ended.
 	lines := make([]string, 0, count)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
@@ -164,7 +183,7 @@ func copyTail(stdout io.Writer, input io.Reader, count int) error {
 		return err
 	}
 	for _, line := range lines {
-		if _, err := fmt.Fprintln(stdout, line); err != nil {
+		if _, err := io.WriteString(stdout, line); err != nil {
 			return err
 		}
 	}
