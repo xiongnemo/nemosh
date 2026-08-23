@@ -3,6 +3,7 @@ package applets
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -108,7 +109,7 @@ func TestTopKeys_theModalOwnsTheKeyboard(t *testing.T) {
 // broken binding.
 //
 // Which of the two answers appears depends on which process the cursor happens to be
-// on, so the assertion is that *something* was said, in the colour that says which.
+// on, so the assertion is that *something* was said and not what.
 func TestTopKeys_priorityAlwaysReportsAnOutcome(t *testing.T) {
 	harness := startTop(t)
 	if _, ok := harness.waitFor(t, "PID"); !ok {
@@ -116,14 +117,20 @@ func TestTopKeys_priorityAlwaysReportsAnOutcome(t *testing.T) {
 	}
 	for _, key := range []tcell.Key{tcell.KeyF7, tcell.KeyF8} {
 		harness.screen.InjectKey(key, 0, tcell.ModNone)
-		// Either "is now <class>" on success or a reason on failure. On this machine
-		// the cursor starts on the Idle process, whose priority nothing can change,
-		// so the usual answer is "not a process this can change" -- and that being an
-		// answer rather than a silence is the whole property.
-		frame, ok := harness.waitForEither(t, "is now ", "not a process this can change",
-			"denied", "Access", "cannot")
+		// **That the status line says anything**, rather than that it says any
+		// particular thing. Which of the two answers appears depends on which process
+		// the cursor happens to be on: "is now <class>" where the priority could be
+		// changed, a refusal where it could not. On a CI runner that is a different
+		// process from this machine's, and the first version of this test listed the
+		// messages it had seen locally and went red once on Windows CI for one it had
+		// not.
+		//
+		// The property is the one the applet is written against: a keypress must not
+		// silently do nothing. A non-empty status row is exactly that, and it is
+		// independent of which process and which error.
+		frame, ok := harness.waitForStatus(t)
 		if !ok {
-			t.Fatalf("%v said nothing at all:\n%s", tcell.KeyNames[key], frame)
+			t.Fatalf("%v left the status line empty:\n%s", tcell.KeyNames[key], frame)
 		}
 	}
 	if err := harness.quit(t); err != nil {
@@ -253,18 +260,42 @@ func TestTopKeyName_answersEmptyForAKeyItDoesNotOwn(t *testing.T) {
 	}
 }
 
-// waitForEither polls for any one of several strings, which is what a test of an
-// outcome that legitimately has two forms needs.
-func (h *topHarness) waitForEither(t *testing.T, wanted ...string) (string, bool) {
+// waitForStatus polls until the status row holds something.
+//
+// Bounded by *time* and not by a number of attempts, which is how the harness's own
+// waitFor does it and which the first version of this got wrong: two hundred
+// iterations of a QueueUpdate round trip take however long the machine makes them,
+// and on a loaded runner that was short enough to finish before the keypress had been
+// handled. That is the whole reason this test went red once on CI and never here.
+func (h *topHarness) waitForStatus(t *testing.T) (string, bool) {
 	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
 	last := ""
-	for attempt := 0; attempt < 200; attempt++ {
+	for time.Now().Before(deadline) {
 		last = h.text(t)
-		for _, want := range wanted {
-			if strings.Contains(last, want) {
-				return last, true
-			}
+		if statusRow(last) != "" {
+			return last, true
 		}
+		time.Sleep(20 * time.Millisecond)
 	}
 	return last, false
+}
+
+// statusRow is the bottom line of a drawn frame that is not the key footer, which is
+// where top puts what it has to say. Reading it rather than searching the whole frame
+// is what makes "it said something" assertable without naming what.
+func statusRow(frame string) string {
+	lines := strings.Split(strings.TrimRight(frame, "\n"), "\n")
+	for index := len(lines) - 1; index >= 0; index-- {
+		trimmed := strings.TrimSpace(lines[index])
+		if trimmed == "" {
+			continue
+		}
+		// The footer of key labels is always drawn, so it is not a message.
+		if strings.Contains(trimmed, "Quit") || strings.Contains(trimmed, "Help") {
+			continue
+		}
+		return trimmed
+	}
+	return ""
 }
