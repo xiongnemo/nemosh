@@ -18,7 +18,6 @@ func testSyntax() *highlightSyntax {
 	return &highlightSyntax{
 		name: "fixture",
 		regions: []highlightRegion{
-			{start: regexp.MustCompile(`^//`), end: regexp.MustCompile(`^$`), group: groupComment},
 			{start: regexp.MustCompile(`^/\*`), end: regexp.MustCompile(`^\*/`), group: groupComment},
 			{start: regexp.MustCompile(`^\{-`), end: regexp.MustCompile(`^-\}`), nested: true, group: groupComment},
 			{
@@ -29,6 +28,12 @@ func testSyntax() *highlightSyntax {
 			},
 		},
 		patterns: []highlightPattern{
+			// A line comment is a *pattern* to the end of the line and not a region.
+			// As a region with an end of `^$` it never closed -- the scan stops at the
+			// end of the line before an empty match can happen -- so the comment
+			// carried into every following line. Measured: `x // c` followed by
+			// `func y` coloured the second line entirely as comment.
+			{match: regexp.MustCompile(`^//.*`), group: groupComment},
 			{match: regexp.MustCompile(`^(?:func|return|int)\b`), group: groupKeyword, wordOnly: true},
 			{match: regexp.MustCompile(`^[0-9]+`), group: groupNumber, wordOnly: true},
 		},
@@ -203,4 +208,34 @@ func isRuneBoundary(line string, offset int) bool {
 	}
 	// A continuation byte is 10xxxxxx; anything else starts a character.
 	return line[offset]&0xc0 != 0x80
+}
+
+// A line comment must not carry into the next line, which is why it is a pattern
+// rather than a region. As a region ending at `^$` it never closed: the scan stops at
+// the end of the line before an empty-string match can happen, so every following line
+// inherited the comment. This is the test that would have caught it.
+func TestHighlightBuffer_aLineCommentDoesNotCarry(t *testing.T) {
+	syntax := testSyntax()
+	lines := []string{`x // comment`, `func y`, `int z`}
+	want := []string{`..cccccccccc`, `kkkk..`, `kkk..`}
+	spans := highlightBuffer(syntax, lines)
+	for index := range lines {
+		if got := render(lines[index], spans[index]); got != want[index] {
+			t.Errorf("line %d %q\n  got %s\n want %s", index, lines[index], got, want[index])
+		}
+	}
+}
+
+// The other half of the same distinction: an unclosed *block* comment must carry, and
+// a closed one must not.
+func TestHighlightBuffer_anUnclosedBlockCommentCarries(t *testing.T) {
+	syntax := testSyntax()
+	lines := []string{`/* open`, `func inside`, `*/ func out`}
+	want := []string{`ccccccc`, `ccccccccccc`, `cc.kkkk....`}
+	spans := highlightBuffer(syntax, lines)
+	for index := range lines {
+		if got := render(lines[index], spans[index]); got != want[index] {
+			t.Errorf("line %d %q\n  got %s\n want %s", index, lines[index], got, want[index])
+		}
+	}
 }
