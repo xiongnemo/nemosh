@@ -164,6 +164,21 @@ Go 1.23 against this module's 1.26, and fetching a toolchain needs network the
 sandbox does not have. So CI is the only real cross-platform check, which is the
 reason to read the run list rather than to assume.
 
+**Per-package coverage understates anything driven from another package.**
+`go test -coverprofile ./internal/applets/` reported `device_walk.go` at 14.3% and it
+is really at 61.9%: the `/dev` walk needs a view that only `internal/shell/runtime`
+implements, so `internal/shell/runtime/device_walk_test.go` is what exercises it and
+the applets profile cannot see that. The same is true of anything reached only
+through the shell. Before concluding a file is untested, check with:
+
+```bash
+go test -coverpkg=./internal/applets/ -coverprofile=c.out ./internal/shell/runtime/
+```
+
+and note that a `-coverpkg` run over *several* test packages writes one profile per
+binary, so summing blocks by hand double-counts and reads far too low. `go tool cover
+-func` merges them correctly; hand-rolled awk over the raw profile does not.
+
 **The clipboard tests fail at random on the development machine, and it is not
 your change.** Windows 10 and later run a clipboard history service that opens the
 clipboard on every change, and any clipboard manager does the same, so
