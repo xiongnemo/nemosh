@@ -99,23 +99,42 @@ func (m editorKeyMap) lookup(event *tcell.EventKey) editorAction {
 	return editorNothing
 }
 
-// footer is the two-line legend, laid out in columns the way nano's is.
+// footer is the key legend, laid out in columns the way nano's is.
+//
+// **Compact columns, and as many rows as they need.** Stretching the columns to fill
+// the width was tried and looked wrong: with seven bindings on a two-hundred-column
+// terminal it left fifty blank characters between each label, which reads as a bug
+// rather than as a layout. nano keeps its shortcuts in narrow columns and simply fits
+// more of them across a wide window, so this does too -- seven labels are one row at a
+// hundred and twelve columns and two rows below that.
+//
+// The width therefore decides the *height* as well, which is the part the caller has to
+// deal with: see editorView.layoutFooter, which resizes the row the legend sits in. The
+// original bug was not this function -- it handled width correctly -- but that the
+// editor asked it for a layout at a hardcoded 80 exactly once, so a wider terminal kept
+// the 80-column answer and left the right-hand side empty.
 func (m editorKeyMap) footer(width int) []string {
-	if width < 20 {
-		width = 20
+	if width < footerColumnWidth {
+		width = footerColumnWidth
 	}
-	columns := max(1, width/16)
+	columns := max(1, width/footerColumnWidth)
 	rows := (len(m.bindings) + columns - 1) / columns
 	lines := make([]string, rows)
 	for index, binding := range m.bindings {
-		row := index % rows
-		lines[row] += fmt.Sprintf("%-16s", binding.label)
+		// Column-major, so a reader looks down a column rather than across a row --
+		// which is how nano orders its own list.
+		lines[index%rows] += fmt.Sprintf("%-*s", footerColumnWidth, binding.label)
 	}
 	for index := range lines {
 		lines[index] = strings.TrimRight(lines[index], " ")
 	}
 	return lines
 }
+
+// footerColumnWidth is the width of one key label's column. Sixteen because the longest
+// label is thirteen characters and two of space either side reads as a column rather
+// than as a run-on.
+const footerColumnWidth = 16
 
 // writeFeatures is `-H`, in the manner of `busybox vi -H`: the editor states what
 // subset it is rather than leaving somebody to discover the gaps.

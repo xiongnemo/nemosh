@@ -966,7 +966,30 @@ Other behaviours worth knowing:
 - **`^X`/`^Q` with unsaved changes warns once and leaves on the second press.** A
   yes/no prompt needs a reader this does not have, and losing a buffer to one
   keystroke is the outcome worth preventing.
-- **A terminal is required, and merely having a file on stdin is not enough.**
+- **The editor uses the width it is given**, which it did not until 2026-08-24 and which
+was reported from a real terminal rather than found by a test. Two things were wrong and
+neither was visible at 80 columns -- the one width the harness runs at.
+
+The key legend was laid out by `footer(80)` **exactly once**, when the view was built, so
+a wider terminal kept the 80-column answer: two rows of 61 characters with everything to
+the right of them empty. It is now laid out for the width it is actually given, asked
+again whenever that changes. Because the row count depends on the width -- seven labels
+are two rows at 80 columns and one at 120 -- the layout resizes the legend's row to
+match, which happens inside a draw function and therefore settles on the second frame. A
+test asserts that settling rather than leaving the one blank row a mystery.
+
+Stretching the columns to fill the width was tried first and looked wrong: seven labels
+across two hundred columns left fifty blank characters between each one, which reads as
+a bug. Compact columns and more of them per row is what nano does, and a compact legend
+can only be as wide as its labels -- 109 characters for seven of them, which is the
+honest ceiling.
+
+And the title is now a **bar**, with a background across the full width, which is what
+nano has. Before it was twenty characters of text on an otherwise blank line, so nothing
+marked the top of the window as the editor's at all -- and that, rather than the legend,
+is most of why the window looked like it was not using the terminal.
+
+**A terminal is required, and merely having a file on stdin is not enough.**
   `nano file < /dev/null` leased successfully and then hung waiting for keys that
   would never arrive; the check is now whether stdin is a terminal.
 - A file that does not exist opens as a new buffer rather than failing. More than

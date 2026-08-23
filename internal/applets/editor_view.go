@@ -32,6 +32,9 @@ type editorView struct {
 	// modified is tracked here rather than read from the area, because "has this
 	// changed since it was saved" is not something the widget knows.
 	modified bool
+	// legendWidth is the width the key legend was last laid out for, so a redraw at
+	// the same size does no work.
+	legendWidth int
 	// prompt, when set, is receiving a line of input rather than the buffer.
 	prompt func(answer string)
 	editorPromptState
@@ -56,16 +59,54 @@ func newEditorView(session *editorSession, keys editorKeyMap, application *tview
 	view.message = tview.NewTextView().SetDynamicColors(true)
 	view.legend = tview.NewTextView().SetDynamicColors(true)
 
-	legendLines := keys.footer(80)
+	// A title bar rather than a line of text, which is what nano has and what makes the
+	// top of the screen read as belonging to the editor. Without a background the row
+	// was twenty characters on an otherwise empty line, and the window looked like it
+	// was not using the terminal.
+	view.title.SetBackgroundColor(tcell.ColorNavy)
+	view.title.SetTextColor(tcell.ColorWhite)
+
 	view.layout = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(view.title, 1, 0, false).
 		AddItem(view.area, 0, 1, true).
 		AddItem(view.message, 1, 0, false).
-		AddItem(view.legend, len(legendLines), 0, false)
-	view.legend.SetText(strings.Join(legendLines, "\n"))
+		AddItem(view.legend, len(keys.footer(80)), 0, false)
+	// The legend is laid out for the width it is actually given, and asked again
+	// whenever that changes -- a resize, or a terminal that was never 80 columns to
+	// begin with. It used to be laid out exactly once, for a hardcoded 80.
+	view.legend.SetDrawFunc(func(screen tcell.Screen, x, y, width, height int) (int, int, int, int) {
+		view.layoutFooter(width)
+		return x, y, width, height
+	})
+	// Once up front as well, so the first frame is right rather than right on the second.
+	view.layoutFooter(80)
 	view.refreshTitle()
 	view.area.SetInputCapture(view.handleKey)
 	return view
+}
+
+// layoutFooter lays the key legend out for a width, and does nothing if the width has
+// not changed.
+//
+// The guard is what makes it safe to call from a draw function: setting a TextView's
+// text is a mutation, and doing it on every frame regardless would be work per redraw
+// for a line that only changes when the window does.
+func (v *editorView) layoutFooter(width int) {
+	if width <= 0 || width == v.legendWidth {
+		return
+	}
+	v.legendWidth = width
+	lines := v.keys.footer(width)
+	v.legend.SetText(strings.Join(lines, "\n"))
+	// The row count depends on the width -- seven labels are one row on a wide terminal
+	// and two on a narrow one -- so the height the layout gives the legend has to
+	// follow. Without this it was allotted two rows forever, and a wide terminal drew
+	// one row of keys above a blank one.
+	//
+	// Resizing from inside a draw function means this frame uses the old height and the
+	// next uses the new: one frame of lag on a resize, which is invisible. tview draws
+	// on a single goroutine, so there is no race to have.
+	v.layout.ResizeItem(v.legend, len(lines), 0)
 }
 
 // refreshTitle redraws the top line: the editor's name, the file, and whether
