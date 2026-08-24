@@ -192,9 +192,14 @@ func TestEditorView_theTextAreaFillsTheWidth(t *testing.T) {
 	view.layout.Draw(screen)
 	screen.Show()
 
-	// Row 1 is the first line of the buffer -- row 0 is the title bar. A line longer
-	// than the terminal must reach the last column.
-	for _, column := range []int{0, width / 2, width - 1} {
+	// Row 1 is the first line of the buffer -- row 0 is the title bar. One line means a
+	// one-digit gutter, so the text starts at column 2 and must reach the last column:
+	// the gutter takes its columns from the left and gives up none on the right.
+	const gutter = 1 + gutterGap
+	if got, _, _ := screen.Get(0, 1); got != "1" {
+		t.Errorf("column 0 of the first text row is %q, want the line number", got)
+	}
+	for _, column := range []int{gutter, width / 2, width - 1} {
 		text, _, _ := screen.Get(column, 1)
 		if text != "x" {
 			t.Errorf("column %d of the first text row is %q, want the long line to reach it", column, text)
@@ -251,7 +256,7 @@ func TestEditorView_theLegendHeightSettlesAfterAResize(t *testing.T) {
 	screen.Show()
 
 	bottom := rowText(screen, width, height-1)
-	if !strings.Contains(bottom, "^O Write Out") || !strings.Contains(bottom, "^_ Go To Line") {
+	if !strings.Contains(bottom, "^O Write Out") || !strings.Contains(bottom, "^/ Go To Line") {
 		t.Fatalf("the bottom row does not hold the whole legend: %q", bottom)
 	}
 	// And the row above it is text-area space again rather than a blank legend row.

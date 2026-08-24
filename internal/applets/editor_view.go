@@ -45,6 +45,12 @@ func newEditorView(session *editorSession, keys editorKeyMap, application *tview
 	// The language comes from the file name, and a name that matches nothing gets no
 	// highlighting rather than a guess -- `notes.txt` should look like text.
 	view.area = newHighlightedArea(highlightSyntaxFor(session.path))
+	// On for both names. nano needs `-l` for this and micro does not, but this editor
+	// already highlights by default where nano needs a config file to, and the reason is
+	// the same both times: the default should be the one worth having, and a name that
+	// differs from the original in what it *shows* costs nobody their muscle memory --
+	// unlike one that differs in what a key does.
+	view.area.showLineNumbers(true)
 	view.area.SetText(session.text, false)
 	// Lexed once for the file as opened, and again on every change. Not on scroll:
 	// scrolling cannot change what a line means, and re-lexing on it would make

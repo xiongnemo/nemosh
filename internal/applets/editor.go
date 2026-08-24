@@ -28,7 +28,10 @@ func newMicroApplet() Applet { return newEditorApplet("micro") }
 
 func newEditorApplet(name string) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "HR", "")
+		// `l` is nano's line-number flag. It is accepted and does nothing, because the
+		// numbers are already on -- refusing a flag whose effect is the current state
+		// would be pedantry at the user's expense.
+		options, operands, err := parseAppletOptions(args, "HRl", "")
 		if err != nil {
 			return err
 		}

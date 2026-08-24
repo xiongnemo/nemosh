@@ -33,8 +33,15 @@ type highlightedArea struct {
 	syntax *highlightSyntax
 	// lines and spans are the lexed buffer. Recomputed when the text changes and not
 	// when it scrolls, because scrolling cannot change what a line means.
+	//
+	// lines is kept even with no syntax, because the gutter counts them and a file
+	// whose name matches no language still has line numbers.
 	lines []string
 	spans [][]highlightSpan
+	// numbers and outer belong to the gutter; see editor_gutter.go. outer is the rect
+	// the layout gave this widget, which is wider than the one the text area gets.
+	numbers bool
+	outer   [4]int
 }
 
 func newHighlightedArea(syntax *highlightSyntax) *highlightedArea {
@@ -47,17 +54,25 @@ func newHighlightedArea(syntax *highlightSyntax) *highlightedArea {
 }
 
 // relex re-reads the buffer. Called when the text changes.
+//
+// The lines are counted whichever way that goes: a file with no syntax still needs them
+// for the gutter, and only the span pass depends on there being a language.
 func (a *highlightedArea) relex() {
+	a.lines = editorLines(a.GetText())
 	if a.syntax == nil {
 		return
 	}
-	a.lines = editorLines(a.GetText())
 	a.spans = highlightBuffer(a.syntax, a.lines)
 }
 
-// Draw lays the text out through the widget, then re-colours what it drew.
+// Draw lays the text out through the widget, then draws the gutter and re-colours what
+// the widget drew.
+//
+// The gutter goes after TextArea.Draw for the scroll offset, and the colours after both
+// because they read cells back off the screen.
 func (a *highlightedArea) Draw(screen tcell.Screen) {
 	a.TextArea.Draw(screen)
+	a.drawGutter(screen)
 	if a.syntax == nil || len(a.spans) == 0 {
 		return
 	}

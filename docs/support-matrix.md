@@ -989,6 +989,33 @@ nano has. Before it was twenty characters of text on an otherwise blank line, so
 marked the top of the window as the editor's at all -- and that, rather than the legend,
 is most of why the window looked like it was not using the terminal.
 
+**Line numbers are on by default**, in a gutter down the left. nano needs `-l` for
+this and micro does not; here both have it, for the same reason this editor highlights
+by default where nano needs a config file to -- a default that differs from the original
+in what it *shows* costs nobody their muscle memory, unlike one that differs in what a
+key does. `-l` is accepted and does nothing, so asking for what is already on is not an
+error.
+
+The gutter is drawn by the widget that draws the text, not by a second widget beside it.
+That is not a style preference: a `TextView` in a Flex would need the text area's scroll
+offset copied into it every frame and, sitting to its left, would read that offset
+*before* the area had clamped it -- so a fast scroll would show numbers a row out from
+their lines. Drawing it inside means the offset is read after `TextArea.Draw` has run,
+which is the one moment it is known to be settled. The width follows the line count
+(three columns at 99 lines, four at 999) and the gutter is dropped entirely rather than
+squeezing the text below twenty columns.
+
+**Both spellings of every key are accepted.** `^_` did nothing on a real Windows
+keyboard, and tcell explains why: there is no VT screen on Windows, so input goes through
+the console API, and for a control character with Ctrl held tcell adds `0x60` back and
+posts a *rune with `ModCtrl`* rather than a `Key` constant
+(`console_win.go:725-736`). Which spelling arrives for a given physical key is a property
+of the console. So each binding lists both, go-to-line answers to `^/`, `^_`, `^-` and
+`M-G` -- nano's own help offers `^/` beside `^_` for the same reason -- and the footer
+leads with the one that works rather than the one that reads better. Shift is ignored
+when matching, because `_` needs Shift on this keyboard and `/` does not: that is a fact
+about the layout, not about the binding.
+
 **A terminal is required, and merely having a file on stdin is not enough.**
   `nano file < /dev/null` leased successfully and then hung waiting for keys that
   would never arrive; the check is now whether stdin is a terminal.

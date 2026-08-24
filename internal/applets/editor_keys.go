@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -38,10 +39,28 @@ const (
 	editorGoToLine
 )
 
+// editorChord is a modified rune that means a binding: Ctrl and a letter, or Alt
+// and one.
+//
+// Needed because Windows does not deliver a control key as a Key constant the way a
+// terminal does. tcell has no VT screen on Windows, so input goes through the console
+// API, and for a control character with Ctrl held it adds 0x60 back and posts a *rune
+// with ModCtrl* instead (console_win.go:725-736). Which of the two spellings arrives
+// therefore depends on what the console reports for the physical key -- and for `^_`
+// on a real keyboard, neither did.
+type editorChord struct {
+	mods tcell.ModMask
+	rune rune
+}
+
 // editorBinding is one key and what it means, with the label the footer shows.
 type editorBinding struct {
-	key    tcell.Key
-	rune   rune
+	key tcell.Key
+	// chords are the modified runes that mean this binding as well as key does.
+	// Listing several is deliberate: `^_` has no key of its own on most layouts and
+	// is typed as Ctrl and one of several punctuation marks, which is why nano's own
+	// help offers `^/` beside it.
+	chords []editorChord
 	label  string
 	action editorAction
 	// describes is the line `-H` prints. Kept beside the binding so the feature
@@ -52,25 +71,35 @@ type editorBinding struct {
 // nanoBindings are nano's, which is the muscle memory people bring from Linux --
 // nano is the default git editor on many distributions.
 var nanoBindings = []editorBinding{
-	{key: tcell.KeyCtrlO, label: "^O Write Out", action: editorSave, describes: "Write the file out with ^O"},
-	{key: tcell.KeyCtrlX, label: "^X Exit", action: editorQuit, describes: "Exit with ^X"},
-	{key: tcell.KeyCtrlW, label: "^W Where Is", action: editorSearch, describes: "Search with ^W"},
-	{key: tcell.KeyCtrlK, label: "^K Cut", action: editorCutLine, describes: "Cut the current line with ^K"},
-	{key: tcell.KeyCtrlU, label: "^U Paste", action: editorPasteLine, describes: "Paste it back with ^U"},
-	{key: tcell.KeyCtrlG, label: "^G Help", action: editorHelp, describes: "Show the key list with ^G"},
-	{key: tcell.KeyCtrlUnderscore, label: "^_ Go To Line", action: editorGoToLine, describes: "Jump to a line with ^_"},
+	{key: tcell.KeyCtrlO, chords: ctrl('o'), label: "^O Write Out", action: editorSave, describes: "Write the file out with ^O"},
+	{key: tcell.KeyCtrlX, chords: ctrl('x'), label: "^X Exit", action: editorQuit, describes: "Exit with ^X"},
+	{key: tcell.KeyCtrlW, chords: ctrl('w'), label: "^W Where Is", action: editorSearch, describes: "Search with ^W"},
+	{key: tcell.KeyCtrlK, chords: ctrl('k'), label: "^K Cut", action: editorCutLine, describes: "Cut the current line with ^K"},
+	{key: tcell.KeyCtrlU, chords: ctrl('u'), label: "^U Paste", action: editorPasteLine, describes: "Paste it back with ^U"},
+	{key: tcell.KeyCtrlG, chords: ctrl('g'), label: "^G Help", action: editorHelp, describes: "Show the key list with ^G"},
+	// `^_` did nothing on a real Windows keyboard: the console sends no 0x1F for the
+	// chords that are supposed to produce it, so the Key constant never arrived. nano's
+	// own help offers `^/` beside `^_` for exactly this reason, and the label leads with
+	// the one that works rather than with the one that reads better.
+	{
+		key:       tcell.KeyCtrlUnderscore,
+		chords:    append(ctrl('_', '/', '-'), editorChord{mods: tcell.ModAlt, rune: 'g'}),
+		label:     "^/ Go To Line",
+		action:    editorGoToLine,
+		describes: "Jump to a line with ^/ (also ^_ and M-G)",
+	},
 }
 
 // microBindings are micro's, which match Windows and VS Code conventions and so
 // need no learning on this platform.
 var microBindings = []editorBinding{
-	{key: tcell.KeyCtrlS, label: "^S Save", action: editorSave, describes: "Save with ^S"},
-	{key: tcell.KeyCtrlQ, label: "^Q Quit", action: editorQuit, describes: "Quit with ^Q"},
-	{key: tcell.KeyCtrlF, label: "^F Find", action: editorSearch, describes: "Find with ^F"},
-	{key: tcell.KeyCtrlK, label: "^K Cut Line", action: editorCutLine, describes: "Cut the current line with ^K"},
-	{key: tcell.KeyCtrlV, label: "^V Paste", action: editorPasteLine, describes: "Paste with ^V"},
-	{key: tcell.KeyCtrlG, label: "^G Help", action: editorHelp, describes: "Show the key list with ^G"},
-	{key: tcell.KeyCtrlL, label: "^L Go To", action: editorGoToLine, describes: "Jump to a line with ^L"},
+	{key: tcell.KeyCtrlS, chords: ctrl('s'), label: "^S Save", action: editorSave, describes: "Save with ^S"},
+	{key: tcell.KeyCtrlQ, chords: ctrl('q'), label: "^Q Quit", action: editorQuit, describes: "Quit with ^Q"},
+	{key: tcell.KeyCtrlF, chords: ctrl('f'), label: "^F Find", action: editorSearch, describes: "Find with ^F"},
+	{key: tcell.KeyCtrlK, chords: ctrl('k'), label: "^K Cut Line", action: editorCutLine, describes: "Cut the current line with ^K"},
+	{key: tcell.KeyCtrlV, chords: ctrl('v'), label: "^V Paste", action: editorPasteLine, describes: "Paste with ^V"},
+	{key: tcell.KeyCtrlG, chords: ctrl('g'), label: "^G Help", action: editorHelp, describes: "Show the key list with ^G"},
+	{key: tcell.KeyCtrlL, chords: ctrl('l'), label: "^L Go To", action: editorGoToLine, describes: "Jump to a line with ^L"},
 }
 
 // editorKeyMap is one name's bindings.
@@ -87,16 +116,45 @@ func editorKeyMapFor(name string) editorKeyMap {
 }
 
 // lookup finds the action a key press means, if any.
+//
+// Both spellings are accepted for every binding, because which one a platform sends is
+// not something this code can know: the Key constant is what a terminal delivers, and
+// the modified rune is what the Windows console does. Accepting both cannot make a
+// working key stop working, and it is what makes `^_` reachable at all here.
 func (m editorKeyMap) lookup(event *tcell.EventKey) editorAction {
 	for _, binding := range m.bindings {
 		if binding.key != 0 && event.Key() == binding.key {
 			return binding.action
 		}
-		if binding.rune != 0 && event.Key() == tcell.KeyRune && event.Rune() == binding.rune {
-			return binding.action
+		if event.Key() != tcell.KeyRune {
+			continue
+		}
+		for _, chord := range binding.chords {
+			// Shift is ignored, and that is the point rather than laxity: `_` is typed
+			// with Shift on this keyboard and `/` is not, so whether Shift is held is a
+			// fact about the layout and not about the binding. Every other modifier must
+			// match exactly, so Alt-g is not Ctrl-g.
+			if event.Modifiers()&^tcell.ModShift != chord.mods {
+				continue
+			}
+			if unicode.ToLower(event.Rune()) == chord.rune {
+				return binding.action
+			}
 		}
 	}
 	return editorNothing
+}
+
+// ctrl and alt build the chord lists, so a binding reads as a row rather than as a
+// struct literal per spelling.
+func ctrl(runes ...rune) []editorChord { return chords(tcell.ModCtrl, runes) }
+
+func chords(mods tcell.ModMask, runes []rune) []editorChord {
+	list := make([]editorChord, 0, len(runes))
+	for _, r := range runes {
+		list = append(list, editorChord{mods: mods, rune: r})
+	}
+	return list
 }
 
 // footer is the key legend, laid out in columns the way nano's is.
@@ -177,6 +235,11 @@ func (m editorKeyMap) writeFeatures(stdout io.Writer) error {
 	// which languages have rules.
 	if _, err := fmt.Fprintf(stdout, "\tSyntax highlighting for %s\n",
 		strings.Join(highlightLanguageNames(), ", ")); err != nil {
+		return err
+	}
+	// On by default, which nano is not -- so it is worth saying, and `-l` is accepted
+	// so that muscle memory for asking costs nothing.
+	if _, err := fmt.Fprintf(stdout, "\tLine numbers in the left margin, always (-l is accepted)\n"); err != nil {
 		return err
 	}
 	for _, line := range absent {
