@@ -200,6 +200,23 @@ and read separately: with no pause between them the read failed 30 times out of
 and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather than
 approximating. Anything landing partially refuses the part it cannot do.
 
+**A test that synthesises its own input can agree with itself and be wrong.**
+`tcell.KeyCtrlUnderscore` is 95, and *nothing produces 95*: a terminal sends
+`0x1F` for `^_`, which tcell turns into `Key(31)` — `KeyUS`. The `KeyCtrl*` block
+is numbered from `KeyCtrlA = 65`, so those constants are the letters, and a
+Ctrl'd letter only reaches them because `key.go:276` maps `a`-`z`+`ModCtrl` onto
+them. Punctuation gets no such mapping. The editor bound `KeyCtrlUnderscore`, the
+test pressed `KeyCtrlUnderscore`, both agreed, and the key had never worked on any
+platform — found only when it was pressed on a real keyboard. Where a test builds
+the event it asserts on, check that a device can produce that event.
+
+Same area, second trap: on Windows tcell has **no VT screen**, so input goes
+through `console_win.go`, which for a control character with Ctrl held adds `0x60`
+back and posts a rune (`:725-736`). `^_` is therefore `0x1F + 0x60 = 0x7F`, which
+tcell reads as Backspace — so `^_` on Windows *deletes* rather than doing nothing.
+Alt with a letter is reported with no character at all and the event is dropped
+(`:741-744`). Escape-then-key is the only meta spelling that survives both.
+
 ## Documentation Hygiene
 
 After changing commands, flags, applet coverage, build scripts, release

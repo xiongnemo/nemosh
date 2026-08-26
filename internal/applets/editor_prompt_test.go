@@ -183,7 +183,7 @@ func TestEditor_goesToALineAndRefusesWhatIsNotOne(t *testing.T) {
 	defer harness.stop(t)
 
 	// ^_ is nano's, and the prompt says what it wants.
-	harness.press(t, tcell.KeyCtrlUnderscore, 0)
+	harness.press(t, tcell.KeyUS, 0)
 	harness.waitForScreen(t, "Line")
 	harness.type_(t, "45")
 	harness.press(t, tcell.KeyEnter, 0)
@@ -191,14 +191,14 @@ func TestEditor_goesToALineAndRefusesWhatIsNotOne(t *testing.T) {
 
 	// A number past the end clamps to the last line rather than failing, which is
 	// what nano does and is the more useful answer to "go to the end".
-	harness.press(t, tcell.KeyCtrlUnderscore, 0)
+	harness.press(t, tcell.KeyUS, 0)
 	harness.waitForScreen(t, "Line")
 	harness.type_(t, "9999")
 	harness.press(t, tcell.KeyEnter, 0)
 	harness.waitForScreen(t, "Line 60")
 
 	for _, answer := range []string{"abc", "0", "-4"} {
-		harness.press(t, tcell.KeyCtrlUnderscore, 0)
+		harness.press(t, tcell.KeyUS, 0)
 		harness.waitForScreen(t, "Line")
 		harness.type_(t, answer)
 		harness.press(t, tcell.KeyEnter, 0)
@@ -206,8 +206,11 @@ func TestEditor_goesToALineAndRefusesWhatIsNotOne(t *testing.T) {
 	}
 }
 
-// Help lists the keys, and lists the ones this name actually binds -- which is
-// what makes it useful rather than a second place for the footer to drift from.
+// Help is a panel, and it lists the keys this name actually binds.
+//
+// It used to write the key list onto the message row -- immediately above the legend,
+// which already shows the key list, so "help" drew a second row of key names under the
+// first. `top` made the same mistake and c5a1a44 fixed it the same way.
 func TestEditor_helpListsThisNamesKeys(t *testing.T) {
 	for _, test := range []struct {
 		name    string
@@ -224,21 +227,30 @@ func TestEditor_helpListsThisNamesKeys(t *testing.T) {
 			defer harness.stop(t)
 
 			harness.press(t, test.key, 0)
-			// Waited on "Keys:" and not on the key label, because **the footer
-			// already shows every label**. The first draft of this test waited for
-			// the label, matched it in frame zero before ^G had been handled, and
-			// then asserted against a frame that predated the help message -- the
-			// same asynchronous-UI trap the harness comment warns about, in the
-			// shape where the string being waited for was already true.
-			frame := harness.waitForScreen(t, "Keys:")
+			// Waited on a string that only the panel has, not on a key label: **the
+			// footer already shows every label**, so waiting for one would match in
+			// frame zero before ^G had been handled and then assert against a frame
+			// that predates the panel. That is the asynchronous-UI trap the harness
+			// comment warns about, in the shape where the string waited for was
+			// already true.
+			frame := harness.waitForScreen(t, "THIS TERMINAL")
 			if !strings.Contains(frame, test.present) {
 				t.Fatalf("%s's help does not list %q:\n%s", test.name, test.present, frame)
 			}
-			// The other map's key does appear nowhere -- neither in the help line
-			// nor, since the footer is generated from the same table, in the footer.
+			// The other map's key appears nowhere.
 			if strings.Contains(frame, test.absent) {
 				t.Fatalf("%s's help mentions %q, which belongs to the other name:\n%s",
 					test.name, test.absent, frame)
+			}
+			// What is *absent* is asserted against the panel text rather than the
+			// frame: the panel is longer than a 24-row terminal and scrolls, so the
+			// bottom of it is legitimately not on screen. See
+			// TestEditorHelpPanel_saysWhatIsNotThere.
+
+			// Escape closes it and the buffer comes back.
+			harness.press(t, tcell.KeyEscape, 0)
+			if back := harness.waitForScreen(t, "number 1"); strings.Contains(back, "THIS TERMINAL") {
+				t.Fatalf("Escape did not dismiss the help panel:\n%s", back)
 			}
 		})
 	}
@@ -294,7 +306,7 @@ func TestEditor_searchWrapsPastTheEnd(t *testing.T) {
 	defer harness.stop(t)
 
 	// Move well down the file first.
-	harness.press(t, tcell.KeyCtrlUnderscore, 0)
+	harness.press(t, tcell.KeyUS, 0)
 	harness.waitForScreen(t, "Line")
 	harness.type_(t, "25")
 	harness.press(t, tcell.KeyEnter, 0)

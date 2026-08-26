@@ -256,7 +256,7 @@ func TestEditorView_theLegendHeightSettlesAfterAResize(t *testing.T) {
 	screen.Show()
 
 	bottom := rowText(screen, width, height-1)
-	if !strings.Contains(bottom, "^O Write Out") || !strings.Contains(bottom, "^/ Go To Line") {
+	if !strings.Contains(bottom, "^O Write Out") || !strings.Contains(bottom, "M-G Go To Line") {
 		t.Fatalf("the bottom row does not hold the whole legend: %q", bottom)
 	}
 	// And the row above it is text-area space again rather than a blank legend row.

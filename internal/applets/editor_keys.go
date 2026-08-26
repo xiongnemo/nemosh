@@ -56,6 +56,9 @@ type editorChord struct {
 // editorBinding is one key and what it means, with the label the footer shows.
 type editorBinding struct {
 	key tcell.Key
+	// alsoKeys are further Key constants that mean the same binding, for the case where
+	// the constant named after a chord is not the constant that chord produces.
+	alsoKeys []tcell.Key
 	// chords are the modified runes that mean this binding as well as key does.
 	// Listing several is deliberate: `^_` has no key of its own on most layouts and
 	// is typed as Ctrl and one of several punctuation marks, which is why nano's own
@@ -77,16 +80,29 @@ var nanoBindings = []editorBinding{
 	{key: tcell.KeyCtrlK, chords: ctrl('k'), label: "^K Cut", action: editorCutLine, describes: "Cut the current line with ^K"},
 	{key: tcell.KeyCtrlU, chords: ctrl('u'), label: "^U Paste", action: editorPasteLine, describes: "Paste it back with ^U"},
 	{key: tcell.KeyCtrlG, chords: ctrl('g'), label: "^G Help", action: editorHelp, describes: "Show the key list with ^G"},
-	// `^_` did nothing on a real Windows keyboard: the console sends no 0x1F for the
-	// chords that are supposed to produce it, so the Key constant never arrived. nano's
-	// own help offers `^/` beside `^_` for exactly this reason, and the label leads with
-	// the one that works rather than with the one that reads better.
+	// `^_` did nothing, and the binding was wrong on every platform.
+	//
+	// **`tcell.KeyCtrlUnderscore` is 95, and nothing produces 95.** A terminal sends
+	// `0x1F` for `^_`, which tcell turns into `Key(31)` -- `KeyUS`. The `KeyCtrl*` block
+	// is numbered from `KeyCtrlA = 65`, so those constants are the *letters*, and a
+	// Ctrl'd letter only reaches them because key.go:276 maps `a`-`z` with ModCtrl onto
+	// them after console_win.go has already added `0x60` back. Punctuation gets no such
+	// mapping. The old test passed because it synthesised `KeyCtrlUnderscore` directly,
+	// which is an event no keyboard can produce -- a test agreeing with itself.
+	//
+	// On Windows it is worse than unreachable: `0x1F + 0x60` is `0x7F`, which tcell reads
+	// as Backspace, so `^_` there arrives as Ctrl+Backspace and deletes rather than doing
+	// nothing. That one cannot be bound without taking a real editing key.
+	//
+	// So: `KeyUS` is the true constant, Escape-then-G is the spelling that cannot fail,
+	// and the label leads with `M-G` because it is the one that works everywhere.
 	{
-		key:       tcell.KeyCtrlUnderscore,
-		chords:    append(ctrl('_', '/', '-'), editorChord{mods: tcell.ModAlt, rune: 'g'}),
-		label:     "^/ Go To Line",
+		key:       tcell.KeyUS,
+		alsoKeys:  []tcell.Key{tcell.KeyCtrlUnderscore},
+		chords:    append(ctrl('_', '/'), editorChord{mods: tcell.ModAlt, rune: 'g'}),
+		label:     "M-G Go To Line",
 		action:    editorGoToLine,
-		describes: "Jump to a line with ^/ (also ^_ and M-G)",
+		describes: "Jump to a line with Esc then G (also ^_ and ^/ where the terminal sends them)",
 	},
 }
 
@@ -125,6 +141,11 @@ func (m editorKeyMap) lookup(event *tcell.EventKey) editorAction {
 	for _, binding := range m.bindings {
 		if binding.key != 0 && event.Key() == binding.key {
 			return binding.action
+		}
+		for _, key := range binding.alsoKeys {
+			if event.Key() == key {
+				return binding.action
+			}
 		}
 		if event.Key() != tcell.KeyRune {
 			continue

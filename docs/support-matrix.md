@@ -1016,6 +1016,39 @@ leads with the one that works rather than the one that reads better. Shift is ig
 when matching, because `_` needs Shift on this keyboard and `/` does not: that is a fact
 about the layout, not about the binding.
 
+**Go to line is `M-G` -- Escape then G -- and that is a correction.** The binding was
+`tcell.KeyCtrlUnderscore`, which is 95, and *nothing produces 95*: a terminal sends `0x1F`
+for `^_`, which tcell turns into `Key(31)`, `KeyUS`. The `KeyCtrl*` constants are numbered
+from `KeyCtrlA = 65` -- they are the letters -- and a Ctrl'd letter only reaches them
+because `key.go:276` maps `a`-`z` with `ModCtrl` onto them; punctuation gets no such
+mapping. So the key had never worked on any platform. The test agreed with the code
+because it synthesised `KeyCtrlUnderscore` directly, which no keyboard can produce; it
+presses `KeyUS` now.
+
+On Windows it is worse than unreachable. tcell has no VT screen there, so input goes
+through the console API, which for a control character with Ctrl held adds `0x60` back
+(`console_win.go:725-736`) -- `0x1F` becomes `0x7F`, which tcell reads as Backspace. `^_`
+in Windows Terminal therefore *deletes a character*. `^-` is taken by the terminal itself
+for zoom, and `^/` produced nothing. Alt with a letter is no better: the console reports
+no character and tcell drops the event (`:741-744`).
+
+Escape-then-G is the spelling that survives all of it -- both halves are ordinary keys --
+and it is what `M-` has always meant on a terminal, so nano's documented `M-G` works here
+by the route the documentation describes. `KeyUS`, `^_` and `^/` stay bound for the
+platforms that do send them.
+
+**`^G` is a panel, not a row.** It used to write the key list onto the message row,
+immediately above the legend that already shows the key list, so help drew a second row
+of key names under the first. `top` made the same mistake and `c5a1a44` fixed it the same
+way: the keys are already on screen, so what a legend owes the reader is what is *not* --
+the absences, with reasons, and which language the buffer was lexed as.
+
+The panel also carries a **key reader**: any key pressed while it is open is named rather
+than acted on, in the terms the binding table matches (`Key` constant against rune, and
+the modifier mask). That is not a debugging affordance left in by accident. Two attempts
+to guess what this console sends for `^_` were both wrong, and a terminal that can be
+asked turns the next such question into a measurement.
+
 **A terminal is required, and merely having a file on stdin is not enough.**
   `nano file < /dev/null` leased successfully and then hung waiting for keys that
   would never arrive; the check is now whether stdin is a terminal.

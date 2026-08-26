@@ -37,6 +37,15 @@ type editorView struct {
 	legendWidth int
 	// prompt, when set, is receiving a line of input rather than the buffer.
 	prompt func(answer string)
+	// meta records that Escape was pressed and the next key is a meta chord.
+	//
+	// This is what `M-G` *is* on a terminal -- Escape then the letter -- and it is the
+	// one spelling of it that cannot fail to arrive, because both halves are ordinary
+	// keys. Alt and a letter is not: the Windows console reports no character for it, and
+	// tcell drops a key event with no character and no recognised virtual key
+	// (console_win.go:741-744). So the documented binding works here by the route the
+	// documentation actually describes.
+	meta bool
 	editorPromptState
 }
 
@@ -151,27 +160,11 @@ func (v *editorView) handleKey(event *tcell.EventKey) *tcell.EventKey {
 	if v.prompt != nil {
 		return v.handlePromptKey(event)
 	}
-	switch v.keys.lookup(event) {
-	case editorSave:
-		v.save()
-		return nil
-	case editorQuit:
-		v.quit()
-		return nil
-	case editorSearch:
-		v.ask("Search: ", v.search)
-		return nil
-	case editorCutLine:
-		v.cutLine()
-		return nil
-	case editorPasteLine:
-		v.pasteLine()
-		return nil
-	case editorHelp:
-		v.showHelp()
-		return nil
-	case editorGoToLine:
-		v.ask("Go to line: ", v.goToLine)
+	if handled := v.handleMetaKey(event); handled != nil {
+		return *handled
+	}
+	if action := v.keys.lookup(event); action != editorNothing {
+		v.runAction(action)
 		return nil
 	}
 	if v.session.readOnly && isEditingKey(event) {
@@ -180,6 +173,27 @@ func (v *editorView) handleKey(event *tcell.EventKey) *tcell.EventKey {
 	}
 	v.setMessage("")
 	return event
+}
+
+// runAction performs what a binding means, reached from either a key or an Escape
+// chord -- which is why it takes the action rather than the event.
+func (v *editorView) runAction(action editorAction) {
+	switch action {
+	case editorSave:
+		v.save()
+	case editorQuit:
+		v.quit()
+	case editorSearch:
+		v.ask("Search: ", v.search)
+	case editorCutLine:
+		v.cutLine()
+	case editorPasteLine:
+		v.pasteLine()
+	case editorHelp:
+		v.showHelp()
+	case editorGoToLine:
+		v.ask("Go to line: ", v.goToLine)
+	}
 }
 
 // isEditingKey reports whether a key would change the buffer, which is what
@@ -276,16 +290,14 @@ func (v *editorView) goToLine(answer string) {
 	v.setMessage("Line %d", number)
 }
 
-func (v *editorView) showHelp() {
-	var help strings.Builder
-	help.WriteString("Keys: ")
-	for index, binding := range v.keys.bindings {
-		if index > 0 {
-			help.WriteString("  ")
-		}
-		help.WriteString(binding.label)
+// helpLines is the key labels, for the one place that still has only a row to put them
+// in: a view built without an application, which is how the headless tests build one.
+func (m editorKeyMap) helpLines() []string {
+	labels := make([]string, 0, len(m.bindings))
+	for _, binding := range m.bindings {
+		labels = append(labels, binding.label)
 	}
-	v.setMessage("%s", help.String())
+	return labels
 }
 
 // ask collects a line of input on the message row, which is where nano puts its

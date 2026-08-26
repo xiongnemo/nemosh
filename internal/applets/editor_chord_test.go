@@ -29,10 +29,15 @@ func TestEditorKeyMap_acceptsEitherSpellingOfAKey(t *testing.T) {
 		// Upper case, because Ctrl-Shift-O is still Ctrl-O.
 		{name: "Ctrl-O upper", event: tcell.NewEventKey(tcell.KeyRune, 'O', tcell.ModCtrl), want: editorSave},
 
-		// Go to line, the binding that was unreachable. All four spellings work.
+		// Go to line, the binding that was unreachable.
+		//
+		// KeyUS is the one that matters: it is what a terminal's `^_` (0x1F) actually
+		// becomes. `KeyCtrlUnderscore` is 95 and *nothing produces 95* -- the old test
+		// passed by synthesising it, which no keyboard can do. It stays accepted in case
+		// some driver does emit it, but this is the case that would have caught the bug.
+		{name: "KeyUS, which is what ^_ really is", event: tcell.NewEventKey(tcell.KeyUS, 0, tcell.ModNone), want: editorGoToLine},
 		{name: "KeyCtrlUnderscore", event: tcell.NewEventKey(tcell.KeyCtrlUnderscore, 0, tcell.ModNone), want: editorGoToLine},
 		{name: "Ctrl-slash", event: tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModCtrl), want: editorGoToLine},
-		{name: "Ctrl-minus", event: tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModCtrl), want: editorGoToLine},
 		// `_` needs Shift on this keyboard, so Shift must not disqualify it -- that is a
 		// fact about the layout rather than about the binding.
 		{name: "Ctrl-Shift-underscore", event: tcell.NewEventKey(tcell.KeyRune, '_', tcell.ModCtrl|tcell.ModShift), want: editorGoToLine},
