@@ -201,21 +201,33 @@ and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather than
 approximating. Anything landing partially refuses the part it cannot do.
 
 **A test that synthesises its own input can agree with itself and be wrong.**
-`tcell.KeyCtrlUnderscore` is 95, and *nothing produces 95*: a terminal sends
-`0x1F` for `^_`, which tcell turns into `Key(31)` — `KeyUS`. The `KeyCtrl*` block
-is numbered from `KeyCtrlA = 65`, so those constants are the letters, and a
-Ctrl'd letter only reaches them because `key.go:276` maps `a`-`z`+`ModCtrl` onto
-them. Punctuation gets no such mapping. The editor bound `KeyCtrlUnderscore`, the
-test pressed `KeyCtrlUnderscore`, both agreed, and the key had never worked on any
-platform — found only when it was pressed on a real keyboard. Where a test builds
-the event it asserts on, check that a device can produce that event.
+The editor bound `^_` as `tcell.KeyCtrlUnderscore` and the test pressed
+`tcell.KeyCtrlUnderscore`. Both agreed, and the key did nothing on Windows —
+found only when someone pressed it on a real keyboard. Where a test builds the
+event it asserts on, it proves the code equals itself and nothing more; check
+that a device can produce that event, or drive it through the layer that does.
 
-Same area, second trap: on Windows tcell has **no VT screen**, so input goes
-through `console_win.go`, which for a control character with Ctrl held adds `0x60`
-back and posts a rune (`:725-736`). `^_` is therefore `0x1F + 0x60 = 0x7F`, which
-tcell reads as Backspace — so `^_` on Windows *deletes* rather than doing nothing.
-Alt with a letter is reported with no character at all and the event is dropped
-(`:741-744`). Escape-then-key is the only meta spelling that survives both.
+**tcell has two input paths and they do not agree.** Measured, after two wrong
+guesses:
+
+- On a terminal (`input.go:450-452`) a control byte becomes
+  `NewEventKey(KeyCtrlSpace+Key(r), 0, ModCtrl)`. `KeyCtrlSpace` is 64, so `0x1F`
+  is `Key(95)` — `KeyCtrlUnderscore`, exactly as named. The `KeyCtrl*` names are
+  correct here.
+- On Windows there is **no VT screen**, so input goes through `console_win.go`,
+  which for a control character whose modifier mask is *exactly* Ctrl adds `0x60`
+  back and posts a rune (`:725-736`). `^_` typed as Ctrl+`-` is therefore
+  `0x1F + 0x60 = 0x7F`, which tcell reads as Backspace — it *deletes*. Typed as
+  Ctrl+Shift+`-` the mask is Ctrl|Shift, the addition is skipped, and it arrives
+  as `Key(31)` — `KeyUS`, a different constant for the same chord.
+
+So a Ctrl chord may need both spellings bound. Letters are safe by accident:
+`key.go:276` maps `a`-`z`+`ModCtrl` onto `KeyCtrlA+n`, which is the same 64-based
+numbering, so both paths agree. Punctuation has no such mapping and does not.
+Alt with a letter is reported by the Windows console with no character at all and
+the event is dropped (`:741-744`), so Escape-then-key is the meta spelling that
+survives both — and on the terminal path tcell already implements it
+(`input.go:104-110` sets `ModAlt` on the key after Escape).
 
 ## Documentation Hygiene
 

@@ -80,29 +80,30 @@ var nanoBindings = []editorBinding{
 	{key: tcell.KeyCtrlK, chords: ctrl('k'), label: "^K Cut", action: editorCutLine, describes: "Cut the current line with ^K"},
 	{key: tcell.KeyCtrlU, chords: ctrl('u'), label: "^U Paste", action: editorPasteLine, describes: "Paste it back with ^U"},
 	{key: tcell.KeyCtrlG, chords: ctrl('g'), label: "^G Help", action: editorHelp, describes: "Show the key list with ^G"},
-	// `^_` did nothing, and the binding was wrong on every platform.
+	// `^_` needs two Key constants, because tcell's two input paths disagree about which
+	// one this chord is. Measured, after two wrong guesses:
 	//
-	// **`tcell.KeyCtrlUnderscore` is 95, and nothing produces 95.** A terminal sends
-	// `0x1F` for `^_`, which tcell turns into `Key(31)` -- `KeyUS`. The `KeyCtrl*` block
-	// is numbered from `KeyCtrlA = 65`, so those constants are the *letters*, and a
-	// Ctrl'd letter only reaches them because key.go:276 maps `a`-`z` with ModCtrl onto
-	// them after console_win.go has already added `0x60` back. Punctuation gets no such
-	// mapping. The old test passed because it synthesised `KeyCtrlUnderscore` directly,
-	// which is an event no keyboard can produce -- a test agreeing with itself.
+	//   - On a terminal, input.go:450-452 posts `KeyCtrlSpace+Key(r)` for a control byte.
+	//     `KeyCtrlSpace` is 64, so `0x1F` is `Key(95)` -- `KeyCtrlUnderscore`, as named.
+	//   - On Windows there is no VT screen, so console_win.go handles it, and for a
+	//     control character whose modifier mask is *exactly* Ctrl it adds `0x60` back
+	//     (:725-736). Ctrl+`-` is therefore `0x7F`, which tcell reads as Backspace -- it
+	//     deletes. Ctrl+Shift+`-` has the mask Ctrl|Shift, skips the addition, and
+	//     arrives as `Key(31)` -- `KeyUS`.
 	//
-	// On Windows it is worse than unreachable: `0x1F + 0x60` is `0x7F`, which tcell reads
-	// as Backspace, so `^_` there arrives as Ctrl+Backspace and deletes rather than doing
-	// nothing. That one cannot be bound without taking a real editing key.
+	// Both are bound. Letters need no such care: key.go:276 maps `a`-`z` with ModCtrl
+	// onto `KeyCtrlA+n`, the same 64-based numbering, so the paths agree for them.
+	// Punctuation has no such mapping, which is why this binding and no other was broken.
 	//
-	// So: `KeyUS` is the true constant, Escape-then-G is the spelling that cannot fail,
-	// and the label leads with `M-G` because it is the one that works everywhere.
+	// Ctrl+Backspace is deliberately *not* bound: it is a real editing key, and taking it
+	// to rescue a chord the console has already mangled would cost more than it gains.
 	{
-		key:       tcell.KeyUS,
-		alsoKeys:  []tcell.Key{tcell.KeyCtrlUnderscore},
+		key:       tcell.KeyCtrlUnderscore,
+		alsoKeys:  []tcell.Key{tcell.KeyUS},
 		chords:    append(ctrl('_', '/'), editorChord{mods: tcell.ModAlt, rune: 'g'}),
-		label:     "M-G Go To Line",
+		label:     "^_ Go To Line",
 		action:    editorGoToLine,
-		describes: "Jump to a line with Esc then G (also ^_ and ^/ where the terminal sends them)",
+		describes: "Jump to a line with ^_ (Ctrl+Shift+- on Windows), or Esc then G",
 	},
 }
 

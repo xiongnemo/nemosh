@@ -1016,26 +1016,34 @@ leads with the one that works rather than the one that reads better. Shift is ig
 when matching, because `_` needs Shift on this keyboard and `/` does not: that is a fact
 about the layout, not about the binding.
 
-**Go to line is `M-G` -- Escape then G -- and that is a correction.** The binding was
-`tcell.KeyCtrlUnderscore`, which is 95, and *nothing produces 95*: a terminal sends `0x1F`
-for `^_`, which tcell turns into `Key(31)`, `KeyUS`. The `KeyCtrl*` constants are numbered
-from `KeyCtrlA = 65` -- they are the letters -- and a Ctrl'd letter only reaches them
-because `key.go:276` maps `a`-`z` with `ModCtrl` onto them; punctuation gets no such
-mapping. So the key had never worked on any platform. The test agreed with the code
-because it synthesised `KeyCtrlUnderscore` directly, which no keyboard can produce; it
-presses `KeyUS` now.
+**Go to line needs two Key constants**, because tcell has two input paths that disagree
+about which constant a control chord is. Measured, after two wrong guesses:
 
-On Windows it is worse than unreachable. tcell has no VT screen there, so input goes
-through the console API, which for a control character with Ctrl held adds `0x60` back
-(`console_win.go:725-736`) -- `0x1F` becomes `0x7F`, which tcell reads as Backspace. `^_`
-in Windows Terminal therefore *deletes a character*. `^-` is taken by the terminal itself
-for zoom, and `^/` produced nothing. Alt with a letter is no better: the console reports
-no character and tcell drops the event (`:741-744`).
+- On a terminal, `input.go:450-452` posts `KeyCtrlSpace+Key(r)` for a control byte.
+  `KeyCtrlSpace` is 64, so `0x1F` is `Key(95)` -- `KeyCtrlUnderscore`, exactly as named.
+  The original binding was right here, and `^_` has always worked on a terminal.
+- On Windows there is no VT screen, so `console_win.go` handles input, and for a control
+  character whose modifier mask is *exactly* Ctrl it adds `0x60` back (`:725-736`).
+  `^_` typed as Ctrl+`-` becomes `0x7F`, which tcell reads as Backspace -- so it deleted a
+  character rather than doing nothing. Typed as **Ctrl+Shift+`-`** the mask is Ctrl|Shift,
+  the addition is skipped, and it arrives as `Key(31)` -- `KeyUS`.
 
-Escape-then-G is the spelling that survives all of it -- both halves are ordinary keys --
-and it is what `M-` has always meant on a terminal, so nano's documented `M-G` works here
-by the route the documentation describes. `KeyUS`, `^_` and `^/` stay bound for the
-platforms that do send them.
+Both are bound now, so `^_` works on both. Letters never had this problem: `key.go:276`
+maps `a`-`z` with `ModCtrl` onto `KeyCtrlA+n`, the same 64-based numbering, so the two
+paths agree for them. Punctuation has no such mapping, which is why this binding and no
+other was broken. `Esc` then `G` is bound as well -- it is what `M-` means on a terminal,
+tcell already implements it there (`input.go:104-110`), and it is the only meta spelling
+that survives the Windows path, which reports Alt with a letter as no character at all and
+drops the event (`:741-744`).
+
+Ctrl+Backspace is deliberately not bound. It is what Ctrl+`-` degenerates into on Windows,
+but it is also a real editing key, and taking it to rescue a chord the console has already
+mangled would cost more than it gains.
+
+The test that missed this pressed `KeyCtrlUnderscore`, the same constant the code bound --
+it proved the code equalled itself. It presses both constants now, and
+`TestTcell_theTwoInputPathsNumberControlKeysDifferently` pins the arithmetic so a tcell
+upgrade that renumbers either block fails loudly.
 
 **`^G` is a panel, not a row.** It used to write the key list onto the message row,
 immediately above the legend that already shows the key list, so help drew a second row

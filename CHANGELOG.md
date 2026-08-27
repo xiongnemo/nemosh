@@ -17,16 +17,20 @@ patch number is the commits since that tag.
 
 ### Fixed
 
-- **Go to line had never worked, on any platform.** Reported from a Windows keyboard, but
-  the cause was not Windows: the binding was `tcell.KeyCtrlUnderscore`, which is 95, and
-  nothing produces 95. A terminal's `^_` is `0x1F`, which tcell turns into `Key(31)`.
-  The existing test passed because it synthesised `KeyCtrlUnderscore` itself -- an event
-  no keyboard can generate. It presses `KeyUS` now, and the binding accepts it.
-- On Windows `^_` was not inert but **destructive**: the console path adds `0x60` to the
-  control character, so `0x1F` becomes `0x7F` and tcell reads it as Backspace. `^-` is
-  taken by Windows Terminal for zoom and `^/` sends nothing, so the label is `M-G` now --
-  Escape then G, which is what `M-` means on a terminal and the one spelling whose halves
-  are both ordinary keys.
+- **Go to line did nothing on Windows.** tcell has two input paths that disagree about
+  which `Key` constant a control chord is. A terminal posts `KeyCtrlSpace+Key(r)` for a
+  control byte and `KeyCtrlSpace` is 64, so `0x1F` is `Key(95)` -- `KeyCtrlUnderscore`,
+  as named, and `^_` had always worked there. The Windows console has no VT screen, and
+  for a control character whose modifier mask is exactly Ctrl it adds `0x60` back: `^_`
+  as Ctrl+`-` becomes `0x7F` and reads as Backspace, so it *deleted*. As Ctrl+Shift+`-`
+  it keeps its mask and arrives as `Key(31)` -- `KeyUS`. Both constants are bound now.
+- Letters were never affected: `key.go:276` maps `a`-`z`+`ModCtrl` onto `KeyCtrlA+n`,
+  the same numbering, so both paths agree for them. Punctuation has no such mapping.
+- `Esc` then `G` is bound too, as nano's `M-G` -- the only meta spelling that survives
+  the Windows path, which reports Alt with a letter as no character and drops the event.
+- The test that missed this pressed the same constant the code bound, so it proved only
+  that the code equalled itself. It presses both now, and the constant arithmetic is
+  pinned so a tcell upgrade that renumbers either block fails loudly.
 - **`^G` help drew a second row of key names under the legend.** It wrote to the message
   row, which sits directly above the legend that already lists every key. It is a panel
   now, listing what is *absent* and why -- the same fix `c5a1a44` made for `top`.

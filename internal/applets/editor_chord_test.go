@@ -6,14 +6,50 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// Whether a key press reaches its binding by either spelling.
+// Whether a key press reaches its binding by every spelling a platform may send it in.
 //
-// `^_` did nothing on a real Windows keyboard, and reading tcell explains why: there
-// is no VT screen on Windows, so input goes through the console API, and for a control
-// character with Ctrl held tcell adds 0x60 back and posts a *rune with ModCtrl* rather
-// than a Key constant (console_win.go:725-736). Which spelling arrives for a given
-// physical key is a property of the console, not something this code can know -- so it
-// accepts both.
+// `^_` did nothing on a real Windows keyboard. tcell has two input paths and they
+// disagree about which Key constant a control chord is:
+//
+//   - a terminal posts `KeyCtrlSpace+Key(r)` for a control byte (input.go:450-452), and
+//     `KeyCtrlSpace` is 64, so `0x1F` is Key(95) -- `KeyCtrlUnderscore`, as named;
+//   - the Windows console has no VT screen, and for a control character whose modifier
+//     mask is *exactly* Ctrl it adds 0x60 back and posts a rune instead
+//     (console_win.go:725-736). Ctrl+`-` becomes 0x7F, which reads as Backspace;
+//     Ctrl+Shift+`-` keeps its mask, skips the addition, and arrives as Key(31) --
+//     `KeyUS`.
+//
+// Letters are safe by accident, because key.go:276 maps `a`-`z`+ModCtrl onto
+// `KeyCtrlA+n`, the same 64-based numbering. Punctuation has no such mapping, which is
+// why this binding and no other was broken.
+
+// The arithmetic both paths depend on, pinned here so it is a test rather than a comment
+// -- and so that a tcell upgrade renumbering either block fails loudly.
+func TestTcell_theTwoInputPathsNumberControlKeysDifferently(t *testing.T) {
+	// The terminal path: KeyCtrlSpace + the control byte.
+	if got := tcell.KeyCtrlSpace + tcell.Key(0x1f); got != tcell.KeyCtrlUnderscore {
+		t.Errorf("a terminal's ^_ is Key(%d); KeyCtrlUnderscore is %d",
+			int(got), int(tcell.KeyCtrlUnderscore))
+	}
+	if got := tcell.KeyCtrlSpace + tcell.Key(0x0f); got != tcell.KeyCtrlO {
+		t.Errorf("a terminal's ^O is Key(%d); KeyCtrlO is %d", int(got), int(tcell.KeyCtrlO))
+	}
+	// The Windows path for a chord that keeps Shift: the bare ASCII value.
+	if got := tcell.Key(0x1f); got != tcell.KeyUS {
+		t.Errorf("Key(0x1f) is %d; KeyUS is %d", int(got), int(tcell.KeyUS))
+	}
+	// And the two are genuinely different constants, which is the whole problem.
+	if tcell.KeyUS == tcell.KeyCtrlUnderscore {
+		t.Fatal("KeyUS and KeyCtrlUnderscore are the same; this binding needs only one of them")
+	}
+	// The mangling that makes Ctrl+`-` destructive on Windows rather than merely dead.
+	if got := tcell.Key(0x1f + 0x60); got != tcell.KeyDEL {
+		t.Errorf("0x1f+0x60 is Key(%d), want KeyDEL(%d)", int(got), int(tcell.KeyDEL))
+	}
+	if tcell.NewEventKey(tcell.KeyRune, 0x1f+0x60, tcell.ModCtrl).Key() != tcell.KeyBackspace {
+		t.Error("Ctrl+`-` on Windows no longer reads as Backspace; the comment needs updating")
+	}
+}
 
 func TestEditorKeyMap_acceptsEitherSpellingOfAKey(t *testing.T) {
 	nano := editorKeyMapFor("nano")
@@ -31,11 +67,11 @@ func TestEditorKeyMap_acceptsEitherSpellingOfAKey(t *testing.T) {
 
 		// Go to line, the binding that was unreachable.
 		//
-		// KeyUS is the one that matters: it is what a terminal's `^_` (0x1F) actually
-		// becomes. `KeyCtrlUnderscore` is 95 and *nothing produces 95* -- the old test
-		// passed by synthesising it, which no keyboard can do. It stays accepted in case
-		// some driver does emit it, but this is the case that would have caught the bug.
-		{name: "KeyUS, which is what ^_ really is", event: tcell.NewEventKey(tcell.KeyUS, 0, tcell.ModNone), want: editorGoToLine},
+		// Both constants matter, because tcell's two input paths disagree: a terminal
+		// posts Key(95) = KeyCtrlUnderscore for 0x1F (input.go:452), and the Windows
+		// console posts Key(31) = KeyUS for the same physical chord. The old test pressed
+		// only the first, which is why the Windows half went unnoticed.
+		{name: "KeyUS, what Windows sends", event: tcell.NewEventKey(tcell.KeyUS, 0, tcell.ModNone), want: editorGoToLine},
 		{name: "KeyCtrlUnderscore", event: tcell.NewEventKey(tcell.KeyCtrlUnderscore, 0, tcell.ModNone), want: editorGoToLine},
 		{name: "Ctrl-slash", event: tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModCtrl), want: editorGoToLine},
 		// `_` needs Shift on this keyboard, so Shift must not disqualify it -- that is a
