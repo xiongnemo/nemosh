@@ -90,7 +90,8 @@ where it was right it is worth saying so.
 | Networking | `wget`, `nc`, `whois`, `ssl_client`, `httpd`, `ftpget`, `ftpput` | not "post-v0 unless needed for scripts" in the end. The focus is containment -- a URL and a request path are untrusted names, so both go through the *archive* helper above -- and every test runs against a server the test starts. | done |
 | Editors | `nano`, `micro` | one implementation under two names, keyed by `argv[0]`, on the reading that busybox's own `vi` is a from-scratch clone. Headless tests over a tcell simulation screen. | done |
 | Interpreters | `awk` | the POSIX language, built in ten staged commits with the value model first, because strnum cannot be retrofitted. Every rule measured against gawk and busybox-w32 before it was written; the differential harness hands each program to both through a *file*, since gawk on Windows collapses a doubled backslash in an argv-delivered program. | done |
-| Interpreters | `vi`, `ed`, `bc`, `dc` | still substantial standalone projects, and still deferred. `vi` is covered by `nano`/`micro` on busybox's own reasoning. | deferred |
+| Interpreters | `bc`, `dc`, `ed`, `less` | the calculator language and its reverse-polish sibling over one exact decimal core, the line editor a script can drive, and the pager that is `cat` when there is nowhere to page to. | done |
+| Interpreters | `vi` | covered by `nano`/`micro` on busybox's own reasoning: its `vi` is a from-scratch clone that says so in its header. | out |
 | No Go support | `xz`, `unxz`, `lzma`, `lzop`, `bzip2` (compressing) | **not implemented and deliberately not registered**, so PATH still finds a real one. The reasons are in `docs/support-matrix.md`. | out |
 
 ## Per-Applet Test File Rule

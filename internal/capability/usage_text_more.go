@@ -47,6 +47,18 @@ var usageTextMore = map[string]Usage{
 			"q refuses once when there are unsaved changes; Q never does.",
 			"This is the one applet that follows GNU rather than busybox-w32, whose ed answers `unimplemented command` to n, cannot search backwards and has no g.",
 		}},
+	"less": {Summary: "Page through text.", Operands: "[FILE]...",
+		Options: map[string]string{"N": "number the lines", "S": "cut long lines instead of folding them",
+			"I": "ignore case when searching", "E": "quit at the end rather than waiting",
+			"F": "quit at once if it all fits on one screen", "h": "list the keys",
+			"M": "accepted; there is one prompt style", "m": "accepted; there is one prompt style",
+			"R": "accepted; control characters are drawn the same either way",
+			"~": "accepted; the tildes past the end are always drawn"},
+		Notes: []string{
+			"With nowhere to page to it is `cat`, so `less f | head -3` and `less f > out` copy their input through -- which is what makes it safe to write in a script.",
+			"Keys: SPACE f PgDn forward, b PgUp back, j k a line, d u a half screen, g G the ends, / ? to search, n N to repeat, q to quit.",
+			"A search does not wrap, and says so when it runs out: wrapping would make \"no more\" indistinguishable from \"none at all\".",
+		}},
 	"df": {Summary: "Report free space on each filesystem.", Operands: "[FILE]...",
 		Options: map[string]string{"h": "print sizes as K, M and G", "k": "print 1K blocks, which is the default"},
 		Notes: []string{

@@ -10,6 +10,12 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`less`.** With nowhere to page to it is `cat`, which is what every less does and what
+  makes it safe to write in a script: `less f | head -3` copies its input through, and a
+  program downstream never has to know a pager was in the way. On a terminal it pages, with
+  the keys people already have in their fingers, and a search that does not wrap -- because
+  wrapping would make "no more" indistinguishable from "none at all".
+
 - **`ed`.** The editor a *script* can drive: `nano` and `micro` need a terminal, and a shell
   script that has to change three lines of a file had nothing else to reach for on Windows.
   Addresses including `/re/`, `?re?` and marks; `a i c d p n l = s g v m t j k r w e f q Q

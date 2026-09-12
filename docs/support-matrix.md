@@ -520,6 +520,7 @@ behaviour this shell deliberately does not have.
 | `killall` | `-l -q`, and a leading `-SIGNAL`; the name is matched whole, not as a pattern | refused by name |
 | `link` | none; an existing LINK is refused rather than replaced | refused by name |
 | `logname` | none; the login account, which under elevation differs from `whoami` | refused by name |
+| `less` | `-N -S -I -E -F -h`; `-M -m -R -~` accepted. With no terminal it is `cat` | refused by name |
 | `nproc` | `--all --ignore=N`; the answer never drops below 1 | refused by name |
 | `pidof` | `-s -o PID[,PID]`; the name is matched whole, not as a pattern | refused by name |
 | `truncate` | `-s SIZE` with `K M G` and `KB MB GB`, a leading `+` or `-`, and `-c` | refused by name |

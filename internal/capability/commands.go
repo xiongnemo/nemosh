@@ -116,6 +116,7 @@ var commands = []Command{
 	{Name: "nano", Short: "HRl", Operand: AnyPath},
 	{Name: "micro", Short: "HRl", Operand: AnyPath},
 	{Name: "ed", Short: "sp", ValueShort: "p", Operand: AnyPath},
+	{Name: "less", Short: "EFIMmNSRh~", Operand: AnyPath},
 	{Name: "od", Short: "bcCdoxvAt", ValueShort: "At", Operand: AnyPath},
 	{Name: "hexdump", Short: "bcCdoxvAt", ValueShort: "At", Operand: AnyPath},
 	{Name: "hd", Short: "bcCdoxvAt", ValueShort: "At", Operand: AnyPath},
