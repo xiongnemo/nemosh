@@ -50,6 +50,10 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		special: r.special,
 		// Cloned rather than shared, and never omitted: see shellArrays.clone.
 		arrays: r.arrays.clone(),
+		// Cloned for the same reason arrays are: `(pushd /tmp)` must leave the
+		// parent's stack alone. $SECONDS and history are the deliberate exceptions
+		// above; a directory stack is not one of them.
+		dirStack: r.dirStack.clone(),
 		// locals belongs to a function call, and a snapshot is not inside
 		// one: a subshell or a background worker that returns has nothing
 		// of the caller's to restore.

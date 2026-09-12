@@ -177,3 +177,12 @@ func causeText(err error) string {
 	}
 	return err.Error()
 }
+
+// CauseText is causeText for callers outside this package.
+//
+// The shell needs it: `cd nosuchdir` printed
+// `GetFileAttributesEx C:\...\nosuchdir: The system cannot find the file specified.`
+// where every shell says `No such file or directory`, because the runtime formatted the
+// raw error and this package's mapping was unexported. One vocabulary for both, so a
+// missing file reads the same whether an applet or a builtin found it.
+func CauseText(err error) string { return causeText(err) }

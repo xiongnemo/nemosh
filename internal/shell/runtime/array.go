@@ -91,9 +91,19 @@ func (a *shellArrays) setElement(name string, index int, value string) {
 	a.mark(name, index)
 }
 
+// unset removes a whole array of either kind.
+//
+// The associative map is cleared too, which it was not: `declare -A m; m[k]=v; unset m`
+// left the name associative and its keys intact, so a later `m[j]=w` added to the old map
+// instead of making a fresh indexed array. bash drops the declaration with the value, and
+// `${!m[@]}` there answers `0` afterwards where this answered `k j`.
+//
+// The builtin never reached here at all before -- it deleted from the scalar table only --
+// so `unset a` on an indexed array left that behind as well.
 func (a *shellArrays) unset(name string) {
 	delete(a.values, name)
 	delete(a.present, name)
+	delete(a.associative, name)
 }
 
 // clone is what a subshell gets: the parent's arrays are visible inside it and a

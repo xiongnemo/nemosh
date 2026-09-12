@@ -38,6 +38,24 @@ func (a *associativeArray) set(key, value string) {
 	a.entries[key] = value
 }
 
+// remove takes a key out, keeping the order of the ones that remain.
+//
+// The order slice is filtered rather than rebuilt from the map, because the map has no
+// order to rebuild it from -- that is the whole reason `order` exists.
+func (a *associativeArray) remove(key string) {
+	if _, present := a.entries[key]; !present {
+		return
+	}
+	delete(a.entries, key)
+	remaining := a.order[:0]
+	for _, existing := range a.order {
+		if existing != key {
+			remaining = append(remaining, existing)
+		}
+	}
+	a.order = remaining
+}
+
 func (a *associativeArray) clone() *associativeArray {
 	copied := &associativeArray{
 		entries: make(map[string]string, len(a.entries)),

@@ -10,6 +10,12 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`pushd`, `popd` and `dirs`.** Position zero of the stack is not stored -- it is read
+  from the shell -- so it cannot go stale when `cd` moves. `+N` counts from the current
+  directory and `-N` from the far end; `pushd +N` rotates where `popd +N` removes, which
+  is bash's behaviour and easy to conflate. A subshell gets a copy, so `(pushd /tmp)`
+  leaves the parent where it was.
+
 - **Replace in the editor**, which `-H` had listed as absent since the day it was
   written. nano binds `^\` and micro `^R`; every match is confirmed with `y`/`n`/`a`/`q`.
   The scan starts at the top of the buffer rather than at the cursor, so there is no wrap
@@ -30,6 +36,17 @@ patch number is the commits since that tag.
   gutter rather than the text.
 
 ### Fixed
+
+- **`unset a[i]` returned success and did nothing.** The subscript was never parsed, so
+  `a[1]` was looked up as a variable name, not found, and deleting a name that is not
+  there succeeds -- a script that removed an element and carried on was silently wrong.
+  It now removes the element and leaves a gap, as bash does, so later indices do not
+  shift. Associative keys too, and `unset a` now clears the array rather than only the
+  scalar of that name.
+- **`cd` printed a raw Win32 error.** `cd nosuchdir` said
+  `GetFileAttributesEx C:\...: The system cannot find the file specified.` where every
+  shell says `No such file or directory`. The mapping the applets already use is shared
+  with the shell now, so a missing directory reads the same whichever found it.
 
 - **The editor deleted the file's final newline when a line was cut or pasted.** The
   buffer was rebuilt with `strings.Join`, which is not the inverse of the line split --

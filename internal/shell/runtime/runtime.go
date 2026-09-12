@@ -36,6 +36,10 @@ type Runtime struct {
 	// history is shared by pointer across snapshots, so a command recorded in a
 	// pipeline stage is still there when the parent's `history` asks.
 	history *shellHistory
+	// dirStack is what lies beneath the current directory, for pushd/popd/dirs.
+	// Position zero is not stored -- it is read from the shell, so it cannot go
+	// stale when `cd` moves. See builtin_dirs.go.
+	dirStack *directoryStack
 	// arrays is the indexed-array store, kept apart from vars because packing
 	// elements into one string cannot represent an element containing the
 	// separator -- which is the case arrays exist for. See array.go.
@@ -196,7 +200,13 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	case "export":
 		return r.export(args[1:])
 	case "unset":
-		return r.unset(args[1:])
+		return r.unset(ctx, args[1:])
+	case "pushd":
+		return r.pushd(args[1:])
+	case "popd":
+		return r.popd(args[1:])
+	case "dirs":
+		return r.dirs(args[1:])
 	case "pwd":
 		return r.pwd()
 	case "shopt":
