@@ -25,6 +25,7 @@ type shoptOption struct {
 }
 
 var shoptOptions = []shoptOption{
+	{"autocd", func(o *shellOptions) *bool { return &o.autoCD }, "a bare directory name means cd to it"},
 	{"dotglob", func(o *shellOptions) *bool { return &o.dotGlob }, "a leading dot is matched by * as well"},
 	{"globstar", func(o *shellOptions) *bool { return &o.globStar }, "** matches across directories"},
 	{"nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }, "patterns match without regard to case"},

@@ -10,6 +10,17 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`shopt -s autocd`**: a bare directory name changes directory. Off by default, and
+  checked only *after* command lookup has failed, so a command always wins -- many trees
+  hold a directory called `test`, and `test` is a command. A path-shaped word like `./a`
+  is not autocd'd, which is bash's behaviour.
+- **`CDPATH`**: `cd src` finds it under any entry, with the current directory tried last.
+  A path that says where it means -- absolute, `./`, `../`, `~` -- is never searched for.
+  The search is silent until the last candidate, so a miss still reports once.
+- **`~+`, `~-`, `~N`, `~+N` and `~-N`**, naming a place on the directory stack. `~-` is
+  where `cd -` would go; the numbered forms count from the current directory and from the
+  far end, the same two directions `pushd +N` and `pushd -N` use.
+
 - **History expansion**: `!!`, `!n`, `!-n`, `!string`, `!?text?`, `!$`, `!^`, `!*` and
   `^old^new`, on interactive input. Single quotes protect and double quotes do not; a
   backslash escapes; a `!` before a blank, an `=` or the end of a line is text, so

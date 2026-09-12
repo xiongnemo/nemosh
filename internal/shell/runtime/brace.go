@@ -111,7 +111,7 @@ func startsWithTilde(item word) bool {
 	if first.kind != wordPartLiteral || first.quote != quoteUnquoted {
 		return false
 	}
-	return first.text == "~" || strings.HasPrefix(first.text, "~/")
+	return wordExpandsTilde(first.text)
 }
 
 // expandBraceAtoms is the expansion itself: find the first group, expand it, and

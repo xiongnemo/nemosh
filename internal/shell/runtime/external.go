@@ -32,6 +32,13 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	}
 	executable, err := r.externalCommandPath(args[0])
 	if err != nil {
+		// `shopt -s autocd`: a lone word that names a directory means `cd` to it.
+		// Checked here, after the lookup has failed, because a command of that name
+		// must still win -- there is a directory called `test` in many trees and
+		// `test` is a command.
+		if status, handled := r.autoChangeDirectory(args, err); handled {
+			return status
+		}
 		return r.reportLookupFailure(args[0], err)
 	}
 	executable, err = requireAbsoluteNativePath("executable", executable)

@@ -233,7 +233,18 @@ func splitOnFieldSeparators(value, separators string) []string {
 	return fields
 }
 
+// expandHomeTilde turns `~`, `~/path`, and the directory-stack forms into paths.
+//
+// `~+` is the current directory and `~-` the previous one, which is what makes
+// `cp file ~-` mean "back where I just was" without typing it. `~N`, `~+N` and `~-N`
+// index the stack `dirs` prints, counting from the current directory and from the far end
+// respectively -- the same two directions `pushd +N` and `pushd -N` use, so one mental
+// model covers both. Added with the stack, because a stack you cannot name positions in
+// is a stack you can only walk.
 func (r Runtime) expandHomeTilde(value string) string {
+	if replaced, ok := r.expandDirectoryTilde(value); ok {
+		return replaced
+	}
 	if value != "~" && !strings.HasPrefix(value, "~/") {
 		return value
 	}

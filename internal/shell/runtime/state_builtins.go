@@ -131,6 +131,30 @@ func (r Runtime) changeDirectory(as string, args []string) int {
 	if !ok {
 		return 1
 	}
+	// CDPATH: a relative operand is looked for under each entry, the current directory
+	// last. Only the *last* candidate reports a failure, so `cd nosuch` still says what
+	// it always did rather than complaining once per entry.
+	candidates := r.cdPathTargets(target)
+	for _, candidate := range candidates[:len(candidates)-1] {
+		if status := r.tryChangeDirectory(as, candidate, printResult, true); status == 0 {
+			return 0
+		}
+	}
+	target = candidates[len(candidates)-1]
+	return r.tryChangeDirectory(as, target, printResult, false)
+}
+
+// reportCD prints a cd diagnostic unless this attempt is a silent CDPATH probe.
+func reportCD(r Runtime, quiet bool, format string, args ...any) {
+	if quiet {
+		return
+	}
+	fmt.Fprintf(r.streams.Stderr, format, args...)
+}
+
+// tryChangeDirectory is one attempt. quiet suppresses the diagnostics, which is what lets
+// the CDPATH search try several places without narrating each miss.
+func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet bool) int {
 	resolved, err := r.ResolveNemoshPath(target)
 	if err != nil {
 		// A host-only UNC path is not a missing directory, it is not a
@@ -142,11 +166,11 @@ func (r Runtime) changeDirectory(as string, args []string) int {
 		// suggestion it cannot complete.
 		var hostOnly pathmodel.HostOnlyUNCError
 		if errors.As(err, &hostOnly) {
-			fmt.Fprintf(r.streams.Stderr, "%s: %s: No such file or directory\n", as, target)
-			fmt.Fprintf(r.streams.Stderr, "hint: %v\n", hostOnly)
+			reportCD(r, quiet, "%s: %s: No such file or directory\n", as, target)
+			reportCD(r, quiet, "hint: %v\n", hostOnly)
 			return 1
 		}
-		fmt.Fprintf(r.streams.Stderr, "%s: %s: %v\n", as, target, err)
+		reportCD(r, quiet, "%s: %s: %v\n", as, target, err)
 		return 1
 	}
 	if resolved.Device {
@@ -157,7 +181,7 @@ func (r Runtime) changeDirectory(as string, args []string) int {
 		// directory the shell was in before while `pwd` said /dev, which is a silent
 		// disagreement rather than an error. /tmp is the contrast that makes this a rule
 		// rather than an inconsistency: `cd /tmp` works because /tmp has a native mapping.
-		fmt.Fprintf(r.streams.Stderr, "%s: %s: a device directory cannot be a working directory\n", as, target)
+		reportCD(r, quiet, "%s: %s: a device directory cannot be a working directory\n", as, target)
 		return 1
 	}
 	info, err := os.Stat(resolved.Native)
@@ -167,14 +191,14 @@ func (r Runtime) changeDirectory(as string, args []string) int {
 		// specified.` -- where every shell says `No such file or directory`.
 		// applets.CauseText is the mapping every applet diagnostic already uses, so a
 		// missing directory reads the same whether an applet or a builtin found it.
-		fmt.Fprintf(r.streams.Stderr, "%s: %s: %s\n", as, target, applets.CauseText(err))
+		reportCD(r, quiet, "%s: %s: %s\n", as, target, applets.CauseText(err))
 		return 1
 	}
 	// Not folded into the branch above: with a nil error there was nothing to
 	// format, so a `cd` onto a regular file reported the literal text <nil> as
 	// its reason.
 	if !info.IsDir() {
-		fmt.Fprintf(r.streams.Stderr, "%s: %s: Not a directory\n", as, target)
+		reportCD(r, quiet, "%s: %s: Not a directory\n", as, target)
 		return 1
 	}
 	previous := r.WorkingDirectory()

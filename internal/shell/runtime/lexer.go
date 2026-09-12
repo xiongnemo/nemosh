@@ -66,7 +66,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 		typed := &word{
 			parts:       append([]wordPart(nil), parts...),
 			quotedEmpty: value == "",
-			expandTilde: raw == "~" || strings.HasPrefix(raw, "~/"),
+			expandTilde: wordExpandsTilde(raw),
 		}
 		if err := appendToken(shellToken{kind: tokenWord, value: value, literalDollarAt: literalDollarAt, parsed: typed}); err != nil {
 			return err

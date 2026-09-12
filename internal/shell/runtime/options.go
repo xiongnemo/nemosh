@@ -32,6 +32,9 @@ type shellOptions struct {
 	// extGlob is reported by `shopt` and is always true: the matcher recognises the
 	// extended operators whether or not it is asked to. See pattern_extended.go.
 	extGlob bool
+	// autoCD is `shopt -s autocd`: a bare directory name means `cd` to it. Off by
+	// default, as it is in bash, because it changes what a mistyped command does.
+	autoCD bool
 }
 
 type shellOptionSpec struct {
