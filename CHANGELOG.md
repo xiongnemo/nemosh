@@ -10,6 +10,15 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`bc`.** The POSIX calculator language: variables, arrays, `if`, `while`, `for`, `define`
+  with autos and recursion, `print`, and exact arithmetic at whatever precision `scale` asks
+  for. `-l`, the maths library, is refused rather than approximated -- those functions are
+  series expansions, and a wrong one is wrong in the last digits of an answer that still
+  looks right, which is the worst shape an error can take in a calculator.
+
+  One divergence from busybox, following POSIX and GNU: **`^` binds tighter than unary
+  minus**, so `-2^2` is -4 here and 4 there.
+
 - **`dc`, and the arbitrary-precision decimal arithmetic under it.** A number is an integer
   and a scale rather than a float, so `0.1` is exactly a tenth and `scale=30; 1/3` really has
   thirty digits. The scale of every result is specified rather than incidental -- with

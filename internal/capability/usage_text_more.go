@@ -12,6 +12,19 @@ package capability
 // which reads the table -- usage.go and the two tests that hold it to the capability rows --
 // sees every entry without knowing there was a split at all.
 var usageTextMore = map[string]Usage{
+	"bc": {Summary: "An arbitrary-precision calculator language.", Operands: "[FILE]...",
+		Options: map[string]string{"s": "the POSIX language, which is what this is", "q": "no banner, which there never is",
+			"w": "warn about non-POSIX constructs", "standard": "the POSIX language, which is what this is",
+			"quiet": "no banner, which there never is", "warn": "warn about non-POSIX constructs"},
+		Notes: []string{
+			"Numbers are exact: `scale=30; 1/3` really has thirty digits, and 0.1 is a tenth rather than the nearest float.",
+			"scale, ibase and obase are ordinary variables. scale is 0 to start, so `10/3` is 3 until a program says otherwise.",
+			"A top-level expression prints its value; an assignment does not. `(x = 5)` prints, because the parenthesis makes it an expression that happens to assign.",
+			"`^` binds tighter than unary minus, so `-2^2` is -4. busybox answers 4 there; POSIX and GNU say -4.",
+			"A string has no escapes at all: `print \"a\nb\"` prints the four characters.",
+			"-l, the maths library, is refused: those functions are series expansions, and a wrong one is wrong in the last digits of an answer that still looks right.",
+			"read() is refused, and an output base above 16 is too -- above that POSIX prints digits as space-separated decimal groups, which is a different format.",
+		}},
 	"dc": {Summary: "A reverse-polish calculator with arbitrary precision.", Operands: "[FILE]...",
 		Options: map[string]string{"e": "run this script", "f": "run this file", "x": "accepted; dc reads its input as a script anyway"},
 		Notes: []string{

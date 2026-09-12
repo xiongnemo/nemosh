@@ -73,6 +73,7 @@ var commands = []Command{
 	{Name: "free", Short: "bkmgh", Operand: AnyPath},
 	{Name: "factor", Operand: AnyPath},
 	{Name: "dc", Short: "xef", ValueShort: "ef", FileShort: "f", Operand: AnyPath},
+	{Name: "bc", Short: "sqw", Long: []string{"standard", "quiet", "warn"}, Operand: AnyPath},
 	{Name: "fold", Short: "bsw", ValueShort: "w", Operand: AnyPath},
 	{Name: "tsort", Operand: AnyPath},
 	{Name: "strings", Short: "afont", ValueShort: "nt", Operand: AnyPath},

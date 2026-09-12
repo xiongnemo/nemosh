@@ -161,6 +161,7 @@ func portableApplets() []Applet {
 		newFreeApplet(),
 		newFactorApplet(),
 		newDcApplet(),
+		newBcApplet(),
 		newFoldApplet(),
 		newTsortApplet(),
 		newStringsApplet(),
