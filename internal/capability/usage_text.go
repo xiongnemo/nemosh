@@ -69,6 +69,15 @@ var usageText = map[string]Usage{
 	"rev":      {Summary: "Reverse the characters of every line.", Operands: "[FILE]..."},
 	"rm":       {Summary: "Remove files and directories.", Operands: "FILE...", Options: map[string]string{"f": "do not complain about what is not there", "r": "remove directories and their contents"}},
 	"rmdir":    {Summary: "Remove empty directories.", Operands: "DIRECTORY...", Options: map[string]string{"p": "remove each parent that becomes empty too", "v": "print a line per directory removed"}},
+	"awk": {Summary: "Scan text for patterns and act on them.", Operands: "PROGRAM [FILE|VAR=VALUE]...",
+		Options: map[string]string{"F": "the field separator", "v": "set VAR=VALUE before BEGIN", "f": "read the program from a file"},
+		Notes: []string{
+			"The POSIX language: patterns and actions, BEGIN and END, fields, arrays, user functions, getline and printf.",
+			"length, substr, index, match and split count runes rather than bytes, so length(\"héllo\") is 5.",
+			"A command in `print | cmd`, `cmd | getline` or system() must be an applet of this shell: no OS process is started, and shell syntax in one is refused rather than guessed at.",
+			"RS is a single character or empty for paragraph mode; a regular expression RS is a gawk extension and is not accepted.",
+			"gensub, asort, switch, @include and BEGINFILE/ENDFILE are gawk extensions and are refused by name.",
+		}},
 	"sed": {Summary: "Edit a stream of text by script.", Operands: "SCRIPT [FILE]...", Notes: []string{
 		"Only the s command: s/PATTERN/REPLACEMENT/[g][N].",
 		"PATTERN is a POSIX basic regular expression, with the GNU \\+ \\? \\| extensions.",

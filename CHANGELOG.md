@@ -10,6 +10,24 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`awk`.** The POSIX language: patterns and actions, `BEGIN`/`END`, ranges, fields and
+  the built-in variables, arrays, every control statement, user-defined functions with
+  arrays by reference, the string and numeric built-ins, `printf`/`sprintf`, all six
+  `getline` forms, output redirection, and `-F`/`-v`/`-f` with operands mixing file names
+  and `VAR=VALUE`. It was the last name a script actually reaches for.
+
+  Built in ten staged commits with the **value model first**, because awk's string /
+  number / strnum rule decides every comparison in every program and cannot be retrofitted.
+  Every rule was measured against gawk 5.4.1 and busybox-w32 1.38.0 *before* it was
+  written, which is what turned up the dozen places the two disagree -- all listed in
+  `docs/support-matrix.md` with the one that was followed and why.
+
+  Two deliberate differences from both: **text is counted in runes**, so
+  `length("héllo")` is 5, matching what `wc -m`, `rev` and `fold` already do here; and a
+  command in `system()`, `print | cmd` or `cmd | getline` is **an applet of this shell**,
+  because `internal/applets` never spawns an OS process. Shell syntax inside such a
+  command is refused rather than guessed at.
+
 - **A kill ring in the line editor.** `^K` kills to the end of the line and `^Y` puts back
   what `^K`, `^U` or `^W` took. `^U` and `^W` destroyed what they removed until now.
   `^U` also changed meaning to readline's unix-line-discard -- backwards to the start of

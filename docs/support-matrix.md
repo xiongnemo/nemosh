@@ -572,6 +572,7 @@ behaviour this shell deliberately does not have.
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
 | `shuf` | `-n -e -i -z` | refused by name |
 | `strings` | `-n -t -o -a -f` | refused by name |
+| `awk` | the POSIX language; `-F -v -f --`, operands mixing files and `VAR=VALUE` | refused by name |
 | `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {}`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
 | `sleep` | duration operand | reported as an invalid duration |
@@ -1613,6 +1614,81 @@ other**, and this follows the consistent answer — which is GNU's, and busybox
 `head` and `tail` disagreeing with each other is worse than one of them
 disagreeing with a reference, and a bare `-` in a header would read as a file of
 that name.
+
+### `awk`
+
+The POSIX language: patterns and actions, `BEGIN`/`END`, ranges, fields and the
+built-in variables, arrays with `SUBSEP` and `delete`, every control statement,
+user-defined functions, the string and numeric built-ins, `printf`/`sprintf`, all
+six `getline` forms, output redirection, and `-F`/`-v`/`-f`/`--` with operands
+that mix file names and `VAR=VALUE`.
+
+Each rule below was measured against gawk 5.4.1 and busybox-w32 1.38.0 before it
+was written. Where the two disagree, the one followed is named.
+
+**Text is counted in runes, not bytes.** `length("héllo")` is 5 here, and
+`index`, `substr`, `match`, `RSTART`, `RLENGTH` and `split(s, a, "")` all agree
+with it. The references do not settle this: busybox always counts bytes, while
+gawk counts bytes under `LC_ALL=C` and runes under a UTF-8 locale. Runes are what
+`wc -m`, `rev`, `fold` and `sed`'s `y///` already count here, and byte offsets
+would let `substr` cut a UTF-8 sequence in half and emit invalid output.
+`toupper`/`tolower` and `printf "%c"` follow the same rule, so `printf "%c", 233`
+writes `é` rather than the lone byte `0xE9`.
+
+**A command is an applet of this shell, and nothing else.** `system()`,
+`print | cmd` and `cmd | getline` look their command up in the applet registry and
+refuse anything else by name, because `internal/applets` never spawns an OS
+process — the boundary `docs/design/windows-execution-model.md` sets and `xargs`
+already draws. So `"sort" | getline` works and `system("c:/tool.exe")` does not.
+Shell syntax inside such a command is **refused rather than approximated**: an
+unquoted `;`, `|`, `&`, `<`, `>`, `$` or backtick is an error, since treating
+`echo a; echo b` as `echo` with three arguments would be a wrong answer wearing
+the costume of a right one. A quoted metacharacter is an ordinary character, so
+`grep '$'` still works.
+
+**A pipe collects and runs at close.** `print | "sort"` hands its applet
+everything written to it when `close()` is called or the program ends, rather than
+running concurrently. `print "x" | "sort"; print "direct"` therefore prints
+`direct` first — busybox's order; gawk's is the other way round.
+
+Where the references disagree and one was chosen:
+
+| case | gawk | busybox | here |
+| --- | --- | --- | --- |
+| `gsub(/a*/, "-", "aaa")` | `1 -` | `2 --` | gawk — an empty match abutting the previous one is skipped |
+| a replacement `\\` with no `&` after it | two backslashes | one | busybox, which is POSIX |
+| `index(s, "")` | 1 | 0 | gawk, which is POSIX |
+| `printf "%*d"` | supported | refused | gawk |
+| `printf "%e"` exponent | `e+03` | `e+003` | gawk — busybox's is the MSVC runtime, not a rule |
+| `printf "%d", 2147483648` | 64-bit | wraps to 32-bit | gawk |
+| `printf "%.0f", 2.5` | `2` | `3` | gawk — half to even |
+| a `printf` argument that is missing | fatal | empty/zero | busybox, which is POSIX |
+| `"0x1A" + 0` | 0 | 26 | gawk — awk has no hex literal |
+| `substr("hello", 2, 1e20)` | `ello` | empty | gawk |
+| `print -2^2` | `-4` | `-4` (1.38.0) | `-4` — `^` binds tighter than unary minus |
+| a missing input file | exit 2 | exit 1 | gawk, matching this awk's other failures |
+
+`substr`'s out-of-range rule is the one worth stating outright, because it is not
+what it looks like: **a start before the string moves to 1 and the length is
+kept**, so `substr("hello", -2, 4)` is `hell` and not `h`. Arguments are truncated
+toward zero rather than rounded.
+
+**`for (k in a)` walks in insertion order.** POSIX leaves the order unspecified
+and the two references answer differently; a stable order is chosen for the reason
+`internal/shell/runtime/array_associative.go` gives for the shell's own arrays. A
+program that depends on a *particular* order is depending on something POSIX does
+not promise.
+
+**`rand` is reproducible.** The sequence starts from seed 1 on every run, as both
+references do, and `srand(x)` answers the previous seed. The numbers themselves
+are this generator's and are not gawk's or busybox's — what is promised is the
+range and that one seed gives one sequence.
+
+Refused by not being implemented: gawk's extensions — `gensub`, `asort`, `switch`,
+`@include`, `BEGINFILE`/`ENDFILE`, true multidimensional arrays beyond `SUBSEP`,
+and a regular-expression `RS` (POSIX allows a single character or empty, and
+busybox agrees). A plain `getline` reads only the file the record loop is reading
+and answers 0 at its end rather than advancing to the next operand; gawk advances.
 
 ### `sed`
 

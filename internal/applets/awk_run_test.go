@@ -31,7 +31,7 @@ func runAwk(t *testing.T, program, input string) (string, string, int) {
 		t.Fatalf("parse %q: %v", program, err)
 	}
 	var stdout, stderr bytes.Buffer
-	status, runErr := runAwkProgram(context.Background(), parsed, strings.NewReader(input), &stdout, &stderr)
+	status, runErr := runAwkProgram(context.Background(), parsed, &awkInvocation{}, strings.NewReader(input), &stdout, &stderr)
 	if runErr != nil {
 		stderr.WriteString(runErr.Error())
 	}

@@ -341,7 +341,8 @@ above:
   (`applet-test-inventory.md:76-89`) were taken after v1.1 and are no longer
   deferred**: checksums (nine applets), archiving (`tar`, `unzip`, and the gzip
   and bzip2 filters), the text tools, and all seven networking applets
-  busybox-w32 keeps. What remains out is `awk`, `vi` and `bc`, which are
+  busybox-w32 keeps, and `awk`, which was the last name a script actually reaches
+  for. What remains out is `vi` and `bc`, which are
   standalone projects — an interpreter each — and the whole of `xz`, `lzma` and
   the Linux package formats, whose reasons are in `support-matrix.md`. An editor
   was written (`nano`/`micro`), on the reading that busybox's own `vi` is a

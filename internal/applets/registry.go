@@ -127,6 +127,7 @@ func portableApplets() []Applet {
 		newChmodApplet(),
 		newGrepApplet(),
 		newSedApplet(),
+		newAwkApplet(),
 		newFindApplet(),
 		newXargsApplet(),
 		newTacApplet(),

@@ -22,10 +22,14 @@ import (
 //     action rather than synthesising, so the decision is made here where it is visible.
 
 // runAwkProgram is the whole run: it answers the exit status.
-func runAwkProgram(ctx context.Context, program *awkProgram, input io.Reader, output, errors io.Writer) (int, error) {
+func runAwkProgram(ctx context.Context, program *awkProgram, invocation *awkInvocation,
+	input io.Reader, output, errors io.Writer) (int, error) {
 	interp := newAwkInterp(ctx, program, input, output, errors)
 	defer interp.buffered.Flush()
 
+	if err := interp.applyInvocation(invocation); err != nil {
+		return 2, err
+	}
 	if err := interp.runBegin(); err != nil {
 		return 2, err
 	}
@@ -33,7 +37,7 @@ func runAwkProgram(ctx context.Context, program *awkProgram, input io.Reader, ou
 	// for a BEGIN-only program, and reading anyway would make `awk 'BEGIN{print}'` hang
 	// on a terminal.
 	if !interp.exiting && interp.readsInput() {
-		if err := interp.runRecords(); err != nil {
+		if err := interp.runInputs(); err != nil {
 			return 2, err
 		}
 	}
@@ -97,35 +101,27 @@ func (in *awkInterp) runEnd() error {
 	return nil
 }
 
-// runRecords is the main loop.
+// applyInvocation settles what the command line asked for, before BEGIN runs.
 //
-// It reads through the interpreter's one main reader rather than a reader of its own,
-// because a plain `getline` reads from the same place: two readers over one stream would
-// each buffer a different part of it, and the records would interleave wrongly.
-func (in *awkInterp) runRecords() error {
-	if in.records == nil {
-		in.records = bufio.NewReader(in.input)
+// The order matters: `-F` and `-v` land first so a BEGIN block can still override either,
+// which is what makes `awk -F: 'BEGIN{FS=","}'` use a comma.
+func (in *awkInterp) applyInvocation(invocation *awkInvocation) error {
+	if invocation == nil {
+		invocation = &awkInvocation{}
 	}
-	for {
-		record, ok, err := in.readRecord(in.records)
-		if err != nil {
-			return err
-		}
+	if invocation.hasSeparator {
+		in.vars["FS"] = awkStr(invocation.fieldSeparator)
+	}
+	for _, assignment := range invocation.assignments {
+		name, value, ok := awkOperandAssignment(assignment)
 		if !ok {
-			return nil
+			return in.errorf("-v takes var=value, not %q", assignment)
 		}
-		in.setRecord(record)
-		in.vars["NR"] = awkNum(in.vars["NR"].num() + 1)
-		in.vars["FNR"] = awkNum(in.vars["FNR"].num() + 1)
-
-		flow, err := in.runRules()
-		if err != nil {
-			return err
-		}
-		if flow == awkFlowExit {
-			return nil
-		}
+		// A `-v` value is a strnum, so `-v n=10` compares numerically.
+		in.setVar(name, awkStrnumOf(awkExpandAssignmentValue(value)))
 	}
+	in.setArguments(invocation.operands)
+	return nil
 }
 
 // readRecord reads one record, honouring RS.
@@ -210,12 +206,12 @@ func (in *awkInterp) runRules() (awkFlow, error) {
 			return awkFlowNone, err
 		}
 		switch flow {
-		case awkFlowNext, awkFlowNextFile:
-			// Both abandon this record; with one input stream they are the same, and
-			// nextfile becomes distinct when stage 10 brings several files.
+		case awkFlowNext:
 			return awkFlowNone, nil
-		case awkFlowExit:
-			return awkFlowExit, nil
+		case awkFlowNextFile, awkFlowExit:
+			// `next` abandons the record and `nextfile` the whole input, which only
+			// became two different things once there were several files to leave.
+			return flow, nil
 		}
 	}
 	return awkFlowNone, nil
