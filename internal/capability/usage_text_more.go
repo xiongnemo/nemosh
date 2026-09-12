@@ -36,6 +36,17 @@ var usageTextMore = map[string]Usage{
 			"The shell escape ! is refused: this shell's applets start no processes.",
 			"Bases run from 2 to 16. Above that POSIX prints digits as space-separated decimal groups, which is a different format rather than a longer alphabet.",
 		}},
+	"ed": {Summary: "Edit a file a line at a time.", Operands: "[FILE]",
+		Options: map[string]string{"s": "no byte counts, for a script that reads what ed prints", "p": "the prompt to print"},
+		Notes: []string{
+			"The editor a script can drive: nano and micro need a terminal, and this does not.",
+			"Addresses: N, ., $, +N, -N, /re/, ?re?, 'x, a,b, and , or % for the whole buffer. A search wraps in both directions.",
+			"Commands: a i c d p n l = s g v m t j k r w W e E f q Q h H P and #.",
+			"s uses sed's regular expressions and replacements, so the two commands cannot come to disagree.",
+			"An error prints `?` and nothing else; `h` explains the last one and `H` explains them as they happen. That is ed's convention, and scripts read it.",
+			"q refuses once when there are unsaved changes; Q never does.",
+			"This is the one applet that follows GNU rather than busybox-w32, whose ed answers `unimplemented command` to n, cannot search backwards and has no g.",
+		}},
 	"df": {Summary: "Report free space on each filesystem.", Operands: "[FILE]...",
 		Options: map[string]string{"h": "print sizes as K, M and G", "k": "print 1K blocks, which is the default"},
 		Notes: []string{

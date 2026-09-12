@@ -185,6 +185,7 @@ func portableApplets() []Applet {
 		newArApplet(),
 		newNanoApplet(),
 		newMicroApplet(),
+		newEdApplet(),
 		newOdApplet(),
 		newHexdumpApplet(),
 		newHdApplet(),

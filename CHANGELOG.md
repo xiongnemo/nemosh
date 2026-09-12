@@ -10,6 +10,16 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`ed`.** The editor a *script* can drive: `nano` and `micro` need a terminal, and a shell
+  script that has to change three lines of a file had nothing else to reach for on Windows.
+  Addresses including `/re/`, `?re?` and marks; `a i c d p n l = s g v m t j k r w e f q Q
+  h H`; and `s` sharing sed's regular expressions so the two commands cannot drift apart.
+
+  This is the **one applet that follows GNU rather than busybox-w32**, and deliberately:
+  busybox's ed answers `unimplemented command` to `n`, cannot search backwards, and does not
+  wrap a forward search, so matching it would have pinned down a subset rather than the
+  language.
+
 - **`bc`.** The POSIX calculator language: variables, arrays, `if`, `while`, `for`, `define`
   with autos and recursion, `print`, and exact arithmetic at whatever precision `scale` asks
   for. `-l`, the maths library, is refused rather than approximated -- those functions are

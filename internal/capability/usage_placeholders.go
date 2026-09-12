@@ -18,6 +18,7 @@ var valuePlaceholders = map[string]string{
 	"getoptlongoptions": "LONGOPTS",
 	"getoptname":        "PROGNAME",
 	"getoptshell":       "SHELL",
+	"edp":               "PROMPT",
 	"dce":               "SCRIPT",
 	"dcf":               "FILE",
 	"pidofo":            "PID",
