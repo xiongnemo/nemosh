@@ -63,6 +63,14 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`HISTCONTROL` and `HISTSIZE` were settable and did nothing.** A leading space is how
+  people keep a token out of their history, so ` export TOKEN=...` silently wrote the
+  secret to disk. `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups` all work now,
+  and `HISTSIZE` caps the list keeping the newest.
+- **`$!` was empty.** It names the job now -- `%1`, a job specification rather than a
+  process id, because a background job here is a goroutine and has no pid. `kill $!` and
+  `wait $!` both work, which is what it is used for.
+
 - **The non-terminal interactive loop recorded no history**, so `history` was empty
   whenever the shell was interactive without a terminal -- and, once expansion landed,
   `!!` answered "event not found" on the very path that had just run a command. Both

@@ -110,6 +110,15 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, worker.fds.closeAll()))
 		return lineResult{status: 1}
 	}
+	// `$!`, which was empty. It is a **job specification** here and not a process id,
+	// and that is forced rather than chosen: a background job in this shell is a
+	// goroutine, so there is no pid to report (see jobRecord.cancel for the same
+	// constraint reached from `kill`). Naming the job keeps the two things `$!` is
+	// actually used for working -- `kill $!` and `wait $!` both take `%N` -- where a
+	// number would have been a pid-shaped lie that `kill` would apply to some other
+	// process entirely. Recorded in docs/support-matrix.md as a divergence.
+	r.vars["!"] = fmt.Sprintf("%%%d", record.id)
+	r.markVarMutation("!")
 	go func() {
 		// Guarded here rather than relying on a defer further down: complete() is
 		// not deferred, so a panic in run left the parent's wait with nobody to

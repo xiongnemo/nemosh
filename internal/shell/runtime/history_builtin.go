@@ -104,3 +104,35 @@ func (r Runtime) historyBuiltin(args []string) int {
 	}
 	return 0
 }
+
+// erase removes every earlier copy of a line, for HISTCONTROL=erasedups.
+func (h *shellHistory) erase(line string) {
+	if h == nil {
+		return
+	}
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	kept := h.entries[:0]
+	for _, entry := range h.entries {
+		if entry != line {
+			kept = append(kept, entry)
+		}
+	}
+	h.entries = kept
+}
+
+// truncate keeps the newest limit entries, for HISTSIZE.
+//
+// The newest rather than the oldest, which is the only useful direction: a history that
+// dropped what you just ran would make the arrows useless at exactly the moment they are
+// wanted.
+func (h *shellHistory) truncate(limit int) {
+	if h == nil || limit < 0 {
+		return
+	}
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	if len(h.entries) > limit {
+		h.entries = append([]string(nil), h.entries[len(h.entries)-limit:]...)
+	}
+}

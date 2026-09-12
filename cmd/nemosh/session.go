@@ -126,7 +126,7 @@ sessionLoop:
 		// landed, made `!!` answer "event not found" on the very path that had just
 		// run a command. An interactive session is an interactive session however its
 		// lines arrive.
-		rt.RecordHistory(strings.TrimRight(input.String(), "\n"))
+		rt.RecordInteractiveLine(strings.TrimRight(input.String(), "\n"))
 		input.Reset()
 		if parseErr != nil {
 			rt.ReportInteractiveParseError(parseErr)

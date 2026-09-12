@@ -336,6 +336,24 @@ subsequent read means. Until it was implemented it returned 0 and did nothing at
 a script that removed an element and carried on was quietly wrong -- the failure mode
 AGENTS.md singles out.
 
+### History, and `$!`
+
+`HISTCONTROL` honours `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups`, and
+`HISTSIZE` caps the list, keeping the newest. Both were settable and had **no effect
+whatever** until 2026-09-13, which matters more than the size of the change: a leading
+space is how everyone keeps a token out of their history, so ` export TOKEN=...` silently
+wrote the secret to disk. A feature that is absent is noticed; a habit that does nothing
+is trusted anyway. An unknown `HISTCONTROL` word and an unusable `HISTSIZE` are both
+ignored rather than refused, so an rc file shared with bash cannot stop this shell
+starting.
+
+**`$!` is a job specification, not a process id** -- `%1` rather than a number. That is
+forced rather than chosen: a background job here is a goroutine, so there is no pid to
+report, the same constraint `kill %N` already works around. Naming the job keeps the two
+things `$!` is used for working, since `kill $!` and `wait $!` both take `%N`; a number
+would have been a pid-shaped lie that `kill` would apply to some other process. It was
+empty before.
+
 ### History expansion
 
 `!!`, `!n`, `!-n`, `!string`, `!?text?`, `!$`, `!^`, `!*` and `^old^new`, on interactive

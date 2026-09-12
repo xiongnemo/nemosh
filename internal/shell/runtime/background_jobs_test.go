@@ -120,3 +120,37 @@ func TestRuntime_jobsObservesRunningAndWaitReturnsCachedStatus_whenWorkerComplet
 		t.Fatalf("wait status = %d, stderr = %q", waitStatus, stderr.String())
 	}
 }
+
+// `$!` names the job that was just started.
+//
+// A **job specification** and not a process id, which is forced rather than chosen: a
+// background job in this shell is a goroutine, so there is no pid to report. Naming the
+// job keeps the two things `$!` is actually used for working, and a number here would have
+// been a pid-shaped lie that `kill` would apply to some other process entirely.
+func TestBackground_dollarBangNamesTheJob(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		script string
+		want   string
+	}{
+		{name: "it is set", script: "sleep 0.01 & echo \"[$!]\"\nwait\n", want: "[%1]\n"},
+		{name: "it follows the newest", script: "sleep 0.01 &\nsleep 0.01 & echo \"[$!]\"\nwait\n", want: "[%2]\n"},
+		// The two uses that have to keep working.
+		{name: "kill takes it", script: "sleep 5 & kill $!\necho \"[$?]\"\n", want: "[0]\n"},
+		{name: "wait takes it", script: "sleep 0.01 & wait $!\necho \"[$?]\"\n", want: "[0]\n"},
+		// Empty before any background job, which is what bash answers too -- measured,
+		// because `${!-unset}` is the indirect-expansion syntax rather than a default
+		// and so cannot be used to ask the question.
+		{name: "empty before any job", script: "echo \"[$!]\"\n", want: "[]\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			status, stdout, stderr := runSetScript(t, test.script)
+			if status != 0 {
+				t.Fatalf("status = %d, stderr = %q", status, stderr)
+			}
+			if stdout != test.want {
+				t.Fatalf("%s\n  got  %q\n  want %q", test.script, stdout, test.want)
+			}
+		})
+	}
+}

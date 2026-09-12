@@ -114,7 +114,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// saw one would be surprised to find the other different.
 		command := strings.TrimRight(input.String(), "\n")
 		editor.remember(command)
-		rt.RecordHistory(command)
+		rt.RecordInteractiveLine(command)
 		// Written now rather than at exit: a session that is killed still leaves
 		// what it ran, and two windows appending interleave whole lines instead
 		// of overwriting each other.
