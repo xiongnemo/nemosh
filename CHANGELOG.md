@@ -68,6 +68,12 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`!!` was drawn red while being typed.** The colour asks "can this shell run a
+  command of this name?", and `!!` is not a command name -- so nothing was ever going
+  to find it. It is now judged by what it will *become*: `!!` after `ls -la` is green,
+  `!!` after a command that cannot run stays red, and `!zzz` with no such event stays
+  red because the line will be refused rather than run.
+
 - **`HISTCONTROL` and `HISTSIZE` were settable and did nothing.** A leading space is how
   people keep a token out of their history, so ` export TOKEN=...` silently wrote the
   secret to disk. `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups` all work now,
