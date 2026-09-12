@@ -200,3 +200,52 @@ func TestGutter_worksWithoutASyntax(t *testing.T) {
 		t.Fatalf("an unhighlighted file has a gutter of %d, want %d", got, 1+gutterGap)
 	}
 }
+
+// Highlighting and the gutter are only ever run *together* by the editor, and until this
+// test no case covered the combination: every colour-at-a-column assertion built a widget
+// with the gutter off, and every gutter assertion built one with no syntax. The gutter
+// shifts every text column, so the gap sat exactly where a mistake would land -- the same
+// shape as the `^_` bug, where the tested configuration was not the shipped one.
+//
+// It passes, and for a reason rather than by luck: the colour pass reads the *text area's*
+// inner rect, which SetRect has already moved, so the columns follow the text without
+// either feature knowing the other exists. Asserted so it stays that way.
+func TestGutter_highlightingStillLandsOnTheRightColumns(t *testing.T) {
+	highlightSyntaxList()
+	area := newHighlightedArea(highlightByName["go"])
+	area.showLineNumbers(true)
+	area.SetText("func main() { // note\n", false)
+	area.relex()
+	area.SetRect(0, 0, 40, 5)
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(40, 5)
+	area.Draw(screen)
+	screen.Show()
+
+	const gutter = 1 + gutterGap
+	at := func(column int) tcell.Color {
+		_, style, _ := screen.Get(column, 0)
+		foreground, _, _ := style.Decompose()
+		return foreground
+	}
+	if got, want := at(gutter+0), tcell.ColorFuchsia; got != want {
+		t.Errorf("the keyword at column %d is %v, want %v", gutter+0, got, want)
+	}
+	if got, want := at(gutter+14), tcell.ColorGray; got != want {
+		t.Errorf("the comment at column %d is %v, want %v", gutter+14, got, want)
+	}
+	if got := at(gutter + 5); got == tcell.ColorFuchsia {
+		t.Errorf("the identifier at column %d is keyword-coloured, so the spans shifted", gutter+5)
+	}
+	// And no colour bleeds into the gutter itself.
+	for column := 0; column < gutter; column++ {
+		if got := at(column); got == tcell.ColorFuchsia {
+			t.Errorf("gutter column %d got the keyword colour", column)
+		}
+	}
+}
