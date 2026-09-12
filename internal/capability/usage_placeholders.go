@@ -18,6 +18,8 @@ var valuePlaceholders = map[string]string{
 	"getoptlongoptions": "LONGOPTS",
 	"getoptname":        "PROGNAME",
 	"getoptshell":       "SHELL",
+	"dce":               "SCRIPT",
+	"dcf":               "FILE",
 	"pidofo":            "PID",
 	"truncates":         "SIZE",
 	"awkF":              "SEPARATOR",

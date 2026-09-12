@@ -12,6 +12,17 @@ package capability
 // which reads the table -- usage.go and the two tests that hold it to the capability rows --
 // sees every entry without knowing there was a split at all.
 var usageTextMore = map[string]Usage{
+	"dc": {Summary: "A reverse-polish calculator with arbitrary precision.", Operands: "[FILE]...",
+		Options: map[string]string{"e": "run this script", "f": "run this file", "x": "accepted; dc reads its input as a script anyway"},
+		Notes: []string{
+			"A stack machine: `echo \"2 3 + p\" | dc` prints 5. `p` prints the top, `f` the whole stack top first.",
+			"`_` is the minus sign of a literal; `-` is subtraction.",
+			"k sets the scale, i the input base and o the output base; K, I and O push them.",
+			"A register is a whole stack: s replaces it and S pushes onto it, which is what makes recursion expressible. An unset register reads as zero.",
+			"An error stops the script, as the reference does -- but output already printed is kept, where the reference loses it.",
+			"The shell escape ! is refused: this shell's applets start no processes.",
+			"Bases run from 2 to 16. Above that POSIX prints digits as space-separated decimal groups, which is a different format rather than a longer alphabet.",
+		}},
 	"df": {Summary: "Report free space on each filesystem.", Operands: "[FILE]...",
 		Options: map[string]string{"h": "print sizes as K, M and G", "k": "print 1K blocks, which is the default"},
 		Notes: []string{

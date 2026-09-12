@@ -160,6 +160,7 @@ func portableApplets() []Applet {
 		newSumApplet(),
 		newFreeApplet(),
 		newFactorApplet(),
+		newDcApplet(),
 		newFoldApplet(),
 		newTsortApplet(),
 		newStringsApplet(),

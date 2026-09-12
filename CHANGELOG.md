@@ -10,6 +10,12 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`dc`, and the arbitrary-precision decimal arithmetic under it.** A number is an integer
+  and a scale rather than a float, so `0.1` is exactly a tenth and `scale=30; 1/3` really has
+  thirty digits. The scale of every result is specified rather than incidental -- with
+  `scale=0`, `1.5 + 1.5` is `3.0` while `1.50 - 1.5` is `0`, and `2.5 * 2.5` is `6.2` -- and
+  all of those were measured against busybox-w32 before being written.
+
 - **`df`, `dd` and `stty`.** Windows has no command that answers `df` in a form a script can
   read -- `wmic` is gone, `fsutil` prints prose and PowerShell returns an object -- so this
   is one of the applets that is not a convenience but the only way. `dd` refuses an operand
