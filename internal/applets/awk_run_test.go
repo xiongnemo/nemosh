@@ -2,8 +2,11 @@ package applets
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -35,13 +38,27 @@ func runAwk(t *testing.T, program, input string) (string, string, int) {
 }
 
 // referenceAwk runs the same program through a reference, or reports that it is absent.
-func referenceAwk(t *testing.T, binary string, argv []string, input string) (string, bool) {
+//
+// The program is handed over in a **file** rather than as an argument, and that is not a
+// style choice. gawk on Windows collapses a doubled backslash in an argv-delivered
+// program: `gsub(/l/, "[\\&]", s)` then behaves as though it had been written with one
+// backslash and answers the matched text, where the same bytes in a file answer a literal
+// `&`. Measured across zero to four backslashes, gawk's two delivery paths disagree at two
+// and at four while busybox's agree everywhere -- so an argv harness would have reported
+// this project's escape handling as a divergence from gawk when it is not one. A file is
+// also how the rules were measured in the first place, for the reason AGENTS.md gives
+// about awkward bytes and text channels.
+func referenceAwk(t *testing.T, binary string, prefix []string, program, input string) (string, bool) {
 	t.Helper()
 	path, err := exec.LookPath(binary)
 	if err != nil {
 		return "", false
 	}
-	command := exec.Command(path, argv...)
+	file := filepath.Join(t.TempDir(), "program.awk")
+	if err := os.WriteFile(file, []byte(program), 0o644); err != nil {
+		t.Fatalf("write the reference program: %v", err)
+	}
+	command := exec.Command(path, append(append([]string{}, prefix...), "-f", file)...)
 	command.Stdin = strings.NewReader(input)
 	var out bytes.Buffer
 	command.Stdout = &out
@@ -49,6 +66,28 @@ func referenceAwk(t *testing.T, binary string, argv []string, input string) (str
 	_ = command.Run()
 	return out.String(), true
 }
+
+// busyboxIsTheReference reports whether the busybox on PATH is busybox-w32, the build this
+// project measures against.
+//
+// A distro's busybox is a **different program with different answers**: ubuntu's prints 4
+// for `BEGIN { print -2^2 }` where busybox-w32 1.38.0 prints -4, so a suite comparing
+// against whichever busybox it happened to find went red on CI over a disagreement between
+// two busyboxes rather than anything about nemosh. That is the "a test must not sample the
+// machine it runs on" failure AGENTS.md records, and it had already cost nine red commits
+// once. busybox-w32 names itself in its banner: its version carries an `-FRP-` suffix that
+// the upstream builds do not.
+var busyboxIsTheReference = sync.OnceValue(func() bool {
+	path, err := exec.LookPath("busybox")
+	if err != nil {
+		return false
+	}
+	// busybox with no arguments prints its banner and exits non-zero, so the status is
+	// not the question -- the first line is.
+	out, _ := exec.Command(path).CombinedOutput()
+	first, _, _ := strings.Cut(string(out), "\n")
+	return strings.Contains(first, "-FRP-")
+})
 
 // checkAgainstReferences compares a result with gawk and busybox when they are installed.
 //
@@ -63,17 +102,22 @@ func checkAgainstReferences(t *testing.T, program, input, got string, diverges .
 	for _, reference := range []struct {
 		name   string
 		binary string
-		argv   []string
+		prefix []string
+		usable func() bool
 	}{
-		{name: "gawk", binary: "gawk", argv: []string{program}},
-		{name: "busybox awk", binary: "busybox", argv: []string{"awk", program}},
+		{name: "gawk", binary: "gawk"},
+		{name: "busybox awk", binary: "busybox", prefix: []string{"awk"}, usable: busyboxIsTheReference},
 	} {
+		if reference.usable != nil && !reference.usable() {
+			// Present, but not the build this project measures against.
+			continue
+		}
 		if skip[reference.name] {
 			// A declared divergence. Naming it here rather than dropping the comparison
 			// altogether keeps the *other* reference checking the case.
 			continue
 		}
-		want, present := referenceAwk(t, reference.binary, reference.argv, input)
+		want, present := referenceAwk(t, reference.binary, reference.prefix, program, input)
 		if !present {
 			continue
 		}
