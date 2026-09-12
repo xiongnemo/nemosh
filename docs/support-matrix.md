@@ -667,18 +667,49 @@ copy a file rather than reinterpret one.
 answer that does not require every applet to remember what it read, and it is
 better said here than discovered.
 
-Still outstanding, and both for the same reason -- they would have to choose an
-output encoding for a file they rewrite, which needs deciding rather than
-defaulting:
+Both of these were carried as outstanding for the same reason -- they would have to
+choose an output encoding for a file they rewrite -- and both are **done as of
+2026-08-27**. `iconv` had already settled the question on 2026-08-22 and nobody went back
+to collect: an encoding is named, never guessed. The name here is the file's own
+byte-order mark, which is the writer stating what it wrote, so re-encoding to it is not a
+guess either.
 
-- `sed` over a UTF-16 file matches nothing, so it copies the file through. **That
-  sentence was false until 2026-08-23**: it copied the file through and appended a
-  byte, because a UTF-16 file's last byte is a NUL rather than a newline and every
-  line-oriented filter here terminated its output unconditionally. `sed -i` wrote
-  that byte to the file. A 24-byte file came back as 25. It now round-trips
-  byte-identical, and a test asserts it.
-- `wc -m` counts bytes for UTF-16, because `wc -c` in the same run must count the
-  file's real size and one pass cannot honestly do both.
+- **`sed` decodes, and `-i` writes the same encoding back.** It used to match nothing on a
+  UTF-16 file and copy it through, because a regular expression cannot match across UTF-16
+  code units. It now substitutes, and `sed -i` puts the file back as UTF-16LE or UTF-16BE
+  with its mark, so a file Notepad wrote is still a file Notepad can open. Printed output
+  is UTF-8, the rule `grep` already follows. A file with **no** mark is not decoded and so
+  is not re-encoded -- `encodingBytes` has the identity for both directions, which keeps
+  the byte-exact path exact rather than merely equivalent.
+
+  (The older note here is still true and still worth keeping: until 2026-08-23 `sed -i`
+  over a UTF-16 file *appended a byte*, because such a file's last byte is a NUL rather
+  than a newline and every line-oriented filter terminated its output unconditionally. A
+  24-byte file came back as 25.)
+- **`wc -m` counts characters and `-c` still counts bytes.** The objection was that one
+  pass cannot honestly do both. It can: the raw bytes are tallied on the way *into* the
+  decoder, so `-c` comes from the tally and `-m`, `-l`, `-w` and `-L` from the decoded
+  text, which is the only view in which they mean anything.
+
+  A byte-order mark is not a character. `-c` counts its bytes and `-m` does not count it
+  as one, which is the same rule `grep` follows when it strips a mark rather than trying
+  to match `^` after it. GNU counts it; this is a deliberate divergence, and the reason is
+  that a mark is the file saying what it is rather than part of what it says.
+
+Measured against both references on a 26-byte UTF-16LE file holding `hello
+world
+`:
+
+| | lines | words | chars | bytes |
+| --- | --- | --- | --- | --- |
+| nemosh | 2 | 2 | **12** | 26 |
+| busybox-w32 | 2 | 2 | 26 | 26 |
+| GNU coreutils | 2 | 2 | 26 | 26 |
+
+Twelve is the number of characters in the file. The references say 26 because they do not
+decode; on a plain ASCII file all three agree exactly, which is the property that matters
+for every script that already exists. `busybox sed -i s/hello/goodbye/` over the same file
+leaves it unchanged; this one substitutes and keeps the mark.
 
 busybox-w32 reads none of these, so this is a feature beyond the reference rather
 than a divergence from it.

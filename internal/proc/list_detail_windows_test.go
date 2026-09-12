@@ -54,13 +54,16 @@ func TestList_omitsTheCallerAndTheIdleProcess(t *testing.T) {
 	if !found {
 		t.Fatalf("the sampler does not see this process either, so List is not choosing to omit it")
 	}
-	// One row apart, give or take whatever started or exited between the two calls.
-	// Asserted loosely on purpose: a tight count would fail on a busy machine rather
-	// than on a broken one.
-	if len(snapshot.Processes) <= len(processes) {
-		t.Fatalf("the sampler saw %d processes and List saw %d; List should see fewer",
-			len(snapshot.Processes), len(processes))
-	}
+	// No comparison of the two *counts*. There was one -- the sampler had to see
+	// strictly more rows than List -- and it was flaky: the two calls are separate
+	// snapshots of a live process table, so any two processes exiting in between make
+	// the counts equal and the assertion fail on a healthy machine. Caught under
+	// `-race -shuffle=on`, which widens the window enough to hit it.
+	//
+	// It was also redundant. The property is "List omits the caller and pid 0, and the
+	// table underneath does not", and both halves are already asserted above by
+	// membership rather than by size -- which is the form that does not depend on what
+	// else the machine was doing.
 }
 
 func TestList_describesEveryRowUsably(t *testing.T) {

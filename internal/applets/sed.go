@@ -59,7 +59,12 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 				if err != nil {
 					return nil, cannotOpen(name, err)
 				}
-				return file, nil
+				// Decoded, because a regular expression cannot match across UTF-16
+				// code units: `sed s/hello/x/` over a file Notepad wrote used to match
+				// nothing and copy it through. Printed output is UTF-8, the same rule
+				// grep follows; `-i` is the case that has to put the encoding back, and
+				// it does -- see sed_inplace.go.
+				return decodedCloser{Reader: decodeTextInput(file), closer: file}, nil
 			})
 		}
 	}

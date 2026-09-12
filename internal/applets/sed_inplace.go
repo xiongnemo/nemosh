@@ -10,13 +10,17 @@ import (
 
 // -i, editing each file in place.
 //
-// This is the option that needed a decision rather than an implementation, and
-// the decision turned out to be smaller than it looked. The concern was that
-// rewriting a file forces a choice of *output* encoding -- the same choice
-// deferred for sed's UTF-16 reading. It does not: sed here is byte-exact, so the
-// bytes written back are the bytes read, transformed. The encoding question only
-// arrives if sed ever starts decoding UTF-16 on input, and it is still deferred
-// until then. See docs/support-matrix.md, Text encodings.
+// The concern recorded here was that rewriting a file forces a choice of *output*
+// encoding, and that the question would arrive "if sed ever starts decoding UTF-16
+// on input". It has: sed decodes now, because a regular expression cannot match
+// across UTF-16 code units and `sed s/hello/x/` over a Notepad file matched
+// nothing.
+//
+// The answer is the one `iconv` settled -- an encoding is named, never guessed --
+// and here the name comes from the file's own byte-order mark, so it is not a
+// guess either. A file that arrived as UTF-16LE is written back as UTF-16LE, mark
+// and all. A file with no mark was never decoded and so is never re-encoded: its
+// bytes pass through exactly as they did before. See docs/support-matrix.md.
 
 // runSedInPlace edits every operand, one at a time.
 //
@@ -67,14 +71,22 @@ func editSedFileInPlace(program *sedProgram, operand, native, suffix string) err
 	if err != nil {
 		return operandFailure(operand, err)
 	}
+	// Read the mark before decoding, because the decoder consumes it and the write
+	// back has to put the same one there. A file with no mark reports encodingBytes,
+	// whose decode and encode are both the identity -- so the byte-exact path is
+	// unchanged rather than merely equivalent.
+	encoding := detectTextEncoding(original)
 	var transformed bytes.Buffer
 	stream := &sedStream{
-		openers:     []func() (io.ReadCloser, error){func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(original)), nil }},
+		openers: []func() (io.ReadCloser, error){func() (io.ReadCloser, error) {
+			return io.NopCloser(decodeTextInput(bytes.NewReader(original))), nil
+		}},
 		onOpenError: func(error) {},
 	}
 	if err := program.execute(stream, &transformed); err != nil {
 		return operandFailure(operand, err)
 	}
+	written := encoding.encode(transformed.Bytes())
 	info, err := os.Stat(native)
 	mode := os.FileMode(0o644)
 	if err == nil {
@@ -87,7 +99,7 @@ func editSedFileInPlace(program *sedProgram, operand, native, suffix string) err
 			return operandFailure(operand, err)
 		}
 	}
-	if err := os.WriteFile(native, transformed.Bytes(), mode); err != nil {
+	if err := os.WriteFile(native, written, mode); err != nil {
 		return operandFailure(operand, err)
 	}
 	return nil

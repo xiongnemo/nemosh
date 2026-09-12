@@ -163,14 +163,27 @@ func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string
 	return err
 }
 
+// countBytes counts one stream, in bytes and in characters at once.
+//
+// Those are different questions on a UTF-16 file, which is why `-m` was recorded as
+// outstanding: `-c` must stay a count of the bytes on disk, and `-m` has to be a count of
+// the characters they encode. Counting the raw bytes on the way *into* the decoder
+// answers both from a single pass -- `-c` from the tally, and `-m`, `-l`, `-w` and `-L`
+// from the decoded text, which is the only view in which they mean anything.
+//
+// The byte-order mark is not a character. It is consumed as a mark on the way in, so `-c`
+// counts its bytes and `-m` does not count it as one -- the same rule `grep` follows when
+// it strips a mark rather than trying to match `^` after it. GNU counts it; this is a
+// deliberate divergence and the reason is that a mark is the file saying what it is,
+// rather than part of what it says.
 func countBytes(input io.Reader) (wcCounts, error) {
-	reader := bufio.NewReader(input)
+	counting := &countingReader{inner: input}
+	reader := bufio.NewReader(decodeTextInput(counting))
 	counts := wcCounts{}
 	inWord := false
 	lineWidth := 0
 	for {
 		r, size, err := reader.ReadRune()
-		counts.bytes += size
 		if size > 0 {
 			counts.chars++
 		}
@@ -195,6 +208,9 @@ func countBytes(input io.Reader) (wcCounts, error) {
 				// the width of the longest *line* rather than of the longest
 				// newline-terminated one.
 				counts.longest = max(counts.longest, lineWidth)
+				// Read to the end, so the tally is the whole file -- including any
+				// bytes the decoder consumed as a mark and never handed on.
+				counts.bytes = int(counting.total)
 				return counts, nil
 			}
 			return wcCounts{}, err

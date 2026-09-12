@@ -10,6 +10,15 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`sed` reads UTF-16, and `sed -i` writes it back.** It used to match nothing on a file
+  Notepad or PowerShell 5.1 wrote and copy it through, because a regular expression
+  cannot match across UTF-16 code units. `-i` re-encodes to the file's own byte-order
+  mark, so the file stays the kind of file it was. Output to a pipe is UTF-8, the rule
+  `grep` already follows.
+- **`wc -m` counts characters on UTF-16** and `-c` still counts bytes, from one pass: the
+  raw bytes are tallied on the way into the decoder. Both were recorded as outstanding on
+  the grounds that one pass could not honestly do both.
+
 - **Line numbers in the editor**, in a gutter down the left, on by default for both
   names. `-l` is accepted for nano's sake and does nothing, since they are already on.
   The width follows the line count, and a terminal too narrow to afford it loses the
