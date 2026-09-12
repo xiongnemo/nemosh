@@ -3,9 +3,9 @@ package applets
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -55,16 +55,37 @@ func referenceAwk(t *testing.T, binary string, prefix []string, program, input s
 	if err != nil {
 		return "", false
 	}
-	file := filepath.Join(t.TempDir(), "program.awk")
-	if err := os.WriteFile(file, []byte(program), 0o644); err != nil {
+	// A plain temp file rather than t.TempDir(): that builds its path out of the *test
+	// name*, and the sweep names each case after the program it runs -- so the file
+	// landed in a directory called `{print NR": "$0}`, which gawk could not open. It
+	// exited non-zero with an empty stdout, and the sweep read that as gawk disagreeing
+	// with everything.
+	handle, err := os.CreateTemp("", "nemosh-awk-*.awk")
+	if err != nil {
+		t.Fatalf("make the reference program file: %v", err)
+	}
+	file := handle.Name()
+	defer os.Remove(file)
+	if _, err := handle.WriteString(program); err != nil {
 		t.Fatalf("write the reference program: %v", err)
+	}
+	if err := handle.Close(); err != nil {
+		t.Fatalf("close the reference program: %v", err)
 	}
 	command := exec.Command(path, append(append([]string{}, prefix...), "-f", file)...)
 	command.Stdin = strings.NewReader(input)
 	var out bytes.Buffer
 	command.Stdout = &out
 	command.Stderr = &bytes.Buffer{}
-	_ = command.Run()
+	err = command.Run()
+	// A non-zero exit is an answer -- an awk program may choose one -- but a failure to
+	// *start* is not, and treating it as empty output turns a missed process launch into
+	// a reported disagreement. That is how a whole sweep once came back saying gawk
+	// answered nothing to everything.
+	var exited *exec.ExitError
+	if err != nil && !errors.As(err, &exited) {
+		t.Fatalf("could not run %s: %v", binary, err)
+	}
 	return out.String(), true
 }
 

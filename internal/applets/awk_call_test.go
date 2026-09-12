@@ -58,6 +58,23 @@ func TestAwkFunctions(t *testing.T) {
 			// array and the caller ends up holding it.
 			name: "an untyped name becomes the caller's array", program: `function f(a){a[1]=1} BEGIN{f(x);print length(x)}`, want: "1\n",
 		},
+		{
+			// The other half of that rule, and a bug the sweep caught: an unset name
+			// passed to a function that treats the parameter as a **scalar** must stay a
+			// scalar. Binding it as an array made the first call turn `m` into one, so
+			// every later call passed the array rather than the running maximum and the
+			// answer was the last record's NF instead of the largest.
+			name:    "an accumulator stays a scalar",
+			program: `function max(a,b){return a>b?a:b} {m=max(m,NF)} END{print m}`,
+			input:   "1\n1 2 3\n1 2\n", want: "3\n",
+		},
+		{
+			// Propagated through a call: `outer` never subscripts A itself, so it is an
+			// array only because `inner` makes it one.
+			name: "an array parameter passed on",
+			program: `function inner(A){A["k"]=1} function outer(A){inner(A)}` +
+				` BEGIN{outer(B);print length(B)}`, want: "1\n",
+		},
 		{name: "split into a parameter", program: `function f(A){return split("a b c",A)} BEGIN{print f(B), B[2]}`, want: "3 b\n"},
 		{
 			// A name is not a keyword: a function may be called `len`.

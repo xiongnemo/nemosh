@@ -241,6 +241,10 @@ type awkFunction struct {
 	// one, so a function takes extra parameters the caller does not pass.
 	params []string
 	body   []awkStmt
+	// arrayParams names the parameters the body uses as arrays, which is how awk decides
+	// what goes by reference. Filled by awk_paramtypes.go once the whole program is
+	// parsed, since it depends on what the *other* functions do with theirs.
+	arrayParams map[string]bool
 }
 
 // awkProgram is a whole program.

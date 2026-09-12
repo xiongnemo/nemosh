@@ -137,5 +137,12 @@ func parseAwkProgram(source string) (*awkProgram, error) {
 		return nil, err
 	}
 	parser := newAwkParser(tokens)
-	return parser.parseProgram()
+	program, err := parser.parseProgram()
+	if err != nil {
+		return nil, err
+	}
+	// Which parameters are arrays can only be settled once every function is parsed,
+	// since one may pass a parameter straight on to another. See awk_paramtypes.go.
+	inferAwkArrayParameters(program)
+	return program, nil
 }

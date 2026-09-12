@@ -81,7 +81,7 @@ func (in *awkInterp) bindArguments(function *awkFunction, args []awkExpr) (*awkF
 	}
 	for index, arg := range args {
 		name := function.params[index]
-		if bound, ok := in.bindByName(arg); ok {
+		if bound, shared := in.bindByName(arg, function.arrayParams[name]); shared {
 			frame.arrays[name] = bound
 			continue
 		}
@@ -94,13 +94,17 @@ func (in *awkInterp) bindArguments(function *awkFunction, args []awkExpr) (*awkF
 	return frame, nil
 }
 
-// bindByName answers the array an argument shares with the caller, if it is one.
+// bindByName answers the array an argument shares with the caller, if it shares one.
 //
-// Only a **bare name** can be passed by reference: `f(a)` shares, while `f(a[1])` and
-// `f(a "")` are values. A name already holding a scalar is a value too -- binding it would
-// turn a variable into an array behind the caller's back, which is the one case where
-// guessing wrong does damage rather than nothing.
-func (in *awkInterp) bindByName(arg awkExpr) (*awkArray, bool) {
+// Only a **bare name** can go by reference: `f(a)` shares, while `f(a[1])` and `f(a "")`
+// are values whatever the parameter is.
+//
+// A name that already holds an array always shares it. A name that holds nothing yet shares
+// one only when the callee is known to use that parameter as an array -- which
+// awk_paramtypes.go worked out from the body before the program started. Deciding it here
+// instead, by binding anything not yet typed, silently turned a scalar accumulator into an
+// array on its first call.
+func (in *awkInterp) bindByName(arg awkExpr, wantsArray bool) (*awkArray, bool) {
 	name, isName := arg.(awkVarExpr)
 	if !isName {
 		return nil, false
@@ -108,15 +112,11 @@ func (in *awkInterp) bindByName(arg awkExpr) (*awkArray, bool) {
 	if array, known := in.lookupArray(name.name); known {
 		return array, true
 	}
-	if in.isLocal(name.name) {
-		if _, assigned := in.frame().values[name.name]; assigned {
-			return nil, false
-		}
-	} else if _, assigned := in.vars[name.name]; assigned {
+	if !wantsArray {
 		return nil, false
 	}
-	// Untyped: the callee decides what it is, and if that is an array the caller must end
-	// up holding it.
+	// Untyped in the caller and used as an array in the callee, so the caller ends up
+	// holding the array the callee fills.
 	return in.getArray(name.name), true
 }
 

@@ -207,6 +207,28 @@ func TestAwkGetline(t *testing.T) {
 	})
 }
 
+// TestAwkParagraphMode covers the empty RS, where records are separated by blank lines.
+//
+// busybox adds a trailing blank line that gawk does not, so it is named as diverging; the
+// records themselves agree in all three.
+func TestAwkParagraphMode(t *testing.T) {
+	t.Parallel()
+	const input = "one\ntwo\n\n\nthree\nfour\n"
+	const program = `BEGIN{RS=""} {print NR": "$0}`
+	got, _, _ := runAwk(t, program, input)
+	if got != "1: one\ntwo\n2: three\nfour\n" {
+		t.Fatalf("got %q", got)
+	}
+	checkAgainstReferences(t, program, input, got, "busybox awk")
+
+	// A newline always separates fields in paragraph mode, whatever FS says.
+	fields, _, _ := runAwk(t, `BEGIN{RS=""} {print NF, $2}`, input)
+	if fields != "2 two\n2 four\n" {
+		t.Fatalf("fields got %q", fields)
+	}
+	checkAgainstReferences(t, `BEGIN{RS=""} {print NF, $2}`, input, fields, "busybox awk")
+}
+
 func TestAwkCloseAndSystem(t *testing.T) {
 	t.Parallel()
 	t.Run("closing something never opened is -1", func(t *testing.T) {
