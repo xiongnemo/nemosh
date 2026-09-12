@@ -508,6 +508,9 @@ behaviour this shell deliberately does not have.
 | `ascii` | none; the character table, read down in eight columns | refused by name |
 | `arch` | none; the same name `uname -m` gives | refused by name |
 | `cal` | `-m -y`, and `[[MONTH] YEAR]`; September 1752 is short, as in every cal. `-j` is refused | read as a number, so a bad one is refused |
+| `dd` | `if= of= bs= ibs= obs= count= skip= seek= conv= status=`; an unknown operand is refused | refused by name |
+| `df` | `-h -k`; a drive letter is a filesystem, mounted at its root | refused by name |
+| `stty` | `size`, `echo`, `-echo`, `sane`, `-a`; everything else refused by name | refused by name |
 | `getopt` | `-o -l -n -q -Q -u -a -T -s`, and the old form where the first operand is the option string | refused by name |
 | `ipcalc` | `-b -n -m -p -h -s`; a non-contiguous netmask is used as given | refused by name |
 | `groups` | none; one name, the one `id -gn` gives -- a user other than this one is refused | refused by name |

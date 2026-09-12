@@ -135,6 +135,10 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		// about the word after it. Which is the right refusal, just not the one
 		// this test looks for.
 		"expr": true,
+		// dd has no options at all: every argument is a name=value operand, so `-Z` is
+		// refused as an unrecognised operand rather than as an option. Which is the
+		// right refusal, just not the one this test looks for.
+		"dd": true,
 	}
 	for _, name := range appletNames(t) {
 		if noOptionParsing[name] || launchesSomething[name] {

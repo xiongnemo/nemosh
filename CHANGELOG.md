@@ -10,6 +10,14 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`df`, `dd` and `stty`.** Windows has no command that answers `df` in a form a script can
+  read -- `wmic` is gone, `fsutil` prints prose and PowerShell returns an object -- so this
+  is one of the applets that is not a convenience but the only way. `dd` refuses an operand
+  it does not know, where busybox prints its usage and exits 0, so a typo like `cnt=3`
+  copies the whole file and reports success there. `stty` is scoped to the two questions a
+  Windows console can answer, the window size and whether it echoes, and refuses the rest by
+  name rather than accepting settings it cannot make.
+
 - **`cal`, `getopt` and `ipcalc`.** `cal` matches busybox-w32 byte for byte across seventy
   calendars, including the eleven days September 1752 does not have and the line of spaces
   a month ending in a blank week prints. `getopt` canonicalises a command line for
