@@ -71,6 +71,8 @@ func (in *awkInterp) exec(statement awkStmt) (awkFlow, error) {
 		return awkFlowContinue, nil
 	case awkExitStmt:
 		return in.execExit(node)
+	case awkReturnStmt:
+		return in.execReturn(node)
 	}
 	return awkFlowNone, in.errorf("this statement is not supported yet: %s", awkReprintStmt(statement))
 }
@@ -199,7 +201,13 @@ func (in *awkInterp) execFor(node awkForStmt) (awkFlow, error) {
 // shell's arrays: an answer that changes between two runs of the same script is not
 // something anyone can build on. Recorded in the support matrix as a deliberate choice.
 func (in *awkInterp) execForIn(node awkForInStmt) (awkFlow, error) {
-	for _, key := range in.arrayKeys(node.array) {
+	array, known := in.lookupArray(node.array)
+	if !known {
+		// Walking a name that is not an array yet is not an error; there is simply
+		// nothing to walk, and the name stays untyped.
+		return awkFlowNone, nil
+	}
+	for _, key := range array.keys() {
 		// A key is a strnum, so `for (k in a)` over numeric subscripts compares
 		// numerically inside the body.
 		in.setVar(node.name, awkStrnumOf(key))
@@ -217,16 +225,16 @@ func (in *awkInterp) execForIn(node awkForInStmt) (awkFlow, error) {
 func (in *awkInterp) execDelete(node awkDeleteStmt) error {
 	if len(node.index) == 0 {
 		// `delete a` empties the array but leaves the name an array, so a later
-		// `a[k]=v` still works.
-		in.arrays[node.name] = map[string]awkValue{}
-		in.arrayOrders[node.name] = nil
+		// `a[k]=v` still works. Emptied in place, so that deleting a parameter's
+		// contents empties what the caller passed.
+		in.getArray(node.name).clear()
 		return nil
 	}
 	key, err := in.subscript(node.index)
 	if err != nil {
 		return err
 	}
-	in.deleteArrayKey(node.name, key)
+	in.getArray(node.name).remove(key)
 	return nil
 }
 

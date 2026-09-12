@@ -39,10 +39,12 @@ func (in *awkInterp) builtinSplit(node awkBuiltinExpr) (awkValue, error) {
 		return awkValue{}, err
 	}
 	// The array is emptied first: `split` replaces its target rather than adding to it.
-	in.clearArray(name.name)
+	// In place, so that splitting into a parameter refills the caller's array.
+	array := in.getArray(name.name)
+	array.clear()
 	for index, part := range parts {
 		// The pieces are **strnums**, like fields, so `split("1 2", a); a[1] == 1` holds.
-		in.setArrayElement(name.name, strconv.Itoa(index+1), awkStrnumOf(part))
+		array.set(strconv.Itoa(index+1), awkStrnumOf(part))
 	}
 	return awkNum(float64(len(parts))), nil
 }

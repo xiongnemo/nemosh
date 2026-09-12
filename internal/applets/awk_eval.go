@@ -56,6 +56,8 @@ func (in *awkInterp) eval(expr awkExpr) (awkValue, error) {
 		return in.evalIncDec(node)
 	case awkBuiltinExpr:
 		return in.evalBuiltin(node)
+	case awkCallExpr:
+		return in.evalCall(node)
 	case awkGroupListExpr:
 		// `(a, b)` reached as a value rather than as a print's argument list.
 		return awkValue{}, in.errorf("a parenthesised list is only an expression before `in`")
@@ -84,10 +86,9 @@ func (in *awkInterp) evalIndex(node awkIndexExpr) (awkValue, error) {
 	// Reading an absent element **creates** it, which is awk's rule and the thing that
 	// makes `if (a[k])` grow the array. Both references do it, and a program that tests
 	// membership without wanting that uses `in`.
-	value, present := array[key]
+	value, present := array.get(key)
 	if !present {
-		in.touchArrayKey(node.name, key)
-		array[key] = awkValue{}
+		array.set(key, awkValue{})
 	}
 	return value, nil
 }
@@ -266,7 +267,11 @@ func (in *awkInterp) evalIn(node awkInExpr) (awkValue, error) {
 		return awkValue{}, err
 	}
 	// `in` asks without creating, which is the whole reason to use it over `a[k]`.
-	_, present := in.arrays[node.array][key]
+	array, known := in.lookupArray(node.array)
+	if !known {
+		return awkBool(false), nil
+	}
+	_, present := array.get(key)
 	return awkBool(present), nil
 }
 

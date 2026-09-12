@@ -97,7 +97,7 @@ func (in *awkInterp) storeLvalue(target awkExpr, value awkValue) error {
 		if err != nil {
 			return err
 		}
-		in.setArrayElement(node.name, key, value)
+		in.getArray(node.name).set(key, value)
 		return nil
 	}
 	return in.errorf("cannot assign to %s", awkReprintExpr(target))

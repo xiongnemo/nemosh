@@ -22,11 +22,14 @@ import (
 type awkInterp struct {
 	program *awkProgram
 	vars    map[string]awkValue
-	arrays  map[string]map[string]awkValue
-	// arrayOrders is each array's keys in the order they were first set, which is
-	// the order `for (k in a)` walks. See awk_array.go for why a stable one is
-	// chosen where POSIX promises none.
-	arrayOrders map[string][]string
+	arrays  map[string]*awkArray
+	// frames is the call stack's locals, innermost last, and is empty outside a call.
+	// See awk_scope.go for what a parameter shadows and when.
+	frames []*awkFrame
+	// returned is what the most recent `return` answered. It lives here rather than in
+	// the flow signal because a signal is a plain value, and the returning statement is
+	// several frames below the call that wants the answer.
+	returned awkValue
 
 	// record is `$0` and fields are `$1`..`$NF`. recordStale means the fields have
 	// been changed and `$0` must be rebuilt; fieldsStale means the reverse.
@@ -67,11 +70,10 @@ var awkSpecialDefaults = map[string]string{
 
 func newAwkInterp(program *awkProgram, output, errors io.Writer) *awkInterp {
 	interp := &awkInterp{
-		program:     program,
-		vars:        map[string]awkValue{},
-		arrays:      map[string]map[string]awkValue{},
-		arrayOrders: map[string][]string{},
-		errors:      errors,
+		program: program,
+		vars:    map[string]awkValue{},
+		arrays:  map[string]*awkArray{},
+		errors:  errors,
 	}
 	interp.buffered = bufio.NewWriter(output)
 	interp.output = interp.buffered
@@ -105,39 +107,6 @@ func (in *awkInterp) text(value awkValue) string {
 		return formatAwkNumber(value.number, in.ofmt())
 	}
 	return value.str(in.convfmt())
-}
-
-// getVar reads a variable, settling NF first if the fields have moved.
-func (in *awkInterp) getVar(name string) awkValue {
-	if name == "NF" {
-		in.ensureFields()
-		return awkNum(float64(len(in.fields)))
-	}
-	return in.vars[name]
-}
-
-// setVar writes a variable, giving the ones that mean something to the record loop their
-// side effects.
-func (in *awkInterp) setVar(name string, value awkValue) {
-	switch name {
-	case "NF":
-		in.setFieldCount(int(value.num()))
-		return
-	}
-	in.vars[name] = value
-}
-
-// getArray answers a name's array, making it if this is the first mention.
-//
-// awk has no declaration, so `a[1]=1` on an unseen name creates the array. That is why
-// this never fails.
-func (in *awkInterp) getArray(name string) map[string]awkValue {
-	array, ok := in.arrays[name]
-	if !ok {
-		array = map[string]awkValue{}
-		in.arrays[name] = array
-	}
-	return array
 }
 
 // errorf is how the interpreter refuses at run time.

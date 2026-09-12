@@ -12,62 +12,70 @@ package applets
 // Recorded in docs/support-matrix.md, because a program that depends on a *particular*
 // order is depending on something POSIX does not promise, and it should be able to find
 // out what this one does.
+//
+// An array is **an object with an identity** rather than a pair of maps keyed by name, and
+// that is what user-defined functions need: a function takes its arrays by reference, so
+// the callee's parameter and the caller's variable must be two names for one array. Keying
+// the elements and the order separately by name could not express that.
 
-// touchArrayKey records a key the first time it is seen, so the order survives.
-func (in *awkInterp) touchArrayKey(name, key string) {
-	if in.arrayOrders == nil {
-		in.arrayOrders = map[string][]string{}
-	}
-	if _, present := in.arrays[name][key]; present {
-		return
-	}
-	in.arrayOrders[name] = append(in.arrayOrders[name], key)
+// awkArray is one associative array: its elements, and the order they were first set in.
+type awkArray struct {
+	values map[string]awkValue
+	order  []string
 }
 
-// setArrayElement writes one element, keeping the order.
-func (in *awkInterp) setArrayElement(name, key string, value awkValue) {
-	array := in.getArray(name)
-	in.touchArrayKey(name, key)
-	array[key] = value
+func newAwkArray() *awkArray {
+	return &awkArray{values: map[string]awkValue{}}
 }
 
-// deleteArrayKey removes one element and its place in the order.
-func (in *awkInterp) deleteArrayKey(name, key string) {
-	array, ok := in.arrays[name]
-	if !ok {
+// get answers one element and whether it was there.
+func (a *awkArray) get(key string) (awkValue, bool) {
+	value, present := a.values[key]
+	return value, present
+}
+
+// set writes one element, recording a new key's place in the order.
+func (a *awkArray) set(key string, value awkValue) {
+	if _, present := a.values[key]; !present {
+		a.order = append(a.order, key)
+	}
+	a.values[key] = value
+}
+
+// remove deletes one element and its place in the order.
+func (a *awkArray) remove(key string) {
+	if _, present := a.values[key]; !present {
 		return
 	}
-	if _, present := array[key]; !present {
-		return
-	}
-	delete(array, key)
-	order := in.arrayOrders[name]
-	remaining := order[:0]
-	for _, existing := range order {
+	delete(a.values, key)
+	remaining := a.order[:0]
+	for _, existing := range a.order {
 		if existing != key {
 			remaining = append(remaining, existing)
 		}
 	}
-	in.arrayOrders[name] = remaining
+	a.order = remaining
 }
 
-// clearArray empties an array, which is what `split` does to its target before filling it.
-func (in *awkInterp) clearArray(name string) {
-	in.arrays[name] = map[string]awkValue{}
-	in.arrayOrders[name] = nil
+// clear empties the array **in place**, which is the whole point: another name may be
+// looking at the same array, so `delete a` on a parameter has to empty what the caller
+// passed rather than give the parameter a new one.
+func (a *awkArray) clear() {
+	a.values = map[string]awkValue{}
+	a.order = nil
 }
 
-// arrayKeys is the array's keys in insertion order.
+func (a *awkArray) length() int { return len(a.values) }
+
+// keys is the array's keys in insertion order.
 //
 // A copy, because the body of a `for (k in a)` may delete from the array it is walking --
 // which both references allow -- and iterating the live slice while it shrinks would skip
 // entries.
-func (in *awkInterp) arrayKeys(name string) []string {
-	order := in.arrayOrders[name]
-	keys := make([]string, 0, len(order))
-	array := in.arrays[name]
-	for _, key := range order {
-		if _, present := array[key]; present {
+func (a *awkArray) keys() []string {
+	keys := make([]string, 0, len(a.order))
+	for _, key := range a.order {
+		if _, present := a.values[key]; present {
 			keys = append(keys, key)
 		}
 	}

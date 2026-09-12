@@ -269,9 +269,13 @@ func TestAwkRun_refusals(t *testing.T) {
 		{name: "a parenthesised list as a value", program: "BEGIN { x = (1, 2) }", says: "before `in`"},
 		// Not implemented yet, and loud about it.
 		{name: "a redirect", program: `BEGIN { print 1 > "f" }`, says: "not supported yet"},
+		{name: "an undefined function", program: "BEGIN { print f() }", says: "undefined function f"},
+		{name: "too many arguments", program: "function f(a) { return a } BEGIN { print f(1,2) }", says: "takes 1 arguments"},
+		{name: "return outside a function", program: "BEGIN { return }", says: "return outside a function"},
+		{name: "runaway recursion", program: "function f() { return f() } BEGIN { print f() }", says: "recursed more than"},
+		// Not implemented yet, and loud about it.
 		{name: "a printf redirect", program: `BEGIN { printf "%s", 1 > "f" }`, says: "not supported yet"},
 		{name: "system", program: `BEGIN { system("true") }`, says: "not supported yet"},
-		{name: "a user function", program: "function f() { return 1 } BEGIN { print f() }", says: "not supported yet"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			_, stderr, status := runAwk(t, test.program, "")

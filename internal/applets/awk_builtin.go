@@ -81,8 +81,8 @@ func (in *awkInterp) builtinLength(node awkBuiltinExpr) (awkValue, error) {
 		return awkNum(float64(utf8.RuneCountInString(in.getRecord()))), nil
 	}
 	if name, ok := node.args[0].(awkVarExpr); ok {
-		if array, present := in.arrays[name.name]; present {
-			return awkNum(float64(len(array))), nil
+		if array, present := in.lookupArray(name.name); present {
+			return awkNum(float64(array.length())), nil
 		}
 	}
 	text, err := in.argText(node, 0)
