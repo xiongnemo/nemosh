@@ -98,8 +98,11 @@ func applyDecimal(operator byte, left, right bigDecimal, scale int) (bigDecimal,
 	case '%':
 		return modDecimal(left, right, scale)
 	case '^':
-		if right.scale != 0 && !right.rescale(0).integer().IsInt64() {
-			return bigDecimal{}, fmt.Errorf("exponent must be an integer")
+		// An exponent with a fraction is **refused**, not truncated. Truncating made
+		// `2^0.5` answer 1 -- a wrong answer with no diagnostic, which is the worst kind
+		// for a calculator to give. Both references say "not an integer" and stop.
+		if !right.isIntegral() {
+			return bigDecimal{}, fmt.Errorf("not an integer")
 		}
 		return powDecimal(left, right.rescale(0).integer(), scale)
 	}

@@ -160,6 +160,18 @@ func sqrtDecimal(a bigDecimal, scale int) (bigDecimal, error) {
 	return bigDecimal{unscaled: root, scale: working}.rescale(want), nil
 }
 
+// isIntegral reports whether the number has nothing after the decimal point.
+//
+// Not the same as `scale == 0`: `2.0` has a scale of 1 and is still an integer, and it is the
+// *value* that decides whether it can be an exponent.
+func (d bigDecimal) isIntegral() bool {
+	if d.scale == 0 {
+		return true
+	}
+	remainder := new(big.Int).Rem(d.integer(), powerOfTen(d.scale))
+	return remainder.Sign() == 0
+}
+
 func compareDecimal(a, b bigDecimal) int {
 	scale := max(a.scale, b.scale)
 	return a.rescale(scale).integer().Cmp(b.rescale(scale).integer())

@@ -50,6 +50,9 @@ func TestBc(t *testing.T) {
 		{name: "square root", program: "scale=4;sqrt(2)", want: "1.4142\n"},
 		{name: "power", program: "2^10", want: "1024\n"},
 		{name: "a negative power", program: "scale=4;2^-2", want: ".2500\n"},
+		// Integral but written with a scale: `2.0` is still an integer, and it is the
+		// value that decides whether it can be an exponent rather than how it was typed.
+		{name: "an exponent written with a scale", program: "2^2.0", want: "4\n"},
 		{name: "power is right-associative", program: "2^3^2", want: "512\n"},
 		{name: "multiplication keeps the smaller scale", program: "scale=0;2.5*2.5", want: "6.2\n"},
 		{name: "remainder at a scale", program: "scale=2;10%3", want: ".01\n"},
@@ -156,6 +159,10 @@ func TestBcRefusals(t *testing.T) {
 		{program: "f(1)", says: "is not defined"},
 		{program: "define f(a){return(a)};f(1,2)", says: "takes 1 arguments"},
 		{program: "1<2<3", says: "cannot be chained"},
+		// Refused rather than truncated. Truncating made `2^0.5` answer 1 -- a wrong
+		// answer with no diagnostic, which is the worst kind for a calculator to give.
+		{program: "2^0.5", says: "not an integer"},
+		{program: "2^2.9", says: "not an integer"},
 		{program: "read()", says: "read() is not supported"},
 		{program: "1+", says: "unexpected"},
 		{program: `"unterminated`, says: "unterminated string"},

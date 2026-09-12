@@ -97,6 +97,7 @@ func TestDcRefusals(t *testing.T) {
 		{script: "1 + p", says: "too few elements"},
 		{script: "@ p", says: "bad character"},
 		{script: "_1 v p", says: "square root of a negative"},
+		{script: "2 0.5 ^ p", says: "not an integer"},
 		{script: "1 ! p", says: "shell escape"},
 		{script: "? p", says: "reading a line"},
 		{script: "99 o 5 p", says: "between 2 and 16"},
