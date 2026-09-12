@@ -196,6 +196,16 @@ read not retrying, where the open already did -- was found by measuring the writ
 and read separately: with no pause between them the read failed 30 times out of
 30, and with one millisecond it succeeded 20 times out of 20.
 
+**An applet never spawns an OS process.** Launching belongs to
+`internal/shell/runtime`, which owns the suffix search, `ComSpec` batch launch, argument
+quoting, long-path fallback, cancellation and job scope that go with it; every production
+`os/exec` import in the tree is there. An applet that must run something looks the name up
+in `DefaultRegistry` and refuses otherwise — `xargs.go:139` is the example, and `awk`'s
+`system()` and pipes follow it. `TestApplets_doNotSpawnProcesses` enforces this. It is
+about *spawning*: `syscall` and `x/sys/windows` are used freely here for file metadata and
+process inspection, and the first draft of that guard banned them and was wrong.
+See `docs/design/windows-execution-model.md`.
+
 **A capability that is absent must fail loudly.** `hash`, `ulimit`, `fg`, `bg`,
 and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather than
 approximating. Anything landing partially refuses the part it cannot do.

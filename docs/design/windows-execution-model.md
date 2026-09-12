@@ -67,6 +67,33 @@ Required invocation forms:
 - applet-name shims such as `cat`, `ls`, and `grep` pointing to `nemosh.exe`
 - shell standalone lookup preferring bundled applets unless overridden
 
+### An applet never spawns a process
+
+**Launching a process belongs to the shell runtime, and only to it.** Every production
+`os/exec` import in the tree is under `internal/shell/runtime` -- `external.go`,
+`external_batch.go`, `external_launch_windows.go`, `external_launch_other.go` -- because
+that is where the Windows machinery lives: suffix search, `ComSpec` for batch files,
+argument quoting, the long-path fallback, context cancellation, and the job scope a
+background child is registered in. None of it is duplicated in `internal/applets`, and
+none of it should be.
+
+An applet that needs to run something **looks the name up in the registry and refuses
+otherwise**. `xargs` is the existing example (`xargs.go:139`: `DefaultRegistry.Lookup`,
+then `commandNotFound`), and `awk`'s `system()`, `print | cmd` and `cmd | getline` follow
+the same rule -- so `"sort" | getline` works, because sort is an applet here, and an
+external program refuses by name rather than half-working.
+
+This was true long before it was written down, which is how it nearly got crossed: the
+obvious way to give `awk` a `system()` is an `exec.Command` in the applet, and it would
+work, and it would quietly put a second process launcher in the tree beside the one that
+already handles every hard case. `TestApplets_doNotSpawnProcesses` enforces it now.
+
+The rule is about *spawning*, not about `syscall`. Applets use `syscall` and
+`golang.org/x/sys/windows` constantly for file metadata and process **inspection** --
+`file_details_windows.go`, `id_windows.go`, `process_view.go` -- and that is reading, not
+launching. The first draft of the guard banned those packages outright and immediately
+reported eight files, correctly: it had banned the wrong thing.
+
 ## Windows Suffix Search
 
 When a command name has no explicit executable suffix, Nemosh should follow the
