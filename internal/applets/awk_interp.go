@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math/rand"
 )
 
 // The interpreter's state.
@@ -45,6 +46,12 @@ type awkInterp struct {
 	// END -- the one control flow in awk that is not a loop or a return.
 	exiting    bool
 	exitStatus int
+
+	// random is what `rand` draws from and randSeed the seed it was last given. The seed
+	// starts at 1 rather than at the clock, because both references make a program that
+	// never calls `srand` produce the same sequence every run.
+	random   *rand.Rand
+	randSeed float64
 }
 
 // awkSpecialDefaults are the built-in variables and what they start as.
@@ -77,6 +84,8 @@ func newAwkInterp(program *awkProgram, output, errors io.Writer) *awkInterp {
 	// RLENGTH is -1 before any match, which is what a program tests to find out that
 	// `match` failed.
 	interp.vars["RLENGTH"] = awkNum(-1)
+	interp.randSeed = 1
+	interp.random = rand.New(rand.NewSource(1))
 	return interp
 }
 

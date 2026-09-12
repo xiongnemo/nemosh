@@ -265,9 +265,12 @@ func TestAwkRun_refusals(t *testing.T) {
 		{name: "division by zero", program: "BEGIN { print 1/0 }", says: "division by zero"},
 		{name: "modulo by zero", program: "BEGIN { print 1%0 }", says: "division by zero"},
 		{name: "a negative field", program: "BEGIN { print $-1 }", says: "field"},
+		{name: "a builtin called wrongly", program: `BEGIN { print index("x") }`, says: "called with 1 arguments"},
+		{name: "a parenthesised list as a value", program: "BEGIN { x = (1, 2) }", says: "before `in`"},
 		// Not implemented yet, and loud about it.
 		{name: "a redirect", program: `BEGIN { print 1 > "f" }`, says: "not supported yet"},
-		{name: "a builtin", program: "BEGIN { print length(\"x\") }", says: "not supported yet"},
+		{name: "a printf redirect", program: `BEGIN { printf "%s", 1 > "f" }`, says: "not supported yet"},
+		{name: "system", program: `BEGIN { system("true") }`, says: "not supported yet"},
 		{name: "a user function", program: "function f() { return 1 } BEGIN { print f() }", says: "not supported yet"},
 	} {
 		t.Run(test.name, func(t *testing.T) {

@@ -123,7 +123,12 @@ func (p *awkParser) parseParenthesisedIn(first awkExpr, flags awkExprFlags, line
 	}
 	p.advance()
 	if p.peek().kind != awkTokenKeyword || p.peek().text != "in" {
-		return nil, fmt.Errorf("line %d: a parenthesised list is only an expression before `in`", line)
+		// The other legal home for a parenthesised list is `print (a, b)` and
+		// `printf("%s\n", x)`, where it is the whole argument list. The parser cannot
+		// tell that from here -- it does not know what statement it is inside -- so the
+		// list is carried up and the print statement unwraps it. Anywhere else,
+		// evaluating the node is what refuses.
+		return awkGroupListExpr{items: index}, nil
 	}
 	p.advance()
 	array, err := p.expectName("an array name after `in`")

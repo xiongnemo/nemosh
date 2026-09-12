@@ -51,6 +51,12 @@ func (in *awkInterp) deleteArrayKey(name, key string) {
 	in.arrayOrders[name] = remaining
 }
 
+// clearArray empties an array, which is what `split` does to its target before filling it.
+func (in *awkInterp) clearArray(name string) {
+	in.arrays[name] = map[string]awkValue{}
+	in.arrayOrders[name] = nil
+}
+
 // arrayKeys is the array's keys in insertion order.
 //
 // A copy, because the body of a `for (k in a)` may delete from the array it is walking --

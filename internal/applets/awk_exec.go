@@ -45,6 +45,8 @@ func (in *awkInterp) exec(statement awkStmt) (awkFlow, error) {
 		return awkFlowNone, err
 	case awkPrintStmt:
 		return awkFlowNone, in.execPrint(node)
+	case awkPrintfStmt:
+		return awkFlowNone, in.execPrintf(node)
 	case awkBlockStmt:
 		return in.execBlock(node.body)
 	case awkIfStmt:
@@ -81,15 +83,9 @@ func (in *awkInterp) execPrint(node awkPrintStmt) error {
 	if node.redirect != nil {
 		return in.errorf("print redirection is not supported yet")
 	}
-	args := node.args
-	// `print (a, b)` parses as one group holding a list; the parser cannot tell that
-	// from `print (expr)` until here, where a group is unwrapped only if it is the
-	// whole argument list.
-	if len(args) == 1 {
-		if group, ok := args[0].(awkGroupExpr); ok {
-			args = []awkExpr{group.inner}
-		}
-	}
+	// `print (a, b)` parses as one parenthesised list; the parser cannot tell that from
+	// `print (expr)`, which must stay a group, so the list is unwrapped only here.
+	args := awkUnwrapPrintList(node.args)
 	if len(args) == 0 {
 		return in.write(in.getRecord() + in.vars["ORS"].str(in.convfmt()))
 	}

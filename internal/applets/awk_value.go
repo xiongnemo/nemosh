@@ -159,6 +159,13 @@ func compareAwkValues(left, right awkValue, convfmt string) int {
 // (busybox on Windows actually prints `1e+019`, a three-digit exponent from the MSVC
 // runtime. That is a C library quirk rather than a specification, and Go's `1e+19` is
 // what C99 and gawk's own %g would produce.)
+// twoToThe63 is the bound every float-to-integer conversion here is written against, as a
+// strict `<` rather than a `<=` against math.MaxInt64. The difference is a real bug rather
+// than pedantry: `float64(math.MaxInt64)` rounds **up** to 2^63, so the `<=` form admitted
+// 2^63 itself and `int64(2^63)` wraps to -9223372036854775808 -- `2^63` printed as a large
+// negative number. MinInt64 is exactly representable, so the lower bound stays `>=`.
+const twoToThe63 = 9223372036854775808.0
+
 func formatAwkNumber(value float64, format string) string {
 	// Infinity and NaN are spelled before anything else, because Go's fmt renders them
 	// `+Inf` and `NaN`, which matches neither reference. gawk prints `+inf` and `-inf`;
@@ -172,12 +179,6 @@ func formatAwkNumber(value float64, format string) string {
 	case math.IsNaN(value):
 		return "nan"
 	}
-	// The upper bound is written as a strict `<` against 2^63 rather than `<=` against
-	// math.MaxInt64, and the difference is a real bug rather than pedantry:
-	// `float64(math.MaxInt64)` rounds **up** to 2^63, so the `<=` form admitted 2^63
-	// itself and `int64(2^63)` wraps to -9223372036854775808. `2^63` printed as a large
-	// negative number. MinInt64 is exactly representable, so the lower bound is `>=`.
-	const twoToThe63 = 9223372036854775808.0
 	if value == math.Trunc(value) && value >= math.MinInt64 && value < twoToThe63 {
 		// -0 prints as 0, which both references do and which strconv would otherwise
 		// render as "-0".

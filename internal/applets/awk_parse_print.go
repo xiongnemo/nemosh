@@ -66,6 +66,8 @@ func awkReprintExpr(expr awkExpr) string {
 		return node.name + "(" + awkReprintList(node.args) + ")"
 	case awkGroupExpr:
 		return "group(" + awkReprintExpr(node.inner) + ")"
+	case awkGroupListExpr:
+		return "list(" + awkReprintList(node.items) + ")"
 	case awkGetlineExpr:
 		return awkReprintGetline(node)
 	case nil:

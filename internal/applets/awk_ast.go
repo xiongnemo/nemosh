@@ -86,6 +86,10 @@ type (
 	// because `(1 > 0)` is a comparison while a bare `1 > 0` after `print` is a
 	// redirect. The parser needs to remember which it saw.
 	awkGroupExpr struct{ inner awkExpr }
+	// awkGroupListExpr is `(a, b)` with no `in` after it, which is legal in exactly two
+	// places: as the whole argument list of `print` or `printf`. Written as an
+	// expression anywhere else it is an error, and evaluating one says so.
+	awkGroupListExpr struct{ items []awkExpr }
 
 	// awkGetlineExpr is every form of getline. Which one is decided by which fields
 	// are set: a source command or file, an optional target, and whether the input
@@ -108,24 +112,25 @@ const (
 	awkGetlineCommand
 )
 
-func (awkNumberExpr) awkExprNode()  {}
-func (awkStringExpr) awkExprNode()  {}
-func (awkRegexExpr) awkExprNode()   {}
-func (awkVarExpr) awkExprNode()     {}
-func (awkFieldExpr) awkExprNode()   {}
-func (awkIndexExpr) awkExprNode()   {}
-func (awkBinaryExpr) awkExprNode()  {}
-func (awkConcatExpr) awkExprNode()  {}
-func (awkUnaryExpr) awkExprNode()   {}
-func (awkMatchExpr) awkExprNode()   {}
-func (awkInExpr) awkExprNode()      {}
-func (awkTernaryExpr) awkExprNode() {}
-func (awkAssignExpr) awkExprNode()  {}
-func (awkIncDecExpr) awkExprNode()  {}
-func (awkCallExpr) awkExprNode()    {}
-func (awkBuiltinExpr) awkExprNode() {}
-func (awkGroupExpr) awkExprNode()   {}
-func (awkGetlineExpr) awkExprNode() {}
+func (awkNumberExpr) awkExprNode()    {}
+func (awkStringExpr) awkExprNode()    {}
+func (awkRegexExpr) awkExprNode()     {}
+func (awkVarExpr) awkExprNode()       {}
+func (awkFieldExpr) awkExprNode()     {}
+func (awkIndexExpr) awkExprNode()     {}
+func (awkBinaryExpr) awkExprNode()    {}
+func (awkConcatExpr) awkExprNode()    {}
+func (awkUnaryExpr) awkExprNode()     {}
+func (awkMatchExpr) awkExprNode()     {}
+func (awkInExpr) awkExprNode()        {}
+func (awkTernaryExpr) awkExprNode()   {}
+func (awkAssignExpr) awkExprNode()    {}
+func (awkIncDecExpr) awkExprNode()    {}
+func (awkCallExpr) awkExprNode()      {}
+func (awkBuiltinExpr) awkExprNode()   {}
+func (awkGroupExpr) awkExprNode()     {}
+func (awkGroupListExpr) awkExprNode() {}
+func (awkGetlineExpr) awkExprNode()   {}
 
 // awkStmt is any statement.
 type awkStmt interface{ awkStmtNode() }
