@@ -133,7 +133,7 @@ func (p *awkParser) parsePrintArguments() ([]awkExpr, error) {
 		return args, nil
 	}
 	for {
-		arg, err := p.parseExpression(awkExprNoGT)
+		arg, err := p.parseExpression(awkExprNoGT | awkExprNoPipe)
 		if err != nil {
 			return nil, err
 		}

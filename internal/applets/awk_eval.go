@@ -58,6 +58,8 @@ func (in *awkInterp) eval(expr awkExpr) (awkValue, error) {
 		return in.evalBuiltin(node)
 	case awkCallExpr:
 		return in.evalCall(node)
+	case awkGetlineExpr:
+		return in.evalGetline(node)
 	case awkGroupListExpr:
 		// `(a, b)` reached as a value rather than as a print's argument list.
 		return awkValue{}, in.errorf("a parenthesised list is only an expression before `in`")

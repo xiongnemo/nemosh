@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,7 +31,7 @@ func runAwk(t *testing.T, program, input string) (string, string, int) {
 		t.Fatalf("parse %q: %v", program, err)
 	}
 	var stdout, stderr bytes.Buffer
-	status, runErr := runAwkProgram(parsed, strings.NewReader(input), &stdout, &stderr)
+	status, runErr := runAwkProgram(context.Background(), parsed, strings.NewReader(input), &stdout, &stderr)
 	if runErr != nil {
 		stderr.WriteString(runErr.Error())
 	}
@@ -267,15 +268,14 @@ func TestAwkRun_refusals(t *testing.T) {
 		{name: "a negative field", program: "BEGIN { print $-1 }", says: "field"},
 		{name: "a builtin called wrongly", program: `BEGIN { print index("x") }`, says: "called with 1 arguments"},
 		{name: "a parenthesised list as a value", program: "BEGIN { x = (1, 2) }", says: "before `in`"},
-		// Not implemented yet, and loud about it.
-		{name: "a redirect", program: `BEGIN { print 1 > "f" }`, says: "not supported yet"},
 		{name: "an undefined function", program: "BEGIN { print f() }", says: "undefined function f"},
 		{name: "too many arguments", program: "function f(a) { return a } BEGIN { print f(1,2) }", says: "takes 1 arguments"},
 		{name: "return outside a function", program: "BEGIN { return }", says: "return outside a function"},
 		{name: "runaway recursion", program: "function f() { return f() } BEGIN { print f() }", says: "recursed more than"},
-		// Not implemented yet, and loud about it.
-		{name: "a printf redirect", program: `BEGIN { printf "%s", 1 > "f" }`, says: "not supported yet"},
-		{name: "system", program: `BEGIN { system("true") }`, says: "not supported yet"},
+		// The registry boundary: a command is an applet here or it is nothing.
+		{name: "a command that is not an applet", program: `BEGIN { system("c:/tool.exe") }`, says: "not found"},
+		{name: "a pipe to something unavailable", program: `BEGIN { print "x" | "definitely-not-an-applet" }`, says: "not found"},
+		{name: "shell syntax in a command", program: `BEGIN { "echo a; echo b" | getline v }`, says: "needs a shell"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			_, stderr, status := runAwk(t, test.program, "")

@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"math/rand"
@@ -38,6 +39,25 @@ type awkInterp struct {
 	recordStale bool
 	fieldsStale bool
 
+	// ctx belongs to the applet this is running inside, and reaches the applets that
+	// `system`, `print | cmd` and `cmd | getline` dispatch to. See awk_command.go for
+	// why those are applets and never OS processes.
+	ctx context.Context
+	// input is the program's own standard input, which both the record loop and a plain
+	// `getline` read from -- through the one reader in `records`, so that the two cannot
+	// each buffer a different part of it.
+	input   io.Reader
+	records *bufio.Reader
+
+	// outputs and inputs are the redirections a program has open, keyed by the text of
+	// the name. Opening once and keeping is what makes `{ print > "out" }` truncate the
+	// file once rather than once per record.
+	outputs map[string]*awkOutput
+	inputs  map[string]*awkInput
+	// deferred carries a failure from somewhere that had to answer a number instead --
+	// `close()` on a pipe whose applet failed is the only one.
+	deferred error
+
 	output io.Writer
 	errors io.Writer
 	// buffered wraps output so a program printing a million lines does not make a
@@ -68,11 +88,15 @@ var awkSpecialDefaults = map[string]string{
 	"FILENAME": "",
 }
 
-func newAwkInterp(program *awkProgram, output, errors io.Writer) *awkInterp {
+func newAwkInterp(ctx context.Context, program *awkProgram, input io.Reader, output, errors io.Writer) *awkInterp {
 	interp := &awkInterp{
+		ctx:     ctx,
 		program: program,
 		vars:    map[string]awkValue{},
 		arrays:  map[string]*awkArray{},
+		input:   input,
+		outputs: map[string]*awkOutput{},
+		inputs:  map[string]*awkInput{},
 		errors:  errors,
 	}
 	interp.buffered = bufio.NewWriter(output)

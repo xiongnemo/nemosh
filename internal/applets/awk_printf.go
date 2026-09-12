@@ -43,9 +43,6 @@ func (in *awkInterp) builtinSprintf(node awkBuiltinExpr) (awkValue, error) {
 
 // execPrintf is the statement, which is `sprintf` written straight to the output.
 func (in *awkInterp) execPrintf(node awkPrintfStmt) error {
-	if node.redirect != nil {
-		return in.errorf("printf redirection is not supported yet")
-	}
 	args := awkUnwrapPrintList(node.args)
 	if len(args) == 0 {
 		return in.errorf("printf needs a format")
@@ -62,7 +59,7 @@ func (in *awkInterp) execPrintf(node awkPrintfStmt) error {
 	if err != nil {
 		return err
 	}
-	return in.write(text)
+	return in.writeTo(node.redirect, text)
 }
 
 func (in *awkInterp) evalArguments(args []awkExpr) ([]awkValue, error) {

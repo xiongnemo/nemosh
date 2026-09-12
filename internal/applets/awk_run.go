@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"strings"
 )
@@ -21,8 +22,8 @@ import (
 //     action rather than synthesising, so the decision is made here where it is visible.
 
 // runAwkProgram is the whole run: it answers the exit status.
-func runAwkProgram(program *awkProgram, input io.Reader, output, errors io.Writer) (int, error) {
-	interp := newAwkInterp(program, output, errors)
+func runAwkProgram(ctx context.Context, program *awkProgram, input io.Reader, output, errors io.Writer) (int, error) {
+	interp := newAwkInterp(ctx, program, input, output, errors)
 	defer interp.buffered.Flush()
 
 	if err := interp.runBegin(); err != nil {
@@ -32,12 +33,21 @@ func runAwkProgram(program *awkProgram, input io.Reader, output, errors io.Write
 	// for a BEGIN-only program, and reading anyway would make `awk 'BEGIN{print}'` hang
 	// on a terminal.
 	if !interp.exiting && interp.readsInput() {
-		if err := interp.runRecords(input); err != nil {
+		if err := interp.runRecords(); err != nil {
 			return 2, err
 		}
 	}
 	if err := interp.runEnd(); err != nil {
 		return 2, err
+	}
+	// Everything still open is finished here: a file redirect is flushed and closed, and
+	// a pipe finally runs its applet. A program that never calls `close` still gets its
+	// output, which is what both references do.
+	if err := interp.closeAllStreams(); err != nil {
+		return 2, err
+	}
+	if interp.deferred != nil {
+		return 2, interp.deferred
 	}
 	return interp.exitStatus, nil
 }
@@ -88,10 +98,16 @@ func (in *awkInterp) runEnd() error {
 }
 
 // runRecords is the main loop.
-func (in *awkInterp) runRecords(input io.Reader) error {
-	reader := bufio.NewReader(input)
+//
+// It reads through the interpreter's one main reader rather than a reader of its own,
+// because a plain `getline` reads from the same place: two readers over one stream would
+// each buffer a different part of it, and the records would interleave wrongly.
+func (in *awkInterp) runRecords() error {
+	if in.records == nil {
+		in.records = bufio.NewReader(in.input)
+	}
 	for {
-		record, ok, err := in.readRecord(reader)
+		record, ok, err := in.readRecord(in.records)
 		if err != nil {
 			return err
 		}

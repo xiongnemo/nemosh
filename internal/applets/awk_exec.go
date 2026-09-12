@@ -82,14 +82,11 @@ func (in *awkInterp) exec(statement awkStmt) (awkFlow, error) {
 // No arguments means `$0`, which is what makes a bare `print` the commonest awk program
 // there is.
 func (in *awkInterp) execPrint(node awkPrintStmt) error {
-	if node.redirect != nil {
-		return in.errorf("print redirection is not supported yet")
-	}
 	// `print (a, b)` parses as one parenthesised list; the parser cannot tell that from
 	// `print (expr)`, which must stay a group, so the list is unwrapped only here.
 	args := awkUnwrapPrintList(node.args)
 	if len(args) == 0 {
-		return in.write(in.getRecord() + in.vars["ORS"].str(in.convfmt()))
+		return in.writeTo(node.redirect, in.getRecord()+in.vars["ORS"].str(in.convfmt()))
 	}
 	parts := make([]string, 0, len(args))
 	for _, arg := range args {
@@ -102,7 +99,7 @@ func (in *awkInterp) execPrint(node awkPrintStmt) error {
 		parts = append(parts, in.text(value))
 	}
 	separator := in.vars["OFS"].str(in.convfmt())
-	return in.write(strings.Join(parts, separator) + in.vars["ORS"].str(in.convfmt()))
+	return in.writeTo(node.redirect, strings.Join(parts, separator)+in.vars["ORS"].str(in.convfmt()))
 }
 
 func (in *awkInterp) write(text string) error {

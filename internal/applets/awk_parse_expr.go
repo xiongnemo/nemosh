@@ -55,6 +55,10 @@ const (
 	// `print (1 > 0)` is a comparison because the parenthesis takes it out of the
 	// argument list, which is why awkGroupExpr survives parsing.
 	awkExprNoGT
+	// awkExprNoPipe is set in the same place and for the same reason: in
+	// `print "x" | "sort"` the bar is a redirect, while everywhere else `expr | getline`
+	// reads from a command.
+	awkExprNoPipe
 )
 
 func (f awkExprFlags) has(flag awkExprFlags) bool { return f&flag != 0 }
@@ -135,7 +139,7 @@ func (p *awkParser) parseAnd(flags awkExprFlags) (awkExpr, error) {
 // first version got backwards -- it called parseMatch from parseAnd and left the `==`
 // with nothing to attach to, so the whole expression was refused as "unexpected ==".
 func (p *awkParser) parseIn(flags awkExprFlags) (awkExpr, error) {
-	left, err := p.parseConcat(flags)
+	left, err := p.parsePipeGetline(flags)
 	if err != nil {
 		return nil, err
 	}
@@ -148,67 +152,6 @@ func (p *awkParser) parseIn(flags awkExprFlags) (awkExpr, error) {
 		left = awkInExpr{index: []awkExpr{left}, array: array}
 	}
 	return left, nil
-}
-
-func (p *awkParser) parseMatch(flags awkExprFlags) (awkExpr, error) {
-	left, err := p.parseComparison(flags)
-	if err != nil {
-		return nil, err
-	}
-	for p.peek().kind == awkTokenOperator && (p.peek().text == "~" || p.peek().text == "!~") {
-		negated := p.peek().text == "!~"
-		p.advance()
-		right, err := p.parseComparison(flags)
-		if err != nil {
-			return nil, err
-		}
-		left = awkMatchExpr{negated: negated, left: left, right: right}
-	}
-	return left, nil
-}
-
-// parseComparison is **non-associative**: `1 < 2 < 3` is refused.
-//
-// gawk refuses it and busybox answers 1. Refusing is followed because a chained
-// comparison is almost always a mistake, and answering `(1<2)<3` silently gives a number
-// nobody meant.
-func (p *awkParser) parseComparison(flags awkExprFlags) (awkExpr, error) {
-	left, err := p.parseIn(flags)
-	if err != nil {
-		return nil, err
-	}
-	operator, ok := p.comparisonOperator(flags)
-	if !ok {
-		return left, nil
-	}
-	p.advance()
-	right, err := p.parseIn(flags)
-	if err != nil {
-		return nil, err
-	}
-	if next, chained := p.comparisonOperator(flags); chained {
-		return nil, fmt.Errorf("line %d: %s cannot be chained after %s; parenthesise one of them",
-			p.peek().line, next, operator)
-	}
-	return awkBinaryExpr{operator: operator, left: left, right: right}, nil
-}
-
-func (p *awkParser) comparisonOperator(flags awkExprFlags) (string, bool) {
-	token := p.peek()
-	if token.kind != awkTokenOperator {
-		return "", false
-	}
-	switch token.text {
-	case "<", "<=", "==", "!=", ">=":
-		return token.text, true
-	case ">":
-		// In a print argument list a `>` is a redirect, not a comparison.
-		if flags.has(awkExprNoGT) {
-			return "", false
-		}
-		return token.text, true
-	}
-	return "", false
 }
 
 // parseConcat joins adjacent expressions with no operator between them.

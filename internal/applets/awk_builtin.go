@@ -26,6 +26,7 @@ var awkBuiltinArity = map[string][2]int{
 	"sin": {1, 1}, "cos": {1, 1}, "atan2": {2, 2}, "exp": {1, 1}, "log": {1, 1},
 	"sqrt": {1, 1}, "int": {1, 1}, "rand": {0, 0}, "srand": {0, 1},
 	"tolower": {1, 1}, "toupper": {1, 1},
+	"system": {1, 1}, "close": {1, 1}, "fflush": {0, 1},
 }
 
 func (in *awkInterp) evalBuiltin(node awkBuiltinExpr) (awkValue, error) {
@@ -53,8 +54,21 @@ func (in *awkInterp) evalBuiltin(node awkBuiltinExpr) (awkValue, error) {
 		return in.builtinSprintf(node)
 	case "sin", "cos", "atan2", "exp", "log", "sqrt", "int", "rand", "srand":
 		return in.evalMathBuiltin(node)
+	case "system":
+		return in.builtinSystem(node)
+	case "close":
+		name, err := in.argText(node, 0)
+		if err != nil {
+			return awkValue{}, err
+		}
+		return awkNum(float64(in.closeStream(name))), nil
+	case "fflush":
+		name, err := in.argText(node, 0)
+		if err != nil {
+			return awkValue{}, err
+		}
+		return awkNum(float64(in.flushOutputs(name))), nil
 	}
-	// `system`, `close` and `fflush` are the I/O three and arrive with stage 9.
 	return awkValue{}, in.errorf("%s is not supported yet", node.name)
 }
 
