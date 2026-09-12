@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,9 +35,14 @@ func runApplet(t *testing.T, name string, args []string, stdin string) (string, 
 		if code, carried := StatusCode(err); carried {
 			status = code
 		}
-		if message, carried := StatusMessage(err); carried {
+		switch {
+		case errors.Is(err, ErrExitFalse):
+			// The sentinel for "fail without saying anything", which is what -q and -s
+			// options ask for. The shell prints nothing for it and neither does this.
+		case hasStatusMessage(err):
+			message, _ := StatusMessage(err)
 			stderr.WriteString(message)
-		} else if _, isStatus := StatusCode(err); !isStatus {
+		case !isStatusOnly(err):
 			stderr.WriteString(err.Error())
 		}
 	}
@@ -356,4 +362,14 @@ func TestProcessesNamedMatchesWholeNames(t *testing.T) {
 	if left, err := processesNamed([]string{self}, omit); err == nil && len(left) != 0 {
 		t.Fatalf("omitting every id still left %v", left)
 	}
+}
+
+func hasStatusMessage(err error) bool {
+	_, carried := StatusMessage(err)
+	return carried
+}
+
+func isStatusOnly(err error) bool {
+	_, carried := StatusCode(err)
+	return carried
 }

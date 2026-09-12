@@ -39,7 +39,7 @@ func newUsleepApplet() Applet {
 		}
 		microseconds, err := strconv.ParseInt(operands[0], 10, 64)
 		if err != nil || microseconds < 0 {
-			return fmt.Errorf("usleep: invalid number '%s'", operands[0])
+			return fmt.Errorf("invalid number '%s'", operands[0])
 		}
 		timer := time.NewTimer(time.Duration(microseconds) * time.Microsecond)
 		defer timer.Stop()

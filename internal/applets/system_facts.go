@@ -55,22 +55,22 @@ func parseNprocIgnore(args []string) (int, error) {
 		case argument == "--ignore":
 			index++
 			if index >= len(args) {
-				return 0, fmt.Errorf("nproc: --ignore needs a number")
+				return 0, fmt.Errorf("--ignore needs a number")
 			}
 			value = args[index]
 		case strings.HasPrefix(argument, "--ignore="):
 			value = strings.TrimPrefix(argument, "--ignore=")
 		default:
 			if strings.HasPrefix(argument, "-") {
-				return 0, fmt.Errorf("nproc: unsupported option: %s", argument)
+				return 0, fmt.Errorf("unsupported option: %s", argument)
 			}
 			// Not an option, so it is an operand -- and nproc takes none. Said in those
 			// words rather than as an option complaint, because it is not one.
-			return 0, fmt.Errorf("nproc: extra operand '%s'", argument)
+			return 0, fmt.Errorf("extra operand '%s'", argument)
 		}
 		parsed, err := strconv.Atoi(value)
 		if err != nil || parsed < 0 {
-			return 0, fmt.Errorf("nproc: invalid number '%s'", value)
+			return 0, fmt.Errorf("invalid number '%s'", value)
 		}
 		ignore = parsed
 	}
@@ -83,7 +83,7 @@ func parseNprocIgnore(args []string) (int, error) {
 // `amd64` where `uname -m` said `x86_64` would be a bug nobody would look for.
 func newArchApplet() Applet {
 	return simpleApplet{name: "arch", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if err := refuseArguments("arch", args); err != nil {
+		if err := refuseArguments(args); err != nil {
 			return err
 		}
 		_, err := fmt.Fprintln(stdout, unameMachine(runtime.GOARCH))
@@ -99,14 +99,14 @@ func newArchApplet() Applet {
 // and busybox draws the line in the same place.
 func newLognameApplet() Applet {
 	return simpleApplet{name: "logname", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if err := refuseArguments("logname", args); err != nil {
+		if err := refuseArguments(args); err != nil {
 			return err
 		}
 		name := accountName()
 		if name == "" {
 			// Loud rather than a guess: a script using this to build a path wants a
 			// failure, not the empty string.
-			return fmt.Errorf("logname: no login name")
+			return fmt.Errorf("no login name")
 		}
 		_, err := fmt.Fprintln(stdout, name)
 		return err
@@ -130,7 +130,7 @@ func newGroupsApplet() Applet {
 		}
 		identity := currentIdentity()
 		if len(operands) == 1 && operands[0] != identity.user && operands[0] != accountName() {
-			return ExitStatusMessage(1, fmt.Errorf("groups: unknown user %s", operands[0]))
+			return ExitStatusMessage(1, fmt.Errorf("unknown user %s", operands[0]))
 		}
 		_, err = fmt.Fprintln(stdout, identity.group)
 		return err
@@ -146,7 +146,7 @@ func newGroupsApplet() Applet {
 // one run to the next, which is the one thing this command must not do.
 func newUUIDGenApplet() Applet {
 	return simpleApplet{name: "uuidgen", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if err := refuseArguments("uuidgen", args); err != nil {
+		if err := refuseArguments(args); err != nil {
 			return err
 		}
 		text, err := randomUUID()
@@ -161,7 +161,7 @@ func newUUIDGenApplet() Applet {
 func randomUUID() (string, error) {
 	var bytes [16]byte
 	if _, err := rand.Read(bytes[:]); err != nil {
-		return "", fmt.Errorf("uuidgen: %v", err)
+		return "", fmt.Errorf("cannot read random bytes: %v", err)
 	}
 	// The version nibble and the variant bits, which are what make this a v4 UUID rather
 	// than sixteen random bytes wearing the shape of one.
@@ -171,13 +171,13 @@ func randomUUID() (string, error) {
 }
 
 // refuseArguments is the check the commands that take none all need.
-func refuseArguments(name string, args []string) error {
+func refuseArguments(args []string) error {
 	_, operands, err := parseAppletOptions(args, "", "")
 	if err != nil {
 		return err
 	}
 	if len(operands) > 0 {
-		return fmt.Errorf("%s: extra operand '%s'", name, operands[0])
+		return fmt.Errorf("extra operand '%s'", operands[0])
 	}
 	return nil
 }

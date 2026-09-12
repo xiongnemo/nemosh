@@ -10,6 +10,13 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`cal`, `getopt` and `ipcalc`.** `cal` matches busybox-w32 byte for byte across seventy
+  calendars, including the eleven days September 1752 does not have and the line of spaces
+  a month ending in a blank week prints. `getopt` canonicalises a command line for
+  `eval set -- "$(getopt ...)"`, quoting the output as the enhanced version does and *not*
+  quoting it in the old form, as the original did. `ipcalc` answers the network numbers as
+  `KEY=value` lines in a fixed order.
+
 - **Twelve more applets**: `nproc`, `arch`, `logname`, `groups`, `uuidgen`, `usleep`,
   `truncate`, `link`, `unlink`, `ts`, `pidof` and `killall`. All twelve are in busybox-w32
   and none is on a clean Windows machine.

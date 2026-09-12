@@ -34,7 +34,7 @@ func newTruncateApplet() Applet {
 			return err
 		}
 		if !options.has('s') {
-			return fmt.Errorf("truncate: you must specify a size with -s")
+			return fmt.Errorf("you must specify a size with -s")
 		}
 		if len(operands) == 0 {
 			return missingOperand()
@@ -97,7 +97,7 @@ func createThenTruncate(native, operand string, target int64) error {
 // truncateSize reads the -s value against the file's current size.
 func truncateSize(spec string, current int64) (int64, error) {
 	if spec == "" {
-		return 0, fmt.Errorf("truncate: invalid number ''")
+		return 0, fmt.Errorf("invalid number ''")
 	}
 	relative := int64(0)
 	switch spec[0] {
@@ -106,7 +106,7 @@ func truncateSize(spec string, current int64) (int64, error) {
 	case '-':
 		relative, spec = -1, spec[1:]
 	case '<', '>', '/', '%':
-		return 0, fmt.Errorf("truncate: %c sizes are not supported; use a plain, + or - size", spec[0])
+		return 0, fmt.Errorf("%c sizes are not supported; use a plain, + or - size", spec[0])
 	}
 	amount, err := parseSizeWithSuffix(spec)
 	if err != nil {
@@ -146,7 +146,7 @@ func parseSizeWithSuffix(spec string) (int64, error) {
 	}
 	value, err := strconv.ParseInt(digits, 10, 64)
 	if err != nil || value < 0 {
-		return 0, fmt.Errorf("truncate: invalid number '%s'", spec)
+		return 0, fmt.Errorf("invalid number '%s'", spec)
 	}
 	return value * factor, nil
 }
@@ -174,7 +174,7 @@ func newLinkApplet() Applet {
 			return err
 		}
 		if err := os.Link(source, target); err != nil {
-			return fmt.Errorf("link: cannot create hard link '%s' to '%s': %s",
+			return fmt.Errorf("cannot create hard link '%s' to '%s': %s",
 				operands[1], operands[0], CauseText(err))
 		}
 		return nil
@@ -200,7 +200,7 @@ func newUnlinkApplet() Applet {
 			return err
 		}
 		if info, err := os.Lstat(native); err == nil && info.IsDir() {
-			return fmt.Errorf("unlink: cannot unlink '%s': Is a directory", operands[0])
+			return fmt.Errorf("cannot unlink '%s': Is a directory", operands[0])
 		}
 		if err := os.Remove(native); err != nil {
 			return cannotRemove(operands[0], err)
