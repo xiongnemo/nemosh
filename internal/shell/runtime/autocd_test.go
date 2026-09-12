@@ -62,7 +62,7 @@ func TestAutocd(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			prefix, hide := dirsRoot(t)
+			prefix, _, hide := dirsRoot(t)
 			status, stdout, stderr := runSetScript(t, prefix+test.script+"\n")
 			if got := hide(stdout); got != test.want {
 				t.Fatalf("%s\n  got  %q\n  want %q\n  status %d stderr %q",
@@ -107,9 +107,7 @@ func TestCDPATH(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			prefix, hide := dirsRoot(t)
-			// The prefix is `cd ROOT`, so the root's own path is what ROOT stands for.
-			root := strings.TrimSpace(strings.TrimPrefix(prefix, "cd "))
+			prefix, root, hide := dirsRoot(t)
 			script := strings.ReplaceAll(test.script, "ROOT", root)
 			status, stdout, stderr := runSetScript(t, prefix+script+"\n")
 			if got := hide(stdout); got != test.want {
@@ -123,8 +121,7 @@ func TestCDPATH(t *testing.T) {
 // A CDPATH miss must not narrate itself: the search tries several places and only the last
 // one is allowed to complain, or a single `cd nosuch` would print an error per entry.
 func TestCDPATH_isQuietWhileSearching(t *testing.T) {
-	prefix, hide := dirsRoot(t)
-	root := strings.TrimSpace(strings.TrimPrefix(prefix, "cd "))
+	prefix, root, hide := dirsRoot(t)
 	status, _, stderr := runSetScript(t,
 		prefix+"CDPATH="+root+":/nowhere:/also-nowhere\ncd nosuchdir\n")
 	if status == 0 {
@@ -159,7 +156,7 @@ func TestTilde_directoryForms(t *testing.T) {
 		{name: "an index past the end", script: "echo ~9", want: "~9\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			prefix, hide := dirsRoot(t)
+			prefix, _, hide := dirsRoot(t)
 			status, stdout, stderr := runSetScript(t, prefix+test.script+"\n")
 			if status != 0 {
 				t.Fatalf("status = %d, stderr = %q", status, hide(stderr))
@@ -174,7 +171,7 @@ func TestTilde_directoryForms(t *testing.T) {
 // `~-` before any `cd` is left as written rather than becoming empty, because an empty
 // path silently means the current directory and would move a file somewhere nobody asked.
 func TestTilde_previousDirectoryBeforeAnyCd(t *testing.T) {
-	prefix, hide := dirsRoot(t)
+	prefix, _, hide := dirsRoot(t)
 	status, stdout, _ := runSetScript(t, prefix+"unset OLDPWD\necho ~-\n")
 	if status != 0 {
 		t.Fatalf("status = %d", status)

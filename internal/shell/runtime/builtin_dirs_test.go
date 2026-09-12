@@ -20,24 +20,31 @@ import (
 
 // dirsRoot makes a root with two subdirectories and answers a script prefix that starts
 // there, plus a replacer that hides the temporary path from the assertions.
-func dirsRoot(t *testing.T) (prefix string, hide func(string) string) {
+func dirsRoot(t *testing.T) (prefix, root string, hide func(string) string) {
 	t.Helper()
-	root, err := filepath.EvalSymlinks(t.TempDir())
+	native, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"a", "b"} {
-		if err := os.MkdirAll(filepath.Join(root, name), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Join(native, name), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	slashed := filepath.ToSlash(root)
+	slashed := filepath.ToSlash(native)
 	// The shell answers in its own spelling -- `/c/Users/...` where the host says
 	// `C:/Users/...` -- so all three forms are hidden. Without the first of them these
 	// assertions compared a nemosh path against a Windows one and every case failed on
 	// the drive letter rather than on anything being tested.
-	spellings := []string{driveLetterToNemosh(slashed), slashed, root}
-	return "cd " + slashed + "\n", func(text string) string {
+	spellings := []string{driveLetterToNemosh(slashed), slashed, native}
+	// HOME is pinned to somewhere that cannot be a prefix of the temporary directory,
+	// because `dirs` abbreviates the home directory to `~` and these assertions are
+	// about the stack rather than about that. On CI the runner's home *is* a prefix of
+	// its temp directory, so every path came back as `~/AppData/Local/Temp/...` and
+	// every case failed -- green here and red there, on an environment difference the
+	// test had no business depending on. TestDirs_abbreviatesHome sets its own HOME and
+	// is where that behaviour is checked.
+	return "HOME=/nemosh-test-home-not-a-prefix\ncd " + slashed + "\n", slashed, func(text string) string {
 		for _, spelling := range spellings {
 			if spelling != "" {
 				text = strings.ReplaceAll(text, spelling, "R")
@@ -104,7 +111,7 @@ func TestDirs_stack(t *testing.T) {
 		{name: "dirs -c empties it", script: "pushd a >/dev/null\ndirs -c\ndirs", want: "R/a\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			prefix, hide := dirsRoot(t)
+			prefix, _, hide := dirsRoot(t)
 			status, stdout, stderr := runSetScript(t, prefix+test.script+"\n")
 			if status != 0 {
 				t.Fatalf("status = %d, stderr = %q", status, hide(stderr))
@@ -135,7 +142,7 @@ func TestDirs_refusals(t *testing.T) {
 		{name: "a directory that is not there", script: "pushd nosuchdir", says: "pushd: nosuchdir: No such file or directory"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			prefix, hide := dirsRoot(t)
+			prefix, _, hide := dirsRoot(t)
 			status, _, stderr := runSetScript(t, prefix+test.script+"\n")
 			if status == 0 {
 				t.Fatalf("%q succeeded", test.script)
@@ -150,7 +157,7 @@ func TestDirs_refusals(t *testing.T) {
 // A subshell gets a copy of the stack, so what it pushes does not escape -- the rule
 // arrays follow. $SECONDS and history are the deliberate exceptions and this is not one.
 func TestDirs_subshellKeepsItsPushesToItself(t *testing.T) {
-	prefix, hide := dirsRoot(t)
+	prefix, _, hide := dirsRoot(t)
 	status, stdout, stderr := runSetScript(t,
 		prefix+"pushd a >/dev/null\n(pushd ../b >/dev/null)\ndirs\n")
 	if status != 0 {
@@ -165,7 +172,7 @@ func TestDirs_subshellKeepsItsPushesToItself(t *testing.T) {
 // on one line -- and the abbreviation must not fire on a path that merely starts with the
 // same letters.
 func TestDirs_abbreviatesHome(t *testing.T) {
-	prefix, _ := dirsRoot(t)
+	prefix, _, _ := dirsRoot(t)
 	status, stdout, stderr := runSetScript(t, prefix+"HOME=/tmp\ncd /tmp\ndirs\n")
 	if status != 0 {
 		t.Fatalf("status = %d, stderr = %q", status, stderr)

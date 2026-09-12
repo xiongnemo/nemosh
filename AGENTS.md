@@ -200,6 +200,15 @@ and read separately: with no pause between them the read failed 30 times out of
 and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather than
 approximating. Anything landing partially refuses the part it cannot do.
 
+**A fixture must not depend on where the machine puts things.** `dirs` abbreviates the
+home directory to `~`, and the directory-stack tests hid a temporary path by substituting
+its full spelling. On this machine `HOME` is not a prefix of the temp directory and the
+substitution worked; on a GitHub runner it *is* one, so every path came back as
+`~/AppData/Local/Temp/...` and eighteen cases failed. Green here, red there, twice over --
+the Product and Release workflows both run the suite. Pin whatever the assertion depends
+on (here, `HOME=` to somewhere that cannot be a prefix) rather than assuming the layout
+this machine happens to have.
+
 **A test that synthesises its own input can agree with itself and be wrong.**
 The editor bound `^_` as `tcell.KeyCtrlUnderscore` and the test pressed
 `tcell.KeyCtrlUnderscore`. Both agreed, and the key did nothing on Windows —
