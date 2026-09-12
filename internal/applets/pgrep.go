@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/proc"
@@ -149,9 +150,25 @@ func splitLeadingSignal(args []string) (int, []string) {
 	return terminate, args
 }
 
+// signalNumbers are the signals this shell can name.
+//
+// Short, and deliberately so: Windows has no signals, so each of these is a behaviour
+// proc.Terminate reproduces rather than a number the kernel understands. Listing ones it
+// cannot act on would be a promise nothing keeps. Shared with `killall -l`.
+var signalNumbers = map[string]int{"HUP": 1, "INT": 2, "QUIT": 3, "KILL": 9, "TERM": 15, "STOP": 19, "CONT": 18}
+
+// knownSignalNames lists them in number order, which is how `kill -l` is read.
+func knownSignalNames() []string {
+	names := make([]string, 0, len(signalNumbers))
+	for name := range signalNumbers {
+		names = append(names, name)
+	}
+	sort.Slice(names, func(i, j int) bool { return signalNumbers[names[i]] < signalNumbers[names[j]] })
+	return names
+}
+
 func processSignalNumber(spec string) (int, bool) {
-	numbers := map[string]int{"HUP": 1, "INT": 2, "QUIT": 3, "KILL": 9, "TERM": 15, "STOP": 19, "CONT": 18}
-	if number, ok := numbers[strings.TrimPrefix(strings.ToUpper(spec), "SIG")]; ok {
+	if number, ok := signalNumbers[strings.TrimPrefix(strings.ToUpper(spec), "SIG")]; ok {
 		return number, true
 	}
 	var number int

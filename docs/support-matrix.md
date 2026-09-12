@@ -506,6 +506,18 @@ behaviour this shell deliberately does not have.
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
 | `ar` | verbs `x p t r`, plus `-o -v`; the long-name table is read, never written | refused by name |
 | `ascii` | none; the character table, read down in eight columns | refused by name |
+| `arch` | none; the same name `uname -m` gives | refused by name |
+| `groups` | none; one name, the one `id -gn` gives -- a user other than this one is refused | refused by name |
+| `killall` | `-l -q`, and a leading `-SIGNAL`; the name is matched whole, not as a pattern | refused by name |
+| `link` | none; an existing LINK is refused rather than replaced | refused by name |
+| `logname` | none; the login account, which under elevation differs from `whoami` | refused by name |
+| `nproc` | `--all --ignore=N`; the answer never drops below 1 | refused by name |
+| `pidof` | `-s -o PID[,PID]`; the name is matched whole, not as a pattern | refused by name |
+| `truncate` | `-s SIZE` with `K M G` and `KB MB GB`, a leading `+` or `-`, and `-c` | refused by name |
+| `ts` | `-i -s`, and a strftime FORMAT operand | refused by name |
+| `unlink` | none; a directory is refused | refused by name |
+| `usleep` | none; a microsecond count | read as a number, so a bad one is refused |
+| `uuidgen` | none; a version 4 identifier from a cryptographic source | refused by name |
 | `base32` | `-d -i -w`; wraps at 76 like `base64` | refused by name |
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |

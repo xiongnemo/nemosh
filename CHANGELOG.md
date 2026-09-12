@@ -10,6 +10,17 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **Twelve more applets**: `nproc`, `arch`, `logname`, `groups`, `uuidgen`, `usleep`,
+  `truncate`, `link`, `unlink`, `ts`, `pidof` and `killall`. All twelve are in busybox-w32
+  and none is on a clean Windows machine.
+
+  Three of them carry a decision rather than a fact. `logname` is deliberately **not**
+  `whoami`: under elevation the second answers `root` and the first still answers the
+  account, which is the only reason to have both. `pidof` and `killall` match a name
+  **whole**, where `pgrep` and `pkill` match a pattern -- `killall sh` must not take `bash`
+  with it. And `truncate` accepts GNU's relative `+N`/`-N` sizes, which busybox refuses,
+  while refusing `<`, `>`, `/` and `%` by name rather than approximating them.
+
 - **`awk`.** The POSIX language: patterns and actions, `BEGIN`/`END`, ranges, fields and
   the built-in variables, arrays, every control statement, user-defined functions with
   arrays by reference, the string and numeric built-ins, `printf`/`sprintf`, all six
