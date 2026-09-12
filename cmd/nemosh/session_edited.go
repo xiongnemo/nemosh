@@ -91,6 +91,18 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			return fmt.Errorf("nemosh: read stdin: %w", err)
 		}
 
+		// History expansion is a textual rewrite done before the line is parsed, so the
+		// shell proper never sees an unexpanded `!`. Shared with the plain loop in
+		// session.go, which is the half that was forgotten on the first attempt -- and
+		// which is the path a piped script takes.
+		expanded, runnable := applyHistoryExpansion(rt, c.stderr, line)
+		if !runnable {
+			input.Reset()
+			lastStatus = 1
+			continue
+		}
+		line = expanded
+
 		appendInteractiveLine(&input, line+"\n")
 		script, parseErr := runtime.ParseScript(input.String())
 		if errors.Is(parseErr, runtime.ErrIncompleteScript) {

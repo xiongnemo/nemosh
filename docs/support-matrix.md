@@ -336,6 +336,33 @@ subsequent read means. Until it was implemented it returned 0 and did nothing at
 a script that removed an element and carried on was quietly wrong -- the failure mode
 AGENTS.md singles out.
 
+### History expansion
+
+`!!`, `!n`, `!-n`, `!string`, `!?text?`, `!$`, `!^`, `!*` and `^old^new`, on interactive
+input only -- a textual rewrite done before the line is parsed, so the shell proper never
+sees an unexpanded `!`. The expanded line is echoed on **stderr** before it runs, which is
+what bash does and what keeps a redirected stdout holding only what the command wrote.
+
+Three rules, all measured rather than recalled:
+
+- **Single quotes protect and double quotes do not.** `echo '!!'` is two characters;
+  `echo "!!"` is the previous command. The asymmetry looks like a bug until you rely on it.
+- **A backslash escapes**, and is consumed: `\!` is a literal `!`.
+- **A `!` that begins nothing is text** -- at end of line, before a blank, or before `=` --
+  which is what keeps `[ x != y ]` working. A reference also ends at the first character
+  that could not begin a command name, so `!ls|wc` finds `ls` and leaves the pipe alone.
+
+A reference that resolves to nothing is an **error and the line does not run**, because
+leaving the text as typed would send `!vim` to PATH as a command name.
+
+Two deliberate narrowings. There is no `:s/old/new/` modifier syntax beyond `^old^new`,
+and `!^`/`!*` on a line with no arguments give the empty string where bash's answer varies
+with context.
+
+It also fixed something else: the **non-terminal interactive loop recorded no history at
+all**, so `history` was empty whenever the shell was interactive without a terminal. Both
+loops record the whole command now, as the edited one always did.
+
 ### Known divergences from bash/dash/ash
 
 - **Parse before effects.** A syntax error anywhere in a script means none of it

@@ -68,6 +68,12 @@ func (h *shellHistory) clear() {
 // that knows a command was typed rather than read from a script.
 func (r Runtime) RecordHistory(line string) { r.history.record(line) }
 
+// HistoryEntries is what has been recorded, oldest first.
+//
+// Exported for history expansion, which runs in the CLI: `!!` has to mean the same
+// line `history` prints, so both read this one list rather than each keeping its own.
+func (r Runtime) HistoryEntries() []string { return r.history.list() }
+
 // RunHistoryBuiltin is the builtin, exported so the editor's own list and this
 // one cannot diverge in a test.
 func (r Runtime) RunHistoryBuiltin(args []string) int { return r.historyBuiltin(args) }

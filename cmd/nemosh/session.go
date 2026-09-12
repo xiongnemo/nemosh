@@ -100,7 +100,15 @@ sessionLoop:
 			}
 			return interactiveStatusError(rt.CloseInteractive(ctx))
 		}
-		appendInteractiveLine(&input, line)
+		// The same expansion the edited loop does. This is the path a piped script
+		// takes, and giving it only to the terminal path would make `!!` depend on
+		// how the shell was started.
+		expanded, runnable := applyHistoryExpansion(rt, c.stderr, line)
+		if !runnable {
+			input.Reset()
+			continue
+		}
+		appendInteractiveLine(&input, expanded)
 		script, parseErr := runtime.ParseScript(input.String())
 		if errors.Is(parseErr, runtime.ErrIncompleteScript) {
 			if errors.Is(err, io.EOF) {
@@ -110,6 +118,15 @@ sessionLoop:
 			}
 			continue
 		}
+		// Recorded here as the edited loop records it: the whole command rather than
+		// each physical line, so recalling a multi-line loop brings back the loop.
+		//
+		// This loop did not record at all, which made `history` empty whenever the
+		// shell was interactive without a terminal -- and, once history expansion
+		// landed, made `!!` answer "event not found" on the very path that had just
+		// run a command. An interactive session is an interactive session however its
+		// lines arrive.
+		rt.RecordHistory(strings.TrimRight(input.String(), "\n"))
 		input.Reset()
 		if parseErr != nil {
 			rt.ReportInteractiveParseError(parseErr)

@@ -10,6 +10,12 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **History expansion**: `!!`, `!n`, `!-n`, `!string`, `!?text?`, `!$`, `!^`, `!*` and
+  `^old^new`, on interactive input. Single quotes protect and double quotes do not; a
+  backslash escapes; a `!` before a blank, an `=` or the end of a line is text, so
+  `[ x != y ]` still works. The expanded line is echoed on stderr before it runs, and a
+  reference that resolves to nothing is an error rather than being left as typed.
+
 - **`select name in words; do ... done`** -- the last of the 46 shell constructs the v1.1
   probe measured and the only one it found missing. The menu and the prompt go to stderr,
   so `x=$(select ...)` captures the answer rather than the list; `REPLY` is the line as
@@ -45,6 +51,11 @@ patch number is the commits since that tag.
   gutter rather than the text.
 
 ### Fixed
+
+- **The non-terminal interactive loop recorded no history**, so `history` was empty
+  whenever the shell was interactive without a terminal -- and, once expansion landed,
+  `!!` answered "event not found" on the very path that had just run a command. Both
+  loops record the whole command now.
 
 - **`unset a[i]` returned success and did nothing.** The subscript was never parsed, so
   `a[1]` was looked up as a variable name, not found, and deleting a name that is not
