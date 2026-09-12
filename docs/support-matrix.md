@@ -326,9 +326,15 @@ deferred scan, and the lexer. Each refused it with a different message on the wa
 a test for each ordinary use of parentheses -- subshell, command substitution,
 arithmetic, function definition -- so that none of them moved.
 
-Not implemented: associative arrays (`declare -A`), slices (`${a[@]:1}`),
-`unset a[i]` (which leaves a sparse array in bash, and compacting instead would
-silently shift every later index), and negative indices.
+All of `declare -A`, slices (`${a[@]:1}`), negative indices and `unset a[i]` work. This
+paragraph said none of them did, which had been wrong for some time -- the first three
+landed without it being updated, and the fourth landed on 2026-09-12.
+
+`unset a[i]` **leaves a gap** rather than compacting, which is bash's behaviour and the
+only safe one: compacting would shift every later index and silently change what every
+subsequent read means. Until it was implemented it returned 0 and did nothing at all, so
+a script that removed an element and carried on was quietly wrong -- the failure mode
+AGENTS.md singles out.
 
 ### Known divergences from bash/dash/ash
 

@@ -42,6 +42,9 @@ const (
 	// loopArithmetic is `for ((init; condition; step))`, whose three parts are
 	// arithmetic expressions rather than a name and a word list.
 	loopArithmetic
+	// loopSelect is `select name in words`: a for loop whose iteration reads a
+	// choice from the terminal rather than stepping through the list.
+	loopSelect
 )
 
 // arithmeticLoop is the three expressions of a C-style for. Any of them may be

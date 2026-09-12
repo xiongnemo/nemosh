@@ -21,7 +21,8 @@ func expandElifLines(lines []string) []string {
 		case hasCompoundHeader(line, "if"):
 			owed = append(owed, 0)
 		case hasCompoundHeader(line, "for"), hasCompoundHeader(line, "while"),
-			hasCompoundHeader(line, "until"), hasCompoundHeader(line, "case"):
+			hasCompoundHeader(line, "until"), hasCompoundHeader(line, "case"),
+			hasCompoundHeader(line, "select"):
 			// Not an if, so it can never owe an extra closer; the -1 marks it.
 			owed = append(owed, -1)
 		case line == "fi" || line == "done" || line == "esac":

@@ -201,6 +201,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.export(args[1:])
 	case "unset":
 		return r.unset(ctx, args[1:])
+	case "mapfile", "readarray":
+		return r.mapfile(ctx, args[0], args[1:])
 	case "pushd":
 		return r.pushd(args[1:])
 	case "popd":

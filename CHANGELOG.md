@@ -10,6 +10,15 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`select name in words; do ... done`** -- the last of the 46 shell constructs the v1.1
+  probe measured and the only one it found missing. The menu and the prompt go to stderr,
+  so `x=$(select ...)` captures the answer rather than the list; `REPLY` is the line as
+  typed; an out-of-range number gives an empty name rather than an error; and a blank line
+  reprints the menu. `PS3` is the prompt. Thirteen forms measured against bash.
+- **`mapfile` and `readarray`**, one builtin under two names, with `-t -n -s -O -d -u`.
+  The delimiter is kept unless `-t` asks otherwise, which is bash's rule and the opposite
+  of what people expect. `-C` callbacks are refused rather than ignored.
+
 - **`pushd`, `popd` and `dirs`.** Position zero of the stack is not stored -- it is read
   from the shell -- so it cannot go stale when `cd` moves. `+N` counts from the current
   directory and `-N` from the far end; `pushd +N` rotates where `popd +N` removes, which

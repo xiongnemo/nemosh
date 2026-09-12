@@ -26,7 +26,7 @@ var errMissingPipelineStage = errors.New("syntax error: missing command before |
 // compoundKeywords are the words that begin a compound. `then`, `do`, `else` and the
 // closers are not among them: those continue a compound rather than open one, and a
 // pipe into `then` is not a thing.
-var compoundKeywords = [...]string{"if", "while", "until", "for", "case"}
+var compoundKeywords = [...]string{"if", "while", "until", "for", "case", "select"}
 
 // splitPipelineCompound finds a compound that begins after a pipe, and returns the words
 // before the pipe and the compound's own header.

@@ -201,7 +201,8 @@ func compoundOpener(line string) (compoundKind, bool) {
 	switch {
 	case hasCompoundHeader(line, "if"):
 		return compoundIf, true
-	case hasCompoundHeader(line, "for"), hasCompoundHeader(line, "while"), hasCompoundHeader(line, "until"):
+	case hasCompoundHeader(line, "for"), hasCompoundHeader(line, "while"), hasCompoundHeader(line, "until"),
+		hasCompoundHeader(line, "select"):
 		return compoundLoop, true
 	case hasCompoundHeader(line, "case"):
 		return compoundCase, true
