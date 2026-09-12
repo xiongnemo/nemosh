@@ -336,6 +336,20 @@ subsequent read means. Until it was implemented it returned 0 and did nothing at
 a script that removed an element and carried on was quietly wrong -- the failure mode
 AGENTS.md singles out.
 
+### The line editor's kill ring
+
+`^K` kills to the end of the line, `^U` to the start, `^W` the word before the cursor, and
+**`^Y` puts back** what any of them took. `^U` and `^W` existed and simply destroyed what
+they removed, which is the half that makes them frightening to use -- nobody asks for a
+kill ring by name, they notice that `^U` lost something and stop pressing it.
+
+`^U` changed meaning with this: it now kills **backwards to the start of the line**, which
+is readline's unix-line-discard, so `^U` with the cursor in the middle keeps the tail. It
+cleared the whole line before -- a more destructive gesture wearing the same key.
+
+One slot rather than readline's ring of many. Everything past the first entry needs `M-y`
+to reach and a rotation state to explain, and the first entry is what the gesture is for.
+
 ### History, and `$!`
 
 `HISTCONTROL` honours `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups`, and

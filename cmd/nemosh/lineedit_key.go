@@ -24,6 +24,10 @@ const (
 	keyHome
 	keyEnd
 	keyClearLine
+	// keyKillToEnd is ^K and keyYank is ^Y. The pair is the point: the three kill
+	// keys destroyed what they removed until yank existed to take it back.
+	keyKillToEnd
+	keyYank
 	keyDeleteWord
 	keyDeleteWordForward
 	keyWordLeft
@@ -73,6 +77,10 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyClearScreen}, 1
 	case 0x12:
 		return key{kind: keyReverseSearch}, 1
+	case 0x0b:
+		return key{kind: keyKillToEnd}, 1
+	case 0x19:
+		return key{kind: keyYank}, 1
 	case 0x15:
 		return key{kind: keyClearLine}, 1
 	case 0x17:

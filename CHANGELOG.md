@@ -10,6 +10,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **A kill ring in the line editor.** `^K` kills to the end of the line and `^Y` puts back
+  what `^K`, `^U` or `^W` took. `^U` and `^W` destroyed what they removed until now.
+  `^U` also changed meaning to readline's unix-line-discard -- backwards to the start of
+  the line, keeping the tail -- where it used to clear the whole line.
+
 - **`shopt -s autocd`**: a bare directory name changes directory. Off by default, and
   checked only *after* command lookup has failed, so a command always wins -- many trees
   hold a directory called `test`, and `test` is a command. A path-shaped word like `./a`

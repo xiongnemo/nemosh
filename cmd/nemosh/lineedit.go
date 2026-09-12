@@ -21,6 +21,8 @@ var errLineAbandoned = errors.New("line abandoned")
 // whole editor is testable without a terminal. Raw mode is the caller's job;
 // see interactive_lineedit.go.
 type lineEditor struct {
+	// kills is what ^K, ^U and ^W took, for ^Y to put back. See lineedit_kill.go.
+	kills            killRing
 	input            io.Reader
 	screen           io.Writer
 	workingDirectory string
@@ -206,9 +208,17 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 				e.buffer.moveEnd()
 			}
 		case keyClearLine:
-			e.buffer.replace("")
+			// Backwards to the start of the line, which is readline's
+			// unix-line-discard -- so ^U with the cursor in the middle keeps the
+			// tail. It cleared the whole line before, a more destructive gesture
+			// wearing the same key, and what it removed was gone for good.
+			e.kills.kill(e.buffer.killToStart())
+		case keyKillToEnd:
+			e.kills.kill(e.buffer.killToEnd())
+		case keyYank:
+			e.buffer.yank(e.kills.yank())
 		case keyDeleteWord:
-			e.buffer.deleteWord()
+			e.kills.kill(e.buffer.killWord())
 		case keyDeleteWordForward:
 			e.buffer.deleteWordForward()
 		case keyWordLeft:
