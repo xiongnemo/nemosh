@@ -10,6 +10,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **Replace in the editor**, which `-H` had listed as absent since the day it was
+  written. nano binds `^\` and micro `^R`; every match is confirmed with `y`/`n`/`a`/`q`.
+  The scan starts at the top of the buffer rather than at the cursor, so there is no wrap
+  condition and no way to wonder whether some were missed.
+
 - **`sed` reads UTF-16, and `sed -i` writes it back.** It used to match nothing on a file
   Notepad or PowerShell 5.1 wrote and copy it through, because a regular expression
   cannot match across UTF-16 code units. `-i` re-encodes to the file's own byte-order
@@ -25,6 +30,12 @@ patch number is the commits since that tag.
   gutter rather than the text.
 
 ### Fixed
+
+- **The editor deleted the file's final newline when a line was cut or pasted.** The
+  buffer was rebuilt with `strings.Join`, which is not the inverse of the line split --
+  the split drops the empty element a terminating newline produces and Join cannot know
+  it was there. Saving then wrote the file back one byte short. Found while writing
+  replace, which rebuilds the buffer the same way.
 
 - **Go to line did nothing on Windows.** tcell has two input paths that disagree about
   which `Key` constant a control chord is. A terminal posts `KeyCtrlSpace+Key(r)` for a

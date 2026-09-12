@@ -1088,6 +1088,36 @@ the modifier mask). That is not a debugging affordance left in by accident. Two 
 to guess what this console sends for `^_` were both wrong, and a terminal that can be
 asked turns the next such question into a measurement.
 
+**Replace is implemented**, and `-H` no longer lists it as absent. nano binds it to `^\`
+and micro to `^R`; every match is confirmed with `y`/`n`/`a`/`q`.
+
+That confirmation is why it was deferred. The prompt the editor already had collects a
+line and fires on Enter, which is right for "what shall I search for" and wrong for "shall
+I replace this one" -- pressing Enter after every `y` through forty matches is not a
+feature. So there are two prompt kinds now, and the single-key one is checked *first*:
+while a confirmation is open every key is an answer to it, including the letters that are
+otherwise bindings. Without that ordering, answering a replace could quit the editor.
+
+**The scan starts at the top of the buffer**, where nano starts at the cursor and wraps.
+Starting at the top is the answer to "fix every occurrence in this file", which is what
+replace is nearly always for, and it has no wrap condition to get wrong -- no question of
+whether the run has come back round to where it began, and no way to be left wondering
+whether some were missed.
+
+Replacing a string with one that contains it terminates: the scan steps past what it
+*wrote*, not past what it matched, so `a` to `aa` does not find the `a` it just produced.
+An unrecognised key asks again rather than guessing -- guessing `n` would be safe and
+guessing `y` would not, and a prompt that silently treats every stray key as "no" is one
+people learn to distrust.
+
+**Rewriting the buffer used to delete the file's last newline.** `^K` and `^U` rebuilt it
+with `strings.Join`, which is not the inverse of the line split: the split drops the empty
+element a terminating newline produces, correctly, and Join has no way to know it was ever
+there. So cutting a line from a file that ended in a newline and saving wrote it back one
+byte short. Found while writing replace, which rebuilds the buffer the same way and would
+have inherited it. There is one helper for this now rather than the rule repeated at each
+call site, because the next thing that rewrites the buffer would forget it otherwise.
+
 **A terminal is required, and merely having a file on stdin is not enough.**
   `nano file < /dev/null` leased successfully and then hung waiting for keys that
   would never arrive; the check is now whether stdin is a terminal.

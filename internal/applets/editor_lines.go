@@ -36,6 +36,26 @@ func editorLines(text string) []string {
 	return lines
 }
 
+// setLines rewrites the buffer from its lines, keeping the terminating newline.
+//
+// `strings.Join` is not the inverse of editorLines and cannot be: editorLines drops the
+// empty element a terminating newline produces, correctly, and Join has no way to know it
+// was ever there. So every caller that rebuilt the buffer by joining -- cut and paste --
+// **silently deleted the file's final newline**, and `^O` then wrote it back one byte
+// short. Found while adding replace, which would have inherited it.
+//
+// One helper rather than the rule repeated at each call site, because the next thing that
+// rewrites the buffer will forget it otherwise.
+func (v *editorView) setLines(lines []string, row int) {
+	text := strings.Join(lines, "\n")
+	// Not for an empty result: cutting the only line of a one-newline buffer should
+	// leave an empty buffer rather than the newline it started with.
+	if len(lines) > 0 && strings.HasSuffix(v.area.GetText(), "\n") {
+		text += "\n"
+	}
+	v.setText(text, row)
+}
+
 // lines is the buffer split by line, and which line the cursor is on.
 func (v *editorView) lines() ([]string, int) {
 	lines := editorLines(v.area.GetText())

@@ -352,7 +352,11 @@ func TestEditor_featureListMatchesTheBindings(t *testing.T) {
 		// replace is worse than one that says it lacks it. Highlighting was on this
 		// list until it was implemented; soft wrap replaced it, because highlighting
 		// needs one screen row to be one buffer line.
-		for _, absent := range []string{"No multiple buffers", "No replace", "No soft wrap"} {
+		// "No replace" left this list when replace was implemented, as syntax
+		// highlighting did before it. That the list shrinks is the point: it is
+		// generated from what the editor can do, so it cannot keep claiming a gap
+		// that has been closed.
+		for _, absent := range []string{"No multiple buffers", "No mouse", "No soft wrap"} {
 			if !strings.Contains(text, absent) {
 				t.Fatalf("%s -H does not admit %q", name, absent)
 			}

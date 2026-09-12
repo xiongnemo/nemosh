@@ -26,7 +26,9 @@ func helpPanelFor(t *testing.T, name string) string {
 // the rest.
 func TestEditorHelpPanel_saysWhatIsNotThere(t *testing.T) {
 	panel := helpPanelFor(t, "nano")
-	for _, absent := range []string{"multiple buffers", "replace", "mouse", "soft wrap"} {
+	// Not "replace": it was on this list until replace was implemented, and a panel that
+	// still claimed it was missing would be the drift this test exists to catch.
+	for _, absent := range []string{"multiple buffers", "mouse", "soft wrap"} {
 		if !strings.Contains(panel, absent) {
 			t.Errorf("the help panel does not mention %q", absent)
 		}

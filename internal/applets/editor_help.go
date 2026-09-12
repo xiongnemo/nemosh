@@ -137,7 +137,6 @@ func describeKeyEvent(event *tcell.EventKey) string {
 // question gets asked, and a comment in the source is not where it gets asked.
 var editorAbsent = []struct{ what, why string }{
 	{"multiple buffers", "one file at a time; a second operand is refused rather than ignored"},
-	{"replace", "search only. Replace needs a confirm-and-step loop this does not have"},
 	{"mouse", "not wired up"},
 	{"a configuration file", "the defaults are the whole of it"},
 	{"soft wrap", "long lines scroll sideways. Highlighting needs one screen row to be one buffer line, because tview's line-start table for a wrapped row is unexported"},

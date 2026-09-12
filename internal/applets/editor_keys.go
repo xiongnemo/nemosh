@@ -37,6 +37,7 @@ const (
 	editorPasteLine
 	editorHelp
 	editorGoToLine
+	editorReplace
 )
 
 // editorChord is a modified rune that means a binding: Ctrl and a letter, or Alt
@@ -105,6 +106,18 @@ var nanoBindings = []editorBinding{
 		action:    editorGoToLine,
 		describes: "Jump to a line with ^_ (Ctrl+Shift+- on Windows), or Esc then G",
 	},
+	// `^\` is nano's Replace, and it is punctuation, so it needs the same two constants
+	// `^_` does for the same reason: a terminal sends 0x1C and posts Key(92) =
+	// KeyCtrlBackslash, while the Windows console adds 0x60 and posts the rune `|` with
+	// ModCtrl -- or, with Shift also held, Key(28) = KeyFS. All three, plus Esc then R.
+	{
+		key:       tcell.KeyCtrlBackslash,
+		alsoKeys:  []tcell.Key{tcell.KeyFS},
+		chords:    append(ctrl('\\', '|'), editorChord{mods: tcell.ModAlt, rune: 'r'}),
+		label:     "^\\ Replace",
+		action:    editorReplace,
+		describes: "Replace with ^\\ (or Ctrl+|), or Esc then R; each match is confirmed",
+	},
 }
 
 // microBindings are micro's, which match Windows and VS Code conventions and so
@@ -117,6 +130,10 @@ var microBindings = []editorBinding{
 	{key: tcell.KeyCtrlV, chords: ctrl('v'), label: "^V Paste", action: editorPasteLine, describes: "Paste with ^V"},
 	{key: tcell.KeyCtrlG, chords: ctrl('g'), label: "^G Help", action: editorHelp, describes: "Show the key list with ^G"},
 	{key: tcell.KeyCtrlL, chords: ctrl('l'), label: "^L Go To", action: editorGoToLine, describes: "Jump to a line with ^L"},
+	// micro reaches replace through its command bar, which this editor does not have, so
+	// ^R is an addition rather than a contradiction -- and it is the chord Windows
+	// editors use. A letter, so it needs no special handling.
+	{key: tcell.KeyCtrlR, chords: ctrl('r'), label: "^R Replace", action: editorReplace, describes: "Replace with ^R; each match is confirmed"},
 }
 
 // editorKeyMap is one name's bindings.
@@ -244,7 +261,6 @@ func (m editorKeyMap) writeFeatures(stdout io.Writer) error {
 	// which is why it is not on this list.
 	absent := []string{
 		"No multiple buffers",
-		"No replace; search only",
 		"No mouse",
 		"No configuration file",
 		// Long lines scroll sideways instead. Not a preference: highlighting needs one

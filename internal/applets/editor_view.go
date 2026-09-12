@@ -37,6 +37,11 @@ type editorView struct {
 	legendWidth int
 	// prompt, when set, is receiving a line of input rather than the buffer.
 	prompt func(answer string)
+	// confirm, when set, is receiving a *single key* rather than a line. Replace needs
+	// it: pressing Enter after every `y` through forty matches is not a feature.
+	confirm func(answer rune)
+	// replace is the run in progress, if there is one. See editor_replace.go.
+	replace *editorReplaceState
 	// meta records that Escape was pressed and the next key is a meta chord.
 	//
 	// This is what `M-G` *is* on a terminal -- Escape then the letter -- and it is the
@@ -157,6 +162,11 @@ func (v *editorView) setMessage(format string, args ...any) {
 // handleKey is the input capture. It returns nil to swallow a key and the event
 // to let the text area have it.
 func (v *editorView) handleKey(event *tcell.EventKey) *tcell.EventKey {
+	// The single-key prompt is checked first: while one is open every key is an answer
+	// to it, including the letters that are otherwise bindings.
+	if v.confirm != nil {
+		return v.handleConfirmKey(event)
+	}
 	if v.prompt != nil {
 		return v.handlePromptKey(event)
 	}
@@ -189,6 +199,8 @@ func (v *editorView) runAction(action editorAction) {
 		v.cutLine()
 	case editorPasteLine:
 		v.pasteLine()
+	case editorReplace:
+		v.askReplace()
 	case editorHelp:
 		v.showHelp()
 	case editorGoToLine:
@@ -238,7 +250,7 @@ func (v *editorView) cutLine() {
 	}
 	v.cut = lines[row]
 	remaining := append(append([]string{}, lines[:row]...), lines[row+1:]...)
-	v.setText(strings.Join(remaining, "\n"), row)
+	v.setLines(remaining, row)
 	v.setMessage("Cut one line")
 }
 
@@ -251,7 +263,7 @@ func (v *editorView) pasteLine() {
 	restored := append([]string{}, lines[:row]...)
 	restored = append(restored, v.cut)
 	restored = append(restored, lines[row:]...)
-	v.setText(strings.Join(restored, "\n"), row+1)
+	v.setLines(restored, row+1)
 	v.setMessage("Pasted one line")
 }
 

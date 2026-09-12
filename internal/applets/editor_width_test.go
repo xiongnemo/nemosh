@@ -31,15 +31,16 @@ func TestEditorFooter_laysOutForTheWidthItIsGiven(t *testing.T) {
 		width    int
 		wantRows int
 	}{
-		// Five columns fit at 80, so seven labels need two rows.
+		// Five columns fit at 80, so eight labels need two rows.
 		{width: 80, wantRows: 2},
 		{width: 100, wantRows: 2},
-		// Seven columns fit at 112, so one row holds them all.
-		{width: 120, wantRows: 1},
+		{width: 120, wantRows: 2},
+		// Eight columns fit at 128, so one row holds them all.
+		{width: 128, wantRows: 1},
 		{width: 200, wantRows: 1},
 		// And a narrow terminal stacks them rather than truncating.
 		{width: 40, wantRows: 4},
-		{width: 16, wantRows: 7},
+		{width: 16, wantRows: 8},
 	} {
 		lines := keys.footer(test.width)
 		if len(lines) != test.wantRows {
@@ -55,8 +56,8 @@ func TestEditorFooter_laysOutForTheWidthItIsGiven(t *testing.T) {
 			}
 		}
 	}
-	// A wide terminal uses much more of it than the old fixed answer did: seven labels
-	// in one row is a hundred and nine characters against the sixty-one it drew before,
+	// A wide terminal uses much more of it than the old fixed answer did: eight labels
+	// in one row is well past a hundred characters against the sixty-one it drew before,
 	// whatever the width.
 	widest := 0
 	for _, line := range keys.footer(160) {
@@ -226,14 +227,15 @@ func TestEditorView_constructsWithoutAnApplication(t *testing.T) {
 
 // The legend's height follows its width, and settles on the second frame.
 //
-// Seven labels are two rows at 80 columns and one at 120, so the row the layout gives
+// Eight labels are two rows at 80 columns and one at 140, so the row the layout gives
 // the legend has to change with the terminal. That resize happens inside a draw
 // function, which means the frame that discovers the new width still uses the old
 // height -- so the first frame after a resize leaves a blank row and the next one does
 // not. One frame is invisible in a running editor, and asserting it here is what makes
 // the lag a known quantity rather than a mystery blank line.
 func TestEditorView_theLegendHeightSettlesAfterAResize(t *testing.T) {
-	const width, height = 120, 12
+	// Wide enough for one row of eight labels, which is 128 columns.
+	const width, height = 140, 12
 	view := newEditorView(&editorSession{name: "nano", path: "a.go", text: "x\n"},
 		editorKeyMapFor("nano"), nil)
 	view.layout.SetRect(0, 0, width, height)
