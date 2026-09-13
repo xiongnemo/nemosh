@@ -106,6 +106,37 @@ func (s *jobScope) reapFinishedLocked() int {
 	return deleted
 }
 
+// forget removes jobs whose final status has just been reported.
+//
+// POSIX 2.9.3: the shell removes a job from the list once it has reported the status, and
+// busybox does the same -- `[1]+ Done sleep 1` appears once and `jobs` afterwards says
+// nothing. Without this, `jobs` answered `[1] Done(1)` every time it was asked, forever,
+// and the table never shrank.
+//
+// Named records rather than a sweep of everything finished, so a job that ends between the
+// listing and this call is reported next time instead of disappearing unannounced. A
+// claimed record belongs to a `wait` that is already holding it.
+func (s *jobScope) forget(records []*jobRecord) {
+	if len(records) == 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	deleted := 0
+	for _, record := range records {
+		if record.claimed {
+			continue
+		}
+		if s.records[record.id] == record {
+			delete(s.records, record.id)
+			deleted++
+		}
+	}
+	if deleted > 0 {
+		s.supervisor.release(deleted)
+	}
+}
+
 func (s *jobScope) complete(record *jobRecord, status int) {
 	s.mu.Lock()
 	record.status = status

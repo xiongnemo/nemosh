@@ -93,7 +93,11 @@ func TestRuntime_exitTrapCanWaitBeforeRootScopeSeals(t *testing.T) {
 	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout})
 
 	// When
-	status := rt.RunScript(context.Background(), "false &\ntrap 'jobs\nwait %1\necho exit:$?' EXIT\n")
+	// No `jobs` before the `wait`: reporting a finished job's status consumes it, so the
+	// wait would then correctly answer "no such job" and this would be testing that
+	// instead. Measured against both references -- busybox answers 2 and bash 127 for a
+	// `wait %1` after a `jobs` that reported it Done, and nemosh answers 2 with them.
+	status := rt.RunScript(context.Background(), "false &\ntrap 'wait %1\necho exit:$?' EXIT\n")
 	rt.CloseBatch(0)
 
 	// Then
