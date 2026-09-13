@@ -119,6 +119,14 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 	// process entirely. Recorded in docs/support-matrix.md as a divergence.
 	r.vars["!"] = fmt.Sprintf("%%%d", record.id)
 	r.markVarMutation("!")
+	// Said out loud at a prompt, the way busybox says `[1] 19676`. The number is real and
+	// the pid is not -- for the reason just above -- so the line carries the handle that
+	// works and what to do with it, rather than a pid-shaped lie. On stderr, as busybox
+	// puts it: on stdout it would end up inside `x=$(cmd &)`. A script gets nothing,
+	// because it wants its output rather than a commentary.
+	if r.interactive.session {
+		fmt.Fprintf(r.streams.Stderr, "[%d] started; kill %%%d to stop it\n", record.id, record.id)
+	}
 	go func() {
 		// Guarded here rather than relying on a defer further down: complete() is
 		// not deferred, so a panic in run left the parent's wait with nobody to

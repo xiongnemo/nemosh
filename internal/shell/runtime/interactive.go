@@ -13,6 +13,12 @@ type InteractiveResult struct {
 type interactiveState struct {
 	status int
 	closed bool
+	// session marks a shell that is talking to a person rather than running a script,
+	// which is what decides whether backgrounding a command announces the job. Copied
+	// along with the rest of this struct into every snapshot, which is what a background
+	// launch deeper in an expansion needs -- and read-only after RunInteractive sets it,
+	// so the copying that cost `$?` its status cannot cost this anything.
+	session bool
 }
 
 func (r *Runtime) RunInteractive(ctx context.Context, script Script) InteractiveResult {
@@ -21,6 +27,7 @@ func (r *Runtime) RunInteractive(ctx context.Context, script Script) Interactive
 		r.interactive.status = 1
 		return InteractiveResult{Status: 1, Exited: r.interactive.closed}
 	}
+	r.interactive.session = true
 	status := r.interactive.status
 	control := flowNone
 	if len(script.program) > 0 {

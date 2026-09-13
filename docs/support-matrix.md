@@ -368,6 +368,20 @@ things `$!` is used for working, since `kill $!` and `wait $!` both take `%N`; a
 would have been a pid-shaped lie that `kill` would apply to some other process. It was
 empty before.
 
+**Backgrounding announces the job, and says how to stop it.** busybox writes `[1] 19676`;
+this writes `[1] started; kill %1 to stop it`, for the reason above — the number is real,
+the pid is not. The sentence is there because `%1` is not what someone who has only ever
+killed a pid would guess. On stderr, where busybox also puts it, so that `x=$(cmd &)`
+collects nothing; and only at a prompt, since a script wants its output rather than a
+commentary.
+
+**A finished job is reported once.** POSIX 2.9.3 removes a job from the list once the
+shell has reported its status, so `jobs` naming a job `Done` is what consumes it and a
+second `jobs` says nothing — as does `wait %N` afterwards, with status 2, which is
+busybox's answer too. What this does *not* do is busybox's asynchronous `[1]+ Done`
+before the next prompt: completion is reported when `wait` or `jobs` asks, which is the
+same reason `set -b` is refused.
+
 ### History expansion
 
 `!!`, `!n`, `!-n`, `!string`, `!?text?`, `!$`, `!^`, `!*` and `^old^new`, on interactive
