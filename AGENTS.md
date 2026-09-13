@@ -196,6 +196,27 @@ read not retrying, where the open already did -- was found by measuring the writ
 and read separately: with no pause between them the read failed 30 times out of
 30, and with one millisecond it succeeded 20 times out of 20.
 
+**A test that asserts on a background job can pass by winning a race.**
+`TestRuntime_outerJobBecomesDoneAfterNestedScopeDrains` failed once on macos-latest
+on 2026-09-13 and was green everywhere else, which reads like a flake and was really
+the test never holding its property. Its nested applet returned on `ctx.Done()`, and
+`commandSubstitutionScript` ends with `cancelAndDrain`, so the substitution cancelled
+it immediately and the `release` channel was holding nothing open: the drain, the
+job's own write and the job finishing all ran concurrently with the assertion.
+
+**The way to check is to inject a delay**, which is cheap and decisive — a
+`time.Sleep(50 * time.Millisecond)` before the assertion made it fail every time, and
+report `[1] Done` rather than the `[1] Running` it claims to test, so on a slow enough
+runner it had been testing nothing. Injecting the same pause at the other nine
+`<-started` sites in that package changed nothing, which is how one real defect was
+told apart from nine sound tests.
+
+A background job's output is ordered against the test's own only by a channel, never
+by being written first. If a helper applet selects on `ctx.Done()`, ask who cancels
+that context: in a command substitution, a group, or a pipeline stage, something does,
+and then the release channel is decoration. Blocking on release alone is also what a
+real command that does not die on cancel does.
+
 **An applet never spawns an OS process.** Launching belongs to
 `internal/shell/runtime`, which owns the suffix search, `ComSpec` batch launch, argument
 quoting, long-path fallback, cancellation and job scope that go with it; every production
