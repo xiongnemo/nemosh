@@ -124,14 +124,55 @@ jobs:
       # A short exploration on Linux only. Long enough to be worth having, short
       # enough not to make every push wait; anything it finds is written to
       # testdata and becomes a seed above.
+      #
+      # **The saved input decides, not the exit status.** A real finding is always
+      # written to testdata/fuzz/<target>/, which is what the corpus regression step
+      # above then replays on every push forever. A failure with nothing saved has
+      # nothing behind it to reproduce or to fix.
+      #
+      # That distinction is here because of one on 2026-09-13: FuzzReadCpioHeader
+      # reported `context deadline exceeded` at exactly 30s of a 30s run, with the
+      # execution count frozen for the last second and no input saved -- the fuzzing
+      # coordinator's shutdown racing its own deadline. Re-running is not an answer
+      # when master is the nightly, and neither is dropping the step.
+      #
+      # Narrow on purpose: only that message is forgiven, and only with nothing saved.
+      # A hang, a panic, or any other wording still fails, because those are findings
+      # even when the harness is what noticed.
       - name: fuzz exploration
         if: runner.os == 'Linux'
         run: |
-          go test ./internal/shell/runtime/ -run FuzzParseScript$ -fuzz 'FuzzParseScript$' -fuzztime 60s
-          go test ./internal/shell/runtime/ -run 'FuzzMatchShellPattern$' -fuzz 'FuzzMatchShellPattern$' -fuzztime 30s
-          go test ./internal/applets/ -run 'FuzzReadCpioHeader$' -fuzz 'FuzzReadCpioHeader$' -fuzztime 30s
-          go test ./internal/applets/ -run 'FuzzReadArHeader$' -fuzz 'FuzzReadArHeader$' -fuzztime 30s
-          go test ./internal/applets/ -run 'FuzzWriteArHeader$' -fuzz 'FuzzWriteArHeader$' -fuzztime 20s
+          corpus() {
+            git status --porcelain -- \
+              internal/applets/testdata/fuzz internal/shell/runtime/testdata/fuzz
+          }
+          explore() {
+            package="$1"
+            target="$2"
+            duration="$3"
+            if output=$(go test "$package" -run "$target" -fuzz "$target" -fuzztime "$duration" 2>&1); then
+              echo "$output" | tail -3
+              return 0
+            fi
+            echo "$output"
+            saved=$(corpus)
+            if [ -n "$saved" ]; then
+              echo "::error::$target saved an input, so this is a finding:"
+              echo "$saved"
+              return 1
+            fi
+            if ! echo "$output" | grep -q 'context deadline exceeded'; then
+              echo "::error::$target failed for a reason that is not the known shutdown race"
+              return 1
+            fi
+            echo "::warning::$target hit the fuzzing shutdown race and saved no input, so there is nothing to reproduce"
+            return 0
+          }
+          explore ./internal/shell/runtime/ 'FuzzParseScript$' 60s
+          explore ./internal/shell/runtime/ 'FuzzMatchShellPattern$' 30s
+          explore ./internal/applets/ 'FuzzReadCpioHeader$' 30s
+          explore ./internal/applets/ 'FuzzReadArHeader$' 30s
+          explore ./internal/applets/ 'FuzzWriteArHeader$' 20s
 
       - name: applet manifest freshness
         run: go test ./internal/appletmanifest/ -count=1
