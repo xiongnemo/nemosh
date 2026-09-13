@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -22,7 +23,8 @@ import (
 //
 // Everything after a line is obtained -- accumulate, parse, run, report -- is
 // the same work, and is shared through runEditedLine.
-func (c command) runInteractiveEdited(ctx context.Context, controller *interruptController, editor *lineEditor) (runErr error) {
+func (c command) runInteractiveEdited(ctx context.Context, controller *interruptController,
+	editor *lineEditor, terminal *os.File) (runErr error) {
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: c.stdin, Stdout: c.stdout, Stderr: c.stderr})
 	sourceStartupFile(ctx, rt, c.stderr)
 	// After the rc file, so an `export HISTFILE=...` in it is honoured, and
@@ -68,7 +70,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			}
 		}
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
-		line, err := editor.readLine(ctx, prompt)
+		line, err := readLineInRawMode(ctx, terminal, editor, prompt)
 		if ctx.Err() != nil {
 			rt.CloseInteractive(ctx)
 			return ctx.Err()
@@ -154,4 +156,16 @@ func (c command) runEditedLine(ctx context.Context, rt runtime.Runtime, controll
 		fmt.Fprintln(c.stderr)
 	}
 	return result.Status, result.Exited, nil
+}
+
+// readLineInRawMode borrows the terminal for exactly as long as the editor is reading.
+//
+// The editor needs raw mode to see arrows and Ctrl-R; everything else in this session --
+// the command that runs next, most of all -- needs the terminal back the way it was. Putting
+// the borrow and the return next to each other is what stops the two being separated again.
+func readLineInRawMode(ctx context.Context, terminal *os.File, editor *lineEditor, prompt string) (string, error) {
+	raw := enterRawMode(terminal)
+	// Nil-safe, and deferred so a panic in the editor cannot leave the terminal raw.
+	defer raw.restore()
+	return editor.readLine(ctx, prompt)
 }

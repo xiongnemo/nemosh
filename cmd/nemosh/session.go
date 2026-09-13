@@ -21,9 +21,17 @@ func (c command) runInteractive(ctx context.Context, controller *interruptContro
 	// which is what makes an idle Ctrl-C able to interrupt a blocked read.
 	if terminal := terminalFile(c.stdin); terminal != nil {
 		if editor := lineEditorFor(terminal, c.stderr, currentWorkingDirectory()); editor != nil {
-			if raw := enterRawMode(terminal); raw != nil {
-				defer raw.restore()
-				return c.runInteractiveEdited(ctx, controller, editor)
+			// Raw mode is entered and left around **each line read**, not held for the
+			// session. A command runs between two prompts, and it must find the terminal
+			// a command expects: echoing, assembling lines, and turning Ctrl-C into an
+			// interrupt. Held raw, `bc` at the prompt showed nothing as it was typed,
+			// never saw a line -- Enter arrives as a carriage return with no line
+			// discipline to translate it -- and could not be interrupted, because
+			// os.Interrupt on Windows needs ENABLE_PROCESSED_INPUT, which raw mode
+			// clears. Entered here once only to find out whether the terminal allows it.
+			if probe := enterRawMode(terminal); probe != nil {
+				probe.restore()
+				return c.runInteractiveEdited(ctx, controller, editor, terminal)
 			}
 		}
 	}
