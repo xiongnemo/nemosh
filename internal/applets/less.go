@@ -45,7 +45,7 @@ func newLessApplet() Applet {
 		if options.has('h') {
 			return writeLessHelp(stdout)
 		}
-		if len(operands) == 0 && lessInputIsTerminal(stdin) {
+		if len(operands) == 0 && lessInputIsTerminal(ctx, stdin) {
 			// `less` with nothing to read would otherwise take the user's typing for the
 			// file's contents and never show anything -- a hang, in the shape bc and dc
 			// had. Every less refuses here instead.
@@ -77,12 +77,19 @@ func newLessApplet() Applet {
 
 // lessInputIsTerminal reports whether standard input is a terminal rather than a file or a
 // pipe -- which is to say, whether reading it would wait on a person.
-func lessInputIsTerminal(stdin io.Reader) bool {
-	file, ok := stdin.(*os.File)
-	if !ok {
-		// Wrapped by the shell, so it is not a terminal handle this can ask about.
+//
+// Asked of the stream rather than of the value: the shell hands an applet a reader that
+// forwards to the console, never the console itself, so `stdin.(*os.File)` answers no
+// inside the shell and `less` with no operands read the keyboard as though it were a file
+// instead of refusing. `top` has asked this way since the same mistake stopped it drawing.
+//
+// The lease is taken and given straight back, because this is a question rather than a use.
+func lessInputIsTerminal(ctx context.Context, stdin io.Reader) bool {
+	file, release, ok := leaseTopStdin(ctx, stdin)
+	if !ok || file == nil {
 		return false
 	}
+	release()
 	return term.IsTerminal(int(file.Fd()))
 }
 
@@ -91,12 +98,14 @@ func lessInputIsTerminal(stdin io.Reader) bool {
 // **Standard output decides**, not standard input: `less file` with its input redirected is
 // still a pager, and `less file | cat` is not. That is the way round every less has it, and
 // the way round that makes a pipeline safe.
+//
+// stdoutIsTerminal walks the chain of wrappers to the file at the end of it. This used to
+// ask `stdout.(*os.File)` directly, which is always false inside the shell -- everything an
+// applet writes to goes through a descriptorWriter -- so `less` decided there was no
+// terminal every single time it was run from a prompt, and printed the file instead of
+// paging it. See fd_stream.go, which exists for this question.
 func lessCanPage(stdout io.Writer) bool {
-	file, ok := stdout.(*os.File)
-	if !ok {
-		return false
-	}
-	return term.IsTerminal(int(file.Fd()))
+	return stdoutIsTerminal(stdout)
 }
 
 // readLessInput gathers the text, from the operands or from standard input.

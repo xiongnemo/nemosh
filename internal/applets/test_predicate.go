@@ -1,7 +1,9 @@
 package applets
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -139,7 +141,16 @@ func (e *testEvaluator) stat(operand string, keepLink bool) (os.FileInfo, error)
 }
 
 // -t asks about a descriptor rather than a path, so it can only answer for the
-// three streams the applet was handed, and only when they are real files.
+// three streams the applet was handed.
+//
+// Asked of the stream rather than of the value. The shell hands an applet a descriptor
+// -backed writer, never os.Stdout, so `stream.(*os.File)` is false inside the shell and
+// `[ -t 1 ]` answered no on a real terminal -- which is the one question it exists to
+// answer, and the one every script asks before deciding to use colour. stdoutFile walks
+// the wrappers to the file at the end; see fd_stream.go, which exists for this.
+//
+// Standard input is a reader rather than a writer, and names its file a different way --
+// the same way `top` and `less` ask for the console.
 func (e *testEvaluator) isTerminal(operand string) (bool, error) {
 	descriptor, err := testNumber(operand)
 	if err != nil {
@@ -148,11 +159,30 @@ func (e *testEvaluator) isTerminal(operand string) (bool, error) {
 	if descriptor < 0 || descriptor > 2 {
 		return false, nil
 	}
-	file, ok := e.streams[descriptor].(*os.File)
-	if !ok {
+	file := e.descriptorFile(descriptor)
+	if file == nil {
 		return false, nil
 	}
 	return term.IsTerminal(int(file.Fd())), nil
+}
+
+// descriptorFile is the file one of the three streams ends at, or nil.
+func (e *testEvaluator) descriptorFile(descriptor int64) *os.File {
+	switch stream := e.streams[descriptor].(type) {
+	case *os.File:
+		return stream
+	case io.Writer:
+		return stdoutFile(stream)
+	case io.Reader:
+		file, release, ok := leaseTopStdin(context.Background(), stream)
+		if !ok {
+			return nil
+		}
+		// Given straight back: this is a question about the stream, not a use of it.
+		release()
+		return file
+	}
+	return nil
 }
 
 // EvaluateConditionPrimary is the shell's way in to `test`'s primaries, so that
