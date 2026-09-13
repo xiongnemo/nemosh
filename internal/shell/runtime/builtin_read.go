@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"time"
 )
 
@@ -149,13 +150,40 @@ func readWithContext(ctx context.Context, input io.Reader, buffer []byte) (int, 
 	if reader, ok := input.(contextReader); ok {
 		return reader.ReadContext(ctx, buffer)
 	}
-	select {
-	case <-ctx.Done():
-		return 0, ctx.Err()
-	default:
-		// Arbitrary blocking readers cannot be canceled without a competing,
-		// potentially abandoned read goroutine. The guarantee is intentionally
-		// limited to contextReader implementations and platform file adapters.
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	file, isFile := input.(*os.File)
+	if !isFile || ctx.Done() == nil {
+		// An arbitrary blocking reader still cannot be cancelled without abandoning a
+		// read goroutine, which would go on to eat a keystroke. A file can be, below.
 		return input.Read(buffer)
 	}
+	// This is where an applet's stdin actually ends up inside the shell: contextReader in
+	// internal/applets forwards to descriptorReader.ReadContext, which forwards to here,
+	// and only here is the underlying file in hand. Checking the context before the read
+	// and never again is no use to an applet already sitting in one -- a console read
+	// returns when a line arrives and not before, which is the whole of why Ctrl-C inside
+	// `bc` did nothing until the next keystroke, and then spent that keystroke noticing.
+	//
+	// interruptPipeIO is CancelIoEx; the name is from its first caller. Measured against a
+	// real console: a read blocked for 500ms, the call answered success, and the read
+	// returned at once.
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = interruptPipeIO(file)
+		case <-stop:
+		}
+	}()
+	read, err := file.Read(buffer)
+	if read == 0 && ctx.Err() != nil {
+		// An aborted console read reports EOF, which is what the input really ending also
+		// reports -- so the context decides, not the error. Bytes that did arrive are
+		// handed back; the read after them reports the cancellation.
+		return 0, ctx.Err()
+	}
+	return read, err
 }

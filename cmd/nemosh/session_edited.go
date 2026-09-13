@@ -126,7 +126,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			rt.ReportInteractiveParseError(parseErr)
 			continue
 		}
-		status, exited, done := c.runEditedLine(ctx, rt, controller, script)
+		status, exited, done := c.runEditedLine(ctx, &rt, controller, script)
 		lastStatus = status
 		if done != nil {
 			return done
@@ -139,7 +139,15 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 
 // runEditedLine executes one parsed command and reports what the loop should do
 // next: the status, whether the shell exited, and a terminal error if any.
-func (c command) runEditedLine(ctx context.Context, rt runtime.Runtime, controller *interruptController, script runtime.Script) (int, bool, error) {
+//
+// The Runtime is taken **by pointer**, and that is not a style choice. RunInteractive and
+// CloseInteractive have pointer receivers because they carry interactive state from one
+// command to the next, and `interactive` is a plain struct field rather than something
+// behind a pointer like the variables and the job scope. Passed by value, this ran each
+// command correctly on a copy and threw the status away, so `$?` at the prompt was zero
+// after every command -- while the prompt itself, which is drawn from this function's
+// return value rather than from the runtime, showed the right one.
+func (c command) runEditedLine(ctx context.Context, rt *runtime.Runtime, controller *interruptController, script runtime.Script) (int, bool, error) {
 	executionCtx, clear, interrupted := controller.begin(ctx)
 	if interrupted {
 		clear()
