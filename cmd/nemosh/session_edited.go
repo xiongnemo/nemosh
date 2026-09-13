@@ -69,6 +69,10 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 				editor.hosts.refresh(hostSources(native))
 			}
 		}
+		// Before the prompt, which is when bash and busybox say it too: a job that ended
+		// while the last command ran, or while you were reading, gets named once here
+		// instead of waiting to be discovered by `jobs`.
+		rt.ReportFinishedJobs()
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
 		line, err := readLineInRawMode(ctx, terminal, editor, prompt)
 		if ctx.Err() != nil {

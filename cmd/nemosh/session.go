@@ -52,6 +52,10 @@ sessionLoop:
 			linePending = true
 			lineResults = inputReader.readLine(ctx, accumulated)
 		}
+		// Before the prompt, as the edited loop does and as bash and busybox do: a job that
+		// ended while the last command ran is named once here rather than waiting for
+		// somebody to run `jobs`.
+		rt.ReportFinishedJobs()
 		fmt.Fprint(c.stderr, interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus))
 		var lineResult interactiveLine
 		for {

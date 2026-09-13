@@ -46,7 +46,7 @@ these names why, and names what busybox-w32 does with the same name.
 | `hash` | 126 | Command lookup is not cached, so there is nothing to remember or forget. busybox-w32 does implement it, over a hash table this shell does not have. |
 | `ulimit` | 126 | Windows has no `getrlimit`. busybox-w32 does not implement it either — it keeps the name and returns 1 with no message. |
 | `fg`, `bg` | 126 | They resume a *suspended* job and nothing here can suspend one — see **Process control** below, which is the long answer. busybox-w32 compiles both out under `#if JOBS`. These two say **"not implemented, and will not be"** where the rows above say only "not implemented", because they are settled rather than pending. |
-| `set -b` | 2 | Asynchronous completion is reported when `wait` or `jobs` asks; there is no notification channel to switch on. |
+| `set -b` | 2 | Completion is already reported at the next prompt, which is the default behaviour it would be switching off. What `-b` asks for is the report *immediately*, mid-command, and there is no notification channel to switch on for that. |
 | `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. |
 
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
@@ -375,12 +375,14 @@ killed a pid would guess. On stderr, where busybox also puts it, so that `x=$(cm
 collects nothing; and only at a prompt, since a script wants its output rather than a
 commentary.
 
-**A finished job is reported once.** POSIX 2.9.3 removes a job from the list once the
-shell has reported its status, so `jobs` naming a job `Done` is what consumes it and a
-second `jobs` says nothing — as does `wait %N` afterwards, with status 2, which is
-busybox's answer too. What this does *not* do is busybox's asynchronous `[1]+ Done`
-before the next prompt: completion is reported when `wait` or `jobs` asks, which is the
-same reason `set -b` is refused.
+**A finished job is reported once**, at the next prompt. POSIX 2.9.3 removes a job from
+the list once the shell has reported its status, so naming a job `Done` is what consumes
+it: the notice before a prompt, or `jobs`, whichever asks first. A second `jobs` says
+nothing, and so does `wait %N` afterwards — with status 2, which is busybox's answer too.
+
+The notice is bash's and busybox's default behaviour and needs no `set -b`; what `set -b`
+asks for is the report *immediately*, in the middle of whatever is running, and that is
+the part with no channel behind it and is still refused.
 
 ### History expansion
 
