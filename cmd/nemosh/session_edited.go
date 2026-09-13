@@ -128,6 +128,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		}
 		status, exited, done := c.runEditedLine(ctx, &rt, controller, script)
 		lastStatus = status
+		// That command had the terminal in cooked mode, where a console read hands back a
+		// line ending CRLF -- and the terminator of the line it consumed last is still
+		// there for the editor to read as an Enter nobody pressed. Ending `wc` with Ctrl-Z
+		// left a spare prompt that way. The editor spends this on one line read and only
+		// against a CRLF pair, which a keyboard in raw mode does not produce.
+		editor.afterCookedCommand = true
 		if done != nil {
 			return done
 		}

@@ -36,7 +36,15 @@ type lineEditor struct {
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
 	// feed arriving in the next read is that Enter finishing rather than another one.
 	afterCarriageReturn bool
-	history             []string
+	// afterCookedCommand says a command has just run and read this terminal in cooked
+	// mode, so the first key of the next line may be the terminator of a line that
+	// command already consumed rather than anything anyone pressed. Set by the session;
+	// spent on one line read. See readLine.
+	afterCookedCommand bool
+	// enterFromPair records that the last Enter was decoded from CRLF rather than from a
+	// bare carriage return, which is what tells the two apart.
+	enterFromPair bool
+	history       []string
 	// recall is the index into history being shown, counted from the end.
 	// Zero means the line being typed rather than a remembered one.
 	recall int
@@ -142,11 +150,26 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 	e.resetDrawState()
 	fmt.Fprint(e.screen, prompt)
 
+	// The terminator of a line the command before this one already consumed. A cooked
+	// console read hands back a line ending CRLF, and what the command did not take is
+	// still there; decoding it as Enter is an empty command and a spare prompt, which is
+	// what ending `wc` with Ctrl-Z used to leave. Only the first key is eligible, only a
+	// CRLF pair counts -- in raw mode a pressed Enter is a bare CR -- and the flag is spent
+	// whatever the key turns out to be, so it cannot reach a later line.
+	leftover := e.afterCookedCommand
+	e.afterCookedCommand = false
+
 	for {
 		if err := ctx.Err(); err != nil {
 			return "", err
 		}
 		key, err := e.nextKey()
+		if err == nil && leftover {
+			leftover = false
+			if key.kind == keyEnter && e.enterFromPair {
+				continue
+			}
+		}
 		if err != nil {
 			// A stream that ends with text already typed submits it, the way a
 			// final line without a newline does.
@@ -278,6 +301,7 @@ func (e *lineEditor) nextKey() (key, error) {
 		}
 		if decoded, consumed := decodeKey(e.pending); decoded.kind != keyIncomplete {
 			e.afterCarriageReturn = decoded.kind == keyEnter && consumed == 1 && e.pending[0] == '\r'
+			e.enterFromPair = decoded.kind == keyEnter && consumed == 2
 			e.pending = e.pending[consumed:]
 			return decoded, nil
 		}
