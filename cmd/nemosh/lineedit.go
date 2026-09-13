@@ -33,7 +33,10 @@ type lineEditor struct {
 	devices []string
 	buffer  *lineBuffer
 	pending []byte
-	history []string
+	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
+	// feed arriving in the next read is that Enter finishing rather than another one.
+	afterCarriageReturn bool
+	history             []string
 	// recall is the index into history being shown, counted from the end.
 	// Zero means the line being typed rather than a remembered one.
 	recall int
@@ -263,7 +266,18 @@ func (e *lineEditor) recallHistory(direction int) {
 // of a sequence.
 func (e *lineEditor) nextKey() (key, error) {
 	for {
+		// The line feed of a CRLF that was split across two reads. decodeKey joins the
+		// pair when it has both, which is the usual case, but a read boundary can fall
+		// between them -- and a bare line feed has to stay an Enter, so the two cannot be
+		// told apart without remembering that the last key was a carriage return.
+		if e.afterCarriageReturn && len(e.pending) > 0 {
+			if e.pending[0] == '\n' {
+				e.pending = e.pending[1:]
+			}
+			e.afterCarriageReturn = false
+		}
 		if decoded, consumed := decodeKey(e.pending); decoded.kind != keyIncomplete {
+			e.afterCarriageReturn = decoded.kind == keyEnter && consumed == 1 && e.pending[0] == '\r'
 			e.pending = e.pending[consumed:]
 			return decoded, nil
 		}

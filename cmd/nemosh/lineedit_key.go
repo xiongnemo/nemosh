@@ -57,7 +57,19 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyIncomplete}, 0
 	}
 	switch buffer[0] {
-	case '\r', '\n':
+	case '\r':
+		// CRLF is one Enter, not two. In raw mode Enter arrives as a bare CR, which is
+		// what this normally sees -- but a command reads the same console in cooked mode,
+		// where a line comes back ending CRLF, and whatever it did not consume is still
+		// buffered when the editor reads next. Two Enters there is two empty commands and
+		// a spare prompt for each: ending `wc` with Ctrl-Z printed three.
+		if len(buffer) > 1 && buffer[1] == '\n' {
+			return key{kind: keyEnter}, 2
+		}
+		return key{kind: keyEnter}, 1
+	case '\n':
+		// A bare line feed is still Enter: that is how a pipe or a file spells it, and
+		// `nemosh < script` depends on it.
 		return key{kind: keyEnter}, 1
 	case 0x7f, 0x08:
 		return key{kind: keyBackspace}, 1
