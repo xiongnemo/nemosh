@@ -202,8 +202,15 @@ func (e *lineEditor) drawSearch() {
 // restorePrompt puts the ordinary prompt back after the search's own, which was
 // a different width. The row is cleared rather than patched for the same reason
 // drawSearch clears it: none of the previous geometry describes what is there.
+//
+// Only the prompt's last line goes back, because only that row was ever taken
+// away. The default prompt is two lines -- `\u @ \h in \w`, a newline, then the
+// symbol -- and drawSearch clears the row the symbol is on and nothing above it,
+// so the rows above are still on screen and still correct. Printing the whole
+// prompt here put its first line back a second time, on the row the symbol
+// belongs to, and left a real two-line prompt looking like a three-line one.
 func (e *lineEditor) restorePrompt(prompt string) {
 	fmt.Fprint(e.screen, "\r\033[K")
 	e.resetDrawState()
-	fmt.Fprint(e.screen, prompt)
+	fmt.Fprint(e.screen, lastPromptLine(prompt))
 }

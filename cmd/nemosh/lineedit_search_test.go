@@ -230,3 +230,40 @@ func TestReverseSearch_survivesAnEmptyHistory(t *testing.T) {
 		t.Fatalf("line = %q, want an empty line back", line)
 	}
 }
+
+// TestHistorySearch_leavingDoesNotReprintTheWholeMultiLinePrompt covers a
+// multi-line prompt, which the default is: `\u @ \h in \w`, a newline, then the
+// symbol.
+//
+// The search takes over only the row the symbol is on -- drawSearch clears that
+// row and nothing above it -- so putting the ordinary prompt back must restore
+// only that row. Reprinting the whole prompt writes its earlier lines a second
+// time, over a row that was never theirs, and the rows above are still on screen
+// saying the same thing. Reported from a real terminal: the first line of a
+// two-line prompt appeared twice, both when the match was accepted and when the
+// search was abandoned.
+func TestHistorySearch_leavingDoesNotReprintTheWholeMultiLinePrompt(t *testing.T) {
+	const prompt = "context-row\n$ "
+	for _, testcase := range []struct{ name, keys string }{
+		{name: "accepted", keys: ctrlR + "al" + enter + enter},
+		{name: "abandoned", keys: ctrlR + "al" + ctrlG + enter},
+		{name: "interrupted", keys: ctrlR + "al" + ctrlC + enter},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			screen, editor := newStyledEditor(t, 80, testcase.keys, []string{"echo alpha"})
+			if _, err := editor.readLine(context.Background(), prompt); err != nil {
+				t.Fatalf("readLine: %v", err)
+			}
+			rows := 0
+			for row := 0; row < screen.rowCount(); row++ {
+				if strings.Contains(screen.text(row), "context-row") {
+					rows++
+				}
+			}
+			if rows != 1 {
+				t.Errorf("the prompt's first line is on %d rows, want 1: leaving the search "+
+					"reprinted the whole prompt onto a row that only ever held its last line", rows)
+			}
+		})
+	}
+}
