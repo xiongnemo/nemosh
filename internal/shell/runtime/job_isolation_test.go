@@ -3,10 +3,12 @@ package runtime_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/shell/runtime"
@@ -63,17 +65,36 @@ func TestRuntime_backgroundStdinDefaultsToNullUnlessRedirected(t *testing.T) {
 	}
 }
 
+// TestRuntime_outerJobBecomesDoneAfterNestedScopeDrains pins that `echo $(nested-block &) &`
+// is reported Running until the job started inside its command substitution has gone.
+//
+// The nested applet must ignore cancellation, and that is the whole point rather than an
+// oversight. commandSubstitutionScript ends with cancelAndDrain (expand_parameter.go), so a
+// nested job that returns on ctx.Done() is gone the instant the substitution closes -- which
+// left every step after this: the drain, echo's write, and the outer job finishing, racing
+// the `jobs` below with no ordering between them. It passed only by winning that race. A
+// 50ms pause after <-started turned it into "\n[1] Done\n" every time, and a loaded macOS
+// runner caught it half way as "\n[1] Running\n".
+//
+// Blocking on release alone is what a command that does not die on cancel really does, and
+// it makes the drain block, so the sequence below is ordered by channels rather than by
+// timing: jobs runs, then release, then the nested applet returns, then the drain, then echo
+// writes, then the job is done and `wait` can see it.
 func TestRuntime_outerJobBecomesDoneAfterNestedScopeDrains(t *testing.T) {
 	// Given
 	started := make(chan struct{})
 	release := make(chan struct{})
-	registry := applets.NewRegistry(backgroundApplet{name: "nested-block", run: func(ctx context.Context, _ []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
+	registry := applets.NewRegistry(backgroundApplet{name: "nested-block", run: func(_ context.Context, _ []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
 		close(started)
 		select {
 		case <-release:
 			return nil
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-time.After(time.Minute):
+			// Only reachable if the runtime stopped letting the test get as far as
+			// releasing it; a bounded wait reports that as a failure rather than as a
+			// package-wide timeout, and unblocks this goroutine if an assertion above
+			// left early.
+			return errors.New("nested-block was never released")
 		}
 	}})
 	var stdout bytes.Buffer
@@ -85,11 +106,17 @@ func TestRuntime_outerJobBecomesDoneAfterNestedScopeDrains(t *testing.T) {
 	}
 	<-started
 	jobsStatus := rt.RunScript(context.Background(), "jobs\n")
+	// Asserted before the release, because this is the property in the name: the nested job
+	// is still there, so the outer job is Running and its echo has not run at all.
+	if jobsStatus != 0 || stdout.String() != "[1] Running\n" {
+		close(release)
+		t.Fatalf("with the nested job still alive: jobs status = %d, stdout = %q", jobsStatus, stdout.String())
+	}
 	close(release)
 	waitStatus := rt.RunScript(context.Background(), "wait %1\n")
 
 	// Then
-	if jobsStatus != 0 || waitStatus != 0 || stdout.String() != "[1] Running\n\n" {
-		t.Fatalf("statuses = %d, %d, stdout = %q", jobsStatus, waitStatus, stdout.String())
+	if waitStatus != 0 || stdout.String() != "[1] Running\n\n" {
+		t.Fatalf("wait status = %d, stdout = %q", waitStatus, stdout.String())
 	}
 }
