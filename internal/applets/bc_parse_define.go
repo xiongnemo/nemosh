@@ -42,7 +42,7 @@ func (p *bcParser) parseDefine() (bcStmt, error) {
 			return bcDefineStmt{function: function}, nil
 		}
 		if p.peek().kind == bcTokenEOF {
-			return nil, fmt.Errorf("line %d: unclosed define", p.peek().line)
+			return nil, p.incompleteAt("line %d: unclosed define", p.peek().line)
 		}
 		statement, err := p.parseStatement()
 		if err != nil {

@@ -1,8 +1,11 @@
 package applets
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
+	"strings"
 )
 
 // bc, the calculator language.
@@ -79,18 +82,76 @@ func (in *bcInterp) run(files []string, stdin io.Reader) error {
 		}
 	}
 	// Standard input is read even when files were given, which is what makes
-	// `bc prelude.bc` a session rather than a batch job. A terminal is handled the same
-	// way: the shell hands over whatever it has.
-	text, err := io.ReadAll(decodeTextInput(stdin))
-	if err != nil {
-		return err
-	}
-	if len(text) > 0 {
-		if bad := in.runSource(string(text)); bad {
-			failed = true
-		}
+	// `bc prelude.bc` a session rather than a batch job.
+	if bad := in.runSession(stdin); bad {
+		failed = true
 	}
 	return bcStatus(failed)
+}
+
+// runSession reads standard input **a line at a time**, running each statement as it
+// completes.
+//
+// Reading to the end first and then running the lot is what a batch job wants, and it is
+// what this did -- which meant an interactive `bc` printed nothing and appeared to hang,
+// because a terminal has no end. It also meant one typo anywhere threw away the whole
+// session's worth of input.
+//
+// A line that cannot be parsed *yet* is held and the next one added to it, which is how
+// `define f(n) {` on its own line works. Which failures mean "not yet" is decided by the
+// parser and measured against the references -- see errBcIncomplete.
+func (in *bcInterp) runSession(stdin io.Reader) bool {
+	reader := bufio.NewScanner(decodeTextInput(stdin))
+	reader.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	failed := false
+	var pending strings.Builder
+	for reader.Scan() {
+		pending.WriteString(reader.Text())
+		pending.WriteString("\n")
+		program, err := parseBcProgram(pending.String())
+		if errors.Is(err, errBcIncomplete) {
+			// Still open: a brace, or a construct whose body is on the next line.
+			continue
+		}
+		pending.Reset()
+		if err != nil {
+			in.report(err)
+			failed = true
+			continue
+		}
+		if bad := in.runParsed(program); bad {
+			failed = true
+		}
+		// Flushed per statement, because the answer is the point of typing the line.
+		in.out.Flush()
+		if in.halted {
+			return failed
+		}
+	}
+	if strings.TrimSpace(pending.String()) != "" {
+		// The input ended in the middle of something, which is an error rather than an
+		// invitation: there is no next line coming.
+		in.report(fmt.Errorf("unexpected end of input"))
+		failed = true
+	}
+	if err := reader.Err(); err != nil {
+		in.report(err)
+		failed = true
+	}
+	return failed
+}
+
+// runParsed runs an already-parsed program, reporting whether anything went wrong.
+func (in *bcInterp) runParsed(program []bcStmt) bool {
+	flow, err := in.execBody(program)
+	if err != nil {
+		in.report(err)
+		return true
+	}
+	if flow == bcFlowHalt {
+		in.halted = true
+	}
+	return false
 }
 
 func bcStatus(failed bool) error {
@@ -111,13 +172,5 @@ func (in *bcInterp) runSource(source string) bool {
 		in.report(err)
 		return true
 	}
-	flow, err := in.execBody(program)
-	if err != nil {
-		in.report(err)
-		return true
-	}
-	if flow == bcFlowHalt {
-		in.halted = true
-	}
-	return false
+	return in.runParsed(program)
 }

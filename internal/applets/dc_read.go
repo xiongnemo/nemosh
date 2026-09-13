@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -57,6 +58,10 @@ func isDcDigit(character byte) bool {
 	return character >= '0' && character <= '9' || character >= 'A' && character <= 'F'
 }
 
+// errDcUnterminated is a `[` that was never closed. A session holds such a line and reads
+// on (see dc.go); reaching the end of the input with one open is this.
+var errDcUnterminated = errors.New("unterminated string")
+
 // readString reads `[...]`, which nests: `[a [b] c]` is one string.
 func (m *dcMachine) readString(source string, index int) (int, error) {
 	depth, start := 0, index
@@ -72,7 +77,7 @@ func (m *dcMachine) readString(source string, index int) (int, error) {
 			}
 		}
 	}
-	return index - start - 1, fmt.Errorf("unterminated string")
+	return index - start - 1, errDcUnterminated
 }
 
 // registerCommand handles the commands that name a register in the next character.

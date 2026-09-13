@@ -1,7 +1,5 @@
 package applets
 
-import "fmt"
-
 // bc's statements, and the `define` that holds them.
 //
 // A statement ends at a newline or a `;`, and **a newline inside brackets is not a
@@ -106,7 +104,7 @@ func (p *bcParser) parseBlock() (bcStmt, error) {
 			return bcBlockStmt{body: body}, nil
 		}
 		if p.peek().kind == bcTokenEOF {
-			return nil, fmt.Errorf("line %d: unclosed {", p.peek().line)
+			return nil, p.incompleteAt("line %d: unclosed {", p.peek().line)
 		}
 		statement, err := p.parseStatement()
 		if err != nil {
@@ -123,6 +121,10 @@ func (p *bcParser) parseIf() (bcStmt, error) {
 		return nil, err
 	}
 	p.skipNewlines()
+	if p.peek().kind == bcTokenEOF {
+		// `if (x)` with its body still to come: keep reading rather than refusing.
+		return nil, errBcIncomplete
+	}
 	then, err := p.parseStatement()
 	if err != nil {
 		return nil, err
@@ -137,6 +139,9 @@ func (p *bcParser) parseIf() (bcStmt, error) {
 	}
 	p.advance()
 	p.skipNewlines()
+	if p.peek().kind == bcTokenEOF {
+		return nil, errBcIncomplete
+	}
 	otherwise, err := p.parseStatement()
 	if err != nil {
 		return nil, err
@@ -151,6 +156,9 @@ func (p *bcParser) parseWhile() (bcStmt, error) {
 		return nil, err
 	}
 	p.skipNewlines()
+	if p.peek().kind == bcTokenEOF {
+		return nil, errBcIncomplete
+	}
 	body, err := p.parseStatement()
 	if err != nil {
 		return nil, err
@@ -189,6 +197,9 @@ func (p *bcParser) parseFor() (bcStmt, error) {
 		return nil, err
 	}
 	p.skipNewlines()
+	if p.peek().kind == bcTokenEOF {
+		return nil, errBcIncomplete
+	}
 	body, err := p.parseStatement()
 	if err != nil {
 		return nil, err

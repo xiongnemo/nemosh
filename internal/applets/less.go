@@ -45,6 +45,12 @@ func newLessApplet() Applet {
 		if options.has('h') {
 			return writeLessHelp(stdout)
 		}
+		if len(operands) == 0 && lessInputIsTerminal(stdin) {
+			// `less` with nothing to read would otherwise take the user's typing for the
+			// file's contents and never show anything -- a hang, in the shape bc and dc
+			// had. Every less refuses here instead.
+			return fmt.Errorf("missing filename (`less -h` for help)")
+		}
 		lines, name, err := readLessInput(ctx, operands, stdin)
 		if err != nil {
 			return err
@@ -67,6 +73,17 @@ func newLessApplet() Applet {
 		}
 		return runLess(ctx, screen, lines, name, settings, stdout)
 	}}
+}
+
+// lessInputIsTerminal reports whether standard input is a terminal rather than a file or a
+// pipe -- which is to say, whether reading it would wait on a person.
+func lessInputIsTerminal(stdin io.Reader) bool {
+	file, ok := stdin.(*os.File)
+	if !ok {
+		// Wrapped by the shell, so it is not a terminal handle this can ask about.
+		return false
+	}
+	return term.IsTerminal(int(file.Fd()))
 }
 
 // lessCanPage reports whether there is a terminal to page on.

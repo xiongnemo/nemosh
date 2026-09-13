@@ -1,6 +1,9 @@
 package applets
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // bc's expression grammar, lowest precedence first:
 //
@@ -13,6 +16,24 @@ import "fmt"
 //     **right-associative**, so `2^3^2` is 2^9.
 //   - **Assignment is right-associative and is an expression**, so `a = b = 5` sets both --
 //     and `(x = 5)` as a statement prints 5 where a bare `x = 5` prints nothing.
+
+// errBcIncomplete says the program ran out of input **where more could follow**, which is
+// how a session tells "keep typing" from "that was wrong".
+//
+// The line is drawn where the references draw it, measured: a construct still waiting for a
+// *statement* continues, so `define f(n) {` and a bare `if (1)` both read on to the next
+// line. An *expression* that ran out does not -- `1+` and `a[0]=` are errors there and here,
+// rather than an invitation to finish them on the next line.
+var errBcIncomplete = errors.New("incomplete")
+
+// incompleteAt answers the sentinel when the parser is at the end of input, and an ordinary
+// failure otherwise.
+func (p *bcParser) incompleteAt(format string, args ...any) error {
+	if p.peek().kind == bcTokenEOF {
+		return errBcIncomplete
+	}
+	return fmt.Errorf(format, args...)
+}
 
 type bcParser struct {
 	tokens []bcToken

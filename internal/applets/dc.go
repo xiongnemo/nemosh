@@ -124,12 +124,10 @@ func (m *dcMachine) runAll(scripts, files []string, stdin io.Reader) error {
 		}
 	}
 	if len(scripts) == 0 && len(files) == 0 {
-		// No script and no file: the program is whatever arrives on standard input.
-		text, err := io.ReadAll(decodeTextInput(stdin))
-		if err != nil {
-			return err
-		}
-		return m.execute(string(text))
+		// No script and no file: the program is whatever arrives on standard input, read
+		// **a line at a time**. Reading to the end first made an interactive dc print
+		// nothing and appear to hang, because a terminal has no end.
+		return m.session(stdin)
 	}
 	for _, name := range files {
 		text, err := readAwkSource(name)
@@ -144,6 +142,55 @@ func (m *dcMachine) runAll(scripts, files []string, stdin io.Reader) error {
 		}
 	}
 	return nil
+}
+
+// session runs standard input a line at a time, holding a line whose `[` is still open.
+//
+// Whether to hold is decided **before** anything runs, by counting brackets, rather than by
+// running the line and seeing it fail. Running first and retrying the whole buffer would
+// repeat whatever came before the `[`: `5 p [abc` would print 5, hold, and print it again
+// when the next line closed the string.
+func (m *dcMachine) session(stdin io.Reader) error {
+	reader := bufio.NewScanner(decodeTextInput(stdin))
+	reader.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	var pending strings.Builder
+	for reader.Scan() && !m.quit {
+		pending.WriteString(reader.Text())
+		pending.WriteString("\n")
+		if dcOpenBrackets(pending.String()) > 0 {
+			continue
+		}
+		source := pending.String()
+		pending.Reset()
+		if err := m.execute(source); err != nil {
+			return err
+		}
+		// Flushed per line, because the answer is the point of typing it.
+		if err := m.out.Flush(); err != nil {
+			return err
+		}
+	}
+	if strings.TrimSpace(pending.String()) != "" {
+		// The input ended inside a string, and there is no next line coming.
+		return errDcUnterminated
+	}
+	return reader.Err()
+}
+
+// dcOpenBrackets counts how many `[` are still open.
+func dcOpenBrackets(source string) int {
+	depth := 0
+	for index := 0; index < len(source); index++ {
+		switch source[index] {
+		case '[':
+			depth++
+		case ']':
+			if depth > 0 {
+				depth--
+			}
+		}
+	}
+	return depth
 }
 
 // push and pop are the whole interface to the stack; everything else goes through them so
