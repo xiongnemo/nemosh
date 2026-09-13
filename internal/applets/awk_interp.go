@@ -70,6 +70,10 @@ type awkInterp struct {
 	exiting    bool
 	exitStatus int
 
+	// streaming says to flush after every record rather than when the buffer fills.
+	// See awk_run.go's runRecordsFrom for why it is decided from the output's kind.
+	streaming bool
+
 	// random is what `rand` draws from and randSeed the seed it was last given. The seed
 	// starts at 1 rather than at the clock, because both references make a program that
 	// never calls `srand` produce the same sequence every run.
@@ -101,6 +105,7 @@ func newAwkInterp(ctx context.Context, program *awkProgram, input io.Reader, out
 	}
 	interp.buffered = bufio.NewWriter(output)
 	interp.output = interp.buffered
+	interp.streaming = !writerIsRegularFile(output)
 	for name, value := range awkSpecialDefaults {
 		interp.vars[name] = awkStr(value)
 	}

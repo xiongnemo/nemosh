@@ -144,6 +144,7 @@ func unescapeTrSet(set string) string {
 func (t trTable) run(ctx context.Context, stdout io.Writer, stdin io.Reader) error {
 	reader := bufio.NewReader(contextReader{ctx: ctx, reader: stdin})
 	writer := bufio.NewWriter(stdout)
+	streaming := !writerIsRegularFile(stdout)
 	previous := rune(-1)
 	for {
 		r, size, err := reader.ReadRune()
@@ -184,6 +185,15 @@ func (t trTable) run(ctx context.Context, stdout io.Writer, stdin io.Reader) err
 		previous = mapped
 		if _, err := writer.WriteRune(mapped); err != nil {
 			return err
+		}
+		if streaming && mapped == '\n' {
+			// A line at a time when someone may be watching, so `tail -f log | tr a-z A-Z`
+			// shows a line when the line happens. busybox's tr does the same. Per newline
+			// rather than per rune: this loop runs once per character, and a write syscall
+			// each time would cost far more than it is worth.
+			if err := writer.Flush(); err != nil {
+				return err
+			}
 		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"io"
+	"os"
 	"unicode/utf16"
 	"unicode/utf8"
 )
@@ -53,9 +54,25 @@ var byteOrderMarks = []struct {
 // The mark itself is consumed either way. A UTF-8 BOM is a zero-width space as far as a regular
 // expression is concerned, so leaving it in makes `grep '^hello'` fail on the first line of a file
 // Notepad wrote -- which is the same defect as not decoding UTF-16, in a form people meet more often.
+//
+// **The mark is looked for in what has already arrived, never by waiting for more.**
+// `Peek(3)` blocks until three bytes exist, and typing `1` and Enter into `bc` is two -- so
+// the interactive applets sat there having read the line and not been given it. One `Peek(1)`
+// blocks only until *something* arrives, which every reader owes its caller anyway, and after
+// it the buffer holds whatever the writer sent in that one write. A file fills the buffer
+// with thousands of bytes, so every mark is still tested there; a person typing sends no
+// byte-order mark at all.
 func decodeTextInput(input io.Reader) io.Reader {
 	reader := bufio.NewReader(input)
+	if _, err := reader.Peek(1); err != nil {
+		return reader
+	}
+	available := reader.Buffered()
 	for _, mark := range byteOrderMarks {
+		if len(mark.prefix) > available {
+			// Peeking further than this would wait for bytes nobody has promised to send.
+			continue
+		}
 		prefix, err := reader.Peek(len(mark.prefix))
 		if err != nil || !equalBytes(prefix, mark.prefix) {
 			continue
@@ -177,3 +194,20 @@ type decodedCloser struct {
 }
 
 func (c decodedCloser) Close() error { return c.closer.Close() }
+
+// writerIsRegularFile reports whether output is going to a file on disk rather than to a
+// terminal, a pipe, or something the shell has wrapped.
+//
+// It decides whether a filter should flush as it goes. Nobody is watching a file being
+// written, so buffering there costs nothing and saves a write per line; a pipe or a terminal
+// may well have someone at the end of it waiting to see a line appear. Anything that is not
+// an *os.File at all -- the shell wraps its streams -- is treated as watched, which is the
+// safe way round: a needless flush is slow, a missing one looks like a hang.
+func writerIsRegularFile(output io.Writer) bool {
+	file, ok := output.(*os.File)
+	if !ok {
+		return false
+	}
+	info, err := file.Stat()
+	return err == nil && info.Mode().IsRegular()
+}

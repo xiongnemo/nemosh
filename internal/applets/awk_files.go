@@ -132,6 +132,16 @@ func (in *awkInterp) runRecordsFrom(reader *bufio.Reader) error {
 		if err != nil {
 			return err
 		}
+		if in.streaming {
+			// One flush per record, so `tail -f log | awk '...'` shows a line when the
+			// line happens. busybox's awk does this and gawk does not; busybox is the
+			// reference here and is the more useful of the two. It is skipped when the
+			// output is a regular file, where nobody is watching and a write per record
+			// would be paid for nothing.
+			if err := in.buffered.Flush(); err != nil {
+				return err
+			}
+		}
 		switch flow {
 		case awkFlowExit:
 			return nil

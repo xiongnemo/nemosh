@@ -143,6 +143,19 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **Interactive `bc` hung, and the cause reached further than bc.** It read standard input to
+  the end before evaluating anything, and a terminal has no end. `dc` had the same line, and
+  `less` would have read the user's typing as a file's contents.
+
+  Auditing every applet that reads a stream found two more faults. The byte-order-mark check
+  peeked three bytes, so typing one character and pressing Enter -- two bytes -- blocked
+  `bc`, `dc` and `ed` after they had already read the line. And `awk` and `tr` held their
+  output until the input ended, where busybox's stream; `tail -f log | awk '...'` showed
+  nothing until the log stopped growing.
+
+  The rest of the "waits for the end" list matches busybox exactly and is left alone, which
+  `docs/support-matrix.md` now sets out applet by applet.
+
 - **`!!` was drawn red while being typed.** The colour asks "can this shell run a
   command of this name?", and `!!` is not a command name -- so nothing was ever going
   to find it. It is now judged by what it will *become*: `!!` after `ls -la` is green,

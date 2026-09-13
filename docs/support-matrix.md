@@ -1637,6 +1637,33 @@ other**, and this follows the consistent answer — which is GNU's, and busybox
 disagreeing with a reference, and a bare `-` in a header would read as a file of
 that name.
 
+### Streaming, and what waits for the end of its input
+
+An applet that reads a stream either answers as lines arrive or gathers everything first, and
+which one it is decides whether `tail -f log | ...` shows anything before the log stops
+growing. Measured against busybox-w32 by feeding one line down a pipe and holding it open.
+
+**These answer as the line arrives**: `cat`, `grep`, `awk`, `tr`, `nl`, `cut`, `rev`, `tee`,
+`fold`, `expand`, `unexpand`, `ts`, `head`, `factor`, `iconv`, and the interactive `bc`, `dc`
+and `ed`.
+
+**These gather the whole input first**, and so do busybox's: `sed`, `uniq`, `sort`, `tac`,
+`shuf`, `wc`, `tail`, `tsort`, `split`, `strings`, `base64`, `base32`, `od`, `hexdump`,
+`xxd`, `uuencode` and the checksums. Some cannot do otherwise -- a digest has no partial
+answer, and `tac` needs the end before it can start -- and the rest match the reference,
+which block-buffers to a pipe the way C stdio does.
+
+Two places this build differs from a reference, both deliberate:
+
+- **`grep` streams where busybox's waits.** Better, and kept.
+- **`awk` and `tr` stream where gawk buffers**, following busybox instead. awk flushes once
+  per record, and tr once per newline, *unless* the output is a regular file -- nobody is
+  watching a file being written, and a write per line there would be paid for nothing.
+
+**A byte-order mark is looked for only in what has already arrived.** Reading three bytes to
+check for one would block a stream whose first write is shorter, which is what typing a
+single character and pressing Enter is.
+
 ### `awk`
 
 The POSIX language: patterns and actions, `BEGIN`/`END`, ranges, fields and the
