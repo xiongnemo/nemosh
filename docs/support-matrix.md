@@ -1637,6 +1637,31 @@ other**, and this follows the consistent answer — which is GNU's, and busybox
 disagreeing with a reference, and a bare `-` in a header would read as a file of
 that name.
 
+### Who owns the terminal, and for how long
+
+The line editor needs raw mode to see arrows and Ctrl-R. A command needs the opposite: echo
+on, lines assembled, and Ctrl-C turned into an interrupt. **The editor borrows the terminal
+for one line read and gives it straight back**, so a command run between two prompts finds
+the terminal it expects.
+
+Held across a command -- which it was until this was fixed -- a terminal reader gets no echo,
+never sees a line at all, because Enter arrives as a carriage return with no line discipline
+to translate it, and cannot be interrupted, because `os.Interrupt` on Windows is delivered by
+the console only while `ENABLE_PROCESSED_INPUT` is set. `bc` at the prompt looked frozen, and
+so would `dc`, `ed`, a bare `cat`, and the shell's own `read` and `select`.
+
+Four places change console state, and a test lists them:
+
+| where | for how long |
+| --- | --- |
+| the line editor | one line read |
+| `--hold` | one key at exit, in the same function |
+| virtual-terminal output mode | the whole session, deliberately: commands want colour too |
+| `stty` | until told otherwise, because somebody asked |
+
+Everything that reads keys -- `nano`, `micro`, `top`, `less` -- goes through tcell, which
+saves the mode it finds and restores it on the way out.
+
 ### Streaming, and what waits for the end of its input
 
 An applet that reads a stream either answers as lines arrive or gathers everything first, and

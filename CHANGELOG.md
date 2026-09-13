@@ -143,6 +143,14 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **The prompt held the terminal raw, so no command could read from it.** Typing `bc` in
+  Windows Terminal gave a shell that took no input and ignored Ctrl-C. The line editor
+  entered raw mode when the session started and left it when the session ended, so every
+  command ran inside it -- with no echo, with Enter arriving as a carriage return that no
+  line discipline turned into a line, and with the console bit that makes Ctrl-C an interrupt
+  switched off. It applied to `dc`, `ed`, a bare `cat`, and the shell's own `read` and
+  `select` too. The borrow is now one line read long.
+
 - **Interactive `bc` hung, and the cause reached further than bc.** It read standard input to
   the end before evaluating anything, and a terminal has no end. `dc` had the same line, and
   `less` would have read the user's typing as a file's contents.
