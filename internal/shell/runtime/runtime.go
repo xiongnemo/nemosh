@@ -240,7 +240,11 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	if !ok {
 		return r.runExternal(ctx, args)
 	}
-	err := applet.Run(applets.WithProcessView(ctx, r), args[1:], r.streams.Stdin, r.streams.Stdout, r.streams.Stderr)
+	// Stdout is wrapped so that Ctrl-C reaches an applet that is not watching the
+	// context -- which is almost all of them. See interrupt_writer.go. Stderr is left
+	// alone: a diagnostic written on the way out is still worth seeing.
+	err := applet.Run(applets.WithProcessView(ctx, r), args[1:], r.streams.Stdin,
+		interruptible(r.streams.Stdout, ctx), r.streams.Stderr)
 	if err == nil {
 		return 0
 	}

@@ -83,8 +83,18 @@ func (in *bcInterp) run(files []string, stdin io.Reader) error {
 	}
 	// Standard input is read even when files were given, which is what makes
 	// `bc prelude.bc` a session rather than a batch job.
-	if bad := in.runSession(stdin); bad {
+	bad, err := in.runSession(stdin)
+	if bad {
 		failed = true
+	}
+	if err != nil {
+		// Returned rather than printed. Every other applet returns what its scanner
+		// failed with, and the shell prints `bc: <err>` from it -- the same words this
+		// used to print itself -- so nothing is lost for a real failure. What is gained
+		// is the cancelled case: runCommand answers 130 and says nothing when the error
+		// it gets back is the context's, and printing it instead put `bc: context
+		// canceled` in front of someone who had pressed Ctrl-C.
+		return err
 	}
 	return bcStatus(failed)
 }
@@ -100,7 +110,7 @@ func (in *bcInterp) run(files []string, stdin io.Reader) error {
 // A line that cannot be parsed *yet* is held and the next one added to it, which is how
 // `define f(n) {` on its own line works. Which failures mean "not yet" is decided by the
 // parser and measured against the references -- see errBcIncomplete.
-func (in *bcInterp) runSession(stdin io.Reader) bool {
+func (in *bcInterp) runSession(stdin io.Reader) (bool, error) {
 	reader := bufio.NewScanner(decodeTextInput(stdin))
 	reader.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	failed := false
@@ -125,7 +135,7 @@ func (in *bcInterp) runSession(stdin io.Reader) bool {
 		// Flushed per statement, because the answer is the point of typing the line.
 		in.out.Flush()
 		if in.halted {
-			return failed
+			return failed, nil
 		}
 	}
 	if strings.TrimSpace(pending.String()) != "" {
@@ -135,10 +145,9 @@ func (in *bcInterp) runSession(stdin io.Reader) bool {
 		failed = true
 	}
 	if err := reader.Err(); err != nil {
-		in.report(err)
-		failed = true
+		return failed, err
 	}
-	return failed
+	return failed, nil
 }
 
 // runParsed runs an already-parsed program, reporting whether anything went wrong.
