@@ -154,7 +154,11 @@ func (m *dcMachine) session(stdin io.Reader) error {
 	reader := bufio.NewScanner(decodeTextInput(stdin))
 	reader.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	var pending strings.Builder
-	for reader.Scan() && !m.quit {
+	// The quit check is inside the body, not in this condition. Written as
+	// `reader.Scan() && !m.quit` it read *another line* after `q` before looking at the
+	// flag, because Go evaluates the left operand first -- and at a terminal that read is
+	// a wait for a keystroke, so dc looked as though `q` had done nothing.
+	for reader.Scan() {
 		pending.WriteString(reader.Text())
 		pending.WriteString("\n")
 		if dcOpenBrackets(pending.String()) > 0 {
@@ -168,6 +172,9 @@ func (m *dcMachine) session(stdin io.Reader) error {
 		// Flushed per line, because the answer is the point of typing it.
 		if err := m.out.Flush(); err != nil {
 			return err
+		}
+		if m.quit {
+			return nil
 		}
 	}
 	if strings.TrimSpace(pending.String()) != "" {
