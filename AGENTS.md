@@ -112,6 +112,13 @@ the entire suite: `times` reported 215 years because its test asserted only the
 Assert values, not just shapes, and re-measure claims against a built binary
 rather than against the suite.
 
+It went further than that on 2026-09-13: the prompt held the terminal in raw mode
+across every command it ran, so `bc` typed at the prompt was unusable, and not one
+of ~3,000 tests noticed -- every one of them fed input through a `strings.Reader`,
+which is indistinguishable from a session that has already ended. What a person has
+to check by hand, and what is already covered so they need not, is
+`docs/testing/manual-checks.md`.
+
 **The local gate is Windows-only, and CI is not.** A green run here says nothing
 about ubuntu and macos, which run the same suite. Four commits went in on
 2026-08-22 before anyone looked, and all four failed CI for one reason:
