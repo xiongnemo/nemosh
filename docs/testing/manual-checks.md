@@ -116,15 +116,21 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 
 These only exist off a GUI launch or a real clipboard, so no test reaches them.
 
-- **`nemosh --hold`** run by double-clicking rather than from a shell: the window
-  waits for one key at exit instead of vanishing.
-- **`nemosh --attach-console`**.
+- **`su`**, which is the only thing that exercises the other two. An elevated shell
+  gets a console of its own that dies with the process, so `su` launches the child
+  with `--attach-console PID` to join this one and `-N` to hold it open at exit.
+  Neither is a thing to type: `--attach-console` names a console a hand-typed PID
+  has no business joining, and it is deliberately absent from `--help`. Run
+  `su -c 'ls'` and check the output is still readable rather than gone with the
+  window.
 - **`/dev/clipboard`**: `echo hi > /dev/clipboard`, then paste somewhere; and
   `cat /dev/clipboard` after copying text elsewhere. Note this overwrites whatever
   you had on the clipboard. It is also known to fail at random when a clipboard
   manager or Windows clipboard history is holding the clipboard -- see AGENTS.md.
-- **Launching real programs**: an `.exe`, a `.bat`, something on a path with spaces,
-  and something on a path longer than 260 characters.
+- **Launching real programs**: an `.exe` that wants the console, since that is the half
+  a pipe cannot stand in for. The rest of this was measured on 2026-09-15 and needs no
+  hand: a `.bat` through ComSpec, a path with spaces in it, and a 522-character path
+  all worked through `-c`, which uses the same launching and the same path handling.
 - **CJK input** typed at the prompt, and a CJK filename completed with Tab. The
   editor decodes multi-byte runes incrementally, so a character split across two
   reads is the interesting case.
