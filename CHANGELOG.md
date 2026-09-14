@@ -10,6 +10,17 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **Backgrounding says which job it became, and how to stop it.** `sleep 20 &` answers
+  `[1] started; kill %1 to stop it`. busybox writes a job number and a process id; the
+  number here is real and the pid is not, since a background job is a goroutine -- which is
+  why `$!` already answers `%1`. So the line carries the handle that works, and the sentence
+  is there because `%1` is not what somebody who has only killed a pid would guess.
+
+- **A job that has ended says so at the next prompt.** bash and busybox both report this
+  without `set -b`, which asks for something else -- the report *immediately*, mid-command,
+  and that is still refused. Reporting is what consumes the job, whether the notice or
+  `jobs` does it first.
+
 - **`less`.** With nowhere to page to it is `cat`, which is what every less does and what
   makes it safe to write in a script: `less f | head -3` copies its input through, and a
   program downstream never has to know a pager was in the way. On a terminal it pages, with
@@ -142,6 +153,57 @@ patch number is the commits since that tag.
   gutter rather than the text.
 
 ### Fixed
+
+- **`$?` at the prompt was always zero.** `false` and then `echo $?` answered 0, while the
+  prompt beside it showed 1 -- the two were reading different things, and only the invisible
+  one was right. The edited session took the Runtime by value, and the three methods that
+  carry interactive state between commands have pointer receivers, so each command ran
+  correctly on a copy and the status was then thrown away. Everything else survived the copy
+  because it already sat behind a pointer.
+
+- **Ctrl-C could not stop a command that was producing output.** `seq 1 100000000` ran to
+  the end: measured, the interrupt arrived after 200ms and it wrote 888 MB anyway, then
+  reported 130 as though it had been stopped. Almost every applet is built from a signature
+  with no context in it, so nothing inside a loop can see a cancellation; the write fails
+  now instead, which reaches all of them at the one place applets are dispatched.
+
+- **Ctrl-C inside an applet needed a second keypress, and that keypress was spent noticing
+  it.** A cancellation was only ever checked between reads, which is no use to an applet
+  already sitting in one -- a console read returns when a line arrives and not before. A
+  blocked read is now ended outright. Measured against a real console first: a read blocked
+  for 500ms, CancelIoEx answered success, and it returned at once.
+
+- **Being interrupted was reported as a failure.** `bc` answered `bc: context canceled`, a
+  Go error string shown to somebody who had pressed a key. Every other applet returns what
+  its scanner failed with and the shell answers 130 in silence; `bc` alone printed it.
+
+- **Ending a command with Ctrl-Z left two spare prompts.** Two causes, one keypress. A
+  console read in cooked mode hands back a line ending CRLF, and the editor decoded that as
+  two Enters -- so one leftover terminator became two empty commands. It is one Enter now,
+  and the terminator a command left behind is not read as a keypress at all: in raw mode,
+  which is the only mode the editor reads in, a pressed Enter is a bare carriage return.
+
+- **`dc` read one more line after `q`.** `for reader.Scan() && !m.quit` evaluates the left
+  operand first, so `q` set the flag and the loop then waited for a keystroke before looking
+  at it. Off a pipe that costs nothing, which is why no test saw it.
+
+- **`jobs` answered `Done` every time it was asked, forever.** POSIX removes a job from the
+  list once the shell has reported its status, and both references do; here the table only
+  ever grew, and `jobs` stopped describing what was actually running.
+
+- **`less` never paged inside the shell, and `[ -t 1 ]` never said yes on a terminal.** Both
+  asked `stream.(*os.File)`, which is false for every applet the shell runs -- so `less`
+  behaved as though its output were a pipe and printed the file, and the one question
+  `[ -t 1 ]` exists to answer was answered wrongly. A guard now fails the build on a sixth
+  occurrence of this, since it has cost five.
+
+- **A search in `less` moved to the match and drew it like any other line.** Every part of a
+  line that matches is highlighted now, as busybox does, and an empty match highlights
+  nothing -- `x*` would otherwise paint the whole file.
+
+- **Leaving a reverse search redrew the first line of a two-line prompt.** Only the row the
+  search took over was ever given back, so a two-line prompt -- which is the default --
+  looked like a three-line one.
 
 - **The prompt held the terminal raw, so no command could read from it.** Typing `bc` in
   Windows Terminal gave a shell that took no input and ignored Ctrl-C. The line editor
