@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"regexp"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -105,15 +105,18 @@ func (p *lessPager) draw() {
 			p.drawText(0, row, "~", style.Foreground(tcell.ColorBlue))
 			continue
 		}
-		text := p.lines[index]
+		prefix := ""
 		if p.settings.numbers {
-			text = fmt.Sprintf("%6d  %s", index+1, text)
+			prefix = fmt.Sprintf("%6d  ", index+1)
 		}
+		text := prefix + p.lines[index]
 		if p.settings.chop && len(text) > p.width {
 			// -S: long lines are cut rather than folded, so every row is one line.
 			text = text[:p.width]
 		}
-		p.drawText(0, row, text, style)
+		// The spans are found in the line itself and then shifted past the line number,
+		// so `-N` moves the highlight without changing what matched.
+		p.drawMatched(row, text, style, p.matchSpans(p.lines[index], utf8.RuneCountInString(prefix)))
 	}
 	p.drawText(0, p.height-1, p.prompt(), style.Reverse(true))
 	p.screen.Show()
@@ -257,12 +260,8 @@ func (p *lessPager) runSearch(forward bool, from int) {
 		p.message = "no previous pattern"
 		return
 	}
-	expression := p.pattern
-	if p.settings.ignoreCase {
-		expression = "(?i)" + expression
-	}
-	compiled, err := regexp.Compile(expression)
-	if err != nil {
+	compiled, ok := p.compiledPattern()
+	if !ok {
 		p.message = "bad pattern: " + p.pattern
 		return
 	}
