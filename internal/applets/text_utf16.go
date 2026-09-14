@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"io"
-	"os"
 	"unicode/utf16"
 	"unicode/utf8"
 )
@@ -200,12 +199,17 @@ func (c decodedCloser) Close() error { return c.closer.Close() }
 //
 // It decides whether a filter should flush as it goes. Nobody is watching a file being
 // written, so buffering there costs nothing and saves a write per line; a pipe or a terminal
-// may well have someone at the end of it waiting to see a line appear. Anything that is not
-// an *os.File at all -- the shell wraps its streams -- is treated as watched, which is the
-// safe way round: a needless flush is slow, a missing one looks like a hang.
+// may well have someone at the end of it waiting to see a line appear. A stream that names
+// no file at all is treated as watched, which is the safe way round: a needless flush is
+// slow, a missing one looks like a hang.
+//
+// Asked through stdoutFile rather than of the value. The shell wraps every stream an applet
+// writes to, so `output.(*os.File)` was false for all of them -- which meant this answered
+// "watched" for `awk ... > big.txt` too, and the buffering it exists to allow never once
+// happened inside the shell. The safe direction hid it. See fd_stream.go.
 func writerIsRegularFile(output io.Writer) bool {
-	file, ok := output.(*os.File)
-	if !ok {
+	file := stdoutFile(output)
+	if file == nil {
 		return false
 	}
 	info, err := file.Stat()
