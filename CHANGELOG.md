@@ -8,6 +8,8 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## v1.2.0 - 2026-09-16
+
 ### Added
 
 - **Backgrounding says which job it became, and how to stop it.** `sleep 20 &` answers
@@ -374,9 +376,7 @@ b
   -- the same fact that keeps the `bzip2` name unregistered here -- so the input
   cannot be produced by the code under test.
 
-## Unreleased
-
-### Added
+### Added, earlier in the same cycle
 
 - **Syntax highlighting in the editor**, for eleven languages: Go, C, C++, Python,
   shell, Haskell, Prolog, JSON, YAML, TOML and Markdown. `nano -H` and `micro -H` list
@@ -515,7 +515,7 @@ b
   are the bytes read, transformed. That question arrives only if sed starts
   *decoding* UTF-16 on input, and stays deferred until then.
 
-### Fixed
+### Fixed, earlier in the same cycle
 
 - **A lone `-` operand now means standard input.** POSIX gives it that meaning for
   every utility taking file operands, and it is how a script mixes a stream into a
