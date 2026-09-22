@@ -1,0 +1,637 @@
+[
+ {
+  "script": "case a in a) echo one;; b) echo two;; esac",
+  "stdout": "one\n",
+  "status": 0
+ },
+ {
+  "script": "case a in (a) echo paren;; esac",
+  "stdout": "paren\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a|b) echo alt;; esac",
+  "stdout": "alt\n",
+  "status": 0
+ },
+ {
+  "script": "case b in a) echo one;; *) echo star;; esac",
+  "stdout": "star\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) ;; esac",
+  "stdout": "",
+  "status": 0
+ },
+ {
+  "script": "f() { case $1 in a) echo A;; *) echo other;; esac; }; f a; f z",
+  "stdout": "A\nother\n",
+  "status": 0
+ },
+ {
+  "script": "( case a in a) echo sub;; *) echo no;; esac )",
+  "stdout": "sub\n",
+  "status": 0
+ },
+ {
+  "script": "{ case a in a) echo brace;; *) echo no;; esac; }",
+  "stdout": "brace\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) case b in b) echo nested;; esac;; esac",
+  "stdout": "nested\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo one; echo two;; esac",
+  "stdout": "one\ntwo\n",
+  "status": 0
+ },
+ {
+  "script": "while :; do case a in a) break;; esac; done; echo looped",
+  "stdout": "looped\n",
+  "status": 0
+ },
+ {
+  "script": "if :; then case a in a) echo cond;; esac; fi",
+  "stdout": "cond\n",
+  "status": 0
+ },
+ {
+  "script": "echo a; echo b",
+  "stdout": "a\nb\n",
+  "status": 0
+ },
+ {
+  "script": "echo a && echo b",
+  "stdout": "a\nb\n",
+  "status": 0
+ },
+ {
+  "script": "echo a || echo c",
+  "stdout": "a\n",
+  "status": 0
+ },
+ {
+  "script": "! false; echo $?",
+  "stdout": "0\n",
+  "status": 0
+ },
+ {
+  "script": "echo one | cat | cat",
+  "stdout": "one\n",
+  "status": 0
+ },
+ {
+  "script": "{ echo group; }",
+  "stdout": "group\n",
+  "status": 0
+ },
+ {
+  "script": "( echo subshell )",
+  "stdout": "subshell\n",
+  "status": 0
+ },
+ {
+  "script": "(echo tight)",
+  "stdout": "tight\n",
+  "status": 0
+ },
+ {
+  "script": "{ echo a; echo b; }",
+  "stdout": "a\nb\n",
+  "status": 0
+ },
+ {
+  "script": "f() ( echo subshell-body ); f",
+  "stdout": "subshell-body\n",
+  "status": 0
+ },
+ {
+  "script": "f() { echo braced; }; f",
+  "stdout": "braced\n",
+  "status": 0
+ },
+ {
+  "script": "for i in 1 2; do echo $i; done",
+  "stdout": "1\n2\n",
+  "status": 0
+ },
+ {
+  "script": "for i in 1 2; do echo $i; done | cat",
+  "stdout": "1\n2\n",
+  "status": 0
+ },
+ {
+  "script": "until false; do break; done; echo until-ok",
+  "stdout": "until-ok\n",
+  "status": 0
+ },
+ {
+  "script": "echo \"a'b'c\"",
+  "stdout": "a'b'c\n",
+  "status": 0
+ },
+ {
+  "script": "echo 'a\"b\"c'",
+  "stdout": "a\"b\"c\n",
+  "status": 0
+ },
+ {
+  "script": "echo \"a\\\"b\"",
+  "stdout": "a\"b\n",
+  "status": 0
+ },
+ {
+  "script": "echo a\\ b",
+  "stdout": "a b\n",
+  "status": 0
+ },
+ {
+  "script": "echo \"$(echo nested)\"",
+  "stdout": "nested\n",
+  "status": 0
+ },
+ {
+  "script": "echo \"$(echo \"$(echo deep)\")\"",
+  "stdout": "deep\n",
+  "status": 0
+ },
+ {
+  "script": "echo `echo backquote`",
+  "stdout": "backquote\n",
+  "status": 0
+ },
+ {
+  "script": "echo $((1+2))",
+  "stdout": "3\n",
+  "status": 0
+ },
+ {
+  "script": "echo $(( (1+2) * 3 ))",
+  "stdout": "9\n",
+  "status": 0
+ },
+ {
+  "script": "i=1; echo $((i++)); echo $i",
+  "stdout": "1\n2\n",
+  "status": 0
+ },
+ {
+  "script": "echo ${x:-default}",
+  "stdout": "default\n",
+  "status": 0
+ },
+ {
+  "script": "echo ${x:-a b}",
+  "stdout": "a b\n",
+  "status": 0
+ },
+ {
+  "script": "x=abc; echo ${x#a}; echo ${x%c}; echo ${#x}",
+  "stdout": "bc\nab\n3\n",
+  "status": 0
+ },
+ {
+  "script": "echo a > /dev/null; echo redirected",
+  "stdout": "redirected\n",
+  "status": 0
+ },
+ {
+  "script": "echo a 2>&1 | cat",
+  "stdout": "a\n",
+  "status": 0
+ },
+ {
+  "script": "cat <<EOF\nheredoc\nEOF",
+  "stdout": "heredoc\n",
+  "status": 0
+ },
+ {
+  "script": "cat <<'EOF'\nno$expansion\nEOF",
+  "stdout": "no$expansion\n",
+  "status": 0
+ },
+ {
+  "script": "cat <<-EOF\n\ttabbed\n\tEOF",
+  "stdout": "tabbed\n",
+  "status": 0
+ },
+ {
+  "script": "x=1 y=2; echo $x$y",
+  "stdout": "12\n",
+  "status": 0
+ },
+ {
+  "script": "echo a\"b\"c'd'",
+  "stdout": "abcd\n",
+  "status": 0
+ },
+ {
+  "script": "echo a#notcomment",
+  "stdout": "a#notcomment\n",
+  "status": 0
+ },
+ {
+  "script": "echo a # comment",
+  "stdout": "a\n",
+  "status": 0
+ },
+ {
+  "script": ":; echo colon-ok",
+  "stdout": "colon-ok\n",
+  "status": 0
+ },
+ {
+  "script": "export A=1; echo $A",
+  "stdout": "1\n",
+  "status": 0
+ },
+ {
+  "script": "unset A; echo \"[${A-unset}]\"",
+  "stdout": "[unset]\n",
+  "status": 0
+ },
+ {
+  "script": "v=0; if [ \"$v\" = 0 ]; then echo test-ok; fi",
+  "stdout": "test-ok\n",
+  "status": 0
+ },
+ {
+  "script": "a=1; case $a in 1) echo var-pattern;; esac",
+  "stdout": "var-pattern\n",
+  "status": 0
+ },
+ {
+  "script": "echo 'a\nb'",
+  "stdout": "a\nb\n",
+  "status": 0
+ },
+ {
+  "script": "echo a \\\n  b",
+  "stdout": "a b\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo semi;; esac; echo after",
+  "stdout": "semi\nafter\n",
+  "status": 0
+ },
+ {
+  "script": "f() { case a in a) echo x;; esac; }; f; f",
+  "stdout": "x\nx\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo one;; esac | cat",
+  "stdout": "one\n",
+  "status": 0
+ },
+ {
+  "script": "echo $(case a in a) echo in-subst;; esac)",
+  "stdout": "in-subst\n",
+  "status": 0
+ },
+ {
+  "script": "x=$(case a in a) echo captured;; esac); echo $x",
+  "stdout": "captured\n",
+  "status": 0
+ },
+ {
+  "script": "case \"a b\" in \"a b\") echo quoted-pattern;; esac",
+  "stdout": "quoted-pattern\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo one;; esac > /dev/null; echo redirected-case",
+  "stdout": "redirected-case\n",
+  "status": 0
+ },
+ {
+  "script": "for i in a; do case $i in a) echo for-case;; esac; done",
+  "stdout": "for-case\n",
+  "status": 0
+ },
+ {
+  "script": "{ ( echo mixed ); }",
+  "stdout": "mixed\n",
+  "status": 0
+ },
+ {
+  "script": "( { echo mixed2; } )",
+  "stdout": "mixed2\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) ( echo arm-subshell );; esac",
+  "stdout": "arm-subshell\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) { echo arm-group; };; esac",
+  "stdout": "arm-group\n",
+  "status": 0
+ },
+ {
+  "script": "if ( true ); then echo cond-subshell; fi",
+  "stdout": "cond-subshell\n",
+  "status": 0
+ },
+ {
+  "script": "if echo a | grep -q a; then echo cond-pipe; fi",
+  "stdout": "cond-pipe\n",
+  "status": 0
+ },
+ {
+  "script": "if ! false; then echo cond-neg; fi",
+  "stdout": "cond-neg\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo x;; esac && echo and-after",
+  "stdout": "x\nand-after\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo x;; esac || echo or-after",
+  "stdout": "x\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) false;; esac || echo or-false",
+  "stdout": "or-false\n",
+  "status": 0
+ },
+ {
+  "script": "{ case a in a) echo g;; esac; } | cat",
+  "stdout": "g\n",
+  "status": 0
+ },
+ {
+  "script": "echo a | { cat; }",
+  "stdout": "a\n",
+  "status": 0
+ },
+ {
+  "script": "echo a | ( cat )",
+  "stdout": "a\n",
+  "status": 0
+ },
+ {
+  "script": "echo a | while read l; do echo \"got $l\"; done",
+  "stdout": "got a\n",
+  "status": 0
+ },
+ {
+  "script": "for i in $(echo 1 2); do echo $i; done",
+  "stdout": "1\n2\n",
+  "status": 0
+ },
+ {
+  "script": "for i in \"a b\"; do echo \"[$i]\"; done",
+  "stdout": "[a b]\n",
+  "status": 0
+ },
+ {
+  "script": "for i in; do echo no; done; echo empty-for",
+  "stdout": "empty-for\n",
+  "status": 0
+ },
+ {
+  "script": "f() { return 3; }; f; echo $?",
+  "stdout": "3\n",
+  "status": 0
+ },
+ {
+  "script": "f() { echo $1; }; f \"a b\"",
+  "stdout": "a b\n",
+  "status": 0
+ },
+ {
+  "script": "f() { local x=1; echo $x; }; f",
+  "stdout": "1\n",
+  "status": 0
+ },
+ {
+  "script": "x=1; (x=2); echo $x",
+  "stdout": "1\n",
+  "status": 0
+ },
+ {
+  "script": "x=1; { x=2; }; echo $x",
+  "stdout": "2\n",
+  "status": 0
+ },
+ {
+  "script": "readonly R=1; echo $R",
+  "stdout": "1\n",
+  "status": 0
+ },
+ {
+  "script": "echo a >&1 | cat",
+  "stdout": "a\n",
+  "status": 0
+ },
+ {
+  "script": "exec 3>&1; echo three >&3; exec 3>&-; echo closed",
+  "stdout": "three\nclosed\n",
+  "status": 0
+ },
+ {
+  "script": "echo a 1>&2 2>/dev/null; echo after-swap",
+  "stdout": "after-swap\n",
+  "status": 0
+ },
+ {
+  "script": "> /dev/null echo leading-redirect",
+  "stdout": "",
+  "status": 0
+ },
+ {
+  "script": "echo a <&0",
+  "stdout": "a\n",
+  "status": 0
+ },
+ {
+  "script": "{ echo x; } > /dev/null; echo group-redirect",
+  "stdout": "group-redirect\n",
+  "status": 0
+ },
+ {
+  "script": "( echo x ) > /dev/null; echo sub-redirect",
+  "stdout": "sub-redirect\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo x;; esac 2>/dev/null; echo case-redirect",
+  "stdout": "x\ncase-redirect\n",
+  "status": 0
+ },
+ {
+  "script": "for i in 1; do echo $i; done > /dev/null; echo for-redirect",
+  "stdout": "for-redirect\n",
+  "status": 0
+ },
+ {
+  "script": "echo \"unterminated",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo 'unterminated",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo $( echo unbalanced",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "case a in a) echo x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "{ echo x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "( echo x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "if true; then echo x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "for i in 1; do echo x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "esac",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": ";;",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "done",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "fi",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "}",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": ")",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo a;;",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "case a in ;; esac",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "case in a) echo x;; esac",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo ${}",
+  "stdout": "",
+  "mustFail": true
+ },
+ {
+  "script": "echo $((1+))",
+  "stdout": "",
+  "mustFail": true
+ },
+ {
+  "script": "f() { }",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "f()",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "&& echo x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "| echo x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo a | | echo b",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo a && && echo b",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "x=1; echo ${x",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo \"$(echo a\" ",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "case a in a) echo x;; esac esac",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo a > ",
+  "stdout": "",
+  "status": 2
+ },
+ {
+  "script": "echo a >> /dev/null; echo append-ok",
+  "stdout": "append-ok\n",
+  "status": 0
+ },
+ {
+  "script": "echo a >| /dev/null; echo clobber-ok",
+  "stdout": "clobber-ok\n",
+  "status": 0
+ },
+ {
+  "script": "exec 4<> /dev/null; echo rw-ok",
+  "stdout": "rw-ok\n",
+  "status": 0
+ }
+]
