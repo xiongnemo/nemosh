@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/capability"
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // Drawing the line in colour is decoration, and decoration must not lie. Three
@@ -30,6 +31,8 @@ import (
 type palette struct {
 	knownCommand   []string
 	unknownCommand []string
+	reservedWord   []string
+	definition     []string
 	knownOption    []string
 	unknownOption  []string
 	editingWord    []string
@@ -40,10 +43,17 @@ func defaultPalette() palette {
 	return palette{
 		knownCommand:   []string{"32"}, // green
 		unknownCommand: []string{"31"}, // red
-		knownOption:    []string{"36"}, // cyan
-		unknownOption:  []string{"33"}, // yellow: unknown here is a guess, not a verdict
-		editingWord:    []string{"4"},  // underline, and combined with whatever colour applies
-		suggestion:     []string{"90"}, // bright black
+		// A reserved word is not a command, and red -- this palette's "no such command" --
+		// was an outright false claim about `case`. Magenta because it has to differ from
+		// both verdicts beside it, and because a keyword is structure rather than a name.
+		reservedWord: []string{"35"},
+		// The `name` of `name()`: not runnable yet, and not unknown either. Blue and bold,
+		// so a definition reads as a declaration rather than as a call.
+		definition:    []string{"1", "34"},
+		knownOption:   []string{"36"}, // cyan
+		unknownOption: []string{"33"}, // yellow: unknown here is a guess, not a verdict
+		editingWord:   []string{"4"},  // underline, and combined with whatever colour applies
+		suggestion:    []string{"90"}, // bright black
 	}
 }
 
@@ -74,51 +84,91 @@ func renderSpans(spans []span) string {
 // edited. That word is underlined while it is still being typed -- until a blank
 // ends it -- which is the visible answer to "what will Tab act on".
 func highlight(line string, cursor int, colours palette, knows commandOracle) []span {
-	runes := []rune(line)
+	tokens := splitHighlightTokens(line)
 	var spans []span
 	commandPosition := true
 	command := ""
-	index := 0
-	for index < len(runes) {
-		if runes[index] == ' ' {
-			start := index
-			for index < len(runes) && runes[index] == ' ' {
-				index++
+	start, offset := 0, 0
+	for index, token := range tokens {
+		end := start + len([]rune(token.text))
+		// A word where a case pattern goes is data. Without asking, the word after a `;;`
+		// looked like a command position and `*)` was drawn as a command that does not
+		// exist -- the same false claim `case` itself used to get. The grammar already
+		// answers this question for the parser; see case_pattern_position.go.
+		pattern := !token.blank && !token.operator && runtime.CasePatternPosition(line[:offset])
+		switch {
+		case token.blank:
+			// Blanks carry no role and no cursor: underlining the gap you are typing into
+			// would move the underline a character ahead of the word it is about.
+			spans = append(spans, span{text: token.text})
+		case token.operator:
+			// Punctuation, drawn plainly -- the eye finds it without help. What it does
+			// carry is the position: after `;;` or `)` a command begins again, which is
+			// the whole of what the blank-splitting version got wrong.
+			spans = append(spans, span{text: token.text, codes: cursorCodes(nil, colours, cursor, start, end)})
+			commandPosition = runtime.CommandFollows(token.text)
+		default:
+			codes := wordCodes(token.text, command, commandPosition && !pattern, colours, knows,
+				definesFunctionAt(tokens, index))
+			if commandPosition && !pattern && !runtime.ReservedWord(token.text) {
+				command = token.text
 			}
-			spans = append(spans, span{text: string(runes[start:index])})
-			continue
+			spans = append(spans, span{text: token.text, codes: cursorCodes(codes, colours, cursor, start, end)})
+			commandPosition = runtime.CommandFollows(token.text)
 		}
-		start := index
-		for index < len(runes) && runes[index] != ' ' {
-			if runes[index] == '\\' && index+1 < len(runes) {
-				index++
-			}
-			index++
-		}
-		if index > len(runes) {
-			index = len(runes)
-		}
-		word := string(runes[start:index])
-		codes := wordCodes(word, command, commandPosition, colours, knows)
-		if commandPosition && !isCommandSeparatorWord(word) {
-			command = word
-		}
-		// The cursor sitting anywhere inside the word, including at its end,
-		// means this is the one being edited. At its end is the common case --
-		// that is where the cursor is while you type.
-		if cursor >= start && cursor <= index {
-			codes = append(codes, colours.editingWord...)
-		}
-		spans = append(spans, span{text: word, codes: codes})
-		commandPosition = isCommandSeparatorWord(word)
+		start = end
+		offset += len(token.text)
 	}
 	return spans
 }
 
+// cursorCodes adds the editing underline when the cursor is in this span.
+//
+// Anywhere inside it, including at its end, which is the common case: that is where the
+// cursor is while a word is being typed.
+func cursorCodes(codes []string, colours palette, cursor, start, end int) []string {
+	if cursor < start || cursor > end {
+		return codes
+	}
+	return append(codes, colours.editingWord...)
+}
+
+// definesFunctionAt reports whether the word at index is the name of a function being
+// defined -- `name()`, or `name ()`, which is equally valid.
+//
+// Without this the name was drawn red: this palette's "no such command", said about a
+// command that is being brought into existence on this very line.
+func definesFunctionAt(tokens []highlightToken, index int) bool {
+	for next := index + 1; next < len(tokens); next++ {
+		if tokens[next].blank {
+			continue
+		}
+		if tokens[next].text != "(" {
+			return false
+		}
+		// `(` alone would be a subshell as an argument, which is not a thing; the pair is
+		// what makes it a definition.
+		for after := next + 1; after < len(tokens); after++ {
+			if tokens[after].blank {
+				continue
+			}
+			return tokens[after].text == ")"
+		}
+		return false
+	}
+	return false
+}
+
 // wordCodes decides how one word is drawn.
-func wordCodes(word, command string, commandPosition bool, colours palette, knows commandOracle) []string {
-	if isCommandSeparatorWord(word) {
-		return nil
+func wordCodes(word, command string, commandPosition bool, colours palette, knows commandOracle, defines bool) []string {
+	// A reserved word before a verdict about commands, because it is not one. `case` was
+	// drawn as a command that does not exist, which is not a missing colour but a false
+	// statement -- and the grammar's own answer is used rather than a second list here.
+	if runtime.ReservedWord(word) {
+		return append([]string(nil), colours.reservedWord...)
+	}
+	if defines {
+		return append([]string(nil), colours.definition...)
 	}
 	if commandPosition {
 		switch knows(word) {
@@ -186,19 +236,16 @@ func optionStanding(command, word string) optionVerdict {
 	return optionAccepted
 }
 
-// isCommandSeparatorWord reports whether a word is one of the operators that
-// starts a new command, so that the word after it is coloured as a command name
-// rather than as an operand.
+// Where a command begins is asked of runtime.CommandFollows now, and this is the note
+// worth keeping about what that replaced.
 //
-// Only a free-standing operator is recognised. `ls | grep x` colours grep;
-// `ls|grep x` does not, because splitting that correctly is parsing, and this is
-// decoration -- being approximate is acceptable where being wrong is only ever a
-// colour. The rule is the same one completesCommand uses, kept deliberately in
-// step with it.
-func isCommandSeparatorWord(word string) bool {
-	switch word {
-	case "|", "||", "&", "&&", ";", ";;", "(", "{":
-		return true
-	}
-	return false
-}
+// The rule used to be "a free-standing operator", so `ls | grep x` coloured grep and
+// `ls|grep x` did not -- on the grounds that splitting the second correctly is parsing, and
+// decoration may be approximate because being wrong is only ever a colour.
+//
+// That reasoning had a hole in it, and `bingo;;` is the hole: an operator glued to a word
+// is not an unusual way to write a line, it is the *normal* way to write a case arm, and
+// being wrong there silently turned the rest of the line into arguments. Splitting properly
+// turned out to be a lexer rather than a parser -- see highlight_tokens.go -- and the same
+// change let the reserved words be asked about too, which is what stopped `case` being
+// drawn as a command that does not exist.

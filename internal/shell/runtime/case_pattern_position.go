@@ -28,6 +28,16 @@ import "strings"
 // apiece, and a flag that has to be updated on every one of those paths is a flag that will
 // be missed on one of them. Lines are short.
 
+// CasePatternPosition is casePatternPosition for the line editor, which needs the same
+// answer for a different reason: a word where a pattern goes is data, and drawing `*` as a
+// command that does not exist is a false statement about the line on screen.
+//
+// Exported rather than copied. The editor asking the grammar is the whole point -- see
+// reserved_words.go, which says the same about where a command begins.
+func CasePatternPosition(prefix string) bool {
+	return casePatternPosition(prefix)
+}
+
 // casePatternPosition reports whether a scan that has just read prefix is sitting where a
 // case pattern goes -- so that the next `(` opens no subshell and the next `)` closes none.
 func casePatternPosition(prefix string) bool {

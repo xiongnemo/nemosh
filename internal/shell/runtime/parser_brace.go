@@ -32,17 +32,6 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	return delimiter == '{' && afterFunctionKeyword(line, index)
 }
 
-// commandIntroducers are the reserved words a command may follow directly. A `{` after one
-// of them opens a group: `if { true; }; then`, `then { echo a; }`, `! { false; }`.
-//
-// POSIX 2.4's reserved words, less the ones nothing can follow on the same line -- the
-// closers `fi`, `done` and `esac`, and `in`, whose place is taken by patterns. `case` and
-// `for` are absent for the same reason: what follows them is a word, not a command.
-var commandIntroducers = map[string]bool{
-	"if": true, "then": true, "elif": true, "else": true,
-	"while": true, "until": true, "do": true, "!": true,
-}
-
 // afterCommandIntroducer reports whether everything before index is a reserved word a
 // command may follow.
 //
