@@ -51,6 +51,16 @@ func splitSequentialSegments(line string) ([]string, error) {
 			index = skip
 			continue
 		}
+		// A bracket where a case pattern goes belongs to the pattern, and counting it here
+		// is what took `( case a in a) x ;; esac )` apart: the pattern's `)` popped the
+		// subshell, so the `;;` after it split at depth zero. The optional `(` before a
+		// pattern is skipped for the same reason, which is what keeps `case a in (a) x ;;
+		// esac` working -- it and its `)` cancel out rather than one of them counting.
+		// This is the guard the comment below says could not be insideCase: a position
+		// rather than a depth. See case_pattern_position.go.
+		if (char == '(' || char == ')') && casePatternPosition(line[:index]) {
+			continue
+		}
 		if char == '(' {
 			if wordGroupOpensAt(line, index) {
 				index = skipBalancedParens(line, index) - 1

@@ -130,7 +130,6 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		if opener == '{' && !hasBraceSeparator(body) {
 			return "", nil, fmt.Errorf("syntax error: expected separator before }")
 		}
-		body = normalizeGroupSeparators(body)
 		nested, err := parseScript(body, budget, depth+1)
 		if err != nil {
 			return "", nil, err
@@ -253,6 +252,12 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 			continue
 		}
 		if quote != 0 {
+			continue
+		}
+		// A bracket sitting where a case pattern goes is the pattern's own: `(a)` around
+		// one cancels itself out, and a bare `a)` closes nothing. Asked before either
+		// half below, so the two answers cannot disagree about the same character.
+		if (char == '(' || char == ')') && casePatternPosition(line[start:index]) {
 			continue
 		}
 		if char == '(' || braceDelimiterAt(line, index, '{') {
