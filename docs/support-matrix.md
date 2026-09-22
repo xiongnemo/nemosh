@@ -336,6 +336,27 @@ subsequent read means. Until it was implemented it returned 0 and did nothing at
 a script that removed an element and carried on was quietly wrong -- the failure mode
 AGENTS.md singles out.
 
+### The line editor's history keys
+
+Three ways to reach history, answering three questions, which is why there are three:
+
+| Key | Walks | The question it answers |
+| --- | --- | --- |
+| Up / Down | everything, in order | the command was recent |
+| `^R` | anywhere in the line, incrementally | a word from the middle is remembered |
+| Page Up / Page Down | entries beginning with the text left of the cursor | how the command *started* is remembered |
+
+The third is zsh's `history-beginning-search-backward`, and it is an **extension**:
+busybox's line editor binds Page Up to nothing at all, so there is no parity to match here.
+It earns its place because how a command started is how it is usually remembered — `git c`
+and Page Up beats pressing Up eleven times.
+
+The prefix is what lies **left of the cursor**, not the whole line, which is what makes the
+key repeatable: the cursor stays where it was, so a second press narrows from the same
+prefix. An empty prefix makes it Up, as it does in zsh. Nothing matching leaves the line
+alone — a key that cleared what you had typed because it could not find it would be worse
+than one that did nothing.
+
 ### The line editor's kill ring
 
 `^K` kills to the end of the line, `^U` to the start, `^W` the word before the cursor, and

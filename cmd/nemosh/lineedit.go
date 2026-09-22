@@ -255,6 +255,10 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			e.recallHistory(1)
 		case keyDown:
 			e.recallHistory(-1)
+		case keyHistoryPrefixBackward:
+			e.searchHistoryByPrefix(1)
+		case keyHistoryPrefixForward:
+			e.searchHistoryByPrefix(-1)
 		case keyTab:
 			e.complete(prompt)
 		case keyClearScreen:

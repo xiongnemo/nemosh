@@ -38,6 +38,12 @@ const (
 	// during an incremental search, where it is the escape hatch that puts the
 	// line back.
 	keyAbort
+	// Page Up and Page Down: history filtered by what is left of the cursor, which is
+	// zsh's history-beginning-search-backward and -forward. A third way to reach history
+	// beside the arrows and Ctrl-R, and the one that matches how a command is usually
+	// remembered -- by how it started. See lineedit_prefix_history.go.
+	keyHistoryPrefixBackward
+	keyHistoryPrefixForward
 )
 
 type key struct {
@@ -191,6 +197,10 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 		return key{kind: keyDelete}, end + 1
 	case "4", "8":
 		return key{kind: keyEnd}, end + 1
+	case "5":
+		return key{kind: keyHistoryPrefixBackward}, end + 1
+	case "6":
+		return key{kind: keyHistoryPrefixForward}, end + 1
 	}
 	return key{kind: keyUnknown}, end + 1
 }
