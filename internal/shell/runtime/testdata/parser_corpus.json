@@ -335,6 +335,11 @@
   "status": 0
  },
  {
+  "script": "if { true; }; then echo cond-group; fi",
+  "stdout": "cond-group\n",
+  "status": 0
+ },
+ {
   "script": "if ( true ); then echo cond-subshell; fi",
   "stdout": "cond-subshell\n",
   "status": 0

@@ -42,13 +42,6 @@
   "nemoshStatus": 2
  },
  {
-  "script": "if { true; }; then echo cond-group; fi",
-  "stdout": "cond-group\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
   "script": "if for i in 1; do true; done; then echo cond-for; fi",
   "stdout": "cond-for\n",
   "status": 0,

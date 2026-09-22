@@ -22,11 +22,60 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	if delimiter == '{' && (previous == ')' || previous == '(' || previous == '{') {
 		return true
 	}
+	if delimiter == '{' && afterCommandIntroducer(line, index) {
+		return true
+	}
 	// `function name {` -- the one place a `{` follows a bare word and still opens a
 	// group. Everywhere else a brace after a word is data, which is what keeps
 	// `echo {` printing a brace. Sixth layer to need telling about a construct, and
 	// the reason the count is worth stating: see array.go.
 	return delimiter == '{' && afterFunctionKeyword(line, index)
+}
+
+// commandIntroducers are the reserved words a command may follow directly. A `{` after one
+// of them opens a group: `if { true; }; then`, `then { echo a; }`, `! { false; }`.
+//
+// POSIX 2.4's reserved words, less the ones nothing can follow on the same line -- the
+// closers `fi`, `done` and `esac`, and `in`, whose place is taken by patterns. `case` and
+// `for` are absent for the same reason: what follows them is a word, not a command.
+var commandIntroducers = map[string]bool{
+	"if": true, "then": true, "elif": true, "else": true,
+	"while": true, "until": true, "do": true, "!": true,
+}
+
+// afterCommandIntroducer reports whether everything before index is a reserved word a
+// command may follow.
+//
+// **Every** word, not just the last: that is what lets `if ! { false; }` through -- two
+// introducers in a row -- while keeping `echo if { a; }` out, where the `{` really is an
+// argument. Both references refuse that second form too.
+//
+// Only back as far as the command position. The separator scan runs over a whole logical
+// line before anything is cut, so `if true; then { echo a; }` reaches here with `if true;
+// then ` in front of the brace -- and reading all of that would find `true;` and refuse.
+// What decides is the words since the last separator, which is `then`.
+//
+// A separator inside quotes would be read as one, the way previousNonBlank beside this
+// already does. `echo ";" if { a; }` is the shape that needs, and it is a syntax error in
+// both references whichever way this answers.
+func afterCommandIntroducer(line string, index int) bool {
+	prefix := line[:index]
+	for offset := len(prefix) - 1; offset >= 0; offset-- {
+		if isCommandSeparator(prefix[offset]) {
+			prefix = prefix[offset+1:]
+			break
+		}
+	}
+	fields := strings.Fields(prefix)
+	if len(fields) == 0 {
+		return false
+	}
+	for _, field := range fields {
+		if !commandIntroducers[field] {
+			return false
+		}
+	}
+	return true
 }
 
 // afterFunctionKeyword reports whether the text before index is exactly
