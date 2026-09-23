@@ -28,24 +28,24 @@ import "strings"
 // The line is left untouched when nothing matches. A key that cleared what you had typed
 // because it could not find it would be worse than one that did nothing.
 func (e *lineEditor) searchHistoryByPrefix(direction int) {
-	prefix := string(e.buffer.runes[:e.buffer.cursor])
+	// The prefix comes from the line that was *typed*, saved when the walk began -- never
+	// from the buffer, which after Up or a previous press holds a history entry. Taking it
+	// from the buffer made the prefix a whole recalled line, so Page Up after Up found
+	// nothing; and handed that recalled text back at the end as though it had been typed.
+	e.beginHistoryWalk()
+	prefix := string([]rune(e.typed)[:e.typedCursor])
 	target, found := e.matchingHistory(prefix, direction)
 	if !found {
 		return
 	}
-	e.recall = target
-	if target == 0 {
-		// Back at the line that was being typed. Only the prefix is known -- the rest was
-		// replaced by a recalled entry -- and the prefix is what was typed, so it goes
-		// back rather than an empty line.
-		e.buffer.replace(prefix)
-		return
-	}
-	e.buffer.replace(e.history[len(e.history)-target])
-	// The cursor returns to the end of the prefix rather than the end of the line, which
-	// is what keeps the next press searching for the same thing.
-	if runes := len([]rune(prefix)); runes <= e.buffer.length() {
-		e.buffer.cursor = runes
+	e.showHistory(target)
+	// Back at the typed line, the cursor is already where it was left. On a match it goes
+	// to the end of the prefix, which is what keeps the next press searching for the same
+	// thing -- unless there is no prefix, where that would be column zero and the next
+	// thing typed would land in front of the recalled line. Up leaves the cursor at the
+	// end, and an empty prefix is Up.
+	if target != 0 && prefix != "" {
+		e.buffer.cursor = len([]rune(prefix))
 	}
 }
 

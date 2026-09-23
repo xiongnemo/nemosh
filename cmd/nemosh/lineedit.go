@@ -48,6 +48,11 @@ type lineEditor struct {
 	// recall is the index into history being shown, counted from the end.
 	// Zero means the line being typed rather than a remembered one.
 	recall int
+	// typed is the line being typed, saved when a history walk leaves it and handed back
+	// when a walk returns to it; typedCursor is where the cursor was. See
+	// lineedit_history_walk.go.
+	typed       string
+	typedCursor int
 	// drawn is how many columns the last redraw put on screen, so the next one
 	// knows how much to erase.
 	drawn int
@@ -272,21 +277,6 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		}
 		e.redraw(prompt)
 	}
-}
-
-// recallHistory walks back through what was typed before. Direction is +1 for
-// older and -1 for newer; walking past the newest returns the empty line.
-func (e *lineEditor) recallHistory(direction int) {
-	target := e.recall + direction
-	if target < 0 || target > len(e.history) {
-		return
-	}
-	e.recall = target
-	if target == 0 {
-		e.buffer.replace("")
-		return
-	}
-	e.buffer.replace(e.history[len(e.history)-target])
 }
 
 // nextKey decodes one key, reading more bytes when the buffer holds only part
