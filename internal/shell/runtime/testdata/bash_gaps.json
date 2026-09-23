@@ -12,12 +12,6 @@
     "reference": "busybox-w32"
   },
   {
-    "script": "f(){ local -; set -e; }; f; case $- in *e*) echo leaked;; *) echo restored;; esac",
-    "stdout": "restored\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "echo $LINENO\necho $LINENO",
     "stdout": "1\n2\n",
     "status": 0,

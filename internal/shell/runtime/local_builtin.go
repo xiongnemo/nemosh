@@ -22,6 +22,10 @@ func (r Runtime) local(args []string) int {
 	}
 	status := 0
 	for _, arg := range args {
+		if arg == "-" {
+			r.locals.saveOptions(r.options)
+			continue
+		}
 		name, value, assigns := strings.Cut(arg, "=")
 		if !isVariableName(name) {
 			fmt.Fprintf(r.streams.Stderr, "local: %s: bad variable name\n", name)
@@ -49,6 +53,25 @@ func (r Runtime) local(args []string) int {
 // the calls did.
 type localScope struct {
 	saved map[string]savedVariable
+	// options are the `set` options as they stood at `local -`, and target is where
+	// they go back to when the call returns. nil when the call did not ask.
+	options []bool
+	target  *shellOptions
+}
+
+// saveOptions is `local -`: the `set` options -- `-e`, `-u`, pipefail and the rest --
+// belong to the call from here on, so a function can `set -e` for its own body without
+// leaving it set for its caller. busybox has it and so does bash; here it was `bad
+// variable name`. Only the options `set` reaches, as in both: a `shopt` setting is not
+// saved. Asked twice, the first answer stands, as it does for a variable.
+func (s *localScope) saveOptions(options *shellOptions) {
+	if s.target != nil {
+		return
+	}
+	s.target = options
+	for _, spec := range shellOptionSpecs {
+		s.options = append(s.options, *spec.field(options))
+	}
 }
 
 type savedVariable struct {
@@ -78,5 +101,10 @@ func (s *localScope) restore(vars map[string]string) {
 			continue
 		}
 		delete(vars, name)
+	}
+	if s.target != nil {
+		for index, spec := range shellOptionSpecs {
+			*spec.field(s.target) = s.options[index]
+		}
 	}
 }
