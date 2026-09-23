@@ -7,69 +7,6 @@
   "nemoshStatus": 0
  },
  {
-  "script": "if case a in a) true;; esac; then echo case-as-cond; fi",
-  "stdout": "case-as-cond\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "while case a in a) false;; esac; do echo no; done; echo while-case",
-  "stdout": "while-case\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "if case a in a) true;; esac; then echo cond-case; fi",
-  "stdout": "cond-case\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "while case a in a) false;; esac; do echo no; done; echo ok",
-  "stdout": "ok\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "until case a in a) true;; esac; do echo no; done; echo ok",
-  "stdout": "ok\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "if for i in 1; do true; done; then echo cond-for; fi",
-  "stdout": "cond-for\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "if while false; do :; done; then echo cond-while; fi",
-  "stdout": "cond-while\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "if if true; then true; fi; then echo cond-if; fi",
-  "stdout": "cond-if\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
-  "script": "f() { if case a in a) true;; esac; then echo deep-cond; fi; }; f",
-  "stdout": "deep-cond\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
- },
- {
   "script": "echo $(())",
   "stdout": "0\n",
   "status": 0,

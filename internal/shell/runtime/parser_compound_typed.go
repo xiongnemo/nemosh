@@ -89,8 +89,7 @@ func parseTypedCompound(lines []string, spans []compoundSpan, byStart map[int]in
 }
 
 func parseTypedIf(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, budget *parseBudget, depth int) (programNode, error) {
-	header, _ := compoundHeader(spanHeaderLine(lines, span), "if")
-	condition, err := parseTypedLineWithBudget(header, budget, depth)
+	condition, err := parseCondition(lines, spans, byStart, span, "if", span.thenIndex, budget, depth)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +129,12 @@ func parseTypedLoop(lines []string, spans []compoundSpan, byStart map[int]int, s
 		return node, err
 	}
 	kind, keyword := loopWhile, "while"
-	if _, ok := compoundHeader(line, "until"); ok {
+	// A bare `until` has no header for compoundHeader to find, and reading it as a
+	// `while` inverted its condition -- a loop that should not have run ran forever.
+	if _, ok := compoundHeader(line, "until"); ok || line == "until" {
 		kind, keyword = loopUntil, "until"
 	}
-	header, _ := compoundHeader(line, keyword)
-	condition, err := parseTypedLineWithBudget(header, budget, depth)
+	condition, err := parseCondition(lines, spans, byStart, span, keyword, span.doIndex, budget, depth)
 	return loopNode{kind: kind, condition: condition, body: body}, err
 }
 

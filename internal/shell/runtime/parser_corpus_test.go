@@ -107,11 +107,6 @@ func TestParserCorpus(t *testing.T) {
 //
 // What is in here, at the time of writing:
 //
-//   - **A compound command as the condition of `if`, `while` or `until`.** POSIX 2.9.4 has
-//     the condition as a compound_list, so `if { true; }; then`, `if case ... esac; then`,
-//     `if for ...; done; then`, and the `if`/`while` forms all belong there. A subshell
-//     condition already works, as do a pipeline and a negation, so it is the keyword
-//     compounds and the brace group that are missing. Nine entries.
 //   - **`esac` as a pattern.** `case a in esac) ...` is rejected by both references and
 //     accepted here. Being too permissive about a word nobody writes on purpose, which is
 //     why it is last.

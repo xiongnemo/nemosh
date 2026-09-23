@@ -778,5 +778,100 @@
   "script": "f() { echo defined; } && f",
   "stdout": "defined\n",
   "status": 0
+ },
+ {
+  "script": "if case a in a) true;; esac; then echo case-as-cond; fi",
+  "stdout": "case-as-cond\n",
+  "status": 0
+ },
+ {
+  "script": "while case a in a) false;; esac; do echo no; done; echo while-case",
+  "stdout": "while-case\n",
+  "status": 0
+ },
+ {
+  "script": "if case a in a) true;; esac; then echo cond-case; fi",
+  "stdout": "cond-case\n",
+  "status": 0
+ },
+ {
+  "script": "while case a in a) false;; esac; do echo no; done; echo ok",
+  "stdout": "ok\n",
+  "status": 0
+ },
+ {
+  "script": "until case a in a) true;; esac; do echo no; done; echo ok",
+  "stdout": "ok\n",
+  "status": 0
+ },
+ {
+  "script": "if for i in 1; do true; done; then echo cond-for; fi",
+  "stdout": "cond-for\n",
+  "status": 0
+ },
+ {
+  "script": "if while false; do :; done; then echo cond-while; fi",
+  "stdout": "cond-while\n",
+  "status": 0
+ },
+ {
+  "script": "if if true; then true; fi; then echo cond-if; fi",
+  "stdout": "cond-if\n",
+  "status": 0
+ },
+ {
+  "script": "f() { if case a in a) true;; esac; then echo deep-cond; fi; }; f",
+  "stdout": "deep-cond\n",
+  "status": 0
+ },
+ {
+  "script": "if true; false; then echo yes; else echo no; fi",
+  "stdout": "no\n",
+  "status": 0
+ },
+ {
+  "script": "if true\nfalse\nthen echo yes; else echo no; fi",
+  "stdout": "no\n",
+  "status": 0
+ },
+ {
+  "script": "n=0; while [ $n -lt 3 ]\nn=$((n+1))\n[ $n -lt 2 ]\ndo echo \"body n=$n\"; done; echo \"end n=$n\"",
+  "stdout": "body n=1\nend n=2\n",
+  "status": 0
+ },
+ {
+  "script": "if\ntrue\nthen echo bare-if; fi",
+  "stdout": "bare-if\n",
+  "status": 0
+ },
+ {
+  "script": "until\nfalse\ntrue\ndo echo no; done; echo bare-until",
+  "stdout": "bare-until\n",
+  "status": 0
+ },
+ {
+  "script": "while\ncase x in x) false;; esac\ndo echo no; done; echo bare-while-case",
+  "stdout": "bare-while-case\n",
+  "status": 0
+ },
+ {
+  "script": "if case a in b) false;; esac; then echo no-arm-is-zero; fi",
+  "stdout": "no-arm-is-zero\n",
+  "status": 0
+ },
+ {
+  "script": "x=0; if x=1; [ $x = 1 ]; then echo seq-cond; fi",
+  "stdout": "seq-cond\n",
+  "status": 0
+ },
+ {
+  "script": "while false; do :; done; until true; do :; done; echo loops-skip",
+  "stdout": "loops-skip\n",
+  "status": 0
+ },
+ {
+  "script": "if if false; then true; fi; then echo inner-if-zero; fi",
+  "stdout": "inner-if-zero\n",
+  "status": 0
  }
 ]

@@ -94,7 +94,7 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 }
 
 func prepareScript(lines []string, budget *parseBudget, depth int) (Script, error) {
-	lines = expandElifLines(expandCaseArmLines(lines))
+	lines = expandElifLines(expandCaseArmLines(splitCompoundConditions(lines)))
 	spans, err := compoundSpans(lines)
 	if err != nil {
 		return Script{}, err
@@ -200,6 +200,9 @@ func compoundSpans(lines []string) ([]compoundSpan, error) {
 }
 
 func compoundOpener(line string) (compoundKind, bool) {
+	if kind, bare := bareConditionOpener(line); bare {
+		return kind, true
+	}
 	switch {
 	case hasCompoundHeader(line, "if"):
 		return compoundIf, true
