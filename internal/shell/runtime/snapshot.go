@@ -14,6 +14,17 @@ func (r Runtime) snapshotShared() (Runtime, error) {
 	return r.clone(context.Background(), false)
 }
 
+// inheritedTraps are the traps a snapshot starts with: all of them, except ERR unless
+// `set -E` asks for it. In both references `(false)` fires the trap once, in the parent,
+// for the subshell's status -- not a second time inside it.
+func (r Runtime) inheritedTraps() map[trapName]string {
+	traps := cloneMap(r.traps)
+	if !r.options.errTrace {
+		delete(traps, trapERR)
+	}
+	return traps
+}
+
 func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 	paths := *r.paths
 	table, err := r.fds.clone()
@@ -34,7 +45,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		streams:     table.streams(),
 		fds:         table,
 		vars:        cloneMap(r.vars),
-		traps:       cloneMap(r.traps),
+		traps:       r.inheritedTraps(),
 		trapRunning: map[trapName]bool{},
 		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...), function: r.params.function},
 		options:     r.options.clone(),

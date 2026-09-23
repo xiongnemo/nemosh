@@ -1,17 +1,5 @@
 [
   {
-    "script": "trap 'echo err' ERR; false; echo after",
-    "stdout": "err\nafter\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
-    "script": "set -o errtrace && echo errtrace",
-    "stdout": "errtrace\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "echo $LINENO\necho $LINENO",
     "stdout": "1\n2\n",
     "status": 0,

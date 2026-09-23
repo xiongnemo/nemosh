@@ -7,8 +7,10 @@ import (
 	"strconv"
 )
 
-// trap implements the POSIX `trap` builtin over the two conditions this shell
-// promises, EXIT and INT (docs/design/v0-readiness.md, P0.4).
+// trap implements the POSIX `trap` builtin over the conditions this shell
+// promises: EXIT and INT (docs/design/v0-readiness.md, P0.4), and ERR, which is
+// not a signal at all and so needs nothing Windows lacks -- busybox and bash both
+// have it, and they agree on every case measured (errTrapTriggers).
 //
 //	trap                     list the armed handlers, re-readable as input
 //	trap ACTION COND...      arm ACTION on each condition
@@ -72,6 +74,8 @@ func trapConditionName(operand string) (trapName, bool) {
 		return trapExit, true
 	case "INT", "SIGINT", "2":
 		return trapINT, true
+	case "ERR":
+		return trapERR, true
 	}
 	if _, err := strconv.Atoi(operand); err == nil {
 		return "", true

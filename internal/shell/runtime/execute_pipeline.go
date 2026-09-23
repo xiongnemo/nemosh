@@ -17,7 +17,11 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 		}
 	}
 	// POSIX 2.9.1 exempts a negated pipeline from `set -e`, along with the
-	// places the caller marks by suppressing it.
+	// places the caller marks by suppressing it. The ERR trap runs in exactly
+	// the same places, and first, so a handler set with `set -e` still runs.
+	if r.errTrapTriggers(result) && !value.negated {
+		r.runTrap(ctx, trapERR, result.status)
+	}
 	if r.errExitTriggers(result) && !value.negated {
 		result.control = flowExit
 	}
@@ -26,6 +30,19 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 
 func (r Runtime) errExitTriggers(result lineResult) bool {
 	return r.options.errExit && !r.errExitSuppressed && result.control == flowNone && result.status != 0
+}
+
+// errTrapTriggers is where `trap ... ERR` runs: after a pipeline fails where `set -e`
+// would act -- not in a condition, not on a term of `&&` or `||` before the last, not
+// under `!` -- whether or not `set -e` is on. Inside a function the trap is not inherited
+// unless `set -E`; the call's own failure fires it in the caller instead. Subshells and
+// substitutions lose it the same way, in snapshot. Every case was measured, and busybox
+// and bash agree on all of them.
+func (r Runtime) errTrapTriggers(result lineResult) bool {
+	if r.traps[trapERR] == "" || r.errExitSuppressed || result.control != flowNone || result.status == 0 {
+		return false
+	}
+	return r.functionDepth == 0 || r.options.errTrace
 }
 
 // suppressingErrExit marks a nested execution as one of the contexts `set -e`

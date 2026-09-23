@@ -20,6 +20,9 @@ type shellOptions struct {
 	verbose   bool
 	xtrace    bool
 	pipefail  bool
+	// errTrace is `set -E`: the ERR trap is inherited by functions, subshells and
+	// command substitutions, which it otherwise is not.
+	errTrace bool
 	// noCaseGlob has no letter, like pipefail. It matters more on Windows
 	// than elsewhere: NTFS is case-insensitive, so a pattern that fails only
 	// because of case is surprising here in a way it is not on Unix.
@@ -50,6 +53,7 @@ var shellOptionSpecs = []shellOptionSpec{
 	{'b', "notify", func(o *shellOptions) *bool { return &o.notify }},
 	{'C', "noclobber", func(o *shellOptions) *bool { return &o.noClobber }},
 	{'e', "errexit", func(o *shellOptions) *bool { return &o.errExit }},
+	{'E', "errtrace", func(o *shellOptions) *bool { return &o.errTrace }},
 	{'f', "noglob", func(o *shellOptions) *bool { return &o.noGlob }},
 	{'n', "noexec", func(o *shellOptions) *bool { return &o.noExec }},
 	{'u', "nounset", func(o *shellOptions) *bool { return &o.noUnset }},

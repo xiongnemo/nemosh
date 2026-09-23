@@ -84,6 +84,8 @@ type trapName string
 const (
 	trapExit trapName = "EXIT"
 	trapINT  trapName = "INT"
+	// trapERR runs after a command fails where `set -e` would exit; see errTrapTriggers.
+	trapERR trapName = "ERR"
 )
 
 func New(registry applets.Registry, streams Streams) Runtime {

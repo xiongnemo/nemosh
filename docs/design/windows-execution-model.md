@@ -333,6 +333,8 @@ Trap/signal support should be useful but honest on Windows:
   active foreground execution and `wait` are the supported interruption points.
 - P0.4 supports exactly `EXIT` and `INT` traps. It does not promise `TERM`, POSIX
   signal delivery, process groups, Job Objects, or ConPTY terminal job control.
+  `ERR` has joined them since: it is a condition the shell itself detects, not a
+  signal, so it needs nothing from the platform.
 - Shell close seals new root-job launches but does not implicitly wait for, cancel,
   or kill existing root jobs. Process exit still ends in-process job supervision,
   so post-process-exit survival is not promised.
