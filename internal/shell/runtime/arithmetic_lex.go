@@ -91,7 +91,33 @@ func arithmeticWordEnd(expression string, start int) int {
 			end++
 		}
 	}
+	// `a[i]` is one word, subscript and all -- `$(( a[0] + a[2] ))`, and the counting
+	// idiom `(( count[$k]++ ))`. The `[` was a token of its own, `unexpected "["`. The
+	// subscript is left as text; resolving it is the element lookup's business, which
+	// knows whether the name is indexed or keyed.
+	if end > start && end < len(expression) && expression[end] == '[' && isVariableName(expression[start:end]) {
+		if close := matchingBracket(expression, end); close > end {
+			end = close + 1
+		}
+	}
 	return end
+}
+
+// matchingBracket is the index of the `]` that closes the `[` at open, or -1.
+func matchingBracket(expression string, open int) int {
+	depth := 0
+	for index := open; index < len(expression); index++ {
+		switch expression[index] {
+		case '[':
+			depth++
+		case ']':
+			depth--
+			if depth == 0 {
+				return index
+			}
+		}
+	}
+	return -1
 }
 
 func matchArithmeticOperator(rest string) string {

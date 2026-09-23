@@ -18,10 +18,16 @@ import (
 // second form -- an arithmetic on an optional setting -- failed only when the
 // setting was absent. `let ""` is status 1 as a result, as both give it.
 func (r Runtime) evaluateArithmetic(expression string) (int64, error) {
+	return r.evaluateArithmeticAt(expression, 0)
+}
+
+// evaluateArithmeticAt evaluates at a nesting depth: 0 for an expression as written, more
+// for a variable's value evaluated in turn. See arithmetic_names.go.
+func (r Runtime) evaluateArithmeticAt(expression string, depth int) (int64, error) {
 	if strings.TrimSpace(expression) == "" {
 		return 0, nil
 	}
-	parser := &arithmeticParser{tokens: tokenizeArithmetic(expression), runtime: r}
+	parser := &arithmeticParser{tokens: tokenizeArithmetic(expression), runtime: r, depth: depth}
 	value, err := parser.comma()
 	if err != nil {
 		return 0, err
@@ -62,7 +68,10 @@ func (p *arithmeticParser) assignment() (int64, error) {
 		return 0, err
 	}
 	if operator != "=" {
-		current, _ := p.lookup(name)
+		current, err := p.lookup(name)
+		if err != nil {
+			return 0, err
+		}
 		if value, err = applyArithmetic(current, strings.TrimSuffix(operator, "="), value); err != nil {
 			return 0, err
 		}
@@ -77,7 +86,7 @@ func (p *arithmeticParser) assignment() (int64, error) {
 // the parser untouched when it is not -- `x == 1` is a comparison, and only the
 // two-token lookahead can tell it from `x = 1`.
 func (p *arithmeticParser) assignmentTarget() (string, string, bool) {
-	if p.index+1 >= len(p.tokens) || !isVariableName(p.tokens[p.index]) {
+	if p.index+1 >= len(p.tokens) || !isArithmeticName(p.tokens[p.index]) {
 		return "", "", false
 	}
 	operator := p.tokens[p.index+1]
@@ -97,13 +106,8 @@ type arithmeticParser struct {
 	tokens  []string
 	index   int
 	runtime Runtime
-}
-
-// An unset or non-numeric name reads as zero, which is what POSIX says of a
-// variable with an unset or null value.
-func (p *arithmeticParser) lookup(name string) (int64, bool) {
-	value, err := strconv.ParseInt(strings.TrimSpace(p.runtime.vars[name]), 0, 64)
-	return value, err == nil
+	// depth is how many variable values deep this evaluation is; see lookup.
+	depth int
 }
 
 // The binary operators in order of increasing precedence, which is the order C
@@ -230,10 +234,13 @@ func (p *arithmeticParser) primary() (int64, error) {
 	if value, ok := parseArithmeticBase(token); ok {
 		return value, nil
 	}
-	if !isVariableName(token) {
+	if !isArithmeticName(token) {
 		return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", token)
 	}
-	value, _ := p.lookup(token)
+	value, err := p.lookup(token)
+	if err != nil {
+		return 0, err
+	}
 	// `i++` and `i--`: the value before the change. This is what `for ((i=0;
 	// i<n; i++))` is written with, and the difference from the prefix form is the
 	// value the expression has, not what the variable ends up holding.

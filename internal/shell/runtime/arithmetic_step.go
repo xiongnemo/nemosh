@@ -32,11 +32,14 @@ var errReadonlyTarget = errors.New("readonly variable")
 // step applies a prefix `++` or `--` and answers with the new value.
 func (p *arithmeticParser) step(operator string, _ bool) (int64, error) {
 	name := p.peek()
-	if !isVariableName(name) {
+	if !isArithmeticName(name) {
 		return 0, fmt.Errorf("arithmetic syntax error: %s needs a variable, found %q", operator, name)
 	}
 	p.index++
-	current, _ := p.lookup(name)
+	current, err := p.lookup(name)
+	if err != nil {
+		return 0, err
+	}
 	updated := stepped(current, operator)
 	if err := p.store(name, updated); err != nil {
 		return 0, err

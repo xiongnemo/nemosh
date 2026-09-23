@@ -312,8 +312,8 @@
     "reference": "busybox-w32"
   },
   {
-    "script": "echo $(( RANDOM >= 0 && RANDOM < 32768 ))",
-    "stdout": "1\n",
+    "script": "a=0; for i in 1 2 3 4 5 6 7 8; do [ $((RANDOM)) -ne 0 ] && a=$((a+1)); done; [ $a -gt 0 ] && echo varies",
+    "stdout": "varies\n",
     "status": 0,
     "reference": "busybox-w32"
   },
@@ -554,6 +554,24 @@
   {
     "script": "f(){ :; }; type -t cd f if",
     "stdout": "builtin\nfunction\nkeyword\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=2+3; echo $((x*2))",
+    "stdout": "10\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "y=z; z=7; echo $((y))",
+    "stdout": "7\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "a=(1 2 3); echo $(( a[0] + a[2] ))",
+    "stdout": "4\n",
     "status": 0,
     "reference": "bash-5.3"
   }
