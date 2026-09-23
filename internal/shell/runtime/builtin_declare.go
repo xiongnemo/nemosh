@@ -171,6 +171,17 @@ func (r Runtime) printDeclarations(names []string) {
 }
 
 func (r Runtime) printOneDeclaration(name string) {
+	text, found := r.declarationText(name)
+	if !found {
+		fmt.Fprintf(r.streams.Stderr, "declare: %s: not found\n", name)
+		return
+	}
+	fmt.Fprintln(r.streams.Stdout, text)
+}
+
+// declarationText is a name written as the declaration that recreates it, which is what
+// `declare -p` prints and what `${a[@]@A}` expands to for an array.
+func (r Runtime) declarationText(name string) (string, bool) {
 	if r.arrays.isAssociative(name) {
 		var out strings.Builder
 		fmt.Fprintf(&out, "declare -A %s=(", name)
@@ -180,8 +191,7 @@ func (r Runtime) printOneDeclaration(name string) {
 		}
 		// bash leaves the blank before the closing parenthesis for this kind and not
 		// the other, and output meant to be read back is worth matching exactly.
-		fmt.Fprintln(r.streams.Stdout, out.String()+")")
-		return
+		return out.String() + ")", true
 	}
 	if elements, ok := r.arrays.get(name); ok {
 		var out strings.Builder
@@ -191,15 +201,13 @@ func (r Runtime) printOneDeclaration(name string) {
 		for _, index := range r.arrays.liveIndices(name) {
 			fmt.Fprintf(&out, "[%d]=%q ", index, elements[index])
 		}
-		fmt.Fprintln(r.streams.Stdout, strings.TrimSuffix(out.String(), " ")+")")
-		return
+		return strings.TrimSuffix(out.String(), " ") + ")", true
 	}
 	value, set := r.vars[name]
 	if !set {
-		fmt.Fprintf(r.streams.Stderr, "declare: %s: not found\n", name)
-		return
+		return "", false
 	}
-	fmt.Fprintf(r.streams.Stdout, "declare -- %s=%q\n", name, value)
+	return fmt.Sprintf("declare -- %s=%q", name, value), true
 }
 
 // parenthesisedList reports the inside of a `(one two)` array literal.

@@ -40,6 +40,15 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 		}
 		return value, nil
 	}
+	if name, transform, ok := splitTransform(body); ok {
+		value, set := r.lookupParameter(ctx, name, savedStatus)
+		if reference, element := parseArrayReference(name); element {
+			// `${a[1]@Q}`: the element, which the name lookup does not reach.
+			elements, exists := r.elementsFor(ctx, reference)
+			value, set = strings.Join(elements, " "), exists && len(elements) > 0
+		}
+		return r.transformParameter(name, transform, value, set)
+	}
 	name, operator, word, ok := splitParameterOperator(body)
 	if !ok {
 		return "", fmt.Errorf("bad substitution: ${%s}", body)

@@ -532,5 +532,17 @@
     "stdout": "a b\nb\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "x=\"a b'c\"; echo \"${x@Q}\"",
+    "stdout": "'a b'\\''c'\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=abc; echo \"${x@U}\" \"${x@u}\"",
+    "stdout": "ABC Abc\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

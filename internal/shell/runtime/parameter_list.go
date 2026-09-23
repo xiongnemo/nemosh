@@ -25,6 +25,14 @@ import (
 // Tried before the scalar path, because the two disagree about what `${a[@]:1}` means
 // and only this one is right. A name that is not a list falls through untouched.
 func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatus int) ([]string, bool) {
+	if name, transform, ok := splitTransform(body); ok {
+		fields, isList, err := r.transformList(ctx, name, transform)
+		if err != nil {
+			r.reportExpansionError(err)
+			return nil, true
+		}
+		return fields, isList
+	}
 	name, operator, word, ok := splitParameterOperator(body)
 	if !ok {
 		return nil, false

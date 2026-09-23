@@ -36,6 +36,10 @@ func isArrayAtReference(text string) bool {
 // word, which is exactly what makes them the `*` forms.
 func isListOperatorReference(body string) bool {
 	name, _, _, ok := splitParameterOperator(body)
+	if transformed, _, isTransform := splitTransform(body); isTransform {
+		// `${a[@]@Q}` is a field per element, like any other operator on a list.
+		name, ok = transformed, true
+	}
 	if !ok {
 		return false
 	}
