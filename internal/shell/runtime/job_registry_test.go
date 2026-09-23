@@ -26,19 +26,31 @@ func TestRuntime_waitAllConsumesCapturedJobs_andJobsIsObservational(t *testing.T
 	}
 }
 
+// An operand that is not a job spec or a number is refused, 2. One that is well formed but
+// names nothing this shell knows is 127, as POSIX has it for a process id and both
+// references answer -- and since `$!` is a job spec here, the same goes for `%N`.
 func TestRuntime_waitRejectsBadOperands_andRetainsExactJob(t *testing.T) {
-	tests := []string{"wait 1", "wait %x", "wait %99", "wait %1 %2"}
-	for _, script := range tests {
-		t.Run(script, func(t *testing.T) {
+	for _, test := range []struct {
+		script string
+		status int
+	}{
+		{script: "wait %x", status: 2},
+		{script: "wait %0", status: 2},
+		{script: "wait nope", status: 2},
+		{script: "wait 1", status: 127},
+		{script: "wait %99", status: 127},
+		{script: "wait %1 %2", status: 127},
+	} {
+		t.Run(test.script, func(t *testing.T) {
 			// Given
 			rt := runtime.New(applets.DefaultRegistry, runtime.Streams{})
 
 			// When
-			status := rt.RunScript(context.Background(), script+"\n")
+			status := rt.RunScript(context.Background(), test.script+"\n")
 
 			// Then
-			if status != 2 {
-				t.Fatalf("status = %d, want 2", status)
+			if status != test.status {
+				t.Fatalf("status = %d, want %d", status, test.status)
 			}
 		})
 	}

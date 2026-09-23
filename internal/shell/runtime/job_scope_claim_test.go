@@ -61,9 +61,14 @@ func TestRuntime_concurrentWaitersHaveSingleOwner(t *testing.T) {
 	first := <-statuses
 	second := <-statuses
 
-	// Then
-	if first+second != 9 || first == second {
-		t.Fatalf("wait statuses = %d, %d, want 7 and 2", first, second)
+	// Then: one owner gets the status. The other either found the job held (2) or,
+	// asking a moment later, found it already consumed and so not known (127); which
+	// one depends on scheduling, and both are right. What must not happen is two 7s.
+	if first == 7 {
+		first, second = second, first
+	}
+	if second != 7 || (first != 2 && first != 127) {
+		t.Fatalf("wait statuses = %d, %d, want 7 and one of 2 or 127", first, second)
 	}
 }
 

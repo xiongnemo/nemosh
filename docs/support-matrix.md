@@ -72,7 +72,7 @@ it is easier to see them together.
 
 | | Implemented | Why it can be |
 | --- | --- | --- |
-| `jobs`, `wait`, `wait %N` | yes | bookkeeping over the shell's own job table |
+| `jobs`, `wait`, `wait %N ...`, `wait -n` | yes | bookkeeping over the shell's own job table. Several operands answer the last one's status; `wait -n` answers whichever job ends first; one the shell does not know is 127 |
 | `kill %N` | yes | ending a job maps onto cancelling its context |
 | `kill PID`, `kill -l` | yes | `TerminateProcess` on Windows, a real signal elsewhere |
 | `pgrep`, `pkill` | yes | `CreateToolhelp32Snapshot` lists, the above terminates |
@@ -417,7 +417,9 @@ commentary.
 **A finished job is reported once**, at the next prompt. POSIX 2.9.3 removes a job from
 the list once the shell has reported its status, so naming a job `Done` is what consumes
 it: the notice before a prompt, or `jobs`, whichever asks first. A second `jobs` says
-nothing, and so does `wait %N` afterwards — with status 2, which is busybox's answer too.
+nothing, and `wait %N` afterwards answers 127: the job is not known any more, and 127 is
+what POSIX gives a process id the shell does not know, and what busybox answers for
+`wait $pid` here. It used to be 2.
 
 The notice is bash's and busybox's default behaviour and needs no `set -b`; what `set -b`
 asks for is the report *immediately*, in the middle of whatever is running, and that is
