@@ -11,7 +11,11 @@ import "fmt"
 // One per snapshot, so a pipeline stage, a subshell, or a background worker
 // cannot see another's.
 type expansionState struct {
-	unsetParameter bool
+	// shellError is a POSIX 2.8.1 shell error raised and not yet acted on -- an
+	// unset parameter, an impossible expansion, an assignment to a readonly
+	// variable. Raised wherever it happens and read at the checkpoints, which turn
+	// it into flowAbort.
+	shellError bool
 	// warnedDebugChannels remembers which unknown NEMOSH_DEBUG names have
 	// already been complained about, so the complaint does not bury the
 	// diagnostics it is attached to.
@@ -53,10 +57,10 @@ func newExpansionState() *expansionState {
 // and the alternative this replaces was worse than fatal: an unrecognised
 // `${x%.txt}` used to expand to its own six characters and exit 0.
 func (r Runtime) reportExpansionError(err error) {
-	if r.expansion.unsetParameter {
+	if r.expansion.shellError {
 		return
 	}
-	r.expansion.unsetParameter = true
+	r.expansion.shellError = true
 	fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 }
 
@@ -68,29 +72,44 @@ func (r Runtime) reportExpansionError(err error) {
 // Only the first one is reported: a single command can expand several unset
 // names, and the shell is leaving after the first of them anyway.
 func (r Runtime) reportUnsetParameter(name string) {
-	if !r.options.noUnset || r.expansion.unsetParameter {
+	if !r.options.noUnset || r.expansion.shellError {
 		return
 	}
-	r.expansion.unsetParameter = true
+	r.expansion.shellError = true
 	fmt.Fprintf(r.streams.Stderr, "nemosh: %s: parameter not set\n", name)
 }
 
-// expansionFailed reports whether the expansions since the last command hit
-// something fatal, and clears the record so the next command starts clean.
-func (r Runtime) expansionFailed() bool {
-	if !r.expansion.unsetParameter {
+// shellErrorRaised reports whether anything since the last checkpoint raised a
+// shell error, and clears the record so the next command starts clean.
+func (r Runtime) shellErrorRaised() bool {
+	if !r.expansion.shellError {
 		return false
 	}
-	r.expansion.unsetParameter = false
+	r.expansion.shellError = false
 	return true
 }
 
-// unsetParameterResult is what every checkpoint returns: status 2 from
-// busybox's error path, and an abort rather than a status because POSIX makes an
-// unset parameter fatal to a non-interactive shell -- and only to the line, at a
-// prompt. See flowAbort.
-func unsetParameterResult() lineResult {
+// raiseShellError records a shell error whose diagnostic has already been written.
+func (r Runtime) raiseShellError() {
+	r.expansion.shellError = true
+}
+
+// shellErrorResult is what every checkpoint returns: status 2 from busybox's
+// error path, and an abort rather than a status because POSIX makes a shell
+// error fatal to a non-interactive shell -- and only to the line, at a prompt.
+// See flowAbort.
+func shellErrorResult() lineResult {
 	return lineResult{status: 2, control: flowAbort}
+}
+
+// abortOnShellError is the checkpoint after a simple command has run. A builtin
+// answers only a status, so one that raised a shell error -- `export R=2` on a
+// readonly R, or the `R=2` in front of any command -- is turned into the abort here.
+func (r Runtime) abortOnShellError(result lineResult) lineResult {
+	if r.shellErrorRaised() {
+		return shellErrorResult()
+	}
+	return result
 }
 
 // recordSubstitution notes what a command substitution exited with.

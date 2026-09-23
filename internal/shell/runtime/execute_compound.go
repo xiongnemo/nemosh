@@ -82,12 +82,14 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 			return lineResult{status: contextStatus(ctx)}
 		}
 		values := r.expandCommandWord(ctx, item, savedStatus)
-		if r.expansionFailed() {
-			return unsetParameterResult()
+		if r.shellErrorRaised() {
+			return shellErrorResult()
 		}
 	iteration:
 		for _, value := range values {
-			r.vars[node.name] = value
+			if r.assignVar(node.name, value) != 0 {
+				return r.loopVariableRefused()
+			}
 			bodyStatus, control := r.executeProgram(ctx, node.body, savedStatus)
 			status, savedStatus = bodyStatus, bodyStatus
 			if ctx.Err() != nil {
@@ -116,8 +118,8 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 
 func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatus int) lineResult {
 	values := r.expandWord(ctx, node.word, savedStatus)
-	if r.expansionFailed() {
-		return unsetParameterResult()
+	if r.shellErrorRaised() {
+		return shellErrorResult()
 	}
 	value := ""
 	if len(values) > 0 {
@@ -172,13 +174,26 @@ func (r Runtime) caseArmMatches(ctx context.Context, arm caseArmNode, value stri
 // parameters. Written separately from the word-list loop because the values need no
 // expansion -- they are already the parameters, and expanding them again would split
 // one holding a blank.
+// loopVariableRefused ends a loop whose variable would not take the next value: a
+// readonly name, which assignVar has reported and made a shell error. The loops
+// used to write the variable themselves, past the readonly check and past the
+// environment -- `export x; for x in 5` left a child seeing the old value.
+func (r Runtime) loopVariableRefused() lineResult {
+	if r.shellErrorRaised() {
+		return shellErrorResult()
+	}
+	return lineResult{status: 1}
+}
+
 func (r Runtime) executeForOverArguments(ctx context.Context, node loopNode, savedStatus int) lineResult {
 	status := 0
 	for _, value := range r.params.values {
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
-		r.vars[node.name] = value
+		if r.assignVar(node.name, value) != 0 {
+			return r.loopVariableRefused()
+		}
 		bodyStatus, control := r.executeProgram(ctx, node.body, savedStatus)
 		status, savedStatus = bodyStatus, bodyStatus
 		switch control {

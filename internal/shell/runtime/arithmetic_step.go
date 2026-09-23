@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,13 +11,23 @@ import (
 // 250-line ceiling. See arithmetic_command.go for what needed them.
 
 // store writes a variable the way an assignment does, so `++` and `=` cannot end
-// up disagreeing about what a write is -- both mark the mutation, which is what
-// `set -a` and the export tracking read.
+// up disagreeing about what a write is.
+//
+// Through assignVar, which is what "the way an assignment does" has to mean. This
+// wrote the map and marked the mutation, and said that was what the export
+// tracking read; it was not. `export x=0; : $((x=5))` left a child seeing 0, and
+// `readonly R; : $((R++))` changed R.
 func (p *arithmeticParser) store(name string, value int64) error {
-	p.runtime.vars[name] = strconv.FormatInt(value, 10)
-	p.runtime.markVarMutation(name)
+	if p.runtime.assignVar(name, strconv.FormatInt(value, 10)) != 0 {
+		return errReadonlyTarget
+	}
 	return nil
 }
+
+// errReadonlyTarget is an arithmetic assignment assignVar refused. It has said so
+// already and raised the shell error, so a caller reporting arithmetic errors
+// passes over this one rather than saying it twice.
+var errReadonlyTarget = errors.New("readonly variable")
 
 // step applies a prefix `++` or `--` and answers with the new value.
 func (p *arithmeticParser) step(operator string, _ bool) (int64, error) {

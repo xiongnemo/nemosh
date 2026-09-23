@@ -38,7 +38,7 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 
 	items, ok := r.selectItems(ctx, node, savedStatus)
 	if !ok {
-		return unsetParameterResult()
+		return shellErrorResult()
 	}
 	// An empty list runs nothing at all, as an empty `for` does -- there is no question
 	// to ask. bash agrees: `select x in; do echo no; done` prints nothing.
@@ -69,8 +69,9 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 			return lineResult{status: status}
 		}
 		line = strings.TrimRight(line, "\r\n")
-		r.vars["REPLY"] = line
-		r.markVarMutation("REPLY")
+		if r.assignVar("REPLY", line) != 0 {
+			return r.loopVariableRefused()
+		}
 		if strings.TrimSpace(line) == "" {
 			// A blank answer asks to see the list again, and does not run the body.
 			showMenu = true
@@ -79,8 +80,9 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 			}
 			continue
 		}
-		r.vars[node.name] = selectChoice(items, line)
-		r.markVarMutation(node.name)
+		if r.assignVar(node.name, selectChoice(items, line)) != 0 {
+			return r.loopVariableRefused()
+		}
 
 		bodyStatus, control := r.executeProgram(ctx, node.body, savedStatus)
 		status, savedStatus = bodyStatus, bodyStatus
@@ -120,7 +122,7 @@ func (r Runtime) selectItems(ctx context.Context, node loopNode, savedStatus int
 	items := make([]string, 0, len(node.values))
 	for _, item := range node.values {
 		values := r.expandCommandWord(ctx, item, savedStatus)
-		if r.expansionFailed() {
+		if r.shellErrorRaised() {
 			return nil, false
 		}
 		items = append(items, values...)

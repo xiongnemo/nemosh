@@ -1,11 +1,5 @@
 [
   {
-    "script": "readonly R=1; R=2; echo reached",
-    "stdout": "",
-    "status": 2,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "f(){ echo \"$FUNCNAME\"; }; f",
     "stdout": "f\n",
     "status": 0,

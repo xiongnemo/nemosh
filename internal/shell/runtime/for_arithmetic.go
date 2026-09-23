@@ -74,8 +74,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 	defer r.loops.leave()
 	if node.arith.initialize != "" {
 		if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.initialize, savedStatus)); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
-			return lineResult{status: 1}
+			return r.arithmeticForFailure(err)
 		}
 	}
 	status := 0
@@ -85,8 +84,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 		}
 		keepGoing, err := r.arithmeticLoopCondition(r.expandArithmeticText(ctx, node.arith.condition, savedStatus))
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
-			return lineResult{status: 1}
+			return r.arithmeticForFailure(err)
 		}
 		if !keepGoing {
 			return lineResult{status: status}
@@ -113,11 +111,20 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 		}
 		if node.arith.step != "" {
 			if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.step, savedStatus)); err != nil {
-				fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
-				return lineResult{status: 1}
+				return r.arithmeticForFailure(err)
 			}
 		}
 	}
+}
+
+// arithmeticForFailure ends the loop over an error in its header. A counter that
+// is readonly has been reported already, by assignVar, and is a shell error.
+func (r Runtime) arithmeticForFailure(err error) lineResult {
+	if r.shellErrorRaised() {
+		return shellErrorResult()
+	}
+	fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
+	return lineResult{status: 1}
 }
 
 // arithmeticLoopCondition evaluates the middle part. An empty one is true, which is

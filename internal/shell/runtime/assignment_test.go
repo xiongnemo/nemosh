@@ -55,12 +55,14 @@ func TestRuntime_persistsLeadingAssignmentValueAndReadonlyFlag_whenDirectReadonl
 	// When
 	status := rt.RunScript(context.Background(), "X=temporary readonly Y=value\necho $X:$Y\nY=changed || echo readonly\n")
 
-	// Then
-	if status != 0 {
-		t.Fatalf("expected status 0, got %d", status)
+	// Then: the readonly flag held. Assigning to Y is a shell error (POSIX 2.8.1), so the
+	// script ends there with status 2 -- the `||` does not catch it, in busybox or here.
+	// This used to answer 1 and run the handler.
+	if status != 2 {
+		t.Fatalf("expected status 2, got %d", status)
 	}
-	if got := stdout.String(); got != "temporary:value\nreadonly\n" {
-		t.Fatalf("expected persistent readonly output %q, got %q", "temporary:value\nreadonly\n", got)
+	if got := stdout.String(); got != "temporary:value\n" {
+		t.Fatalf("expected persistent readonly output %q, got %q", "temporary:value\n", got)
 	}
 }
 

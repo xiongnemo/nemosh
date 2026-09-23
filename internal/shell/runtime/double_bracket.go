@@ -55,8 +55,8 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStat
 		text, quoted := r.expandConditionWord(ctx, item, savedStatus)
 		terms = append(terms, conditionTerm{text: text, quoted: quoted})
 	}
-	if r.expansionFailed() {
-		return unsetParameterResult()
+	if r.shellErrorRaised() {
+		return shellErrorResult()
 	}
 	parser := &conditionParser{terms: terms, runtime: r}
 	value, err := parser.parseOr()

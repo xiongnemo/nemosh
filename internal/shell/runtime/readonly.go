@@ -25,10 +25,16 @@ func (r Runtime) readonlyBuiltin(args []string) int {
 	return 0
 }
 
+// assignVar is the one way a variable is written: readonly refused, RANDOM and SECONDS
+// honoured, an element reached by its subscript, and the environment kept in step for a
+// name that is exported or under `set -a`.
+//
+// **The one way, now.** The for loop, `select`, `${x:=word}` and arithmetic each wrote the
+// map themselves, so each of them skipped all of that: `readonly R; : $((R=5))` changed R,
+// and `export x=0; for x in 5; do env; done` showed a child `x=0`.
 func (r Runtime) assignVar(name string, value string) int {
 	if r.isReadonly(name) {
-		fmt.Fprintf(r.streams.Stderr, "%s: readonly variable\n", name)
-		return 1
+		return r.refuseReadonly("", name)
 	}
 	// RANDOM and SECONDS take an assignment as a seed and a reset rather than
 	// storing it. Storing would make the next read return a constant, and a
@@ -63,6 +69,19 @@ func (r Runtime) assignVar(name string, value string) int {
 // own map too.
 func (r Runtime) allExport() bool {
 	return r.options != nil && r.options.allExport
+}
+
+// refuseReadonly reports an assignment to a readonly variable, and makes it a shell error.
+//
+// POSIX 2.8.1 makes a variable assignment error fatal to a non-interactive shell, and
+// busybox-w32 holds to that everywhere measured: `R=2`, `R=2 cmd`, `export R=2`, `unset R`,
+// `local R`, `for R in ...` and `$((R=5))` all end the script with status 2, and a
+// subshell that does it ends only the subshell. `read R` is the exception there, and here
+// -- it refuses, and the script goes on. This used to be a status of 1 and the next line.
+func (r Runtime) refuseReadonly(prefix, name string) int {
+	fmt.Fprintf(r.streams.Stderr, "%s%s: readonly variable\n", prefix, name)
+	r.raiseShellError()
+	return 1
 }
 
 func (r Runtime) isReadonly(name string) bool {

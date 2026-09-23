@@ -430,5 +430,53 @@
     "stdout": "",
     "status": 2,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "readonly R=1; R=2; echo reached",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f(){ exit 3; }; f; echo after",
+    "stdout": "",
+    "status": 3,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "die(){ echo \"fatal: $1\" >&2; exit 1; }; die boom; echo next",
+    "stdout": "",
+    "status": 1,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f(){ break; }; for i in 1 2; do f; echo \"i=$i\"; done; echo done",
+    "stdout": "done\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=1; f(){ x=inner; }; x=2 f; echo \"x=$x\"",
+    "stdout": "x=1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "export x=0; for x in 5; do env | grep \"^x=\"; done",
+    "stdout": "x=5\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "export x=0; : $((x=5)); env | grep \"^x=\"",
+    "stdout": "x=5\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "readonly R=1; : $((R=5)); echo reached",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
   }
 ]

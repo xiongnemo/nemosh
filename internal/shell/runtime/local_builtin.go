@@ -29,9 +29,7 @@ func (r Runtime) local(args []string) int {
 			continue
 		}
 		if r.isReadonly(name) {
-			fmt.Fprintf(r.streams.Stderr, "local: %s: readonly variable\n", name)
-			status = 1
-			continue
+			return r.refuseReadonly("local: ", name)
 		}
 		r.locals.save(name, r.vars)
 		if !assigns {

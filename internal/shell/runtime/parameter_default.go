@@ -91,8 +91,11 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 		if !isVariableName(name) {
 			return "", fmt.Errorf("%s: cannot assign in this way", name)
 		}
-		r.vars[name] = assigned
-		r.markVarMutation(name)
+		// Through assignVar, so a readonly name refuses and an exported one reaches
+		// the environment; this wrote the map directly and did neither.
+		if r.assignVar(name, assigned) != 0 {
+			return "", errReadonlyTarget
+		}
 		return assigned, nil
 	default:
 		if missing {

@@ -1,6 +1,9 @@
 package runtime
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // let evaluates each operand as an arithmetic expression and reports whether
 // the last one came out non-zero -- 0 when it did, 1 when it did not, which is
@@ -18,6 +21,10 @@ func (r Runtime) let(args []string) int {
 	var last int64
 	for _, expression := range args {
 		value, err := r.evaluateArithmetic(expression)
+		if errors.Is(err, errReadonlyTarget) {
+			// Reported already, and a shell error, which the caller acts on.
+			return 1
+		}
 		if err != nil {
 			fmt.Fprintf(r.streams.Stderr, "let: %v\n", err)
 			return 2

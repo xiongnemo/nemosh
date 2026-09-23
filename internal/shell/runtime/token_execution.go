@@ -111,8 +111,8 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	defer r.cleanUpProcessSubstitutions()
 	var ok bool
 	operations, ok = r.expandRedirectOperations(ctx, operations, savedStatus)
-	if r.expansionFailed() {
-		return unsetParameterResult()
+	if r.shellErrorRaised() {
+		return shellErrorResult()
 	}
 	if !ok {
 		return lineResult{status: 1}
@@ -127,8 +127,8 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// reason: `a=(one "two words" three)` is three elements, and after expansion
 	// the quotes are gone. See array_assign.go.
 	if remaining, applied := r.applyArrayAssignments(ctx, command, savedStatus); applied {
-		if r.expansionFailed() {
-			return unsetParameterResult()
+		if r.shellErrorRaised() {
+			return shellErrorResult()
 		}
 		if len(remaining) == 0 {
 			return lineResult{}
@@ -155,8 +155,8 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 			expanded = append(expanded, shellToken{kind: tokenWord, value: value})
 		}
 	}
-	if r.expansionFailed() {
-		return unsetParameterResult()
+	if r.shellErrorRaised() {
+		return shellErrorResult()
 	}
 	args := tokenValues(expanded)
 	if len(args) == 0 {
@@ -164,7 +164,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	}
 	assignments, commandArgs := leadingAssignments(args)
 	if len(assignments) > 0 && len(commandArgs) == 0 {
-		return lineResult{status: r.assignmentStatus(assignments, mark)}
+		return r.abortOnShellError(lineResult{status: r.assignmentStatus(assignments, mark)})
 	}
 	// Alias substitution goes here rather than during tokenization, because
 	// parsing completes before anything runs; see substituteAliases. A quoted
@@ -186,9 +186,12 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// lookup for a command named `break`. In a `while true` loop that never
 	// ended.
 	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, operations, savedStatus); handled {
-		return result
+		return r.abortOnShellError(result)
 	}
-	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
+	if result, handled := r.functionCommand(ctx, commandArgs, assignments, operations); handled {
+		return r.abortOnShellError(result)
+	}
+	return r.abortOnShellError(lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)})
 }
 
 // assignmentStatus is what a command consisting only of assignments exits with.

@@ -36,8 +36,7 @@ func (r Runtime) export(args []string) int {
 		if !hasValue {
 			value = r.vars[name]
 		} else if r.isReadonly(name) {
-			fmt.Fprintf(r.streams.Stderr, "export: %s: readonly variable\n", name)
-			return 1
+			return r.refuseReadonly("export: ", name)
 		}
 		r.vars[name] = value
 		r.env.Set(name, value)
@@ -57,8 +56,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 	for _, name := range args {
 		base, subscript, hasSubscript := splitSubscriptedName(name)
 		if r.isReadonly(base) {
-			fmt.Fprintf(r.streams.Stderr, "unset: %s: readonly variable\n", base)
-			return 1
+			return r.refuseReadonly("unset: ", base)
 		}
 		if !hasSubscript {
 			delete(r.vars, name)

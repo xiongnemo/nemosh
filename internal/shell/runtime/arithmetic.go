@@ -59,8 +59,9 @@ func (p *arithmeticParser) assignment() (int64, error) {
 			return 0, err
 		}
 	}
-	p.runtime.vars[name] = strconv.FormatInt(value, 10)
-	p.runtime.markVarMutation(name)
+	if err := p.store(name, value); err != nil {
+		return 0, err
+	}
 	return value, nil
 }
 

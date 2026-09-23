@@ -132,6 +132,19 @@ func (r Runtime) assignReadResult(options readOptions, line readLineResult) int 
 		r.syncArrayScalar(options.arrayName)
 		return 0
 	}
+	// A readonly name is refused before anything is assigned, and it is not a shell error:
+	// busybox's read reports it and the script goes on, which is the one place busybox
+	// does not abort over a readonly variable. Status 2, as busybox answers.
+	targets := options.names
+	if len(targets) == 0 {
+		targets = []string{"REPLY"}
+	}
+	for _, name := range targets {
+		if r.isReadonly(name) {
+			fmt.Fprintf(r.streams.Stderr, "read: %s: readonly variable\n", name)
+			return 2
+		}
+	}
 	if len(options.names) == 0 {
 		return r.assignVar("REPLY", line.text)
 	}
