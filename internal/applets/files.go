@@ -55,32 +55,12 @@ func readWithContext(ctx context.Context, reader io.Reader, buffer []byte) (int,
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
-	file, isFile := reader.(*os.File)
-	if !isFile || ctx.Done() == nil {
-		return reader.Read(buffer)
+	if file, isFile := reader.(*os.File); isFile {
+		// A read that has already started is ended by the platform. See ReadInterruptibly,
+		// which the shell's own reads use as well.
+		return ReadInterruptibly(ctx, file, buffer)
 	}
-	// A read that has already started is ended by the platform, because checking the
-	// context between reads is no use to an applet sitting in one. At a terminal that was
-	// the whole of `bc` ignoring Ctrl-C until the next keystroke -- and consuming that
-	// keystroke to notice, which is why it took two.
-	stop := make(chan struct{})
-	defer close(stop)
-	go func() {
-		select {
-		case <-ctx.Done():
-			interruptBlockedRead(file)
-		case <-stop:
-		}
-	}()
-	read, err := file.Read(buffer)
-	if read == 0 && ctx.Err() != nil {
-		// An aborted console read reports EOF, which is indistinguishable from the input
-		// really ending -- so the context is asked instead of the error. Bytes that did
-		// arrive are handed back rather than thrown away; the next read will see the
-		// cancellation.
-		return 0, ctx.Err()
-	}
-	return read, err
+	return reader.Read(buffer)
 }
 
 func copyWithContext(ctx context.Context, stdout io.Writer, stdin io.Reader) (int64, error) {

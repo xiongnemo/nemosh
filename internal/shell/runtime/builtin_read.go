@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 type contextReader interface {
@@ -153,37 +155,16 @@ func readWithContext(ctx context.Context, input io.Reader, buffer []byte) (int, 
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
-	file, isFile := input.(*os.File)
-	if !isFile || ctx.Done() == nil {
-		// An arbitrary blocking reader still cannot be cancelled without abandoning a
-		// read goroutine, which would go on to eat a keystroke. A file can be, below.
-		return input.Read(buffer)
-	}
 	// This is where an applet's stdin actually ends up inside the shell: contextReader in
-	// internal/applets forwards to descriptorReader.ReadContext, which forwards to here,
-	// and only here is the underlying file in hand. Checking the context before the read
-	// and never again is no use to an applet already sitting in one -- a console read
-	// returns when a line arrives and not before, which is the whole of why Ctrl-C inside
-	// `bc` did nothing until the next keystroke, and then spent that keystroke noticing.
+	// internal/applets forwards to descriptorReader.ReadContext, which forwards to here, and
+	// only here is the underlying file in hand. So a file is read through the one
+	// implementation that can end a read already blocked -- there used to be a second copy of
+	// it here, and it carried the same data race as the first. See applets.ReadInterruptibly.
 	//
-	// interruptPipeIO is CancelIoEx; the name is from its first caller. Measured against a
-	// real console: a read blocked for 500ms, the call answered success, and the read
-	// returned at once.
-	stop := make(chan struct{})
-	defer close(stop)
-	go func() {
-		select {
-		case <-ctx.Done():
-			_ = interruptPipeIO(file)
-		case <-stop:
-		}
-	}()
-	read, err := file.Read(buffer)
-	if read == 0 && ctx.Err() != nil {
-		// An aborted console read reports EOF, which is what the input really ending also
-		// reports -- so the context decides, not the error. Bytes that did arrive are
-		// handed back; the read after them reports the cancellation.
-		return 0, ctx.Err()
+	// An arbitrary blocking reader still cannot be cancelled without abandoning a read
+	// goroutine, which would go on to eat a keystroke, so anything else is read plainly.
+	if file, isFile := input.(*os.File); isFile {
+		return applets.ReadInterruptibly(ctx, file, buffer)
 	}
-	return read, err
+	return input.Read(buffer)
 }
