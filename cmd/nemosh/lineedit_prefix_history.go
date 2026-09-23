@@ -33,7 +33,9 @@ func (e *lineEditor) searchHistoryByPrefix(direction int) {
 	// from the buffer made the prefix a whole recalled line, so Page Up after Up found
 	// nothing; and handed that recalled text back at the end as though it had been typed.
 	e.beginHistoryWalk()
-	prefix := string([]rune(e.typed)[:e.typedCursor])
+	// Leading blanks are not part of what is searched for, on either side -- see
+	// matchingHistory.
+	prefix := strings.TrimLeft(string([]rune(e.typed)[:e.typedCursor]), historyBlanks)
 	target, found := e.matchingHistory(prefix, direction)
 	if !found {
 		return
@@ -44,13 +46,28 @@ func (e *lineEditor) searchHistoryByPrefix(direction int) {
 	// thing -- unless there is no prefix, where that would be column zero and the next
 	// thing typed would land in front of the recalled line. Up leaves the cursor at the
 	// end, and an empty prefix is Up.
+	//
+	// "The end of the prefix" is counted inside the entry, past its own leading blanks: an
+	// entry stored as `  git commit` matched `git c`, and the prefix ends after the `c`,
+	// not five characters in.
 	if target != 0 && prefix != "" {
-		e.buffer.cursor = len([]rune(prefix))
+		entry := []rune(e.history[len(e.history)-target])
+		blanks := len(entry) - len([]rune(strings.TrimLeft(string(entry), historyBlanks)))
+		e.buffer.cursor = blanks + len([]rune(prefix))
 	}
 }
 
-// matchingHistory is the index of the next entry in that direction whose text begins with
-// prefix, counted from the end the way recall is.
+// historyBlanks is what may sit in front of a command without changing it.
+const historyBlanks = " \t"
+
+// matchingHistory is the index of the next entry in that direction whose command begins
+// with prefix, counted from the end the way recall is.
+//
+// **Leading blanks do not count**, on the entry or on the prefix, because they do not change
+// what a command does: `  git status` runs exactly as `git status` does. They got into a real
+// history file by the ordinary route -- a multi-line paste keeps the indentation of every line
+// after the first -- and a literal match then found none of those lines, so `git c` and Page
+// Up did nothing with `  git commit -m x` sitting right there. prefix arrives already trimmed.
 //
 // Zero is the line being typed and is always a valid destination going forward: it is where
 // Page Down ends up, and it always "matches" because the prefix came from it.
@@ -59,7 +76,7 @@ func (e *lineEditor) matchingHistory(prefix string, direction int) (int, bool) {
 		if target == 0 {
 			return 0, true
 		}
-		if strings.HasPrefix(e.history[len(e.history)-target], prefix) {
+		if strings.HasPrefix(strings.TrimLeft(e.history[len(e.history)-target], historyBlanks), prefix) {
 			return target, true
 		}
 	}

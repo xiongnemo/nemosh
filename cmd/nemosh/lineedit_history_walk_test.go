@@ -99,3 +99,41 @@ func TestHistoryWalk_givesTheTypedLineBack(t *testing.T) {
 		})
 	}
 }
+
+// TestPageUp_ignoresLeadingBlanksInTheHistory is the second report of Page Up doing nothing,
+// and this time the key and the code were both fine -- the history was not what it looked
+// like. Its real entries, from ~/.nemosh_history:
+//
+//	git status
+//	  make test
+//	  git commit -m x
+//	  ls -l
+//	  git push
+//
+// A multi-line paste kept the indentation of every line after the first, so `git c` was a
+// prefix of none of them: `strings.HasPrefix("  git commit -m x", "git c")` is false. The
+// search was answering the question literally and the answer was useless.
+//
+// Leading blanks do not change what a command does -- `  git status` runs exactly as
+// `git status` does -- so they do not decide whether a prefix finds it either. The entry is
+// shown as it was stored, the way Up shows it, and the cursor lands after the prefix *within*
+// it, past the blanks, which is where the prefix actually ended.
+func TestPageUp_ignoresLeadingBlanksInTheHistory(t *testing.T) {
+	history := []string{"git status", "  make test", "  git commit -m x", "  ls -l", "  git push"}
+	for _, testcase := range []struct {
+		name string
+		keys string
+		want string
+	}{
+		{name: "the prefix finds an indented entry", keys: "git c" + pageUp + enter, want: "  git commit -m x"},
+		{name: "the cursor lands after the prefix, past the blanks", keys: "git c" + pageUp + "X" + enter, want: "  git cXommit -m x"},
+		{name: "an indented prefix finds an unindented entry", keys: "  git s" + pageUp + enter, want: "git status"},
+		{name: "walking back further still skips the blanks", keys: "git " + pageUp + pageUp + enter, want: "  git commit -m x"},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			if got := walkedLine(t, testcase.keys, history...); got != testcase.want {
+				t.Errorf("got %q, want %q", got, testcase.want)
+			}
+		})
+	}
+}
