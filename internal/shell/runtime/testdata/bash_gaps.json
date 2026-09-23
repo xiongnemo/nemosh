@@ -1,11 +1,5 @@
 [
   {
-    "script": "f(){ echo \"$FUNCNAME\"; }; f",
-    "stdout": "f\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "trap 'echo err' ERR; false; echo after",
     "stdout": "err\nafter\n",
     "status": 0,
@@ -14,18 +8,6 @@
   {
     "script": "set -o errtrace && echo errtrace",
     "stdout": "errtrace\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
-    "script": "echo ${#EPOCHSECONDS}",
-    "stdout": "10\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
-    "script": "case $EPOCHREALTIME in *.*) echo frac;; esac",
-    "stdout": "frac\n",
     "status": 0,
     "reference": "busybox-w32"
   },

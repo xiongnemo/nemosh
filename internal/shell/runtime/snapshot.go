@@ -36,7 +36,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		vars:        cloneMap(r.vars),
 		traps:       cloneMap(r.traps),
 		trapRunning: map[trapName]bool{},
-		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...)},
+		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...), function: r.params.function},
 		options:     r.options.clone(),
 		expansion:   newExpansionState(),
 		aliases:     cloneMap(r.aliases),

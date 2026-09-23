@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"os"
 	"strconv"
@@ -8,7 +9,7 @@ import (
 )
 
 // The variables the shell computes rather than stores: $RANDOM, $SECONDS, $PPID,
-// and the $PIPESTATUS array.
+// $FUNCNAME, $EPOCHSECONDS and $EPOCHREALTIME, and the $PIPESTATUS array.
 //
 // All four were simply unset, which reads as the empty string, so `$RANDOM` in a
 // script that wanted a temporary name produced the same name every time and
@@ -69,6 +70,22 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		return strconv.Itoa(elapsed + r.special.secondsOffset), true
 	case "PPID":
 		return strconv.Itoa(os.Getppid()), true
+	case "FUNCNAME":
+		// The function running now, which is busybox's `$FUNCNAME` and the first
+		// element of bash's array; empty, and so unset, outside one. It used to be
+		// empty everywhere, with no error, so a `log()` that named its caller named
+		// nothing.
+		if r.params != nil && r.params.function != "" {
+			return r.params.function, true
+		}
+		return "", false
+	case "EPOCHSECONDS":
+		// Both references have these two, and a timestamp without forking `date` is
+		// what they are for. EPOCHREALTIME has six decimal places, as both give it.
+		return strconv.FormatInt(time.Now().Unix(), 10), true
+	case "EPOCHREALTIME":
+		now := time.Now()
+		return fmt.Sprintf("%d.%06d", now.Unix(), now.Nanosecond()/1000), true
 	case "$":
 		// `$$`, the shell's own process id. Answered here rather than in either
 		// expansion switch, because there are two of them -- the braced path and the

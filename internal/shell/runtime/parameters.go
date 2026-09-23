@@ -8,6 +8,10 @@ import (
 type parameters struct {
 	name   string
 	values []string
+	// function is the function these parameters were passed to, which is what
+	// `$FUNCNAME` answers; empty outside one. Kept here because a call already
+	// makes a new set of parameters and restores the caller's on the way out.
+	function string
 }
 
 // SetArguments seeds $0 and the positional parameters. POSIX gives the name and
