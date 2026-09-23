@@ -82,5 +82,96 @@
   "status": 0,
   "nemosh": "",
   "nemoshStatus": 2
+ },
+ {
+  "script": "true && if true; then echo and-if; fi",
+  "stdout": "and-if\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "false || if true; then echo or-if; fi",
+  "stdout": "or-if\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true && case x in x) echo and-case;; esac",
+  "stdout": "and-case\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "false || for x in 1; do echo or-for; done",
+  "stdout": "or-for\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true && while false; do :; done && echo and-while",
+  "stdout": "and-while\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true && until true; do :; done && echo and-until",
+  "stdout": "and-until\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true && f() { echo and-fn; }; f",
+  "stdout": "and-fn\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true & if true; then echo bg-if; fi; wait",
+  "stdout": "bg-if\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true & case x in x) echo bg-case;; esac; wait",
+  "stdout": "bg-case\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true & for x in 1; do echo bg-for; done; wait",
+  "stdout": "bg-for\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true & while false; do :; done; echo bg-while; wait",
+  "stdout": "bg-while\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "true & f() { echo bg-fn; }; f; wait",
+  "stdout": "bg-fn\n",
+  "status": 0,
+  "nemosh": "",
+  "nemoshStatus": 2
+ },
+ {
+  "script": "! if false; then :; fi && echo not-if",
+  "stdout": "",
+  "status": 1,
+  "nemosh": "",
+  "nemoshStatus": 2
  }
 ]

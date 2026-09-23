@@ -1,0 +1,212 @@
+[
+  {
+    "script": "(sleep 0.3; echo alive) & kill -0 $!; echo \"probe=$?\"; wait",
+    "stdout": "probe=0\nalive\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 & p=$!; kill -9 $p; wait $p; echo $?",
+    "stdout": "137\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 & p=$!; kill $p; wait $p; echo $?",
+    "stdout": "143\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "(exit 7) & p=$!; n=0; while kill -0 $p 2>/dev/null && [ $n -lt 40 ]; do sleep 0.05; n=$((n+1)); done; jobs >/dev/null; wait $p; echo $?",
+    "stdout": "127\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "readonly R=1; R=2; echo reached",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f(){ echo \"$FUNCNAME\"; }; f",
+    "stdout": "f\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "trap 'echo err' ERR; false; echo after",
+    "stdout": "err\nafter\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -o errtrace && echo errtrace",
+    "stdout": "errtrace\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo ${#EPOCHSECONDS}",
+    "stdout": "10\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "case $EPOCHREALTIME in *.*) echo frac;; esac",
+    "stdout": "frac\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f(){ local -; set -e; }; f; case $- in *e*) echo leaked;; *) echo restored;; esac",
+    "stdout": "restored\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo $LINENO\necho $LINENO",
+    "stdout": "1\n2\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "printf -v out '%05d' 42; echo \"$out\"",
+    "stdout": "00042\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "echo a b; echo \"$_\"",
+    "stdout": "a b\nb\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m=([a]=1 [b]=2); echo \"${m[b]}\"",
+    "stdout": "2\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=1; [[ -v x ]] && echo set; [[ -v nope ]] || echo unset",
+    "stdout": "set\nunset\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=\"a b'c\"; echo \"${x@Q}\"",
+    "stdout": "'a b'\\''c'\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=abc; echo \"${x@U}\" \"${x@u}\"",
+    "stdout": "ABC Abc\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "{ echo out; echo err >&2; } |& cat",
+    "stdout": "out\nerr\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "exec {fd}>&1; echo named >&\"$fd\"; exec {fd}>&-",
+    "stdout": "named\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -i n; n=2+3; echo $n",
+    "stdout": "5\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -l s=ABC; declare -u t=abc; echo $s $t",
+    "stdout": "abc ABC\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ :; }; declare -F f",
+    "stdout": "f\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s nocasematch; case ABC in abc) echo match;; esac",
+    "stdout": "match\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "printf '%(%Y)T\\n' 17280000",
+    "stdout": "1970\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ :; }; type -t cd f if",
+    "stdout": "builtin\nfunction\nkeyword\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "trap 'echo dbg' DEBUG; echo one",
+    "stdout": "dbg\none\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ trap 'echo ret' RETURN; echo in; }; f",
+    "stdout": "in\nret\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ caller >/dev/null && echo has-caller; }; f",
+    "stdout": "has-caller\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ abc =~ ([a-z])(c) ]] && echo \"${BASH_REMATCH[2]}\"",
+    "stdout": "c\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(1 2 3); echo $(( a[0] + a[2] ))",
+    "stdout": "4\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "echo hi > >(cat); wait",
+    "stdout": "hi\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "coproc cat; echo hi >&\"${COPROC[1]}\"; read -r line <&\"${COPROC[0]}\"; echo \"$line\"",
+    "stdout": "hi\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "sleep 0 & p=$!; case $p in *[!0-9]*|'') echo not-a-pid;; *) echo pid;; esac; wait",
+    "stdout": "pid\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "[ \"$BASHPID\" = \"$$\" ] && echo same; ( [ \"$BASHPID\" != \"$$\" ] && echo differs )",
+    "stdout": "same\ndiffers\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  }
+]

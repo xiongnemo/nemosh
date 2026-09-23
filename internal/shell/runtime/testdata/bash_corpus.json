@@ -1,0 +1,392 @@
+[
+  {
+    "script": "a=(one two three); echo \"${a[1]}\" \"${#a[@]}\"",
+    "stdout": "two 3\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(x); a+=(y z); echo \"${a[@]}\"",
+    "stdout": "x y z\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(a b c d e); echo \"${a[@]:1:2}\"",
+    "stdout": "b c\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(p q r); echo \"${!a[@]}\"",
+    "stdout": "0 1 2\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(p q r); unset 'a[1]'; echo \"${#a[@]}\" \"${a[@]}\"",
+    "stdout": "2 p r\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m; m[k]=v; m[j]=w; echo \"${m[k]}${m[j]}\"",
+    "stdout": "vw\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(1 2 3); for x in \"${a[@]}\"; do printf \"%s,\" \"$x\"; done; echo",
+    "stdout": "1,2,3,\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ abc == a* ]] && echo glob",
+    "stdout": "glob\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ abc == \"a*\" ]] || echo literal",
+    "stdout": "literal\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ -n x && ( 1 -lt 2 || 3 -gt 4 ) ]] && echo grouped",
+    "stdout": "grouped\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ apple < banana ]] && echo less",
+    "stdout": "less\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ a == a &&\nb == b ]] && echo multi",
+    "stdout": "multi\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "re='^a(b)c$'; [[ abc =~ $re ]] && echo \"${BASH_REMATCH[1]}\"",
+    "stdout": "b\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=hello; echo \"${x^^}\" \"${x^}\"",
+    "stdout": "HELLO Hello\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=HELLO; echo \"${x,,}\"",
+    "stdout": "hello\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=abcdef; echo \"${x:1:3}\" \"${x: -2}\"",
+    "stdout": "bcd ef\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=a-b-c; echo \"${x/-/+}\" \"${x//-/+}\"",
+    "stdout": "a+b-c a+b+c\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=abcabc; echo \"${x/#abc/X}\" \"${x/%abc/Y}\"",
+    "stdout": "Xabc abcY\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "y=val; x=y; echo \"${!x}\"",
+    "stdout": "val\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "pre_a=1 pre_b=2; echo ${!pre_*}",
+    "stdout": "pre_a pre_b\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=file.tar.gz; echo \"${x%.*}\" \"${x%%.*}\" \"${x#*.}\" \"${x##*.}\"",
+    "stdout": "file.tar file tar.gz gz\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "unset u; echo \"${u:-def}\" \"${u-dash}\"; u=; echo \"[${u:-e}]\" \"[${u-f}]\"",
+    "stdout": "def dash\n[e] []\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=abc; echo ${#x}",
+    "stdout": "3\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '%s\\n' $'a\\x41b'",
+    "stdout": "aAb\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo {a,b,c} x{1,2}y",
+    "stdout": "a b c x1y x2y\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "echo {1..5} {1..10..3}",
+    "stdout": "1 2 3 4 5 1 4 7 10\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "echo {01..03} {a..e..2}",
+    "stdout": "01 02 03 a c e\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "cat <<< \"here string\"",
+    "stdout": "here string\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "cat <(echo procsub)",
+    "stdout": "procsub\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "{ echo out; echo err >&2; } &>/dev/null; echo quiet",
+    "stdout": "quiet\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "(( 3 > 2 )) && echo yes",
+    "stdout": "yes\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "let 'x = 2 * 3'; echo $x",
+    "stdout": "6\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "for ((i=0; i<3; i++)); do printf %s $i; done; echo",
+    "stdout": "012\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "echo $(( 2 ** 10 )) $(( 5 > 3 ? 1 : 0 ))",
+    "stdout": "1024 1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo $(( 16#ff )) $(( 2#101 ))",
+    "stdout": "255 5\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=5; (( x += 2 )); echo $x",
+    "stdout": "7\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ local v=in; echo $v; }; v=out; f; echo $v",
+    "stdout": "in\nout\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "typeset t=1; echo $t",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -r c=1; echo \"$c\"",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=1; declare -p x",
+    "stdout": "declare -- x=\"1\"\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "function g { echo kw; }; g",
+    "stdout": "kw\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo 1 | select x in a b; do echo \"$x\"; break; done",
+    "stdout": "a\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "case b in a) echo a;& b) echo b;& c) echo c;; d) echo d;; esac",
+    "stdout": "b\nc\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "case ab in a*) echo 1;;& *b) echo 2;; esac",
+    "stdout": "1\n2\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "mapfile -t L < <(printf 'x\\ny\\n'); echo \"${#L[@]} ${L[1]}\"",
+    "stdout": "2 y\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "readarray -t L <<< $'p\\nq'; echo \"${L[0]}${L[1]}\"",
+    "stdout": "pq\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "read -a A <<< \"1 2 3\"; echo \"${A[2]}\"",
+    "stdout": "3\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "read -n 2 x <<< abcd; echo $x",
+    "stdout": "ab\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "read -d , x <<< \"ab,cd\"; echo $x",
+    "stdout": "ab\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '%q\\n' 'a b'",
+    "stdout": "a\\ b\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "echo -e 'x\\ty'",
+    "stdout": "x\ty\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 0.1 & sleep 0.2 & wait -n; echo one-done; wait",
+    "stdout": "one-done\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- -a -b val; while getopts ab: o; do echo \"$o${OPTARG:+=$OPTARG}\"; done",
+    "stdout": "a\nb=val\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo $(( RANDOM >= 0 && RANDOM < 32768 ))",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "[ \"$SECONDS\" -ge 0 ] && echo sec",
+    "stdout": "sec\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "true | false | true; echo \"${PIPESTATUS[@]}\"",
+    "stdout": "0 1 0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[ \"$PPID\" -gt 0 ] && echo ppid",
+    "stdout": "ppid\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -o pipefail; true | false | true; echo $?",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -e; false || true; echo survived",
+    "stdout": "survived\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "for i in 1 2; do for j in a b; do [ $j = b ] && break 2; echo $i$j; done; done",
+    "stdout": "1a\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "for i in 1 2 3; do [ $i = 2 ] && continue; echo $i; done",
+    "stdout": "1\n3\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=1; (x=2); echo $x",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "shopt -s extglob\ncase abc in @(abc|def)) echo ext;; esac",
+    "stdout": "ext\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s nullglob; set -- /nonexistent/*; echo $#",
+    "stdout": "0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s extglob\nx=aaab; echo \"${x##+(a)}\"",
+    "stdout": "b\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  }
+]
