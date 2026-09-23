@@ -82,21 +82,22 @@ func TestJobs_reportsAFinishedJobOnceAndThenForgetsIt(t *testing.T) {
 	// which is the sequence the terminal hit.
 	shell.run("kill %1\n")
 
-	// Asked until it answers Done rather than once after a pause: `kill` cancels the
+	// Asked until it answers Terminated -- how a job `kill` ended is named -- rather than
+	// once after a pause: `kill` cancels the
 	// context and the applet returns on its own time, so a single ask can catch it still
-	// Running -- which it did, under -race. The ask that sees Done *is* the report, so the
+	// Running -- which it did, under -race. The ask that sees it end *is* the report, so the
 	// assertion below still lands on the right one, and nothing here depends on how fast
 	// the machine is.
 	var first string
 	for range 400 {
 		first = shell.run("jobs\n")
-		if strings.Contains(first, "Done") {
+		if strings.Contains(first, "Terminated") {
 			break
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	if !strings.Contains(first, "Done") {
-		t.Fatalf("the killed job never reported Done; last answer was %q", first)
+	if !strings.Contains(first, "Terminated") {
+		t.Fatalf("the killed job never reported Terminated; last answer was %q", first)
 	}
 	if second := shell.run("jobs\n"); second != "" {
 		t.Errorf("jobs answered %q and then %q; a job whose status has been reported is "+

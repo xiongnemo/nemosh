@@ -388,5 +388,17 @@
     "stdout": "probe=0\nalive\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 & p=$!; kill -9 $p; wait $p; echo $?",
+    "stdout": "137\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 & p=$!; kill $p; wait $p; echo $?",
+    "stdout": "143\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

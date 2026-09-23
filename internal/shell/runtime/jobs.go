@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/proc"
 )
 
 // jobLine is the one place a job's state is put into words.
@@ -12,6 +14,9 @@ import (
 // same record, and a notice that called a job something `jobs` did not would be two
 // accounts of one thing. The bool says whether this is final -- which is also what decides
 // whether reporting it consumes the job.
+//
+// A job `kill` ended is named for the signal -- `Terminated`, `Killed` -- as both
+// references name it, rather than `Done(143)`: done is what it was not.
 func jobLine(record *jobRecord) (string, bool) {
 	select {
 	case <-record.done:
@@ -19,9 +24,25 @@ func jobLine(record *jobRecord) (string, bool) {
 		if record.status != 0 {
 			state += "(" + strconv.Itoa(record.status) + ")"
 		}
+		if record.signal != 0 {
+			state = proc.SignalWord(record.signal)
+		}
 		return fmt.Sprintf("[%d] %s\n", record.id, state), true
 	default:
 		return fmt.Sprintf("[%d] Running\n", record.id), false
+	}
+}
+
+// reportSignalled says, on stderr, how each of these jobs ended if kill ended it: the word
+// busybox's `wait` prints, `Terminated` or `Killed`. Not for INT, which neither reference
+// reports -- an interrupt is something the person just did, not news to them.
+//
+// Only for jobs that have ended, so the signal can be read without the scope's lock.
+func (r Runtime) reportSignalled(records []*jobRecord) {
+	for _, record := range records {
+		if record.signal != 0 && record.signal != 2 {
+			fmt.Fprintln(r.streams.Stderr, proc.SignalWord(record.signal))
+		}
 	}
 }
 

@@ -35,9 +35,9 @@ func TestKill_stopsABackgroundJob(t *testing.T) {
 	// Given / When: a job that would run for half a minute, killed at once
 	stdout, stderr, status := runKill(t, "sleep 30 &\nkill %1\nwait\njobs\n")
 
-	// Then
-	if stderr != "" {
-		t.Fatalf("stderr = %q, want nothing", stderr)
+	// Then: `wait` names how it ended, as busybox's does, and says nothing else
+	if stderr != "Terminated\n" {
+		t.Fatalf("stderr = %q, want only %q", stderr, "Terminated\n")
 	}
 	if status != 0 {
 		t.Fatalf("status = %d, want 0", status)
@@ -55,15 +55,14 @@ func TestKill_leavesTheJobWaitable(t *testing.T) {
 	// Given / When
 	_, stderr, status := runKill(t, "sleep 30 &\nkill %1\nwait %1\n")
 
-	// Then: the job is still there to be waited for. Its status is deliberately
-	// not asserted to be zero -- a killed job did not succeed, and `wait`
-	// reporting that is the point of `wait`. What must not happen is `wait`
-	// failing to find a job that kill only signalled.
-	if stderr != "" {
+	// Then: the job is still there to be waited for, and its status is the
+	// signal's -- 143, TERM's, which is what both references' `wait` answers. What
+	// must not happen is `wait` failing to find a job that kill only signalled.
+	if stderr != "Terminated\n" {
 		t.Fatalf("wait complained after kill: %s", stderr)
 	}
-	if status == 2 {
-		t.Fatal("wait reported an unknown or busy job, so kill had claimed it")
+	if status != 143 {
+		t.Fatalf("status = %d, want 143, 128 plus TERM", status)
 	}
 }
 
@@ -98,17 +97,31 @@ func TestKill_refusesWhatItCannotDo(t *testing.T) {
 
 // Both spellings of a signal, because a script writes the number and a person
 // writes the name, and refusing either refuses half the users.
+//
+// And the job reports which one ended it: `wait %1` answers 128 plus the signal,
+// and names it on stderr as busybox's does.
 func TestKill_acceptsASignalEitherWay(t *testing.T) {
-	for _, script := range []string{
-		"sleep 30 &\nkill -9 %1\nwait\n",
-		"sleep 30 &\nkill -TERM %1\nwait\n",
-		"sleep 30 &\nkill -SIGTERM %1\nwait\n",
-		"sleep 30 &\nkill -15 %1\nwait\n",
+	for _, test := range []struct {
+		signal string
+		word   string
+		status int
+	}{
+		{signal: "-9", word: "Killed", status: 137},
+		{signal: "-KILL", word: "Killed", status: 137},
+		{signal: "-TERM", word: "Terminated", status: 143},
+		{signal: "-SIGTERM", word: "Terminated", status: 143},
+		{signal: "-15", word: "Terminated", status: 143},
+		{signal: "-HUP", word: "Hangup", status: 129},
+		// An interrupt is not announced, in either reference.
+		{signal: "-INT", word: "", status: 130},
 	} {
-		t.Run(script, func(t *testing.T) {
-			_, stderr, status := runKill(t, script)
-			if stderr != "" || status != 0 {
-				t.Fatalf("stderr = %q, status = %d", stderr, status)
+		t.Run(test.signal, func(t *testing.T) {
+			stdout, stderr, _ := runKill(t, "sleep 30 &\nkill "+test.signal+" %1\nwait %1\necho $?\n")
+			if want := strconv.Itoa(test.status) + "\n"; stdout != want {
+				t.Fatalf("wait answered %q, want %q", stdout, want)
+			}
+			if strings.TrimSuffix(stderr, "\n") != test.word {
+				t.Fatalf("stderr = %q, want %q", stderr, test.word)
 			}
 		})
 	}

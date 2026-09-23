@@ -29,6 +29,9 @@ type jobRecord struct {
 	// launched with exec.CommandContext under this very context, so cancelling it
 	// terminates the real process too.
 	cancel context.CancelFunc
+	// signal is what `kill` ended this job with, or 0. It decides the job's
+	// status and how it is named -- see complete.
+	signal int
 }
 
 type jobScope struct {
@@ -137,11 +140,36 @@ func (s *jobScope) forget(records []*jobRecord) {
 	}
 }
 
+// complete records how a job ended.
+//
+// A job ended by `kill` reports what a process ended by that signal reports -- 137
+// for KILL, 143 for TERM -- which is what `wait` answers in both references. It
+// used to report 1 for every signal, which is what the job's last command happened
+// to return on its way out; but it was stopped, not finished, and a script telling
+// the two apart reads this number to do it.
 func (s *jobScope) complete(record *jobRecord, status int) {
 	s.mu.Lock()
 	record.status = status
+	if record.signal != 0 {
+		record.status = 128 + record.signal
+	}
 	close(record.done)
 	s.mu.Unlock()
+}
+
+// markSignalled notes that kill is about to end this job with signal, unless it
+// has ended already -- in which case it reports false and changes nothing. Under
+// the scope's lock, so this and complete cannot both be deciding the status.
+func (s *jobScope) markSignalled(record *jobRecord, signal int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	select {
+	case <-record.done:
+		return false
+	default:
+	}
+	record.signal = signal
+	return true
 }
 
 func (s *jobScope) snapshot() []*jobRecord {

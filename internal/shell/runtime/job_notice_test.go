@@ -71,8 +71,9 @@ func TestReportFinishedJobs_namesAJobThatHasEndedAndForgetsIt(t *testing.T) {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	if !strings.Contains(notice, "[1]") || !strings.Contains(notice, "Done") {
-		t.Fatalf("the notice was %q, want it to name job 1 as done", notice)
+	// Named for how it ended: `kill` sent TERM, so it was terminated, not done.
+	if !strings.Contains(notice, "[1]") || !strings.Contains(notice, "Terminated") {
+		t.Fatalf("the notice was %q, want it to name job 1 as terminated", notice)
 	}
 
 	// Said once. A second ask has nothing, and neither has `jobs`.

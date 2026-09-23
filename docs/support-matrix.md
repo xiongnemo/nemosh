@@ -140,7 +140,7 @@ process.
 
 | Form | Behaviour |
 | --- | --- |
-| `kill %N` | cancels that job. Every signal cancels; a goroutine has no handler, so telling TERM from KILL would be a promise this cannot keep |
+| `kill %N` | cancels that job. Every signal cancels; a goroutine has no handler, so telling TERM from KILL would be a promise this cannot keep. What the job reports afterwards does tell them apart, as busybox's do: `wait` answers 128 plus the signal -- 137 for KILL, 143 for TERM -- and `jobs` names it `Killed` or `Terminated` rather than `Done(1)`, which is what it used to say |
 | `kill PID` | `TerminateProcess` on Windows, a real signal elsewhere. busybox-w32 uses `TerminateProcess` only for KILL; every other signal injects a thread into the target that calls `ExitProcess(signal << 24)` (`win32/process.c:862-909`), so the parent sees which signal ended it |
 | `kill -9`, `kill -TERM`, `kill -SIGTERM` | all accepted; a script writes the number and a person writes the name |
 | `kill -0 %N`, `kill -0 PID` | **asks, and changes nothing**: 0 while the job or process is running, 1 once it has ended. It used to be one more signal, so the question ended what it asked about |

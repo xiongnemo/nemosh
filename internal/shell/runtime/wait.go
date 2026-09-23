@@ -18,6 +18,7 @@ func (r Runtime) wait(ctx context.Context, args []string) int {
 			r.jobScope.releaseAll(records)
 			return contextStatus(ctx)
 		}
+		r.reportSignalled(records)
 		r.jobScope.consumeAll(records)
 		return 0
 	}
@@ -40,6 +41,7 @@ func (r Runtime) wait(ctx context.Context, args []string) int {
 		r.jobScope.release(record)
 		return contextStatus(ctx)
 	}
+	r.reportSignalled([]*jobRecord{record})
 	if !r.jobScope.consumeAll([]*jobRecord{record}) {
 		return 2
 	}
