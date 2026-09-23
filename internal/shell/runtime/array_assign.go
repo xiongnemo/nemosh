@@ -93,58 +93,38 @@ func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, save
 }
 
 func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, savedStatus int) {
-	if !assignment.list {
-		values := r.expandWord(ctx, assignment.value, savedStatus)
-		if r.arrays.isAssociative(assignment.name) {
-			r.arrays.setKey(assignment.name, r.resolveKey(ctx, assignment.subscript), strings.Join(values, " "))
-			return
-		}
-		index, err := r.resolveSubscript(ctx, assignment.subscript)
-		if err != nil {
-			fmt.Fprintln(r.streams.Stderr, err)
-			return
-		}
-		// A negative subscript counts from the end, so it needs the length the array
-		// has now. Without the check this reached setElement with -1 and panicked --
-		// caught by the guard, which printed a diagnostic instead of a stack trace,
-		// but a diagnostic about an internal error is not the right answer either.
-		existing, _ := r.arrays.get(assignment.name)
-		index, withinRange := countFromEnd(index, len(existing))
-		if !withinRange {
-			fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", assignment.subscript)
-			return
-		}
-		r.arrays.setElement(assignment.name, index, strings.Join(values, " "))
-		r.syncArrayScalar(assignment.name)
+	if assignment.list {
+		r.assignCompound(ctx, assignment.name, assignment.raw, assignment.append, savedStatus)
 		return
 	}
-	elements := r.expandArrayElements(ctx, assignment.raw, savedStatus)
-	if assignment.append {
-		r.arrays.append(assignment.name, elements)
-	} else {
-		r.arrays.set(assignment.name, elements)
+	if r.isReadonly(assignment.name) {
+		// An element of a readonly array is refused like the whole of it; this path
+		// had no check, so `a[0]=x` wrote through.
+		r.refuseReadonly("", assignment.name)
+		return
 	}
-	r.syncArrayScalar(assignment.name)
-}
-
-// expandArrayElements lexes the text between the parentheses and expands each
-// word, which is what keeps `"two words"` one element.
-//
-// Lexing rather than splitting on blanks: the quoting, the parameters and the
-// command substitutions inside all have to work, and the lexer already knows how.
-func (r Runtime) expandArrayElements(ctx context.Context, raw string, savedStatus int) []string {
-	tokens, err := scanShellTokens(strings.TrimSpace(raw))
+	values := r.expandWord(ctx, assignment.value, savedStatus)
+	if r.arrays.isAssociative(assignment.name) {
+		r.arrays.setKey(assignment.name, r.resolveKey(ctx, assignment.subscript), strings.Join(values, " "))
+		return
+	}
+	index, err := r.resolveSubscript(ctx, assignment.subscript)
 	if err != nil {
-		return nil
+		fmt.Fprintln(r.streams.Stderr, err)
+		return
 	}
-	var elements []string
-	for _, token := range tokens {
-		if token.kind != tokenWord || token.parsed == nil {
-			continue
-		}
-		elements = append(elements, r.expandCommandWord(ctx, *token.parsed, savedStatus)...)
+	// A negative subscript counts from the end, so it needs the length the array
+	// has now. Without the check this reached setElement with -1 and panicked --
+	// caught by the guard, which printed a diagnostic instead of a stack trace,
+	// but a diagnostic about an internal error is not the right answer either.
+	existing, _ := r.arrays.get(assignment.name)
+	index, withinRange := countFromEnd(index, len(existing))
+	if !withinRange {
+		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", assignment.subscript)
+		return
 	}
-	return elements
+	r.arrays.setElement(assignment.name, index, strings.Join(values, " "))
+	r.syncArrayScalar(assignment.name)
 }
 
 // syncArrayScalar keeps `$a` answering with the first element, which is bash's

@@ -520,5 +520,11 @@
     "stdout": "00042\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m=([a]=1 [b]=2); echo \"${m[b]}\"",
+    "stdout": "2\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

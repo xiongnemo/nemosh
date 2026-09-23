@@ -92,7 +92,8 @@ func TestDeclare_otherForms(t *testing.T) {
 		},
 		{name: "an empty indexed array", script: "declare -a e=()\necho ${#e[@]}\n", want: "0\n"},
 		{name: "declaring indexed then assigning", script: "declare -a a\na[1]=q\necho ${a[1]}\n", want: "q\n"},
-		{name: "-p prints an associative array", script: "declare -A m\nm[a]=1\ndeclare -p m\n", want: "declare -A m=([a]=\"1\")\n"},
+		// bash's exact form, blank before the parenthesis included -- this kind has one.
+		{name: "-p prints an associative array", script: "declare -A m\nm[a]=1\ndeclare -p m\n", want: "declare -A m=([a]=\"1\" )\n"},
 		{name: "-p prints an indexed array", script: "declare -a a=(x)\ndeclare -p a\n", want: "declare -a a=([0]=\"x\")\n"},
 		{name: "-p prints a scalar", script: "declare s=v\ndeclare -p s\n", want: "declare -- s=\"v\"\n"},
 		{name: "-x exports", script: "declare -x E=1\nenv | grep '^E=1$'\n", want: "E=1\n"},

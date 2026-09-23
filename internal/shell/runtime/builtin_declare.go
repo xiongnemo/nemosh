@@ -113,8 +113,9 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		// arrives here whole and has to be split into elements. Without this it
 		// became the single string `(one two)`.
 		if inner, ok := parenthesisedList(value); ok {
-			r.arrays.set(name, r.expandArrayElements(ctx, inner, 0))
-			r.syncArrayScalar(name)
+			if status := r.assignCompound(ctx, name, inner, false, 0); status != 0 {
+				return status
+			}
 		} else if status := r.assignVar(name, value); status != 0 {
 			return status
 		}
@@ -177,14 +178,18 @@ func (r Runtime) printOneDeclaration(name string) {
 			value, _ := r.arrays.lookupKey(name, key)
 			fmt.Fprintf(&out, "[%s]=%q ", key, value)
 		}
-		fmt.Fprintln(r.streams.Stdout, strings.TrimSuffix(out.String(), " ")+")")
+		// bash leaves the blank before the closing parenthesis for this kind and not
+		// the other, and output meant to be read back is worth matching exactly.
+		fmt.Fprintln(r.streams.Stdout, out.String()+")")
 		return
 	}
 	if elements, ok := r.arrays.get(name); ok {
 		var out strings.Builder
 		fmt.Fprintf(&out, "declare -a %s=(", name)
-		for index, element := range elements {
-			fmt.Fprintf(&out, "[%d]=%q ", index, element)
+		// The set indices only: every slot used to be printed, so a gap came out as
+		// `[1]=""` and an element removed with unset came back with its old value.
+		for _, index := range r.arrays.liveIndices(name) {
+			fmt.Fprintf(&out, "[%d]=%q ", index, elements[index])
 		}
 		fmt.Fprintln(r.streams.Stdout, strings.TrimSuffix(out.String(), " ")+")")
 		return

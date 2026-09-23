@@ -78,6 +78,13 @@ func (a *shellArrays) declareAssociative(name string) {
 	}
 }
 
+// clearAssociative empties an associative array and keeps it declared, which is what
+// `m=(...)` does to one before it writes the new keys.
+func (a *shellArrays) clearAssociative(name string) {
+	a.declareAssociative(name)
+	a.associative[name] = newAssociativeArray()
+}
+
 func (a *shellArrays) isAssociative(name string) bool {
 	_, ok := a.associative[name]
 	return ok
