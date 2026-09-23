@@ -4,8 +4,8 @@ import "context"
 
 // variableIsSet is `[[ -v name ]]`: whether a name is set, empty or not. The form a script
 // uses to tell "unset" from "empty" under `set -u` without tripping it, and bash has it;
-// here `-v` was not an operator, so `[[ -v x ]]` read as a test of the string "-v" and was
-// true whatever x was.
+// here `-v` was not an operator, so `[[ -v x ]]` was a malformed expression -- `unexpected
+// x`, status 2 -- whatever x was.
 //
 // A subscript names one element -- an index is arithmetic, a key expands -- and `[@]` any
 // of them. A bare array name is its element zero, as bash has it: `a=([3]=z)` is not set

@@ -550,5 +550,11 @@
     "stdout": "set\nunset\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ :; }; type -t cd f if",
+    "stdout": "builtin\nfunction\nkeyword\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

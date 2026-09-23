@@ -2,8 +2,8 @@ package runtime_test
 
 import "testing"
 
-// `[[ -v name ]]` asks whether a name is set, empty or not. It was not an operator, so it read
-// as a test of the string "-v" and was true whatever the name was. Every answer is bash's.
+// `[[ -v name ]]` asks whether a name is set, empty or not. It was not an operator, so the
+// expression was malformed -- status 2 -- whatever the name was. Every answer is bash's.
 func TestDoubleBracketV_asksWhetherANameIsSet(t *testing.T) {
 	for _, test := range []struct {
 		name   string
