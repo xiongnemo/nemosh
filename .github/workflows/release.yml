@@ -336,9 +336,27 @@ jobs:
       # A release is not held up by this. The default GITHUB_TOKEN deliberately
       # cannot start a workflow in another repository, so without the secret the
       # step says so and succeeds, leaving the hourly cron exactly as it was.
+      # The bucket packages a release only once its checkver sees the Windows asset
+      # inside that release in GitHub's releases *list*. That is a deliberate rule, in the
+      # bucket's AGENTS.md: it keeps a prerelease from being picked up before its assets
+      # have finished uploading.
+      #
+      # On 2026-09-23 the list lagged the upload by hours. v1.2.8 was published with all
+      # ten assets -- /releases/{id}/assets returned them and the zip downloaded -- while
+      # the embedded list said zero. The dispatch below fired six seconds after publish,
+      # the bucket's excavator found no asset, packaged nothing and reported success, and
+      # so did this run. `scoop update` did nothing for hours and nothing said why.
+      #
+      # So this waits until the list shows the asset before dispatching, which is what
+      # makes the dispatch worth sending. If the list still has not caught up it dispatches
+      # anyway -- one more chance costs nothing -- and says so, because the next person to
+      # wonder why the bucket did not move should find the answer in this run rather than
+      # in three repositories' API responses. The hourly sweep is still the backstop.
       - name: Tell the Scoop bucket to update
         env:
           GH_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          RELEASE_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
@@ -346,5 +364,22 @@ jobs:
             echo "To make it immediate, add a fine-grained token with Actions: read and write on"
             echo "xiongnemo/windows-binaries-scoop-bucket as the SCOOP_BUCKET_TOKEN secret here."
             exit 0
+          fi
+
+          asset="nemosh-${TAG}-windows-amd64.zip"
+          visible=false
+          # Twenty checks fifteen seconds apart: five minutes at most, and nothing at all
+          # when the list is consistent, which is nearly always.
+          for attempt in $(seq 1 20); do
+            if GH_TOKEN="$RELEASE_TOKEN" gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=10" \
+                --jq ".[] | select(.tag_name == \"${TAG}\") | .assets[].name" | grep -qxF "$asset"; then
+              visible=true
+              echo "the releases list shows ${asset} (check ${attempt}); dispatching the bucket."
+              break
+            fi
+            sleep 15
+          done
+          if [ "$visible" != true ]; then
+            echo "::warning title=The Scoop bucket will lag this release::GitHub's releases list does not show ${asset} yet, though the upload finished. The bucket's checkver reads that list and requires the asset in it, so it will package this release on the hourly sweep after the list catches up, not now. Nothing is broken; this is a delay, and this line is why."
           fi
           gh workflow run excavator.yml --repo xiongnemo/windows-binaries-scoop-bucket
