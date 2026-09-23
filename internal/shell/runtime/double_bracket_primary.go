@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -43,6 +44,10 @@ func (p *conditionParser) parsePrimary() (bool, error) {
 	// A unary operator is only a unary operator when something follows it, so
 	// `[[ -n ]]` is a test of the string "-n" rather than a syntax error. bash
 	// does the same, and it is why `[[ -n $x ]]` is safe when x is unset.
+	if term := p.peek(); term.text == "-v" && !term.quoted && p.at+1 < len(p.terms) {
+		p.take()
+		return p.runtime.variableIsSet(context.Background(), p.take().text), nil
+	}
 	if term := p.peek(); applets.IsUnaryConditionOperator(term.text) && !term.quoted && p.at+1 < len(p.terms) {
 		operator := p.take().text
 		operand := p.take()

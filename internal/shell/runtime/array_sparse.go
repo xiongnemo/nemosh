@@ -45,6 +45,16 @@ func (a *shellArrays) unsetElement(name string, index int) {
 	delete(a.present[name], index)
 }
 
+// isLive reports whether one index of a name is set. unsetElement drops only the mark and
+// leaves the old value in its slot, so a read that skips this sees what was removed.
+func (a *shellArrays) isLive(name string, index int) bool {
+	set := a.present[name]
+	if set == nil {
+		return index < len(a.values[name])
+	}
+	return set[index]
+}
+
 // liveIndices is the set subscripts of a name, in order. This is what `${!a[@]}`
 // answers and what the `[@]` and `[*]` forms are built from.
 func (a *shellArrays) liveIndices(name string) []int {
