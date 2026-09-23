@@ -112,6 +112,18 @@ Making `fg` work would mean moving background jobs from goroutines to real child
 processes and then gambling on `SuspendThread` against the heap lock — trading a
 property that holds for a feature that might.
 
+**The first half of that is reachable; only the second is not.** busybox-w32 has
+no fork either, and its background jobs are real processes all the same:
+`spawn_forkshell` (`shell/ash.c:17040`) copies the shell's state into a file
+mapping with an inheritable handle and launches a fresh `sh --fs <handle>`, which
+maps it and carries on, and `forkparent` sets `$!` from `GetProcessId`. What that
+buys is a real pid, a `wait` over process handles, and a `kill` that can tell one
+signal from another (below). What it does not buy is suspension — the three
+reasons above are about Windows and Go, not about goroutines. Measured cost here
+would be one process start per `&`, about 9 ms (startup-and-footprint.md), plus
+moving the state across. It is planned last among the bash-compatibility work,
+behind a design document of its own, because nothing else waits on it.
+
 ### `kill`
 
 A builtin, as busybox's is (`shell/ash.c:12096`), and for the same reason: `%N`
@@ -129,7 +141,7 @@ process.
 | Form | Behaviour |
 | --- | --- |
 | `kill %N` | cancels that job. Every signal cancels; a goroutine has no handler, so telling TERM from KILL would be a promise this cannot keep |
-| `kill PID` | `TerminateProcess` on Windows, as busybox does (`win32/process.c:909`), a real signal elsewhere |
+| `kill PID` | `TerminateProcess` on Windows, a real signal elsewhere. busybox-w32 uses `TerminateProcess` only for KILL; every other signal injects a thread into the target that calls `ExitProcess(signal << 24)` (`win32/process.c:862-909`), so the parent sees which signal ended it |
 | `kill -9`, `kill -TERM`, `kill -SIGTERM` | all accepted; a script writes the number and a person writes the name |
 | `kill -l` | lists the signals this shell can act on, not the whole POSIX set |
 | a pid that has already exited | refused, not reported as killed — the check busybox makes with `GetExitCodeProcess` first |
@@ -295,11 +307,13 @@ was quoted, and therefore whether `==` compares a pattern or a literal.
 | `&&`, `||`, `!`, `( )` | the conditional's own grammar, not the shell's |
 | a malformed expression | **status 2**, so "that was not an expression" stays distinguishable from "the answer is no" |
 
-Two limitations, stated rather than hidden. The expression must be on **one
-line**: bash can span lines because `[[` is a reserved word its parser knows,
-while here it is recognised at execution time, after the line has been divided
-into commands. And `[[` is only a conditional at the **start of a command** --
-`echo [[` prints two ordinary words.
+Two limitations, stated rather than hidden. The expression can continue onto the
+next line **only after `&&`, `||` or `(`** -- which are where a script breaks a
+long one -- and a newline anywhere else ends it: `[[ a == a` with `]]` on the
+next line is `missing ]]`, where bash accepts it, because there `[[` is a
+reserved word its parser knows and here it is recognised at execution time. And
+`[[` is only a conditional at the **start of a command** -- `echo [[` prints two
+ordinary words.
 
 **Indexed arrays.** `a=(one two three)`, `${a[0]}`, `${a[@]}`, `${a[*]}`,
 `${#a[@]}`, `${#a[0]}`, `${!a[@]}`, `a[1]=x`, `a+=(four)`, `a=()`. Neither dash
@@ -387,7 +401,8 @@ forced rather than chosen: a background job here is a goroutine, so there is no 
 report, the same constraint `kill %N` already works around. Naming the job keeps the two
 things `$!` is used for working, since `kill $!` and `wait $!` both take `%N`; a number
 would have been a pid-shaped lie that `kill` would apply to some other process. It was
-empty before.
+empty before. busybox-w32 does report a real pid, because its jobs are processes; see
+"Process control" above for how, and what moving to that would take.
 
 **Backgrounding announces the job, and says how to stop it.** busybox writes `[1] 19676`;
 this writes `[1] started; kill %1 to stop it`, for the reason above — the number is real,

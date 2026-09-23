@@ -28,10 +28,11 @@ import (
 // also supplies the other thing an applet could not know: whether the right-hand
 // side of `==` was quoted, which decides pattern against literal.
 //
-// One limitation, stated rather than hidden: the expression has to be on one
-// line. bash allows it to span lines, because there `[[` is a reserved word the
-// parser knows; here it is recognised at execution time, and the line has already
-// been divided into commands by then.
+// One limitation, stated rather than hidden: the expression continues onto the next
+// line only after `&&`, `||` or `(`, where a script actually breaks one. A newline
+// anywhere else ends it, as it does not in bash, because there `[[` is a reserved
+// word the parser knows; here it is recognised at execution time, and the line has
+// already been divided into commands by then.
 
 // isDoubleBracket reports whether this command is a `[[ ]]` conditional.
 func isDoubleBracket(command []word) bool {
