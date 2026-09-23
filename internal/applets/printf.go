@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -15,30 +16,52 @@ import (
 // The conversions are the ones POSIX lists, plus the `%b` of XSI, and the
 // format is reused from the start while operands remain, which is what makes
 // `printf '%s\n' a b c` print three lines.
+//
+// A leading `--` ends the options, as in both references; it was taken for the format and
+// printed. And an operand that is not a number is POSIX's case exactly: a diagnostic, zero
+// written in its place, the rest processed, and a status that is not zero. This stopped at
+// the first one and wrote nothing after it.
 func newPrintfApplet() Applet {
-	return simpleApplet{name: "printf", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "printf", run: func(args []string, _ io.Reader, stdout, stderr io.Writer) error {
+		if len(args) > 0 && args[0] == "--" {
+			args = args[1:]
+		}
 		if len(args) == 0 {
 			return missingOperand()
 		}
 		format, operands := args[0], args[1:]
+		invalid := false
 		for pass := 0; ; pass++ {
-			consumed, err := writePrintfPass(stdout, format, operands)
+			consumed, failed, err := writePrintfPass(stdout, stderr, format, operands)
+			invalid = invalid || failed
 			if err != nil {
 				return err
 			}
 			// A pass that consumes nothing would repeat forever; one pass is
 			// always run so a format with no conversions still prints.
 			if consumed == 0 || consumed >= len(operands) {
-				return nil
+				break
 			}
 			operands = operands[consumed:]
 		}
+		if invalid {
+			return ExitStatus(1)
+		}
+		return nil
 	}}
 }
 
-// writePrintfPass walks the format once and reports how many operands it used.
-func writePrintfPass(out io.Writer, format string, operands []string) (int, error) {
-	used := 0
+// errPrintfNumber is an operand a numeric conversion could not read. It is reported and
+// written as zero, which is busybox's answer -- bash writes the digits it managed to read,
+// so `12abc` is 12 there and 0 here.
+type errPrintfNumber struct{ operand string }
+
+func (e errPrintfNumber) Error() string { return fmt.Sprintf("%s: invalid number", e.operand) }
+
+// writePrintfPass walks the format once and reports how many operands it used, and whether
+// one of them was not the number its conversion wanted.
+func writePrintfPass(out, diagnostics io.Writer, format string, operands []string) (int, bool, error) {
+	used, failed := 0, false
 	next := func() string {
 		if used < len(operands) {
 			value := operands[used]
@@ -56,7 +79,7 @@ func writePrintfPass(out io.Writer, format string, operands []string) (int, erro
 			index += width
 			if stop {
 				_, err := io.WriteString(out, text.String())
-				return used, err
+				return used, failed, err
 			}
 			continue
 		}
@@ -75,14 +98,20 @@ func writePrintfPass(out io.Writer, format string, operands []string) (int, erro
 			continue
 		}
 		rendered, err := renderPrintfConversion(spec, verb, next)
+		var number errPrintfNumber
+		if errors.As(err, &number) {
+			// Said now, in order with the output, and processing goes on.
+			fmt.Fprintf(diagnostics, "printf: %v\n", err)
+			failed, err = true, nil
+		}
 		if err != nil {
-			return used, err
+			return used, failed, err
 		}
 		text.WriteString(rendered)
 		index += width - 1
 	}
 	_, err := io.WriteString(out, text.String())
-	return used, err
+	return used, failed, err
 }
 
 // printfSpecification reads `%[flags][width][.precision]verb` and reports the
@@ -110,24 +139,21 @@ func printfSpecification(rest string) (string, byte, int) {
 func renderPrintfConversion(spec string, verb byte, next func() string) (string, error) {
 	switch verb {
 	case 'd', 'i':
+		// The zero an unreadable operand stands for is rendered with the operand's own
+		// width and flags, and the error goes back beside it for the caller to report.
 		value, err := printfInteger(next())
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf(spec+"d", value), nil
+		return fmt.Sprintf(spec+"d", value), err
 	case 'o', 'x', 'X', 'u':
 		value, err := printfInteger(next())
-		if err != nil {
-			return "", err
-		}
 		if verb == 'u' {
-			return fmt.Sprintf(spec+"d", value), nil
+			return fmt.Sprintf(spec+"d", value), err
 		}
-		return fmt.Sprintf(spec+string(verb), value), nil
+		return fmt.Sprintf(spec+string(verb), value), err
 	case 'e', 'E', 'f', 'F', 'g', 'G':
-		value, err := strconv.ParseFloat(strings.TrimSpace(next()), 64)
-		if err != nil {
-			return "", fmt.Errorf("invalid number")
+		operand := next()
+		value, err := strconv.ParseFloat(strings.TrimSpace(operand), 64)
+		if err != nil && strings.TrimSpace(operand) != "" {
+			return fmt.Sprintf(spec+string(verb), 0.0), errPrintfNumber{operand: operand}
 		}
 		return fmt.Sprintf(spec+string(verb), value), nil
 	case 'c':
@@ -152,8 +178,8 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 	}
 }
 
-// An operand that is not a number is zero with a diagnostic in POSIX; busybox
-// and the shells all reject it, and so does this.
+// An operand that is not a number is zero with a diagnostic, in POSIX and in both
+// references -- measured, and not the rejection this comment used to claim.
 func printfInteger(operand string) (int64, error) {
 	trimmed := strings.TrimSpace(operand)
 	if trimmed == "" {
@@ -161,7 +187,7 @@ func printfInteger(operand string) (int64, error) {
 	}
 	value, err := strconv.ParseInt(trimmed, 0, 64)
 	if err != nil {
-		return 0, fmt.Errorf("%s: expected a numeric value", operand)
+		return 0, errPrintfNumber{operand: operand}
 	}
 	return value, nil
 }

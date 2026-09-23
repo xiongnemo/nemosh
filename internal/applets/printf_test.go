@@ -3,6 +3,8 @@ package applets_test
 import (
 	"strings"
 	"testing"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 func runPrintf(t *testing.T, args ...string) (string, error) {
@@ -64,14 +66,29 @@ func TestPrintf_rendersTheConversions(t *testing.T) {
 	}
 }
 
-func TestPrintf_refusesANonNumericOperandForAnIntegerConversion(t *testing.T) {
-	// This used to print `%!d(string=abc)` and exit 0.
+// A non-numeric operand is POSIX's case exactly, and busybox's answer: a diagnostic, zero
+// in its place with the conversion's width, the rest still processed, and status 1. This
+// used to print `%!d(string=abc)` and exit 0, and after that to stop at the first one.
+func TestPrintf_reportsANonNumericOperandAndGoesOn(t *testing.T) {
 	// When
-	_, err := runPrintf(t, "%d\n", "abc")
+	stdout, stderr, err := runApplet(t, "printf", "[%3d][%s]\n", "abc", "next")
 
 	// Then
-	if err == nil || !strings.Contains(err.Error(), "numeric") {
-		t.Fatalf("err = %v, want a numeric-value diagnostic", err)
+	if stdout != "[  0][next]\n" {
+		t.Fatalf("stdout = %q, want the zero and the rest", stdout)
+	}
+	if !strings.Contains(stderr, "abc: invalid number") {
+		t.Fatalf("stderr = %q, want the diagnostic", stderr)
+	}
+	if status, ok := applets.StatusCode(err); !ok || status != 1 {
+		t.Fatalf("status = %d (recognised %v), want 1", status, ok)
+	}
+}
+
+// A leading `--` ends the options, as in both references; it was taken for the format.
+func TestPrintf_skipsALeadingDoubleDash(t *testing.T) {
+	if stdout, err := runPrintf(t, "--", "-v %s\n", "x"); err != nil || stdout != "-v x\n" {
+		t.Fatalf("stdout = %q, err = %v, want %q", stdout, err, "-v x\n")
 	}
 }
 

@@ -238,6 +238,10 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.umask(args[1:])
 	case "wait":
 		return r.wait(ctx, args[1:])
+	case "printf":
+		if len(args) > 1 && args[1] == "-v" {
+			return r.printfToVariable(ctx, args[2:])
+		}
 	}
 	// Before applet lookup and before PATH: a builtin this shell recognises and
 	// does not implement must say so, rather than depend on whether something
@@ -254,25 +258,7 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	// alone: a diagnostic written on the way out is still worth seeing.
 	err := applet.Run(applets.WithProcessView(ctx, r), args[1:], r.streams.Stdin,
 		interruptible(r.streams.Stdout, ctx), r.streams.Stderr)
-	if err == nil {
-		return 0
-	}
-	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
-		return contextStatus(ctx)
-	}
-	// Normalized first, which is what this was missing: an applet returns the raw
-	// *fs.PathError from the failed write, and that is not the sentinel. external.go
-	// already normalizes on its own path; this one compared against the sentinel and
-	// never matched, so every `producer | head -1` where the producer was an applet
-	// reported a write failure that POSIX would have passed over in silence.
-	if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
-		return 0
-	}
-	status, message := AppletFailure(args[0], err)
-	if message != "" {
-		fmt.Fprintln(r.streams.Stderr, message)
-	}
-	return status
+	return r.appletStatus(ctx, args[0], err)
 }
 
 // AppletFailure turns an applet's error into the status and the one-line

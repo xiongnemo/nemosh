@@ -6,12 +6,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "printf -v out '%05d' 42; echo \"$out\"",
-    "stdout": "00042\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "echo a b; echo \"$_\"",
     "stdout": "a b\nb\n",
     "status": 0,
