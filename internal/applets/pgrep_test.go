@@ -32,6 +32,10 @@ func TestPgrep_refusesWhatWouldMatchEverything(t *testing.T) {
 		// privileges an ordinary session has not got, so it is refused rather
 		// than quietly matching the name instead.
 		{applet: "pgrep", args: []string{"-f", "x"}, want: "invalid option"},
+		// A pause cannot be delivered on Windows, and delivered the way every other
+		// signal is it would terminate every match -- which `pkill -STOP` used to do.
+		{applet: "pkill", args: []string{"-STOP", "zzznosuchprocessname"}, want: "suspend"},
+		{applet: "killall", args: []string{"-CONT", "zzznosuchprocessname"}, want: "suspend"},
 	} {
 		t.Run(test.applet+" "+strings.Join(test.args, " "), func(t *testing.T) {
 			_, stderr, err := runAppletWithInput(t, "", test.applet, test.args...)

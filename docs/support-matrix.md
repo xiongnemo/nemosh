@@ -143,8 +143,11 @@ process.
 | `kill %N` | cancels that job. Every signal cancels; a goroutine has no handler, so telling TERM from KILL would be a promise this cannot keep |
 | `kill PID` | `TerminateProcess` on Windows, a real signal elsewhere. busybox-w32 uses `TerminateProcess` only for KILL; every other signal injects a thread into the target that calls `ExitProcess(signal << 24)` (`win32/process.c:862-909`), so the parent sees which signal ended it |
 | `kill -9`, `kill -TERM`, `kill -SIGTERM` | all accepted; a script writes the number and a person writes the name |
-| `kill -l` | lists the signals this shell can act on, not the whole POSIX set |
+| `kill -0 %N`, `kill -0 PID` | **asks, and changes nothing**: 0 while the job or process is running, 1 once it has ended. It used to be one more signal, so the question ended what it asked about |
+| `kill -STOP`, `-CONT`, `-TSTP` (or 18–22) | **refused by name**, status 1. Nothing here can suspend a process, and delivered the way every other signal is, STOP would end it. busybox-w32 has neither name either. `pkill` and `killall` refuse them too: all three read one table, `internal/proc/signal.go` |
+| `kill -l` | lists the signals this shell can act on, not the whole POSIX set: HUP, INT, QUIT, KILL and TERM |
 | a pid that has already exited | refused, not reported as killed — the check busybox makes with `GetExitCodeProcess` first |
+| a job that has already ended | refused the same way. Both references accept `kill %1` for a job that has ended but not been reported; they refuse `kill $pid` once the process is gone, and here `$!` is `%1`, so the second is what a script is writing |
 | pid `0` or negative | refused on Windows: those mean process groups, which Windows has not got in the POSIX sense. Passed through elsewhere |
 
 `kill` does not claim the job, so a later `wait %N` still finds it.

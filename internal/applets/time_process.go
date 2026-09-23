@@ -211,7 +211,10 @@ func processesNamed(names []string, omit map[int]bool) ([]int, error) {
 // take `bash` with it, and that is the difference between a tidy-up and an accident.
 func newKillallApplet() Applet {
 	return simpleApplet{name: "killall", run: func(args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		signal, rest := splitLeadingSignal(args)
+		signal, rest, err := splitLeadingSignal(args)
+		if err != nil {
+			return err
+		}
 		options, names, err := parseAppletOptions(rest, "lq", "")
 		if err != nil {
 			return err

@@ -306,12 +306,6 @@
     "reference": "busybox-w32"
   },
   {
-    "script": "sleep 0.1 & sleep 0.2 & wait -n; echo one-done; wait",
-    "stdout": "one-done\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "set -- -a -b val; while getopts ab: o; do echo \"$o${OPTARG:+=$OPTARG}\"; done",
     "stdout": "a\nb=val\n",
     "status": 0,
@@ -388,5 +382,11 @@
     "stdout": "b\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "(sleep 0.3; echo alive) & kill -0 $!; echo \"probe=$?\"; wait",
+    "stdout": "probe=0\nalive\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

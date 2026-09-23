@@ -1,10 +1,10 @@
 package applets
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/proc"
@@ -48,7 +48,10 @@ func newPgrepApplet() Applet {
 
 func newPkillApplet() Applet {
 	return simpleApplet{name: "pkill", run: func(args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
-		signal, rest := splitLeadingSignal(args)
+		signal, rest, err := splitLeadingSignal(args)
+		if err != nil {
+			return err
+		}
 		matcher, err := parseProcessPattern("pkill", rest, "x")
 		if err != nil {
 			return err
@@ -139,41 +142,32 @@ func trimExecutableSuffix(name string) string {
 // splitLeadingSignal reads pkill's optional `-SIG` or `-N`, which comes before
 // the options and cannot be told from one by getopt -- which is why it is read
 // first, exactly as kill does it.
-func splitLeadingSignal(args []string) (int, []string) {
+//
+// The table is proc's, the one the kill builtin reads as well. A spec it does not know is
+// left for the option parser -- `-x` is an option, not a signal -- but one it refuses is
+// refused here: `pkill -STOP` used to *terminate* every match, which is what any signal
+// becomes on Windows, and a pause that kills is the worst reading of that request.
+func splitLeadingSignal(args []string) (int, []string, error) {
 	const terminate = 15
 	if len(args) == 0 || !strings.HasPrefix(args[0], "-") || args[0] == "-" {
-		return terminate, args
+		return terminate, args, nil
 	}
-	if number, ok := processSignalNumber(args[0][1:]); ok {
-		return number, args[1:]
+	number, err := proc.ParseSignal(args[0][1:])
+	switch {
+	case err == nil:
+		return number, args[1:], nil
+	case errors.Is(err, proc.ErrCannotSuspend):
+		return 0, nil, err
 	}
-	return terminate, args
+	return terminate, args, nil
 }
 
-// signalNumbers are the signals this shell can name.
-//
-// Short, and deliberately so: Windows has no signals, so each of these is a behaviour
-// proc.Terminate reproduces rather than a number the kernel understands. Listing ones it
-// cannot act on would be a promise nothing keeps. Shared with `killall -l`.
-var signalNumbers = map[string]int{"HUP": 1, "INT": 2, "QUIT": 3, "KILL": 9, "TERM": 15, "STOP": 19, "CONT": 18}
-
-// knownSignalNames lists them in number order, which is how `kill -l` is read.
+// knownSignalNames lists the table in number order, which is how `kill -l` is read.
 func knownSignalNames() []string {
-	names := make([]string, 0, len(signalNumbers))
-	for name := range signalNumbers {
-		names = append(names, name)
+	signals := proc.Signals()
+	names := make([]string, len(signals))
+	for index, signal := range signals {
+		names[index] = signal.Name
 	}
-	sort.Slice(names, func(i, j int) bool { return signalNumbers[names[i]] < signalNumbers[names[j]] })
 	return names
-}
-
-func processSignalNumber(spec string) (int, bool) {
-	if number, ok := signalNumbers[strings.TrimPrefix(strings.ToUpper(spec), "SIG")]; ok {
-		return number, true
-	}
-	var number int
-	if _, err := fmt.Sscanf(spec, "%d", &number); err == nil && number > 0 && spec == fmt.Sprint(number) {
-		return number, true
-	}
-	return 0, false
 }

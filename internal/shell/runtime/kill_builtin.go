@@ -28,8 +28,9 @@ func (r Runtime) killBuiltin(args []string) int {
 	}
 	signal, operands, err := parseKillSignal(args)
 	if err != nil {
+		// 1, as both references answer a signal they will not send.
 		fmt.Fprintf(r.streams.Stderr, "kill: %v\n", err)
-		return 2
+		return 1
 	}
 	if signal == listSignals {
 		return r.listKillSignals()
@@ -50,7 +51,7 @@ func (r Runtime) killBuiltin(args []string) int {
 
 func (r Runtime) killOne(operand string, signal int) error {
 	if strings.HasPrefix(operand, "%") {
-		return r.killJob(operand)
+		return r.killJob(operand, signal)
 	}
 	pid, err := strconv.Atoi(operand)
 	if err != nil {
@@ -65,7 +66,19 @@ func (r Runtime) killOne(operand string, signal int) error {
 // Every signal cancels, and saying so is better than pretending to tell TERM
 // from KILL: a goroutine has no handler to run, so the distinction would be a
 // promise this cannot keep. What it can promise is that the job stops.
-func (r Runtime) killJob(spec string) error {
+//
+// **Except zero, which only asks.** `kill -0 $pid` is how a script tests whether
+// its job is still alive -- `while kill -0 $pid; do sleep 1; done` -- and it used
+// to cancel the job it was asking about, then keep answering yes for as long as
+// the record lasted, so that loop never ended. It answers now, and changes
+// nothing.
+//
+// **A job that has ended is refused, whatever the signal.** Both references
+// accept `kill %1` for a job that has finished but not yet been reported; they
+// refuse `kill $pid` once the process is gone. Here `$!` *is* `%1`, so the
+// second is the one a script is actually writing, and it is the same answer
+// `kill PID` gives for a process that has exited.
+func (r Runtime) killJob(spec string, signal int) error {
 	value, err := strconv.ParseUint(strings.TrimPrefix(spec, "%"), 10, 64)
 	if err != nil || value == 0 {
 		return fmt.Errorf("invalid job: %s", spec)
@@ -73,6 +86,14 @@ func (r Runtime) killJob(spec string) error {
 	record, ok := r.jobScope.lookup(jobID(value))
 	if !ok {
 		return fmt.Errorf("%s: no such job", spec)
+	}
+	select {
+	case <-record.done:
+		return fmt.Errorf("%s: the job has already ended", spec)
+	default:
+	}
+	if signal == 0 {
+		return nil
 	}
 	if record.cancel == nil {
 		// A job registered without a cancel is one the shell cannot reach, which
@@ -89,9 +110,9 @@ const listSignals = -1
 
 // parseKillSignal reads the leading signal option, if there is one.
 //
-// Both spellings busybox accepts: `-9` and `-TERM`, with or without the `SIG`
-// prefix. The number is what a script writes and the name is what a person
-// writes, so refusing either would be refusing half the users.
+// Both spellings busybox accepts, `-9` and `-TERM`, read by proc.ParseSignal --
+// the table pkill and killall read too, so the three cannot disagree about which
+// signals exist.
 func parseKillSignal(args []string) (int, []string, error) {
 	signal := defaultKillSignal
 	if len(args) == 0 || !strings.HasPrefix(args[0], "-") || args[0] == "-" {
@@ -101,33 +122,20 @@ func parseKillSignal(args []string) (int, []string, error) {
 	if spec == "l" {
 		return listSignals, args[1:], nil
 	}
-	if number, err := strconv.Atoi(spec); err == nil {
-		if number < 0 {
-			return 0, nil, fmt.Errorf("invalid signal: %s", args[0])
-		}
-		return number, args[1:], nil
-	}
-	number, ok := killSignalNumbers[strings.TrimPrefix(strings.ToUpper(spec), "SIG")]
-	if !ok {
-		return 0, nil, fmt.Errorf("invalid signal: %s", args[0])
+	number, err := proc.ParseSignal(spec)
+	if err != nil {
+		return 0, nil, err
 	}
 	return number, args[1:], nil
 }
 
+// listKillSignals lists what the shell can act on, not the whole POSIX set: a
+// name it would accept and then ignore would be worse than one it refuses.
 func (r Runtime) listKillSignals() int {
-	for _, name := range killSignalNames {
-		fmt.Fprintf(r.streams.Stdout, "%2d) SIG%s\n", killSignalNumbers[name], name)
+	for _, signal := range proc.Signals() {
+		fmt.Fprintf(r.streams.Stdout, "%2d) SIG%s\n", signal.Number, signal.Name)
 	}
 	return 0
-}
-
-// The signals worth naming. Deliberately not the whole POSIX set: this lists
-// what the shell can actually act on, and a name it would accept and then ignore
-// would be worse than one it refuses.
-var killSignalNames = []string{"HUP", "INT", "QUIT", "KILL", "TERM", "STOP", "CONT"}
-
-var killSignalNumbers = map[string]int{
-	"HUP": 1, "INT": 2, "QUIT": 3, "KILL": 9, "TERM": 15, "STOP": 19, "CONT": 18,
 }
 
 // defaultKillSignal is TERM, as everywhere.

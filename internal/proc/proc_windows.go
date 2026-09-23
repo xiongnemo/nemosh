@@ -19,19 +19,32 @@ const stillActive = 259
 // call TerminateProcess, with a comment saying plainly that it is not gentle --
 // the target gets no chance to close handles or remove lock files
 // (win32/process.c:900-910). Every signal therefore lands the same way, and that
-// comment is the honest description of what `kill -TERM` means here.
+// comment is the honest description of what `kill -TERM` means here. The one
+// exception is zero, below, and the stop-and-continue signals never get this far:
+// ParseSignal refuses them.
 //
 // A pid that is not running is refused rather than reported as killed, which is
 // the GetExitCodeProcess check busybox makes first. Telling a script that a
 // signal reached a process which had already exited is the one answer worse than
 // an error.
+//
+// **Signal 0 only asks.** `kill -0 $pid` is how a script tests whether a process
+// is still there, and it used to reach TerminateProcess like everything else --
+// so the question ended the thing it was asking about. It now stops at the same
+// still-running check, and busybox's kill_signal_by_handle does exactly that for
+// zero (win32/process.c:876): no thread injected, nothing ended.
 func Terminate(pid, signal int) error {
 	if pid <= 0 {
 		// Zero and negative address process groups, which Windows has not got in
 		// the POSIX sense. Refusing beats guessing which processes were meant.
 		return fmt.Errorf("%d: this build signals a single process id", pid)
 	}
-	const access = windows.PROCESS_TERMINATE | windows.PROCESS_QUERY_LIMITED_INFORMATION
+	access := uint32(windows.PROCESS_TERMINATE | windows.PROCESS_QUERY_LIMITED_INFORMATION)
+	if signal == 0 {
+		// Asking needs no right to terminate, so a process this session could not
+		// kill can still be found alive.
+		access = windows.PROCESS_QUERY_LIMITED_INFORMATION
+	}
 	handle, err := windows.OpenProcess(access, false, uint32(pid))
 	if err != nil {
 		return fmt.Errorf("%d: %w", pid, err)
@@ -44,6 +57,9 @@ func Terminate(pid, signal int) error {
 	}
 	if code != stillActive {
 		return fmt.Errorf("%d: no such process", pid)
+	}
+	if signal == 0 {
+		return nil
 	}
 	// The exit code busybox leaves behind, so a wrapper reading it sees the same
 	// number under either shell.

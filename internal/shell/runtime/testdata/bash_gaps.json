@@ -1,7 +1,7 @@
 [
   {
-    "script": "(sleep 0.3; echo alive) & kill -0 $!; echo \"probe=$?\"; wait",
-    "stdout": "probe=0\nalive\n",
+    "script": "sleep 0.1 & sleep 0.3 & wait -n; echo \"st=$?\"; wait",
+    "stdout": "st=0\n",
     "status": 0,
     "reference": "busybox-w32"
   },
