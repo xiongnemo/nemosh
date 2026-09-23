@@ -164,7 +164,9 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	}
 	assignments, commandArgs := leadingAssignments(args)
 	if len(assignments) > 0 && len(commandArgs) == 0 {
-		return r.abortOnShellError(lineResult{status: r.assignmentStatus(assignments, mark)})
+		status := r.assignmentStatus(assignments, mark)
+		r.vars["_"] = ""
+		return r.abortOnShellError(lineResult{status: status})
 	}
 	// Alias substitution goes here rather than during tokenization, because
 	// parsing completes before anything runs; see substituteAliases. A quoted
@@ -181,17 +183,27 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		}
 	}
 	r.traceCommand(args)
-	// Dispatch on the command, not on args[0]: with a leading assignment those
-	// are different words, and reading the first one turned `V=x break` into a
-	// lookup for a command named `break`. In a `while true` loop that never
-	// ended.
+	result := r.dispatchCommand(ctx, commandArgs, assignments, expanded, operations, savedStatus)
+	// `$_` is the last argument of the command that just finished, or its name when
+	// it had none, and it is set after the command -- so a function's own `$_` is its
+	// last argument once it returns, whatever its body did. It was whatever the
+	// environment brought in, for the whole session. bash's rule; busybox has no `$_`.
+	r.vars["_"] = commandArgs[len(commandArgs)-1]
+	return r.abortOnShellError(result)
+}
+
+// dispatchCommand runs a simple command once it is expanded. On the command, not on
+// args[0]: with a leading assignment those are different words, and reading the first
+// one turned `V=x break` into a lookup for a command named `break`. In a `while true`
+// loop that never ended.
+func (r Runtime) dispatchCommand(ctx context.Context, commandArgs []string, assignments []assignment, expanded []shellToken, operations []redirectOperation, savedStatus int) lineResult {
 	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, operations, savedStatus); handled {
-		return r.abortOnShellError(result)
+		return result
 	}
 	if result, handled := r.functionCommand(ctx, commandArgs, assignments, operations); handled {
-		return r.abortOnShellError(result)
+		return result
 	}
-	return r.abortOnShellError(lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)})
+	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
 }
 
 // assignmentStatus is what a command consisting only of assignments exits with.

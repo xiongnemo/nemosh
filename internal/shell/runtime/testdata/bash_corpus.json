@@ -526,5 +526,11 @@
     "stdout": "2\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo a b; echo \"$_\"",
+    "stdout": "a b\nb\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
