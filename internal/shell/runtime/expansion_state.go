@@ -86,10 +86,11 @@ func (r Runtime) expansionFailed() bool {
 }
 
 // unsetParameterResult is what every checkpoint returns: status 2 from
-// busybox's error path, and an exit rather than a status because POSIX makes an
-// unset parameter fatal to a non-interactive shell.
+// busybox's error path, and an abort rather than a status because POSIX makes an
+// unset parameter fatal to a non-interactive shell -- and only to the line, at a
+// prompt. See flowAbort.
 func unsetParameterResult() lineResult {
-	return lineResult{status: 2, control: flowExit}
+	return lineResult{status: 2, control: flowAbort}
 }
 
 // recordSubstitution notes what a command substitution exited with.

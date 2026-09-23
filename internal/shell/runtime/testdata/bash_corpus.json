@@ -412,5 +412,23 @@
     "stdout": "127\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "eval \"exit 3\"; echo after",
+    "stdout": "",
+    "status": 3,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "for i in 1 2 3; do eval break; echo $i; done; echo done",
+    "stdout": "done\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -u; eval 'echo $nope'; echo after",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
   }
 ]

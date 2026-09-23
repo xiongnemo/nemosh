@@ -108,6 +108,13 @@ const (
 	flowContinue
 	flowExec
 	flowReturn
+	// flowAbort is a shell error in the sense of POSIX 2.8.1 -- an unset parameter
+	// under `set -u`, an assignment to a readonly variable. It unwinds exactly as
+	// far as flowExit does, and differs in one place: a person at a prompt. There
+	// the shell "shall write a diagnostic message ... without exiting", so the rest
+	// of the line is abandoned and the session goes on. These used to be flowExit,
+	// and `set -u; echo $nope` typed at a prompt closed the terminal.
+	flowAbort
 )
 
 func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int {

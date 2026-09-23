@@ -31,20 +31,29 @@ func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error,
 }
 
 func (r Runtime) runCommandWithRedirectOperations(ctx context.Context, command []shellToken, operations []redirectOperation) int {
+	return r.withAppliedRedirects(operations, func(redirected Runtime) lineResult {
+		return lineResult{status: redirected.runCommand(ctx, tokenValues(command))}
+	}).status
+}
+
+// withAppliedRedirects runs a command with its redirections, already expanded, in force for
+// its duration and no longer. The control a command answers with -- `. ./lib.sh 2>/dev/null`
+// that exits -- passes through untouched.
+func (r Runtime) withAppliedRedirects(operations []redirectOperation, run func(Runtime) lineResult) lineResult {
 	table, err := r.fds.clone()
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-		return 1
+		return lineResult{status: 1}
 	}
 	if err := r.applyRedirectOperations(table, operations); err != nil {
 		cleanupErr := table.closeAll()
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, cleanupErr))
-		return 1
+		return lineResult{status: 1}
 	}
-	status := r.withFDTable(table).runCommand(ctx, tokenValues(command))
-	if err := table.closeAll(); err != nil && status == 0 {
+	result := run(r.withFDTable(table))
+	if err := table.closeAll(); err != nil && result.status == 0 {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
-		return 1
+		result.status = 1
 	}
-	return status
+	return result
 }
