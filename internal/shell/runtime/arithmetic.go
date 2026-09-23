@@ -12,7 +12,15 @@ import (
 // of that shell variable and an unset or non-numeric one standing for zero.
 // Assignment writes back to the shell variable, so `$((i += 1))` both yields
 // the new value and stores it.
+//
+// An empty expression is zero, in both references: `$(( ))`, and `$(( $unset ))`
+// once the unset name has expanded to nothing. It was a syntax error here, so the
+// second form -- an arithmetic on an optional setting -- failed only when the
+// setting was absent. `let ""` is status 1 as a result, as both give it.
 func (r Runtime) evaluateArithmetic(expression string) (int64, error) {
+	if strings.TrimSpace(expression) == "" {
+		return 0, nil
+	}
 	parser := &arithmeticParser{tokens: tokenizeArithmetic(expression), runtime: r}
 	value, err := parser.comma()
 	if err != nil {

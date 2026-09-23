@@ -5,12 +5,5 @@
   "status": 2,
   "nemosh": "",
   "nemoshStatus": 0
- },
- {
-  "script": "echo $(())",
-  "stdout": "0\n",
-  "status": 0,
-  "nemosh": "",
-  "nemoshStatus": 2
  }
 ]

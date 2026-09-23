@@ -873,5 +873,10 @@
   "script": "if if false; then true; fi; then echo inner-if-zero; fi",
   "stdout": "inner-if-zero\n",
   "status": 0
+ },
+ {
+  "script": "echo $(())",
+  "stdout": "0\n",
+  "status": 0
  }
 ]
