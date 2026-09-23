@@ -638,5 +638,145 @@
   "script": "exec 4<> /dev/null; echo rw-ok",
   "stdout": "rw-ok\n",
   "status": 0
+ },
+ {
+  "script": "echo a | case $(cat) in a) echo piped-case;; esac",
+  "stdout": "piped-case\n",
+  "status": 0
+ },
+ {
+  "script": "true && if true; then echo and-if; fi",
+  "stdout": "and-if\n",
+  "status": 0
+ },
+ {
+  "script": "false || if true; then echo or-if; fi",
+  "stdout": "or-if\n",
+  "status": 0
+ },
+ {
+  "script": "true && case x in x) echo and-case;; esac",
+  "stdout": "and-case\n",
+  "status": 0
+ },
+ {
+  "script": "false || for x in 1; do echo or-for; done",
+  "stdout": "or-for\n",
+  "status": 0
+ },
+ {
+  "script": "true && while false; do :; done && echo and-while",
+  "stdout": "and-while\n",
+  "status": 0
+ },
+ {
+  "script": "true && until true; do :; done && echo and-until",
+  "stdout": "and-until\n",
+  "status": 0
+ },
+ {
+  "script": "true && f() { echo and-fn; }; f",
+  "stdout": "and-fn\n",
+  "status": 0
+ },
+ {
+  "script": "true & if true; then echo bg-if; fi; wait",
+  "stdout": "bg-if\n",
+  "status": 0
+ },
+ {
+  "script": "true & case x in x) echo bg-case;; esac; wait",
+  "stdout": "bg-case\n",
+  "status": 0
+ },
+ {
+  "script": "true & for x in 1; do echo bg-for; done; wait",
+  "stdout": "bg-for\n",
+  "status": 0
+ },
+ {
+  "script": "true & while false; do :; done; echo bg-while; wait",
+  "stdout": "bg-while\n",
+  "status": 0
+ },
+ {
+  "script": "true & f() { echo bg-fn; }; f; wait",
+  "stdout": "bg-fn\n",
+  "status": 0
+ },
+ {
+  "script": "! if false; then :; fi && echo not-if",
+  "stdout": "",
+  "status": 1
+ },
+ {
+  "script": "true || while false; do :; done && echo left-assoc",
+  "stdout": "left-assoc\n",
+  "status": 0
+ },
+ {
+  "script": "false && if true; then echo no; fi || echo fallback",
+  "stdout": "fallback\n",
+  "status": 0
+ },
+ {
+  "script": "true && for i in 1 2; do echo $i; done | cat",
+  "stdout": "1\n2\n",
+  "status": 0
+ },
+ {
+  "script": "x=0; true && while [ $x -lt 2 ]; do x=$((x+1)); done; echo \"x=$x\"",
+  "stdout": "x=2\n",
+  "status": 0
+ },
+ {
+  "script": "[ -n x ] && case b in a) echo a;; b) echo multi-arm;; esac",
+  "stdout": "multi-arm\n",
+  "status": 0
+ },
+ {
+  "script": "true && if true; then echo hidden; fi > /dev/null; echo after-redirect",
+  "stdout": "after-redirect\n",
+  "status": 0
+ },
+ {
+  "script": "false || case y in y) echo matched;; esac && echo chained",
+  "stdout": "matched\nchained\n",
+  "status": 0
+ },
+ {
+  "script": "true && while false && true; do :; done; echo header-and",
+  "stdout": "header-and\n",
+  "status": 0
+ },
+ {
+  "script": "a=1; [ $a = 1 ] && if [ $a = 1 ]; then echo nested; fi",
+  "stdout": "nested\n",
+  "status": 0
+ },
+ {
+  "script": "echo '&& if' && echo quoted-operator",
+  "stdout": "&& if\nquoted-operator\n",
+  "status": 0
+ },
+ {
+  "script": "true && f() { echo defined; } && f",
+  "stdout": "defined\n",
+  "status": 0
+ },
+ {
+  "script": "false && f() { echo never; }; f 2>/dev/null || echo not-defined",
+  "stdout": "not-defined\n",
+  "status": 0
+ },
+ {
+  "script": "true && if true; then echo t; fi &\nwait",
+  "stdout": "t\n",
+  "status": 0
+ },
+ {
+  "script": "f() { echo defined; } && f",
+  "stdout": "defined\n",
+  "status": 0
  }
 ]

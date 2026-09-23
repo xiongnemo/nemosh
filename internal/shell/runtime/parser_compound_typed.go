@@ -21,8 +21,8 @@ func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int
 					return nil, err
 				}
 			}
-			if span.prefix != "" {
-				if node, err = wrapCompoundIntoPipeline(node, span.prefix, budget, depth); err != nil {
+			if span.prefixOperator != "" {
+				if node, err = wrapCompoundAfterOperator(node, span.prefix, span.prefixOperator, budget, depth); err != nil {
 					return nil, err
 				}
 			}
@@ -41,13 +41,19 @@ func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int
 			line += " " + lines[index+1]
 			index++
 		}
+		if node, recognized, err := parseFunctionAfterOperator(line, budget, depth); recognized {
+			if err != nil {
+				return nil, err
+			}
+			program = append(program, node)
+			continue
+		}
 		definitionLine, background := trailingBackground(line)
-		definition, recognized, err := parseFunctionDefinition(definitionLine, budget, depth)
+		node, recognized, err := parseDefinitionWithSuffix(definitionLine, budget, depth)
 		if err != nil {
 			return nil, err
 		}
 		if recognized {
-			var node programNode = definition
 			if background {
 				node = backgroundNode{value: node}
 			}

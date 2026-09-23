@@ -112,17 +112,6 @@ func TestParserCorpus(t *testing.T) {
 //     `if for ...; done; then`, and the `if`/`while` forms all belong there. A subshell
 //     condition already works, as do a pipeline and a negation, so it is the keyword
 //     compounds and the brace group that are missing. Nine entries.
-//   - **A keyword compound or a function definition after `&&`, `||` or `&`.** POSIX
-//     2.9.3 makes every pipeline in an and-or list a command, compound or not, so
-//     `[ -n "$x" ] && case ...`, `cmd || for ...` and `sleep 1 & while ...` are all
-//     ordinary scripts. After `;` or a newline these already work -- after `|` too, all
-//     but `case`, which is the entry above -- and so do a brace group and a subshell
-//     after any of the three. It is `if`, `case`, `for`, `while`, `until` and `name()`
-//     that are not recognised there. Thirteen entries, found while
-//     measuring the bash corpus, when `sleep 0 & case $! in ...` was a syntax error.
-//   - **`case` as a pipeline stage.** `cmd | while ...` works and `cmd | { ...; }` works;
-//     `cmd | case ... esac` does not, and splitPipelineCompound already lists `case` among
-//     the keywords it looks for -- so this is nearer than it looks.
 //   - **`esac` as a pattern.** `case a in esac) ...` is rejected by both references and
 //     accepted here. Being too permissive about a word nobody writes on purpose, which is
 //     why it is last.

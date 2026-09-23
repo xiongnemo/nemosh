@@ -30,10 +30,12 @@ type compoundSpan struct {
 	// suffix is what followed the closer -- a redirection, or a pipe into another
 	// command. Empty for the ordinary case; see splitCompoundCloser.
 	suffix string
-	// prefix is the pipeline this compound is the last stage of: the words before the
-	// `|` in `cmd | while read ...`. Empty for the ordinary case; see
-	// parser_pipeline_compound.go.
-	prefix string
+	// prefix is what stood before the compound on its line: the words before the `|`
+	// in `cmd | while read ...`, or the `&&` in `cmd && if ...`. prefixOperator is
+	// that operator, and `!` with an empty prefix for a negated compound. Both empty
+	// for the ordinary case; see parser_operator_compound.go.
+	prefix         string
+	prefixOperator string
 	// header is the compound's own header when the line held something before it, so
 	// the readers see `while read -r l` rather than `cmd | while read -r l`. Empty
 	// means the whole line is the header.
@@ -117,14 +119,14 @@ func compoundSpans(lines []string) ([]compoundSpan, error) {
 			return nil, err
 		}
 		kind, opener := compoundOpener(baseLine)
-		pipelinePrefix, compoundHeaderLine := "", ""
+		pipelinePrefix, prefixOperator, compoundHeaderLine := "", "", ""
 		if !opener {
-			// `cmd | while ...`: a compound that begins after a pipe. Looked for only
-			// when the line does not already begin with one, so the ordinary case pays
-			// nothing. See parser_pipeline_compound.go.
-			if prefix, rest, ok := splitPipelineCompound(baseLine); ok {
+			// `cmd | while ...`, `cmd && if ...`: a compound that begins after an
+			// operator. Looked for only when the line does not already begin with one,
+			// so the ordinary case pays nothing. See parser_operator_compound.go.
+			if prefix, operator, rest, ok := splitCompoundAfterOperator(baseLine); ok {
 				if kind, opener = compoundOpener(rest); opener {
-					pipelinePrefix, compoundHeaderLine = prefix, rest
+					pipelinePrefix, prefixOperator, compoundHeaderLine = prefix, operator, rest
 				}
 			}
 		}
@@ -134,7 +136,7 @@ func compoundSpans(lines []string) ([]compoundSpan, error) {
 			}
 			stack = append(stack, compoundFrame{span: compoundSpan{
 				kind: kind, start: index, thenIndex: -1, elseIndex: -1, doIndex: -1,
-				prefix: pipelinePrefix, header: compoundHeaderLine,
+				prefix: pipelinePrefix, prefixOperator: prefixOperator, header: compoundHeaderLine,
 			}})
 			continue
 		}

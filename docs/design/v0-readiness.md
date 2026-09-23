@@ -577,7 +577,6 @@ of `$(`, so the first `)` belonging to anything else ended the body early.
 
 | gap | workaround | why it is not done |
 | --- | --- | --- |
-| `true \| case a in a) x ;; esac` -- piping into a *case* | pipe into a `while`, `if`, `for` or `until`, all of which work; or `{ case ...; esac; }` | The case-arm line pass finds a `case` only at the start of a line. The other four compounds are done |
 | `>(cmd)` -- the *output* half of process substitution | `cmd1 > file; cmd2 < file`, or a pipe | Refused by name rather than approximated. `<(cmd)` works, as a real temporary file rather than `/dev/fd/63`, which Windows has no equivalent of; the input form's consumer reads a file the command has already finished writing, and that trade does not carry over to writing into one. See process_substitution.go |
 | `$LINENO` | none | No AST node carries a position. A `$LINENO` that is always 1 would send someone to the wrong line with confidence, which is worse than its being unset |
 | `$!` is a job spec, `%1`, not a process id | `wait $!` and `kill $!` work with it; writing it to a pidfile or handing it to `tasklist` does not | Background jobs here are goroutines, not processes, so there is no pid to report. busybox-w32 has no fork either and still reports a real one, by launching each background job as a fresh copy of itself with the shell state passed over an inherited handle. See support-matrix.md, "Process control" |

@@ -19,7 +19,7 @@ import (
 // parsed as the pipeline they are, and the group is appended as its last stage.
 
 // errMissingPipelineStage is what a prefix that parsed to nothing gets. It should not be
-// reachable -- splitPipelineCompound refuses an empty prefix -- and saying so is cheaper
+// reachable -- splitCompoundAfterOperator refuses an empty prefix -- and saying so is cheaper
 // than a nil dereference if it ever is.
 var errMissingPipelineStage = errors.New("syntax error: missing command before |")
 
@@ -28,70 +28,10 @@ var errMissingPipelineStage = errors.New("syntax error: missing command before |
 // pipe into `then` is not a thing.
 var compoundKeywords = [...]string{"if", "while", "until", "for", "case", "select"}
 
-// splitPipelineCompound finds a compound that begins after a pipe, and returns the words
-// before the pipe and the compound's own header.
-//
-// The *last* such pipe, so `a | b | while ...` puts both `a` and `b` in the prefix. The
-// prefix keeps its own pipes and is parsed as an ordinary line, which is what makes an
-// and-or in front of it work too: `x && a | while ...` is `x && (a | while ...)`, and
-// parsing `x && a` gives exactly that shape to append to.
-func splitPipelineCompound(line string) (string, string, bool) {
-	prefix, rest, found := "", "", false
-	for _, index := range topLevelPipes(line) {
-		candidate := strings.TrimLeft(line[index+1:], " \t")
-		if !beginsWithCompoundKeyword(candidate) {
-			continue
-		}
-		before := strings.TrimSpace(line[:index])
-		if before == "" {
-			// `| while ...` with nothing in front of it is a syntax error, and calling
-			// it a pipeline stage here would hide that.
-			continue
-		}
-		prefix, rest, found = before, candidate, true
-	}
-	return prefix, rest, found
-}
-
-// topLevelPipes reports the offsets of the `|` characters that separate pipeline stages:
-// outside quotes, outside any bracket, and not part of `||`.
-func topLevelPipes(line string) []int {
-	var offsets []int
-	quote := byte(0)
-	depth := 0
-	escaped := false
-	for index := 0; index < len(line); index++ {
-		char := line[index]
-		switch {
-		case escaped:
-			escaped = false
-		case char == '\\' && quote != '\'':
-			escaped = true
-		case quote != 0:
-			if char == quote {
-				quote = 0
-			}
-		case char == '\'' || char == '"':
-			quote = char
-		case char == '(' || char == '{' || char == '[':
-			depth++
-		case char == ')' || char == '}' || char == ']':
-			if depth > 0 {
-				depth--
-			}
-		case char == '|' && depth == 0:
-			if index+1 < len(line) && line[index+1] == '|' {
-				index++
-				continue
-			}
-			if index > 0 && line[index-1] == '|' {
-				continue
-			}
-			offsets = append(offsets, index)
-		}
-	}
-	return offsets
-}
+// Finding the compound after the pipe is splitCompoundAfterOperator's, which does it for
+// `&&`, `||` and `&` as well. The prefix keeps its own pipes and is parsed as an ordinary
+// line, which is what makes an and-or in front of it work too: `x && a | while ...` is
+// `x && (a | while ...)`, and parsing `x && a` gives exactly that shape to append to.
 
 func beginsWithCompoundKeyword(text string) bool {
 	for _, keyword := range compoundKeywords {
