@@ -30,12 +30,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "[[ abc =~ ([a-z])(c) ]] && echo \"${BASH_REMATCH[2]}\"",
-    "stdout": "c\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "echo hi > >(cat); wait",
     "stdout": "hi\n",
     "status": 0,

@@ -21,28 +21,32 @@ func TestBashRematch_recordsWhatMatched(t *testing.T) {
 			// Element 0 is the whole match, which is bash's layout.
 			name: "the whole match", script: "[[ abc =~ b ]] && echo \"${BASH_REMATCH[0]}\"\n", want: "b\n",
 		},
+		// Unquoted, as bash writes them: these were quoted because an unquoted group did
+		// not parse, and bash reads a quoted regular expression as a literal.
 		{
 			name:   "one group",
-			script: "[[ abc =~ \"(b)\" ]] && echo \"${BASH_REMATCH[0]}-${BASH_REMATCH[1]}\"\n", want: "b-b\n",
+			script: "[[ abc =~ (b) ]] && echo \"${BASH_REMATCH[0]}-${BASH_REMATCH[1]}\"\n", want: "b-b\n",
 		},
 		{
 			name:   "two groups",
-			script: "[[ abc =~ \"(b)(c)\" ]] && echo \"${BASH_REMATCH[1]}${BASH_REMATCH[2]}\"\n", want: "bc\n",
+			script: "[[ abc =~ (b)(c) ]] && echo \"${BASH_REMATCH[1]}${BASH_REMATCH[2]}\"\n", want: "bc\n",
 		},
 		{
 			// The shape a script actually uses.
 			name:   "pulling fields out of a line",
-			script: "[[ 12:xy =~ \"^([0-9]+):(.*)$\" ]] && echo \"${BASH_REMATCH[1]}|${BASH_REMATCH[2]}\"\n",
+			script: "[[ 12:xy =~ ^([0-9]+):(.*)$ ]] && echo \"${BASH_REMATCH[1]}|${BASH_REMATCH[2]}\"\n",
 			want:   "12|xy\n",
 		},
-		{name: "the count", script: "[[ abc =~ \"(b)\" ]]\necho \"${#BASH_REMATCH[@]}\"\n", want: "2\n"},
+		{name: "the count", script: "[[ abc =~ (b) ]]\necho \"${#BASH_REMATCH[@]}\"\n", want: "2\n"},
 		{
 			// A group that did not participate is empty rather than absent, because the
 			// array is indexed by group number and a gap would shift every later one.
 			name:   "a group that did not participate",
-			script: "[[ ab =~ \"(a)(z)?\" ]] && echo \"[${BASH_REMATCH[2]}]\"\n", want: "[]\n",
+			script: "[[ ab =~ (a)(z)? ]] && echo \"[${BASH_REMATCH[2]}]\"\n", want: "[]\n",
 		},
-		{name: "a longer match wins", script: "[[ aaa =~ \"a*\" ]] && echo \"${BASH_REMATCH[0]}\"\n", want: "aaa\n"},
+		{name: "a longer match wins", script: "[[ aaa =~ a* ]] && echo \"${BASH_REMATCH[0]}\"\n", want: "aaa\n"},
+		// And a quoted part is literal: a dot is a dot.
+		{name: "a quoted part is literal", script: "[[ a.c =~ ^a\".\"c$ ]] && ! [[ abc =~ \"a.c\" ]] && echo literal\n", want: "literal\n"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

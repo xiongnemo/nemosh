@@ -92,6 +92,12 @@ func rejectDeferredSyntax(line string) error {
 				continue
 			}
 		}
+		// Nor is a regular expression's: the operand of `=~` is one word, parentheses and
+		// all. Sixth layer; see regex_operand.go.
+		if char != ' ' && char != '\t' && followsRegexOperator(line[:index]) {
+			index = regexOperandEnd(line, index) - 1
+			continue
+		}
 		// A pattern group is not grouping: `[[ x == @(a|b) ]]` and a case pattern both
 		// carry one, and this scan refuses parentheses outright.
 		if wordGroupOpensAt(line, index) {

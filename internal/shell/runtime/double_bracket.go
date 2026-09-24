@@ -52,6 +52,10 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStat
 	}
 	terms := make([]conditionTerm, 0, len(command)-2)
 	for _, item := range command[1 : len(command)-1] {
+		if last := len(terms) - 1; last >= 0 && terms[last].text == "=~" && !terms[last].quoted {
+			terms = append(terms, r.regexOperandTerm(ctx, item, savedStatus))
+			continue
+		}
 		text, quoted := r.expandConditionWord(ctx, item, savedStatus)
 		terms = append(terms, conditionTerm{text: text, quoted: quoted})
 	}
@@ -77,6 +81,10 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStat
 type conditionTerm struct {
 	text   string
 	quoted bool
+	// regex is the term as a regular expression, its quoted parts made literal; set only
+	// for the operand of `=~`. See regexOperandTerm.
+	regex    string
+	hasRegex bool
 }
 
 // expandConditionWord expands one word with neither field splitting nor pathname

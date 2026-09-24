@@ -38,13 +38,7 @@ func insideCase(text string) bool {
 // An unquoted parenthesis inside `[[ ]]` is *not* handled here, and the attempt is worth
 // recording. Teaching these three scans that a `(` inside `[[ ]]` belongs to the condition
 // looked symmetric with the case rule above, and it broke `[[ ( a == a ) ]]` -- the nested
-// condition form, which worked before -- while still not fixing `[[ x =~ (b) ]]`. The
-// parentheses of a condition reach the condition parser by a route these scans are not the
-// whole of, so the change has to start there rather than here.
-//
-// The practical consequence: a group in a regular expression only works quoted here,
-// `[[ abc =~ "(b)" ]]`. That is *not* bash-compatible and the difference is worth naming
-// rather than recommending -- bash 3.2 and later treat a quoted right-hand side as a
-// literal string, so the same line finds nothing there. It is a pre-existing divergence
-// in this shell, not something introduced for this, and it is the second half of the same
-// gap: the parentheses of a condition need handling where the condition is parsed.
+// condition form -- while still not fixing `[[ x =~ (b) ]]`. What fixed it was narrower:
+// only the operand of `=~` is a regular expression, and it is one word to the first blank
+// outside a bracket. See regex_operand.go, which also made a quoted part of it literal, as
+// bash has it -- the other half of the same gap, and the divergence this note used to name.

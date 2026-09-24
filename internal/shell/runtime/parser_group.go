@@ -102,6 +102,13 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 				continue
 			}
 		}
+		// The operand of `=~` is one word, brackets and all. See regexOperandEnd.
+		if char != ' ' && char != '\t' && followsRegexOperator(output.String()) {
+			end := regexOperandEnd(line, index)
+			output.WriteString(line[index:end])
+			index = end
+			continue
+		}
 		// `@(a|b)` and its four siblings: the parenthesis belongs to the pattern, so the
 		// whole group is data. Before groupOpenerAt, because that one answers "is this a
 		// group" and the `)` below then reported `unexpected )` on what it left behind.

@@ -88,14 +88,13 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 		return !r.matchWordPattern(right.text, left.text), nil
 	case "=~":
 		// An extended regular expression, anchored nowhere -- so `[[ abc =~ b ]]`
-		// is true.
-		//
-		// A quoted right side is treated as a regular expression here, which bash 3.2
-		// and later do not do: there, quoting makes it a literal string. The divergence
-		// predates this comment and is recorded in case_awareness.go, where the reason it
-		// has not been closed is set out -- an unquoted group does not reach the matcher
-		// at all yet, so making quoting literal would leave no working spelling.
+		// is true. A quoted part of it is literal, as bash 3.2 and later have it; see
+		// regexOperandTerm, and regex_operand.go for the unquoted group that made that
+		// possible to fix.
 		source := right.text
+		if right.hasRegex {
+			source = right.regex
+		}
 		if r.noCaseMatch() {
 			source = "(?i)" + source
 		}
