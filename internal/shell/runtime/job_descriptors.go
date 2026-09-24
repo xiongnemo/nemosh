@@ -107,6 +107,10 @@ func (h *jobHandoff) fileFor(description *openDescription, canRead, canWrite boo
 	} else if file, ok := nativeReader(description.reader).(*os.File); ok {
 		return file, nil
 	}
+	source := description.reader
+	if memory, ok := source.(memoryInput); ok && !canWrite {
+		return memory.share()
+	}
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -119,11 +123,13 @@ func (h *jobHandoff) fileFor(description *openDescription, canRead, canWrite boo
 		})
 		return writer, nil
 	}
-	// Not waited for: the source can be a console that never ends, and the copy stops once
-	// the child has gone and the pipe refuses the next write.
+	// Not waited for: the source can be a device that never ends, and the copy stops once
+	// the child has gone and the pipe refuses the next write. A stream that is not in
+	// memory is shared with the shell, as a pipe two processes hold is: what the job reads
+	// the shell does not.
 	h.given = append(h.given, reader.Close)
 	go func() {
-		_, _ = io.Copy(writer, description.reader)
+		_, _ = io.Copy(writer, source)
 		_ = writer.Close()
 	}()
 	return reader, nil

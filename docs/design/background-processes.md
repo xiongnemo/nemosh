@@ -109,10 +109,17 @@ A job's descriptors are whatever its fd table holds when it starts:
 - a file, the console, or a pipe: the handle is inherited, listed explicitly in
   `SysProcAttr.AdditionalInheritedHandles` so nothing else leaks into the child, and the
   description maps each fd number to the handle value it arrives under;
-- something in memory -- a heredoc body, `/dev/clipboard`, a test's `bytes.Buffer`, a
-  command substitution's capture: the parent makes a pipe and runs a copy goroutine
-  between it and the resource for the life of the job. This is what keeps every existing
-  test that captures a background job's output in a buffer working unchanged.
+- something in memory that the job writes to -- a test's `bytes.Buffer`, a command
+  substitution's capture: the parent makes a pipe and runs a copy goroutine between it and
+  the resource for the life of the job. This is what keeps every existing test that
+  captures a background job's output in a buffer working unchanged.
+- something in memory that the job reads -- a heredoc body, `/dev/clipboard`: what is
+  left of it moves into a temporary file the first time a job is given it, and the shell
+  reads from that file too (memory_input.go). A pipe filled from here would have read the
+  text out of the shell's hands whether the job wanted it or not. With the file, the job
+  and the shell share one offset, as they do in both references, whose heredoc is a file
+  from the start: after `exec 4<<DOC`, `{ read a <&4; } & wait; read b <&4` gives the
+  job the first line and the shell the second.
 
 stdin is `/dev/null` for a job in a session with job control, as in busybox, and
 otherwise what it was.

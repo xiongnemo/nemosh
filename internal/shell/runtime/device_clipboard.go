@@ -49,7 +49,7 @@ func openClipboardReader() (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return io.NopCloser(strings.NewReader(text)), nil
+	return newMemoryInput([]byte(text)), nil
 }
 
 // A write is one atomic replacement of that value, so the writer buffers and

@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -30,7 +29,7 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 				err = table.dup(2, 1)
 			}
 		case redirectHeredoc, redirectHereString:
-			err = table.bindOwnedReader(operation.target, io.NopCloser(bytes.NewReader([]byte(operation.body))))
+			err = table.bindOwnedReader(operation.target, newMemoryInput([]byte(operation.body)))
 		case redirectDup:
 			err = table.dup(operation.target, operation.source)
 		case redirectClose:

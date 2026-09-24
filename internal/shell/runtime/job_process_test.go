@@ -49,16 +49,18 @@ func TestProcessJobs_behaveAsTheReferencesDo(t *testing.T) {
 		}
 	})
 	// The shell's descriptors as they were at launch, each by its own route: a file inherited
-	// as a handle, a heredoc through a pipe the parent fills, and a buffer -- the test's
-	// stdout -- through a pipe the parent drains. An `exec >` after the launch does not take
-	// the job's output with it. busybox-w32 and bash 5.3 answer the same.
+	// as a handle; a heredoc moved into a file the shell reads too, so the job and the shell
+	// share one offset; and a buffer -- the test's stdout -- through a pipe the parent drains.
+	// The last job inherits the heredoc again, which is where two copies of it once raced.
+	// An `exec >` after the launch does not take the job's output with it. busybox-w32 and
+	// bash 5.3 answer the same.
 	t.Run("the job has the shell's descriptors from its launch", func(t *testing.T) {
 		file := filepath.ToSlash(filepath.Join(t.TempDir(), "three"))
 		script := "f='" + file + "'\nexec 3>\"$f\"\necho three >&3 & wait\nexec 3>&-\necho \"3=[$(cat \"$f\")]\"\n" +
-			"exec 4<<'DOC'\nfrom-heredoc\nDOC\n{ read line <&4; echo \"4=[$line]\"; } & wait\n" +
+			"exec 4<<'DOC'\nline1\nline2\nDOC\n{ read line <&4; echo \"4=[$line]\"; } & wait\nread line <&4; echo \"shell=[$line]\"\n" +
 			"{ sleep 0.3; echo from-job; } &\nexec 7>&1 >\"$f\"\necho into-file\nwait\nexec 1>&7\necho \"file=[$(cat \"$f\")]\"\n"
 		stdout, stderr := run(t, script)
-		if stdout != "3=[three]\n4=[from-heredoc]\nfrom-job\nfile=[into-file]\n" {
+		if stdout != "3=[three]\n4=[line1]\nshell=[line2]\nfrom-job\nfile=[into-file]\n" {
 			t.Fatalf("stdout %q stderr %q", stdout, stderr)
 		}
 	})
