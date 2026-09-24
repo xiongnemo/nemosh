@@ -29,7 +29,27 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	// group. Everywhere else a brace after a word is data, which is what keeps
 	// `echo {` printing a brace. Sixth layer to need telling about a construct, and
 	// the reason the count is worth stating: see array.go.
-	return delimiter == '{' && afterFunctionKeyword(line, index)
+	return delimiter == '{' && (afterFunctionKeyword(line, index) || afterCoprocKeyword(line, index))
+}
+
+// afterCoprocKeyword reports whether the words since the last separator are `coproc` or
+// `coproc NAME`, after which bash's brace opens the coprocess's group. The form is refused
+// when it runs (coproc.go), and read as a group here so the refusal is what arrives rather
+// than `unexpected }`.
+func afterCoprocKeyword(line string, index int) bool {
+	prefix := line[:index]
+	for offset := len(prefix) - 1; offset >= 0; offset-- {
+		if isCommandSeparator(prefix[offset]) {
+			prefix = prefix[offset+1:]
+			break
+		}
+	}
+	fields := strings.Fields(prefix)
+	// `then coproc {`, `do coproc {`: the reserved words a command may follow come first.
+	for len(fields) > 0 && commandIntroducers[fields[0]] {
+		fields = fields[1:]
+	}
+	return len(fields) > 0 && fields[0] == "coproc" && (len(fields) == 1 || len(fields) == 2 && isVariableName(fields[1]))
 }
 
 // afterCommandIntroducer reports whether everything before index is a reserved word a

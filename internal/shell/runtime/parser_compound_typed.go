@@ -68,6 +68,10 @@ func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int
 			program = append(program, node)
 			continue
 		}
+		if node, ok := coprocLine(line, budget); ok {
+			program = append(program, node)
+			continue
+		}
 		parsed, err := parseTypedLineWithBudget(lines[index], budget, depth)
 		if err != nil {
 			return nil, err

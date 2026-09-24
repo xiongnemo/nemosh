@@ -37,6 +37,12 @@ var unimplementedBuiltins = map[string]unimplementedBuiltin{
 			"it keeps the name and returns 1 with no message (shell/shell_common.c, " +
 			"the #else of `#if !ENABLE_PLATFORM_MINGW32`)",
 	},
+	// Refused by name, where `coproc cat` was a command not found and `coproc NAME {
+	// cat; }` a syntax error that stopped the whole script; see coproc.go.
+	"coproc": {
+		reason: "a coprocess is a background job with pipes both ways, and a background job " +
+			"here is not yet a process to give them to. See docs/design/background-processes.md",
+	},
 	"fg": {reason: noSuspensionReason, permanent: true},
 	"bg": {reason: noSuspensionReason, permanent: true},
 }
