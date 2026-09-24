@@ -80,21 +80,26 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		// locals belongs to a function call, and a snapshot is not inside
 		// one: a subshell or a background worker that returns has nothing
 		// of the caller's to restore.
-		locals:        nil,
-		frames:        r.frames,
-		substitutions: r.substitutions,
-		scriptFile:    r.scriptFile,
-		readonly:      cloneMap(r.readonly),
-		attributes:    cloneMap(r.attributes),
-		mutatedVars:   cloneMap(r.mutatedVars),
-		mask:          &fileModeMask{value: r.mask.value},
-		sourceDepth:   r.sourceDepth,
-		functionDepth: r.functionDepth,
-		interactive:   r.interactive,
-		paths:         &paths,
-		env:           r.env.clone(),
-		jobScope:      jobs,
-		lifecycle:     lifecycle,
+		locals: nil,
+		frames: r.frames,
+		// Where `set -e` is ignored -- a condition, the left of `||` -- it is ignored in
+		// a subshell there too, even one that sets -e itself: `(set -e; false; echo x) ||
+		// y` prints x in both references. The snapshot started with it cleared, so the
+		// subshell stopped at false.
+		errExitSuppressed: r.errExitSuppressed,
+		substitutions:     r.substitutions,
+		scriptFile:        r.scriptFile,
+		readonly:          cloneMap(r.readonly),
+		attributes:        cloneMap(r.attributes),
+		mutatedVars:       cloneMap(r.mutatedVars),
+		mask:              &fileModeMask{value: r.mask.value},
+		sourceDepth:       r.sourceDepth,
+		functionDepth:     r.functionDepth,
+		interactive:       r.interactive,
+		paths:             &paths,
+		env:               r.env.clone(),
+		jobScope:          jobs,
+		lifecycle:         lifecycle,
 	}, nil
 }
 
