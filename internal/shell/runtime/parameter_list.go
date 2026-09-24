@@ -53,7 +53,7 @@ func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatu
 	case "/", "//", "/#", "/%":
 		pattern := r.expandScalarParameterText(ctx, word, savedStatus)
 		return mapList(elements, func(element string) string {
-			return parameterReplace(element, operator, pattern)
+			return parameterReplace(element, operator, pattern, r.noCaseMatch())
 		}), true
 	case "^", "^^", ",", ",,":
 		pattern := r.expandScalarParameterText(ctx, word, savedStatus)

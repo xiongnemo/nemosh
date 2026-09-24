@@ -60,7 +60,7 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	case ":":
 		return r.parameterSubstring(value, word)
 	case "/", "//", "/#", "/%":
-		return parameterReplace(value, operator, r.expandScalarParameterText(ctx, word, savedStatus)), nil
+		return parameterReplace(value, operator, r.expandScalarParameterText(ctx, word, savedStatus), r.noCaseMatch()), nil
 	case "^", "^^", ",", ",,":
 		return parameterCase(value, operator, r.expandScalarParameterText(ctx, word, savedStatus)), nil
 	default:

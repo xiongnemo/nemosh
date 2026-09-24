@@ -32,6 +32,8 @@ type shellOptions struct {
 	globStar bool
 	nullGlob bool
 	dotGlob  bool
+	// noCaseMatch is `shopt -s nocasematch`; see pattern_nocase.go.
+	noCaseMatch bool
 	// extGlob is reported by `shopt` and is always true: the matcher recognises the
 	// extended operators whether or not it is asked to. See pattern_extended.go.
 	extGlob bool

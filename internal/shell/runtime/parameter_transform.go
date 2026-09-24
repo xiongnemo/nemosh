@@ -101,32 +101,41 @@ func splitSubstringSpec(spec string) (string, string, bool) {
 // The pattern is a shell pattern rather than a regular expression, and the match is
 // greedy: measured, `${x/b*/-}` over `a1b2c` gives `a1-`, so `b*` took everything
 // it could. A missing replacement deletes -- `${x//X}` is `${x//X/}`.
-func parameterReplace(value, operator, spec string) string {
+//
+// fold is `shopt -s nocasematch`: the match is looked for in an ASCII-folded copy, and
+// the replacement cut out of the original, whose offsets are the same (pattern_nocase.go).
+func parameterReplace(value, operator, spec string, fold bool) string {
 	pattern, replacement := splitReplacementSpec(spec)
 	if pattern == "" {
 		return value
 	}
+	subject := value
+	if fold {
+		subject, pattern = foldASCII(value), foldASCII(pattern)
+	}
 	switch operator {
 	case "/#":
-		if width, ok := longestPatternMatchAt(value, pattern, 0); ok {
+		if width, ok := longestPatternMatchAt(subject, pattern, 0); ok {
 			return replacement + value[width:]
 		}
 		return value
 	case "/%":
-		for start := 0; start <= len(value); start++ {
-			if matchShellPattern(pattern, value[start:]) {
+		for start := 0; start <= len(subject); start++ {
+			if matchShellPattern(pattern, subject[start:]) {
 				return value[:start] + replacement
 			}
 		}
 		return value
 	}
-	return replaceMatches(value, pattern, replacement, operator == "//")
+	return replaceMatches(value, subject, pattern, replacement, operator == "//")
 }
 
-func replaceMatches(value, pattern, replacement string, all bool) string {
+// replaceMatches finds matches in subject and writes value around them: the two are the
+// same string, or one is the other folded, with the same offsets.
+func replaceMatches(value, subject, pattern, replacement string, all bool) string {
 	var out strings.Builder
 	for index := 0; index <= len(value); {
-		width, ok := longestPatternMatchAt(value, pattern, index)
+		width, ok := longestPatternMatchAt(subject, pattern, index)
 		if !ok {
 			if index == len(value) {
 				break

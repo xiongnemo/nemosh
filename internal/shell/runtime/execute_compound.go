@@ -163,7 +163,7 @@ func (r Runtime) caseArmMatches(ctx context.Context, arm caseArmNode, value stri
 		if len(expanded) > 0 {
 			pattern = expanded[0]
 		}
-		if matchShellPattern(pattern, value) {
+		if r.matchWordPattern(pattern, value) {
 			return true
 		}
 	}

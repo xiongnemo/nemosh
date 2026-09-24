@@ -78,14 +78,14 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 		// The right side is a *pattern* unless it was quoted. Measured:
 		// `[[ abc == a* ]]` is true and `[[ abc == "a*" ]]` is false.
 		if right.quoted {
-			return left.text == right.text, nil
+			return r.equalWords(left.text, right.text), nil
 		}
-		return matchShellPattern(right.text, left.text), nil
+		return r.matchWordPattern(right.text, left.text), nil
 	case "!=":
 		if right.quoted {
-			return left.text != right.text, nil
+			return !r.equalWords(left.text, right.text), nil
 		}
-		return !matchShellPattern(right.text, left.text), nil
+		return !r.matchWordPattern(right.text, left.text), nil
 	case "=~":
 		// An extended regular expression, anchored nowhere -- so `[[ abc =~ b ]]`
 		// is true.
@@ -95,7 +95,11 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 		// predates this comment and is recorded in case_awareness.go, where the reason it
 		// has not been closed is set out -- an unquoted group does not reach the matcher
 		// at all yet, so making quoting literal would leave no working spelling.
-		expression, err := regexp.Compile(right.text)
+		source := right.text
+		if r.noCaseMatch() {
+			source = "(?i)" + source
+		}
+		expression, err := regexp.Compile(source)
 		if err != nil {
 			return false, fmt.Errorf("invalid regular expression: %s", right.text)
 		}

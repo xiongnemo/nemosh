@@ -24,12 +24,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "shopt -s nocasematch; case ABC in abc) echo match;; esac",
-    "stdout": "match\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "printf '%(%Y)T\\n' 17280000",
     "stdout": "1970\n",
     "status": 0,
