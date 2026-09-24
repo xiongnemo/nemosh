@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 	// Either way this binary can be a job's: the built nemosh, or itself through the
 	// intercept above.
 	AllowJobProcesses()
+	endJobsWithTheTestBinary()
 	directory, err := os.MkdirTemp("", "nemosh-job-binary-")
 	if err == nil {
 		if binary, built := buildJobBinary(directory); built {
