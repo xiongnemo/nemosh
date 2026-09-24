@@ -82,7 +82,7 @@ func (r Runtime) globChildren(base, segment string) []string {
 		if strings.HasPrefix(name, ".") && !strings.HasPrefix(segment, ".") && !r.options.dotGlob {
 			continue
 		}
-		if !r.matchGlobSegment(segment, name) {
+		if !r.matchGlobSegment(segment, name) || r.hiddenFromGlob(entry) {
 			continue
 		}
 		matched = append(matched, joinGlobPath(base, name))
@@ -183,7 +183,7 @@ func (r Runtime) expandGlobStar(bases []string) []string {
 					continue
 				}
 				name := entry.Name()
-				if strings.HasPrefix(name, ".") && !r.options.dotGlob {
+				if strings.HasPrefix(name, ".") && !r.options.dotGlob || r.hiddenFromGlob(entry) {
 					continue
 				}
 				next = append(next, joinGlobPath(base, name))

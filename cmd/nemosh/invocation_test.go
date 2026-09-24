@@ -168,3 +168,15 @@ func TestInvocation_exitInENVEndsTheSession(t *testing.T) {
 		t.Fatalf("status %d stdout %q, want 4 before any line ran", result.status, result.stdout)
 	}
 }
+
+// ignoreeof refuses an end of input at the prompt with busybox's words, fifty times in a
+// row and then leaves, as busybox does -- so a pipe that has ended cannot hold the shell.
+func TestInvocation_ignoreeofRefusesEndOfInput(t *testing.T) {
+	result := runInvocation(t, "set -o ignoreeof\necho hi\n", "-i")
+	if result.status != 0 || !strings.Contains(result.stdout, "hi\n") {
+		t.Fatalf("status %d stdout %q, want the session to run and leave", result.status, result.stdout)
+	}
+	if got := strings.Count(result.stderr, "Use \"exit\" to leave shell."); got != maxIgnoredEOFs {
+		t.Fatalf("refused %d times, want %d", got, maxIgnoredEOFs)
+	}
+}

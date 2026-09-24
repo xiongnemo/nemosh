@@ -118,6 +118,9 @@ func (r Runtime) setOptionName(name string, enable bool) error {
 	if err := inertOptionRefusal(spec.letter, enable); err != nil {
 		return err
 	}
+	if reason, inert := inertShellOptionNames[name]; inert && enable {
+		return fmt.Errorf("-o %s: not implemented: %s", name, reason)
+	}
 	*spec.field(r.options) = enable
 	return nil
 }
@@ -149,6 +152,15 @@ var inertShellOptions = map[byte]string{
 		"`nemosh -n SCRIPT` is the syntax check",
 	'v': "a script is parsed in full before any of it runs, so there is no " +
 		"moment at which its lines are read one by one to be echoed",
+	'm': "there is no job control to switch on: nothing here can stop a job " +
+		"and resume it, which is what fg and bg are refused for too",
+}
+
+// inertShellOptionNames is the same for options that have only a name. busybox accepts
+// both of these; asking for either was "illegal option", which says the option does not
+// exist rather than that this shell cannot do it.
+var inertShellOptionNames = map[string]string{
+	"vi": "the line editor's keys are emacs's, and there is no vi mode to switch to",
 }
 
 // Every other option acts: -a exports what is assigned (readonly.go), -C

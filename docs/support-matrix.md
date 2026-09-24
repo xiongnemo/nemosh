@@ -48,6 +48,8 @@ these names why, and names what busybox-w32 does with the same name.
 | `fg`, `bg` | 126 | They resume a *suspended* job and nothing here can suspend one — see **Process control** below, which is the long answer. busybox-w32 compiles both out under `#if JOBS`. These two say **"not implemented, and will not be"** where the rows above say only "not implemented", because they are settled rather than pending. |
 | `set -b` | 2 | Completion is already reported at the next prompt, which is the default behaviour it would be switching off. What `-b` asks for is the report *immediately*, mid-command, and there is no notification channel to switch on for that. |
 | `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. `nemosh -n SCRIPT` is the syntax check; `nemosh -v` is refused for the same reason. |
+| `set -m`, `set -o monitor` | 2 | There is no job control to switch on: nothing here can stop a job and resume it, which is what `fg` and `bg` are refused for too. busybox-w32 accepts the option, with job control compiled out. |
+| `set -o vi` | 2 | The line editor's keys are emacs's, and there is no vi mode to switch to. busybox-w32 has one. |
 
 The shell's own command line takes what busybox's does:
 `nemosh [-ils] [-|+aCeEfnux] [-|+o NAME]... [-c COMMAND [NAME [ARG]...] | SCRIPT [ARG]...]`.
@@ -60,6 +62,17 @@ for commands read from standard input, and `is` for a session. The letters come 
 table order rather than busybox's, which only matters to a script comparing `$-` as
 a whole. A name `-o` does not have exits 2, bash's answer. busybox reports it and then
 exits 0.
+
+busybox-w32's other options are here too:
+- `set -o ignoreeof` (`-I`) refuses an end of input at the prompt. It prints
+  `Use "exit" to leave shell.`, and the fiftieth in a row leaves anyway, as
+  busybox's does.
+- `set -o nohiddenglob` keeps files with the Windows Hidden attribute out of
+  pathname expansion.
+- `set -o nohidsysglob` keeps out only those that are Hidden and System, the pair
+  on `desktop.ini`.
+
+Both glob options are off by default, as they are in busybox.
 
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.

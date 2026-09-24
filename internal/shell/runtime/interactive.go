@@ -37,6 +37,10 @@ func (r *Runtime) ParseSessionInput(source string) (Script, error) {
 	return script, err
 }
 
+// IgnoresEOF is `set -o ignoreeof`: an end of input at the prompt is refused rather than
+// taken as `exit`.
+func (r Runtime) IgnoresEOF() bool { return r.options.ignoreEOF }
+
 func (r *Runtime) RunInteractive(ctx context.Context, script Script) InteractiveResult {
 	if r.initErr != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", r.initErr)

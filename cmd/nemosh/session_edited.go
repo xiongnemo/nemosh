@@ -39,6 +39,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	}
 
 	lastStatus := 0
+	ignoredEOFs := 0
 	var input strings.Builder
 
 	for {
@@ -92,8 +93,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 				fmt.Fprintln(c.stderr, "nemosh: unexpected end of file")
 				return exitStatus(2)
 			}
+			if refuseEOF(rt, c.stderr, &ignoredEOFs) {
+				continue
+			}
 			return interactiveStatusError(rt.CloseInteractive(ctx))
 		}
+		ignoredEOFs = 0
 		if err != nil {
 			rt.CloseInteractive(ctx)
 			return fmt.Errorf("nemosh: read stdin: %w", err)

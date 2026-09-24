@@ -34,6 +34,18 @@ type shellOptions struct {
 	dotGlob  bool
 	// noCaseMatch is `shopt -s nocasematch`; see pattern_nocase.go.
 	noCaseMatch bool
+	// noHiddenGlob and noHidSysGlob are busybox-w32's: pathname expansion leaves out
+	// a file with the Hidden attribute, or one that is both Hidden and System. See
+	// glob_hidden.go.
+	noHiddenGlob bool
+	noHidSysGlob bool
+	// ignoreEOF is `set -o ignoreeof`, -I: an end of input at a prompt is refused
+	// rather than taken as `exit`. The session loops read it (IgnoresEOF).
+	ignoreEOF bool
+	// monitor and vi are accepted names that are refused when asked for; see
+	// inertShellOptionNames.
+	monitor bool
+	vi      bool
 	// extGlob is reported by `shopt` and is always true: the matcher recognises the
 	// extended operators whether or not it is asked to. See pattern_extended.go.
 	extGlob bool
@@ -62,12 +74,17 @@ var shellOptionSpecs = []shellOptionSpec{
 	{'e', "errexit", func(o *shellOptions) *bool { return &o.errExit }},
 	{'E', "errtrace", func(o *shellOptions) *bool { return &o.errTrace }},
 	{'f', "noglob", func(o *shellOptions) *bool { return &o.noGlob }},
+	{'I', "ignoreeof", func(o *shellOptions) *bool { return &o.ignoreEOF }},
+	{'m', "monitor", func(o *shellOptions) *bool { return &o.monitor }},
 	{'n', "noexec", func(o *shellOptions) *bool { return &o.noExec }},
 	{'u', "nounset", func(o *shellOptions) *bool { return &o.noUnset }},
 	{'v', "verbose", func(o *shellOptions) *bool { return &o.verbose }},
 	{'x', "xtrace", func(o *shellOptions) *bool { return &o.xtrace }},
 	{0, "pipefail", func(o *shellOptions) *bool { return &o.pipefail }},
 	{0, "nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }},
+	{0, "nohiddenglob", func(o *shellOptions) *bool { return &o.noHiddenGlob }},
+	{0, "nohidsysglob", func(o *shellOptions) *bool { return &o.noHidSysGlob }},
+	{0, "vi", func(o *shellOptions) *bool { return &o.vi }},
 }
 
 func (o *shellOptions) clone() *shellOptions {

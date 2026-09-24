@@ -45,6 +45,7 @@ func (c command) runInteractive(ctx context.Context, controller *interruptContro
 	var lineResults <-chan interactiveLine
 	linePending := false
 	lastStatus := 0
+	ignoredEOFs := 0
 	var input strings.Builder
 
 sessionLoop:
@@ -112,8 +113,12 @@ sessionLoop:
 				fmt.Fprintln(c.stderr, "nemosh: unexpected end of file")
 				return exitStatus(2)
 			}
+			if refuseEOF(rt, c.stderr, &ignoredEOFs) {
+				continue
+			}
 			return interactiveStatusError(rt.CloseInteractive(ctx))
 		}
+		ignoredEOFs = 0
 		// The same expansion the edited loop does. This is the path a piped script
 		// takes, and giving it only to the terminal path would make `!!` depend on
 		// how the shell was started.

@@ -168,3 +168,27 @@ func TestRuntime_leavesAnAssignmentUnexported_whenAllExportIsOff(t *testing.T) {
 		t.Fatalf("stdout = %q, want the assignment to stay out of the environment", stdout)
 	}
 }
+
+// ignoreeof is -I, as in busybox, and `set -o` names the options busybox-w32 has that this
+// shell had no name for. vi and monitor are named and refused: asking for either was
+// "illegal option", which says the option does not exist.
+func TestRuntime_namesBusyboxOptions(t *testing.T) {
+	// When
+	status, stdout, _ := runSetScript(t, "set -I\necho \"[$-]\"\nset -o\n")
+
+	// Then
+	if status != 0 || !strings.HasPrefix(stdout, "[I]\n") {
+		t.Fatalf("status = %d, stdout = %q, want I in $-", status, stdout)
+	}
+	for _, name := range []string{"ignoreeof", "monitor", "nohiddenglob", "nohidsysglob", "vi"} {
+		if !strings.Contains(stdout, name) {
+			t.Errorf("set -o = %q, want it to list %s", stdout, name)
+		}
+	}
+	for _, option := range []string{"-o vi", "-m", "-o monitor"} {
+		status, _, stderr := runSetScript(t, "set "+option+"\n")
+		if status != 2 || !strings.Contains(stderr, "not implemented") {
+			t.Errorf("set %s = %d %q, want a refusal that names why", option, status, stderr)
+		}
+	}
+}
