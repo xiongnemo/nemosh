@@ -345,6 +345,9 @@ func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]strin
 		return []string{strconv.Itoa(len([]rune(elements[0])))}, true
 	}
 	if indices, ok := strings.CutPrefix(body, "!"); ok {
+		if names, ok := r.namesWithPrefix(indices); ok {
+			return names, true
+		}
 		reference, ok := parseArrayReference(indices)
 		if !ok || (reference.subscript != "@" && reference.subscript != "*") {
 			return nil, false

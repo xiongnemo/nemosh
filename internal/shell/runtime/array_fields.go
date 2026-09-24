@@ -20,6 +20,10 @@ func isArrayAtReference(text string) bool {
 	if !ok {
 		return false
 	}
+	// `${!prefix@}`, a field per name; see namesWithPrefix.
+	if prefix, ok := strings.CutPrefix(body, "!"); ok && strings.HasSuffix(prefix, "@") && isVariableName(strings.TrimSuffix(prefix, "@")) {
+		return true
+	}
 	body = strings.TrimPrefix(body, "!")
 	if reference, ok := parseArrayReference(body); ok {
 		return reference.subscript == "@"

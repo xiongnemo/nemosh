@@ -235,21 +235,9 @@ func parameterCase(value, operator, pattern string) string {
 // The array forms `${!a[@]}` and `${!a[*]}` are subscripts rather than indirection
 // and are answered before this is reached; see array.go.
 func (r Runtime) expandIndirectParameter(ctx context.Context, name string, savedStatus int) (string, error) {
-	// `${!prefix*}` and `${!prefix@}` are a different question sharing the `!`:
-	// the *names* that begin with prefix, not the value one of them holds. Handled
-	// here because otherwise it would ask for a variable called `HO*` and quietly
-	// find nothing -- which is what it did for one commit, and worse than the
-	// `bad substitution` it replaced.
-	if prefix, ok := strings.CutSuffix(name, "*"); ok {
-		return r.namesWithPrefix(prefix), nil
-	}
-	if prefix, ok := strings.CutSuffix(name, "@"); ok {
-		// bash makes this one a field per name when quoted, where `*` is always
-		// one word. Unquoted the two are identical because the result splits
-		// anyway, and the quoted difference is not expressible on this path; the
-		// joined form is the closer of the two.
-		return r.namesWithPrefix(prefix), nil
-	}
+	// `${!prefix*}` and `${!prefix@}` are a different question sharing the `!` -- the
+	// names that begin with prefix -- and are answered as the lists they are before this
+	// is reached; see namesWithPrefix.
 	target, set := r.lookupParameter(ctx, name, savedStatus)
 	if !set || target == "" {
 		// bash gives the empty string rather than an error, and a script testing
@@ -263,15 +251,41 @@ func (r Runtime) expandIndirectParameter(ctx context.Context, name string, saved
 	return value, nil
 }
 
-// namesWithPrefix is the set part of `${!prefix*}`: every set variable whose name
-// begins with prefix, sorted so the answer is the same twice.
-func (r Runtime) namesWithPrefix(prefix string) string {
-	var names []string
+// namesWithPrefix is `${!prefix@}` and `${!prefix*}`: every set variable or array whose
+// name begins with prefix, sorted so the answer is the same twice. `@` is a field per name
+// and `*` one field joined as `$*` is, bash's forms; busybox calls both a bad substitution.
+// They were one field joined with a blank, so `"${!ab@}"` was one word and `${!ab*}` under
+// `IFS=,` still had blanks in it.
+func (r Runtime) namesWithPrefix(text string) ([]string, bool) {
+	prefix, star := strings.CutSuffix(text, "*")
+	if !star {
+		var at bool
+		if prefix, at = strings.CutSuffix(text, "@"); !at {
+			return nil, false
+		}
+	}
+	if !isVariableName(prefix) {
+		return nil, false
+	}
+	seen := map[string]bool{}
 	for name := range r.vars {
+		seen[name] = true
+	}
+	for name := range r.arrays.values {
+		seen[name] = true
+	}
+	for _, name := range r.arrays.associativeNames() {
+		seen[name] = true
+	}
+	var names []string
+	for name := range seen {
 		if strings.HasPrefix(name, prefix) {
 			names = append(names, name)
 		}
 	}
 	sort.Strings(names)
-	return strings.Join(names, " ")
+	if star {
+		return []string{strings.Join(names, r.starSeparator())}, true
+	}
+	return names, true
 }

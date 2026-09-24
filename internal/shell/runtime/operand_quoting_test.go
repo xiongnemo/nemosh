@@ -48,3 +48,13 @@ func TestMixedAssignments_runInOrder(t *testing.T) {
 		}
 	}
 }
+
+// `${!prefix@}` is a field per name and `${!prefix*}` one word joined as `$*` is, arrays
+// included. Both were one word joined with a blank. bash's answers, measured.
+func TestNamePrefix_listsTheNames(t *testing.T) {
+	script := "ab1=1 ab2=2 abc=3; abz=(x)\nprintf '[%s]' \"${!ab@}\"; echo\nIFS=,; echo \"${!ab*}\"\nfor v in ${!ab@}; do echo \"v=$v\"; done\necho \"[${!zz@}]\"\n"
+	want := "[ab1][ab2][abc][abz]\nab1,ab2,abc,abz\nv=ab1\nv=ab2\nv=abc\nv=abz\n[]\n"
+	if stdout, _ := runScriptCapturing(script); stdout != want {
+		t.Fatalf("stdout = %q, want %q", stdout, want)
+	}
+}
