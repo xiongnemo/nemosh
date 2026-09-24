@@ -58,21 +58,32 @@ busybox's `--fs` does. On other platforms the pipe is `ExtraFiles[0]`, fd 3.
 A pipe rather than a file mapping, because the description is read once, front to back,
 and a pipe needs no size decided in advance and leaves nothing to unmap.
 
-### 2. The program travels as its parsed form, not as text
+### 2. The program travels as printed text
 
-busybox copies the node tree and rebases pointers. The equivalent here is to encode the
-`programNode` the job runs, with `encoding/gob` over the AST types (`ast.go`,
-`ast_word.go`), each node type registered once. Parent and child are always the same
-binary -- the child is started from `os.Executable()` -- so the encoding needs no
-compatibility across versions, and nothing needs to turn an AST back into source.
+busybox copies the node tree and rebases pointers. The first version of this design had
+the equivalent -- `encoding/gob` over the AST types -- and it does not work as stated: gob
+encodes exported fields only, and every field of every node in `ast.go` and `ast_word.go`
+is unexported. Making it work would mean a mirror type per node, kept in step with the
+real ones by hand: the two-copies problem again, at the scale of the whole grammar.
 
-Text was the other candidate, and it loses: the parser takes heredoc bodies out before it
-reads anything (`heredoc_parse.go`), so the text of `cat <<EOF` inside a job is not in any
-line the parser holds, and reconstructing it is a printer this shell does not have.
-Functions travel the same way: a function is a `functionDefinition` whose body is a node.
+So the job's program travels as text, printed from its nodes by the printer `declare -f`
+uses (script_print.go), and the child parses it. The objection to text was heredocs --
+the parser takes their bodies out before it reads anything, so no line it holds contains
+them -- and the printer answers it: it writes each body back after the line its operator
+is on. `TestDeclareF_readsBackAsTheSameFunction` is the evidence: a function using every
+construct the printer knows, printed, evaluated under another name, and run beside the
+original, gives the same output. That test is the contract this step depends on, and a
+construct the printer gets wrong is a job that runs differently -- so the round-trip test
+grows with the grammar.
+
+Functions travel the same way, as `declare -f` would print them. One cost: `$LINENO`
+inside a job counts the printed lines, from the line the job started on, not the lines
+as written. Recorded when this lands.
 
 ### 3. The state travels through one codec, with a guard
 
+The state is a plain struct of exported fields, encoded as JSON -- it is read once, by
+the same binary, and JSON is the one encoding a person can read when a job misbehaves.
 Everything `clone()` copies (snapshot.go) goes into the description: variables, both
 kinds of array and which indices are live, attributes, read-only and exported names
 (including the pending ones, export_pending.go), functions, aliases, options and the
@@ -149,7 +160,8 @@ background jobs will notice; busybox pays the same price for the same reason.
 Behind `NEMOSH_JOBS=process` until it reaches parity, then the default, then the switch
 goes:
 
-1. The codec and its two tests (reflect guard, round trip), with nothing using them.
+1. The codec and its two tests (reflect guard, round trip), with nothing using them; the
+   printer's round-trip test widened to every construct a job can hold.
 2. `nemosh --job` and the launch: pid, handle, `$!`, `wait`, status. Every existing
    background-job test runs under both launchers.
 3. Signals: the Job Object, the control pipe, `kill` by pid, TERM traps in a job.
