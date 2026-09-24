@@ -79,6 +79,9 @@ func parseArrayAssignmentWord(item word) (arrayAssignment, bool) {
 // is not something bash supports either, because an array cannot be passed in a
 // command's temporary environment.
 func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, savedStatus int) ([]word, bool) {
+	if applied := r.applyMixedAssignments(ctx, command, savedStatus); applied {
+		return nil, true
+	}
 	applied := false
 	for index, item := range command {
 		assignment, ok := parseArrayAssignmentWord(item)
@@ -119,4 +122,34 @@ func (r Runtime) syncArrayScalar(name string) {
 		return
 	}
 	r.vars[name] = elements[0]
+}
+
+// applyMixedAssignments runs a command made only of assignments, some of them arrays, in
+// the order written. The array pass stopped at the first word that was not an array, so in
+// `IFS=, parts=($line)` -- the way to split a line into an array -- the array came after a
+// scalar and was never seen: it was expanded as an ordinary word and assigned as text. Left
+// to right, because `x=1 a=($x)` has to see the x it has just set.
+func (r Runtime) applyMixedAssignments(ctx context.Context, command []word, savedStatus int) bool {
+	arrays := 0
+	for _, item := range command {
+		if _, ok := parseArrayAssignmentWord(item); ok {
+			arrays++
+		} else if !isAssignmentWord(item) {
+			return false
+		}
+	}
+	if arrays == 0 || arrays == len(command) {
+		return false
+	}
+	for _, item := range command {
+		if assignment, ok := parseArrayAssignmentWord(item); ok {
+			r.assignArray(ctx, assignment, savedStatus)
+			continue
+		}
+		assignments, _ := leadingAssignments(r.expandAssignmentWord(ctx, item, savedStatus))
+		if r.assignVars(assignments) != 0 {
+			return true
+		}
+	}
+	return true
 }
