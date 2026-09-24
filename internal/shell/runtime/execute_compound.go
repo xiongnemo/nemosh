@@ -119,7 +119,11 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 
 func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatus int) lineResult {
 	r.enterLine(node.line)
-	values := r.expandWord(ctx, node.word, savedStatus)
+	// Not split, and neither is a pattern (caseArmMatches): POSIX 2.9.4.3 gives the word
+	// and the patterns every expansion but field splitting. Both were split and cut to the
+	// first field, so `x="a b"; case $x in "a b")` matched nothing, where it matches in
+	// busybox-w32 and bash 5.3 alike, and `case $@ in` saw only "$1".
+	values := r.expandingAssignment().expandWord(ctx, node.word, savedStatus)
 	if r.shellErrorRaised() {
 		return shellErrorResult()
 	}
@@ -160,12 +164,7 @@ func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatu
 // string and a lone `*` -- that used to be recognised here.
 func (r Runtime) caseArmMatches(ctx context.Context, arm caseArmNode, value string, savedStatus int) bool {
 	for _, candidate := range arm.patterns {
-		expanded := r.expandWord(ctx, candidate, savedStatus)
-		pattern := ""
-		if len(expanded) > 0 {
-			pattern = expanded[0]
-		}
-		if r.matchWordPattern(pattern, value) {
+		if r.matchWordPattern(r.casePattern(ctx, candidate, savedStatus), value) {
 			return true
 		}
 	}
