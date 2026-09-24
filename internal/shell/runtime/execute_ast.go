@@ -44,11 +44,12 @@ func (r Runtime) executeProgram(ctx context.Context, program []programNode, save
 func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus int) lineResult {
 	switch value := node.(type) {
 	case backgroundNode:
+		body := jobBody(value.value)
 		if r.processJobsEnabled() {
-			return r.launchProcessJob(value.value)
+			return r.launchProcessJob(body)
 		}
 		return r.launchBackground(func(worker Runtime) lineResult {
-			return worker.executeNode(worker.jobScope.ctx, value.value, savedStatus)
+			return worker.executeNode(worker.jobScope.ctx, body, savedStatus)
 		})
 	case listNode:
 		return r.executeTypedList(ctx, value.value, savedStatus)
@@ -72,9 +73,9 @@ func (r Runtime) executeTypedList(ctx context.Context, item list, savedStatus in
 	for _, entry := range item.items {
 		var result lineResult
 		if entry.background && r.processJobsEnabled() {
-			result = r.launchProcessJob(listNode{value: list{items: []listItem{{value: entry.value}}}})
+			result = r.launchProcessJob(listNode{value: list{items: []listItem{{value: jobAndOr(entry.value)}}}})
 		} else if entry.background {
-			value := entry.value
+			value := jobAndOr(entry.value)
 			saved := status
 			result = r.launchBackground(func(worker Runtime) lineResult {
 				return worker.executeTypedAndOr(worker.jobScope.ctx, value, saved)
@@ -93,6 +94,29 @@ func (r Runtime) executeTypedList(ctx context.Context, item list, savedStatus in
 	return lineResult{status: status}
 }
 
+// jobBody is what a job runs. A subshell that is the whole of the job runs as the job
+// itself, as bash runs `( list ) &` in the one process it forks: a trap the list sets is
+// then the job's, and `kill $!` reaches it. The job is as isolated as the subshell was.
+func jobBody(node programNode) programNode {
+	value, ok := node.(listNode)
+	if !ok || len(value.value.items) != 1 || value.value.items[0].background {
+		return node
+	}
+	return listNode{value: list{items: []listItem{{value: jobAndOr(value.value.items[0].value)}}}}
+}
+
+func jobAndOr(item andOr) andOr {
+	if len(item.pipelines) != 1 || item.pipelines[0].negated || len(item.pipelines[0].commands) != 1 {
+		return item
+	}
+	subshell, ok := item.pipelines[0].commands[0].(subshellCommand)
+	if !ok {
+		return item
+	}
+	group := braceGroup{body: subshell.body, redirects: subshell.redirects}
+	return andOr{pipelines: []pipeline{{commands: []commandNode{group}}}}
+}
+
 func (r Runtime) launchBackground(run func(Runtime) lineResult) lineResult {
 	worker, err := r.snapshot(r.jobScope.ctx)
 	if err != nil {
@@ -104,6 +128,8 @@ func (r Runtime) launchBackground(run func(Runtime) lineResult) lineResult {
 
 func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) lineResult) lineResult {
 	worker.traps = map[trapName]string{}
+	// A job is addressed by `kill` on its own, so it has an inbox of its own.
+	worker.signals = newSignalInbox()
 	if err := worker.fds.bindBorrowedReader(0, bytes.NewReader(nil)); err != nil {
 		worker.jobScope.cancelAndDrain()
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, worker.fds.closeAll()))
@@ -116,6 +142,7 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, worker.fds.closeAll()))
 		return lineResult{status: 1}
 	}
+	record.deliver = worker.signals.offer
 	// `$!`, which was empty. It is a **job specification** here and not a process id,
 	// and that is forced rather than chosen: a background job in this shell is a
 	// goroutine, so there is no pid to report (see jobRecord.cancel for the same

@@ -45,10 +45,13 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 	}
 	jobs := r.jobScope
 	lifecycle := &shellLifecycle{}
+	// A subshell has no inbox: a signal is addressed to the shell or the job, and one
+	// that arrives while a subshell runs is the shell's to deliver once it has finished.
+	var signals *signalInbox
 	if privateJobs {
 		jobs = newPrivateJobScope(ctx, r.jobScope.supervisor)
 	} else {
-		lifecycle = r.lifecycle
+		lifecycle, signals = r.lifecycle, r.signals
 	}
 	return Runtime{
 		initErr:     r.initErr,
@@ -59,6 +62,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		vars:        cloneMap(r.vars),
 		traps:       r.inheritedTraps(),
 		trapRunning: map[trapName]bool{},
+		signals:     signals,
 		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...), function: r.params.function},
 		options:     r.options.clone(),
 		expansion:   newExpansionState(),

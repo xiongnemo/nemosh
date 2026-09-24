@@ -25,6 +25,11 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 	if r.errExitTriggers(result) && !value.negated {
 		result.control = flowExit
 	}
+	// A signal that arrived while the pipeline ran has its trap run now; see
+	// signal_inbox.go.
+	if result.control == flowNone {
+		result = r.deliverSignals(ctx, result)
+	}
 	return result
 }
 

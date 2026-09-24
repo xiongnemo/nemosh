@@ -66,13 +66,13 @@ func (r Runtime) killOne(operand string, signal int) error {
 	return proc.Terminate(pid, signal)
 }
 
-// killJob stops one background job.
+// killJob sends one background job a signal.
 //
-// Every signal cancels, and saying so is better than pretending to tell TERM
-// from KILL: a goroutine has no handler to run, so the distinction would be a
-// promise this cannot keep. What it can promise is that the job stops, and that
-// it reports which signal stopped it -- 143 for TERM, `Terminated` in `jobs` --
-// as busybox's jobs do, whose targets have no handler run either.
+// A job that has set a trap for the signal, or an empty one to ignore it, is handed it
+// and carries on, as in bash (signal_inbox.go). Otherwise the job stops, and it reports
+// which signal stopped it -- 143 for TERM, `Terminated` in `jobs` -- as busybox's jobs
+// do. busybox never runs the trap: it cannot deliver a signal to one, so every kill
+// there ends the job.
 //
 // **Except zero, which only asks.** `kill -0 $pid` is how a script tests whether
 // its job is still alive -- `while kill -0 $pid; do sleep 1; done` -- and it used
@@ -100,6 +100,11 @@ func (r Runtime) killJob(spec string, signal int) error {
 	default:
 	}
 	if signal == 0 {
+		return nil
+	}
+	// Offered first, since the job may have a trap for it: then the trap runs and the job
+	// carries on. KILL is never offered, because nothing catches it.
+	if signal != 9 && record.deliver != nil && record.deliver(signal) {
 		return nil
 	}
 	if record.cancel == nil {

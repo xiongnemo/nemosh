@@ -24,6 +24,7 @@ var jobStateCoverage = map[string]string{
 	"vars":              "encoded: Vars",
 	"traps":             "encoded: Traps",
 	"trapRunning":       "not inherited: nothing is running a trap in a new process",
+	"signals":           "not inherited: a job starts with no traps, so its inbox is new; its signals come over Control",
 	"params":            "encoded: Name, Positional, Function",
 	"options":           "encoded: Options, Invocation",
 	"expansion":         "not inherited: per command; the line travels as Line",

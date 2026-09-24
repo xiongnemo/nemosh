@@ -34,6 +34,9 @@ type jobRecord struct {
 	signal int
 	// pid is the job's process when it is one (job_process.go), and 0 for a goroutine.
 	pid int
+	// deliver hands the job a signal it may catch, and reports whether the job took it;
+	// see signal_inbox.go. Nil for a job that cannot catch one.
+	deliver func(signal int) bool
 }
 
 type jobScope struct {

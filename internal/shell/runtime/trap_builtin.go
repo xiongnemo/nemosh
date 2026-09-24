@@ -8,7 +8,8 @@ import (
 )
 
 // trap implements the POSIX `trap` builtin over the conditions this shell
-// promises: EXIT and INT (docs/design/v0-readiness.md, P0.4), and ERR, which is
+// promises: EXIT and INT (docs/design/v0-readiness.md, P0.4); HUP, QUIT and TERM,
+// which `kill` can send a background job (signal_inbox.go); and ERR, which is
 // not a signal at all and so needs nothing Windows lacks -- busybox and bash both
 // have it, and they agree on every case measured (errTrapTriggers).
 //
@@ -64,11 +65,7 @@ func (r Runtime) trap(args []string) int {
 			status = 1
 			continue
 		}
-		if action == "-" {
-			delete(r.traps, name)
-			continue
-		}
-		r.traps[name] = action
+		r.setTrap(name, action)
 	}
 	return status
 }
@@ -107,6 +104,12 @@ func trapConditionName(operand string) (trapName, bool) {
 		return trapExit, true
 	case "INT", "SIGINT", "2":
 		return trapINT, true
+	case "HUP", "SIGHUP", "1":
+		return trapHUP, true
+	case "QUIT", "SIGQUIT", "3":
+		return trapQUIT, true
+	case "TERM", "SIGTERM", "15":
+		return trapTERM, true
 	case "ERR":
 		return trapERR, true
 	case "RETURN":
@@ -122,7 +125,7 @@ func trapConditionName(operand string) (trapName, bool) {
 }
 
 // The signal names POSIX XCU requires `kill -l` to know. Nemosh recognises them
-// so a script trapping TERM is told the truth -- that this shell does not
+// so a script trapping USR1 is told the truth -- that this shell does not
 // deliver it -- rather than being told the name is wrong.
 var portableSignalNames = []string{
 	"ABRT", "ALRM", "BUS", "CHLD", "CONT", "FPE", "HUP", "ILL", "KILL", "PIPE",

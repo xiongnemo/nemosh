@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
+	"time"
 )
 
 // prepareJobCommand makes the child its own process group, so a terminal's Ctrl-C reaches
@@ -30,4 +33,55 @@ func inheritedFile(handle, name string) (*os.File, error) {
 		return nil, fmt.Errorf("%s: %q is not an inherited descriptor", name, handle)
 	}
 	return os.NewFile(uintptr(value), name), nil
+}
+
+// jobTree is a job process's process group, which prepareJobCommand made, so KILL ends
+// the programs the job started too.
+type jobTree struct {
+	mu     sync.Mutex
+	pgid   int
+	closed bool
+}
+
+func (t *jobTree) attach(pid int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.pgid = pid
+}
+
+func (t *jobTree) kill(process *os.Process, _ int) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.closed {
+		return nil
+	}
+	if t.pgid > 0 {
+		return syscall.Kill(-t.pgid, syscall.SIGKILL)
+	}
+	return process.Kill()
+}
+
+// close is the job's end; after it, kill does nothing, so a group id that has been reused
+// is never signalled.
+func (t *jobTree) close() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.closed = true
+}
+
+// processOutcome is a job process's status and the signal that ended it, if one did.
+func processOutcome(state *os.ProcessState) (int, int) {
+	if status, ok := state.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+		return 128 + int(status.Signal()), int(status.Signal())
+	}
+	return state.ExitCode(), 0
+}
+
+// endBySignal is a job ending by a signal it did not catch: the signal raised on itself
+// with its default action back, so the parent sees what processOutcome reads.
+func endBySignal(number int) {
+	signal.Reset(syscall.Signal(number))
+	_ = syscall.Kill(os.Getpid(), syscall.Signal(number))
+	time.Sleep(time.Second)
+	os.Exit(128 + number)
 }

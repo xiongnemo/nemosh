@@ -82,10 +82,10 @@ func (r Runtime) runInterruptTrap(ctx context.Context, savedStatus int) {
 	r.runTrap(ctx, trapINT, savedStatus)
 }
 
-func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) {
+func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) lineResult {
 	command := r.traps[name]
 	if command == "" || r.trapRunning[name] {
-		return
+		return lineResult{status: savedStatus}
 	}
 	if name == trapExit {
 		delete(r.traps, name)
@@ -95,7 +95,8 @@ func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) {
 	prepared, err := r.parseHere(command)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "trap %s: %v\n", name, err)
-		return
+		return lineResult{status: savedStatus}
 	}
-	r.executeProgram(ctx, prepared.program, savedStatus)
+	status, control := r.executeProgram(ctx, prepared.program, savedStatus)
+	return lineResult{status: status, control: control}
 }

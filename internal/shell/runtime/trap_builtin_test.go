@@ -118,17 +118,18 @@ func TestRuntime_reportsAnInvalidCondition_whenTheNameIsNotASignal(t *testing.T)
 }
 
 func TestRuntime_saysSoPlainly_whenTheSignalIsRealButUnsupported(t *testing.T) {
-	// TERM is a real signal and a typo is not what happened, so the diagnostic
-	// must not claim the name is invalid.
+	// USR1 is a real signal and a typo is not what happened, so the diagnostic
+	// must not claim the name is invalid. (TERM was the example until a job could be
+	// sent it; see signal_job_test.go.)
 	// When
-	status, _, stderr := runSetScript(t, "trap 'echo x' TERM\n")
+	status, _, stderr := runSetScript(t, "trap 'echo x' USR1\n")
 
 	// Then
 	if status != 1 {
 		t.Fatalf("status = %d, want 1", status)
 	}
-	if !strings.Contains(stderr, "TERM") || strings.Contains(stderr, "invalid signal specification") {
-		t.Fatalf("stderr = %q, want TERM reported as unsupported rather than invalid", stderr)
+	if !strings.Contains(stderr, "USR1") || strings.Contains(stderr, "invalid signal specification") {
+		t.Fatalf("stderr = %q, want USR1 reported as unsupported rather than invalid", stderr)
 	}
 }
 

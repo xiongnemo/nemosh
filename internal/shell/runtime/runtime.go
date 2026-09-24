@@ -26,10 +26,13 @@ type Runtime struct {
 	vars        map[string]string
 	traps       map[trapName]string
 	trapRunning map[trapName]bool
-	params      *parameters
-	options     *shellOptions
-	expansion   *expansionState
-	aliases     map[string]string
+	// signals holds what `kill` sent this shell until a command boundary runs the trap;
+	// see signal_inbox.go. Nil in a subshell, which a signal is never addressed to.
+	signals   *signalInbox
+	params    *parameters
+	options   *shellOptions
+	expansion *expansionState
+	aliases   map[string]string
 	// childCPU is shared by pointer across snapshots: a pipeline stage's
 	// children are the shell's children too, and `times` in the parent has to
 	// see what they used.
@@ -101,6 +104,10 @@ const (
 	trapERR trapName = "ERR"
 	// trapRETURN runs as a function returns or a sourced file finishes; see return_trap.go.
 	trapRETURN trapName = "RETURN"
+	// The signals a trap can catch besides INT; see signal_inbox.go.
+	trapHUP  trapName = "HUP"
+	trapQUIT trapName = "QUIT"
+	trapTERM trapName = "TERM"
 )
 
 func New(registry applets.Registry, streams Streams) Runtime {

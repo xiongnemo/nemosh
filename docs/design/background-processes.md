@@ -1,7 +1,8 @@
 # Background jobs as processes
 
-Status: **proposed**, 2026-09-24. Nothing here is built yet. This is the design the
-bash-compatibility plan put last, and asked for before any code.
+Status: **steps 1-3 built** behind `NEMOSH_JOBS=process` (see "How it lands"), 2026-09-24.
+The goroutine is still the default. This is the design the bash-compatibility plan put
+last, and asked for before any code.
 
 ## What is wrong with the goroutine
 
@@ -16,7 +17,7 @@ things a script can observe need one:
 | `$!` | `%1`, a job spec | the pid, as both references give |
 | `$BASHPID` | unset | the job's own pid |
 | `wait $pid`, `kill $pid`, `tasklist`, `taskkill` | only `%N` and the spec in `$!` work | the pid works everywhere |
-| `trap '...' TERM` inside the job | cannot fire: nothing delivers TERM to a goroutine | the parent can tell the child |
+| `trap '...' TERM` inside the job | could not fire: nothing delivered TERM to a goroutine. It does now, through the inbox both launchers share (step three) | the parent can tell the child |
 | `kill %1` on a job that started programs | cancels the job's context, which reaches the programs it started under `exec.CommandContext`, not their children | a Job Object takes the whole tree |
 
 The corpus records the first two as gaps (`bash_gaps.json`: the numeric `$!`, BASHPID),
@@ -147,6 +148,29 @@ the pid. The status arrives as the process's exit code, so `complete` stays as i
 The child is started with `CREATE_NEW_PROCESS_GROUP`, so the console's Ctrl-C reaches
 the foreground and not the background, as busybox arranges.
 
+**As built** (step three), with what measuring changed:
+
+- The job's trap runs when the command in progress finishes, not the moment the byte
+  arrives. That is bash's rule: `(trap 'echo got' TERM; sleep 1; echo after) & kill $!`
+  prints got, then after. A signal nothing catches ends the job at once, and its EXIT trap
+  still runs, as bash's does. The status is 143 all the same.
+- The child answers every signal, so there is **no grace period**. The child's reader is a
+  goroutine that does nothing else. A job that ignores TERM (`trap '' TERM`) has to keep
+  running, and a timer would have ended it; bash leaves such a job alone too. KILL is
+  still there for a job that has stopped answering.
+- A subshell that is the whole of a job, `( list ) &`, runs as the job itself, as bash
+  runs it in the one process it forks. Otherwise the trap the list sets would belong to a
+  subshell inside the job, and `kill $!` would not reach it. The goroutine launcher does
+  the same, and the inbox the two share (signal_inbox.go) gives both launchers the same
+  answers.
+- HUP, INT, QUIT and TERM only: the ones `kill` has names for. USR1 and USR2 are not in
+  that table, nor in busybox's.
+- The Job Object has no `KILL_ON_JOB_CLOSE`: with it, the shell exiting would take every
+  job with it, where both references' jobs outlive the shell.
+- A job that dies by a signal it did not catch exits with `n << 24`, or re-raises the
+  signal off Windows. So the parent can tell a kill from `exit 143` and name the job
+  `Terminated`, not `Done(143)`.
+
 ### 7. What stays a goroutine
 
 Subshells `( )`, pipeline stages and command substitutions. None of them has a pid a
@@ -183,5 +207,7 @@ goes:
   child; to confirm against bash before step 2.
 - Whether `wait` with no operands should also wait for `>(cmd)` readers, which remain
   goroutines. bash waits for the last process substitution since 5.1.
-- The grace period for a signal the child does not answer: 500 ms is a guess to be
-  measured against a child busy in a loop with no trap.
+- ~~The grace period for a signal the child does not answer.~~ Settled in step three:
+  there is none; see section 6.
+- A signal sent to the shell itself, from outside it: `trap … TERM` is accepted at the
+  top level, but nothing delivers a console close or a real SIGTERM to the inbox yet.

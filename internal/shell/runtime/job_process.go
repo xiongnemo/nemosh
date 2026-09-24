@@ -16,7 +16,7 @@ import (
 // `kill` take the pid as they take `%N`. Off unless asked for, because the goroutine is
 // still what every other test and every user runs.
 //
-// Not yet: the Job Object, and signals delivered to the child's traps. Those are step three.
+// Signals, and the Job Object KILL ends, are job_process_signal.go.
 
 // processJobsEnabled reports NEMOSH_JOBS=process in the shell's environment, for a shell
 // whose applets are the ones a child of this binary would have. A runtime given its own
@@ -51,33 +51,41 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 	// references' jobs do.
 	command := exec.CommandContext(r.jobScope.ctx, executable)
 	prepareJobCommand(command)
+	tree := &jobTree{}
+	command.Cancel = func() error { return tree.kill(command.Process, 9) }
 	handoff, descriptors, err := r.handOffDescriptors(command)
 	if err != nil {
 		return r.jobLaunchFailure(err)
 	}
 	state.Descriptors = descriptors
-	if err := r.startJobProcess(command, handoff, executable, state); err != nil {
+	sender, control, err := handoff.control()
+	if err != nil {
 		return r.jobLaunchFailure(errors.Join(err, handoff.abandon()))
 	}
-	record, err := r.jobScope.registerCancellable(func() { _ = command.Process.Kill() })
+	state.Control = control
+	if err := r.startJobProcess(command, handoff, executable, state); err != nil {
+		sender.close()
+		return r.jobLaunchFailure(errors.Join(err, handoff.abandon()))
+	}
+	tree.attach(command.Process.Pid)
+	record, err := r.jobScope.registerCancellable(func() { _ = tree.kill(command.Process, 9) })
 	if err != nil {
-		_ = command.Process.Kill()
-		go func() { _ = command.Wait(); _ = handoff.finish() }()
+		_ = tree.kill(command.Process, 9)
+		go func() { _ = command.Wait(); _ = handoff.finish(); tree.close(); sender.close() }()
 		return r.jobLaunchFailure(err)
 	}
-	record.pid = command.Process.Pid
+	record.pid, record.deliver = command.Process.Pid, sender.send
 	r.vars["!"] = strconv.Itoa(record.pid)
 	r.markVarMutation("!")
 	if r.interactive.session {
 		fmt.Fprintf(r.streams.Stderr, "[%d] %d\n", record.id, record.pid)
 	}
 	go func() {
-		err := command.Wait()
-		status := 0
-		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
-			status = jobExitStatus(uint32(exit.ExitCode()))
-		} else if err != nil {
-			status = 1
+		status, signal := jobOutcome(command, command.Wait())
+		tree.close()
+		sender.close()
+		if signal != 0 {
+			r.jobScope.noteExitSignal(record, signal)
 		}
 		if err := handoff.finish(); err != nil && status == 0 {
 			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
@@ -161,16 +169,28 @@ func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: job state: %v\n", err)
 		return 2
 	}
+	ctx, end := context.WithCancelCause(ctx)
+	defer end(nil)
 	program, err := r.restoreJobState(ctx, state)
 	if err == nil {
 		err = r.bindJobDescriptors(state.Descriptors)
+	}
+	var control *os.File
+	if err == nil && state.Control != "" {
+		control, err = inheritedFile(state.Control, "job-control")
 	}
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: job: %v\n", err)
 		return 2
 	}
+	if control != nil {
+		go r.receiveSignals(control, end)
+	}
 	status, _ := r.executePrepared(ctx, program)
 	r.CloseBatch(status)
+	if signal, ok := errors.AsType[jobSignal](context.Cause(ctx)); ok {
+		endBySignal(int(signal))
+	}
 	return status
 }
 

@@ -45,6 +45,9 @@ type jobState struct {
 	// Descriptors is the job's descriptor table past what the child's standard handles
 	// carry, filled by the launcher rather than captured; see job_descriptors.go.
 	Descriptors []jobDescriptor `json:"descriptors"`
+	// Control is the handle of the pipe `kill` sends the job its signals on; see
+	// job_process_signal.go.
+	Control string `json:"control"`
 }
 
 type jobIndexedArray struct {
@@ -168,7 +171,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 	r.options.invocation = state.Invocation
 	r.params = &parameters{name: state.Name, values: append([]string(nil), state.Positional...), function: state.Function}
 	for name, action := range state.Traps {
-		r.traps[trapName(name)] = action
+		r.setTrap(trapName(name), action)
 	}
 	for index := len(state.Frames) - 1; index >= 0; index-- {
 		frame := state.Frames[index]

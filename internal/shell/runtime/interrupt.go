@@ -21,6 +21,9 @@ func contextStatus(ctx context.Context) int {
 	if isShellInterrupt(ctx) {
 		return 130
 	}
+	if signal, ok := errors.AsType[jobSignal](context.Cause(ctx)); ok {
+		return 128 + int(signal)
+	}
 	return 1
 }
 
