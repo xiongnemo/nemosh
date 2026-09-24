@@ -141,8 +141,13 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			}
 			fields[len(fields)-1] += strconv.FormatInt(value, 10)
 			contributed = true
-		case wordPartProcessSubstitution:
-			path := r.expandProcessSubstitution(ctx, part.script, savedStatus)
+		case wordPartProcessSubstitution, wordPartOutputSubstitution:
+			var path string
+			if part.kind == wordPartOutputSubstitution {
+				path = r.expandOutputSubstitution(ctx, part.script, savedStatus)
+			} else {
+				path = r.expandProcessSubstitution(ctx, part.script, savedStatus)
+			}
 			var produced bool
 			fields, produced = r.appendExpansion(fields, path, quoteDouble)
 			contributed = contributed || produced

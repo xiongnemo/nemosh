@@ -63,6 +63,11 @@ func (r Runtime) CloseBatch(savedStatus int) {
 	if err := r.fds.closeAll(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 	}
+	// After the descriptors, whose closing is the end of input a `>(cmd)` reading from an
+	// `exec` redirect waits for: `exec > >(tee log)` has all of its log once this returns.
+	if r.substitutions != nil {
+		r.substitutions.Wait()
+	}
 }
 
 func (r Runtime) executePrepared(ctx context.Context, script Script) (int, flowControl) {

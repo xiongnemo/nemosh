@@ -658,5 +658,11 @@
     "stdout": "in\nret\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo hi > >(cat); wait",
+    "stdout": "hi\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

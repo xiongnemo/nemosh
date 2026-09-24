@@ -111,24 +111,6 @@ func TestProcessSubstitution_insideACommandSubstitution(t *testing.T) {
 	}
 }
 
-// The output form is refused rather than approximated. Writing into a file after the
-// command that would read it has already finished is not what `>(command)` means, and a
-// script that got a path back would be told the wrong thing quietly.
-func TestProcessSubstitution_refusesTheOutputForm(t *testing.T) {
-	// When
-	status, stdout, stderr := runSetScript(t, "echo hi >(cat)\n")
-
-	// Then
-	if status == 0 {
-		t.Fatalf("status = 0, want a failure; stdout = %q", stdout)
-	}
-	for _, want := range []string{">(cat)", "<(...)"} {
-		if !strings.Contains(stderr, want) {
-			t.Fatalf("stderr = %q, want it to name %q", stderr, want)
-		}
-	}
-}
-
 // A path rather than `/dev/fd/63`, and a temporary file that is removed when the command
 // that reads it has finished. Both are divergences from bash worth pinning: Windows has no
 // `/dev/fd`, so the file is real, and a real file has to be cleaned up. See

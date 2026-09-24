@@ -19,6 +19,9 @@ const (
 	// wordPartProcessSubstitution is `<(command)`: it expands to a path holding the
 	// command's output. See process_substitution.go.
 	wordPartProcessSubstitution
+	// wordPartOutputSubstitution is `>(command)`: a path to a pipe the command reads
+	// while the consumer writes. See output_substitution.go.
+	wordPartOutputSubstitution
 )
 
 type wordPart struct {

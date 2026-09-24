@@ -58,8 +58,23 @@ func (m Model) WithCWD(cwd Path) Model {
 	return m
 }
 
+// namedPipePrefix is where Windows keeps named pipes: `\\.\pipe\NAME`, a path only in the
+// sense that CreateFile opens it. Nothing under it is a directory, and the `.` names the
+// machine rather than the current directory, so it is passed through whole in both
+// directions instead of being read as a UNC share called pipe. `>(cmd)` substitutes one.
+const namedPipePrefix = "//./pipe/"
+
+// IsNamedPipe reports a path in the named-pipe namespace, in either slash.
+func IsNamedPipe(path string) bool {
+	path = strings.ReplaceAll(path, `\`, "/")
+	return len(path) > len(namedPipePrefix) && strings.EqualFold(path[:len(namedPipePrefix)], namedPipePrefix)
+}
+
 func WindowsPath(path Path) (string, error) {
 	s := string(path)
+	if IsNamedPipe(s) {
+		return s, nil
+	}
 	if strings.HasPrefix(s, "//") {
 		parts := strings.Split(strings.Trim(s, "/"), "/")
 		if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
@@ -87,6 +102,9 @@ func (m Model) Resolve(input string) (Path, error) {
 	}
 	if isWindowsDrivePath(path) {
 		return clean(Path("/" + strings.ToLower(path[:1]) + path[2:])), nil
+	}
+	if IsNamedPipe(path) {
+		return Path(path), nil
 	}
 	if strings.HasPrefix(path, "//") {
 		return normalizeUNC(path)

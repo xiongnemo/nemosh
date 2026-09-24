@@ -36,6 +36,9 @@ type expansionState struct {
 	// expanded. Held until the command has run, because the consumer opens them in
 	// between; see process_substitution.go.
 	processSubstitutions []string
+	// outputPipes are the pipes `>(cmd)` handed the command being expanded, to let go of
+	// once it has run; see output_substitution.go.
+	outputPipes []*substitutionPipe
 }
 
 func (state *expansionState) registerProcessSubstitution(path string) {

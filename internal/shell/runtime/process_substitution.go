@@ -29,8 +29,9 @@ import (
 // bash, where the path names a pipe.
 //
 // That is the right trade for what the form is used for: comparing or reading the output of
-// a command that ends. `>(command)` is refused by name rather than approximated, because
-// writing into a file a command has already finished reading is not the same thing.
+// a command that ends. `>(command)` cannot make it -- writing into a file a command has
+// already finished reading is not the same thing -- so it is a pipe; see
+// output_substitution.go.
 
 // processSubstitutionOpensAt reports whether the `(` at index is the one in `<(` or `>(`.
 //
@@ -77,18 +78,16 @@ func processSubstitutionPart(line string, index int, budget *parseBudget, depth 
 		return wordPart{}, 0, nil
 	}
 	text := line[index : end+1]
-	// Refused before the body is parsed, so the diagnostic is about the form rather than
-	// about whatever is inside it.
-	if line[index] == '>' {
-		return wordPart{}, 0, fmt.Errorf(
-			"process substitution %s: only the input form <(...) is implemented", text)
-	}
 	nested, err := parseNestedScript(line[index+2:end], line[:index+2], budget, depth)
 	if err != nil {
 		return wordPart{}, 0, err
 	}
+	kind := wordPartProcessSubstitution
+	if line[index] == '>' {
+		kind = wordPartOutputSubstitution
+	}
 	return wordPart{
-		kind:   wordPartProcessSubstitution,
+		kind:   kind,
 		text:   text,
 		quote:  quoteUnquoted,
 		script: &nested,
@@ -148,6 +147,7 @@ func (r Runtime) runIntoFile(ctx context.Context, script Script, file *os.File, 
 // between. Called from the one place that knows a command has finished, so a substitution
 // inside a loop does not leave one file per iteration.
 func (r Runtime) cleanUpProcessSubstitutions() {
+	r.abandonOutputPipes()
 	for _, path := range r.expansion.takeProcessSubstitutions() {
 		// A failure to remove is not reported: the file is in the system temporary
 		// directory, the command has already run, and a diagnostic arriving after the

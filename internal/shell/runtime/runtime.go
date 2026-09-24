@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"sync"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -58,6 +59,10 @@ type Runtime struct {
 	// of it: $FUNCNAME, $BASH_SOURCE, $BASH_LINENO and `caller`. See call_stack.go.
 	frames     *callFrame
 	scriptFile string
+	// substitutions counts the `>(cmd)` commands still reading, which a script waits for
+	// before it exits. One for the whole shell, shared by every snapshot: a pipeline stage
+	// or a subshell can start one too. See output_substitution.go.
+	substitutions *sync.WaitGroup
 	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options

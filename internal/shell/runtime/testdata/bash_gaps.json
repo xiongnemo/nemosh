@@ -6,12 +6,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "echo hi > >(cat); wait",
-    "stdout": "hi\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "coproc cat; echo hi >&\"${COPROC[1]}\"; read -r line <&\"${COPROC[0]}\"; echo \"$line\"",
     "stdout": "hi\n",
     "status": 0,
