@@ -19,3 +19,12 @@ func TestErrexit_isIgnoredInASubshellWhereTheSubshellIsTested(t *testing.T) {
 		}
 	}
 }
+
+// pwd into a pipe whose reader has gone ends quietly, as every other writer does and as
+// busybox's does; it reported `pwd: pipeline downstream closed`.
+func TestPwd_isQuietWhenTheReaderHasGone(t *testing.T) {
+	_, stdout, stderr := runSetScript(t, "{ echo 1; sleep 0.2; pwd; echo after >&2; } | head -1\n")
+	if stdout != "1\n" || stderr != "after\n" {
+		t.Fatalf("stdout %q stderr %q, want the line head took and nothing from pwd", stdout, stderr)
+	}
+}

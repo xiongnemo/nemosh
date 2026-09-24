@@ -14,6 +14,11 @@ import (
 
 func (r Runtime) pwd() int {
 	_, err := fmt.Fprintln(r.streams.Stdout, r.WorkingDirectory())
+	// A reader that has gone -- `... | head -1` -- ends the output quietly, as every other
+	// writer here takes it and busybox does; this said `pwd: pipeline downstream closed`.
+	if err != nil && errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
+		return 1
+	}
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "pwd: %v\n", err)
 		return 1
