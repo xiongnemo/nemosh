@@ -12,6 +12,8 @@ type parameters struct {
 	// `$FUNCNAME` answers; empty outside one. Kept here because a call already
 	// makes a new set of parameters and restores the caller's on the way out.
 	function string
+	// getopts is where getopts left off inside a group of letters; see getopts.go.
+	getopts getoptsState
 }
 
 // SetArguments seeds $0 and the positional parameters. POSIX gives the name and
