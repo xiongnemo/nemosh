@@ -27,6 +27,9 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 	if options.functionNames {
 		return r.declareFunctionNames(names)
 	}
+	if options.functionBodies {
+		return r.declareFunctionBodies(names)
+	}
 	if options.print || len(names) == 0 {
 		r.printDeclarations(names)
 		return 0
@@ -61,8 +64,10 @@ type declareOptions struct {
 	// that takes an attribute away again.
 	integer, lower, upper bool
 	removed               string
-	// functionNames is -F; see declareFunctionNames.
-	functionNames bool
+	// functionNames is -F; see declareFunctionNames. functionBodies is -f, the
+	// definitions themselves; see declareFunctionBodies.
+	functionNames  bool
+	functionBodies bool
 	// global is -g: inside a function the names are the caller's rather than the call's.
 	global bool
 }
@@ -92,6 +97,8 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 			switch letter {
 			case 'F':
 				options.functionNames = true
+			case 'f':
+				options.functionBodies = true
 			case 'i':
 				options.integer = true
 			case 'l':
@@ -112,7 +119,7 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 				options.global = true
 			default:
 				return options, nil, fmt.Errorf(
-					"-%c: not an option this build has; it takes -A -a -i -l -u -r -x -p -g -F", letter)
+					"-%c: not an option this build has; it takes -A -a -i -l -u -r -x -p -g -f -F", letter)
 			}
 		}
 	}
