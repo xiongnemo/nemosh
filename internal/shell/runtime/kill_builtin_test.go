@@ -180,7 +180,9 @@ func TestKill_terminatesARealProcess(t *testing.T) {
 // test can be sure exists on the machine.
 func sleepingHelper(t *testing.T) string {
 	t.Helper()
-	binary := t.TempDir() + "/helper"
+	// A name of its own: the applets package's pkill test matches its helper by name, and
+	// ended this one when the two packages' tests ran at once and both were "helper".
+	binary := t.TempDir() + "/killprobe"
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
 	}

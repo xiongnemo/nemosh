@@ -2,6 +2,8 @@ package applets_test
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -81,13 +83,13 @@ func TestPgrep_findsAProcessByTheNameYouType(t *testing.T) {
 	}
 	defer func() { _ = child.Process.Kill() }()
 
-	name := "helper"
+	name := helperName
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		stdout, _, err := runAppletWithInput(t, "", "pgrep", "-l", name)
 		if err == nil && strings.Contains(stdout, strconv.Itoa(child.Process.Pid)) {
 			// And -l names it, which is the whole difference from bare pgrep.
-			if !strings.Contains(strings.ToLower(stdout), "helper") {
+			if !strings.Contains(strings.ToLower(stdout), helperName) {
 				t.Fatalf("pgrep -l = %q, want the process name too", stdout)
 			}
 			return
@@ -112,12 +114,12 @@ func TestPkill_stopsWhatItMatches(t *testing.T) {
 	}
 	defer func() { _ = child.Process.Kill() }()
 	waitFor(t, func() bool {
-		_, _, err := runAppletWithInput(t, "", "pgrep", "helper")
+		_, _, err := runAppletWithInput(t, "", "pgrep", helperName)
 		return err == nil
 	}, "pgrep never saw the helper")
 
-	// When: the name is exact, so nothing else on the machine can match
-	if _, stderr, err := runAppletWithInput(t, "", "pkill", "-x", "helper"); err != nil {
+	// When: the name is exact and this binary's own, so nothing else can match
+	if _, stderr, err := runAppletWithInput(t, "", "pkill", "-x", helperName); err != nil {
 		t.Fatalf("pkill = %v, stderr = %q", err, stderr)
 	}
 
@@ -146,9 +148,14 @@ func listableOrSkip(t *testing.T) ([]proc.Process, bool) {
 	return processes, true
 }
 
+// helperName is the helper's process name, and unique to this test binary. It was
+// "helper", and pkill -x matches by name across the machine: the runtime package's tests,
+// running at the same time, build a helper of the same name, and this pkill ended theirs.
+var helperName = fmt.Sprintf("pkillprobe%d", os.Getpid())
+
 func buildHelperShell(t *testing.T) string {
 	t.Helper()
-	binary := t.TempDir() + "/helper"
+	binary := t.TempDir() + "/" + helperName
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
 	}
