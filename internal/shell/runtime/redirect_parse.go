@@ -51,6 +51,10 @@ type redirectOperation struct {
 	body        string
 	line        int
 	order       int
+	// name is the `{name}` in front of the operator, and duplicate a duplication whose
+	// source is a word to expand; see redirect_named.go.
+	name      string
+	duplicate bool
 }
 
 func parseRedirects(tokens []shellToken) ([]shellToken, []redirectOperation, error) {
@@ -112,10 +116,20 @@ func parseRedirectsWithBudget(tokens []shellToken, budget *parseBudget) ([]shell
 				operation.path = operand
 				operation.operand = parseTypedWord(*tokens[index].parsed)
 			case redirectDup, redirectClose:
+				// `>&word` with no number in front sends both streams to the file word
+				// when word is not a descriptor, as `&>word` does; see redirect_named.go.
+				operation.bothStreams = token.value == ">&"
+				written := parseTypedWord(*tokens[index].parsed)
+				if !isUnquotedLiteralWord(written) || operation.bothStreams && !isDigits(operand) && operand != "-" {
+					operation.duplicate, operation.operand, operation.path = true, written, operand
+					break
+				}
+				name := operation.name
 				operation, _, err = parseDupRedirect(operation.target, operand, token.value+operand)
 				if err != nil {
 					return nil, nil, err
 				}
+				operation.name = name
 			}
 		}
 		operations = append(operations, operation)
@@ -145,6 +159,13 @@ func parseRedirectsOnly(tokens []shellToken, budget *parseBudget) ([]redirectOpe
 }
 
 func parseRedirectToken(value string) (redirectOperation, bool, error) {
+	name, operator := splitDescriptorName(value)
+	operation, needsOperand, err := parseRedirectOperator(operator)
+	operation.name = name
+	return operation, needsOperand, err
+}
+
+func parseRedirectOperator(value string) (redirectOperation, bool, error) {
 	digits := 0
 	for digits < len(value) && value[digits] >= '0' && value[digits] <= '9' {
 		digits++

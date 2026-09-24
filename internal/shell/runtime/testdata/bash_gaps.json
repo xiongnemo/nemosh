@@ -1,11 +1,5 @@
 [
   {
-    "script": "exec {fd}>&1; echo named >&\"$fd\"; exec {fd}>&-",
-    "stdout": "named\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "trap 'echo dbg' DEBUG; echo one",
     "stdout": "dbg\none\n",
     "status": 0,

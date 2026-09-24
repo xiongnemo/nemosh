@@ -224,7 +224,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			// is a lexical comparison, would create a file called `b`. Measured
 			// before this: it did.
 			if kind, width := activeOperator(line[index:]); width > 0 && !inCondition {
-				if kind == tokenRedirect && isDigits(line[wordStart:index]) {
+				if kind == tokenRedirect && (isDigits(line[wordStart:index]) || isDescriptorName(line[wordStart:index])) {
 					buffer.WriteString(line[index : index+width])
 					if err := appendToken(shellToken{kind: tokenRedirect, value: buffer.String()}); err != nil {
 						return nil, nil, err

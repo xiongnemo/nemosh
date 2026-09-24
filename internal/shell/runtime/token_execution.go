@@ -244,6 +244,15 @@ func replaceCommandTokens(tokens []shellToken, commandStart int, words []string)
 
 func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redirectOperation, savedStatus int) ([]redirectOperation, bool) {
 	for index, operation := range operations {
+		if operation.duplicate {
+			resolved, err := r.resolveDuplication(ctx, operation, savedStatus)
+			if err != nil {
+				fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+				return nil, false
+			}
+			operations[index] = resolved
+			continue
+		}
 		if !operation.kind.takesPath() {
 			if operation.kind == redirectHeredoc && operation.expand {
 				operations[index].body = r.expandHeredocBody(ctx, operation.body, savedStatus)

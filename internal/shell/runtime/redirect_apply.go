@@ -13,6 +13,11 @@ import (
 func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOperation) error {
 	for _, operation := range operations {
 		var err error
+		if operation.name != "" {
+			if operation.target, err = r.namedTarget(table, operation); err != nil {
+				return err
+			}
+		}
 		switch operation.kind {
 		case redirectInput:
 			err = r.bindInputRedirect(table, operation)

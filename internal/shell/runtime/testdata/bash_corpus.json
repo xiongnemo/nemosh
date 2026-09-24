@@ -646,5 +646,11 @@
     "stdout": "has-caller\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "exec {fd}>&1; echo named >&\"$fd\"; exec {fd}>&-",
+    "stdout": "named\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
