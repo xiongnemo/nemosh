@@ -32,16 +32,19 @@ import (
 // grepFlags is the whole option surface, in one place so the parser and the
 // matcher cannot disagree about what was asked for.
 type grepFlags struct {
-	ignoreCase   bool
-	invert       bool
-	lineNumber   bool
-	recursive    bool
-	filesOnly    bool
-	countOnly    bool
-	quiet        bool
-	wordMatch    bool
-	lineMatch    bool
-	fixedString  bool
+	ignoreCase  bool
+	invert      bool
+	lineNumber  bool
+	recursive   bool
+	filesOnly   bool
+	countOnly   bool
+	quiet       bool
+	wordMatch   bool
+	lineMatch   bool
+	fixedString bool
+	// extended is -E. Without it a pattern is a POSIX basic regular expression, as it is
+	// in busybox, GNU and POSIX; see compile.
+	extended     bool
 	onlyMatching bool
 	noMessages   bool
 	noFilename   bool
@@ -81,8 +84,18 @@ func (f grepFlags) compile() (*regexp.Regexp, error) {
 	}
 	parts := make([]string, 0, len(f.patterns))
 	for _, pattern := range f.patterns {
-		if f.fixedString {
+		switch {
+		case f.fixedString:
 			pattern = regexp.QuoteMeta(pattern)
+		case !f.extended:
+			// A basic expression, translated as sed's is. Handed to Go as it was, `a+b`
+			// needed a+ where every grep matches the three characters, `x|y` was an
+			// alternation, `(` a syntax error, and `\(a\)` matched nothing.
+			translated, err := translateBasicRegex(pattern)
+			if err != nil {
+				return nil, err
+			}
+			pattern = translated
 		}
 		switch {
 		case f.lineMatch:
@@ -140,9 +153,9 @@ func parseGrepFlags(flags string, into *grepFlags) error {
 		case 'H':
 			into.withFilename = true
 		case 'E':
-			// GNU's default here already is extended: Go's regexp is RE2, which
-			// has no basic mode. So -E is accepted as a no-op and -G would be a
-			// lie -- see the support matrix.
+			into.extended = true
+		case 'G':
+			into.extended = false
 		default:
 			return fmt.Errorf("unsupported grep option: -%c", flag)
 		}

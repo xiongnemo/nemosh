@@ -113,6 +113,14 @@ func translateEscape(char byte) (string, bool, error) {
 		return "\n", false, nil
 	case 't':
 		return "\t", false, nil
+	// GNU's classes and word edges, which busybox's grep and sed both have: `\w` matched
+	// a literal w and `\b` a literal b. Go has the first six itself. `\<` and `\>` are
+	// the start and end of a word, which RE2 cannot say apart without lookaround; a word
+	// boundary is what they are at the edge of a word, which is where they are written.
+	case 'w', 'W', 's', 'S', 'b', 'B':
+		return `\` + string(char), false, nil
+	case '<', '>':
+		return `\b`, false, nil
 	case '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return "", false, fmt.Errorf(
 			"backreference \\%c in a pattern: this build matches with RE2, which has none", char)

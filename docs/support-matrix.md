@@ -639,7 +639,7 @@ behaviour this shell deliberately does not have.
 | `env` | `-i`, and `NAME=VALUE command` | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
-| `grep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored | refused by name |
+| `grep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E` | refused by name, and a backreference in a pattern |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
 | `hd`, `hexdump` | `-b -c -C -d -o -x -v -A -t` | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
@@ -917,9 +917,12 @@ quietly getting something else.
 
 Two deliberate near-misses worth naming:
 
-- **`grep -E` is accepted and does nothing**, because Go's regexp is RE2 and has
-  no basic mode -- what grep here always did was extended. `-G` is *not* accepted,
-  because claiming to switch to basic syntax and not doing it would be the lie.
+- **`grep` reads a basic expression unless `-E`**, through the translation sed
+  uses (sed_regex.go). It read every pattern as extended, so `grep 'a+b'`, `grep
+  'x|y'` and `grep '('` all meant something else and `\(a\)` matched nothing. A
+  backreference inside a pattern is refused by name: Go's regexp is RE2, which has
+  none. `\<` and `\>` are read as `\b`, which is what they are at the edge of a
+  word.
 - **`wc -m` counts runes.** GNU said 19 where this says 18 for the same input,
   which is a locale artifact rather than a disagreement: with no locale set a
   character is a byte, and under `LC_ALL=C.UTF-8` GNU says 18 too. Runes are what
