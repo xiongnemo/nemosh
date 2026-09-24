@@ -18,18 +18,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "declare -i n; n=2+3; echo $n",
-    "stdout": "5\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
-    "script": "declare -l s=ABC; declare -u t=abc; echo $s $t",
-    "stdout": "abc ABC\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "f(){ :; }; declare -F f",
     "stdout": "f\n",
     "status": 0,

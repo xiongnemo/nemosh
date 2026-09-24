@@ -64,6 +64,7 @@ type Runtime struct {
 	noFieldSplit      bool
 	errExitSuppressed bool
 	readonly          map[string]struct{}
+	attributes        map[string]variableAttributes
 	mutatedVars       map[string]struct{}
 	mask              *fileModeMask
 	sourceDepth       int

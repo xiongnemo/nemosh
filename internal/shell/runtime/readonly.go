@@ -8,11 +8,15 @@ import (
 
 func (r Runtime) readonlyBuiltin(args []string) int {
 	for _, arg := range args {
-		name, value, hasValue := strings.Cut(arg, "=")
+		target, value, hasValue := strings.Cut(arg, "=")
+		name, appended := splitAssignmentTarget(target)
 		if name == "" {
 			return 2
 		}
 		if hasValue {
+			if appended {
+				value = r.appendedValue(name, value)
+			}
 			if status := r.assignVar(name, value); status != 0 {
 				return status
 			}
@@ -36,6 +40,12 @@ func (r Runtime) assignVar(name string, value string) int {
 	if r.isReadonly(name) {
 		return r.refuseReadonly("", name)
 	}
+	// `declare -i -l -u`, here so every way a value arrives is treated alike.
+	value, err := r.applyAttributes(name, value)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+		return 1
+	}
 	// RANDOM and SECONDS take an assignment as a seed and a reset rather than
 	// storing it. Storing would make the next read return a constant, and a
 	// `$RANDOM` that is always the same is the kind of thing noticed after the
@@ -54,6 +64,12 @@ func (r Runtime) assignVar(name string, value string) int {
 		// subscript is refused either way; see array_subscript.go.
 		return r.assignElementByKind(context.Background(), reference, value)
 	}
+	// An array's bare name is its element zero, to write as to read: `a=(p q); a=z` is
+	// `z q` in bash. This wrote only the scalar mirror, so `$a` said z while `${a[@]}`
+	// still said `p q`.
+	if r.isArrayName(name) {
+		return r.assignElementByKind(context.Background(), arrayReference{name: name, subscript: "0"}, value)
+	}
 	r.vars[name] = value
 	// `set -a` exports every name an assignment touches, so a variable set
 	// after it is on reaches children without a separate `export`.
@@ -62,6 +78,16 @@ func (r Runtime) assignVar(name string, value string) int {
 	}
 	r.markVarMutation(name)
 	return 0
+}
+
+// isArrayName reports a name that is an array of either kind. Nil-safe for the same reason
+// allExport is.
+func (r Runtime) isArrayName(name string) bool {
+	if r.arrays == nil {
+		return false
+	}
+	_, indexed := r.arrays.get(name)
+	return indexed || r.arrays.isAssociative(name)
 }
 
 // allExport is nil-safe: a Runtime built by hand for a focused test carries
@@ -84,7 +110,12 @@ func (r Runtime) refuseReadonly(prefix, name string) int {
 	return 1
 }
 
+// isReadonly answers for a name, or for the array an element belongs to: `readonly a`
+// protects `a[0]` as well.
 func (r Runtime) isReadonly(name string) bool {
+	if reference, ok := parseArrayReference(name); ok {
+		name = reference.name
+	}
 	_, ok := r.readonly[name]
 	return ok
 }

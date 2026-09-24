@@ -52,6 +52,12 @@ func (r Runtime) assignIndexedCompound(name string, elements []arrayElement, ext
 		r.arrays.set(name, nil)
 	}
 	for _, element := range elements {
+		value, err := r.applyAttributes(name, element.value)
+		if err != nil {
+			fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+			return 1
+		}
+		element.value = value
 		index := next
 		if element.keyed {
 			value, err := r.evaluateArithmetic(element.key)
@@ -77,7 +83,7 @@ func (r Runtime) assignAssociativeCompound(name string, elements []arrayElement,
 	for index := 0; index < len(elements); index++ {
 		element := elements[index]
 		if element.keyed {
-			r.arrays.setKey(name, element.key, element.value)
+			r.arrays.setKey(name, element.key, r.attributedOrAsWritten(name, element.value))
 			continue
 		}
 		value := ""
@@ -85,8 +91,17 @@ func (r Runtime) assignAssociativeCompound(name string, elements []arrayElement,
 			index++
 			value = elements[index].value
 		}
-		r.arrays.setKey(name, element.value, value)
+		r.arrays.setKey(name, element.value, r.attributedOrAsWritten(name, value))
 	}
+}
+
+// attributedOrAsWritten is a map value with the name's attributes applied, or as written if
+// they cannot be: a map's assignment is not refused element by element, in bash either.
+func (r Runtime) attributedOrAsWritten(name, value string) string {
+	if attributed, err := r.applyAttributes(name, value); err == nil {
+		return attributed
+	}
+	return value
 }
 
 // compoundElements lexes the text between the parentheses and expands each word, which is

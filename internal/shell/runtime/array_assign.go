@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"strings"
 )
 
@@ -97,34 +96,16 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 		r.assignCompound(ctx, assignment.name, assignment.raw, assignment.append, savedStatus)
 		return
 	}
-	if r.isReadonly(assignment.name) {
-		// An element of a readonly array is refused like the whole of it; this path
-		// had no check, so `a[0]=x` wrote through.
-		r.refuseReadonly("", assignment.name)
-		return
+	// One element, through assignVar like any other write: readonly refused, attributes
+	// applied, and the element reached by assignElementByKind. This wrote the element
+	// itself and so skipped the first two -- and ignored `+=`, so `a[1]+=z` replaced the
+	// element where bash appends to it.
+	value := strings.Join(r.expandWord(ctx, assignment.value, savedStatus), " ")
+	target := assignment.name + "[" + assignment.subscript + "]"
+	if assignment.append {
+		value = r.appendedValue(target, value)
 	}
-	values := r.expandWord(ctx, assignment.value, savedStatus)
-	if r.arrays.isAssociative(assignment.name) {
-		r.arrays.setKey(assignment.name, r.resolveKey(ctx, assignment.subscript), strings.Join(values, " "))
-		return
-	}
-	index, err := r.resolveSubscript(ctx, assignment.subscript)
-	if err != nil {
-		fmt.Fprintln(r.streams.Stderr, err)
-		return
-	}
-	// A negative subscript counts from the end, so it needs the length the array
-	// has now. Without the check this reached setElement with -1 and panicked --
-	// caught by the guard, which printed a diagnostic instead of a stack trace,
-	// but a diagnostic about an internal error is not the right answer either.
-	existing, _ := r.arrays.get(assignment.name)
-	index, withinRange := countFromEnd(index, len(existing))
-	if !withinRange {
-		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", assignment.subscript)
-		return
-	}
-	r.arrays.setElement(assignment.name, index, strings.Join(values, " "))
-	r.syncArrayScalar(assignment.name)
+	r.assignVar(target, value)
 }
 
 // syncArrayScalar keeps `$a` answering with the first element, which is bash's

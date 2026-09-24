@@ -70,6 +70,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		// of the caller's to restore.
 		locals:        nil,
 		readonly:      cloneMap(r.readonly),
+		attributes:    cloneMap(r.attributes),
 		mutatedVars:   cloneMap(r.mutatedVars),
 		mask:          &fileModeMask{value: r.mask.value},
 		sourceDepth:   r.sourceDepth,

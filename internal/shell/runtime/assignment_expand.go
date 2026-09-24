@@ -43,7 +43,8 @@ func isAssignmentWord(item word) bool {
 	if first.kind != wordPartLiteral || first.quote != quoteUnquoted {
 		return false
 	}
-	name, _, found := strings.Cut(first.text, "=")
+	target, _, found := strings.Cut(first.text, "=")
+	name, _ := splitAssignmentTarget(target)
 	if !found {
 		// The `=` may be past a subscript that is itself an expansion: `m[$k]=v`
 		// begins with the literal `m[` and the equals arrives two parts later. Left
@@ -137,7 +138,16 @@ func assignmentTildeWord(item word) word {
 // drift apart.
 func (r Runtime) assignArrayElementText(ctx context.Context, reference arrayReference, value string) int {
 	index, err := r.resolveSubscript(ctx, reference.subscript)
-	if err != nil || index < 0 {
+	if err != nil {
+		fmt.Fprintln(r.streams.Stderr, err)
+		return 1
+	}
+	// A negative subscript counts from the end, so it needs the length the array has
+	// now. This refused one outright while the literal `a[-1]=x` path counted it; the
+	// two answered the same question differently, and there is one of them now.
+	existing, _ := r.arrays.get(reference.name)
+	index, withinRange := countFromEnd(index, len(existing))
+	if !withinRange {
 		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", reference.subscript)
 		return 1
 	}

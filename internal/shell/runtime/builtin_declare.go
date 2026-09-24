@@ -42,6 +42,10 @@ type declareOptions struct {
 	readonly    bool
 	export      bool
 	print       bool
+	// integer, lower and upper are -i -l -u; the removed set is the `+i +l +u +x`
+	// that takes an attribute away again.
+	integer, lower, upper bool
+	removed               string
 }
 
 func parseDeclareOptions(args []string) (declareOptions, []string, error) {
@@ -53,11 +57,26 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 			index++
 			break
 		}
+		if len(argument) >= 2 && argument[0] == '+' {
+			for _, letter := range argument[1:] {
+				if !strings.ContainsRune("ilux", letter) {
+					return options, nil, fmt.Errorf("+%c: not an attribute this build can take away; it takes +i +l +u +x", letter)
+				}
+			}
+			options.removed += argument[1:]
+			continue
+		}
 		if len(argument) < 2 || argument[0] != '-' {
 			break
 		}
 		for _, letter := range argument[1:] {
 			switch letter {
+			case 'i':
+				options.integer = true
+			case 'l':
+				options.lower, options.upper = true, false
+			case 'u':
+				options.upper, options.lower = true, false
 			case 'A':
 				options.associative = true
 			case 'a':
@@ -74,7 +93,7 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 				// already happens.
 			default:
 				return options, nil, fmt.Errorf(
-					"-%c: not an option this build has; it takes -A -a -r -x -p -g", letter)
+					"-%c: not an option this build has; it takes -A -a -i -l -u -r -x -p -g", letter)
 			}
 		}
 	}
@@ -86,12 +105,16 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 
 // declareName applies one `name` or `name=value`.
 func (r Runtime) declareName(ctx context.Context, options declareOptions, argument string) int {
-	name, value, assigned := strings.Cut(argument, "=")
+	target, value, assigned := strings.Cut(argument, "=")
+	name, appended := splitAssignmentTarget(target)
 	if reference, ok := parseArrayReference(name); ok {
 		// `declare m[k]=v` is not something to encourage, but it is what an
 		// element assignment looks like and refusing it here would be arbitrary.
 		if !assigned {
 			return 0
+		}
+		if appended {
+			value = r.appendedValue(name, value)
 		}
 		return r.assignElementByKind(ctx, reference, value)
 	}
@@ -107,21 +130,31 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 			r.arrays.set(name, nil)
 		}
 	}
+	// Before the value, so `declare -i n=2+3` stores 5.
+	r.applyDeclaredAttributes(name, options)
 	if assigned {
 		// `declare -a x=(one two)`. The lexer keeps the parenthesised list in one
 		// word -- the `(` follows `x=`, which is the test it applies -- so it
 		// arrives here whole and has to be split into elements. Without this it
 		// became the single string `(one two)`.
 		if inner, ok := parenthesisedList(value); ok {
-			if status := r.assignCompound(ctx, name, inner, false, 0); status != 0 {
+			if status := r.assignCompound(ctx, name, inner, appended, 0); status != 0 {
 				return status
 			}
-		} else if status := r.assignVar(name, value); status != 0 {
-			return status
+		} else {
+			if appended {
+				value = r.appendedValue(name, value)
+			}
+			if status := r.assignVar(name, value); status != 0 {
+				return status
+			}
 		}
 	}
 	if options.export {
 		r.env.Set(name, r.vars[name])
+	}
+	if strings.ContainsRune(options.removed, 'x') {
+		r.env.Unset(name)
 	}
 	if options.readonly {
 		// The same set `readonly` writes to, so a name made read-only either way is
@@ -181,10 +214,14 @@ func (r Runtime) printOneDeclaration(name string) {
 
 // declarationText is a name written as the declaration that recreates it, which is what
 // `declare -p` prints and what `${a[@]@A}` expands to for an array.
+//
+// With the name's attributes as flags, in bash's order: `declare -irx n="5"`. It printed
+// `-a`, `-A` or `--` whatever else was true of the name.
 func (r Runtime) declarationText(name string) (string, bool) {
+	flags := r.declareFlags(name)
 	if r.arrays.isAssociative(name) {
 		var out strings.Builder
-		fmt.Fprintf(&out, "declare -A %s=(", name)
+		fmt.Fprintf(&out, "declare -%s %s=(", flags, name)
 		for _, key := range r.arrays.keysOf(name) {
 			value, _ := r.arrays.lookupKey(name, key)
 			fmt.Fprintf(&out, "[%s]=%q ", key, value)
@@ -195,7 +232,7 @@ func (r Runtime) declarationText(name string) (string, bool) {
 	}
 	if elements, ok := r.arrays.get(name); ok {
 		var out strings.Builder
-		fmt.Fprintf(&out, "declare -a %s=(", name)
+		fmt.Fprintf(&out, "declare -%s %s=(", flags, name)
 		// The set indices only: every slot used to be printed, so a gap came out as
 		// `[1]=""` and an element removed with unset came back with its old value.
 		for _, index := range r.arrays.liveIndices(name) {
@@ -205,9 +242,13 @@ func (r Runtime) declarationText(name string) (string, bool) {
 	}
 	value, set := r.vars[name]
 	if !set {
+		if flags != "-" {
+			// Declared and never assigned: bash prints the attributes and no value.
+			return fmt.Sprintf("declare -%s %s", flags, name), true
+		}
 		return "", false
 	}
-	return fmt.Sprintf("declare -- %s=%q", name, value), true
+	return fmt.Sprintf("declare -%s %s=%q", flags, name, value), true
 }
 
 // parenthesisedList reports the inside of a `(one two)` array literal.

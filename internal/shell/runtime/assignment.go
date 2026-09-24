@@ -9,6 +9,8 @@ import (
 type assignment struct {
 	name  string
 	value string
+	// appended is `name+=value`; see variable_attributes.go.
+	appended bool
 }
 
 func leadingAssignments(args []string) ([]assignment, []string) {
@@ -17,15 +19,24 @@ func leadingAssignments(args []string) ([]assignment, []string) {
 		if !isAssignment(arg) {
 			return assignments, args[i:]
 		}
-		name, value, _ := strings.Cut(arg, "=")
-		assignments = append(assignments, assignment{name: name, value: value})
+		target, value, _ := strings.Cut(arg, "=")
+		name, appended := splitAssignmentTarget(target)
+		assignments = append(assignments, assignment{name: name, value: value, appended: appended})
 	}
 	return assignments, nil
 }
 
+// assignedValue is what an assignment stores: its value, or the old one with it for `+=`.
+func (r Runtime) assignedValue(assignment assignment) string {
+	if assignment.appended {
+		return r.appendedValue(assignment.name, assignment.value)
+	}
+	return assignment.value
+}
+
 func (r Runtime) assignVars(assignments []assignment) int {
 	for _, assignment := range assignments {
-		if status := r.assignVar(assignment.name, assignment.value); status != 0 {
+		if status := r.assignVar(assignment.name, r.assignedValue(assignment)); status != 0 {
 			return status
 		}
 	}
@@ -65,10 +76,12 @@ func (r Runtime) withLocalAssignments(assignments []assignment) *Runtime {
 	commandRuntime.env = r.env.clone()
 	maps.Copy(commandRuntime.vars, r.vars)
 	for _, assignment := range assignments {
-		if status := commandRuntime.assignVar(assignment.name, assignment.value); status != 0 {
+		if status := commandRuntime.assignVar(assignment.name, commandRuntime.assignedValue(assignment)); status != 0 {
 			return nil
 		}
-		commandRuntime.env.Set(assignment.name, assignment.value)
+		// What was stored, which `+=` and an attribute can make differ from what was
+		// written: the command's environment sees the same value its shell does.
+		commandRuntime.env.Set(assignment.name, commandRuntime.vars[assignment.name])
 	}
 	commandRuntime.mutatedVars = make(map[string]struct{})
 	return &commandRuntime

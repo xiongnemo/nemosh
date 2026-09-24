@@ -29,18 +29,27 @@ func (r Runtime) export(args []string) int {
 		return r.listExported()
 	}
 	for _, arg := range args {
-		name, value, hasValue := strings.Cut(arg, "=")
+		target, value, hasValue := strings.Cut(arg, "=")
+		name, appended := splitAssignmentTarget(target)
 		if name == "" {
 			return 2
 		}
 		if !hasValue {
-			value = r.vars[name]
+			r.vars[name] = r.vars[name]
+			r.markVarMutation(name)
 		} else if r.isReadonly(name) {
 			return r.refuseReadonly("export: ", name)
+		} else {
+			// Through assignVar like any assignment -- an attribute applies, `+=`
+			// appends -- rather than written into the map, which skipped both.
+			if appended {
+				value = r.appendedValue(name, value)
+			}
+			if status := r.assignVar(name, value); status != 0 {
+				return status
+			}
 		}
-		r.vars[name] = value
-		r.env.Set(name, value)
-		r.markVarMutation(name)
+		r.env.Set(name, r.vars[name])
 	}
 	return 0
 }
