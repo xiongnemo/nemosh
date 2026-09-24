@@ -104,7 +104,7 @@ func TestRuntime_usesPS4AsTheTracePrefix(t *testing.T) {
 func TestRuntime_refusesTheOptionsThatNeedUnreadInput(t *testing.T) {
 	for _, testCase := range []struct{ option, fragment string }{
 		{option: "-n", fragment: "no unread input left"},
-		{option: "-v", fragment: "no lines left to echo"},
+		{option: "-v", fragment: "read one by one to be echoed"},
 	} {
 		t.Run(testCase.option, func(t *testing.T) {
 			// When

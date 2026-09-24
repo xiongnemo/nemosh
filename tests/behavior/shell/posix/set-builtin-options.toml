@@ -29,7 +29,7 @@ echo [$?]
 
 [expect]
 status = 0
-stdout = "[value]\n[]\nvaluebc\n3 a b c\n3\n[f]\n[]\n2 -f -x\n[0]\n[0]\n"
+stdout = "[value]\n[]\nvaluebc\n3 a b c\n3\n[fc]\n[c]\n2 -f -x\n[0]\n[0]\n"
 stderr = ""
 
 [notes]
@@ -38,4 +38,4 @@ why = "`${name}` with no operator is the commonest brace form and used to expand
 
 [differential]
 diverges = ["dash", "bash-posix", "posix", "busybox-ash"]
-why = "`$-` reports each shell's own option set, so bash adds h and B and busybox adds c; there is nothing to agree on. dash additionally has no pipefail and exits 2 when asked to clear it."
+why = "`$-` reports each shell's own option set, so bash adds h and B, and the order of the letters is each shell's own: busybox says `cf` where this says `fc`. Both include the c of a command string, which this shell's `$-` has had since its command line was read the way sh reads one. dash additionally has no pipefail and exits 2 when asked to clear it."

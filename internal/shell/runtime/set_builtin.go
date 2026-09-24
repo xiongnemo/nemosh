@@ -79,33 +79,50 @@ func (r Runtime) applySetOptions(args []string) (int, bool, int) {
 
 func (r Runtime) setLetterOptions(letters string, enable bool) int {
 	for index := 0; index < len(letters); index++ {
-		flag, ok := r.options.byLetter(letters[index])
-		if !ok {
-			fmt.Fprintf(r.streams.Stderr, "set: illegal option %c%c\n", optionSign(enable), letters[index])
+		if err := r.setOptionLetter(letters[index], enable); err != nil {
+			fmt.Fprintf(r.streams.Stderr, "set: %v\n", err)
 			return 2
 		}
-		if status := r.refuseInertOption(letters[index], enable); status != 0 {
-			return status
-		}
-		*flag = enable
 	}
 	return 0
 }
 
 func (r Runtime) setNamedOption(name string, enable bool) int {
-	spec, ok := shellOptionSpecByName(name)
-	if !ok {
-		fmt.Fprintf(r.streams.Stderr, "set: illegal option %co %s\n", optionSign(enable), name)
+	if err := r.setOptionName(name, enable); err != nil {
+		fmt.Fprintf(r.streams.Stderr, "set: %v\n", err)
 		return 2
 	}
-	if status := r.refuseInertOption(spec.letter, enable); status != 0 {
-		return status
-	}
-	*spec.field(r.options) = enable
 	return 0
 }
 
-// refuseInertOption stops an option that would be remembered and never read.
+// setOptionLetter and setOptionName are `set` without its diagnostics, which is what
+// nemosh's own command line uses too (invocation_options.go): the error says what was
+// wrong, and each caller says who it was.
+func (r Runtime) setOptionLetter(letter byte, enable bool) error {
+	flag, ok := r.options.byLetter(letter)
+	if !ok {
+		return fmt.Errorf("%w %c%c", ErrUnknownOption, optionSign(enable), letter)
+	}
+	if err := inertOptionRefusal(letter, enable); err != nil {
+		return err
+	}
+	*flag = enable
+	return nil
+}
+
+func (r Runtime) setOptionName(name string, enable bool) error {
+	spec, ok := shellOptionSpecByName(name)
+	if !ok {
+		return fmt.Errorf("%w %co %s", ErrUnknownOption, optionSign(enable), name)
+	}
+	if err := inertOptionRefusal(spec.letter, enable); err != nil {
+		return err
+	}
+	*spec.field(r.options) = enable
+	return nil
+}
+
+// inertOptionRefusal stops an option that would be remembered and never read.
 // Turning one *off* is always allowed, because that is the state it is already
 // in; only asking for behaviour that does not exist is refused.
 //
@@ -113,26 +130,25 @@ func (r Runtime) setNamedOption(name string, enable bool) int {
 // shell did until every other option was made to act, and it is the same shape
 // of lie as an applet swallowing a flag: the script goes on believing it asked
 // for something.
-func (r Runtime) refuseInertOption(letter byte, enable bool) int {
+func inertOptionRefusal(letter byte, enable bool) error {
 	if !enable {
-		return 0
+		return nil
 	}
 	reason, inert := inertShellOptions[letter]
 	if !inert {
-		return 0
+		return nil
 	}
-	fmt.Fprintf(r.streams.Stderr, "set: -%c: not implemented: %s\n", letter, reason)
-	return 2
+	return fmt.Errorf("-%c: not implemented: %s", letter, reason)
 }
 
 var inertShellOptions = map[byte]string{
 	'b': "asynchronous job completion is reported when `wait` or `jobs` asks, " +
 		"not the moment it happens; there is no notification channel to switch on",
 	'n': "a script is parsed in full before any of it runs, so by the time this " +
-		"option is set there is no unread input left to withhold; a syntax check " +
-		"would have to be a command-line option instead",
-	'v': "a script is parsed in full before any of it runs, so by the time this " +
-		"option is set there are no lines left to echo as they are read",
+		"option is set there is no unread input left to withhold; " +
+		"`nemosh -n SCRIPT` is the syntax check",
+	'v': "a script is parsed in full before any of it runs, so there is no " +
+		"moment at which its lines are read one by one to be echoed",
 }
 
 // Every other option acts: -a exports what is assigned (readonly.go), -C

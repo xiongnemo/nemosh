@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // sourceStartupFile runs $ENV for an interactive shell, which is what POSIX
-// specifies and what busybox ash does (shell/ash.c:16801). Nothing else is
-// read: /etc/profile and ~/.profile belong to a login shell, and Nemosh has no
-// login mode to justify them.
+// specifies and what busybox ash does (shell/ash.c:16801). A login shell, `nemosh -l`,
+// reads its profiles first (sourceLoginProfiles); nothing else is read.
 //
 // Using $ENV rather than inventing a `.nemoshrc` is the point. A machine that
 // already configures busybox has ENV pointing at its rc file, so the same
@@ -31,7 +31,27 @@ func sourceStartupFile(ctx context.Context, rt runtime.Runtime, stderr io.Writer
 	if path == "" {
 		return
 	}
-	resolved := rt.ResolvePath(rt.ExpandPromptString(ctx, path, 0))
+	sourceProfile(ctx, rt, stderr, path, rt.ResolvePath(rt.ExpandPromptString(ctx, path, 0)))
+}
+
+// sourceLoginProfiles is what busybox's login shell reads, in its order: /etc/profile and
+// then $HOME/.profile (shell/ash.c, read_profile), each through the shell's own path
+// model, so /etc/profile is the file `cat /etc/profile` shows. `-l` was an invalid option,
+// and it is the one a terminal profile adds to start a login shell.
+func sourceLoginProfiles(ctx context.Context, rt runtime.Runtime, stderr io.Writer) {
+	sourceProfile(ctx, rt, stderr, "/etc/profile", rt.ResolvePath("/etc/profile"))
+	home, present := rt.LookupVariable("HOME")
+	if !present {
+		home, present = rt.LookupEnv("HOME")
+	}
+	if present && home != "" {
+		path := strings.TrimRight(home, `/\`) + "/.profile"
+		sourceProfile(ctx, rt, stderr, path, rt.ResolvePath(path))
+	}
+}
+
+// sourceProfile runs one startup file, named in diagnostics as it was spelled.
+func sourceProfile(ctx context.Context, rt runtime.Runtime, stderr io.Writer, path, resolved string) {
 	contents, err := os.ReadFile(resolved)
 	if err != nil {
 		// A missing startup file is the ordinary case for a machine that has

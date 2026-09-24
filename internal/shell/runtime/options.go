@@ -40,6 +40,11 @@ type shellOptions struct {
 	// autoCD is `shopt -s autocd`: a bare directory name means `cd` to it. Off by
 	// default, as it is in bash, because it changes what a mistyped command does.
 	autoCD bool
+	// invocation is how the shell was started, as `$-` spells it after the options:
+	// c for a command string, s for commands read from standard input, i for an
+	// interactive session. Not options -- `set` cannot change them -- but kept here so
+	// a subshell reports the same, as it does in both references.
+	invocation string
 }
 
 type shellOptionSpec struct {
@@ -89,8 +94,8 @@ func shellOptionSpecByName(name string) (shellOptionSpec, bool) {
 }
 
 // letters spells the enabled options the way `$-` reports them: the short
-// letters that are on, in table order. An option with no short form has nothing
-// to contribute.
+// letters that are on, in table order, then how the shell was started. An option
+// with no short form has nothing to contribute.
 func (o *shellOptions) letters() string {
 	var enabled strings.Builder
 	for _, spec := range shellOptionSpecs {
@@ -98,5 +103,6 @@ func (o *shellOptions) letters() string {
 			enabled.WriteByte(spec.letter)
 		}
 	}
+	enabled.WriteString(o.invocation)
 	return enabled.String()
 }

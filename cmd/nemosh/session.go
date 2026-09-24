@@ -38,7 +38,9 @@ func (c command) runInteractive(ctx context.Context, controller *interruptContro
 	inputReader := newInteractiveInput(c.stdin)
 	defer func() { runErr = errors.Join(runErr, inputReader.close()) }()
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: inputReader, Stdout: c.stdout, Stderr: c.stderr})
-	sourceStartupFile(ctx, rt, c.stderr)
+	if err := c.startSession(ctx, rt); err != nil {
+		return err
+	}
 	idleInterrupts := controller.idleInterrupts()
 	var lineResults <-chan interactiveLine
 	linePending := false

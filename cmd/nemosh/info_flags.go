@@ -49,17 +49,21 @@ func (c command) infoFlag(argument string) (bool, error) {
 func helpText() string {
 	return fmt.Sprintf(`nemosh - a Windows-first, BusyBox-style POSIX shell and utility bundle
 
-Usage: nemosh [-c COMMAND [NAME [ARG]...]]
-   or: nemosh [-i]
-   or: nemosh SCRIPT [ARG]...
-   or: nemosh -
+Usage: nemosh [OPTION]... -c COMMAND [NAME [ARG]...]
+   or: nemosh [OPTION]... [-i] [-s [ARG]...]
+   or: nemosh [OPTION]... SCRIPT [ARG]...
    or: nemosh APPLET [ARG]...
    or: APPLET [ARG]...          when invoked under an applet's name
 
 Options:
   -c COMMAND    run COMMAND and exit; NAME becomes $0 and ARG... the positionals
   -i            run interactively even when stdin is not a terminal
-  -             read the script from standard input
+  -s            read the script from standard input; ARG... are the positionals
+  -l            login shell: read /etc/profile and $HOME/.profile first
+  -n            parse the script and report syntax errors without running it
+  -aCeEfux      the "set" options of the same letters; +LETTER turns one off
+  -o NAME       the "set -o" option NAME, such as pipefail; +o NAME turns it off
+  - or --       end the options
   --version     print the version and exit
   --list        print every bundled applet, one per line, and exit
   --help        print this and exit

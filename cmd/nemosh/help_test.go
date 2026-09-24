@@ -50,6 +50,10 @@ func TestHelpFlag_namesEveryInvocationFormAndOption(t *testing.T) {
 		"Usage:",
 		"-c ",       // run a command string
 		"-i",        // force interactive
+		"-s ",       // standard input with positionals
+		"-l ",       // login profiles
+		"-n ",       // syntax check
+		"-o NAME",   // set -o options
 		"--version", // the two info flags
 		"--list",
 		"--help",

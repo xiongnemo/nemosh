@@ -65,6 +65,8 @@ type command struct {
 	interrupts      <-chan os.Signal
 	registry        applets.Registry
 	state           *runtime.State
+	// invocation is the command line as parseInvocation read it; see invocation.go.
+	invocation invocation
 }
 
 func run(ctx context.Context, args []string) error {
@@ -106,17 +108,6 @@ func (c command) run(ctx context.Context, args []string) error {
 		return c.runDirectApplet(ctx, controller, applet, args[1:])
 	}
 
-	if len(args) > 1 && args[1] == "-c" {
-		if len(args) < 3 {
-			fmt.Fprintln(c.stderr, "nemosh: -c requires an argument")
-			return exitStatus(2)
-		}
-		return c.runScriptAs(ctx, controller, args[2], commandStringInvocation(args[3:]))
-	}
-	if len(args) > 1 && args[1] == "-i" {
-		return c.runInteractive(ctx, controller)
-	}
-
 	if len(args) > 1 {
 		if applet, ok := registry.Lookup(args[1]); ok {
 			return c.runDirectApplet(ctx, controller, applet, args[2:])
@@ -124,32 +115,19 @@ func (c command) run(ctx context.Context, args []string) error {
 		if applet, ok := applets.DefaultRegistry.Lookup(args[1]); ok {
 			return c.runDirectApplet(ctx, controller, applet, args[2:])
 		}
-		if !strings.HasPrefix(args[1], "-") {
-			return c.runScriptFile(ctx, controller, args[1], args[2:])
-		}
 		if handled, err := c.infoFlag(args[1]); handled {
 			return err
 		}
-		// A bare "-" is the POSIX spelling of "read the script from stdin".
-		if args[1] != "-" {
-			fmt.Fprintf(c.stderr, "nemosh: invalid option %s\n", args[1])
-			fmt.Fprintln(c.stderr, "hint: `nemosh --help` lists the options this build accepts")
-			return exitStatus(2)
-		}
 	}
-	if len(args) == 1 && c.stdinIsTerminal {
-		return c.runInteractive(ctx, controller)
-	}
-
-	data, err := readBoundedInput(c.stdin)
+	parsed, err := parseInvocation(args[1:])
 	if err != nil {
-		if errors.Is(err, errInputTooLarge) {
-			fmt.Fprintln(c.stderr, "nemosh: input too large")
-			return exitStatus(2)
+		fmt.Fprintf(c.stderr, "nemosh: %v\n", err)
+		if errors.Is(err, errInvalidOption) {
+			fmt.Fprintln(c.stderr, optionHint)
 		}
-		return fmt.Errorf("nemosh: read stdin: %w", err)
+		return exitStatus(2)
 	}
-	return c.runScript(ctx, controller, string(data))
+	return c.runInvocation(ctx, controller, parsed)
 }
 
 func (c command) runDirectApplet(ctx context.Context, controller *interruptController, applet applets.Applet, args []string) error {
@@ -239,10 +217,6 @@ func interactiveStatusError(status int) error {
 		return nil
 	}
 	return exitStatus(status)
-}
-
-func (c command) runScript(ctx context.Context, controller *interruptController, script string) error {
-	return c.runScriptAs(ctx, controller, script, scriptInvocation{name: defaultScriptName})
 }
 
 type exitStatus int

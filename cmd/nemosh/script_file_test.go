@@ -119,14 +119,15 @@ func TestRun_appletNamesWinOverSameNamedFiles(t *testing.T) {
 }
 
 // An unrecognised option used to be swallowed and stdin read instead, which made
-// a typo look like a hang.
+// a typo look like a hang. -q is one neither reference has; -x, which this used,
+// is xtrace now that the shell's options are read on its command line.
 func TestRun_unknownOptionIsAUsageError(t *testing.T) {
-	got := runArgs(t, "", "nemosh", "-x")
+	got := runArgs(t, "", "nemosh", "-q")
 
 	if got.status != 2 {
 		t.Fatalf("status = %d, want 2 (err = %v)", got.status, got.err)
 	}
-	if !strings.Contains(got.stderr, "-x") {
+	if !strings.Contains(got.stderr, "-q") {
 		t.Fatalf("stderr = %q, want it to name the option", got.stderr)
 	}
 }

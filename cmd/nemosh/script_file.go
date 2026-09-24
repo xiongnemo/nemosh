@@ -15,10 +15,12 @@ import (
 // with no operands, or a script arriving on stdin.
 const defaultScriptName = "nemosh"
 
-// scriptInvocation is how a run names itself: $0 plus the positional parameters.
+// scriptInvocation is how a run names itself: $0 plus the positional parameters, and
+// what `$-` says about where the script came from (SetInvocationMode).
 type scriptInvocation struct {
 	name string
 	args []string
+	mode string
 }
 
 // commandStringInvocation reads the operands after `-c command_string`. POSIX
@@ -26,9 +28,9 @@ type scriptInvocation struct {
 // operand becomes $0 rather than $1.
 func commandStringInvocation(operands []string) scriptInvocation {
 	if len(operands) == 0 {
-		return scriptInvocation{name: defaultScriptName}
+		return scriptInvocation{name: defaultScriptName, mode: "c"}
 	}
-	return scriptInvocation{name: operands[0], args: operands[1:]}
+	return scriptInvocation{name: operands[0], args: operands[1:], mode: "c"}
 }
 
 // runScriptFile executes a script named on the command line. $0 is the operand
@@ -36,12 +38,18 @@ func commandStringInvocation(operands []string) scriptInvocation {
 // usage message should print.
 func (c command) runScriptFile(ctx context.Context, controller *interruptController, path string, args []string) error {
 	rt := c.newRuntime()
+	// The options before the file, so a refused one is what is reported, as it is in
+	// both references, rather than whether the script could be opened.
+	rt.SetArguments(path, args)
+	if err := c.startShell(ctx, rt, ""); err != nil {
+		return err
+	}
 	script, err := readScriptFile(rt, path)
 	if err != nil {
 		fmt.Fprintf(c.stderr, "nemosh: cannot open '%s': %v\n", path, openFailureReason(err))
 		return exitStatus(127)
 	}
-	return c.runScriptWith(ctx, controller, rt, string(script), scriptInvocation{name: path, args: args})
+	return c.runScriptWith(ctx, controller, rt, string(script))
 }
 
 // readScriptFile takes the operand through the shell's own path model, so every
@@ -74,13 +82,23 @@ func (c command) newRuntime() runtime.Runtime {
 }
 
 func (c command) runScriptAs(ctx context.Context, controller *interruptController, script string, invocation scriptInvocation) error {
-	return c.runScriptWith(ctx, controller, c.newRuntime(), script, invocation)
+	rt := c.newRuntime()
+	rt.SetArguments(invocation.name, invocation.args)
+	if err := c.startShell(ctx, rt, invocation.mode); err != nil {
+		return err
+	}
+	return c.runScriptWith(ctx, controller, rt, script)
 }
 
 // runScriptWith takes the runtime as a parameter because a script file has to
 // resolve its own operand through one before there is anything to run.
-func (c command) runScriptWith(ctx context.Context, controller *interruptController, rt runtime.Runtime, script string, invocation scriptInvocation) error {
-	rt.SetArguments(invocation.name, invocation.args)
+func (c command) runScriptWith(ctx context.Context, controller *interruptController, rt runtime.Runtime, script string) error {
+	if c.invocation.checkOnly {
+		if status := rt.CheckSyntax(script); status != 0 {
+			return exitStatus(status)
+		}
+		return nil
+	}
 	executionCtx, clear := controller.context(ctx)
 	status := rt.RunScript(executionCtx, script)
 	clear()

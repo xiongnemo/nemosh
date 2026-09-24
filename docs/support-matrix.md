@@ -47,7 +47,19 @@ these names why, and names what busybox-w32 does with the same name.
 | `ulimit` | 126 | Windows has no `getrlimit`. busybox-w32 does not implement it either — it keeps the name and returns 1 with no message. |
 | `fg`, `bg` | 126 | They resume a *suspended* job and nothing here can suspend one — see **Process control** below, which is the long answer. busybox-w32 compiles both out under `#if JOBS`. These two say **"not implemented, and will not be"** where the rows above say only "not implemented", because they are settled rather than pending. |
 | `set -b` | 2 | Completion is already reported at the next prompt, which is the default behaviour it would be switching off. What `-b` asks for is the report *immediately*, mid-command, and there is no notification channel to switch on for that. |
-| `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. |
+| `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. `nemosh -n SCRIPT` is the syntax check; `nemosh -v` is refused for the same reason. |
+
+The shell's own command line takes what busybox's does:
+`nemosh [-ils] [-|+aCeEfnux] [-|+o NAME]... [-c COMMAND [NAME [ARG]...] | SCRIPT [ARG]...]`.
+The letters mean what `set` makes them mean, so `nemosh -eu -o pipefail script` works,
+and so does a script that begins `#!/bin/sh -e`, which is launched as `nemosh -e script`.
+Only `-c` and `-i` were read before, and only as the first argument; every other
+option was "invalid". `-l` reads `/etc/profile` and `$HOME/.profile` first. `-n`
+parses the script and runs none of it. `$-` ends with `c` for a command string, `s`
+for commands read from standard input, and `is` for a session. The letters come in
+table order rather than busybox's, which only matters to a script comparing `$-` as
+a whole. A name `-o` does not have exits 2, bash's answer. busybox reports it and then
+exits 0.
 
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.

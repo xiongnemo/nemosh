@@ -26,7 +26,9 @@ import (
 func (c command) runInteractiveEdited(ctx context.Context, controller *interruptController,
 	editor *lineEditor, terminal *os.File) (runErr error) {
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdin: c.stdin, Stdout: c.stdout, Stderr: c.stderr})
-	sourceStartupFile(ctx, rt, c.stderr)
+	if err := c.startSession(ctx, rt); err != nil {
+		return err
+	}
 	// After the rc file, so an `export HISTFILE=...` in it is honoured, and
 	// before the first prompt, so the first thing typed already has yesterday to
 	// suggest from.
