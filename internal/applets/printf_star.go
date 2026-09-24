@@ -54,3 +54,20 @@ func resolvePrintfStars(spec string, next func() string) (string, error) {
 	}
 	return out.String(), firstErr
 }
+
+// printfCharacterCode reads the `'c` and `"c` operands POSIX gives the numeric conversions:
+// the value is the code of the character after the quote, and anything after it is ignored.
+// A quote with nothing after it is zero, the code of the empty string's end, as busybox
+// gives it.
+func printfCharacterCode(operand string) (int64, bool) {
+	if operand == "" || operand[0] != '\'' && operand[0] != '"' {
+		return 0, false
+	}
+	if len(operand) == 1 {
+		return 0, true
+	}
+	for _, char := range operand[1:] {
+		return int64(char), true
+	}
+	return 0, false
+}

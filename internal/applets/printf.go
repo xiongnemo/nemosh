@@ -160,6 +160,9 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 		return fmt.Sprintf(spec+string(verb), value), err
 	case 'e', 'E', 'f', 'F', 'g', 'G':
 		operand := next()
+		if code, ok := printfCharacterCode(strings.TrimSpace(operand)); ok {
+			return fmt.Sprintf(spec+string(verb), float64(code)), nil
+		}
 		value, err := strconv.ParseFloat(strings.TrimSpace(operand), 64)
 		if err != nil && strings.TrimSpace(operand) != "" {
 			return fmt.Sprintf(spec+string(verb), 0.0), errPrintfNumber{operand: operand}
@@ -193,6 +196,11 @@ func printfInteger(operand string) (int64, error) {
 	trimmed := strings.TrimSpace(operand)
 	if trimmed == "" {
 		return 0, nil
+	}
+	// A leading quote makes the operand the code of the character after it, which POSIX
+	// specifies and both references do: `printf '%d' "'A"` is 65. It was a non-number.
+	if code, ok := printfCharacterCode(trimmed); ok {
+		return code, nil
 	}
 	value, err := strconv.ParseInt(trimmed, 0, 64)
 	if err != nil {
