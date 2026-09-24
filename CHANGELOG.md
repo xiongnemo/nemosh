@@ -8,6 +8,183 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## Unreleased
+
+Bash compatibility, measured rather than assumed. Every change below was checked against
+busybox-w32 v1.38.0 first and, where busybox has not got the construct, against GNU bash
+5.3; the order of authority is the project's, so where busybox has it, busybox decides.
+Two corpora hold the answers: a bash corpus of 113 cases, each naming the reference it
+follows, and a parser corpus of 181 written from the POSIX grammar. Two bash gaps are left
+(`trap DEBUG`, and `$BASHPID` inside a subshell) and one parser gap (`case a in esac)`).
+
+### Changed
+
+- **Background jobs are processes.** A `cmd &` starts this binary again, as
+  `nemosh --job <handle>`, the way busybox-w32 starts `sh --fs`, and hands it the job's
+  program and the shell's state over an inherited pipe. So `$!` is a real pid, and
+  `wait $!`, `kill $!`, `tasklist` and `taskkill` all take it. A job's own
+  `trap ... TERM` runs when it is sent TERM. `kill -9` ends the job's Job Object, and
+  with it every program the job started. At a prompt a job is announced as `[1] 12345`,
+  busybox's form, and `$BASHPID`, `jobs -l` and `jobs -p` are new with it.
+
+  Three things a script can notice. A job outlives the shell that started it, as in both
+  references, so a console window stays open until the jobs attached to it have ended;
+  measured in conhost, busybox-w32 does the same. A script that Ctrl-C ends takes its jobs
+  with it, though, as busybox-w32's does, where bash would leave them running. And a job
+  costs about 4-6 ms and 11 MB where a goroutine cost microseconds
+  (docs/design/startup-and-footprint.md). `NEMOSH_JOBS=goroutine` brings the goroutine
+  back: `$!` is then `%1` again and a job is announced as `[1] started; kill %1 to stop
+  it`, as in 1.2.
+
+- **grep reads a pattern as a basic regular expression**, as POSIX, GNU and busybox do,
+  and `-E` makes it extended. Every pattern used to be extended, so `grep 'a+b'` wanted
+  one or more a's, `grep 'x|y'` was an alternation, and `grep '\(a\)b'` matched nothing.
+  A script written against the old reading needs `-E`. GNU's `\w \W \s \S \b \B` and
+  `\< \>` now work in grep and sed alike.
+
+- **An error POSIX makes fatal ends a script.** Assigning to a readonly name, in any of
+  the ways a name is written (`R=2`, `R=2 cmd`, `export`, `local`, `unset`, `for R in`,
+  `$((R=5))`), and `export a/b` end a non-interactive shell with status 2, as in busybox;
+  they answered 1 and carried on. At a prompt only the line is abandoned. `set -u; echo
+  $nope` typed at a prompt used to close the terminal.
+
+- **`exit` exits**, from a function, a sourced file and `eval`. `die() { echo "$1" >&2;
+  exit 1; }` stopped at the function, and the script went on with status 0. `break` and
+  `continue` in `eval` reach the loop, as they do in a function.
+
+- **A job ended by `kill` says so.** Its status is 128 plus the signal, 137 for KILL and
+  143 for TERM, and `jobs` names it `Killed` or `Terminated`; it said `Done(1)`. `wait`
+  for a job or pid the shell does not know is 127, as POSIX says, where it was 2.
+  `kill -0` asks about a job or a pid and changes nothing; it used to end what it asked
+  about. `kill -STOP` and `-CONT` are refused by name: nothing here can suspend a
+  process, and they used to end it.
+
+- **`unset name` leaves a function of that name alone**, busybox's reading of POSIX, and
+  `unset -f` removes the function. `unset -f f` looked for a variable called `-f`.
+
+### Added
+
+- **The shell's own command line**, in busybox's shape:
+  `nemosh [-ils] [-|+aCeEfnux] [-|+o NAME]... [-c COMMAND [NAME [ARG]...] | SCRIPT
+  [ARG]...]`. A script beginning `#!/bin/sh -e` is started as `nemosh -e script`, and that
+  exited 2 before running a line. `-l` reads /etc/profile and ~/.profile first; `-n`
+  checks the syntax and runs nothing; `-s` gives standard input its positional
+  parameters. `$-` says how the shell was started: `c`, `s`, or `is` at a prompt.
+
+- **Options.** `set -euo pipefail` in one cluster: an `o` among the letters takes the next
+  argument, and the line was "illegal option -o", which under `-e` ended every strict
+  script on its first line. `set -E` and `set -T`; `set -o ignoreeof`; `nohiddenglob` and
+  `nohidsysglob`, which keep files with Windows' Hidden attribute, or Hidden and System,
+  out of pathname expansion; `shopt -s nocasematch`; `local -`, which keeps a function's
+  `set -e` inside it. `set -o vi` and `set -m` are refused by name rather than called
+  illegal.
+
+- **Traps.** `trap ... ERR` runs where `set -e` would act. `trap ... RETURN` runs as a
+  function returns or a sourced file finishes. `trap ... HUP`, `QUIT` and `TERM` run when
+  `kill` sends the signal to a job, and when it reaches a script from outside it: a real
+  `kill` off Windows, and on Windows the console closing, a logoff or a shutdown, after
+  which the script stops, runs its TERM trap and then its EXIT trap. `trap -p`, `trap -l`
+  and `trap --`. A subshell's own EXIT trap runs as the subshell ends, and `$(trap)` sees
+  the parent's traps, so `saved=$(trap); ...; eval "$saved"` works.
+
+- **Variables.** `$LINENO`, with PS4 expanded, so `PS4='+$LINENO: '` traces line numbers;
+  `$FUNCNAME` as a name and as a stack; `${BASH_SOURCE[0]}`, `$BASH_LINENO` and `caller`,
+  so a script can find its own directory; `EPOCHSECONDS` and `EPOCHREALTIME`; `$_`;
+  `$BASHPID`.
+
+- **Declarations and arrays.** `x+=y` and `a+=(...)`; `declare -i -l -u -g -A`, with
+  `declare -A m=([k]=v ...)` and `a=([2]=two [0]=zero)`; `declare -f`, which prints a
+  function back in bash's shape, so `nemosh -c "$(declare -f f); f"` hands a function on;
+  `declare -F`; `local` with `declare`'s options; `declare -p` printing only the elements
+  an array has.
+
+- **Expansions.** `${x@Q}` and the other transformations, `@E @U @u @L @A @a`;
+  `${!prefix@}` as a list; `[[ -v name ]]`; an unquoted group in `[[ $x =~ ^([0-9]+):
+  ]]`, with the quoted parts of a regex taken literally, as bash 3.2 and later take
+  them; `$(( a[i] ))` and `(( count[$w]++ ))`; arithmetic that follows a name to the
+  expression it holds, so `x=2+3; echo $((x*2))` is 10; and `$(( ))`, which is 0.
+
+- **Redirections.** `>(cmd)`, a named pipe the command reads while you write, so `tee
+  >(sha256sum > sum) > copy` and `exec > >(tee -a log) 2>&1` work. `{fd}>file`,
+  `{fd}<file` and `exec {fd}>&-`; `>&$fd`, whose descriptor is a word; `>&file`; `|&`; a
+  heredoc into a loop, `done <<EOF`; and a loop redirected and piped, `done < in | sort`.
+
+- **`coproc`**, bash's: `coproc [NAME] command` runs the command with a pipe to its stdin
+  and one from its stdout, on `${NAME[1]}` and `${NAME[0]}`.
+
+- **Builtins.** `printf -v var`, `%(fmt)T`, a `*` width or precision, and `"'A"` as the
+  code of A; a non-number is written as 0 and printf carries on, as POSIX says. `type -t
+  -p -P -a`, in the order a command is actually looked up. `getopts` reads grouped
+  letters, attached arguments and `--`, and has its silent mode. `wait` takes several
+  operands, a pid, and `-n`. `jobs` inside a pipeline or a command substitution lists the
+  shell's jobs, so `kill $(jobs -p)` and `jobs | wc -l` see them.
+
+- **Applets.** `tr` has the POSIX classes, so `tr '[:upper:]' '[:lower:]'` lowercases,
+  and `tr -s SET1 SET2`. `date +%j`, `+%V` and the rest of glibc's strftime set, which
+  `ts` and `printf %()T` share. `grep -G`.
+
+- **The line editor.** Page Up and Page Down walk the history that starts with what is
+  left of the cursor, zsh's history-beginning-search, and a pasted entry's indentation
+  does not hide it. The highlighter reads a line with the shell's own lexer, so reserved
+  words, the name of a function being defined, and case patterns each have a colour of
+  their own, where they were drawn as commands that do not exist.
+
+- **The parser.** A compound command as a condition, `if case ... esac; then`, and a
+  condition of several commands: `if cd "$d"; [ -f x ]; then` decided on the `cd` alone.
+  A compound after `&&`, `||`, `&` or `|`, as `[ -n "$x" ] && case ...`. A brace group
+  after a reserved word, as `then { ...; }` and `! { ...; }`.
+
+### Fixed
+
+- `export PATH=$PATH:/x` cut PATH at its first space, which on Windows is nearly always
+  there (`C:/Program Files`), and exported the rest as a name. The same was true of
+  `readonly`, `local`, `declare` and `typeset`.
+- `${x:-"a b"}` kept its quotes, and `${path%"/"}` and `${s#"a"}` removed nothing.
+- `case $x in` split `$x` and matched its first field, and a quoted `*` in a pattern
+  still matched anything.
+- Unquoted `$@` kept each parameter whole, `"$*"` joined with a space whatever IFS said,
+  and `"${@}"` was one word.
+- `[[:upper:]]` and the other bracket classes matched nothing: in `case`, in `[[ ]]`, in
+  `${x//...}` and in globs.
+- `$((RANDOM % 6))` was always 0.
+- `if true; false; then` took the yes branch, and a bare `until` read as `while`.
+- `(set -e; false; echo x) || y` stopped at false.
+- `IFS=, parts=($line)` stored the text `parts=(...)`.
+- `declare -A m=([a]=1 [b]=2)` made an empty map, `a=([2]=two)` stored the text, and an
+  element removed with `unset 'a[1]'` came back.
+- `local a` over a global array wrote into the caller's array, `local -r` protected
+  nothing, and a local over an exported name did not reach children.
+- `export X` with X unset gave children an empty X, and `unset` kept a name's attributes.
+- `$((1+1))` in a heredoc ran a command called `1+1`, and backquotes in one were left as
+  they were.
+- `[ "(" = "(" ]`, `[ ! = ! ]` and `test !` were syntax errors.
+- `getopts` stopped at `-ab` and at an unknown option.
+- `$_` was a path for the whole session.
+- `set -x` did not trace an assignment-only command.
+- A profile's EXIT trap ran as the profile finished, and `exit` in a profile ended only
+  the profile.
+- `for i in 1 2; do echo a& done`, `if ...; then x & fi`, `a) x & ;;` and `{ x & }` were
+  syntax errors.
+- `a() { case a in a) echo bingo;; *) echo hmm;; esac; }` did not parse, and neither did
+  a function with a `case` and then an `||` in its body.
+- `pwd` into a closed pipe reported "pipeline downstream closed".
+- Up and then Down at the prompt lost the line that was being typed.
+- A read that Ctrl-C ended could touch its file after the read had returned. The race
+  detector found it on a Windows runner.
+- The release job reported success when the Scoop bucket had packaged nothing: GitHub's
+  release list lagged behind its uploads. It now waits for the list to show the asset
+  before telling the bucket.
+
+### Tested
+
+- The bash corpus and the parser corpus above, with a gap file beside each. A gap that
+  closes fails its test until the case moves across, so the corpus records what is fixed
+  rather than what was hoped.
+- CI runs the runtime suite under both job launchers on all three runners. The job
+  processes in the tests are a nemosh the test binary builds once, and on Windows the test
+  binary's Job Object ends them if it dies: one left by a hung run was found still running
+  six hours later.
+
 ## v1.2.0 - 2026-09-16
 
 ### Added
