@@ -8,7 +8,7 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
-## Unreleased
+## v1.3.0 - 2026-09-25
 
 Bash compatibility, measured rather than assumed. Every change below was checked against
 busybox-w32 v1.38.0 first and, where busybox has not got the construct, against GNU bash
