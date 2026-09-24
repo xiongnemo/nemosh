@@ -98,7 +98,7 @@ it is easier to see them together.
 
 | | Implemented | Why it can be |
 | --- | --- | --- |
-| `jobs`, `wait`, `wait %N ...`, `wait -n` | yes | bookkeeping over the shell's own job table. Several operands answer the last one's status; `wait -n` answers whichever job ends first; one the shell does not know is 127 |
+| `jobs`, `wait`, `wait %N ...`, `wait -n` | yes | bookkeeping over the shell's own job table. Several operands answer the last one's status; `wait -n` answers whichever job ends first; one the shell does not know is 127. `jobs` in a pipeline stage or a command substitution lists the shell's jobs, as both references do, so `jobs -p \| wc -l` and `kill $(jobs -p)` work; they saw an empty table before. In a subshell `( )` the table is its own, and empty, as in both |
 | `kill %N` | yes | ending a job maps onto cancelling its context |
 | `kill PID`, `kill -l` | yes | `TerminateProcess` on Windows, a real signal elsewhere |
 | `pgrep`, `pkill` | yes | `CreateToolhelp32Snapshot` lists, the above terminates |

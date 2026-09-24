@@ -50,6 +50,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 	var signals *signalInbox
 	if privateJobs {
 		jobs = newPrivateJobScope(ctx, r.jobScope.supervisor)
+		jobs.outer = r.jobScope
 	} else {
 		lifecycle, signals = r.lifecycle, r.signals
 	}

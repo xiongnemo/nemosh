@@ -141,6 +141,7 @@ func TestBackground_dollarBangNamesTheJob(t *testing.T) {
 		// The two uses that have to keep working.
 		{name: "kill takes it", script: "sleep 5 & kill $!\necho \"[$?]\"\n", want: "[0]\n"},
 		{name: "wait takes it", script: "sleep 0.01 & wait $!\necho \"[$?]\"\n", want: "[0]\n"},
+		{name: "jobs -p names it the same way", script: "sleep 0.5 & p=$!\n[ \"$(jobs -p)\" = \"$p\" ] && echo same\nwait\n", want: "same\n"},
 		// Empty before any background job, which is what bash answers too -- measured,
 		// because `${!-unset}` is the indirect-expansion syntax rather than a default
 		// and so cannot be used to ask the question.

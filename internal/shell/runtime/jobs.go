@@ -69,9 +69,10 @@ func (r Runtime) jobs(args []string) int {
 	// reported its status, and busybox agrees -- `[1]+ Done` appears once and `jobs`
 	// afterwards says nothing. This used to answer `[1] Done(1)` every time it was asked.
 	var reported []*jobRecord
-	for _, record := range r.jobScope.snapshot() {
+	records, own := r.listedJobs()
+	for _, record := range records {
 		line, finished := jobLine(record)
-		if finished {
+		if finished && own {
 			reported = append(reported, record)
 		}
 		if long && record.pid != 0 {
@@ -89,9 +90,28 @@ func (r Runtime) jobs(args []string) int {
 	return 0
 }
 
+// listedJobs are the jobs `jobs` lists, and whether they are this scope's own. A pipeline
+// stage and a command substitution list the shell's, as both references do -- `jobs -p |
+// wc -l` counts them, and `kill $(jobs -p)` ends them -- until they start jobs of their own.
+// They were an empty table, so both idioms saw no jobs at all. Listing the shell's
+// consumes nothing: its Done is still the shell's to report.
+func (r Runtime) listedJobs() ([]*jobRecord, bool) {
+	records := r.jobScope.snapshot()
+	if len(records) > 0 || r.jobScope.outer == nil {
+		return records, true
+	}
+	for scope := r.jobScope.outer; scope != nil; scope = scope.outer {
+		if records := scope.snapshot(); len(records) > 0 {
+			return records, false
+		}
+	}
+	return nil, false
+}
+
 // jobPIDs is `jobs -p`. It reports no status, so it consumes nothing.
 func (r Runtime) jobPIDs() int {
-	for _, record := range r.jobScope.snapshot() {
+	records, _ := r.listedJobs()
+	for _, record := range records {
 		name := "%" + strconv.FormatUint(uint64(record.id), 10)
 		if record.pid != 0 {
 			name = strconv.Itoa(record.pid)

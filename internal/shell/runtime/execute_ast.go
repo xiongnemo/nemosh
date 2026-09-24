@@ -128,6 +128,8 @@ func (r Runtime) launchBackground(run func(Runtime) lineResult) lineResult {
 
 func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) lineResult) lineResult {
 	worker.traps = map[trapName]string{}
+	// A job's table is its own, as a subshell's is.
+	worker.jobScope.outer = nil
 	// A job is addressed by `kill` on its own, so it has an inbox of its own.
 	worker.signals = newSignalInbox()
 	if err := worker.fds.bindBorrowedReader(0, bytes.NewReader(nil)); err != nil {

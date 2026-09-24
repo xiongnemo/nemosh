@@ -28,6 +28,9 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 			return lineResult{status: 1}
 		}
+		// A subshell's job table is its own, and starts empty: `( jobs )` lists nothing in
+		// both references. See listedJobs.
+		commandRuntime.jobScope.outer = nil
 		defer func() {
 			commandRuntime.jobScope.cancelAndDrain()
 			_ = commandRuntime.fds.closeAll()

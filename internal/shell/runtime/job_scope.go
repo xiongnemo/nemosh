@@ -47,6 +47,9 @@ type jobScope struct {
 	cancel     context.CancelFunc
 	supervisor *jobSupervisor
 	sealed     bool
+	// outer is the scope this one was made in, which `jobs` lists when this one has
+	// none of its own; see listedJobs.
+	outer *jobScope
 }
 
 func newRootJobScope() *jobScope {
