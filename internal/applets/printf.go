@@ -107,7 +107,11 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			text.WriteByte('%')
 			continue
 		}
-		rendered, err := renderPrintfConversion(spec, verb, next)
+		spec, err := resolvePrintfStars(spec, next)
+		rendered, renderErr := renderPrintfConversion(spec, verb, next)
+		if err == nil {
+			err = renderErr
+		}
 		var number errPrintfNumber
 		if errors.As(err, &number) {
 			// Said now, in order with the output, and processing goes on.
@@ -131,14 +135,9 @@ func printfSpecification(rest string) (string, byte, int) {
 	for index < len(rest) && strings.IndexByte("-+ #0", rest[index]) >= 0 {
 		index++
 	}
-	for index < len(rest) && rest[index] >= '0' && rest[index] <= '9' {
-		index++
-	}
+	index = printfNumberOrStar(rest, index)
 	if index < len(rest) && rest[index] == '.' {
-		index++
-		for index < len(rest) && rest[index] >= '0' && rest[index] <= '9' {
-			index++
-		}
+		index = printfNumberOrStar(rest, index+1)
 	}
 	if index >= len(rest) {
 		return "", 0, 0
