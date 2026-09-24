@@ -58,6 +58,18 @@ func runLeakScript(t *testing.T, script string) {
 	if status := rt.RunScript(context.Background(), script); status != 0 {
 		t.Fatalf("script %q exited %d, stderr = %q", script, status, stderr.String())
 	}
+	// Until its jobs have ended, since the question is whether what a job holds is given
+	// back once it has. A job that is a process holds a few goroutines while it runs --
+	// its wait, its output's copy -- and under -race the child is slow enough to start
+	// that the count settled with them still there, which read as a leak of four a run.
+	// Watched rather than waited for, so a job nobody waits for stays one.
+	for _, record := range rt.jobScope.snapshot() {
+		select {
+		case <-record.done:
+		case <-time.After(30 * time.Second):
+			t.Fatalf("a job of %q did not end", script)
+		}
+	}
 }
 
 func TestGoroutines_returnToBaseline_afterRepeatedScripts(t *testing.T) {

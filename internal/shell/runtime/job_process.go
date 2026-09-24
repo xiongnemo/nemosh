@@ -24,7 +24,13 @@ import (
 // another process, so its jobs stay goroutines.
 func (r Runtime) processJobsEnabled() bool {
 	value, _ := r.env.LookupEnv("NEMOSH_JOBS")
-	return value == "process" && r.registry.IsDefault()
+	return jobsAreProcesses(value) && r.registry.IsDefault()
+}
+
+// jobsAreProcesses is the launcher NEMOSH_JOBS names: processes for "process", and
+// goroutines otherwise.
+func jobsAreProcesses(value string) bool {
+	return value == "process"
 }
 
 // jobExecutable is the program a job process runs: this binary. A variable so a test,

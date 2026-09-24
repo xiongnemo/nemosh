@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -152,9 +151,9 @@ func TestBackground_dollarBangNamesTheJob(t *testing.T) {
 			if status != 0 {
 				t.Fatalf("status = %d, stderr = %q", status, stderr)
 			}
-			// A job that is a process (NEMOSH_JOBS=process) names itself by its pid, as
-			// both references do; see docs/design/background-processes.md.
-			if os.Getenv("NEMOSH_JOBS") == "process" && strings.HasPrefix(test.want, "[%") {
+			// A job that is a process names itself by its pid, as both references do; see
+			// docs/design/background-processes.md.
+			if runtime.JobsAreProcesses() && strings.HasPrefix(test.want, "[%") {
 				if !regexp.MustCompile(`^\[[0-9]+\]\n$`).MatchString(stdout) {
 					t.Fatalf("%s\n  got  %q\n  want a pid", test.script, stdout)
 				}

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // **The bash-compatibility corpus, each case answered by the reference that governs it.**
@@ -30,6 +32,22 @@ type bashCase struct {
 	Stdout    string `json:"stdout"`
 	Status    int    `json:"status"`
 	Reference string `json:"reference"`
+	// Jobs is the launcher the case's answer depends on, "process" or "goroutine", and
+	// empty for a case that holds under either. The numeric `$!` is the one that needs it:
+	// only a job that is a process has a pid to give.
+	Jobs string `json:"jobs,omitempty"`
+}
+
+// launcherApplies reports whether the case's launcher is the one these tests run under
+// (runtime.JobsAreProcesses, from NEMOSH_JOBS).
+func (c bashCase) launcherApplies() bool {
+	switch c.Jobs {
+	case "process":
+		return runtime.JobsAreProcesses()
+	case "goroutine":
+		return !runtime.JobsAreProcesses()
+	}
+	return true
 }
 
 func loadBashCases(t *testing.T, name string) []bashCase {
@@ -50,6 +68,9 @@ func loadBashCases(t *testing.T, name string) []bashCase {
 		if testcase.Reference != "busybox-w32" && testcase.Reference != "bash-5.3" {
 			t.Fatalf("%q names reference %q; want busybox-w32 or bash-5.3", testcase.Script, testcase.Reference)
 		}
+		if testcase.Jobs != "" && testcase.Jobs != "process" && testcase.Jobs != "goroutine" {
+			t.Fatalf("%q names launcher %q; want process, goroutine, or none", testcase.Script, testcase.Jobs)
+		}
 	}
 	return cases
 }
@@ -57,6 +78,9 @@ func loadBashCases(t *testing.T, name string) []bashCase {
 func TestBashCorpus(t *testing.T) {
 	for _, testcase := range loadBashCases(t, "bash_corpus.json") {
 		t.Run(caseName(testcase.Script), func(t *testing.T) {
+			if !testcase.launcherApplies() {
+				t.Skipf("holds only when jobs are %ss", testcase.Jobs)
+			}
 			stdout, status := runScriptCapturing(testcase.Script)
 			if stdout != testcase.Stdout || status != testcase.Status {
 				t.Errorf("got %q/%d, want %q/%d, as %s answers", stdout, status,
@@ -69,6 +93,9 @@ func TestBashCorpus(t *testing.T) {
 func TestBashGaps(t *testing.T) {
 	for _, testcase := range loadBashCases(t, "bash_gaps.json") {
 		t.Run(caseName(testcase.Script), func(t *testing.T) {
+			if !testcase.launcherApplies() {
+				t.Skipf("a gap only when jobs are %ss", testcase.Jobs)
+			}
 			stdout, status := runScriptCapturing(testcase.Script)
 			if stdout == testcase.Stdout && status == testcase.Status {
 				t.Fatalf("this gap is closed: %s's answer %q/%d is now what this shell gives, "+
