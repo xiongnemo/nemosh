@@ -45,6 +45,11 @@ func topLevelOperators(line string) []operatorAt {
 			}
 		case char == '\'' || char == '"':
 			quote = char
+		// A pattern's `)` closes nothing (case_pattern_position.go). Counting it took the
+		// depth to zero inside a function whose body held a case, so an `||` further down
+		// the body read as the definition's own: `f() { case ...; *) ...;; esac; (x) ||
+		// y; }` was cut there and reported `missing }`.
+		case (char == '(' || char == ')') && casePatternPosition(line[:index]):
 		case char == '(' || char == '{' || char == '[':
 			depth++
 		case char == ')' || char == '}' || char == ']':
