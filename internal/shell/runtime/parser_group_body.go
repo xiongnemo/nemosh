@@ -9,7 +9,9 @@ import "strings"
 
 func hasBraceSeparator(body string) bool {
 	trimmed := strings.TrimRight(body, " \t")
-	if strings.HasSuffix(trimmed, "\n") {
+	// A background `&` ends the last command as `;` does: `{ sleep 1 & }` in both
+	// references.
+	if strings.HasSuffix(trimmed, "\n") || endsWithBackgroundOperator(trimmed) {
 		return true
 	}
 	if !strings.HasSuffix(trimmed, ";") {

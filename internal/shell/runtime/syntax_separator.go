@@ -25,6 +25,9 @@ func splitSequentialSegments(line string) ([]string, error) {
 	// openers is the brackets still open, innermost last. A count is not enough: a `)`
 	// closes a `(` and not a `{`, and a case pattern's `)` sits inside a brace group.
 	var openers []byte
+	// backgrounded is the segments a `&` ended rather than a `;`, which the check at the
+	// end must not read as `a &; b`.
+	backgrounded := map[int]bool{}
 	start := 0
 	for index := 0; index < len(line); index++ {
 		char := line[index]
@@ -90,6 +93,16 @@ func splitSequentialSegments(line string) ([]string, error) {
 			openers = openers[:len(openers)-1]
 			continue
 		}
+		// A background `&` ends a command as `;` does, and before a reserved word it has
+		// to split as `;` does: `for i in 1 2; do sleep 1& done` left `done` inside the
+		// segment, so the loop never closed and the script was "missing done". It stays
+		// on its command, which is what makes that command the background one.
+		if char == '&' && len(openers) == 0 && backgroundBeforeReservedWord(line, index) {
+			backgrounded[len(segments)] = true
+			segments = append(segments, line[start:index+1])
+			start = index + 1
+			continue
+		}
 		if char != ';' || len(openers) != 0 {
 			continue
 		}
@@ -112,7 +125,7 @@ func splitSequentialSegments(line string) ([]string, error) {
 		start = index + 1
 	}
 	segments = append(segments, line[start:])
-	return segments, rejectSeparatorMisuse(segments)
+	return segments, rejectSeparatorMisuse(segments, backgrounded)
 }
 
 // splitLeadingReservedWord peels `then`, `else`, or `do` off the front of a
@@ -163,9 +176,9 @@ func expansionEnd(line string, index int) (int, bool) {
 // ending rather than a command missing. A `&` is the other: it already
 // terminates a list, so `echo a &; next` is rejected too. Only the last segment
 // has no separator after it, so every earlier one is a candidate.
-func rejectSeparatorMisuse(segments []string) error {
+func rejectSeparatorMisuse(segments []string, backgrounded map[int]bool) error {
 	for index, segment := range segments {
-		if index == len(segments)-1 {
+		if index == len(segments)-1 || backgrounded[index] {
 			continue
 		}
 		trimmed := strings.Trim(segment, logicalLineCutset)
@@ -178,7 +191,9 @@ func rejectSeparatorMisuse(segments []string) error {
 		if isCaseTerminator(trimmed) {
 			continue
 		}
-		if trimmed == "" || endsWithBackgroundOperator(trimmed) {
+		// `true & ;;` ends the arm after a background command, which both references
+		// take; only a `;` of its own after the `&` is the misuse.
+		if trimmed == "" || endsWithBackgroundOperator(trimmed) && !isCaseTerminator(segments[index+1]) {
 			return errors.New("syntax error: unexpected ;")
 		}
 	}
@@ -203,4 +218,19 @@ func isCaseTerminator(segment string) bool {
 		return true
 	}
 	return false
+}
+
+// backgroundBeforeReservedWord reports a background `&` at index -- not `&&`, not part of
+// a redirection -- with a reserved word after it: `done`, `fi`, `esac` and the rest.
+func backgroundBeforeReservedWord(line string, index int) bool {
+	// The second `&` of `&&` is not one: operatorText reads a character from its
+	// neighbours, and a `&` before it is not among the ones it knows.
+	if index > 0 && line[index-1] == '&' {
+		return false
+	}
+	if operator, _ := operatorText(line, index); operator != "&" {
+		return false
+	}
+	fields := strings.Fields(line[index+1:])
+	return len(fields) > 0 && ReservedWord(strings.TrimRight(fields[0], ";"))
 }
