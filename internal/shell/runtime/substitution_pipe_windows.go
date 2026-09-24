@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"sync/atomic"
 
 	"golang.org/x/sys/windows"
@@ -41,14 +40,12 @@ func newSubstitutionPipe() (*substitutionPipe, error) {
 
 // accept waits for the consumer to open the pipe and answers with what it writes.
 func (p *substitutionPipe) accept() (io.ReadCloser, error) {
+	// ERROR_NO_DATA is a consumer that opened, wrote and closed before this asked: what it
+	// wrote is still in the pipe, and reading drains it before the end of input -- measured.
+	// Taking it for an empty input lost the whole of `echo hi > >(cat)` whenever the writer
+	// was quicker than this goroutine, which on a fast machine is always.
 	err := windows.ConnectNamedPipe(p.handle, nil)
-	if err == windows.ERROR_NO_DATA {
-		// Opened and closed before this asked -- abandon, or a consumer that wrote nothing:
-		// an empty input, as bash's command gets when its writer goes.
-		_ = windows.CloseHandle(p.handle)
-		return io.NopCloser(strings.NewReader("")), nil
-	}
-	if err != nil && err != windows.ERROR_PIPE_CONNECTED {
+	if err != nil && err != windows.ERROR_PIPE_CONNECTED && err != windows.ERROR_NO_DATA {
 		_ = windows.CloseHandle(p.handle)
 		return nil, fmt.Errorf("connect %s: %w", p.path, err)
 	}
