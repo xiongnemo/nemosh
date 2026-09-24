@@ -39,6 +39,9 @@ func main() {
 		interrupts:      signals,
 	}
 	if err := cmd.run(context.Background(), args); err != nil {
+		if signal, ok := errors.AsType[signalExit](err); ok {
+			runtime.ExitBySignal(int(signal))
+		}
 		if status, ok := applets.StatusCode(err); ok {
 			os.Exit(status)
 		}

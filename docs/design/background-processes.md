@@ -209,5 +209,7 @@ goes:
   goroutines. bash waits for the last process substitution since 5.1.
 - ~~The grace period for a signal the child does not answer.~~ Settled in step three:
   there is none; see section 6.
-- A signal sent to the shell itself, from outside it: `trap … TERM` is accepted at the
-  top level, but nothing delivers a console close or a real SIGTERM to the inbox yet.
+- ~~A signal sent to the shell itself, from outside it.~~ A script now gets one
+  (runtime.ReceiveSignals): a real SIGTERM, HUP or QUIT off Windows, and on Windows a
+  console close, which ends the script where it is, since Windows ends the process
+  within seconds. A prompt still ignores TERM, as bash's does.

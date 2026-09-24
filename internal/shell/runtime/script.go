@@ -42,6 +42,11 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 		if status == 130 && isShellInterrupt(ctx) {
 			r.runInterruptTrap(context.WithoutCancel(ctx), status)
 		}
+		// A signal that ended the script with a trap set for it: a final one (see
+		// ReceiveSignals). One nothing caught has no trap to run.
+		if signal, ok := ExitSignal(ctx); ok {
+			r.runTrap(context.WithoutCancel(ctx), signalTraps[signal], status)
+		}
 		r.runExitTrap(context.WithoutCancel(ctx), status)
 	}
 	if control == flowExec {

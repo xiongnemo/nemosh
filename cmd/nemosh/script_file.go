@@ -101,9 +101,17 @@ func (c command) runScriptWith(ctx context.Context, controller *interruptControl
 		return nil
 	}
 	executionCtx, clear := controller.context(ctx)
+	// A TERM from outside the script, which its trap may catch; see notifyTerminations.
+	terminations, stopTerminations := notifyTerminations()
+	executionCtx, stopWatch := rt.ReceiveSignals(executionCtx, terminations, terminationsAreFinal)
 	status := rt.RunScript(executionCtx, script)
+	stopWatch()
+	stopTerminations()
 	clear()
 	rt.CloseBatch(status)
+	if signal, ok := runtime.ExitSignal(executionCtx); ok {
+		return signalExit(signal)
+	}
 	if status == 0 {
 		return nil
 	}

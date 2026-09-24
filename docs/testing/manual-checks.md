@@ -93,6 +93,11 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 - **Ctrl-D on an empty prompt**: the shell exits.
 - **Ctrl-Z then Enter** as end-of-input to an applet reading stdin (the Windows
   spelling of Ctrl-D).
+- **Closing the console window under a script**: run a script with
+  `trap 'echo term >> log' TERM`, `trap 'echo exit >> log' EXIT` and a `sleep 20`, in a
+  window of its own, and close the window. The log should say term, then exit. No test
+  can close a console, so this is the only check that the trap survives Windows ending
+  the process a few seconds later.
 
 ## D. Job control
 
