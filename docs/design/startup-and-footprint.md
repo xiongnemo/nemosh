@@ -266,3 +266,25 @@ introduced to catch a package doing *work* before `main` — it caught toml spen
 allocating a table quickly. It is kept on allocations because a clock threshold
 flaps on a shared runner, and the ceiling was raised with this note rather than the
 number being changed quietly.
+
+## What a background job that is a process costs, measured 2026-09-24
+
+Under `NEMOSH_JOBS=process` (background-processes.md) every `&` starts this binary again.
+These are wall-clock times for the whole script, the best of three, on the machine the
+rest of this file was measured on:
+
+| script | goroutine jobs | process jobs |
+| --- | --- | --- |
+| `for i in 1 .. 10; do :& done; wait` | 0.108 s | 0.183 s |
+| `for i in $(seq 100); do :& done; wait` | 0.107 s | 0.535 s |
+| 20 jobs calling a function, with an array and an associative one set | 0.092 s | 0.217 s |
+
+That is about 4-6 ms a job over the shell's own start, the process launch plus the
+state written, read and parsed again. It is less than the 9 ms a cold start costs, since
+the image is already in the file cache. busybox-w32 runs the ten-job line in 0.148 s. Its
+hundred-job line did not finish within five minutes here, and it was stopped.
+
+A running job process holds about 11 MB of working set (five `sleep 4 &` jobs, measured
+with `tasklist`: 11.2-11.5 MB each), which is this shell's interactive footprint less
+the line editor. Sizing the default-flip decision in those terms: a script that keeps
+a hundred jobs running at once would hold about a gigabyte.

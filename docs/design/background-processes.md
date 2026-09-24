@@ -181,11 +181,12 @@ bash gives the subshell's. Recorded in the support matrix when this lands.
 
 ## Cost
 
-A process start is about 9 ms (startup-and-footprint.md), plus the encode and decode,
-not yet measured, and 5-10 MB of memory per running job. A goroutine costs
-microseconds. `for i in $(seq 100); do :& done; wait` is benchmarked before and after,
-and the result goes in startup-and-footprint.md. A script that starts thousands of
-background jobs will notice; busybox pays the same price for the same reason.
+Measured once steps 1-4 were built (startup-and-footprint.md, "What a background job
+that is a process costs"): about 4-6 ms a job, the launch and the state's round trip
+together, and about 11 MB of working set while a job runs. `for i in $(seq 100); do :&
+done; wait` takes 0.107 s with goroutine jobs and 0.535 s with process jobs. A goroutine
+costs microseconds. A script that starts thousands of background jobs will notice;
+busybox pays the same price for the same reason.
 
 ## How it lands
 
