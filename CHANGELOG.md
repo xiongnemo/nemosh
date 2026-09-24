@@ -30,7 +30,8 @@ follows, and a parser corpus of 181 written from the POSIX grammar. Two bash gap
   Three things a script can notice. A job outlives the shell that started it, as in both
   references, so a console window stays open until the jobs attached to it have ended;
   measured in conhost, busybox-w32 does the same. A script that Ctrl-C ends takes its jobs
-  with it, though, as busybox-w32's does, where bash would leave them running. And a job
+  with it, though, as busybox-w32's does, where bash would leave them running; the shell
+  names the jobs it ended and says which of the two answers that was. And a job
   costs about 4-6 ms and 11 MB where a goroutine cost microseconds
   (docs/design/startup-and-footprint.md). `NEMOSH_JOBS=goroutine` brings the goroutine
   back: `$!` is then `%1` again and a job is announced as `[1] started; kill %1 to stop

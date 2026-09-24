@@ -442,8 +442,16 @@ to it have ended, which busybox-w32 does too (measured in conhost). **Except aft
 Ctrl-C.** A script that Ctrl-C ends takes its jobs, and their programs, with it -- once its
 own INT and EXIT traps have run -- which is busybox-w32's answer, measured by pressing
 Ctrl-C in its console with the job waited for and with it running beside a foreground
-command. bash leaves them running, since POSIX has an asynchronous list ignore SIGINT. A
-Ctrl-C at a prompt interrupts only what is in the foreground, and the jobs carry on.
+command. bash leaves them running, since POSIX has an asynchronous list ignore SIGINT, and
+since either answer can surprise someone used to the other, the shell says which it gave
+whenever there was a job to end:
+
+    nemosh: Ctrl-C ended the script, and the background job it had running: [1] 3140
+    hint: busybox ends a script's jobs on Ctrl-C too; bash would have left them running
+
+On the shell's own stderr, where the person who pressed the key is, and not at all when no
+job was running. A Ctrl-C at a prompt interrupts only what is in the foreground, and the
+jobs carry on.
 
 **Under `NEMOSH_JOBS=goroutine` a job is a goroutine** in the shell's own process, the way
 every job was before the default changed, and it has no pid to report. `$!` is then a job

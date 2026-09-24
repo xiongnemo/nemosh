@@ -105,16 +105,15 @@ func (c command) runScriptWith(ctx context.Context, controller *interruptControl
 	terminations, stopTerminations := notifyTerminations()
 	executionCtx, stopWatch := rt.ReceiveSignals(executionCtx, terminations, terminationsAreFinal)
 	status := rt.RunScript(executionCtx, script)
-	interrupted := runtime.IsShellInterrupt(executionCtx)
+	if runtime.IsShellInterrupt(executionCtx) {
+		// Ctrl-C ended the script, and its jobs go with it, as busybox-w32's do; see
+		// runtime.EndJobs. After the script's INT and EXIT traps, which RunScript has run.
+		reportEndedJobs(c.stderr, rt.EndJobs())
+	}
 	stopWatch()
 	stopTerminations()
 	clear()
 	rt.CloseBatch(status)
-	if interrupted {
-		// Ctrl-C ended the script, and its jobs go with it, as busybox-w32's do; see
-		// runtime.EndJobs.
-		rt.EndJobs()
-	}
 	if signal, ok := runtime.ExitSignal(executionCtx); ok {
 		return signalExit(signal)
 	}

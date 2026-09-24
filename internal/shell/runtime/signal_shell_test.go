@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -13,17 +14,26 @@ import (
 
 // EndJobs, which cmd/nemosh calls when Ctrl-C has ended a script, ends a job that is still
 // running under either launcher, the process's programs with it, and returns once it has.
+// It names only that job: not the one that had already finished, and not the one the
+// script had already killed.
 func TestEndJobs_endsWhatIsStillRunning(t *testing.T) {
 	for _, launcher := range []string{"goroutine", "process"} {
 		t.Run(launcher, func(t *testing.T) {
 			var stdout bytes.Buffer
 			rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout})
 			rt.env.Set("NEMOSH_JOBS", launcher)
-			rt.RunScript(context.Background(), "sleep 30 & p=$!\n")
+			rt.RunScript(context.Background(), "true &\nsleep 30 & killed=$!\nkill $killed\nsleep 30 & p=$!\nsleep 0.5\n")
 			started := time.Now()
-			rt.EndJobs()
+			ended := rt.EndJobs()
 			if waited := time.Since(started); waited > 10*time.Second {
 				t.Fatalf("EndJobs took %v", waited)
+			}
+			want := `^\[3\]$`
+			if launcher == "process" {
+				want = `^\[3\] [0-9]+$`
+			}
+			if len(ended) != 1 || !regexp.MustCompile(want).MatchString(ended[0]) {
+				t.Fatalf("EndJobs named %q, want the one job still running (%s)", ended, want)
 			}
 			rt.RunScript(context.Background(), "kill -0 $p 2>/dev/null; echo \"asked=$?\"\n")
 			if stdout.String() != "asked=1\n" {

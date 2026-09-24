@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"errors"
+	"strconv"
 	"sync"
 )
 
@@ -65,6 +66,35 @@ func ExitBySignal(signal int) {
 // its jobs were goroutines, which died with the process. A job that is a process would
 // otherwise run on, often a loop nobody can see any more. bash leaves them running,
 // since POSIX has an asynchronous list ignore SIGINT; busybox's answer is the one kept.
-func (r Runtime) EndJobs() {
+//
+// It answers with the jobs it ended, named as `jobs -l` names them -- `[1] 12345`, or
+// `[1]` for a job that is a goroutine -- so the shell can say which choice it made. A job
+// that had already ended, or that the script's own trap had already sent a signal, is not
+// one of them.
+func (r Runtime) EndJobs() []string {
+	var ended []string
+	for _, record := range r.jobScope.snapshot() {
+		if !r.jobScope.runningUnsignalled(record) {
+			continue
+		}
+		name := "[" + strconv.FormatUint(uint64(record.id), 10) + "]"
+		if record.pid != 0 {
+			name += " " + strconv.Itoa(record.pid)
+		}
+		ended = append(ended, name)
+	}
 	r.jobScope.cancelAndDrain()
+	return ended
+}
+
+// runningUnsignalled reports a job that has not ended and that no `kill` has been sent.
+func (s *jobScope) runningUnsignalled(record *jobRecord) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	select {
+	case <-record.done:
+		return false
+	default:
+	}
+	return record.signal == 0
 }
