@@ -142,12 +142,13 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// Leading assignments are expanded unsplit. Recognised on the word rather than
 	// on its expansion, which is the only place the distinction still exists: see
 	// assignment_expand.go for what `d=$(date)` did without this.
-	leading := true
+	leading, declaration := true, false
 	for _, item := range command {
 		var values []string
-		if leading && isAssignmentWord(item) {
+		if (leading || declaration) && isAssignmentWord(item) {
 			values = r.expandAssignmentWord(ctx, item, savedStatus)
 		} else {
+			declaration = declaration || leading && isDeclarationUtility(item)
 			leading = false
 			values = r.expandCommandWord(ctx, item, savedStatus)
 		}

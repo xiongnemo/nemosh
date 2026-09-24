@@ -10,9 +10,11 @@ func (r Runtime) readonlyBuiltin(args []string) int {
 	for _, arg := range args {
 		target, value, hasValue := strings.Cut(arg, "=")
 		name, appended := splitAssignmentTarget(target)
-		if name == "" {
-			return 2
+		if !isValidVariableName(name) {
+			return r.refuseName("readonly: ", name)
 		}
+		// A name with no value stays unset, read-only from now on: `readonly X` made X
+		// empty, where both references leave `${X-unset}` saying unset.
 		if hasValue {
 			if appended {
 				value = r.appendedValue(name, value)
@@ -20,8 +22,6 @@ func (r Runtime) readonlyBuiltin(args []string) int {
 			if status := r.assignVar(name, value); status != 0 {
 				return status
 			}
-		} else if _, ok := r.vars[name]; !ok {
-			r.vars[name] = ""
 		}
 		r.readonly[name] = struct{}{}
 		r.markVarMutation(name)
@@ -108,6 +108,16 @@ func (r Runtime) refuseReadonly(prefix, name string) int {
 	fmt.Fprintf(r.streams.Stderr, "%s%s: readonly variable\n", prefix, name)
 	r.raiseShellError()
 	return 1
+}
+
+// refuseName reports an operand that is not a variable name, in busybox's words, and makes
+// it a shell error, which ends a script as it does there. `export a/b` returned 0 -- and the
+// tail of a value split at a space, `export PATH=$PATH:...` over `C:/Program Files`, went
+// quietly into the environment as a name nothing could read back.
+func (r Runtime) refuseName(prefix, name string) int {
+	fmt.Fprintf(r.streams.Stderr, "%s%s: bad variable name\n", prefix, name)
+	r.raiseShellError()
+	return 2
 }
 
 // isReadonly answers for a name, or for the array an element belongs to: `readonly a`

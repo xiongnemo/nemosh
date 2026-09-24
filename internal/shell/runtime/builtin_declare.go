@@ -32,11 +32,23 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 		return 0
 	}
 	for _, name := range names {
-		if status := r.declareName(ctx, options, name); status != 0 {
+		if status := r.declareInFunction(ctx, options, name); status != 0 {
 			return status
 		}
 	}
 	return 0
+}
+
+// declareInFunction is declare's scope rule, bash's: inside a function a name it declares
+// is the call's own, as `local` makes it, unless -g says otherwise. Every declaration here
+// was global, so `f() { declare x=1; }` left x set after f returned, and `typeset` -- the
+// ksh spelling a script uses for a local -- did the same.
+func (r Runtime) declareInFunction(ctx context.Context, options declareOptions, argument string) int {
+	target, _, _ := strings.Cut(argument, "=")
+	if name, _ := splitAssignmentTarget(target); options.global || r.functionDepth == 0 || r.locals == nil || !isVariableName(name) {
+		return r.declareName(ctx, options, argument)
+	}
+	return r.declareLocal(ctx, "declare", options, argument)
 }
 
 type declareOptions struct {
@@ -51,6 +63,8 @@ type declareOptions struct {
 	removed               string
 	// functionNames is -F; see declareFunctionNames.
 	functionNames bool
+	// global is -g: inside a function the names are the caller's rather than the call's.
+	global bool
 }
 
 func parseDeclareOptions(args []string) (declareOptions, []string, error) {
@@ -95,9 +109,7 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 			case 'p':
 				options.print = true
 			case 'g':
-				// Every declaration here is global, because `local` is what makes a
-				// name local and this shell has it separately. So -g asks for what
-				// already happens.
+				options.global = true
 			default:
 				return options, nil, fmt.Errorf(
 					"-%c: not an option this build has; it takes -A -a -i -l -u -r -x -p -g -F", letter)

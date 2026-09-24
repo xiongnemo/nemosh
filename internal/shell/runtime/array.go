@@ -344,7 +344,13 @@ func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]strin
 		if !ok || (reference.subscript != "@" && reference.subscript != "*") {
 			return nil, false
 		}
-		return r.arrayIndices(reference.name), true
+		keys := r.arrayIndices(reference.name)
+		if reference.subscript == "*" {
+			// One field, as `${a[*]}` is. The caller takes one value from a `*` form, so
+			// returning each key gave only the first: `0` for `0 1 2`.
+			return []string{strings.Join(keys, r.starSeparator())}, true
+		}
+		return keys, true
 	}
 	reference, ok := parseArrayReference(body)
 	if !ok {

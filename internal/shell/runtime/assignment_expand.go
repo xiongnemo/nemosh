@@ -92,6 +92,27 @@ func (r Runtime) expandingAssignment() Runtime {
 
 // expandAssignmentWord expands one leading assignment, unsplit, with a tilde after
 // the `=` honoured.
+// isDeclarationUtility reports a command word that is, as written, one of the builtins whose
+// `name=value` operands are assignments: expanded as one, not split and not globbed, which
+// POSIX now says for export and readonly and both references do for all five. They were
+// expanded as arguments, so `export PATH=$PATH:/x` with a space anywhere in PATH -- which on
+// Windows is `C:/Program Files` -- cut the value at the space and exported what followed as
+// a name of its own.
+func isDeclarationUtility(item word) bool {
+	if !isUnquotedLiteralWord(item) {
+		return false
+	}
+	var text strings.Builder
+	for _, part := range item.parts {
+		text.WriteString(part.text)
+	}
+	switch text.String() {
+	case "export", "readonly", "local", "declare", "typeset":
+		return true
+	}
+	return false
+}
+
 func (r Runtime) expandAssignmentWord(ctx context.Context, item word, savedStatus int) []string {
 	return r.expandingAssignment().expandCommandWord(ctx, assignmentTildeWord(item), savedStatus)
 }

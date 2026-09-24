@@ -31,8 +31,8 @@ func (r Runtime) export(args []string) int {
 	for _, arg := range args {
 		target, value, hasValue := strings.Cut(arg, "=")
 		name, appended := splitAssignmentTarget(target)
-		if name == "" {
-			return 2
+		if !isValidVariableName(name) {
+			return r.refuseName("export: ", name)
 		}
 		if !hasValue {
 			r.markExported(name)

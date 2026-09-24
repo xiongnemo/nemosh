@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -13,98 +14,51 @@ import (
 // so a shell without it silently leaks working variables into its caller.
 // busybox carries it as BUILTIN_SPEC_REG_ASSG (shell/ash.c:12101).
 //
+// It takes declare's options, as bash's does: `local -a list=(...)`, `local -A map`,
+// `local -i n`, `local -r`. Each was `bad variable name`, and the call went on with the
+// value unset or unevaluated -- `local -i n=2+3` held the text 2+3. It is `declare` inside
+// a function, which is also what `declare` itself now is there (declareInFunction).
+//
 // Outside a function there is nothing to restore to, and the shells report that
 // rather than quietly behaving like an assignment.
-func (r Runtime) local(args []string) int {
+func (r Runtime) local(ctx context.Context, args []string) int {
 	if r.functionDepth == 0 || r.locals == nil {
 		fmt.Fprintln(r.streams.Stderr, "local: not in a function")
 		return 1
 	}
-	status := 0
-	for _, arg := range args {
+	options, names, err := parseDeclareOptions(args)
+	if err == nil && (options.print || options.functionNames || options.global) {
+		err = fmt.Errorf("-p, -F and -g are declare's; local declares")
+	}
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "local: %v\n", err)
+		return 2
+	}
+	for _, arg := range names {
 		if arg == "-" {
 			r.locals.saveOptions(r.options)
 			continue
 		}
-		name, value, assigns := strings.Cut(arg, "=")
-		if !isVariableName(name) {
-			fmt.Fprintf(r.streams.Stderr, "local: %s: bad variable name\n", name)
-			status = 2
-			continue
+		target, _, _ := strings.Cut(arg, "=")
+		if name, _ := splitAssignmentTarget(target); !isVariableName(name) {
+			return r.refuseName("local: ", name)
 		}
-		if r.isReadonly(name) {
-			return r.refuseReadonly("local: ", name)
-		}
-		r.locals.save(name, r.vars)
-		if !assigns {
-			// `local x` with no value leaves x unset for the call, which is
-			// what makes it a declaration rather than an assignment.
-			delete(r.vars, name)
-			continue
-		}
-		r.vars[name] = value
-		r.markVarMutation(name)
-	}
-	return status
-}
-
-// localScope remembers what each name held before a function call shadowed it.
-// One per call; a nested call gets its own, so restoring unwinds in the order
-// the calls did.
-type localScope struct {
-	saved map[string]savedVariable
-	// options are the `set` options as they stood at `local -`, and target is where
-	// they go back to when the call returns. nil when the call did not ask.
-	options []bool
-	target  *shellOptions
-}
-
-// saveOptions is `local -`: the `set` options -- `-e`, `-u`, pipefail and the rest --
-// belong to the call from here on, so a function can `set -e` for its own body without
-// leaving it set for its caller. busybox has it and so does bash; here it was `bad
-// variable name`. Only the options `set` reaches, as in both: a `shopt` setting is not
-// saved. Asked twice, the first answer stands, as it does for a variable.
-func (s *localScope) saveOptions(options *shellOptions) {
-	if s.target != nil {
-		return
-	}
-	s.target = options
-	for _, spec := range shellOptionSpecs {
-		s.options = append(s.options, *spec.field(options))
-	}
-}
-
-type savedVariable struct {
-	value   string
-	present bool
-}
-
-func newLocalScope() *localScope {
-	return &localScope{saved: map[string]savedVariable{}}
-}
-
-// save records a name's outer value once. Twice would overwrite the outer value
-// with the local one, so `local x=1; local x=2` would restore 1 rather than
-// whatever the caller had.
-func (s *localScope) save(name string, vars map[string]string) {
-	if _, already := s.saved[name]; already {
-		return
-	}
-	value, present := vars[name]
-	s.saved[name] = savedVariable{value: value, present: present}
-}
-
-func (s *localScope) restore(vars map[string]string) {
-	for name, previous := range s.saved {
-		if previous.present {
-			vars[name] = previous.value
-			continue
-		}
-		delete(vars, name)
-	}
-	if s.target != nil {
-		for index, spec := range shellOptionSpecs {
-			*spec.field(s.target) = s.options[index]
+		if status := r.declareLocal(ctx, "local", options, arg); status != 0 {
+			return status
 		}
 	}
+	return 0
+}
+
+// declareLocal makes one `name` or `name=value` the running call's own and then declares
+// it. A read-only name cannot be shadowed, and that refusal is fatal as an assignment to
+// it is.
+func (r Runtime) declareLocal(ctx context.Context, builtin string, options declareOptions, arg string) int {
+	target, _, _ := strings.Cut(arg, "=")
+	name, _ := splitAssignmentTarget(target)
+	if _, already := r.locals.saved[name]; !already && r.isReadonly(name) {
+		return r.refuseReadonly(builtin+": ", name)
+	}
+	r.makeLocal(name)
+	return r.declareName(ctx, options, arg)
 }

@@ -174,7 +174,7 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	case "unalias":
 		return r.unalias(args[1:])
 	case "local":
-		return r.local(args[1:])
+		return r.local(ctx, args[1:])
 	case "type":
 		return r.typeBuiltin(args[1:])
 	case "let":

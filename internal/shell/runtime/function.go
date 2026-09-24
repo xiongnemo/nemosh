@@ -77,7 +77,7 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 	// breaks out of a loop, which is why the restore is deferred.
 	scope := newLocalScope()
 	r.locals = scope
-	defer scope.restore(r.vars)
+	defer scope.restore(r)
 	result := r.executeCommandNode(ctx, definition.body, 0)
 	if result.control == flowExec {
 		r.lifecycle.exitSuppressed = true
