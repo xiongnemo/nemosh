@@ -79,7 +79,9 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 	scope := newLocalScope()
 	r.locals = scope
 	defer scope.restore(r)
+	hidden, wasSet := r.hideReturnTrap()
 	result := r.executeCommandNode(ctx, definition.body, 0)
+	r.finishReturnTrap(ctx, hidden, wasSet, result)
 	if result.control == flowExec {
 		r.lifecycle.exitSuppressed = true
 	}

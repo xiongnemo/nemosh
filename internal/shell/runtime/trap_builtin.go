@@ -25,6 +25,15 @@ import (
 // command named `-`. Storing it was the old behaviour, so `trap - EXIT` left
 // the handler armed and printed `-: not found` when the shell exited.
 func (r Runtime) trap(args []string) int {
+	switch {
+	case len(args) > 0 && args[0] == "--":
+		args = args[1:]
+	case len(args) > 0 && args[0] == "-l":
+		// bash's `trap -l` is `kill -l`, and so is this.
+		return r.listKillSignals()
+	case len(args) > 0 && args[0] == "-p":
+		return r.printTraps(args[1:])
+	}
 	if len(args) == 0 {
 		return r.listTraps()
 	}
@@ -34,6 +43,13 @@ func (r Runtime) trap(args []string) int {
 	}
 	status := 0
 	for _, condition := range conditions {
+		if condition == "DEBUG" {
+			// Named rather than called invalid: bash has it, and what it needs is missing.
+			fmt.Fprintln(r.streams.Stderr, "trap: DEBUG: not implemented: it runs before every command "+
+				"with $BASH_COMMAND, the command as written, and a command here keeps no written form")
+			status = 1
+			continue
+		}
 		name, ok := trapConditionName(condition)
 		if !ok {
 			// bash's wording, which busybox copies deliberately.
@@ -57,6 +73,23 @@ func (r Runtime) trap(args []string) int {
 	return status
 }
 
+// printTraps is bash's `trap -p [condition...]`: the armed handlers, re-readable, all of
+// them or the ones named. busybox refuses the option; here it was taken for an action, so
+// `trap -p RETURN` armed RETURN with a command named -p.
+func (r Runtime) printTraps(conditions []string) int {
+	if len(conditions) == 0 {
+		return r.listTraps()
+	}
+	for _, condition := range conditions {
+		if name, ok := trapConditionName(condition); ok && name != "" {
+			if action, set := r.traps[name]; set {
+				fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", singleQuoteForReuse(action), name)
+			}
+		}
+	}
+	return 0
+}
+
 func (r Runtime) listTraps() int {
 	for _, name := range slices.Sorted(maps.Keys(r.traps)) {
 		fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", singleQuoteForReuse(r.traps[name]), name)
@@ -76,6 +109,8 @@ func trapConditionName(operand string) (trapName, bool) {
 		return trapINT, true
 	case "ERR":
 		return trapERR, true
+	case "RETURN":
+		return trapRETURN, true
 	}
 	if _, err := strconv.Atoi(operand); err == nil {
 		return "", true

@@ -91,6 +91,8 @@ const (
 	trapINT  trapName = "INT"
 	// trapERR runs after a command fails where `set -e` would exit; see errTrapTriggers.
 	trapERR trapName = "ERR"
+	// trapRETURN runs as a function returns or a sourced file finishes; see return_trap.go.
+	trapRETURN trapName = "RETURN"
 )
 
 func New(registry applets.Registry, streams Streams) Runtime {

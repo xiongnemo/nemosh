@@ -652,5 +652,11 @@
     "stdout": "named\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ trap 'echo ret' RETURN; echo in; }; f",
+    "stdout": "in\nret\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
