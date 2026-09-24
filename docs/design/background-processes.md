@@ -1,7 +1,7 @@
 # Background jobs as processes
 
-Status: **steps 1-4 built**, behind `NEMOSH_JOBS=process` (see "How it lands"),
-2026-09-24. Step 5, the default flipping, is a decision still to be taken.
+Status: **built, and the default**, 2026-09-25. `NEMOSH_JOBS=goroutine` is the way back
+to the goroutine every job used to be, and CI runs the job tests under both.
 The goroutine is still the default. This is the design the bash-compatibility plan put
 last, and asked for before any code.
 
@@ -190,8 +190,11 @@ busybox pays the same price for the same reason.
 
 ## How it lands
 
-Behind `NEMOSH_JOBS=process` until it reaches parity, then the default, then the switch
-goes:
+Behind `NEMOSH_JOBS=process` until it reached parity, then the default. The switch was
+meant to go after that, and it stayed: `NEMOSH_JOBS=goroutine` is the way back, because a
+goroutine job starts in microseconds and a process in milliseconds, and a script that
+starts thousands of jobs is better off knowing it can have that back. CI runs the runtime
+suite under both launchers, so the way back keeps working.
 
 1. The codec and its two tests (reflect guard, round trip), with nothing using them; the
    printer's round-trip test widened to every construct a job can hold.
@@ -199,8 +202,11 @@ goes:
    background-job test runs under both launchers.
 3. Signals: the Job Object, the control pipe, `kill` by pid, TERM traps in a job.
 4. `$BASHPID`, `jobs -l`, `coproc` over the same launch.
-5. The default flips; manual-checks.md gains `$!` in `tasklist`, `kill -0` in a loop, and
-   `trap TERM` inside a job.
+5. The default flips (2026-09-25); manual-checks.md gains `$!` in `tasklist`, `kill -0` in
+   a loop, and `trap TERM` inside a job. Only a binary that answers `--job` starts job
+   processes (AllowJobProcesses): cmd/nemosh and the runtime tests' TestMain. Another
+   program linking the runtime would start a copy of itself that does not know the
+   argument, so its jobs stay goroutines.
 
 ## Open questions
 

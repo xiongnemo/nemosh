@@ -90,15 +90,14 @@ jobs:
       - name: go test
         run: go test -race -shuffle=on -count=1 ./...
 
-      # The other launcher, so both keep their answers. A background job is a goroutine
-      # by default and a process under NEMOSH_JOBS=process (docs/design/
+      # The other launcher, so the way back keeps working. A background job is a process
+      # by default and a goroutine under NEMOSH_JOBS=goroutine (docs/design/
       # background-processes.md), and the step above only ever runs the default. The
-      # runtime package alone, because that is where every job test is; it is also where
-      # a race between a job process and the shell shows, as one did on e9ac46a.
-      - name: go test (process jobs)
+      # runtime package alone, because that is where every job test is.
+      - name: go test (goroutine jobs)
         shell: bash
         env:
-          NEMOSH_JOBS: process
+          NEMOSH_JOBS: goroutine
         run: go test -race -shuffle=on -count=1 ./internal/shell/runtime/
 
       # Strict mode turns a divergence from a reference shell into a failure.

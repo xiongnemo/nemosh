@@ -98,7 +98,7 @@ it is easier to see them together.
 | | Implemented | Why it can be |
 | --- | --- | --- |
 | `jobs`, `wait`, `wait %N ...`, `wait -n` | yes | bookkeeping over the shell's own job table. Several operands answer the last one's status; `wait -n` answers whichever job ends first; one the shell does not know is 127. `jobs` in a pipeline stage or a command substitution lists the shell's jobs, as both references do, so `jobs -p \| wc -l` and `kill $(jobs -p)` work; they saw an empty table before. In a subshell `( )` the table is its own, and empty, as in both |
-| `kill %N` | yes | ending a job maps onto cancelling its context |
+| `kill %N` | yes | a job is a process: the signal goes over its control pipe, and KILL ends its Job Object. A goroutine job (`NEMOSH_JOBS=goroutine`) is ended by cancelling its context |
 | `coproc cmd`, `coproc NAME { ...; }` | yes | bash's, which busybox-w32 has not got: a background job with a pipe to its stdin and one from its stdout. The shell's ends are `${NAME[1]}` and `${NAME[0]}`, on 60 and 63 as bash puts them. `$NAME_PID` is the job's `$!`. `exec {NAME[1]}>&-` ends its input, and the `wait` that reaps it closes both ends and unsets both names. NAME is COPROC unless the command is a compound one (a group, a subshell, a loop, an if or a case), as in bash. It runs under either launcher, since it is an ordinary job whose group redirects its 0 and 1. It used to be refused with 126 |
 | `kill PID`, `kill -l` | yes | `TerminateProcess` on Windows, a real signal elsewhere |
 | `pgrep`, `pkill` | yes | `CreateToolhelp32Snapshot` lists, the above terminates |
@@ -134,21 +134,22 @@ features"*. Those job-related features are precisely the top half of the table
 above. Measured: `SIGSTOP`, `SIGTSTP` and `SIGCONT` appear nowhere in its `win32/`
 layer.
 
-Making `fg` work would mean moving background jobs from goroutines to real child
-processes and then gambling on `SuspendThread` against the heap lock — trading a
+Background jobs are real child processes now (below), so making `fg` work would
+come down to gambling on `SuspendThread` against the heap lock — trading a
 property that holds for a feature that might.
 
-**The first half of that is reachable; only the second is not.** busybox-w32 has
-no fork either, and its background jobs are real processes all the same:
+**Background jobs are processes, as busybox-w32's are.** It has no fork either:
 `spawn_forkshell` (`shell/ash.c:17040`) copies the shell's state into a file
 mapping with an inheritable handle and launches a fresh `sh --fs <handle>`, which
-maps it and carries on, and `forkparent` sets `$!` from `GetProcessId`. What that
-buys is a real pid, a `wait` over process handles, and a `kill` that can tell one
-signal from another (below). What it does not buy is suspension — the three
-reasons above are about Windows and Go, not about goroutines. Measured cost here
-would be one process start per `&`, about 9 ms (startup-and-footprint.md), plus
-moving the state across. It is planned last among the bash-compatibility work,
-behind a design document of its own, because nothing else waits on it.
+maps it and carries on, and `forkparent` sets `$!` from `GetProcessId`. Here a
+`cmd &` starts this binary as `nemosh --job <handle>` and sends it the job's state
+and program over an inherited pipe (docs/design/background-processes.md). What that
+buys is a real pid, a `wait` over process handles, a `kill` that can tell one
+signal from another (below), and a KILL that takes the programs the job started with
+it. What it does not buy is suspension — the three reasons above are about Windows
+and Go, not about goroutines. It costs about 4-6 ms a job and 11 MB while one runs
+(startup-and-footprint.md). `NEMOSH_JOBS=goroutine` is the way back to the goroutine
+each job used to be, which starts in microseconds and whose `$!` is `%1`.
 
 ### `kill`
 
@@ -157,12 +158,13 @@ names a job and only the shell has the job table. busybox's `killcmd` does
 nothing but translate `%N` into that job's pids and hand them to the ordinary
 `kill` (`:4787-4830`).
 
-Here there is nothing to translate into, because a background job is a goroutine
-and has no pid. What it has is its own context, so the signal arrives as a
-cancellation — and for the case that matters most that is not a weaker
-substitute: an external command in a background job is launched with
-`exec.CommandContext` under that context, so cancelling it terminates the real
-process.
+Here `%N` and a job's pid both reach the job's record, and the record knows how
+to reach the job. A job that is a process is sent the signal as a message on a
+control pipe, so its own trap can run, and KILL ends its Job Object, which is the
+job and every program it started. A job that is a goroutine (`NEMOSH_JOBS=goroutine`)
+has no pid; what it has is its own context, so a signal nothing catches arrives as a
+cancellation, and an external command in the job, launched with
+`exec.CommandContext` under that context, is terminated with it.
 
 | Form | Behaviour |
 | --- | --- |
@@ -426,29 +428,27 @@ is trusted anyway. An unknown `HISTCONTROL` word and an unusable `HISTSIZE` are 
 ignored rather than refused, so an rc file shared with bash cannot stop this shell
 starting.
 
-**`$!` is a job specification, not a process id** -- `%1` rather than a number. That is
-forced rather than chosen: a background job here is a goroutine, so there is no pid to
-report, the same constraint `kill %N` already works around. Naming the job keeps the two
-things `$!` is used for working, since `kill $!` and `wait $!` both take `%N`; a number
-would have been a pid-shaped lie that `kill` would apply to some other process. It was
-empty before. busybox-w32 does report a real pid, because its jobs are processes; see
-"Process control" above for how, and what moving to that would take.
+**`$!` is the job's pid**, as in both references: a background job is a process
+(docs/design/background-processes.md), and `wait $!`, `kill $!`, `tasklist` and `taskkill`
+all take the pid. The pid variables answer as bash's do. `$$` and `$PPID` inside a job are
+still the shell's. `$BASHPID` is the job's own pid, the same one `$!` names; busybox has no
+`$BASHPID`. `jobs -l` adds each job's pid (`[1] 12345 Running`), and `jobs -p` prints the
+pids alone. A subshell is not a process of its own here, so its `$BASHPID` is the shell's,
+where bash's differs.
 
-**Under `NEMOSH_JOBS=process` a job is a process** (docs/design/background-processes.md,
-not yet the default), and `$!` is its pid, as in both references. The pid variables then
-answer as bash's do. `$$` and `$PPID` inside a job are still the shell's. `$BASHPID` is the
-job's own pid, the same one `$!` names; busybox has no `$BASHPID`. `jobs -l` adds each
-job's pid (`[1] 12345 Running`), and `jobs -p` prints the pids alone. Under the default,
-a job is a goroutine in the shell's own process, so `$BASHPID` inside it is the shell's
-pid, and `jobs -p` prints `%1`, the same thing `$!` holds. A subshell is this process
-under either launcher, so its `$BASHPID` is the shell's, where bash's differs.
+**Under `NEMOSH_JOBS=goroutine` a job is a goroutine** in the shell's own process, the way
+every job was before the default changed, and it has no pid to report. `$!` is then a job
+specification, `%1`, which keeps the two things `$!` is used for working, since `kill $!`
+and `wait $!` both take `%N`; a number would have been a pid-shaped lie that `kill` would
+apply to some other process. `jobs -p` prints `%1` too, and `$BASHPID` inside the job is the
+shell's pid. The same holds for a runtime embedded with applets of its own, whose jobs
+cannot be reproduced in another process.
 
-**Backgrounding announces the job, and says how to stop it.** busybox writes `[1] 19676`;
-this writes `[1] started; kill %1 to stop it`, for the reason above — the number is real,
-the pid is not. The sentence is there because `%1` is not what someone who has only ever
-killed a pid would guess. On stderr, where busybox also puts it, so that `x=$(cmd &)`
-collects nothing; and only at a prompt, since a script wants its output rather than a
-commentary.
+**Backgrounding announces the job at a prompt.** A job that is a process is announced as
+busybox announces one, `[1] 19676`. A goroutine job is announced as `[1] started; kill %1
+to stop it`: it has no pid, and `%1` is not what someone who has only ever killed a pid
+would guess. On stderr, where busybox also puts it, so that `x=$(cmd &)` collects nothing;
+and only at a prompt, since a script wants its output rather than a commentary.
 
 **A finished job is reported once**, at the next prompt. POSIX 2.9.3 removes a job from
 the list once the shell has reported its status, so naming a job `Done` is what consumes

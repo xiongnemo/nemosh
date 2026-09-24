@@ -147,13 +147,12 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		return lineResult{status: 1}
 	}
 	record.deliver = worker.signals.offer
-	// `$!`, which was empty. It is a **job specification** here and not a process id,
-	// and that is forced rather than chosen: a background job in this shell is a
-	// goroutine, so there is no pid to report (see jobRecord.cancel for the same
-	// constraint reached from `kill`). Naming the job keeps the two things `$!` is
-	// actually used for working -- `kill $!` and `wait $!` both take `%N` -- where a
-	// number would have been a pid-shaped lie that `kill` would apply to some other
-	// process entirely. Recorded in docs/support-matrix.md as a divergence.
+	// `$!` for a job that is a goroutine -- NEMOSH_JOBS=goroutine, or a runtime with a
+	// registry of its own -- is a **job specification** and not a process id: there is
+	// no pid to report (a job that is a process reports its own, job_process.go). Naming
+	// the job keeps the two things `$!` is actually used for working -- `kill $!` and
+	// `wait $!` both take `%N` -- where a number would have been a pid-shaped lie that
+	// `kill` would apply to some other process entirely.
 	r.vars["!"] = fmt.Sprintf("%%%d", record.id)
 	r.markVarMutation("!")
 	// Said out loud at a prompt, the way busybox says `[1] 19676`. The number is real and

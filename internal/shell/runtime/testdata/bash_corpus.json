@@ -670,5 +670,12 @@
     "stdout": "hi\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "sleep 0 & p=$!; case $p in *[!0-9]*|'') echo not-a-pid;; *) echo pid;; esac; wait",
+    "stdout": "pid\n",
+    "status": 0,
+    "reference": "busybox-w32",
+    "jobs": "process"
   }
 ]

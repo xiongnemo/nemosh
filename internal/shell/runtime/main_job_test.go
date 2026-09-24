@@ -26,6 +26,9 @@ func TestMain(m *testing.M) {
 	if len(os.Args) == 3 && os.Args[1] == "--job" {
 		os.Exit(runJobChild(os.Args[2]))
 	}
+	// Either way this binary can be a job's: the built nemosh, or itself through the
+	// intercept above.
+	AllowJobProcesses()
 	directory, err := os.MkdirTemp("", "nemosh-job-binary-")
 	if err == nil {
 		if binary, built := buildJobBinary(directory); built {

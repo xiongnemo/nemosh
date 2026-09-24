@@ -8,29 +8,42 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync/atomic"
 )
 
-// Background jobs as processes, step two of docs/design/background-processes.md: behind
-// NEMOSH_JOBS=process, a `cmd &` is this binary started as `nemosh --job <handle>`, given
-// the job's state over an inherited pipe (job_state.go). `$!` is its pid; `wait` and
-// `kill` take the pid as they take `%N`. Off unless asked for, because the goroutine is
-// still what every other test and every user runs.
+// Background jobs as processes, docs/design/background-processes.md: a `cmd &` is this
+// binary started as `nemosh --job <handle>`, given the job's state over an inherited pipe
+// (job_state.go). `$!` is its pid; `wait` and `kill` take the pid as they take `%N`. The
+// default since step five. NEMOSH_JOBS=goroutine is the way back, to the goroutine each
+// job used to be: microseconds to start rather than milliseconds, at the price of `$!`
+// being `%N`.
 //
 // Signals, and the Job Object KILL ends, are job_process_signal.go.
 
-// processJobsEnabled reports NEMOSH_JOBS=process in the shell's environment, for a shell
-// whose applets are the ones a child of this binary would have. A runtime given its own
-// registry -- a test's applet that answers over a channel -- cannot be reproduced in
-// another process, so its jobs stay goroutines.
-func (r Runtime) processJobsEnabled() bool {
-	value, _ := r.env.LookupEnv("NEMOSH_JOBS")
-	return jobsAreProcesses(value) && r.registry.IsDefault()
+// processJobsAllowed is set by a binary that answers `--job`: cmd/nemosh, and the tests'
+// TestMain. Anything else that links this package -- another package's tests -- would start
+// a job as a copy of itself that does not know the argument, so its jobs stay goroutines.
+var processJobsAllowed atomic.Bool
+
+// AllowJobProcesses says this binary is one a job can be: it runs `--job <handle>` as
+// RunJob. cmd/nemosh calls it before anything else.
+func AllowJobProcesses() {
+	processJobsAllowed.Store(true)
 }
 
-// jobsAreProcesses is the launcher NEMOSH_JOBS names: processes for "process", and
-// goroutines otherwise.
+// processJobsEnabled reports whether this shell's jobs are processes: the binary can be one,
+// NEMOSH_JOBS does not ask for goroutines, and the applets are the ones a child of this
+// binary would have. A runtime given its own registry -- a test's applet that answers over
+// a channel -- cannot be reproduced in another process, so its jobs stay goroutines.
+func (r Runtime) processJobsEnabled() bool {
+	value, _ := r.env.LookupEnv("NEMOSH_JOBS")
+	return processJobsAllowed.Load() && jobsAreProcesses(value) && r.registry.IsDefault()
+}
+
+// jobsAreProcesses is the launcher NEMOSH_JOBS names: goroutines for "goroutine", and
+// processes otherwise, unset included.
 func jobsAreProcesses(value string) bool {
-	return value == "process"
+	return value != "goroutine"
 }
 
 // jobExecutable is the program a job process runs: this binary. A variable so a test,

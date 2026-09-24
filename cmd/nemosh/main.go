@@ -21,6 +21,8 @@ func main() {
 	// editor, terminal restoration. A defect in any of those used to print a
 	// goroutine dump, which tells the reader nothing they can act on.
 	defer guardMain()
+	// This binary answers `--job` (job.go), so a background job can be a copy of it.
+	runtime.AllowJobProcesses()
 	signals, stopSignals := notifyInterrupts()
 	defer stopSignals()
 	// Joining a console has to happen before the streams are read, because it is

@@ -102,6 +102,15 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 ## D. Job control
 
 - `sleep 20 &` then `jobs` -- `[1] Running`.
+- **`$!` is a process**: `sleep 30 &`, then `tasklist /FI "PID eq $!"` names it, and
+  `taskkill /PID $! /F` ends it, after which `wait $!` answers.
+- **`kill -0` in a loop**: `sleep 3 & p=$!; while kill -0 $p 2>/dev/null; do echo alive;
+  sleep 1; done` prints alive about three times and stops.
+- **`trap TERM` inside a job**: `( trap 'echo got-term' TERM; sleep 2; echo after ) &
+  sleep 1; kill $!` -- got-term, then after, and `wait $!` answers 0. The `sleep 1` is
+  what gives the job time to set its trap: a `kill` straight after the `&` reaches it
+  first, and it ends by the signal, as it does in bash.
+- **The way back**: `NEMOSH_JOBS=goroutine nemosh -c 'sleep 1 & echo $!'` prints `%1`.
 - `wait` -- returns when it finishes.
 - `kill %1` on a running background job.
 - `fg` and `bg` **should refuse loudly**, with a reason and a pointer to the support

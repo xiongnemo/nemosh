@@ -21,11 +21,11 @@ type jobRecord struct {
 	claimed bool
 	// cancel stops this job and nothing else, which is what `kill %N` needs.
 	//
-	// A background job here is a goroutine rather than a process, so it has no
-	// pid to signal -- busybox's kill builtin translates %N into the job's pids
-	// (shell/ash.c:4801-4830) and there is nothing to translate into. What the
-	// job does have is its own context, so cancelling that is the same act
-	// arriving by a different route. An external command in a background job is
+	// For a job that is a process it ends the job's tree (job_process_signal.go).
+	// For one that is a goroutine there is no pid to signal -- busybox's kill
+	// builtin translates %N into the job's pids (shell/ash.c:4801-4830) -- and
+	// what it does have is its own context, so cancelling that is the same act
+	// arriving by a different route. An external command in such a job is
 	// launched with exec.CommandContext under this very context, so cancelling it
 	// terminates the real process too.
 	cancel context.CancelFunc

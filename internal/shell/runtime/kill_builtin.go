@@ -12,12 +12,12 @@ import (
 // job and only the shell has the job table.
 //
 // busybox's killcmd (shell/ash.c:4787) does nothing except translate `%N` into
-// that job's pids and hand the result to the ordinary kill. Here there is nothing
-// to translate into -- a background job is a goroutine, not a process, so it has
-// no pid -- and what stands in for the signal is cancelling the job's own
-// context. That is not a weaker substitute where it matters most: an external
-// command in a background job is launched with exec.CommandContext under that
-// context, so cancelling it terminates the real process.
+// that job's pids and hand the result to the ordinary kill. Here `%N` goes to the
+// job's record, which knows how to reach it: a job that is a process through its
+// control pipe and its Job Object (job_process_signal.go), and one that is a
+// goroutine -- NEMOSH_JOBS=goroutine -- through its inbox and its own context. An
+// external command in a goroutine job is launched with exec.CommandContext under
+// that context, so cancelling it terminates the real process.
 //
 // A pid operand is killed for real, through internal/proc -- the same code the
 // pkill applet uses, so the two cannot disagree about what killing means.
