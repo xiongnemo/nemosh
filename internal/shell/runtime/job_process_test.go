@@ -3,6 +3,7 @@ package runtime
 import (
 	"bytes"
 	"context"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -44,6 +45,20 @@ func TestProcessJobs_behaveAsTheReferencesDo(t *testing.T) {
 	t.Run("a list item in the background", func(t *testing.T) {
 		stdout, stderr := run(t, "echo one && echo two & wait\necho after\n")
 		if stdout != "one\ntwo\nafter\n" {
+			t.Fatalf("stdout %q stderr %q", stdout, stderr)
+		}
+	})
+	// The shell's descriptors as they were at launch, each by its own route: a file inherited
+	// as a handle, a heredoc through a pipe the parent fills, and a buffer -- the test's
+	// stdout -- through a pipe the parent drains. An `exec >` after the launch does not take
+	// the job's output with it. busybox-w32 and bash 5.3 answer the same.
+	t.Run("the job has the shell's descriptors from its launch", func(t *testing.T) {
+		file := filepath.ToSlash(filepath.Join(t.TempDir(), "three"))
+		script := "f='" + file + "'\nexec 3>\"$f\"\necho three >&3 & wait\nexec 3>&-\necho \"3=[$(cat \"$f\")]\"\n" +
+			"exec 4<<'DOC'\nfrom-heredoc\nDOC\n{ read line <&4; echo \"4=[$line]\"; } & wait\n" +
+			"{ sleep 0.3; echo from-job; } &\nexec 7>&1 >\"$f\"\necho into-file\nwait\nexec 1>&7\necho \"file=[$(cat \"$f\")]\"\n"
+		stdout, stderr := run(t, script)
+		if stdout != "3=[three]\n4=[from-heredoc]\nfrom-job\nfile=[into-file]\n" {
 			t.Fatalf("stdout %q stderr %q", stdout, stderr)
 		}
 	})

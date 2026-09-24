@@ -10,27 +10,35 @@ import (
 	"syscall"
 )
 
-// prepareJobCommand lets the child inherit the state pipe and nothing else, and answers
-// with the argument that names it. The handle is listed rather than every inheritable one
-// being passed, and the child is its own process group, so the console's Ctrl-C reaches
+// prepareJobCommand makes the child its own process group, so the console's Ctrl-C reaches
 // the foreground and not the job -- busybox's arrangement.
-func prepareJobCommand(command *exec.Cmd, state *os.File) (string, error) {
-	handle := syscall.Handle(state.Fd())
-	if err := syscall.SetHandleInformation(handle, syscall.HANDLE_FLAG_INHERIT, syscall.HANDLE_FLAG_INHERIT); err != nil {
-		return "", fmt.Errorf("mark the job state inheritable: %w", err)
-	}
-	command.SysProcAttr = &syscall.SysProcAttr{
-		AdditionalInheritedHandles: []syscall.Handle{handle},
-		CreationFlags:              syscall.CREATE_NEW_PROCESS_GROUP,
-	}
-	return strconv.FormatUint(uint64(handle), 10), nil
+func prepareJobCommand(command *exec.Cmd) {
+	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP}
 }
 
-// JobStateFile is the child's end of the state pipe, from the argument after --job.
-func JobStateFile(argument string) (*os.File, error) {
-	handle, err := strconv.ParseUint(argument, 10, 64)
+// inheritFile lets the child inherit file, and answers with the handle value it arrives
+// under. An inheritable duplicate rather than the handle itself, so a file the shell goes on
+// using keeps its own flags; the duplicate is listed, so the child inherits it and nothing
+// else, and release closes it once the child has it.
+func inheritFile(command *exec.Cmd, file *os.File) (string, func() error, error) {
+	process, err := syscall.GetCurrentProcess()
 	if err != nil {
-		return nil, fmt.Errorf("--job %s: not a handle", argument)
+		return "", nil, err
 	}
-	return os.NewFile(uintptr(handle), "job-state"), nil
+	var duplicate syscall.Handle
+	if err := syscall.DuplicateHandle(process, syscall.Handle(file.Fd()), process, &duplicate, 0, true, syscall.DUPLICATE_SAME_ACCESS); err != nil {
+		return "", nil, fmt.Errorf("make %s inheritable: %w", file.Name(), err)
+	}
+	command.SysProcAttr.AdditionalInheritedHandles = append(command.SysProcAttr.AdditionalInheritedHandles, duplicate)
+	release := func() error { return syscall.CloseHandle(duplicate) }
+	return strconv.FormatUint(uint64(duplicate), 10), release, nil
+}
+
+// inheritedFile is the child's side: the file behind a handle inheritFile named.
+func inheritedFile(handle, name string) (*os.File, error) {
+	value, err := strconv.ParseUint(handle, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %q is not a handle", name, handle)
+	}
+	return os.NewFile(uintptr(value), name), nil
 }

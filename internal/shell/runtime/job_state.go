@@ -42,6 +42,9 @@ type jobState struct {
 	FunctionDepth     int  `json:"functionDepth"`
 	SourceDepth       int  `json:"sourceDepth"`
 	ErrExitSuppressed bool `json:"errExitSuppressed"`
+	// Descriptors is the job's descriptor table past what the child's standard handles
+	// carry, filled by the launcher rather than captured; see job_descriptors.go.
+	Descriptors []jobDescriptor `json:"descriptors"`
 }
 
 type jobIndexedArray struct {

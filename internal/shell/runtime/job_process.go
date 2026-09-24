@@ -16,9 +16,7 @@ import (
 // `kill` take the pid as they take `%N`. Off unless asked for, because the goroutine is
 // still what every other test and every user runs.
 //
-// Not yet: descriptors other than 0, 1 and 2 (a job that writes to a `3>file` of the
-// shell's), the Job Object, and signals delivered to the child's traps. Those are steps
-// three and four.
+// Not yet: the Job Object, and signals delivered to the child's traps. Those are step three.
 
 // processJobsEnabled reports NEMOSH_JOBS=process in the shell's environment, for a shell
 // whose applets are the ones a child of this binary would have. A runtime given its own
@@ -43,15 +41,7 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 	}
 	// A job starts with no traps, as the goroutine's worker does.
 	state.Traps = map[string]string{}
-	data, err := json.Marshal(state)
-	if err != nil {
-		return r.jobLaunchFailure(err)
-	}
 	executable, err := jobExecutable()
-	if err != nil {
-		return r.jobLaunchFailure(err)
-	}
-	reader, writer, err := os.Pipe()
 	if err != nil {
 		return r.jobLaunchFailure(err)
 	}
@@ -60,29 +50,19 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 	// cancelled when the shell exits, so a job started at the top can outlive it, as both
 	// references' jobs do.
 	command := exec.CommandContext(r.jobScope.ctx, executable)
-	argument, err := prepareJobCommand(command, reader)
+	prepareJobCommand(command)
+	handoff, descriptors, err := r.handOffDescriptors(command)
 	if err != nil {
-		return r.jobLaunchFailure(errors.Join(err, reader.Close(), writer.Close()))
+		return r.jobLaunchFailure(err)
 	}
-	command.Args = []string{executable, "--job", argument}
-	command.Env = r.env.Environ()
-	if directory, err := r.nativeWorkingDirectory(); err == nil {
-		command.Dir = directory
+	state.Descriptors = descriptors
+	if err := r.startJobProcess(command, handoff, executable, state); err != nil {
+		return r.jobLaunchFailure(errors.Join(err, handoff.abandon()))
 	}
-	// No stdin, as POSIX gives an asynchronous list without job control and busybox gives
-	// every background job.
-	command.Stdout, command.Stderr = r.streams.Stdout, r.streams.Stderr
-	if err := command.Start(); err != nil {
-		return r.jobLaunchFailure(errors.Join(err, reader.Close(), writer.Close()))
-	}
-	_ = reader.Close()
-	go func() {
-		_, _ = writer.Write(data)
-		_ = writer.Close()
-	}()
 	record, err := r.jobScope.registerCancellable(func() { _ = command.Process.Kill() })
 	if err != nil {
 		_ = command.Process.Kill()
+		go func() { _ = command.Wait(); _ = handoff.finish() }()
 		return r.jobLaunchFailure(err)
 	}
 	record.pid = command.Process.Pid
@@ -99,9 +79,47 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 		} else if err != nil {
 			status = 1
 		}
+		if err := handoff.finish(); err != nil && status == 0 {
+			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			status = 1
+		}
 		r.jobScope.complete(record, status)
 	}()
 	return lineResult{}
+}
+
+// startJobProcess starts command as `nemosh --job <handle>`, the handle an inherited pipe
+// the state is then written to.
+func (r Runtime) startJobProcess(command *exec.Cmd, handoff *jobHandoff, executable string, state jobState) error {
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	handoff.given = append(handoff.given, reader.Close)
+	argument, err := handoff.give(reader)
+	if err != nil {
+		return errors.Join(err, writer.Close())
+	}
+	command.Args = []string{executable, "--job", argument}
+	command.Env = r.env.Environ()
+	if directory, err := r.nativeWorkingDirectory(); err == nil {
+		command.Dir = directory
+	}
+	if err := command.Start(); err != nil {
+		return errors.Join(err, writer.Close())
+	}
+	if err := handoff.started(); err != nil {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+	}
+	go func() {
+		_, _ = writer.Write(data)
+		_ = writer.Close()
+	}()
+	return nil
 }
 
 // lookupPID finds the job whose process this is, for a `wait` or `kill` given a pid.
@@ -131,6 +149,11 @@ func jobExitStatus(code uint32) int {
 	return int(code & 0xff)
 }
 
+// JobStateFile is the child's end of the state pipe, from the argument after --job.
+func JobStateFile(argument string) (*os.File, error) {
+	return inheritedFile(argument, "job-state")
+}
+
 // RunJob is the child's side, `nemosh --job`: the state read, the job run, its status.
 func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
 	var state jobState
@@ -139,6 +162,9 @@ func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
 		return 2
 	}
 	program, err := r.restoreJobState(ctx, state)
+	if err == nil {
+		err = r.bindJobDescriptors(state.Descriptors)
+	}
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: job: %v\n", err)
 		return 2

@@ -6,21 +6,28 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
-// prepareJobCommand passes the state pipe as the child's descriptor 3, and makes the child
-// its own process group so a terminal's Ctrl-C reaches the foreground and not the job.
-func prepareJobCommand(command *exec.Cmd, state *os.File) (string, error) {
-	command.ExtraFiles = []*os.File{state}
+// prepareJobCommand makes the child its own process group, so a terminal's Ctrl-C reaches
+// the foreground and not the job.
+func prepareJobCommand(command *exec.Cmd) {
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	return "3", nil
 }
 
-// JobStateFile is the child's end of the state pipe, from the argument after --job.
-func JobStateFile(argument string) (*os.File, error) {
-	if argument != "3" {
-		return nil, fmt.Errorf("--job %s: not the state descriptor", argument)
+// inheritFile passes file as the child's next descriptor after 2, and answers with its
+// number. os/exec duplicates it into the child, so there is nothing of its own to release.
+func inheritFile(command *exec.Cmd, file *os.File) (string, func() error, error) {
+	command.ExtraFiles = append(command.ExtraFiles, file)
+	return strconv.Itoa(2 + len(command.ExtraFiles)), func() error { return nil }, nil
+}
+
+// inheritedFile is the child's side: the file behind a descriptor inheritFile named.
+func inheritedFile(handle, name string) (*os.File, error) {
+	value, err := strconv.Atoi(handle)
+	if err != nil || value < 3 {
+		return nil, fmt.Errorf("%s: %q is not an inherited descriptor", name, handle)
 	}
-	return os.NewFile(3, "job-state"), nil
+	return os.NewFile(uintptr(value), name), nil
 }

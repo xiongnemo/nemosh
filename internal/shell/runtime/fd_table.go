@@ -160,6 +160,14 @@ func (t *fdTable) close(fd int) error {
 
 func (t *fdTable) closeAll() error {
 	var closeErr error
+	for _, fd := range t.numbers() {
+		closeErr = errors.Join(closeErr, t.close(fd))
+	}
+	return closeErr
+}
+
+// numbers is every descriptor the table has an entry for, closed ones included, in order.
+func (t *fdTable) numbers() []int {
 	t.mu.Lock()
 	descriptors := make([]int, 0, len(t.entries))
 	for fd := range t.entries {
@@ -167,10 +175,7 @@ func (t *fdTable) closeAll() error {
 	}
 	t.mu.Unlock()
 	slices.Sort(descriptors)
-	for _, fd := range descriptors {
-		closeErr = errors.Join(closeErr, t.close(fd))
-	}
-	return closeErr
+	return descriptors
 }
 
 func (t *fdTable) reader(fd int) (io.Reader, error) {
@@ -233,13 +238,7 @@ func validateDescriptor(fd int) error {
 // describe lists the descriptors the table currently holds, for the `fd` debug
 // channel. Sorted, so two runs of the same script produce the same line.
 func (t *fdTable) describe() string {
-	t.mu.Lock()
-	descriptors := make([]int, 0, len(t.entries))
-	for fd := range t.entries {
-		descriptors = append(descriptors, fd)
-	}
-	t.mu.Unlock()
-	slices.Sort(descriptors)
+	descriptors := t.numbers()
 	names := make([]string, len(descriptors))
 	for index, fd := range descriptors {
 		names[index] = strconv.Itoa(fd)
