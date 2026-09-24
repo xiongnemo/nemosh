@@ -126,10 +126,11 @@ func compoundSpans(lines []string) ([]compoundSpan, error) {
 		kind, opener := compoundOpener(baseLine)
 		pipelinePrefix, prefixOperator, compoundHeaderLine := "", "", ""
 		if !opener {
-			// `cmd | while ...`, `cmd && if ...`: a compound that begins after an
-			// operator. Looked for only when the line does not already begin with one,
-			// so the ordinary case pays nothing. See parser_operator_compound.go.
-			if prefix, operator, rest, ok := splitCompoundAfterOperator(baseLine); ok {
+			// `cmd | while ...`, `cmd && if ...`, `coproc NAME while ...`: a compound that
+			// begins after something else on its line. Looked for only when the line does
+			// not already begin with one, so the ordinary case pays nothing. See
+			// parser_operator_compound.go.
+			if prefix, operator, rest, ok := splitCompoundAfterPrefix(baseLine); ok {
 				if kind, opener = compoundOpener(rest); opener {
 					pipelinePrefix, prefixOperator, compoundHeaderLine = prefix, operator, rest
 				}

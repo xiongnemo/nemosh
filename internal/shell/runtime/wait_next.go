@@ -39,6 +39,7 @@ func (r Runtime) waitNext(ctx context.Context, operands []string) int {
 		}
 	}
 	r.reportSignalled([]*jobRecord{ended})
+	r.disposeCoprocs([]*jobRecord{ended})
 	if !r.jobScope.consumeAll([]*jobRecord{ended}) {
 		return 2
 	}

@@ -63,6 +63,8 @@ func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus 
 		return r.executeTypedLoop(ctx, value, savedStatus)
 	case caseNode:
 		return r.executeTypedCase(ctx, value, savedStatus)
+	case coprocNode:
+		return r.executeCoproc(ctx, value, savedStatus)
 	default:
 		return lineResult{status: 2}
 	}

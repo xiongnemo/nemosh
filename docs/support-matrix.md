@@ -45,7 +45,6 @@ these names why, and names what busybox-w32 does with the same name.
 | --- | --- | --- |
 | `hash` | 126 | Command lookup is not cached, so there is nothing to remember or forget. busybox-w32 does implement it, over a hash table this shell does not have. |
 | `ulimit` | 126 | Windows has no `getrlimit`. busybox-w32 does not implement it either — it keeps the name and returns 1 with no message. |
-| `coproc` | 126 | A coprocess is a background job with pipes both ways, and a background job here is not yet a process to give them to (docs/design/background-processes.md). Both forms, `coproc cmd` and `coproc NAME { ...; }`, are refused when reached, so a script that only mentions it in a branch it does not take still runs. busybox-w32 has no coproc. |
 | `fg`, `bg` | 126 | They resume a *suspended* job and nothing here can suspend one — see **Process control** below, which is the long answer. busybox-w32 compiles both out under `#if JOBS`. These two say **"not implemented, and will not be"** where the rows above say only "not implemented", because they are settled rather than pending. |
 | `set -b` | 2 | Completion is already reported at the next prompt, which is the default behaviour it would be switching off. What `-b` asks for is the report *immediately*, mid-command, and there is no notification channel to switch on for that. |
 | `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. `nemosh -n SCRIPT` is the syntax check; `nemosh -v` is refused for the same reason. |
@@ -100,6 +99,7 @@ it is easier to see them together.
 | --- | --- | --- |
 | `jobs`, `wait`, `wait %N ...`, `wait -n` | yes | bookkeeping over the shell's own job table. Several operands answer the last one's status; `wait -n` answers whichever job ends first; one the shell does not know is 127. `jobs` in a pipeline stage or a command substitution lists the shell's jobs, as both references do, so `jobs -p \| wc -l` and `kill $(jobs -p)` work; they saw an empty table before. In a subshell `( )` the table is its own, and empty, as in both |
 | `kill %N` | yes | ending a job maps onto cancelling its context |
+| `coproc cmd`, `coproc NAME { ...; }` | yes | bash's, which busybox-w32 has not got: a background job with a pipe to its stdin and one from its stdout. The shell's ends are `${NAME[1]}` and `${NAME[0]}`, on 60 and 63 as bash puts them. `$NAME_PID` is the job's `$!`. `exec {NAME[1]}>&-` ends its input, and the `wait` that reaps it closes both ends and unsets both names. NAME is COPROC unless the command is a compound one (a group, a subshell, a loop, an if or a case), as in bash. It runs under either launcher, since it is an ordinary job whose group redirects its 0 and 1. It used to be refused with 126 |
 | `kill PID`, `kill -l` | yes | `TerminateProcess` on Windows, a real signal elsewhere |
 | `pgrep`, `pkill` | yes | `CreateToolhelp32Snapshot` lists, the above terminates |
 | **`fg`, `bg`** | **no, and not planned** | they resume a *suspended* job, and nothing here can suspend one |

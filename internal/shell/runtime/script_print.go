@@ -64,6 +64,8 @@ func (p *scriptPrinter) statement(node programNode) {
 	switch value := node.(type) {
 	case functionDefinition:
 		p.function(value)
+	case coprocNode:
+		p.coproc(value)
 	case ifNode:
 		p.ifBlock(value, "if ")
 	case loopNode:

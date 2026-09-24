@@ -45,11 +45,18 @@ func afterCoprocKeyword(line string, index int) bool {
 		}
 	}
 	fields := strings.Fields(prefix)
-	// `then coproc {`, `do coproc {`: the reserved words a command may follow come first.
-	for len(fields) > 0 && commandIntroducers[fields[0]] {
-		fields = fields[1:]
+	keyword := len(fields) - 1
+	if keyword > 0 && fields[keyword] != "coproc" && isVariableName(fields[keyword]) {
+		keyword--
 	}
-	return len(fields) > 0 && fields[0] == "coproc" && (len(fields) == 1 || len(fields) == 2 && isVariableName(fields[1]))
+	if keyword < 0 || fields[keyword] != "coproc" {
+		return false
+	}
+	// `then coproc {`, `do coproc {`, and `f() { coproc NAME {`: what stands before the
+	// keyword is a reserved word a command may follow, or nothing. Only the word just
+	// before, since a function's header is not one: the whole of `f() {` was asked, and
+	// the brace of a coprocess in a one-line function body read as data.
+	return keyword == 0 || commandIntroducers[fields[keyword-1]]
 }
 
 // afterCommandIntroducer reports whether everything before index is a reserved word a

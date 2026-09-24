@@ -37,6 +37,8 @@ type jobRecord struct {
 	// deliver hands the job a signal it may catch, and reports whether the job took it;
 	// see signal_inbox.go. Nil for a job that cannot catch one.
 	deliver func(signal int) bool
+	// coproc is the coprocess this job is, for the wait that reaps it (coproc.go).
+	coproc *coprocState
 }
 
 type jobScope struct {

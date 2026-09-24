@@ -6,12 +6,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "coproc cat; echo hi >&\"${COPROC[1]}\"; read -r line <&\"${COPROC[0]}\"; echo \"$line\"",
-    "stdout": "hi\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "sleep 0 & p=$!; case $p in *[!0-9]*|'') echo not-a-pid;; *) echo pid;; esac; wait",
     "stdout": "pid\n",
     "status": 0,

@@ -22,14 +22,41 @@ import (
 // namedDescriptorFloor is where bash starts looking for a descriptor to give a `{name}`.
 const namedDescriptorFloor = 10
 
-// isDescriptorName reports `{name}` as it stands in front of a redirection operator.
+// isDescriptorName reports `{name}` as it stands in front of a redirection operator, or
+// `{name[n]}`, an element: `exec {COPROC[1]}>&-` is how bash closes a coprocess's input.
 func isDescriptorName(text string) bool {
 	name, ok := strings.CutPrefix(text, "{")
 	if !ok {
 		return false
 	}
 	name, ok = strings.CutSuffix(name, "}")
-	return ok && isVariableName(name)
+	base, _, _ := descriptorElement(name)
+	return ok && isVariableName(base)
+}
+
+// descriptorElement splits `name[n]` into the array and the index; a plain name has none.
+func descriptorElement(name string) (string, int, bool) {
+	base, subscript, found := strings.Cut(name, "[")
+	if !found {
+		return name, 0, false
+	}
+	index, err := strconv.Atoi(strings.TrimSuffix(subscript, "]"))
+	if err != nil || !strings.HasSuffix(subscript, "]") || index < 0 {
+		return "", 0, false
+	}
+	return base, index, true
+}
+
+// descriptorVariable is the number a `{name}` or `{name[n]}` holds.
+func (r Runtime) descriptorVariable(name string) string {
+	base, index, element := descriptorElement(name)
+	if !element {
+		return r.vars[name]
+	}
+	if values, ok := r.arrays.get(base); ok && index < len(values) {
+		return values[index]
+	}
+	return ""
 }
 
 // splitDescriptorName separates `{name}` from the operator after it.
@@ -62,7 +89,7 @@ func (r Runtime) resolveDuplication(ctx context.Context, operation redirectOpera
 // holds; otherwise the lowest free one from 10, which name is then set to.
 func (r Runtime) namedTarget(table *fdTable, operation redirectOperation) (int, error) {
 	if operation.kind == redirectClose {
-		fd, err := strconv.Atoi(r.vars[operation.name])
+		fd, err := strconv.Atoi(r.descriptorVariable(operation.name))
 		if err != nil {
 			return 0, fmt.Errorf("%s: not a descriptor number", operation.name)
 		}
@@ -71,6 +98,11 @@ func (r Runtime) namedTarget(table *fdTable, operation redirectOperation) (int, 
 	fd := table.lowestFree(namedDescriptorFloor)
 	if fd < 0 {
 		return 0, fmt.Errorf("no descriptor free from %d to %d", namedDescriptorFloor, maxDescriptor)
+	}
+	if base, index, element := descriptorElement(operation.name); element {
+		r.arrays.setElement(base, index, strconv.Itoa(fd))
+		r.markVarMutation(base)
+		return fd, nil
 	}
 	if status := r.assignVar(operation.name, strconv.Itoa(fd)); status != 0 {
 		return 0, fmt.Errorf("%s: cannot be set", operation.name)

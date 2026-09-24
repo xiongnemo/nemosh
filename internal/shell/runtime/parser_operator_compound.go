@@ -131,6 +131,9 @@ func joinCompoundPrefix(prefix, operator, text string) string {
 // between them says.
 func wrapCompoundAfterOperator(node programNode, prefix, operator string, budget *parseBudget, depth int) (programNode, error) {
 	switch operator {
+	case "coproc":
+		// The prefix is the coprocess's name; see splitCompoundAfterPrefix.
+		return coprocNode{name: prefix, body: node}, nil
 	case "|":
 		return wrapCompoundIntoPipeline(node, prefix, budget, depth)
 	case "|&":
