@@ -592,5 +592,11 @@
     "stdout": "match\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "f(){ :; }; declare -F f",
+    "stdout": "f\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

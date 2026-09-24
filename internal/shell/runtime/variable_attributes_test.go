@@ -2,6 +2,16 @@ package runtime_test
 
 import "testing"
 
+// `declare -F` names functions: each one asked about that exists, status 1 if one does not,
+// and every one as `declare -f name` when none is asked about. bash's transcript, measured.
+func TestDeclareF_namesFunctions(t *testing.T) {
+	script := "f() { :; }\ng() { :; }\ndeclare -F f\necho \"st=$?\"\ndeclare -F nope\necho \"st=$?\"\ndeclare -F\n"
+	want := "f\nst=0\nst=1\ndeclare -f f\ndeclare -f g\n"
+	if stdout, _ := runScriptCapturing(script); stdout != want {
+		t.Fatalf("stdout = %q, want %q", stdout, want)
+	}
+}
+
 // `declare -i -l -u` and `+=`. The attributes were refused; `+=` was run as a command called
 // `x+=y` and left x as it was. Every answer here is bash's, measured -- busybox has neither.
 func TestAttributesAndAppend_answerAsBashDoes(t *testing.T) {

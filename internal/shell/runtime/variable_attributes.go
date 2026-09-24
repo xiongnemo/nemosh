@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -111,6 +113,35 @@ func (r Runtime) declareFlags(name string) string {
 		return "-"
 	}
 	return flags.String()
+}
+
+// declareFunctionNames is `declare -F`: with names, each one that is a function, and status
+// 1 if any is not -- how a script asks whether it defined something; with none, every
+// function as `declare -f name`. It was refused. `declare -f`, which prints the bodies, still
+// is: the parser keeps no source text to print them from, and a body reconstructed wrongly
+// would be worse than none.
+func (r Runtime) declareFunctionNames(names []string) int {
+	if len(names) == 0 {
+		defined := make([]string, 0, len(r.functions))
+		for name := range r.functions {
+			defined = append(defined, name.value)
+		}
+		sort.Strings(defined)
+		for _, name := range defined {
+			fmt.Fprintf(r.streams.Stdout, "declare -f %s\n", name)
+		}
+		return 0
+	}
+	status := 0
+	for _, name := range names {
+		parsed, ok := newFunctionName(name)
+		if _, found := r.functions[parsed]; !ok || !found {
+			status = 1
+			continue
+		}
+		fmt.Fprintln(r.streams.Stdout, name)
+	}
+	return status
 }
 
 // splitAssignmentTarget reads the left side of `name=value` or `name+=value`, reporting the

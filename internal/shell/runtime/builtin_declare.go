@@ -24,6 +24,9 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 		fmt.Fprintf(r.streams.Stderr, "declare: %v\n", err)
 		return 2
 	}
+	if options.functionNames {
+		return r.declareFunctionNames(names)
+	}
 	if options.print || len(names) == 0 {
 		r.printDeclarations(names)
 		return 0
@@ -46,6 +49,8 @@ type declareOptions struct {
 	// that takes an attribute away again.
 	integer, lower, upper bool
 	removed               string
+	// functionNames is -F; see declareFunctionNames.
+	functionNames bool
 }
 
 func parseDeclareOptions(args []string) (declareOptions, []string, error) {
@@ -71,6 +76,8 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 		}
 		for _, letter := range argument[1:] {
 			switch letter {
+			case 'F':
+				options.functionNames = true
 			case 'i':
 				options.integer = true
 			case 'l':
@@ -93,7 +100,7 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 				// already happens.
 			default:
 				return options, nil, fmt.Errorf(
-					"-%c: not an option this build has; it takes -A -a -i -l -u -r -x -p -g", letter)
+					"-%c: not an option this build has; it takes -A -a -i -l -u -r -x -p -g -F", letter)
 			}
 		}
 	}
