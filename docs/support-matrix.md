@@ -693,7 +693,7 @@ behaviour this shell deliberately does not have.
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a` | refused by name |
 | `touch` | `-c` | refused by name |
-| `tr` | `-d -s -c`, ranges and backslash escapes; not classes | refused by name |
+| `tr` | `-d -s -c`, ranges, backslash escapes and the POSIX classes (`[:upper:]` and the rest, in code order) | `[=c=]` and `[c*n]` refused by name, and a class name it does not know |
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
 | `uniq` | `-c -d -u -i` | refused by name |

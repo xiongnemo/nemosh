@@ -57,10 +57,15 @@ func trSpec(options appletOptions, operands []string) (trTable, error) {
 	}
 	// POSIX gives tr four forms, and how many operands it wants depends on which
 	// one it is in: translating needs two, `-d` alone needs one, `-s` alone needs
-	// one, and `-ds` needs both. Exactly one of -d and -s means one operand.
+	// one, and `-ds` needs both. Exactly one of -d and -s means one operand -- except
+	// that -s may also translate first, `tr -s '[:space:]' ' '`, the first form with
+	// -s on it, which busybox takes and this called an extra operand.
 	wanted := 2
 	if table.delete != table.squeeze {
 		wanted = 1
+	}
+	if table.squeeze && !table.delete && len(operands) == 2 {
+		wanted = 2
 	}
 	if len(operands) < wanted {
 		return trTable{}, missingOperand()
@@ -90,11 +95,33 @@ func trSpec(options appletOptions, operands []string) (trTable, error) {
 	return table, nil
 }
 
-// expandTrSet turns a set as written into the characters it names.
+// expandTrSet turns a set as written into the characters it names: characters, ranges and
+// the POSIX classes. A class was refused by name, which at least said so, but
+// `tr '[:upper:]' '[:lower:]'` is how a script lowercases a string, and busybox has it.
 func expandTrSet(set string) ([]rune, error) {
-	if strings.Contains(set, "[:") {
-		return nil, fmt.Errorf("unsupported tr set: %s; this build implements characters and ranges, not classes", set)
+	var expanded []rune
+	for set != "" {
+		start := strings.Index(set, "[:")
+		end := -1
+		if start >= 0 {
+			end = strings.Index(set[start+2:], ":]")
+		}
+		if end < 0 {
+			return append(expanded, expandTrRanges(set)...), nil
+		}
+		name := set[start+2 : start+2+end]
+		class, ok := trClass(name)
+		if !ok {
+			return nil, fmt.Errorf("unsupported tr class [:%s:]; it takes alnum alpha blank cntrl digit graph lower print punct space upper xdigit", name)
+		}
+		expanded = append(append(expanded, expandTrRanges(set[:start])...), class...)
+		set = set[start+2+end+2:]
 	}
+	return expanded, nil
+}
+
+// expandTrRanges is a set without classes: its escapes read, and `a-z` spelled out.
+func expandTrRanges(set string) []rune {
 	runes := []rune(unescapeTrSet(set))
 	expanded := make([]rune, 0, len(runes))
 	for index := 0; index < len(runes); index++ {
@@ -109,8 +136,53 @@ func expandTrSet(set string) ([]rune, error) {
 		}
 		expanded = append(expanded, runes[index])
 	}
-	return expanded, nil
+	return expanded
 }
+
+// trClass is a POSIX class in the C locale, in code order, which is what makes
+// `[:upper:]` and `[:lower:]` line up letter for letter as they do in busybox and GNU.
+func trClass(name string) ([]rune, bool) {
+	var test func(rune) bool
+	switch name {
+	case "alnum":
+		test = func(c rune) bool { return isTrDigit(c) || isTrUpper(c) || isTrLower(c) }
+	case "alpha":
+		test = func(c rune) bool { return isTrUpper(c) || isTrLower(c) }
+	case "blank":
+		test = func(c rune) bool { return c == ' ' || c == '\t' }
+	case "cntrl":
+		test = func(c rune) bool { return c < 32 || c == 127 }
+	case "digit":
+		test = isTrDigit
+	case "graph":
+		test = func(c rune) bool { return c > 32 && c < 127 }
+	case "lower":
+		test = isTrLower
+	case "print":
+		test = func(c rune) bool { return c >= 32 && c < 127 }
+	case "punct":
+		test = func(c rune) bool { return c > 32 && c < 127 && !isTrDigit(c) && !isTrUpper(c) && !isTrLower(c) }
+	case "space":
+		test = func(c rune) bool { return c == ' ' || c >= '\t' && c <= '\r' }
+	case "upper":
+		test = isTrUpper
+	case "xdigit":
+		test = func(c rune) bool { return isTrDigit(c) || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F' }
+	default:
+		return nil, false
+	}
+	var members []rune
+	for c := rune(0); c < 128; c++ {
+		if test(c) {
+			members = append(members, c)
+		}
+	}
+	return members, true
+}
+
+func isTrDigit(c rune) bool { return c >= '0' && c <= '9' }
+func isTrUpper(c rune) bool { return c >= 'A' && c <= 'Z' }
+func isTrLower(c rune) bool { return c >= 'a' && c <= 'z' }
 
 // unescapeTrSet reads the backslash escapes tr defines. A set is nearly always
 // single-quoted, so the shell hands `\r` over as two characters and tr is the

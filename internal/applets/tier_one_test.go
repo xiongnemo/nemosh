@@ -41,12 +41,29 @@ func TestTr(t *testing.T) {
 	}
 }
 
-// A character class is refused rather than read as the characters its brackets
-// are made of, which is what taking it literally would silently do.
-func TestTr_refusesACharacterClass(t *testing.T) {
-	_, _, err := runAppletWithInput(t, "abc\n", "tr", "[:alpha:]", "x")
-	if err == nil || !strings.Contains(err.Error(), "classes") {
-		t.Fatalf("err = %v, want it to refuse the class by name", err)
+// The POSIX classes, in code order so that upper and lower line up, and -s with two sets.
+// Every answer is busybox-w32's, measured. A class it does not know is refused by name
+// rather than read as the characters its brackets are made of.
+func TestTr_readsCharacterClasses(t *testing.T) {
+	for _, test := range []struct {
+		input string
+		args  []string
+		want  string
+	}{
+		{input: "HeLLo\n", args: []string{"[:upper:]", "[:lower:]"}, want: "hello\n"},
+		{input: "Hello, World! 123\n", args: []string{"-d", "[:punct:]"}, want: "Hello World 123\n"},
+		{input: "a1b2c3\n", args: []string{"[:digit:]", "X"}, want: "aXbXcX\n"},
+		{input: "a1-b2_c3!", args: []string{"-cd", "[:alnum:]"}, want: "a1b2c3"},
+		{input: "abc\n", args: []string{"a-c[:upper:]", "x-z[:lower:]"}, want: "xyz\n"},
+		{input: "a  b\t\tc\n", args: []string{"-s", "[:space:]", " "}, want: "a b c "},
+	} {
+		stdout, _, err := runAppletWithInput(t, test.input, "tr", test.args...)
+		if err != nil || stdout != test.want {
+			t.Errorf("tr %q = %q (err %v), want %q", test.args, stdout, err, test.want)
+		}
+	}
+	if _, _, err := runAppletWithInput(t, "abc\n", "tr", "[:nope:]", "x"); err == nil || !strings.Contains(err.Error(), "[:nope:]") {
+		t.Fatalf("err = %v, want the unknown class refused by name", err)
 	}
 }
 
