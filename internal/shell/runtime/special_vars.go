@@ -79,6 +79,12 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		return "", false
 	case "LINENO":
 		return strconv.Itoa(r.currentLine()), true
+	case "BASH_SOURCE", "BASH_LINENO":
+		// The first element, as a bare array name is; see call_stack.go.
+		if stack, _ := r.callStackArray(name); len(stack) > 0 {
+			return stack[0], true
+		}
+		return "", false
 	case "EPOCHSECONDS":
 		// Both references have these two, and a timestamp without forking `date` is
 		// what they are for. EPOCHREALTIME has six decimal places, as both give it.

@@ -21,6 +21,8 @@ func (n functionName) String() string { return n.value }
 type functionDefinition struct {
 	name functionName
 	body commandNode
+	// file is where the definition ran, for $BASH_SOURCE while the function does.
+	file string
 }
 
 func (functionDefinition) programNode() {}

@@ -54,6 +54,10 @@ type Runtime struct {
 	// locals belongs to the function call in progress and is nil outside one,
 	// which is how `local` knows there is nothing to restore to.
 	locals *localScope
+	// frames is the call stack, innermost first, and scriptFile the file at the bottom
+	// of it: $FUNCNAME, $BASH_SOURCE, $BASH_LINENO and `caller`. See call_stack.go.
+	frames     *callFrame
+	scriptFile string
 	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options
@@ -225,6 +229,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.shoptBuiltin(args[1:])
 	case "declare", "typeset":
 		return r.declareBuiltin(ctx, args[1:])
+	case "caller":
+		return r.caller(args[1:])
 	case "read":
 		return r.read(ctx, args[1:])
 	case "readonly":

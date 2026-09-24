@@ -42,7 +42,7 @@ func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
 		fmt.Fprintf(r.streams.Stderr, ".: %s: %v\n", args[0], err)
 		return lineResult{status: 1}
 	}
-	child := r
+	child := r.enterFrame("source", args[0])
 	child.sourceDepth++
 	status, control := child.runScriptResult(ctx, string(data), 1, false)
 	if control == flowReturn {

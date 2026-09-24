@@ -180,3 +180,17 @@ func TestInvocation_ignoreeofRefusesEndOfInput(t *testing.T) {
 		t.Fatalf("refused %d times, want %d", got, maxIgnoredEOFs)
 	}
 }
+
+// The commonest line in a bash script finds the script's own directory from anywhere:
+// ${BASH_SOURCE[0]} was unset, so it found the directory the script was run from.
+func TestInvocation_bashSourceFindsTheScriptsDirectory(t *testing.T) {
+	home, elsewhere := t.TempDir(), t.TempDir()
+	script := filepath.Join(home, "where.sh")
+	if err := os.WriteFile(script, []byte("cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && basename \"$(pwd)\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := runArgs(t, elsewhere, "nemosh", script)
+	if result.stdout != filepath.Base(home)+"\n" {
+		t.Fatalf("stdout %q, want the script's directory %q (stderr %q)", result.stdout, filepath.Base(home), result.stderr)
+	}
+}

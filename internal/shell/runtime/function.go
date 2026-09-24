@@ -70,6 +70,7 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 		fmt.Fprintf(r.streams.Stderr, "nemosh: function call depth exceeds %d\n", maxFunctionCallDepth)
 		return lineResult{status: 1}
 	}
+	r = r.enterFrame(definition.name.value, definition.file)
 	r.params = &parameters{name: r.params.name, values: append([]string(nil), args...), function: definition.name.value}
 	r.functionDepth++
 	// A call gets its own local scope, and whatever `local` shadowed inside it

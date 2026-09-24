@@ -50,6 +50,7 @@ func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus 
 	case listNode:
 		return r.executeTypedList(ctx, value.value, savedStatus)
 	case functionDefinition:
+		value.file = r.currentFile()
 		r.functions[value.name] = value
 		return lineResult{status: 0}
 	case ifNode:

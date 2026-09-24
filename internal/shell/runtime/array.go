@@ -184,10 +184,15 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 	elements, isArray := r.arrays.get(reference.name)
 	if !isArray {
 		value, exists := r.vars[reference.name]
-		if !exists {
+		switch stack, isStack := r.callStackArray(reference.name); {
+		case exists:
+			elements = []string{value}
+		case isStack:
+			// FUNCNAME, BASH_SOURCE, BASH_LINENO: computed, behind anything the script set.
+			elements = stack
+		default:
 			return nil, false
 		}
-		elements = []string{value}
 	}
 	switch reference.subscript {
 	case "@", "*":

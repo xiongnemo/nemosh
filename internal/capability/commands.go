@@ -169,6 +169,7 @@ var commands = []Command{
 	{Name: ".", Operand: AnyPath, Builtin: true},
 	{Name: "alias", Operand: AnyPath, Builtin: true},
 	{Name: "break", Operand: AnyPath, Builtin: true},
+	{Name: "caller", Operand: AnyPath, Builtin: true},
 	{Name: "cd", Operand: Directory, Builtin: true},
 	{Name: "command", Operand: AnyPath, Builtin: true},
 	{Name: "declare", Operand: AnyPath, Builtin: true},

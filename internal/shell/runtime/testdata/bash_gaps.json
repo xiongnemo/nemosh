@@ -18,12 +18,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "f(){ caller >/dev/null && echo has-caller; }; f",
-    "stdout": "has-caller\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "echo hi > >(cat); wait",
     "stdout": "hi\n",
     "status": 0,

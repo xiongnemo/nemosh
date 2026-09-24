@@ -41,6 +41,7 @@ func (c command) runScriptFile(ctx context.Context, controller *interruptControl
 	// The options before the file, so a refused one is what is reported, as it is in
 	// both references, rather than whether the script could be opened.
 	rt.SetArguments(path, args)
+	rt.SetScriptFile(path)
 	if err := c.startShell(ctx, rt, ""); err != nil {
 		return err
 	}
