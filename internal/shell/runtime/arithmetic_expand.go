@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"strconv"
 	"strings"
 )
 
@@ -16,11 +17,10 @@ import (
 // this was easy to miss: the spelling without the dollar worked and the spelling
 // with it did not, and both are common.
 //
-// bash expands the expression first, then evaluates the result. This does the same,
-// for the reference forms this shell can expand without a context: `$name`,
-// `${...}`, and the positional and special parameters. A command substitution inside
-// arithmetic -- `$(( $(echo 2) * 3 ))` -- is still not handled, and is left as a `$`
-// for the evaluator to refuse by name rather than silently becoming zero.
+// bash expands the expression first, then evaluates the result. This does the same:
+// `$name`, `${...}`, the positional and special parameters, a command substitution --
+// `$(( $(echo 2) * 3 ))` -- and a nested `$((...))`. A `$` that begins none of those is
+// left for the evaluator to refuse by name rather than silently becoming zero.
 
 // expandArithmeticText replaces each parameter reference in an arithmetic expression
 // with its value.
@@ -49,6 +49,21 @@ func (r Runtime) expandEmbeddedParameters(ctx context.Context, text string, save
 		if text[index] != '$' {
 			out.WriteByte(text[index])
 			continue
+		}
+		// `$((...))` before `$(...)`, which took it for a command in a subshell: the inner
+		// half of `$((1+$((2))))` ran a command named 2, and `${x:-$((1+1))}` one named
+		// 1+1. Evaluated here and written as its number, which is what both references do.
+		if strings.HasPrefix(text[index:], "$((") {
+			if end, ok := arithmeticExpansionEnd(text, index+3); ok {
+				value, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, text[index+3:end-1], savedStatus))
+				if err != nil {
+					r.reportExpansionError(err)
+				} else {
+					out.WriteString(strconv.FormatInt(value, 10))
+				}
+				index = end
+				continue
+			}
 		}
 		// `$(...)` -- a command substitution. `$(( $(cmd) * 3 ))` reported
 		// `unexpected "$"` and `${x:-$(cmd)}` printed the text at the reader, because
