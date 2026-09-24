@@ -6,7 +6,13 @@ import (
 )
 
 type syntaxScanner struct {
-	lines         []string
+	lines []string
+	// starts is, for each of lines, the physical line its text starts on (line_numbers.go).
+	// logicalStart is the one the logical line in progress began on, and breaks the
+	// offsets in it where each later physical line began.
+	starts        []int
+	logicalStart  int
+	breaks        []int
 	logical       strings.Builder
 	quotes        []byte
 	substitutions int
@@ -21,32 +27,6 @@ type syntaxScanner struct {
 // "one\r\n" and then "one\n" — so a second pass would eat a \r that is data.
 func normalizeLineEndings(source string) string {
 	return strings.ReplaceAll(source, "\r\n", "\n")
-}
-
-// The source must already have been through normalizeLineEndings.
-func logicalLines(source string) ([]string, error) {
-	physical := strings.Split(source, "\n")
-	if len(physical) > 0 && physical[len(physical)-1] == "" {
-		physical = physical[:len(physical)-1]
-	}
-	scanner := syntaxScanner{}
-	for _, line := range physical {
-		scanner.beginPhysicalLine()
-		scanner.scanLine(line)
-		scanner.finishPhysicalLine(line)
-	}
-	if err := scanner.incompleteError(); err != nil {
-		return scanner.lines, err
-	}
-	scanner.flushLogicalLine()
-	if scanner.syntaxErr != nil {
-		return scanner.lines, scanner.syntaxErr
-	}
-	return scanner.lines, nil
-}
-
-func (scanner *syntaxScanner) beginPhysicalLine() {
-	scanner.continued = false
 }
 
 func (scanner *syntaxScanner) scanLine(line string) {
@@ -226,23 +206,6 @@ func (scanner *syntaxScanner) finishPhysicalLine(line string) {
 // gone by this point. Whatever \r survives is data, and trimming it would edit
 // the user's word (docs/design/windows-execution-model.md).
 const logicalLineCutset = " \t\n"
-
-func (scanner *syntaxScanner) flushLogicalLine() {
-	if scanner.syntaxErr != nil {
-		return
-	}
-	segments, err := splitSequentialSegments(scanner.logical.String())
-	scanner.logical.Reset()
-	if err != nil {
-		scanner.syntaxErr = err
-		return
-	}
-	for _, segment := range segments {
-		if normalized := strings.Trim(segment, logicalLineCutset); normalized != "" {
-			scanner.lines = append(scanner.lines, splitLeadingReservedWord(normalized)...)
-		}
-	}
-}
 
 func (scanner *syntaxScanner) incompleteError() error {
 	if scanner.syntaxErr != nil {

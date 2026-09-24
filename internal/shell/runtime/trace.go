@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -13,19 +14,35 @@ const defaultTracePrefix = "+ "
 // expansion, so what is shown is what will actually happen. Quoting is added
 // where a word would not survive being read back, which is what makes the trace
 // of an empty or space-bearing argument readable.
-func (r Runtime) traceCommand(args []string) {
+func (r Runtime) traceCommand(ctx context.Context, args []string, savedStatus int) {
 	if !r.options.xtrace || len(args) == 0 {
 		return
 	}
 	prefix := defaultTracePrefix
 	if custom, ok := r.vars["PS4"]; ok {
-		prefix = custom
+		prefix = r.tracePrefix(ctx, custom, savedStatus)
 	}
 	quoted := make([]string, len(args))
 	for index, arg := range args {
 		quoted[index] = traceWord(arg)
 	}
 	fmt.Fprintf(r.streams.Stderr, "%s%s\n", prefix, strings.Join(quoted, " "))
+}
+
+// tracePrefix expands PS4, as POSIX asks and both references do: `PS4='+$LINENO: '` is
+// how a trace says where each command is, and it was printed as written. The trace is off
+// while it expands, or a PS4 that runs a command would trace that command, and that trace
+// would expand PS4 again. What the expansion leaves behind is put back, so tracing a
+// command cannot change its status: an assignment's status is its last substitution's.
+func (r Runtime) tracePrefix(ctx context.Context, ps4 string, savedStatus int) string {
+	state := *r.expansion
+	r.options.xtrace = false
+	defer func() {
+		r.options.xtrace = true
+		r.expansion.shellError = state.shellError
+		r.expansion.substitutionStatus, r.expansion.substitutions = state.substitutionStatus, state.substitutions
+	}()
+	return r.ExpandPromptString(ctx, ps4, savedStatus)
 }
 
 func traceWord(arg string) string {

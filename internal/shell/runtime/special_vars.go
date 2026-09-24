@@ -9,7 +9,7 @@ import (
 )
 
 // The variables the shell computes rather than stores: $RANDOM, $SECONDS, $PPID,
-// $FUNCNAME, $EPOCHSECONDS and $EPOCHREALTIME, and the $PIPESTATUS array.
+// $FUNCNAME, $LINENO, $EPOCHSECONDS and $EPOCHREALTIME, and the $PIPESTATUS array.
 //
 // All four were simply unset, which reads as the empty string, so `$RANDOM` in a
 // script that wanted a temporary name produced the same name every time and
@@ -17,11 +17,9 @@ import (
 // the way `read -r` was -- an unset variable *is* empty -- but it is the wrong
 // answer to a question these names exist to answer.
 //
-// $LINENO is deliberately not here. It needs the line each command came from, and
-// nothing in the AST carries one: programNode has no position, so plumbing it would
-// mean touching the parser and every node. Left out rather than faked, because a
-// $LINENO that is always 1 is worse than one that is absent -- it would send
-// somebody to the wrong line with confidence.
+// $LINENO is the line the running command starts on. Each command carries its line
+// from the parser (line_numbers.go); it was unset, so `set -u` stopped any script that
+// named it -- and naming it is what an error handler does.
 
 // specialState holds what the computed variables need to be computed from.
 //
@@ -79,6 +77,8 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 			return r.params.function, true
 		}
 		return "", false
+	case "LINENO":
+		return strconv.Itoa(r.currentLine()), true
 	case "EPOCHSECONDS":
 		// Both references have these two, and a timestamp without forking `date` is
 		// what they are for. EPOCHREALTIME has six decimal places, as both give it.

@@ -137,7 +137,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		if opener == '{' && !hasBraceSeparator(body) {
 			return "", nil, fmt.Errorf("syntax error: expected separator before }")
 		}
-		nested, err := parseScript(body, budget, depth+1)
+		nested, err := parseNestedScript(body, line[:start+1], budget, depth)
 		if err != nil {
 			return "", nil, err
 		}

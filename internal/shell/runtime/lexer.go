@@ -127,7 +127,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' && !inSingle {
 			if end, ok := commandSubstitutionEnd(line, index+2); ok {
 				buffer.WriteString(line[index : end+1])
-				nested, err := parseScript(line[index+2:end], budget, depth+1)
+				nested, err := parseNestedScript(line[index+2:end], line[:index+2], budget, depth)
 				part := wordPart{kind: wordPartCommandSubstitution, text: line[index : end+1], quote: quoteFor(inSingle, inDouble)}
 				if err != nil {
 					return nil, nil, err

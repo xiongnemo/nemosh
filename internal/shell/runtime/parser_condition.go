@@ -30,20 +30,21 @@ var conditionKeywords = [...]string{"if", "while", "until"}
 // `if case a in` becomes `if` and `case a in`, so that the case-arm pass and the span
 // builder, which find a compound at the start of a line, find this one too. Repeated, so
 // `if if true` becomes `if` and `if true`.
-func splitCompoundConditions(lines []string) []string {
+func splitCompoundConditions(lines []string, at []int) ([]string, []int) {
 	var split []string
-	for _, line := range lines {
+	var splitAt []int
+	for index, line := range lines {
 		for {
 			keyword, header, ok := compoundConditionHeader(line)
 			if !ok {
-				split = append(split, line)
+				split, splitAt = appendNumbered(split, splitAt, line, startOf(at, index))
 				break
 			}
-			split = append(split, keyword)
+			split, splitAt = appendNumbered(split, splitAt, keyword, startOf(at, index))
 			line = header
 		}
 	}
-	return split
+	return split, splitAt
 }
 
 // compoundConditionHeader reports a line whose condition begins with a compound keyword.

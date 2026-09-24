@@ -14,17 +14,18 @@ import "strings"
 // opens and closes unseen, which is enough: all the stack has to answer is
 // which case an `esac` or `;;` belongs to, and whether that case is still
 // waiting for the pattern that starts its next arm.
-func expandCaseArmLines(lines []string) []string {
+func expandCaseArmLines(lines []string, at []int) ([]string, []int) {
 	var expanded []string
+	var expandedAt []int
 	var awaitingPattern []bool
-	for _, line := range lines {
+	for index, line := range lines {
 		for rest := line; rest != ""; {
 			var emit string
 			emit, rest = nextCaseLine(&awaitingPattern, rest)
-			expanded = append(expanded, emit)
+			expanded, expandedAt = appendNumbered(expanded, expandedAt, emit, startOf(at, index))
 		}
 	}
-	return expanded
+	return expanded, expandedAt
 }
 
 func nextCaseLine(stack *[]bool, line string) (string, string) {

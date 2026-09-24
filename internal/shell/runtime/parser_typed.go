@@ -126,7 +126,7 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 			for index, token := range command {
 				words[index] = parseTypedWord(*token.parsed)
 			}
-			parsed.commands = append(parsed.commands, simpleCommand{words: words, redirects: redirects})
+			parsed.commands = append(parsed.commands, simpleCommand{words: words, redirects: redirects, line: budget.line()})
 		}
 		result.pipelines = append(result.pipelines, parsed)
 		if len(result.pipelines) > 1 {

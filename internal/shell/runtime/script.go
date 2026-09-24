@@ -18,12 +18,14 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 }
 
 func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool) int {
-	status, _ := r.runScriptResult(ctx, script, runExitTrap)
+	status, _ := r.runScriptResult(ctx, script, 1, runExitTrap)
 	return status
 }
 
-func (r Runtime) runScriptResult(ctx context.Context, script string, runExitTrap bool) (int, flowControl) {
-	prepared, parseErr := ParseScript(script)
+// runScriptResult parses script as beginning on source line first, for $LINENO: 1 for a
+// script of its own, the running command's line for eval.
+func (r Runtime) runScriptResult(ctx context.Context, script string, first int, runExitTrap bool) (int, flowControl) {
+	prepared, parseErr := parseScriptAt(script, first)
 	status := 0
 	control := flowNone
 	if parseErr == nil {
@@ -85,7 +87,7 @@ func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) {
 	}
 	r.trapRunning[name] = true
 	defer delete(r.trapRunning, name)
-	prepared, err := ParseScript(command)
+	prepared, err := r.parseHere(command)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "trap %s: %v\n", name, err)
 		return

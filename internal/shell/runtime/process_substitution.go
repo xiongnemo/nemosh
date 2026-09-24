@@ -83,7 +83,7 @@ func processSubstitutionPart(line string, index int, budget *parseBudget, depth 
 		return wordPart{}, 0, fmt.Errorf(
 			"process substitution %s: only the input form <(...) is implemented", text)
 	}
-	nested, err := parseScript(line[index+2:end], budget, depth+1)
+	nested, err := parseNestedScript(line[index+2:end], line[:index+2], budget, depth)
 	if err != nil {
 		return wordPart{}, 0, err
 	}

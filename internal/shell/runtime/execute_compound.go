@@ -21,6 +21,7 @@ func (r Runtime) executeTypedIf(ctx context.Context, node ifNode, savedStatus in
 }
 
 func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatus int) lineResult {
+	r.enterLine(node.line)
 	if node.kind == loopFor {
 		return r.executeTypedFor(ctx, node, savedStatus)
 	}
@@ -117,6 +118,7 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 }
 
 func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatus int) lineResult {
+	r.enterLine(node.line)
 	values := r.expandWord(ctx, node.word, savedStatus)
 	if r.shellErrorRaised() {
 		return shellErrorResult()

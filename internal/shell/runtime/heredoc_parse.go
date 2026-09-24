@@ -18,17 +18,21 @@ type pendingHeredoc struct {
 	operandEnd    int
 }
 
-// The source must already have been through normalizeLineEndings.
-func collectHeredocs(source string) (string, []pendingHeredoc, error) {
+// The source must already have been through normalizeLineEndings. The third answer is,
+// for each line left in the output, the index of the source line it was, so $LINENO can
+// count past the bodies taken out (line_numbers.go).
+func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 	lines := strings.Split(source, "\n")
 	var output strings.Builder
 	var records []pendingHeredoc
+	var origins []int
 	for index := 0; index < len(lines); index++ {
 		line := lines[index]
 		declarations, err := heredocDeclarations(line, index+1, len(records))
 		if err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
+		origins = append(origins, index)
 		output.WriteString(markHeredocOperands(line, declarations))
 		if index+1 < len(lines) {
 			output.WriteByte('\n')
@@ -56,13 +60,13 @@ func collectHeredocs(source string) (string, []pendingHeredoc, error) {
 				}
 			}
 			if !terminated {
-				return "", nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, declaration.delimiter)
+				return "", nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, declaration.delimiter)
 			}
 			declaration.body = body.String()
 			records = append(records, *declaration)
 		}
 	}
-	return output.String(), records, nil
+	return output.String(), records, origins, nil
 }
 
 func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHeredoc, error) {

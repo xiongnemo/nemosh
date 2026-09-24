@@ -21,6 +21,8 @@ type parseBudget struct {
 	tokens          int
 	heredocs        map[string]pendingHeredoc
 	heredocsScanned bool
+	// numbering is where the lines being parsed came from, for $LINENO; see line_numbers.go.
+	numbering lineNumbering
 }
 
 func (budget *parseBudget) heredoc(marker string) (pendingHeredoc, bool) {

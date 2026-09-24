@@ -8,12 +8,16 @@ import (
 func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int, start, end int, budget *parseBudget, depth int) ([]programNode, error) {
 	var program []programNode
 	for index := start; index < end; index++ {
+		budget.enterLine(index)
 		if spanIndex, ok := byStart[index]; ok {
 			span := spans[spanIndex]
 			node, err := parseTypedCompound(lines, spans, byStart, span, budget, depth)
 			if err != nil {
 				return nil, err
 			}
+			// The words after the closer are on the closer's line, and the ones before the
+			// opener on the opener's; the body in between moved the line on.
+			budget.enterLine(span.end)
 			if span.suffix != "" {
 				// A compound with a redirection or a pipe after it is exactly a brace
 				// group holding that compound: same scope, same redirects, same
@@ -25,6 +29,7 @@ func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int
 				}
 			}
 			if span.prefixOperator != "" {
+				budget.enterLine(span.start)
 				if node, err = wrapCompoundAfterOperator(node, span.prefix, span.prefixOperator, budget, depth); err != nil {
 					return nil, err
 				}
@@ -111,11 +116,23 @@ func parseTypedIf(lines []string, spans []compoundSpan, byStart map[int]int, spa
 	return ifNode{condition: condition, thenBody: thenBody, elseBody: elseBody}, err
 }
 
+// parseTypedLoop reads the body first and the header after it, so the header's line is
+// entered again before it is read, and the loop carries it for what its header expands.
 func parseTypedLoop(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, budget *parseBudget, depth int) (programNode, error) {
 	body, err := parseTypedProgram(lines, spans, byStart, span.doIndex+1, span.end, budget, depth)
 	if err != nil {
 		return nil, err
 	}
+	budget.enterLine(span.start)
+	node, err := parseTypedLoopHeader(lines, spans, byStart, span, body, budget, depth)
+	if loop, ok := node.(loopNode); ok {
+		loop.line = budget.lineOf(span.start)
+		return loop, err
+	}
+	return node, err
+}
+
+func parseTypedLoopHeader(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, body []programNode, budget *parseBudget, depth int) (programNode, error) {
 	line := spanHeaderLine(lines, span)
 	if header, ok := compoundHeader(line, "for"); ok {
 		return parseTypedFor(header, body, budget, depth)
@@ -201,8 +218,9 @@ func parseTypedCase(lines []string, spans []compoundSpan, byStart map[int]int, s
 	if err != nil {
 		return nil, err
 	}
-	node := caseNode{word: selector}
+	node := caseNode{word: selector, line: budget.lineOf(span.start)}
 	for _, arm := range span.caseArms {
+		budget.enterLine(arm.patternIndex)
 		pattern, _ := casePattern(lines[arm.patternIndex])
 		patterns, err := parseCaseAlternatives(pattern, budget, depth)
 		if err != nil {

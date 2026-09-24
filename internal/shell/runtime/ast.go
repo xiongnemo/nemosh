@@ -66,6 +66,8 @@ type loopNode struct {
 	// overArguments is `for name` with no `in`: the list is the positional
 	// parameters, which POSIX 2.9.4.2 specifies.
 	overArguments bool
+	// line is the header's source line, for what the header expands; see line_numbers.go.
+	line int
 }
 
 func (loopNode) programNode() {}
@@ -73,6 +75,8 @@ func (loopNode) programNode() {}
 type caseNode struct {
 	word word
 	arms []caseArmNode
+	// line is the header's source line, for what the selector expands.
+	line int
 }
 
 func (caseNode) programNode() {}
@@ -110,6 +114,9 @@ type commandNode interface{ commandNode() }
 type simpleCommand struct {
 	words     []word
 	redirects []redirectOperation
+	// line is the source line the command starts on, which is what $LINENO reports while
+	// it runs; see line_numbers.go.
+	line int
 }
 
 func (simpleCommand) commandNode() {}

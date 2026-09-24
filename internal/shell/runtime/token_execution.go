@@ -182,7 +182,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 			commandArgs = substituted
 		}
 	}
-	r.traceCommand(args)
+	r.traceCommand(ctx, args, savedStatus)
 	result := r.dispatchCommand(ctx, commandArgs, assignments, expanded, operations, savedStatus)
 	// `$_` is the last argument of the command that just finished, or its name when
 	// it had none, and it is set after the command -- so a function's own `$_` is its

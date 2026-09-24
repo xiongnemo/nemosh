@@ -2,7 +2,9 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 type InteractiveResult struct {
@@ -19,6 +21,20 @@ type interactiveState struct {
 	// launch deeper in an expansion needs -- and read-only after RunInteractive sets it,
 	// so the copying that cost `$?` its status cannot cost this anything.
 	session bool
+	// linesRead is how many lines the session has parsed, which its $LINENO counts on from.
+	linesRead int
+}
+
+// ParseSessionInput parses what a session has read so far, numbering it on from the lines
+// before it: busybox's $LINENO counts a session's lines, and a function defined at a
+// prompt reports the lines it was typed on. Input still waiting for more lines is not
+// counted yet, because it comes back whole with them.
+func (r *Runtime) ParseSessionInput(source string) (Script, error) {
+	script, err := parseScriptAt(source, r.interactive.linesRead+1)
+	if !errors.Is(err, ErrIncompleteScript) {
+		r.interactive.linesRead += strings.Count(strings.TrimSuffix(source, "\n"), "\n") + 1
+	}
+	return script, err
 }
 
 func (r *Runtime) RunInteractive(ctx context.Context, script Script) InteractiveResult {

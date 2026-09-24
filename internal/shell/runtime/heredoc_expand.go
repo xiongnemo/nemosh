@@ -25,7 +25,7 @@ func (r Runtime) expandHeredocBody(ctx context.Context, body string, savedStatus
 		if index+1 < len(body) && body[index+1] == '(' {
 			end, ok := commandSubstitutionEnd(body, index+2)
 			if ok {
-				script, err := ParseScript(body[index+2 : end])
+				script, err := r.parseHere(body[index+2 : end])
 				if err == nil {
 					expanded.WriteString(r.commandSubstitutionScript(ctx, script, savedStatus))
 					index = end + 1

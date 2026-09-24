@@ -112,7 +112,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		line = expanded
 
 		appendInteractiveLine(&input, line+"\n")
-		script, parseErr := runtime.ParseScript(input.String())
+		script, parseErr := rt.ParseSessionInput(input.String())
 		if errors.Is(parseErr, runtime.ErrIncompleteScript) {
 			continue
 		}

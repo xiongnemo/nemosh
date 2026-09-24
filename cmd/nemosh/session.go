@@ -123,7 +123,7 @@ sessionLoop:
 			continue
 		}
 		appendInteractiveLine(&input, expanded)
-		script, parseErr := runtime.ParseScript(input.String())
+		script, parseErr := rt.ParseSessionInput(input.String())
 		if errors.Is(parseErr, runtime.ErrIncompleteScript) {
 			if errors.Is(err, io.EOF) {
 				rt.CloseInteractive(ctx)

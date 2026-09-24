@@ -58,10 +58,7 @@ type compoundFrame struct {
 }
 
 func ParseScript(source string) (Script, error) {
-	if len(source) > maxParseInputBytes {
-		return Script{}, fmt.Errorf("input bytes: %w", errParseLimit)
-	}
-	return parseScript(source, &parseBudget{}, 0)
+	return parseScriptAt(source, 1)
 }
 
 func parseScript(source string, budget *parseBudget, depth int) (Script, error) {
@@ -69,11 +66,12 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 		return Script{}, fmt.Errorf("command substitution depth: %w", errParseLimit)
 	}
 	if !budget.heredocsScanned {
-		cleaned, heredocs, err := collectHeredocs(normalizeLineEndings(source))
+		cleaned, heredocs, origins, err := collectHeredocs(normalizeLineEndings(source))
 		if err != nil {
 			return Script{}, err
 		}
 		source = cleaned
+		budget.numbering.origins = origins
 		budget.heredocs = make(map[string]pendingHeredoc, len(heredocs))
 		for _, heredoc := range heredocs {
 			budget.heredocs[heredoc.marker] = heredoc
@@ -86,15 +84,22 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 	if err != nil {
 		return Script{}, err
 	}
-	lines, err := logicalLines(source)
+	lines, starts, err := numberedLogicalLines(source)
 	if err != nil {
 		return Script{}, err
 	}
+	budget.numberLines(starts)
 	return prepareScript(lines, budget, depth)
 }
 
+// prepareScript runs the passes that reshape lines, carrying where each one started
+// (budget.numbering) through them.
 func prepareScript(lines []string, budget *parseBudget, depth int) (Script, error) {
-	lines = expandElifLines(expandCaseArmLines(splitCompoundConditions(lines)))
+	at := budget.numbering.at
+	lines, at = splitCompoundConditions(lines, at)
+	lines, at = expandCaseArmLines(lines, at)
+	lines, at = expandElifLines(lines, at)
+	budget.numbering.at = at
 	spans, err := compoundSpans(lines)
 	if err != nil {
 		return Script{}, err

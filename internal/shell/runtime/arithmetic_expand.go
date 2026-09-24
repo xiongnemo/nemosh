@@ -87,7 +87,7 @@ func (r Runtime) expandEmbeddedParameters(ctx context.Context, text string, save
 // runs while a word is being built and there is nowhere here to report to -- the same
 // arrangement expandBracedParameter's callers already live with.
 func (r Runtime) runEmbeddedSubstitution(ctx context.Context, script string, savedStatus int) string {
-	parsed, err := ParseScript(script)
+	parsed, err := r.parseHere(script)
 	if err != nil {
 		return ""
 	}

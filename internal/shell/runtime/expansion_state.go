@@ -29,6 +29,9 @@ type expansionState struct {
 	// error check in shell never fired.
 	substitutionStatus int
 	substitutions      int
+	// line is the source line of the command running, which is $LINENO. Here because it is
+	// per snapshot too: a background job counts its own lines while the shell goes on.
+	line int
 	// processSubstitutions are the temporary files `<(cmd)` created for the command being
 	// expanded. Held until the command has run, because the consumer opens them in
 	// between; see process_substitution.go.

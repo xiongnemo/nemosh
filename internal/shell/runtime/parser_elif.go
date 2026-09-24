@@ -13,10 +13,12 @@ package runtime
 // Only `if` frames can owe anything, but every compound opener is tracked so
 // the `fi` that closes an if is not confused with the `done` that closes a loop
 // nested inside its body.
-func expandElifLines(lines []string) []string {
+func expandElifLines(lines []string, at []int) ([]string, []int) {
 	var expanded []string
+	var expandedAt []int
 	var owed []int
-	for _, line := range lines {
+	for index, line := range lines {
+		start := startOf(at, index)
 		switch {
 		case hasCompoundHeader(line, "if"):
 			owed = append(owed, 0)
@@ -32,7 +34,7 @@ func expandElifLines(lines []string) []string {
 				owed = owed[:len(owed)-1]
 			}
 			for range extra {
-				expanded = append(expanded, line)
+				expanded, expandedAt = appendNumbered(expanded, expandedAt, line, start)
 			}
 		default:
 			condition, ok := compoundHeader(line, "elif")
@@ -40,10 +42,11 @@ func expandElifLines(lines []string) []string {
 				break
 			}
 			owed[len(owed)-1]++
-			expanded = append(expanded, "else", "if "+condition)
+			expanded, expandedAt = appendNumbered(expanded, expandedAt, "else", start)
+			expanded, expandedAt = appendNumbered(expanded, expandedAt, "if "+condition, start)
 			continue
 		}
-		expanded = append(expanded, line)
+		expanded, expandedAt = appendNumbered(expanded, expandedAt, line, start)
 	}
-	return expanded
+	return expanded, expandedAt
 }

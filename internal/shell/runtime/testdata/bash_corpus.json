@@ -634,5 +634,11 @@
     "stdout": "[a b][c]\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "echo $LINENO\necho $LINENO",
+    "stdout": "1\n2\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

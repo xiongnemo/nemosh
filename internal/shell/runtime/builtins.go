@@ -44,7 +44,7 @@ func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
 	}
 	child := r
 	child.sourceDepth++
-	status, control := child.runScriptResult(ctx, string(data), false)
+	status, control := child.runScriptResult(ctx, string(data), 1, false)
 	if control == flowReturn {
 		return lineResult{status: status}
 	}
@@ -59,6 +59,6 @@ func (r Runtime) evalResult(ctx context.Context, args []string) lineResult {
 	if len(args) == 0 {
 		return lineResult{}
 	}
-	status, control := r.runScriptResult(ctx, strings.Join(args, " "), false)
+	status, control := r.runScriptResult(ctx, strings.Join(args, " "), r.currentLine(), false)
 	return lineResult{status: status, control: control}
 }
