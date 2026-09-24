@@ -59,19 +59,25 @@ func (r Runtime) applySetOptions(args []string) (int, bool, int) {
 			return index, false, 0
 		}
 		enable := arg[0] == '-'
-		if arg[1:] != "o" {
-			if status := r.setLetterOptions(arg[1:], enable); status != 0 {
+		// An `o` anywhere in the letters takes the next argument as its name, as in both
+		// references: `set -euo pipefail`, the first line of a strict bash script. Only a
+		// lone `-o` was understood, so that line was `illegal option -o` and status 2 --
+		// under -e, the end of the script before it began.
+		for _, letter := range []byte(arg[1:]) {
+			if letter != 'o' {
+				if status := r.setLetterOptions(string(letter), enable); status != 0 {
+					return index, false, status
+				}
+				continue
+			}
+			if index+1 == len(args) {
+				r.listShellOptions(enable)
+				continue
+			}
+			index++
+			if status := r.setNamedOption(args[index], enable); status != 0 {
 				return index, false, status
 			}
-			continue
-		}
-		if index+1 == len(args) {
-			r.listShellOptions(enable)
-			continue
-		}
-		index++
-		if status := r.setNamedOption(args[index], enable); status != 0 {
-			return index, false, status
 		}
 	}
 	return len(args), false, 0

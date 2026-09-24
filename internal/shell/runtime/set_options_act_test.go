@@ -192,3 +192,16 @@ func TestRuntime_namesBusyboxOptions(t *testing.T) {
 		}
 	}
 }
+
+// `set -euo pipefail` is the first line of a strict bash script, and an `o` in the letters
+// takes the next argument as its name in both references. Only a lone `-o` did here, so the
+// line was `illegal option -o`, and under -e the script ended before it began.
+func TestRuntime_takesAnOptionNameAfterOInALetterGroup(t *testing.T) {
+	// When
+	status, stdout, stderr := runSetScript(t, "set -euo pipefail\necho \"[$-]\"\nset -o | grep -E '^(pipefail|nounset)'\nset +euo pipefail\necho \"[$-]\"\n")
+
+	// Then
+	if status != 0 || stdout != "[eu]\nnounset     \ton\npipefail    \ton\n[]\n" {
+		t.Fatalf("status = %d, stdout = %q, stderr = %q", status, stdout, stderr)
+	}
+}
