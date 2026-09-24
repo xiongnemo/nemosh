@@ -18,7 +18,7 @@ func TestExport_waitsForAValue(t *testing.T) {
 		},
 		{
 			name:   "export -p lists a marked name without a value",
-			script: "unset PX\nexport PX\nexport -p | grep PX\n",
+			script: "unset PX\nexport PX\nexport -p | grep -x 'export PX'\n",
 			want:   "export PX\n",
 		},
 		{
