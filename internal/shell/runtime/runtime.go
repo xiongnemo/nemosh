@@ -75,17 +75,17 @@ type Runtime struct {
 	// operandQuoted marks a `${...}` inside double quotes, which changes what a single quote
 	// in its operator's word means; see operand_quoting.go. On the value for the same reason.
 	operandQuoted bool
-	readonly          map[string]struct{}
-	attributes        map[string]variableAttributes
-	mutatedVars       map[string]struct{}
-	mask              *fileModeMask
-	sourceDepth       int
-	functionDepth     int
-	interactive       interactiveState
-	paths             *pathState
-	env               Environment
-	jobScope          *jobScope
-	lifecycle         *shellLifecycle
+	readonly      map[string]struct{}
+	attributes    map[string]variableAttributes
+	mutatedVars   map[string]struct{}
+	mask          *fileModeMask
+	sourceDepth   int
+	functionDepth int
+	interactive   interactiveState
+	paths         *pathState
+	env           Environment
+	jobScope      *jobScope
+	lifecycle     *shellLifecycle
 }
 
 type shellLifecycle struct {
