@@ -14,6 +14,18 @@ func (r Runtime) snapshotShared() (Runtime, error) {
 	return r.clone(context.Background(), false)
 }
 
+// runOwnExitTrap is a subshell's end: its EXIT trap runs if the subshell set one itself,
+// and not if the one it has is only the parent's, which fires once, when the parent exits.
+// Both references agree: `(trap 'echo bye' EXIT; ...)` says bye as the subshell ends, which
+// here it never did. The parent's traps stay visible to the subshell all the same, so the
+// save-and-restore idiom `saved=$(trap)` sees them -- a command substitution started with an
+// empty table, and that idiom saved nothing.
+func (r Runtime) runOwnExitTrap(ctx context.Context, inherited string, status int) {
+	if own := r.traps[trapExit]; own != "" && own != inherited {
+		r.runExitTrap(context.WithoutCancel(ctx), status)
+	}
+}
+
 // inheritedTraps are the traps a snapshot starts with: all of them, except ERR unless
 // `set -E` asks for it. In both references `(false)` fires the trap once, in the parent,
 // for the subshell's status -- not a second time inside it.

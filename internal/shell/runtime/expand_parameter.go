@@ -102,8 +102,8 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 		return ""
 	}
 	child = child.withFDTable(table)
-	child.traps = map[trapName]string{}
 	status, _ := child.executeTypedScriptFrom(ctx, script, savedStatus)
+	child.runOwnExitTrap(ctx, r.traps[trapExit], status)
 	// The status was discarded here, which is where `out=$(false) || handler` lost its failure.
 	// The child runs with its own expansion state, so it is recorded on the parent's.
 	r.expansion.recordSubstitution(status)

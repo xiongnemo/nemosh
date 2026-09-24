@@ -61,7 +61,39 @@ func (r Runtime) export(args []string) int {
 // a name that is not there succeeds. A script that removed an element and carried on was
 // silently wrong, which is the failure mode AGENTS.md singles out: a capability that is
 // absent must fail loudly. This one was absent and silent.
+//
+// `-f` removes functions and `-v` variables, which is also what no option means (POSIX).
+// There was no option parsing at all, so `unset -f f` looked for a variable named `-f`, left
+// the function defined, and succeeded. A plain `unset f` does not reach a function either,
+// which is busybox's reading of POSIX; bash falls back to one.
 func (r Runtime) unset(ctx context.Context, args []string) int {
+	functions := false
+	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
+		if args[0] == "--" {
+			args = args[1:]
+			break
+		}
+		for _, letter := range args[0][1:] {
+			switch letter {
+			case 'f':
+				functions = true
+			case 'v':
+				functions = false
+			default:
+				fmt.Fprintf(r.streams.Stderr, "unset: -%c: invalid option; it takes -f -v\n", letter)
+				return 2
+			}
+		}
+		args = args[1:]
+	}
+	if functions {
+		for _, name := range args {
+			if parsed, ok := newFunctionName(name); ok {
+				delete(r.functions, parsed)
+			}
+		}
+		return 0
+	}
 	for _, name := range args {
 		base, subscript, hasSubscript := splitSubscriptedName(name)
 		if r.isReadonly(base) {

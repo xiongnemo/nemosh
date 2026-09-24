@@ -36,6 +36,11 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 	return commandRuntime.executeWithRedirects(ctx, redirects, savedStatus, func(redirected Runtime) lineResult {
 		status, control := redirected.executeProgram(ctx, body.program, savedStatus)
 		if isolated {
+			// Not after an `exec`, which replaced the subshell: nothing is left to
+			// run its trap, in either reference.
+			if control != flowExec {
+				redirected.runOwnExitTrap(ctx, r.traps[trapExit], status)
+			}
 			control = flowNone
 		}
 		return lineResult{status: status, control: control}
