@@ -1,6 +1,9 @@
 package runtime
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 func activeOperator(input string) (tokenKind, int) {
 	if strings.HasPrefix(input, "&&") {
@@ -21,6 +24,9 @@ func activeOperator(input string) (tokenKind, int) {
 	if input[0] == '&' {
 		return tokenBackground, 1
 	}
+	if strings.HasPrefix(input, "|&") {
+		return tokenPipeStderr, 2
+	}
 	if input[0] == '|' {
 		return tokenPipe, 1
 	}
@@ -28,6 +34,33 @@ func activeOperator(input string) (tokenKind, int) {
 		return tokenRedirect, redirectTokenWidth(input)
 	}
 	return tokenWord, 0
+}
+
+// expandPipeStderr turns each `|&` into what it means, `2>&1 |`: the redirection onto the
+// command before it, then the pipe. So the pipeline and the redirection code see only the
+// long form and nothing downstream has to know the short one. `a |& b` is bash's; it was a
+// pipe followed by a background `&`, and a syntax error. Each new token keeps the offset
+// of the `|&` it came from.
+func expandPipeStderr(tokens []shellToken, starts []int) ([]shellToken, []int) {
+	if !slices.ContainsFunc(tokens, func(token shellToken) bool { return token.kind == tokenPipeStderr }) {
+		return tokens, starts
+	}
+	var expandedTokens []shellToken
+	var expandedStarts []int
+	for index, token := range tokens {
+		if token.kind != tokenPipeStderr {
+			expandedTokens = append(expandedTokens, token)
+			expandedStarts = append(expandedStarts, starts[index])
+			continue
+		}
+		one := word{parts: []wordPart{{kind: wordPartLiteral, text: "1"}}}
+		expandedTokens = append(expandedTokens,
+			shellToken{kind: tokenRedirect, value: "2>&"},
+			shellToken{kind: tokenWord, value: "1", parsed: &one},
+			shellToken{kind: tokenPipe, value: "|"})
+		expandedStarts = append(expandedStarts, starts[index], starts[index], starts[index])
+	}
+	return expandedTokens, expandedStarts
 }
 
 func redirectTokenWidth(input string) int {

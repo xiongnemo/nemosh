@@ -83,6 +83,11 @@ func hasTrailingSyntaxOperator(line string) bool {
 			continue
 		}
 		if char == '|' {
+			// `|&` is a pipe too, and a line ending in one continues like a line
+			// ending in `|` -- the `&` is not a background marker there.
+			if index+1 < len(line) && line[index+1] == '&' {
+				index++
+			}
 			trailing = true
 			continue
 		}

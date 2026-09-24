@@ -82,7 +82,7 @@ func wrapCompoundIntoPipeline(node programNode, prefix string, budget *parseBudg
 // splitCloserOperator reads a suffix that begins with a pipe or an and-or operator,
 // returning the operator and the words after it.
 func splitCloserOperator(suffix string) (string, string, bool) {
-	for _, operator := range [...]string{"&&", "||", "|"} {
+	for _, operator := range [...]string{"&&", "||", "|&", "|"} {
 		rest, ok := strings.CutPrefix(suffix, operator)
 		if !ok {
 			continue

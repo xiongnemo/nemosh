@@ -878,5 +878,30 @@
   "script": "echo $(())",
   "stdout": "0\n",
   "status": 0
+ },
+ {
+  "script": "for i in 2 1; do echo $i; done 2>/dev/null | sort",
+  "stdout": "1\n2\n",
+  "status": 0
+ },
+ {
+  "script": "for i in 1; do echo x; done > /dev/null && echo chained",
+  "stdout": "chained\n",
+  "status": 0
+ },
+ {
+  "script": "if true; then echo e >&2; fi 2>&1 | tr e E",
+  "stdout": "E\n",
+  "status": 0
+ },
+ {
+  "script": "case a in a) echo in;; esac > /dev/null || echo not-reached; echo after",
+  "stdout": "after\n",
+  "status": 0
+ },
+ {
+  "script": "while read l; do echo \"got $l\"; done <<EOF | cat\nx\nEOF",
+  "stdout": "got x\n",
+  "status": 0
  }
 ]

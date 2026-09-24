@@ -15,6 +15,8 @@ const (
 	tokenPipe
 	tokenRedirect
 	tokenBackground
+	// tokenPipeStderr is `|&`, which never leaves the lexer; see expandPipeStderr.
+	tokenPipeStderr
 )
 
 type shellToken struct {
@@ -287,5 +289,6 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 	if err := flush(len(line)); err != nil {
 		return nil, nil, err
 	}
+	tokens, starts = expandPipeStderr(tokens, starts)
 	return tokens, starts, nil
 }

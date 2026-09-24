@@ -1,6 +1,9 @@
 package runtime
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int, start, end int, budget *parseBudget, depth int) ([]programNode, error) {
 	var program []programNode
@@ -240,13 +243,32 @@ func wrapCompoundWithSuffix(node programNode, suffix string, budget *parseBudget
 	// A pipe or an and-or operator makes the compound a stage or a term of what
 	// follows, rather than something with redirections on it.
 	if operator, rest, ok := splitCloserOperator(suffix); ok {
+		if operator == "|&" {
+			// `done |& cat` is `done 2>&1 | cat`: the redirection onto the compound,
+			// then the pipe, which is what the lexer makes of `|&` after a command.
+			redirected, err := wrapCompoundWithSuffix(node, "2>&1", budget, depth)
+			if err != nil {
+				return nil, err
+			}
+			return wrapCompoundBeforeOperator(redirected, "|", rest, budget, depth)
+		}
 		return wrapCompoundBeforeOperator(node, operator, rest, budget, depth)
+	}
+	// `done < input | sort`: redirections, then an operator. The redirections go on the
+	// compound and the operator joins what follows. It reported `unexpected word after a
+	// redirection`, so a loop could read a file or feed a pipe but not both.
+	if operators := topLevelOperators(suffix); len(operators) > 0 && operators[0].offset > 0 && operators[0].text != "&" {
+		redirected, err := wrapCompoundWithSuffix(node, strings.TrimSpace(suffix[:operators[0].offset]), budget, depth)
+		if err != nil {
+			return nil, err
+		}
+		return wrapCompoundWithSuffix(redirected, suffix[operators[0].offset:], budget, depth)
 	}
 	tokens, err := scanShellTokensWithBudget(suffix, budget, depth)
 	if err != nil {
 		return nil, err
 	}
-	operations, err := parseRedirectsOnly(tokens)
+	operations, err := parseRedirectsOnly(tokens, budget)
 	if err != nil {
 		return nil, err
 	}

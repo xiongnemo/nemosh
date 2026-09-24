@@ -18,7 +18,7 @@ import "strings"
 // the last pipeline stage for `|`, the next term for `&&` and `||`, the next list item after
 // a background one for `&`. A leading `!` negates the compound's own pipeline.
 
-// operatorAt is one top-level separator on a line: `|`, `||`, `&&` or `&`.
+// operatorAt is one top-level separator on a line: `|`, `|&`, `||`, `&&` or `&`.
 type operatorAt struct {
 	offset int
 	text   string
@@ -26,7 +26,7 @@ type operatorAt struct {
 
 // topLevelOperators reports the separators outside quotes and brackets, so an `&&` inside
 // `[[ ]]` or `$(( ))` is not one. The `&` of a redirection -- `>&2`, `<&3`, `&>file` -- and
-// bash's `|&` are not separators and are passed over.
+// bash's `|&` is one, the pipe that carries stderr too.
 func topLevelOperators(line string) []operatorAt {
 	var found []operatorAt
 	quote := byte(0)
@@ -77,7 +77,7 @@ func operatorText(line string, index int) (string, int) {
 	case next == char:
 		return line[index : index+2], 2
 	case char == '|' && next == '&':
-		return "", 2
+		return "|&", 2
 	case char == '&' && (previous == '>' || previous == '<' || previous == '|' || next == '>'):
 		return "", 1
 	}
@@ -128,6 +128,10 @@ func wrapCompoundAfterOperator(node programNode, prefix, operator string, budget
 	switch operator {
 	case "|":
 		return wrapCompoundIntoPipeline(node, prefix, budget, depth)
+	case "|&":
+		// `cmd |& while ...` is `cmd 2>&1 | while ...`, and the prefix is parsed as a
+		// line, so the redirection lands on its last command.
+		return wrapCompoundIntoPipeline(node, prefix+" 2>&1", budget, depth)
 	case "!":
 		following := compoundAsList(node)
 		following.items[0].value.pipelines[0].negated = true
@@ -180,7 +184,7 @@ func compoundAsList(node programNode) list {
 // `|`: a definition as a pipeline stage would define it in that stage's subshell and nowhere.
 func parseFunctionAfterOperator(line string, budget *parseBudget, depth int) (programNode, bool, error) {
 	for _, operator := range topLevelOperators(line) {
-		if operator.text == "|" {
+		if operator.text == "|" || operator.text == "|&" {
 			continue
 		}
 		prefix := strings.TrimSpace(line[:operator.offset])

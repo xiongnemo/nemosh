@@ -129,8 +129,12 @@ func parseRedirectsWithBudget(tokens []shellToken, budget *parseBudget) ([]shell
 // where the redirections belong to the compound and there is no command word at all.
 // Sharing the scan rather than writing a second one is what keeps `done < file` and
 // `cat < file` agreeing about what a redirection is.
-func parseRedirectsOnly(tokens []shellToken) ([]redirectOperation, error) {
-	command, operations, err := parseRedirectsAllowingNoCommand(tokens)
+//
+// With the parse budget, which is where the heredoc bodies collected before parsing are
+// kept. It was called without one, so `while read l; do ...; done <<EOF` -- the ordinary
+// way to feed a loop a few lines -- was an unsupported redirection.
+func parseRedirectsOnly(tokens []shellToken, budget *parseBudget) ([]redirectOperation, error) {
+	command, operations, err := parseRedirectsWithBudget(tokens, budget)
 	if err != nil {
 		return nil, err
 	}
