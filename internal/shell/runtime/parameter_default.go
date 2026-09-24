@@ -60,11 +60,11 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	case ":":
 		return r.parameterSubstring(value, word)
 	case "/", "//", "/#", "/%":
-		return parameterReplace(value, operator, r.expandScalarParameterText(ctx, word, savedStatus), r.noCaseMatch()), nil
+		return parameterReplace(value, operator, r.expandReplaceSpec(ctx, word, savedStatus), r.noCaseMatch()), nil
 	case "^", "^^", ",", ",,":
-		return parameterCase(value, operator, r.expandScalarParameterText(ctx, word, savedStatus)), nil
+		return parameterCase(value, operator, r.expandOperand(ctx, word, operandPattern, savedStatus)), nil
 	default:
-		return trimParameter(operator, value, r.expandScalarParameterText(ctx, word, savedStatus)), nil
+		return trimParameter(operator, value, r.expandOperand(ctx, word, operandPattern, savedStatus)), nil
 	}
 }
 
@@ -80,12 +80,12 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 		if missing {
 			return "", nil
 		}
-		return r.expandScalarParameterText(ctx, word, savedStatus), nil
+		return r.expandOperand(ctx, word, operandValue, savedStatus), nil
 	case "?":
 		if !missing {
 			return value, nil
 		}
-		message := r.expandScalarParameterText(ctx, word, savedStatus)
+		message := r.expandOperand(ctx, word, operandValue, savedStatus)
 		if message == "" {
 			message = "parameter not set"
 		}
@@ -96,7 +96,7 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 		}
 		// `=` assigns as well as substitutes, which is the only expansion that
 		// changes the shell's state.
-		assigned := r.expandScalarParameterText(ctx, word, savedStatus)
+		assigned := r.expandOperand(ctx, word, operandValue, savedStatus)
 		if !isVariableName(name) {
 			return "", fmt.Errorf("%s: cannot assign in this way", name)
 		}
@@ -108,7 +108,7 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 		return assigned, nil
 	default:
 		if missing {
-			return r.expandScalarParameterText(ctx, word, savedStatus), nil
+			return r.expandOperand(ctx, word, operandValue, savedStatus), nil
 		}
 		return value, nil
 	}

@@ -72,6 +72,9 @@ type Runtime struct {
 	// errExitSuppressed, so it cannot leak past the word it was set for.
 	noFieldSplit      bool
 	errExitSuppressed bool
+	// operandQuoted marks a `${...}` inside double quotes, which changes what a single quote
+	// in its operator's word means; see operand_quoting.go. On the value for the same reason.
+	operandQuoted bool
 	readonly          map[string]struct{}
 	attributes        map[string]variableAttributes
 	mutatedVars       map[string]struct{}

@@ -50,6 +50,13 @@ func bracedParameterEnd(text string, start int) (int, bool) {
 	quote := byte(0)
 	for index := start; index < len(text); index++ {
 		char := text[index]
+		// A backslash escapes the next character everywhere but inside single quotes, so
+		// `${x:-a\"b}` is one expansion: the escaped quote opened a quote that never closed,
+		// and the whole reference came out as its own text.
+		if char == '\\' && quote != '\'' {
+			index++
+			continue
+		}
 		if quote != 0 {
 			if char == quote {
 				quote = 0

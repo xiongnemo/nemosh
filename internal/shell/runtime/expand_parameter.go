@@ -64,6 +64,7 @@ func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedSt
 		// An operator applied to a list produces fields too, and means something
 		// different from the same operator applied to a joined string: `${@:2:2}` is
 		// two parameters, not a substring of them. See parameter_list.go.
+		r.operandQuoted = part.quote == quoteDouble
 		if values, ok := r.expandListOperator(ctx, text[2:len(text)-1], savedStatus); ok {
 			return values
 		}
