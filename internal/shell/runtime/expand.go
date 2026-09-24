@@ -107,7 +107,14 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 				mark(strings.Join(values, " "), part.quote, start)
 				continue
 			}
-			if part.text == "$@" && part.quote != quoteSingle {
+			if list := positionalList(part.text); (list == "$@" || list == "$*") && part.quote == quoteUnquoted {
+				var produced bool
+				fields, produced = r.appendUnquotedParameters(fields, values, list)
+				contributed = contributed || produced
+				mark(strings.Join(values, " "), part.quote, start)
+				continue
+			}
+			if positionalList(part.text) == "$@" && part.quote != quoteSingle {
 				if len(values) == 0 {
 					if len(item.parts) == 1 {
 						return nil, nil
@@ -198,6 +205,52 @@ func (r Runtime) fieldSeparators() string {
 		return value
 	}
 	return " \t\n"
+}
+
+// appendUnquotedParameters is unquoted `$@` and `$*`: each parameter split by IFS in turn,
+// an empty one vanishing, and a field boundary between parameters even when IFS is empty
+// -- then the first piece joins whatever came before in the word and the last whatever
+// comes after. It kept each parameter whole and kept the empty ones, so `set -- "a b" ""
+// c; for x in $@` looped over `a b`, an empty word and `c`, where both references loop
+// over `a`, `b` and `c`. In an assignment, where nothing splits, they are one value joined
+// by IFS's first character -- busybox's answer for both; bash joins `$@` with a space
+// there, and the two agree while IFS is the default.
+func (r Runtime) appendUnquotedParameters(fields, values []string, _ string) ([]string, bool) {
+	if r.noFieldSplit {
+		fields[len(fields)-1] += strings.Join(values, r.starSeparator())
+		return fields, true
+	}
+	separators := r.fieldSeparators()
+	var pieces []string
+	for _, value := range values {
+		if separators == "" {
+			if value != "" {
+				pieces = append(pieces, value)
+			}
+			continue
+		}
+		pieces = append(pieces, splitOnFieldSeparators(value, separators)...)
+	}
+	if len(pieces) == 0 {
+		return fields, false
+	}
+	fields[len(fields)-1] += pieces[0]
+	return append(fields, pieces[1:]...), true
+}
+
+// starSeparator is what `"$*"` and the other `*` forms join with: the first character of
+// IFS, a space when IFS is unset, and nothing at all when it is empty (POSIX 2.5.2). They
+// all joined with a space, so `IFS=,; echo "$*"` -- the ordinary way to make a comma list
+// -- printed blanks where both references print commas.
+func (r Runtime) starSeparator() string {
+	separators, set := r.vars["IFS"]
+	if !set {
+		return " "
+	}
+	for _, first := range separators {
+		return string(first)
+	}
+	return ""
 }
 
 // A run of IFS whitespace is one delimiter and a leading or trailing run makes

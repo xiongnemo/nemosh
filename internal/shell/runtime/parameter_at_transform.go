@@ -122,7 +122,7 @@ func (r Runtime) transformList(ctx context.Context, name string, operator byte) 
 	}
 	if reference, ok := parseArrayReference(name); name == "*" || ok && reference.subscript == "*" {
 		// The `*` forms join into one word, transformed or not.
-		return []string{strings.Join(transformed, " ")}, true, nil
+		return []string{strings.Join(transformed, r.starSeparator())}, true, nil
 	}
 	return transformed, true, nil
 }

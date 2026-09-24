@@ -217,7 +217,10 @@ func (r Runtime) lookupParameter(ctx context.Context, name string, savedStatus i
 		return "", false
 	}
 	switch name {
-	case "0", "?", "#", "@", "*", "-", "$":
+	case "*":
+		// A value, so joined as `"$*"` is: by IFS's first character.
+		return strings.Join(r.params.values, r.starSeparator()), true
+	case "0", "?", "#", "@", "-", "$":
 		return r.expandScalarParameterText(ctx, "$"+name, savedStatus), true
 	}
 	if value, set := r.vars[name]; set {

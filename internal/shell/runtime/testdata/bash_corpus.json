@@ -616,5 +616,23 @@
     "stdout": "c\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "set -- 'a b' '' c; for x in $@; do printf '[%s]' \"$x\"; done; echo",
+    "stdout": "[a][b][c]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- a b; IFS=,; echo \"$*\"",
+    "stdout": "a,b\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- 'a b' c; for x in \"${@}\"; do printf '[%s]' \"$x\"; done; echo",
+    "stdout": "[a b][c]\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

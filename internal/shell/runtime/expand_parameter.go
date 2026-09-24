@@ -13,8 +13,20 @@ import (
 // file-size ceiling. The field-splitting half stays there; this is the half that
 // turns one reference into a value.
 
+// positionalList is `${@}` and `${*}` spelled the short way: the same two references, which
+// the braced spelling reached by the scalar lookup instead -- so `"${@}"` was one word.
+func positionalList(text string) string {
+	switch text {
+	case "${@}":
+		return "$@"
+	case "${*}":
+		return "$*"
+	}
+	return text
+}
+
 func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedStatus int) []string {
-	text := part.text
+	text := positionalList(part.text)
 	switch text {
 	case "$0":
 		return []string{r.params.name}
@@ -25,7 +37,12 @@ func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedSt
 	case "$@":
 		return append([]string(nil), r.params.values...)
 	case "$*":
-		return []string{strings.Join(r.params.values, " ")}
+		// Unquoted it is a field per parameter, like `$@`, each split in turn; only
+		// quoted is it one word, joined by IFS's first character.
+		if part.quote == quoteUnquoted {
+			return append([]string(nil), r.params.values...)
+		}
+		return []string{strings.Join(r.params.values, r.starSeparator())}
 	case "$-":
 		return []string{r.options.letters()}
 	}

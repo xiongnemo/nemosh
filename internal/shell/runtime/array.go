@@ -355,7 +355,7 @@ func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]strin
 		// Joined into one field. Unquoted, the caller splits it on IFS again --
 		// which is bash's behaviour and the reason `"${a[*]}"` is the form that
 		// yields a single word.
-		return []string{strings.Join(elements, " ")}, true
+		return []string{strings.Join(elements, r.starSeparator())}, true
 	}
 	if len(elements) == 0 {
 		return []string{""}, true

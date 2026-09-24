@@ -128,7 +128,7 @@ func (r Runtime) sliceList(elements []string, spec, name string) ([]string, bool
 	sliced := append([]string(nil), elements[offset:end]...)
 	if strings.HasSuffix(name, "[*]") || name == "*" {
 		// The `*` forms join into one field, as they do without an operator.
-		return []string{strings.Join(sliced, " ")}, true
+		return []string{strings.Join(sliced, r.starSeparator())}, true
 	}
 	return sliced, true
 }
