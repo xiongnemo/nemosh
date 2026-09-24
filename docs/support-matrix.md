@@ -436,6 +436,15 @@ still the shell's. `$BASHPID` is the job's own pid, the same one `$!` names; bus
 pids alone. A subshell is not a process of its own here, so its `$BASHPID` is the shell's,
 where bash's differs.
 
+**A job outlives the shell that started it**, as in both references: after `exit`, or at
+the end of a script, it runs on, and a console window stays open until the jobs attached
+to it have ended, which busybox-w32 does too (measured in conhost). **Except after
+Ctrl-C.** A script that Ctrl-C ends takes its jobs, and their programs, with it -- once its
+own INT and EXIT traps have run -- which is busybox-w32's answer, measured by pressing
+Ctrl-C in its console with the job waited for and with it running beside a foreground
+command. bash leaves them running, since POSIX has an asynchronous list ignore SIGINT. A
+Ctrl-C at a prompt interrupts only what is in the foreground, and the jobs carry on.
+
 **Under `NEMOSH_JOBS=goroutine` a job is a goroutine** in the shell's own process, the way
 every job was before the default changed, and it has no pid to report. `$!` is then a job
 specification, `%1`, which keeps the two things `$!` is used for working, since `kill $!`

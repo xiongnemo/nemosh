@@ -11,6 +11,28 @@ import (
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
+// EndJobs, which cmd/nemosh calls when Ctrl-C has ended a script, ends a job that is still
+// running under either launcher, the process's programs with it, and returns once it has.
+func TestEndJobs_endsWhatIsStillRunning(t *testing.T) {
+	for _, launcher := range []string{"goroutine", "process"} {
+		t.Run(launcher, func(t *testing.T) {
+			var stdout bytes.Buffer
+			rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout})
+			rt.env.Set("NEMOSH_JOBS", launcher)
+			rt.RunScript(context.Background(), "sleep 30 & p=$!\n")
+			started := time.Now()
+			rt.EndJobs()
+			if waited := time.Since(started); waited > 10*time.Second {
+				t.Fatalf("EndJobs took %v", waited)
+			}
+			rt.RunScript(context.Background(), "kill -0 $p 2>/dev/null; echo \"asked=$?\"\n")
+			if stdout.String() != "asked=1\n" {
+				t.Fatalf("stdout %q: the job is still there", stdout.String())
+			}
+		})
+	}
+}
+
 // A script sent a signal from outside it -- what cmd/nemosh hands ReceiveSignals -- gets
 // bash 5.3's answers, measured with a script bash ran and `kill` sent TERM.
 func TestReceiveSignals_aScriptGetsBashsAnswers(t *testing.T) {

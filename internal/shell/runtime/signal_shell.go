@@ -57,3 +57,14 @@ func ExitSignal(ctx context.Context) (int, bool) {
 func ExitBySignal(signal int) {
 	endBySignal(signal)
 }
+
+// EndJobs ends every background job the shell still has running, their programs with
+// them, and returns once they have ended. cmd/nemosh calls it when Ctrl-C has ended a
+// script, after the script's own traps have had their say. busybox-w32 ends a script's
+// jobs that way, measured by pressing Ctrl-C in its console, and so did this shell while
+// its jobs were goroutines, which died with the process. A job that is a process would
+// otherwise run on, often a loop nobody can see any more. bash leaves them running,
+// since POSIX has an asynchronous list ignore SIGINT; busybox's answer is the one kept.
+func (r Runtime) EndJobs() {
+	r.jobScope.cancelAndDrain()
+}
