@@ -88,6 +88,34 @@ func TestRuntime_tracesEachCommand_whenXtraceIsOn(t *testing.T) {
 	}
 }
 
+// An assignment-only command is traced too, with only its values quoted. It was not traced
+// at all. The transcript is busybox-w32's, measured.
+func TestRuntime_tracesAssignments_whenXtraceIsOn(t *testing.T) {
+	// When
+	_, _, stderr := runSetScript(t, "set -x\nx=1\ny='a b' z=\nw=\"p q\" echo hi\n")
+
+	// Then
+	want := "+ x=1\n+ y='a b' z=\n+ w='p q' echo hi\n"
+	if !strings.Contains(stderr, want) {
+		t.Fatalf("stderr = %q, want %q", stderr, want)
+	}
+}
+
+// A PS4 whose expansion runs a command does not trace that command -- which would expand
+// PS4 again -- and does not change the status an assignment reports.
+func TestRuntime_expandsPS4WithoutTracingItself(t *testing.T) {
+	// When
+	status, stdout, stderr := runSetScript(t, "PS4='+$(echo in) '\nset -x\nx=$(exit 3)\necho \"st=$?\"\n")
+
+	// Then
+	if status != 0 || stdout != "st=3\n" {
+		t.Fatalf("status = %d, stdout = %q, want the assignment's own status", status, stdout)
+	}
+	if strings.Count(stderr, "+in ") != 3 || strings.Contains(stderr, "+in echo in") {
+		t.Fatalf("stderr = %q, want each command traced once and PS4's own command not at all", stderr)
+	}
+}
+
 func TestRuntime_usesPS4AsTheTracePrefix(t *testing.T) {
 	// When
 	_, _, stderr := runSetScript(t, "PS4='TRACE: '\nset -x\necho one\n")

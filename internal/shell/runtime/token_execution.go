@@ -164,6 +164,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	}
 	assignments, commandArgs := leadingAssignments(args)
 	if len(assignments) > 0 && len(commandArgs) == 0 {
+		r.traceCommand(ctx, args, savedStatus)
 		status := r.assignmentStatus(assignments, mark)
 		r.vars["_"] = ""
 		return r.abortOnShellError(lineResult{status: status})

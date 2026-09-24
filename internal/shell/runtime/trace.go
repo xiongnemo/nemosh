@@ -22,8 +22,13 @@ func (r Runtime) traceCommand(ctx context.Context, args []string, savedStatus in
 	if custom, ok := r.vars["PS4"]; ok {
 		prefix = r.tracePrefix(ctx, custom, savedStatus)
 	}
+	assignments, _ := leadingAssignments(args)
 	quoted := make([]string, len(args))
 	for index, arg := range args {
+		if index < len(assignments) {
+			quoted[index] = traceAssignment(arg)
+			continue
+		}
 		quoted[index] = traceWord(arg)
 	}
 	fmt.Fprintf(r.streams.Stderr, "%s%s\n", prefix, strings.Join(quoted, " "))
@@ -43,6 +48,18 @@ func (r Runtime) tracePrefix(ctx context.Context, ps4 string, savedStatus int) s
 		r.expansion.substitutionStatus, r.expansion.substitutions = state.substitutionStatus, state.substitutions
 	}()
 	return r.ExpandPromptString(ctx, ps4, savedStatus)
+}
+
+// traceAssignment shows `name=value` with only the value quoted, busybox's spelling:
+// `y='a b'`, where quoting the whole word gave `'y=a b'`. An assignment-only command was
+// not traced at all, so a trace could not show where a variable got its value; both
+// references trace it.
+func traceAssignment(arg string) string {
+	name, value, _ := strings.Cut(arg, "=")
+	if value == "" {
+		return arg
+	}
+	return name + "=" + traceWord(value)
 }
 
 func traceWord(arg string) string {
