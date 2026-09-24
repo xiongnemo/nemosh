@@ -32,6 +32,8 @@ type jobRecord struct {
 	// signal is what `kill` ended this job with, or 0. It decides the job's
 	// status and how it is named -- see complete.
 	signal int
+	// pid is the job's process when it is one (job_process.go), and 0 for a goroutine.
+	pid int
 }
 
 type jobScope struct {

@@ -76,9 +76,13 @@ func (r Runtime) waitOperand(ctx context.Context, operand string) int {
 // waitTarget reads an operand as a job: its id, or the status to answer instead.
 func (r Runtime) waitTarget(operand string) (jobID, int) {
 	if !strings.HasPrefix(operand, "%") {
-		if _, err := strconv.Atoi(operand); err == nil {
-			// Every job here is a goroutine, so no number names a child of this shell.
-			// bash's words, and its status.
+		if pid, err := strconv.Atoi(operand); err == nil {
+			// A job that is a process answers to its pid (job_process.go).
+			if id, found := r.jobScope.lookupPID(pid); found {
+				return id, 0
+			}
+			// Otherwise no number names a child of this shell. bash's words, and its
+			// status.
 			fmt.Fprintf(r.streams.Stderr, "wait: pid %s is not a child of this shell\n", operand)
 			return 0, 127
 		}

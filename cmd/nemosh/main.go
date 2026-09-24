@@ -100,6 +100,11 @@ func (c command) run(ctx context.Context, args []string) error {
 		}()
 		defer close(stop)
 	}
+	// `nemosh --job <handle>` is a background job this binary started for itself; see
+	// docs/design/background-processes.md. Not a user-facing option, and not in --help.
+	if len(args) == 3 && args[1] == "--job" {
+		return c.runJob(ctx, controller, args[2])
+	}
 	registry := c.registry
 	if applet, ok := registry.Lookup(applets.InvocationName(args)); ok {
 		return c.runDirectApplet(ctx, controller, applet, args[1:])

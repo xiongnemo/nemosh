@@ -26,10 +26,12 @@ func TestRuntime_backgroundStateControlAndTrapAreIsolated(t *testing.T) {
 	stdout.Reset()
 
 	// When
-	status := rt.RunScript(context.Background(), "value=parent\n{ value=child\ncd /\ntrap 'echo leaked' EXIT\nexit 7\n} &\nwait %1\necho $value\npwd\n")
+	status := rt.RunScript(context.Background(), "value=parent\n{ value=child\ncd /\ntrap 'echo child-exit' EXIT\nexit 7\n} &\nwait %1\necho $value\npwd\n")
 
 	// Then
-	wantOutput := "parent\n" + baselinePwd
+	// The trap the job set runs as the job exits, and only there: busybox-w32 and bash 5.3
+	// both print it once, before the parent's own output.
+	wantOutput := "child-exit\nparent\n" + baselinePwd
 	if status != 0 || stdout.String() != wantOutput || rt.WorkingDirectory() != displayPath(parentCwd) {
 		t.Fatalf("status = %d, stdout = %q", status, stdout.String())
 	}

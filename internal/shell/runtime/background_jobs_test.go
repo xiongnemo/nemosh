@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
+	"regexp"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -147,6 +150,14 @@ func TestBackground_dollarBangNamesTheJob(t *testing.T) {
 			status, stdout, stderr := runSetScript(t, test.script)
 			if status != 0 {
 				t.Fatalf("status = %d, stderr = %q", status, stderr)
+			}
+			// A job that is a process (NEMOSH_JOBS=process) names itself by its pid, as
+			// both references do; see docs/design/background-processes.md.
+			if os.Getenv("NEMOSH_JOBS") == "process" && strings.HasPrefix(test.want, "[%") {
+				if !regexp.MustCompile(`^\[[0-9]+\]\n$`).MatchString(stdout) {
+					t.Fatalf("%s\n  got  %q\n  want a pid", test.script, stdout)
+				}
+				return
 			}
 			if stdout != test.want {
 				t.Fatalf("%s\n  got  %q\n  want %q", test.script, stdout, test.want)

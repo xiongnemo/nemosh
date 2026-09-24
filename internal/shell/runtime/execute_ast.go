@@ -44,6 +44,9 @@ func (r Runtime) executeProgram(ctx context.Context, program []programNode, save
 func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus int) lineResult {
 	switch value := node.(type) {
 	case backgroundNode:
+		if r.processJobsEnabled() {
+			return r.launchProcessJob(value.value)
+		}
 		return r.launchBackground(func(worker Runtime) lineResult {
 			return worker.executeNode(worker.jobScope.ctx, value.value, savedStatus)
 		})
@@ -68,7 +71,9 @@ func (r Runtime) executeTypedList(ctx context.Context, item list, savedStatus in
 	status := savedStatus
 	for _, entry := range item.items {
 		var result lineResult
-		if entry.background {
+		if entry.background && r.processJobsEnabled() {
+			result = r.launchProcessJob(listNode{value: list{items: []listItem{{value: entry.value}}}})
+		} else if entry.background {
 			value := entry.value
 			saved := status
 			result = r.launchBackground(func(worker Runtime) lineResult {
@@ -133,7 +138,14 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		// not deferred, so a panic in run left the parent's wait with nobody to
 		// answer it -- a hang, not a crash.
 		result := worker.guardedRun("running a background job", func() lineResult {
-			return run(worker)
+			result := run(worker)
+			// A job starts with no traps, so an EXIT trap it has is one it set, and it
+			// runs as the job ends, as a subshell's does -- in both references. It never
+			// ran; the process launcher found that by running it.
+			if result.control != flowExec {
+				worker.runOwnExitTrap(worker.jobScope.ctx, "", result.status)
+			}
+			return result
 		})
 		worker.jobScope.cancelAndDrain()
 		if err := worker.fds.closeAll(); err != nil && result.status == 0 {

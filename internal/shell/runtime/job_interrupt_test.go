@@ -118,8 +118,11 @@ func TestRuntime_backgroundClearsINTAndEXITTraps(t *testing.T) {
 	status := rt.RunScript(context.Background(), "trap 'echo parent-int' INT\ntrap 'echo parent-exit' EXIT\n{ trap 'echo child-int' INT; trap 'echo child-exit' EXIT; } &\nwait %1\n")
 
 	// Then
-	if status != 0 || stdout.String() != "parent-exit\n" {
-		t.Fatalf("status = %d, stdout = %q, want only parent EXIT trap", status, stdout.String())
+	// The job starts without the parent's traps, so parent-int never runs in it. The EXIT
+	// trap it sets for itself runs as it ends, the way a subshell's does. busybox-w32 and
+	// bash 5.3 both print child-exit and then parent-exit.
+	if status != 0 || stdout.String() != "child-exit\nparent-exit\n" {
+		t.Fatalf("status = %d, stdout = %q, want the child's own EXIT trap, then the parent's", status, stdout.String())
 	}
 }
 

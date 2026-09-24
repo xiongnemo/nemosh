@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -78,6 +79,13 @@ func InvocationName(args []string) string {
 // reads no user database, and answers only to `root`. busybox-w32 makes the same
 // split by building suw32 under PLATFORM_MINGW32 alone.
 var DefaultRegistry = NewRegistry(append(portableApplets(), platformApplets()...)...)
+
+// IsDefault reports whether this is DefaultRegistry, or a copy of it: the applets another
+// process of this binary would have. A background job that is a process can only be one
+// where the shell's applets are those (docs/design/background-processes.md).
+func (r Registry) IsDefault() bool {
+	return reflect.ValueOf(r.applets).UnsafePointer() == reflect.ValueOf(DefaultRegistry.applets).UnsafePointer()
+}
 
 func portableApplets() []Applet {
 	return []Applet{

@@ -58,6 +58,11 @@ func (r Runtime) killOne(operand string, signal int) error {
 		// busybox's wording, which names the operand rather than the option.
 		return fmt.Errorf("illegal pid: %s", operand)
 	}
+	// A job that is a process goes through its record, so its status is 128+n and
+	// `jobs` names the signal, as for `kill %N`.
+	if id, found := r.jobScope.lookupPID(pid); found {
+		return r.killJob("%"+strconv.FormatUint(uint64(id), 10), signal)
+	}
 	return proc.Terminate(pid, signal)
 }
 
