@@ -26,6 +26,8 @@ type variableAttributes struct {
 	integer bool
 	lower   bool
 	upper   bool
+	// exported is a name marked for export that had no value then; see export_pending.go.
+	exported bool
 }
 
 // attributesOf answers for a name or for the array an element belongs to.
@@ -100,7 +102,7 @@ func (r Runtime) declareFlags(name string) string {
 	if r.isReadonly(name) {
 		flags.WriteByte('r')
 	}
-	if _, exported := r.env.LookupEnv(name); exported {
+	if r.isExported(name) {
 		flags.WriteByte('x')
 	}
 	if attributes.lower {

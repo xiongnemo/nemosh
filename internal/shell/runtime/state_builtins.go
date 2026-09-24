@@ -35,19 +35,19 @@ func (r Runtime) export(args []string) int {
 			return 2
 		}
 		if !hasValue {
-			r.vars[name] = r.vars[name]
-			r.markVarMutation(name)
-		} else if r.isReadonly(name) {
+			r.markExported(name)
+			continue
+		}
+		if r.isReadonly(name) {
 			return r.refuseReadonly("export: ", name)
-		} else {
-			// Through assignVar like any assignment -- an attribute applies, `+=`
-			// appends -- rather than written into the map, which skipped both.
-			if appended {
-				value = r.appendedValue(name, value)
-			}
-			if status := r.assignVar(name, value); status != 0 {
-				return status
-			}
+		}
+		// Through assignVar like any assignment -- an attribute applies, `+=`
+		// appends -- rather than written into the map, which skipped both.
+		if appended {
+			value = r.appendedValue(name, value)
+		}
+		if status := r.assignVar(name, value); status != 0 {
+			return status
 		}
 		r.env.Set(name, r.vars[name])
 	}
@@ -100,19 +100,13 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 			return r.refuseReadonly("unset: ", base)
 		}
 		if !hasSubscript {
-			delete(r.vars, name)
-			r.arrays.unset(name)
-			r.env.Unset(name)
-			r.markVarMutation(name)
+			r.unsetName(name)
 			continue
 		}
 		// `a[@]` and `a[*]` remove the whole array, as bash does. Spelling it this way
 		// is rare but it is what a script that builds the name does.
 		if subscript == "@" || subscript == "*" {
-			delete(r.vars, base)
-			r.arrays.unset(base)
-			r.env.Unset(base)
-			r.markVarMutation(base)
+			r.unsetName(base)
 			continue
 		}
 		// An associative name is answered by *key*, so the subscript is a word and not
@@ -300,6 +294,9 @@ func (r Runtime) listExported() int {
 			continue
 		}
 		fmt.Fprintf(r.streams.Stdout, "export %s=%s\n", name, singleQuoteForReuse(value))
+	}
+	for _, name := range r.pendingExports() {
+		fmt.Fprintf(r.streams.Stdout, "export %s\n", name)
 	}
 	return 0
 }

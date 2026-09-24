@@ -73,7 +73,7 @@ func (r Runtime) assignVar(name string, value string) int {
 	r.vars[name] = value
 	// `set -a` exports every name an assignment touches, so a variable set
 	// after it is on reaches children without a separate `export`.
-	if _, exported := r.env.LookupEnv(name); exported || r.allExport() {
+	if r.isExported(name) || r.allExport() {
 		r.env.Set(name, value)
 	}
 	r.markVarMutation(name)

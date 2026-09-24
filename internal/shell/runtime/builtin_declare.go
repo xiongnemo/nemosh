@@ -158,10 +158,10 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		}
 	}
 	if options.export {
-		r.env.Set(name, r.vars[name])
+		r.markExported(name)
 	}
 	if strings.ContainsRune(options.removed, 'x') {
-		r.env.Unset(name)
+		r.unexport(name)
 	}
 	if options.readonly {
 		// The same set `readonly` writes to, so a name made read-only either way is
