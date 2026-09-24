@@ -85,6 +85,11 @@ func bracketEnd(pattern []rune, start int) (int, bool) {
 		index++
 	}
 	for ; index < len(pattern); index++ {
+		// A class's own `]` does not close the bracket: `[[:upper:]]`.
+		if end, ok := characterClassEnd(pattern, index); ok {
+			index = end - 1
+			continue
+		}
 		if pattern[index] == ']' {
 			return index + 1, true
 		}
@@ -99,6 +104,13 @@ func bracketMatches(spec []rune, char rune) bool {
 	}
 	matched := false
 	for index := 0; index < len(spec); index++ {
+		if end, ok := characterClassEnd(spec, index); ok {
+			if inCharacterClass(string(spec[index+2:end-2]), char) {
+				matched = true
+			}
+			index = end - 1
+			continue
+		}
 		if index+2 < len(spec) && spec[index+1] == '-' {
 			if char >= spec[index] && char <= spec[index+2] {
 				matched = true
