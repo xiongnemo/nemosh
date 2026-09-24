@@ -73,7 +73,11 @@ func (e *testEvaluator) andExpression() (bool, error) {
 }
 
 func (e *testEvaluator) notExpression() (bool, error) {
-	if e.peek() != "!" {
+	// A `!` with a binary operator after it is an operand being compared: `[ "!" = "!" ]`
+	// is true in both references. POSIX settles the three-argument form on $2 first,
+	// and this took the `!` for negation and then found `=` with nothing to its left. A `!`
+	// with nothing after it is the one-argument form, a non-empty string: `test !` is true.
+	if e.peek() != "!" || e.binaryFollows() || e.index+1 >= len(e.args) {
 		return e.primary()
 	}
 	e.index++
@@ -85,7 +89,11 @@ func (e *testEvaluator) primary() (bool, error) {
 	switch {
 	case e.index >= len(e.args):
 		return false, errors.New("argument expected")
-	case e.args[e.index] == "(":
+	// Binary before a group for the same reason, `[ "(" = "(" ]`, and a lone `(` is the
+	// one-argument form -- a non-empty string -- rather than a group with nothing in it.
+	case e.binaryFollows():
+		return e.binaryPrimary()
+	case e.args[e.index] == "(" && e.index+1 < len(e.args):
 		e.index++
 		result, err := e.orExpression()
 		if err != nil {
@@ -96,11 +104,6 @@ func (e *testEvaluator) primary() (bool, error) {
 		}
 		e.index++
 		return result, nil
-	// Binary before unary, because POSIX resolves the three-argument form on
-	// $2 first: `test -f = -f` compares two strings rather than asking whether
-	// a file named `=` exists.
-	case e.index+2 < len(e.args)+1 && e.index+1 < len(e.args) && isTestBinaryOperator(e.args[e.index+1]):
-		return e.binaryPrimary()
 	// A unary operator with nothing after it is the one-argument form -- a
 	// non-empty string -- which is why this insists on having an operand.
 	// `test -f` is true and `test ! -f` is false, both by POSIX 2.14's
@@ -113,6 +116,14 @@ func (e *testEvaluator) primary() (bool, error) {
 	operand := e.args[e.index]
 	e.index++
 	return operand != "", nil
+}
+
+// binaryFollows reports a binary operator after the current word with an operand after it.
+// Checked before a group, a negation and a unary operator, because POSIX resolves the
+// three-argument form on $2 first: `test -f = -f` compares two strings rather than asking
+// whether a file named `=` exists, and `[ "(" = "(" ]` compares two parentheses.
+func (e *testEvaluator) binaryFollows() bool {
+	return e.index+2 < len(e.args) && isTestBinaryOperator(e.args[e.index+1])
 }
 
 func (e *testEvaluator) binaryPrimary() (bool, error) {

@@ -104,6 +104,31 @@ func TestTest_treatsATrailingOperatorAsAString(t *testing.T) {
 	}
 }
 
+// `(` and `!` are operands when a binary operator follows them, and strings when they stand
+// alone: POSIX settles three arguments on $2 and one argument by whether it is empty. Each
+// answer is busybox-w32's, measured; `[ "(" = "(" ]` said "closing paren expected".
+func TestTest_readsParenthesisAndBangAsOperandsByPosition(t *testing.T) {
+	for _, test := range []struct {
+		args []string
+		want int
+	}{
+		{args: []string{"(", "=", "("}, want: 0},
+		{args: []string{"!", "=", "!"}, want: 0},
+		{args: []string{"!", "!=", "!"}, want: 1},
+		{args: []string{"("}, want: 0},
+		{args: []string{"!"}, want: 0},
+		{args: []string{"!", "!"}, want: 1},
+		{args: []string{"!", "x", "=", "y"}, want: 0},
+		{args: []string{"(", "a", "=", "a", ")"}, want: 0},
+		{args: []string{"(", "x", ")"}, want: 0},
+		{args: []string{"a", "=", "a", "-a", "!", "b", "=", "c"}, want: 0},
+	} {
+		if status, stderr := runTestApplet(t, test.args...); status != test.want {
+			t.Errorf("test %q = %d, want %d (stderr %q)", test.args, status, test.want, stderr)
+		}
+	}
+}
+
 func TestTest_evaluatesFilePrimaries(t *testing.T) {
 	// Given
 	dir := t.TempDir()
