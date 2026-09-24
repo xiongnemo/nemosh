@@ -64,6 +64,26 @@ func TestProcessJobs_behaveAsTheReferencesDo(t *testing.T) {
 			t.Fatalf("stdout %q stderr %q", stdout, stderr)
 		}
 	})
+	// `$$` and `$PPID` are the shell's in a job, in both references; `$BASHPID` is the
+	// job's own, as bash gives it, and the same pid `$!` names.
+	t.Run("a job keeps the shell's $$ and $PPID, and has its own $BASHPID", func(t *testing.T) {
+		stdout, stderr := run(t, "d='"+filepath.ToSlash(t.TempDir())+"'\n"+
+			"top=\"$$ $PPID $BASHPID\"\n{ echo \"$$ $PPID $BASHPID\" > \"$d/job\"; } & p=$!; wait\n"+
+			"read s pp b < \"$d/job\"\nset -- $top\n[ \"$s $pp\" = \"$1 $2\" ] && echo shell-kept\n"+
+			"[ \"$b\" = \"$p\" ] && [ \"$b\" != \"$s\" ] && echo own-bashpid\n[ \"$3\" = \"$1\" ] && echo top-same\n")
+		if stdout != "shell-kept\nown-bashpid\ntop-same\n" {
+			t.Fatalf("stdout %q stderr %q", stdout, stderr)
+		}
+	})
+	t.Run("jobs -l and -p name the pids", func(t *testing.T) {
+		d := filepath.ToSlash(t.TempDir())
+		stdout, stderr := run(t, "sleep 2 & a=$!\njobs -p > '"+d+"/p'\njobs -l > '"+d+"/l'\n"+
+			"read p < '"+d+"/p'\n[ \"$p\" = \"$a\" ] && echo p-ok\n"+
+			"read l < '"+d+"/l'\n[ \"$l\" = \"[1] $a Running\" ] && echo l-ok\nkill %1; wait\n")
+		if stdout != "p-ok\nl-ok\n" {
+			t.Fatalf("stdout %q stderr %q", stdout, stderr)
+		}
+	})
 	t.Run("the pid is a real process", func(t *testing.T) {
 		stdout, stderr := run(t, "sleep 2 & echo $!\nkill -0 $! && echo alive\nkill $!\nwait\n")
 		lines := strings.Split(strings.TrimSpace(stdout), "\n")

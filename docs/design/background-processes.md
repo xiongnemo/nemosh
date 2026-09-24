@@ -1,6 +1,7 @@
 # Background jobs as processes
 
-Status: **steps 1-3 built** behind `NEMOSH_JOBS=process` (see "How it lands"), 2026-09-24.
+Status: **steps 1-3 built**, and step 4's `$BASHPID` and `jobs -l`, behind
+`NEMOSH_JOBS=process` (see "How it lands"), 2026-09-24. `coproc` is still to come.
 The goroutine is still the default. This is the design the bash-compatibility plan put
 last, and asked for before any code.
 

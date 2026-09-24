@@ -34,11 +34,17 @@ type specialState struct {
 	// random is seeded per shell rather than per read, so a script gets a
 	// sequence rather than the same number twice.
 	random *rand.Rand
+	// pid and ppid are `$$` and `$PPID`, fixed when the shell starts, as bash fixes them.
+	// A job process is given its shell's (job_state.go): `$$` in a job is the shell's pid
+	// in both references, and only `$BASHPID` is the job's own.
+	pid, ppid int
 }
 
 func newSpecialState() *specialState {
 	return &specialState{
 		started: time.Now(),
+		pid:     os.Getpid(),
+		ppid:    os.Getppid(),
 		// Seeded from the clock and the pid: two shells started in the same
 		// millisecond should not agree, which is exactly the case a script using
 		// $RANDOM for a temporary name runs into.
@@ -67,7 +73,12 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		elapsed := int(time.Since(r.special.started).Seconds())
 		return strconv.Itoa(elapsed + r.special.secondsOffset), true
 	case "PPID":
-		return strconv.Itoa(os.Getppid()), true
+		return strconv.Itoa(r.special.ppid), true
+	case "BASHPID":
+		// The process running this, where `$$` is the shell's: bash's, which busybox has
+		// not got. A job that is a process has its own. A subshell, and a job that is a
+		// goroutine, are this process, so theirs is the shell's, where bash's differs.
+		return strconv.Itoa(os.Getpid()), true
 	case "FUNCNAME":
 		// The function running now, which is busybox's `$FUNCNAME` and the first
 		// element of bash's array; empty, and so unset, outside one. It used to be
@@ -97,7 +108,7 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		// expansion switch, because there are two of them -- the braced path and the
 		// bare one -- and a special parameter that only one knows about is how `$$`
 		// came to work inside `${...}` and not on its own.
-		return strconv.Itoa(os.Getpid()), true
+		return strconv.Itoa(r.special.pid), true
 	}
 	return "", false
 }

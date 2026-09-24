@@ -434,6 +434,15 @@ would have been a pid-shaped lie that `kill` would apply to some other process. 
 empty before. busybox-w32 does report a real pid, because its jobs are processes; see
 "Process control" above for how, and what moving to that would take.
 
+**Under `NEMOSH_JOBS=process` a job is a process** (docs/design/background-processes.md,
+not yet the default), and `$!` is its pid, as in both references. The pid variables then
+answer as bash's do. `$$` and `$PPID` inside a job are still the shell's. `$BASHPID` is the
+job's own pid, the same one `$!` names; busybox has no `$BASHPID`. `jobs -l` adds each
+job's pid (`[1] 12345 Running`), and `jobs -p` prints the pids alone. Under the default,
+a job is a goroutine in the shell's own process, so `$BASHPID` inside it is the shell's
+pid, and `jobs -p` prints `%1`, the same thing `$!` holds. A subshell is this process
+under either launcher, so its `$BASHPID` is the shell's, where bash's differs.
+
 **Backgrounding announces the job, and says how to stop it.** busybox writes `[1] 19676`;
 this writes `[1] started; kill %1 to stop it`, for the reason above — the number is real,
 the pid is not. The sentence is there because `%1` is not what someone who has only ever

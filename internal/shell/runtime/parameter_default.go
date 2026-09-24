@@ -259,6 +259,9 @@ func (r Runtime) expandScalarParameterText(ctx context.Context, text string, sav
 		// The shell's own process id, which is what a script builds a temporary name
 		// out of. It was empty, so `/tmp/work.$$` was `/tmp/work.` for every run and
 		// two scripts collided.
+		if r.special != nil {
+			return strconv.Itoa(r.special.pid)
+		}
 		return strconv.Itoa(os.Getpid())
 	}
 	if len(text) == 2 && text[1] >= '1' && text[1] <= '9' {

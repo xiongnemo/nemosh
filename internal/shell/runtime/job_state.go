@@ -38,7 +38,10 @@ type jobState struct {
 	Umask         uint16                         `json:"umask"`
 	DirStack      []string                       `json:"dirStack"`
 	// Seconds is what $SECONDS says now, so the child's count carries on from it.
-	Seconds           int  `json:"seconds"`
+	Seconds int `json:"seconds"`
+	// ShellPID and ShellPPID are the shell's `$$` and `$PPID`, which a job keeps.
+	ShellPID          int  `json:"shellPid"`
+	ShellPPID         int  `json:"shellPpid"`
 	FunctionDepth     int  `json:"functionDepth"`
 	SourceDepth       int  `json:"sourceDepth"`
 	ErrExitSuppressed bool `json:"errExitSuppressed"`
@@ -125,6 +128,9 @@ func (r Runtime) captureJobState(program programNode) jobState {
 	if seconds, ok := r.dynamicParameter("SECONDS"); ok {
 		state.Seconds = atoiOrZero(seconds)
 	}
+	if r.special != nil {
+		state.ShellPID, state.ShellPPID = r.special.pid, r.special.ppid
+	}
 	return state
 }
 
@@ -180,6 +186,9 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 	r.scriptFile, r.mask.value = state.ScriptFile, state.Umask
 	r.dirStack.below = append([]string(nil), state.DirStack...)
 	r.special.started = time.Now().Add(-time.Duration(state.Seconds) * time.Second)
+	if state.ShellPID != 0 {
+		r.special.pid, r.special.ppid = state.ShellPID, state.ShellPPID
+	}
 	r.functionDepth, r.sourceDepth, r.errExitSuppressed = state.FunctionDepth, state.SourceDepth, state.ErrExitSuppressed
 	return parseScriptAt(state.Program, max(state.Line, 1))
 }

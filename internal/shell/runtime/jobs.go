@@ -46,10 +46,24 @@ func (r Runtime) reportSignalled(records []*jobRecord) {
 	}
 }
 
+// jobs lists the job table. `-l` adds each job's pid and `-p` prints the pids alone, as in
+// both references. A job that is a goroutine has no pid: `-p` gives the `%N` its `$!` holds,
+// which `kill` and `wait` take the same way, and `-l` leaves its line as it was.
 func (r Runtime) jobs(args []string) int {
-	if len(args) != 0 {
-		fmt.Fprintln(r.streams.Stderr, "jobs: expected no operands")
-		return 2
+	long, pids := false, false
+	for _, arg := range args {
+		switch arg {
+		case "-l":
+			long = true
+		case "-p":
+			pids = true
+		default:
+			fmt.Fprintf(r.streams.Stderr, "jobs: %s: expected -l or -p, and no job operands\n", arg)
+			return 2
+		}
+	}
+	if pids {
+		return r.jobPIDs()
 	}
 	// Reported is consumed: POSIX 2.9.3 removes a job from the list once the shell has
 	// reported its status, and busybox agrees -- `[1]+ Done` appears once and `jobs`
@@ -60,6 +74,9 @@ func (r Runtime) jobs(args []string) int {
 		if finished {
 			reported = append(reported, record)
 		}
+		if long && record.pid != 0 {
+			line = strings.Replace(line, "] ", "] "+strconv.Itoa(record.pid)+" ", 1)
+		}
 		if _, err := r.streams.Stdout.Write([]byte(line)); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
 			// Forgotten anyway: the status reached the caller's stream or it did not,
@@ -69,6 +86,21 @@ func (r Runtime) jobs(args []string) int {
 		}
 	}
 	r.jobScope.forget(reported)
+	return 0
+}
+
+// jobPIDs is `jobs -p`. It reports no status, so it consumes nothing.
+func (r Runtime) jobPIDs() int {
+	for _, record := range r.jobScope.snapshot() {
+		name := "%" + strconv.FormatUint(uint64(record.id), 10)
+		if record.pid != 0 {
+			name = strconv.Itoa(record.pid)
+		}
+		if _, err := fmt.Fprintln(r.streams.Stdout, name); err != nil {
+			fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
+			return 1
+		}
+	}
 	return 0
 }
 

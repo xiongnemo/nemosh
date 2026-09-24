@@ -34,7 +34,7 @@ var jobStateCoverage = map[string]string{
 	"dirStack":          "encoded: DirStack",
 	"arrays":            "encoded: Indexed, Associative",
 	"loops":             "not inherited: a job does not break its parent's loop",
-	"special":           "encoded: Seconds; RANDOM is reseeded, as a subshell's is not",
+	"special":           "encoded: Seconds, ShellPID, ShellPPID; RANDOM is reseeded, as a subshell's is not",
 	"locals":            "not inherited: a job restores nothing to its caller",
 	"frames":            "encoded: Frames",
 	"scriptFile":        "encoded: ScriptFile",
