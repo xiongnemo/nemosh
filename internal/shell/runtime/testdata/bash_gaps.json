@@ -18,12 +18,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "printf '%(%Y)T\\n' 17280000",
-    "stdout": "1970\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "trap 'echo dbg' DEBUG; echo one",
     "stdout": "dbg\none\n",
     "status": 0,

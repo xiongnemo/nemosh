@@ -85,6 +85,15 @@ func TestPrintf_reportsANonNumericOperandAndGoesOn(t *testing.T) {
 	}
 }
 
+// `%(format)T` renders seconds since the epoch through strftime, with the conversion's width;
+// bash's answers, measured. Mid-year, so the year and month hold in any zone.
+func TestPrintf_rendersATimeConversion(t *testing.T) {
+	stdout, err := runPrintf(t, "[%(%Y-%m)T][%8(%Y)T]\n", "17280000", "17280000")
+	if err != nil || stdout != "[1970-07][    1970]\n" {
+		t.Fatalf("stdout = %q, err = %v", stdout, err)
+	}
+}
+
 // A leading `--` ends the options, as in both references; it was taken for the format.
 func TestPrintf_skipsALeadingDoubleDash(t *testing.T) {
 	if stdout, err := runPrintf(t, "--", "-v %s\n", "x"); err != nil || stdout != "-v x\n" {

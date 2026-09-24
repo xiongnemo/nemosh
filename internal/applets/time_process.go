@@ -119,24 +119,12 @@ func elapsedStamp(elapsed time.Duration) string {
 	return fmt.Sprintf("%02d:%02d:%02d", total/3600, (total/60)%60, total%60)
 }
 
-// strftimeLike renders the strftime conversions `ts` is given, which are a small set.
-//
-// Not every strftime conversion: the ones a timestamp uses. An unknown one is left as it
-// was written rather than swallowed, so a format with a typo shows the typo.
+// strftimeLike renders the strftime conversions `ts` is given, through the one strftime
+// (strftime.go). An unknown one is left as it was written rather than swallowed, so a format
+// with a typo shows the typo.
 func strftimeLike(when time.Time, format string) string {
-	replacements := []struct{ verb, layout string }{
-		{"%Y", "2006"}, {"%m", "01"}, {"%d", "02"}, {"%b", "Jan"}, {"%a", "Mon"},
-		{"%H", "15"}, {"%M", "04"}, {"%S", "05"}, {"%Z", "MST"}, {"%F", "2006-01-02"},
-		{"%T", "15:04:05"},
-	}
-	out := format
-	for _, replacement := range replacements {
-		out = strings.ReplaceAll(out, replacement.verb, when.Format(replacement.layout))
-	}
-	// %e is the day of the month, space-padded, which Go's layouts spell `_2`.
-	out = strings.ReplaceAll(out, "%e", when.Format("_2"))
-	out = strings.ReplaceAll(out, "%%", "%")
-	return out
+	stamp, _ := strftime(when, format, false)
+	return stamp
 }
 
 // pidof answers the process ids of everything running under a name.

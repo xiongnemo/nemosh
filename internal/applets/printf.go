@@ -92,6 +92,16 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			index++
 			continue
 		}
+		if spec, layout, width, ok := printfTimeSpecification(format[index:]); ok {
+			rendered, err := renderPrintfTime(spec, layout, next())
+			if err != nil {
+				fmt.Fprintf(diagnostics, "printf: %v\n", err)
+				failed = true
+			}
+			text.WriteString(rendered)
+			index += width - 1
+			continue
+		}
 		spec, verb, width := printfSpecification(format[index:])
 		if verb == 0 {
 			text.WriteByte('%')

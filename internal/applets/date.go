@@ -105,56 +105,14 @@ func parseDateEpoch(input string) (int64, error) {
 	return epoch, nil
 }
 
+// formatDate is `date +FORMAT`, through the one strftime (strftime.go), strictly: a
+// conversion this build does not know is refused rather than printed as written.
 func formatDate(stamp time.Time, format string) (string, error) {
-	var builder strings.Builder
-	for index := 0; index < len(format); index++ {
-		char := format[index]
-		if char != '%' {
-			builder.WriteByte(char)
-			continue
-		}
-		if index+1 >= len(format) {
-			return "", fmt.Errorf("date: unsupported format: %%")
-		}
-		index++
-		part, err := formatDateToken(stamp, format[index])
-		if err != nil {
-			return "", err
-		}
-		builder.WriteString(part)
+	formatted, err := strftime(stamp, format, true)
+	if err != nil {
+		return "", fmt.Errorf("date: %v", err)
 	}
-	return builder.String(), nil
-}
-
-func formatDateToken(stamp time.Time, token byte) (string, error) {
-	switch token {
-	case 'Y':
-		return stamp.Format("2006"), nil
-	case 'm':
-		return stamp.Format("01"), nil
-	case 'd':
-		return stamp.Format("02"), nil
-	case 'H':
-		return stamp.Format("15"), nil
-	case 'M':
-		return stamp.Format("04"), nil
-	case 'S':
-		return stamp.Format("05"), nil
-	case 'Z':
-		return stamp.Format("MST"), nil
-	case 'a':
-		return stamp.Format("Mon"), nil
-	case 'b':
-		return stamp.Format("Jan"), nil
-	case 'e':
-		return stamp.Format("_2"), nil
-	case 's':
-		return strconv.FormatInt(stamp.Unix(), 10), nil
-	case '%':
-		return "%", nil
-	default:
-		return "", fmt.Errorf("date: unsupported format: %%%c", token)
-	}
+	return formatted, nil
 }
 
 func writeDateDiagnostic(stderr io.Writer, message string) error {
