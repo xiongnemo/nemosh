@@ -120,3 +120,51 @@ func TestInvocation_sessionReportsItself(t *testing.T) {
 		t.Fatalf("stdout %q, want the session's $-, $0 and $1", result.stdout)
 	}
 }
+
+// A startup file runs as part of the shell. Its EXIT trap waits for the shell's exit, and
+// an `exit` in it ends the shell with that status. Through RunScript the trap ran as soon
+// as the profile ended, and `exit 3` ended only the profile. Both answers are busybox's.
+func TestInvocation_startupFileIsPartOfTheShell(t *testing.T) {
+	for _, test := range []struct {
+		name, profile string
+		stdout        string
+		missing       string
+		status        int
+	}{
+		{name: "the EXIT trap waits", profile: "trap 'echo bye' EXIT\necho profiled\n", stdout: "profiled\nmain\nbye\n"},
+		{name: "exit ends the shell", profile: "echo profiled\nexit 3\necho after\n", stdout: "profiled\n", missing: "main", status: 3},
+		{name: "a last status is not a failure", profile: "false\n", stdout: "main\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			home := t.TempDir()
+			if err := os.WriteFile(filepath.Join(home, ".profile"), []byte(test.profile), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("HOME", home)
+
+			result := runInvocation(t, "", "-l", "-c", "echo main")
+			if !strings.HasSuffix(result.stdout, test.stdout) || result.status != test.status {
+				t.Fatalf("stdout %q status %d, want it to end %q with %d (stderr %q)", result.stdout, result.status, test.stdout, test.status, result.stderr)
+			}
+			if test.missing != "" && strings.Contains(result.stdout, test.missing) {
+				t.Fatalf("stdout %q, want nothing after the profile's exit", result.stdout)
+			}
+			if strings.Contains(result.stderr, ".profile") {
+				t.Fatalf("stderr %q, want the profile not reported", result.stderr)
+			}
+		})
+	}
+}
+
+func TestInvocation_exitInENVEndsTheSession(t *testing.T) {
+	rc := filepath.Join(t.TempDir(), "rc.sh")
+	if err := os.WriteFile(rc, []byte("exit 4\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ENV", filepath.ToSlash(rc))
+
+	result := runInvocation(t, "echo reached\n", "-i")
+	if result.status != 4 || strings.Contains(result.stdout, "reached") {
+		t.Fatalf("status %d stdout %q, want 4 before any line ran", result.status, result.stdout)
+	}
+}

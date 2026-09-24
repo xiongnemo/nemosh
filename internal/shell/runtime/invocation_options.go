@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"errors"
 	"fmt"
 )
@@ -32,6 +33,36 @@ func (r Runtime) SetInvocationMode(letters string) { r.options.invocation = lett
 // ListOptions prints what `set -o` prints, which is what `nemosh -o` with no name after
 // it does in both references.
 func (r Runtime) ListOptions() { r.listShellOptions(true) }
+
+// SourceStartup runs a startup file -- $ENV, or a login shell's profiles -- as part of the
+// shell rather than as a script of its own. Its EXIT trap is the shell's, left for when the
+// shell exits. An `exit` in it is the shell's exit, which the second answer reports, and
+// the caller ends the shell with CloseBatch as a script's end would. A file that does not
+// parse is the error, unreported, so the caller can name the file.
+//
+// These went through RunScript, which ran a profile's `trap ... EXIT` the moment the
+// profile ended, and let `exit 3` end only the profile. busybox runs the trap at the
+// shell's exit, and exits 3.
+func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, error) {
+	prepared, err := ParseScript(script)
+	if err != nil {
+		return 2, false, err
+	}
+	control := flowNone
+	status := r.guardedStatus("running a startup file", func() int {
+		status, flow := r.executePrepared(ctx, prepared)
+		control = flow
+		return status
+	})
+	switch control {
+	case flowExec:
+		r.lifecycle.exitSuppressed = true
+		return status, true, nil
+	case flowExit:
+		return status, true, nil
+	}
+	return status, false, nil
+}
 
 // CheckSyntax is `nemosh -n`: the script is parsed and none of it runs. 0 when it parses,
 // and 2 with the parser's diagnostic when it does not -- the status and the words a run

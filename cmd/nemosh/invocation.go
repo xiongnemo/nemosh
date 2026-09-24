@@ -155,7 +155,9 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 		rt.ListOptions()
 	}
 	if c.invocation.login && !c.invocation.checkOnly {
-		sourceLoginProfiles(ctx, rt, c.stderr)
+		if status, exited := sourceLoginProfiles(ctx, rt, c.stderr); exited {
+			return startupExit(rt, status)
+		}
 	}
 	return nil
 }
@@ -167,6 +169,8 @@ func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 	if err := c.startShell(ctx, rt, "is"); err != nil {
 		return err
 	}
-	sourceStartupFile(ctx, rt, c.stderr)
+	if status, exited := sourceStartupFile(ctx, rt, c.stderr); exited {
+		return startupExit(rt, status)
+	}
 	return nil
 }

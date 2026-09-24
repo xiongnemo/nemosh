@@ -68,13 +68,15 @@ func TestStartupFile_isSilent_whenThereIsNothingToSource(t *testing.T) {
 	}
 }
 
-// A startup file that fails reports it. Silently ignoring the error would leave
-// the user with a shell that is quietly not configured.
+// A startup file that does not parse reports it, by name. Silently ignoring the
+// error would leave the user with a shell that is quietly not configured. A command
+// failing inside one says so itself, as it does in busybox; the file's last status is
+// not reported (sourceProfile).
 func TestStartupFile_reportsAFailingFile(t *testing.T) {
 	// Given
 	directory := t.TempDir()
 	rc := filepath.Join(directory, "bad.sh")
-	if err := os.WriteFile(rc, []byte("{echo unbalanced\n"), 0o600); err != nil {
+	if err := os.WriteFile(rc, []byte("if true; then\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &bytes.Buffer{}, Stderr: &bytes.Buffer{}})
