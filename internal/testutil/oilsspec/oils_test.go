@@ -23,19 +23,24 @@ import (
 //
 //	NEMOSH_OILS=report go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m
 //
-// NEMOSH_OILS=calibrate runs the references instead, bash from NEMOSH_OILS_BASH and
-// busybox from NEMOSH_OILS_BUSYBOX, and writes what they did to tests/oils/calibration.json:
-// bash's passes are the headline's denominator, and the harness is faithful when bash run
-// through it does what the files record of bash. NEMOSH_OILS_OUT names a file to write
-// every case's result to, as JSON.
+// NEMOSH_OILS=strict also fails for every case that stands otherwise than
+// tests/oils/baseline.json says, the case that started passing as much as the one that
+// stopped, once it has stood that way in two more runs of its own; one that does not is
+// flaky, and is reported. NEMOSH_OILS=update writes the baseline from the run instead.
+//
+// NEMOSH_OILS=calibrate runs the references instead of nemosh, bash from NEMOSH_OILS_BASH
+// and busybox from NEMOSH_OILS_BUSYBOX, and writes what they did to
+// tests/oils/calibration.json: bash's passes are the headline's denominator, and the
+// harness is faithful when bash run through it does what the files record of bash.
+// NEMOSH_OILS_OUT names a file to write every case's result to, as JSON.
 func TestOilsSpec(t *testing.T) {
 	mode := os.Getenv("NEMOSH_OILS")
 	switch mode {
 	case "":
 		t.Skip("set NEMOSH_OILS=report to run the Oils spec suite")
-	case "report", "calibrate":
+	case "report", "strict", "update", "calibrate":
 	default:
-		t.Fatalf("NEMOSH_OILS=%s: want report or calibrate", mode)
+		t.Fatalf("NEMOSH_OILS=%s: want report, strict, update or calibrate", mode)
 	}
 	exclusions, err := oilsspec.ReadExclusions(root)
 	if err != nil {
@@ -74,6 +79,12 @@ func TestOilsSpec(t *testing.T) {
 		t.Fatal(err)
 	}
 	reportHeadline(t, calibration, results)
+	switch mode {
+	case "strict":
+		checkBaseline(t, suite, nemosh, work, results)
+	case "update":
+		updateBaseline(t, suite, nemosh, work, runtime.GOOS, results)
+	}
 }
 
 // calibrate runs bash, held to what the files record of bash, and busybox, installed as

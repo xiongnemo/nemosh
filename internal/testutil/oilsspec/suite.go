@@ -19,6 +19,9 @@ type Suite struct {
 	Specs map[string]Spec
 	// Left counts the cases left out, by the exclusion rule that left them out.
 	Left map[string]int
+	// Parallel is how many files Run runs at once: as many as there are processors when
+	// it is zero.
+	Parallel int
 }
 
 // LoadSuite parses every vendored spec file and leaves out what the exclusions leave out on
@@ -56,15 +59,19 @@ func LoadSuite(root string, record Upstream, exclusions Exclusions, platform str
 }
 
 // Run runs the suite with the subject under work: the files side by side, as many at once
-// as there are processors, and the cases of each in order, each file with a $REPO_ROOT of
-// its own, since cases write into it. When only is not nil, it runs just the cases only
+// as Parallel says, and the cases of each in order, each file with a $REPO_ROOT of its
+// own, since cases write into it. When only is not nil, it runs just the cases only
 // answers true for, and the files that have one.
 func (s Suite) Run(ctx context.Context, subject Subject, work string, only func(file, id string) bool) (map[string][]CaseResult, error) {
 	results := map[string][]CaseResult{}
 	var mu sync.Mutex
 	var group sync.WaitGroup
 	var failures []error
-	slots := make(chan struct{}, runtime.NumCPU())
+	parallel := s.Parallel
+	if parallel == 0 {
+		parallel = runtime.NumCPU()
+	}
+	slots := make(chan struct{}, parallel)
 	for file, spec := range s.Specs {
 		if only != nil {
 			var chosen []Case

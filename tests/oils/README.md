@@ -53,6 +53,14 @@ difference: `HOME` is the case's directory, where Oils leaves it unset. On Windo
 shell measured here takes the user's profile for an unset `HOME`, and a case that wrote
 under `~` would write into the user's real home.
 
+`baseline.json` records every measured case nemosh does not pass, and how it stands: `fail`
+when it does neither what the files record of bash nor what they record of ash, and
+`ash-only` when it does what they record of ash, as busybox might. `NEMOSH_OILS=strict`
+fails for every case that stands otherwise, the one that started passing as much as the one
+that stopped, so the baseline always says where nemosh is; `NEMOSH_OILS=update` writes it
+from the run. A case that differs is run twice more, alone, before either mode believes
+it, and one that does not stand the same way every time is reported as flaky instead.
+
 `exclusions.json` leaves out the cases this harness cannot measure on a platform,
 whichever shell runs them: on Windows those that use `chmod`, `ln -s`, `ulimit` or
 `read_from_fd.py`; off Linux those that read `/proc`; and everywhere the one case about

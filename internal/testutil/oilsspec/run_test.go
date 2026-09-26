@@ -28,11 +28,11 @@ func TestMain(m *testing.M) {
 
 // fakeShell prints what a case sees -- its name, directory, stdin and the variables the
 // harness gives it -- then does as its stdin's first word says: exit with a status, run
-// past any timeout, or leave a process behind that would write a file a second later.
+// past any timeout, or leave a process behind, one that would run for a minute, writing
+// its pid to the file named.
 func fakeShell() int {
-	if marker := os.Getenv("OILSSPEC_FAKE_MARK"); marker != "" {
-		time.Sleep(time.Second)
-		_ = os.WriteFile(marker, []byte("still running\n"), 0o644)
+	if os.Getenv("OILSSPEC_FAKE_LINGER") != "" {
+		time.Sleep(time.Minute)
 		return 0
 	}
 	code, _ := io.ReadAll(os.Stdin)
@@ -52,8 +52,11 @@ func fakeShell() int {
 	case len(words) == 2 && words[0] == "leave":
 		self, _ := os.Executable()
 		child := exec.Command(self)
-		child.Env = []string{"OILSSPEC_FAKE_SHELL=1", "OILSSPEC_FAKE_MARK=" + words[1]}
+		child.Env = []string{"OILSSPEC_FAKE_SHELL=1", "OILSSPEC_FAKE_LINGER=1"}
 		if err := child.Start(); err != nil {
+			return 1
+		}
+		if err := os.WriteFile(words[1], []byte(strconv.Itoa(child.Process.Pid)), 0o644); err != nil {
 			return 1
 		}
 	}
@@ -77,7 +80,12 @@ func fakeSubject(t *testing.T) oilsspec.Subject {
 // name $SH gives, with an environment made for it -- TMP and HOME the case's directory --
 // and nothing of this process's passed on, such as USERPROFILE.
 func TestRunCase_givesTheCaseItsOwnDirectoryAndEnvironment(t *testing.T) {
-	dir := t.TempDir()
+	// Resolved, since macOS's temporary directory is under /var, a link to /private/var,
+	// and the shell reports where it is without the link.
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	run, err := fakeSubject(t).RunCase(context.Background(), "exit 3", dir, "/repo")
 
@@ -120,15 +128,22 @@ func TestRunCase_endsACaseThatRunsOutOfTime(t *testing.T) {
 // What a case leaves running is ended with it, so it cannot write into the next case or
 // outlive the suite.
 func TestRunCase_endsWhatTheCaseLeftRunning(t *testing.T) {
-	marker := filepath.Join(t.TempDir(), "marker")
+	pidFile := filepath.Join(t.TempDir(), "pid")
 
-	if _, err := fakeSubject(t).RunCase(context.Background(), "leave "+marker, t.TempDir(), "/repo"); err != nil {
+	if _, err := fakeSubject(t).RunCase(context.Background(), "leave "+pidFile, t.TempDir(), "/repo"); err != nil {
 		t.Fatal(err)
 	}
 
-	time.Sleep(1500 * time.Millisecond)
-	if _, err := os.Stat(marker); err == nil {
-		t.Fatal("a process the case left behind was still running a second later")
+	data, err := os.ReadFile(pidFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, err := strconv.Atoi(string(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !processEnds(pid, 2*time.Second) {
+		t.Fatalf("process %d, which the case left behind, was still running after the case", pid)
 	}
 }
 
