@@ -971,5 +971,11 @@
     "stdout": "",
     "status": 2,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x='/_/'; echo ${x////c}",
+    "stdout": "c_c\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

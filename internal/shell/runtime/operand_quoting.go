@@ -88,13 +88,29 @@ func (r Runtime) expandOperand(ctx context.Context, word string, role operandRol
 
 // expandReplaceSpec is `/`'s word: a pattern, then the replacement after the first `/`
 // that is neither quoted nor escaped. Put back together with the pattern's own slashes
-// escaped, which is how splitReplacementSpec reads a literal one.
-func (r Runtime) expandReplaceSpec(ctx context.Context, word string, savedStatus int) string {
+// escaped, which is how splitReplacementSpec reads a literal one -- with no replacement
+// too, where a quoted slash went through bare and was read as the separator, so
+// `${x//'/'}` deleted nothing.
+//
+// After `/` and `//` the pattern's first character is never that separator: `${x////c}`
+// replaces every slash with c and `${x///}` deletes them, in both references. It was taken
+// for the separator, and the empty pattern it left changed nothing. After `/#` and `/%` an
+// empty pattern is allowed, so a leading slash separates there as before.
+func (r Runtime) expandReplaceSpec(ctx context.Context, word, operator string, savedStatus int) string {
 	cut := unquotedSlash(word)
-	if cut < 0 {
-		return r.expandOperand(ctx, word, operandPattern, savedStatus)
+	if cut == 0 && (operator == "/" || operator == "//") {
+		if cut = unquotedSlash(word[1:]); cut >= 0 {
+			cut++
+		}
 	}
-	pattern := strings.ReplaceAll(r.expandOperand(ctx, word[:cut], operandPattern, savedStatus), "/", `\/`)
+	pattern := word
+	if cut >= 0 {
+		pattern = word[:cut]
+	}
+	pattern = strings.ReplaceAll(r.expandOperand(ctx, pattern, operandPattern, savedStatus), "/", `\/`)
+	if cut < 0 {
+		return pattern
+	}
 	return pattern + "/" + r.expandOperand(ctx, word[cut+1:], operandReplacement, savedStatus)
 }
 

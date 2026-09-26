@@ -53,7 +53,7 @@ func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatu
 		}
 		return r.sliceList(ctx, elements, r.listIndices(name), word, name, savedStatus)
 	case "/", "//", "/#", "/%":
-		pattern := r.expandReplaceSpec(ctx, word, savedStatus)
+		pattern := r.expandReplaceSpec(ctx, word, operator, savedStatus)
 		return mapList(elements, func(element string) string {
 			return parameterReplace(element, operator, pattern, r.noCaseMatch())
 		}), true
