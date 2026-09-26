@@ -110,7 +110,12 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 		return ""
 	}
 	child = child.withFDTable(table)
-	status, _ := child.executeTypedScriptFrom(ctx, script, savedStatus)
+	var status int
+	if redirect, isFileRead := fileReadSubstitution(script); isFileRead {
+		status = child.readRedirectedFile(ctx, redirect, savedStatus)
+	} else {
+		status, _ = child.executeTypedScriptFrom(ctx, script, savedStatus)
+	}
 	child.runOwnExitTrap(ctx, r.traps[trapExit], status)
 	// The status was discarded here, which is where `out=$(false) || handler` lost its failure.
 	// The child runs with its own expansion state, so it is recorded on the parent's.

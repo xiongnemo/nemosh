@@ -991,9 +991,6 @@
     "print-source-code.test.sh": {
       "typeset -f with function keyword (ksh style)": "fail"
     },
-    "process-sub.test.sh": {
-      "$(\u003cfile) idiom with process sub": "fail"
-    },
     "prompt.test.sh": {
       "@P with array": "fail",
       "Escaped backslash": "fail",
@@ -1036,8 +1033,6 @@
       "$'' supports \\cA escape for Ctrl-A - mask with 0x1f": "fail"
     },
     "redirect-command.test.sh": {
-      "$(\u003c $file) yields the contents of the file": "ash-only",
-      "`\u003c $file` behaves like $(\u003c file)": "ash-only",
       "redirect bash extensions:   [[  ((  for ((": "fail"
     },
     "redirect-multi.test.sh": {
