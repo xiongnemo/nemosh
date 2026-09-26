@@ -21,15 +21,14 @@ const bashRematch = "BASH_REMATCH"
 // group that did not participate is the empty string rather than absent, because the
 // array is indexed by group number and a gap would shift every later one.
 //
-// On no match the array is left as it was, which is also bash's behaviour: a script
-// that tests one pattern and then reads BASH_REMATCH after a *different*, failed test
-// sees the last successful match. Clearing it would be tidier and would not be bash.
+// A failed match empties the array. It was left holding the last successful match, on the
+// belief that bash does the same, and bash does not: every attempt clears it first
+// (sh_regmatch, lib/sh/shmatch.c), so after a failed test `${#BASH_REMATCH[@]}` is 0. A
+// script that tried one pattern and then a second that failed read the first one's groups
+// as the second's.
 func (r Runtime) recordRegexMatch(groups []string) bool {
-	if groups == nil {
-		return false
-	}
 	if r.arrays != nil {
 		r.arrays.set(bashRematch, groups)
 	}
-	return true
+	return groups != nil
 }

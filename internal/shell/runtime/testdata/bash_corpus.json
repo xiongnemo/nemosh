@@ -893,5 +893,11 @@
     "stdout": "[1 2][3]",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ abc =~ (b) ]]; [[ abc =~ (z) ]]; echo \"${#BASH_REMATCH[@]}\"",
+    "stdout": "0\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

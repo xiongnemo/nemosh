@@ -1037,7 +1037,6 @@
       "Parsing of x={myvar} and related cases": "fail"
     },
     "regex.test.sh": {
-      "BASH_REMATCH": "fail",
       "Bug: Nix idiom with closing ) next to pattern": "fail",
       "Fatal error inside [[ =~ ]]": "fail",
       "Multiple adjacent () groups": "fail",

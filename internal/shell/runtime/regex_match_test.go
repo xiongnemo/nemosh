@@ -64,20 +64,20 @@ func TestBashRematch_recordsWhatMatched(t *testing.T) {
 	}
 }
 
-// No match leaves the array as it was, which is bash's behaviour: a script that tests one
-// pattern and then reads BASH_REMATCH after a different, failed test sees the last
-// successful match. Clearing it would be tidier and would not be bash.
-func TestBashRematch_isLeftAloneWhenNothingMatches(t *testing.T) {
+// No match empties the array, as bash 5.3 does: a script that tests one pattern and then
+// reads BASH_REMATCH after a different, failed test finds nothing there. It found the last
+// successful match, which this test pinned on the belief that it was bash's answer.
+func TestBashRematch_isEmptiedWhenNothingMatches(t *testing.T) {
 	// When
 	status, stdout, stderr := runSetScript(t,
-		"[[ abc =~ b ]]\n[[ xyz =~ q ]]\necho \"[${BASH_REMATCH[0]}]\"\n")
+		"[[ abc =~ b ]]\n[[ xyz =~ q ]]\necho \"[${BASH_REMATCH[0]}] ${#BASH_REMATCH[@]}\"\n")
 
 	// Then
 	if status != 0 {
 		t.Fatalf("status = %d, stderr = %q", status, stderr)
 	}
-	if stdout != "[b]\n" {
-		t.Fatalf("stdout = %q, want the previous successful match", stdout)
+	if stdout != "[] 0\n" {
+		t.Fatalf("stdout = %q, want an empty BASH_REMATCH", stdout)
 	}
 }
 
