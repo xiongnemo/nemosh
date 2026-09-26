@@ -116,6 +116,23 @@ jobs:
           NEMOSH_DIFFERENTIAL: ${{ runner.os == 'macOS' && 'report' || 'strict' }}
         run: go test ./internal/testutil/behavior/ -run Differential -count=1 -v
 
+      # The Oils spec suite, vendored in tests/oils, measures how far nemosh is from
+      # bash: of the cases bash itself passes, how many nemosh passes, file by file.
+      # docs/testing/oils-spec.md holds the numbers, rendered from
+      # tests/oils/baseline.json, and an ordinary test holds that page to the data.
+      #
+      # The baseline is Windows', so Windows runs strict mode, which fails for a case
+      # that stands otherwise than the baseline says -- but does not gate yet, until
+      # the runs CI gets are shown to be the ones a local run gets. Ubuntu reports.
+      # macOS is left out: its bash is 3.2, and nothing here was measured on it.
+      - name: Oils spec suite
+        if: runner.os != 'macOS'
+        continue-on-error: ${{ runner.os == 'Windows' }}
+        shell: bash
+        env:
+          NEMOSH_OILS: ${{ runner.os == 'Windows' && 'strict' || 'report' }}
+        run: go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
+
       # Fuzz seeds are run as ordinary tests on every platform: the corpus in
       # testdata holds the inputs that have already broken something, so a
       # regression is caught without spending CI time exploring.
