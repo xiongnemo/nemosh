@@ -70,6 +70,13 @@ func bareConditionOpener(line string) (compoundKind, bool) {
 		return compoundIf, true
 	case "while", "until":
 		return compoundLoop, true
+	// A loop or a case with nothing after its keyword is still that keyword, and so a
+	// syntax error once its header is read, as both references have it. It ran a command
+	// named `for`.
+	case "for", "select":
+		return compoundLoop, true
+	case "case":
+		return compoundCase, true
 	}
 	return 0, false
 }

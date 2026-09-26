@@ -171,7 +171,7 @@ func typedWordOf(token shellToken) (word, error) {
 	if token.parsed == nil {
 		return word{}, fmt.Errorf("syntax error: unexpected %s", token.value)
 	}
-	return parseTypedWord(*token.parsed), nil
+	return parseTypedWord(*token.parsed), refuseArrayLiteral(*token.parsed)
 }
 
 func parseTypedFor(header string, body []programNode, budget *parseBudget, depth int) (programNode, error) {
@@ -182,6 +182,9 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 		return loopNode{kind: loopArithmetic, arith: loop, body: body}, nil
 	}
 	tokens, err := scanShellTokensWithBudget(header, budget, depth)
+	if err == nil {
+		err = checkLoopName(tokens)
+	}
 	if err != nil {
 		return nil, err
 	}

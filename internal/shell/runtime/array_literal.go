@@ -50,3 +50,52 @@ func hasUnquotedSemicolon(item word) bool {
 	}
 	return false
 }
+
+// An array literal is an assignment's value and nothing else: `echo a=(1 2)`, `for x in a=()`
+// and `case a=() in` are syntax errors in busybox-w32 and bash, where the literal was taken
+// as a word and its text used. It may stand in front of a command, as any assignment may,
+// and after a declaration utility, which assigns its operands. `let x=( 1 )` is arithmetic,
+// and the operand of `[[ x =~ a=(x) ]]` a regular expression, so both keep theirs.
+
+// refuseMisplacedArrayLiteral refuses an array literal after a command name that is not a
+// declaration utility, let, or `[[`.
+func refuseMisplacedArrayLiteral(words []word) error {
+	command := 0
+	for command < len(words) && isAssignmentWord(words[command]) {
+		command++
+	}
+	if command >= len(words) || isDeclarationUtility(words[command]) {
+		return nil
+	}
+	if name := soleLiteralText(words[command]); name == "let" || name == "[[" {
+		return nil
+	}
+	for _, item := range words[command+1:] {
+		if err := refuseArrayLiteral(item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// refuseArrayLiteral refuses a word that is an array literal. An element assignment,
+// `b[0]=2`, is an ordinary word after a command name, as `echo b[0]=2` prints it.
+func refuseArrayLiteral(item word) error {
+	if assignment, literal := parseArrayAssignmentWord(item); literal && assignment.list {
+		return fmt.Errorf("syntax error: unexpected ( in %s", soleLiteralText(item))
+	}
+	return nil
+}
+
+// checkLoopName refuses a loop variable that cannot be a name, `for i.j in`, as busybox-w32
+// does; bash runs such a loop as if nothing were wrong with it. A quoted one is refused when
+// the loop runs, as it was.
+func checkLoopName(tokens []shellToken) error {
+	if len(tokens) == 0 || tokens[0].parsed == nil || !isUnquotedLiteralWord(*tokens[0].parsed) {
+		return nil
+	}
+	if !isValidVariableName(tokens[0].value) {
+		return fmt.Errorf("syntax error: bad for loop variable %s", tokens[0].value)
+	}
+	return nil
+}

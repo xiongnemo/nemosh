@@ -132,6 +132,9 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 			for index, token := range command {
 				words[index] = parseTypedWord(*token.parsed)
 			}
+			if err := refuseMisplacedArrayLiteral(words); err != nil {
+				return andOr{}, err
+			}
 			parsed.commands = append(parsed.commands, simpleCommand{words: words, redirects: redirects, line: budget.line()})
 		}
 		result.pipelines = append(result.pipelines, parsed)

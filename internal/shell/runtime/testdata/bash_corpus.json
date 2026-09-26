@@ -1001,5 +1001,17 @@
     "stdout": "[x][y][z]",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo hi\necho a=(1 2)",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "for i.j in a b c; do\n  echo hi\ndone\necho done",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
   }
 ]

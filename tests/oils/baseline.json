@@ -134,7 +134,6 @@
       "xtrace a+=()": "fail"
     },
     "array.test.sh": {
-      "Array syntax in wrong place": "ash-only",
       "Dynamic parsing of LHS a[$code]=value": "fail",
       "Exporting array doesn't do anything, not even first element": "fail",
       "Length op, index op, then transform op is not allowed": "ash-only",
@@ -150,8 +149,6 @@
     "assign-deferred.test.sh": {
       "'builtin' prefix is allowed on assignments": "fail",
       "export a[7]=8": "fail",
-      "is 'builtin' prefix and array allowed?  OSH is smarter": "fail",
-      "is 'command' prefix and array allowed?  OSH is smarter": "ash-only",
       "local a[3]=4": "fail",
       "readonly a[7]=8": "fail"
     },
@@ -467,7 +464,6 @@
     },
     "builtin-meta-assign.test.sh": {
       "\\builtin declare - ble.sh relies on it": "fail",
-      "builtin declare a=(x y) is allowed": "fail",
       "builtin declare,local": "fail",
       "builtin typeset, export,readonly": "fail",
       "dynamic builtin command ASSIGN, command builtin ASSIGN": "fail",
@@ -667,9 +663,6 @@
       "local after readonly": "fail",
       "unset -v assoc (related to issue #661)": "fail"
     },
-    "case_.test.sh": {
-      "case \\n bug regression": "fail"
-    },
     "command-parsing.test.sh": {
       "Redirect on control flow (ignored in OSH)": "fail",
       "Redirect on control flow with ysh:all (no_parse_ignored)": "fail"
@@ -859,7 +852,7 @@
       "break in condition of loop": "fail",
       "break in condition of nested loop": "fail",
       "builtin,command break,continue,return,exit": "fail",
-      "for loop with invalid identifier": "fail",
+      "for loop with invalid identifier": "ash-only",
       "too many args to continue": "fail",
       "top-level break/continue/return (without strict_control_flow)": "fail"
     },
@@ -922,13 +915,10 @@
     },
     "parse-errors.test.sh": {
       "Bad braced var sub -- not allowed": "ash-only",
-      "Incomplete for": "fail",
-      "Invalid for loop variable name": "fail",
+      "Invalid for loop variable name": "ash-only",
       "Long Token - 65535 bytes": "fail",
       "Token that's too long for Oils - 65536 bytes": "fail",
-      "array literal in case": "fail",
       "array literal inside array is a parse error": "fail",
-      "array literal inside loop is a parse error": "fail",
       "bad var name in export": "fail",
       "bad var name in local": "fail",
       "} on the second line": "fail"
