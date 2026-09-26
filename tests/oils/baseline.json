@@ -94,7 +94,6 @@
       "bash variable can have an associative array part and a string part": "fail",
       "lookup with unquoted $key and quoted \"$i$i\"": "fail",
       "nameref and assoc array": "fail",
-      "printf -v and assoc array": "fail",
       "readonly associative array can't be modified": "fail",
       "set associative array to indexed array literal (very surprising bash behavior)": "fail",
       "setting key to itself (from bash-bug mailing list)": "ash-only",
@@ -198,7 +197,6 @@
       "declare -pnrx": "fail",
       "declare -pnrx var": "fail",
       "eval -- \"$(declare -p arr)\" (restore arrays w/ unset elements)": "fail",
-      "function name with /": "ash-only",
       "syntax error in array assignment": "fail",
       "typeset +r removes read-only attribute (TODO: documented in bash to do nothing)": "fail",
       "typeset -ar makes it readonly": "fail",
@@ -542,7 +540,7 @@
       "Invalid UTF-8": "fail",
       "Runtime error for invalid integer": "ash-only",
       "Too large": "fail",
-      "bash truncates long strftime string at 128": "fail",
+      "bash truncates long strftime string at 128": "ash-only",
       "leading spaces are accepted in value given to %d %X, but not trailing spaces": "fail",
       "negative numbers with unsigned / octal / hex": "fail",
       "printf # flag": "fail",
@@ -837,11 +835,8 @@
       "For loop with and without semicolon": "fail"
     },
     "func-parsing.test.sh": {
-      ". in function name": "fail",
       "= in function name": "fail",
-      "Function name with !": "fail",
       "Function name with $": "ash-only",
-      "Function name with -": "fail",
       "Function name with command sub": "ash-only"
     },
     "glob-bash.test.sh": {
@@ -1141,7 +1136,6 @@
       "shopt -p validates option names": "fail",
       "shopt -q": "fail",
       "shopt -s nounset works in YSH, not in bash": "fail",
-      "shopt -s strict:all": "fail",
       "shopt allows for backward compatibility like bash": "fail",
       "shopt with no flags prints options": "fail",
       "stubbed out bash options": "fail",

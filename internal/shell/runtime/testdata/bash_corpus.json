@@ -737,5 +737,17 @@
     "stdout": "c\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "lib::fn() { echo ok; }; lib::fn",
+    "stdout": "ok\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "my-fn() { echo ok; }; my-fn",
+    "stdout": "ok\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

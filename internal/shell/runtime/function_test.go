@@ -156,10 +156,12 @@ func TestRuntime_installsAFunctionDeclaredWithTheKeyword(t *testing.T) {
 	}
 }
 
-func TestParseScript_acceptsSubshellFunctionBody_andRejectsNonPortableNames(t *testing.T) {
+// A name as both references take it: 1f and f-name are functions there, and a quoted or
+// expanded name is not a name at all.
+func TestParseScript_acceptsSubshellFunctionBody_andRejectsQuotedNames(t *testing.T) {
 	// Given
 	valid := "f() ( echo child )\n"
-	invalid := []string{"1f() { echo no; }\n", "'f'() { echo no; }\n", "f-name() { echo no; }\n"}
+	invalid := []string{"'f'() { echo no; }\n", "\"f\"() { echo no; }\n", "f$x() { echo no; }\n"}
 
 	// When
 	script, err := ParseScript(valid)

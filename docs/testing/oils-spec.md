@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1513 of the 2551 cases bash passes: 59.3%.**
+**nemosh passes 1519 of the 2551 cases bash passes: 59.5%.**
 
-Of the other 1038, it does 102 the way the files record of ash, which may be busybox's
-way, and 936 neither way.
+Of the other 1032, it does 102 the way the files record of ash, which may be busybox's
+way, and 930 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 936 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1513 |
+| that nemosh passes of those | 1519 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -49,7 +49,7 @@ of ash.
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 55 | 74.3% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
-| array-assoc.test.sh | 42 | 36 | 23 | 63.9% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 24 | 66.7% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 7 | 43.8% | 0 | 0 |
@@ -57,7 +57,7 @@ of ash.
 | array.test.sh | 78 | 78 | 53 | 67.9% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 3 | 33.3% | 1 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 1 | 25.0% | 0 | 0 |
-| assign-extended.test.sh | 39 | 34 | 17 | 50.0% | 1 | 0 |
+| assign-extended.test.sh | 39 | 34 | 18 | 52.9% | 0 | 0 |
 | assign.test.sh | 48 | 45 | 31 | 68.9% | 1 | 28 |
 | background.test.sh | 27 | 25 | 21 | 84.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 3 | 33.3% | 3 | 9 |
@@ -83,7 +83,7 @@ of ash.
 | builtin-meta-assign.test.sh | 11 | 11 | 4 | 36.4% | 1 | 11 |
 | builtin-meta.test.sh | 15 | 15 | 4 | 26.7% | 5 | 13 |
 | builtin-misc.test.sh | 7 | 5 | 2 | 40.0% | 0 | 4 |
-| builtin-printf.test.sh | 63 | 55 | 40 | 72.7% | 6 | 57 |
+| builtin-printf.test.sh | 63 | 55 | 40 | 72.7% | 7 | 57 |
 | builtin-process.test.sh | 10 | 9 | 5 | 55.6% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 47 | 74.6% | 4 | 60 |
 | builtin-set.test.sh | 24 | 24 | 17 | 70.8% | 0 | 20 |
@@ -113,7 +113,7 @@ of ash.
 | extglob-match.test.sh | 29 | 29 | 23 | 79.3% | 0 | 0 |
 | fatal-errors.test.sh | 5 | 5 | 0 | 0.0% | 3 | 3 |
 | for-expr.test.sh | 9 | 8 | 5 | 62.5% | 0 | 0 |
-| func-parsing.test.sh | 15 | 15 | 9 | 60.0% | 2 | 13 |
+| func-parsing.test.sh | 15 | 15 | 12 | 80.0% | 2 | 13 |
 | glob-bash.test.sh | 8 | 8 | 4 | 50.0% | 3 | 8 |
 | glob.test.sh | 39 | 37 | 29 | 78.4% | 0 | 36 |
 | globignore.test.sh | 18 | 17 | 3 | 17.6% | 1 | 1 |
@@ -144,7 +144,7 @@ of ash.
 | serialize.test.sh | 10 | 9 | 3 | 33.3% | 1 | 10 |
 | sh-func.test.sh | 12 | 12 | 11 | 91.7% | 0 | 10 |
 | sh-options-bash.test.sh | 9 | 9 | 1 | 11.1% | 0 | 0 |
-| sh-options.test.sh | 39 | 39 | 11 | 28.2% | 1 | 12 |
+| sh-options.test.sh | 39 | 39 | 12 | 30.8% | 1 | 12 |
 | sh-usage.test.sh | 23 | 22 | 18 | 81.8% | 0 | 18 |
 | smoke.test.sh | 18 | 18 | 16 | 88.9% | 0 | 16 |
 | strict-options.test.sh | 17 | 15 | 13 | 86.7% | 0 | 7 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 35 | 66.0% | 4 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 0 | 0.0% | 0 | 2 |
-| all | 2668 | 2551 | 1513 | 59.3% | 102 | 1447 |
+| all | 2668 | 2551 | 1519 | 59.5% | 102 | 1447 |

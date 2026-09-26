@@ -63,20 +63,20 @@ func standaloneFunctionHeader(line string) bool {
 	return strings.TrimSpace(remainder) == ")"
 }
 
+// newFunctionName accepts the names both references accept, which is nearly any word:
+// lib::fn, my-fn, a.b and 1fn are the names library code gives functions to fake
+// namespaces, and each was a syntax error that stopped the whole script. Only a word
+// that is something else is refused: one with blanks, quoting, an expansion, an operator,
+// a bracket, a comment's `#`, or the `=` of an assignment. So is one ending in ?, *, +,
+// @ or !, since here `@(` always begins an extended pattern.
 func newFunctionName(value string) (functionName, bool) {
-	if value == "" || !isPortableNameStart(value[0]) {
+	if value == "" || strings.ContainsAny(value, " \t\n\"'\\$`()<>|&;={}[]#") {
 		return functionName{}, false
 	}
-	for index := 1; index < len(value); index++ {
-		if !isNameByte(value[index]) {
-			return functionName{}, false
-		}
+	if strings.IndexByte("?*+@!", value[len(value)-1]) >= 0 {
+		return functionName{}, false
 	}
 	return functionName{value: value}, true
-}
-
-func isPortableNameStart(value byte) bool {
-	return value == '_' || 'a' <= value && value <= 'z' || 'A' <= value && value <= 'Z'
 }
 
 func parseFunctionBody(source string, budget *parseBudget, depth int) (commandNode, error) {

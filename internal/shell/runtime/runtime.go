@@ -183,10 +183,8 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 
 func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFunctions bool) int {
 	if allowFunctions && !isSpecialBuiltin(args[0]) {
-		if name, ok := newFunctionName(args[0]); ok {
-			if definition, found := r.functions[name]; found {
-				return r.callFunction(ctx, definition, args[1:])
-			}
+		if definition, found := r.calledFunction(args[0]); found {
+			return r.callFunction(ctx, definition, args[1:])
 		}
 	}
 	switch args[0] {

@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 const maxFunctionCallDepth = 128
@@ -26,11 +27,7 @@ func (r Runtime) functionCommand(ctx context.Context, args []string, assignments
 	if len(args) == 0 || isSpecialBuiltin(args[0]) {
 		return lineResult{}, false
 	}
-	name, ok := newFunctionName(args[0])
-	if !ok {
-		return lineResult{}, false
-	}
-	definition, found := r.functions[name]
+	definition, found := r.calledFunction(args[0])
 	if !found {
 		return lineResult{}, false
 	}
@@ -89,4 +86,19 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 		return lineResult{status: result.status}
 	}
 	return result
+}
+
+// calledFunction is the function a command word calls, if one is defined by that name. A
+// word with a slash is a path, and calls no function though one may be defined by it --
+// busybox-w32's answer; bash calls the function.
+func (r Runtime) calledFunction(word string) (functionDefinition, bool) {
+	if strings.Contains(word, "/") {
+		return functionDefinition{}, false
+	}
+	name, ok := newFunctionName(word)
+	if !ok {
+		return functionDefinition{}, false
+	}
+	definition, found := r.functions[name]
+	return definition, found
 }
