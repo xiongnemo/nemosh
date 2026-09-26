@@ -114,8 +114,20 @@ func (r Runtime) buildOperand(ctx context.Context, build *fieldBuilder, word str
 		// An expansion in double quotes is a word even when it comes to nothing.
 		build.text("", false)
 	}
+	afterColon := false
 	for index := 0; index < len(word); {
 		char := word[index]
+		// A tilde-prefix at the start of the word, or after an unquoted `:` in an assignment,
+		// is the directory it names: `${u:-~}` is HOME in both references. See tilde_expand.go.
+		if char == '~' && !quoted && (index == 0 || build.assignment && afterColon) {
+			if directory, width, ok := r.tildePrefix(word[index:], build.assignment, true); ok {
+				build.text(directory, false)
+				index += width
+				afterColon = false
+				continue
+			}
+		}
+		afterColon = char == ':' && !quoted
 		switch {
 		case char == '\\' && index+1 < len(word):
 			switch next := word[index+1]; {

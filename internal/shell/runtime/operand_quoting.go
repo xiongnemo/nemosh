@@ -33,6 +33,13 @@ const (
 
 // expandOperand expands an operator's word in the role it plays.
 func (r Runtime) expandOperand(ctx context.Context, word string, role operandRole, savedStatus int) string {
+	// A value's leading tilde-prefix is the directory it names: `: ${x:=~}` assigns HOME in
+	// both references. See tilde_expand.go.
+	if role == operandValue && !r.operandQuoted && strings.HasPrefix(word, "~") {
+		if directory, width, ok := r.tildePrefix(word, r.noFieldSplit, true); ok {
+			return directory + r.expandOperand(ctx, word[width:], role, savedStatus)
+		}
+	}
 	if !strings.ContainsAny(word, "\"'\\") {
 		return r.expandScalarParameterText(ctx, word, savedStatus)
 	}

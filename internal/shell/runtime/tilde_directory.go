@@ -15,24 +15,6 @@ import (
 // the current directory and `-N` from the far end. One mental model covers both, which is
 // the argument for spelling them the same way here rather than inventing a third.
 
-// expandDirectoryTilde answers a stack reference, or reports that this is not one.
-func (r Runtime) expandDirectoryTilde(value string) (string, bool) {
-	if !strings.HasPrefix(value, "~") || value == "~" {
-		return "", false
-	}
-	// Only up to the first slash is the reference; the rest is a path under it, so
-	// `~-/sub` works the way `~/sub` does.
-	reference, rest, _ := strings.Cut(value[1:], "/")
-	resolved, ok := r.directoryTildeTarget(reference)
-	if !ok {
-		return "", false
-	}
-	if rest == "" {
-		return resolved, true
-	}
-	return strings.TrimRight(resolved, `/\`) + "/" + rest, true
-}
-
 // directoryTildeTarget resolves the part between the tilde and the slash.
 func (r Runtime) directoryTildeTarget(reference string) (string, bool) {
 	// `~/path` has nothing between them, and is the home-directory form rather than a

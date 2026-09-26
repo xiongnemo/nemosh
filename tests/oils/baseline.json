@@ -109,7 +109,7 @@
       "(strict_array) declare -A s+=()": "fail",
       "(strict_array) s+=()": "fail",
       "BashArray cannot be changed to BashAssoc and vice versa": "fail",
-      "Tilde expansions in RHS of [k]=v (BashArray)": "fail",
+      "Tilde expansions in RHS of [k]=v (BashAssoc)": "ash-only",
       "[k1]=v1 (BashArray)": "fail",
       "[k1]=v1 looking like brace expansions (BashArray)": "fail",
       "[k1]=v1 looking like brace expansions (BashAssoc)": "fail",
@@ -723,7 +723,6 @@
       "[[ compound expressions": "fail",
       "[[ over multiple lines is OK": "fail",
       "[[ with op variable (compare with test-builtin.test.sh)": "fail",
-      "more tilde expansion": "fail",
       "negative numbers - zero, decimal, octal, hex, base N": "fail",
       "tilde expansion with =~ (confusing)": "fail"
     },
@@ -1110,14 +1109,10 @@
       "Temp bindings with unset": "ash-only"
     },
     "tilde.test.sh": {
-      "${undef:-~}": "fail",
       "${x//~/~root}": "fail",
       "No tilde expansion in word that looks like assignment but isn't": "ash-only",
       "a[x]=foo:~ has tilde expansion": "fail",
-      "temp assignment x=~ env": "fail",
-      "tilde expansion an assignment keyword": "fail",
-      "x=${undef-~:~}": "fail",
-      "x=foo:~ has tilde expansion": "fail"
+      "temp assignment x=~ env": "fail"
     },
     "toysh-posix.test.sh": {
       "Failed redirect in assignment, vs. export": "fail",

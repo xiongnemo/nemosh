@@ -107,8 +107,9 @@ func (r Runtime) attributedOrAsWritten(name, value string) string {
 // compoundElements lexes the text between the parentheses and expands each word, which is
 // what keeps `"two words"` one element. Lexing rather than splitting on blanks: the quoting,
 // the parameters and the command substitutions inside all have to work, and the lexer
-// already knows how. A keyed element's value is expanded as an assignment is -- unsplit --
-// and so is its subscript.
+// already knows how. A keyed element's value is expanded as an assignment is -- unsplit, with
+// a tilde at its start or after a `:` expanded, as bash 5.3 has `[2]=~:~` -- and its
+// subscript is expanded unsplit too.
 func (r Runtime) compoundElements(ctx context.Context, raw string, savedStatus int) []arrayElement {
 	tokens, err := scanShellTokens(strings.TrimSpace(raw))
 	if err != nil {
@@ -120,6 +121,7 @@ func (r Runtime) compoundElements(ctx context.Context, raw string, savedStatus i
 			continue
 		}
 		if key, value, keyed := splitKeyedElement(*token.parsed); keyed {
+			value.valueTilde = true
 			elements = append(elements, arrayElement{
 				key: r.expandUnsplit(ctx, key, savedStatus), keyed: true, value: r.expandUnsplit(ctx, value, savedStatus),
 			})

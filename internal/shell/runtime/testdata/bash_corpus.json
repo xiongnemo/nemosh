@@ -911,5 +911,23 @@
     "stdout": "y\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "HOME=/h; x=a:~:b; echo $x",
+    "stdout": "a:/h:b\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "HOME=/h; echo ${undef:-~}",
+    "stdout": "/h\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "HOME=''; x=~; echo \"[$x]\"",
+    "stdout": "[]\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"strconv"
-	"strings"
 )
 
 // expandCommandWord is expandWord followed by the pathname expansion of POSIX
@@ -63,7 +62,7 @@ func (r Runtime) expandWord(ctx context.Context, item word, savedStatus int) []s
 // `set -- $empty` leave no positional parameters.
 func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus int) ([]string, []bool) {
 	build := r.newFieldBuilder()
-	for _, part := range item.parts {
+	for _, part := range r.tildeParts(item) {
 		switch part.kind {
 		case wordPartLiteral:
 			build.text(part.text, part.quote == quoteUnquoted)
@@ -100,16 +99,6 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			return nil, nil
 		}
 		fields, globbable = []string{""}, []bool{false}
-	}
-	if item.expandTilde {
-		fields[0] = r.expandHomeTilde(fields[0])
-	}
-	if item.assignmentTilde {
-		// The tilde is after the `=`, so the name and the equals are put back in
-		// front of whatever the tilde expanded to.
-		if name, value, found := strings.Cut(fields[0], "="); found {
-			fields[0] = name + "=" + r.expandHomeTilde(value)
-		}
 	}
 	return fields, globbable
 }

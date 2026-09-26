@@ -117,36 +117,22 @@ func (r Runtime) expandAssignmentWord(ctx context.Context, item word, savedStatu
 	return r.expandingAssignment().expandCommandWord(ctx, assignmentTildeWord(item), savedStatus)
 }
 
-// assignmentTildeWord marks the word so that a tilde straight after the `=` is
-// expanded.
+// assignmentTildeWord marks an assignment word, whose tilde-prefixes begin after the `=` and
+// after every unquoted `:` -- which is what makes `PATH=~/bin:~/sbin` work. See
+// tilde_expand.go; only the leading one after the `=` was expanded.
 //
-// POSIX expands one after each unquoted `:` as well, which is what makes
-// `PATH=~/bin:~/sbin` work. That is not done here: the value is expanded as one
-// piece and there is no per-colon hook, so only the leading tilde is handled. The
-// commoner spelling by far is `x=~/dir`, and a tilde in the middle of a value is
-// left alone rather than half-expanded.
+// Not an array literal, whose text is its elements': they are expanded one by one when the
+// literal is taken apart, and a tilde pass over the whole text half-expanded `[k]=~:~:~`.
 func assignmentTildeWord(item word) word {
-	if item.expandTilde || len(item.parts) == 0 {
+	if len(item.parts) == 0 {
 		return item
 	}
 	first := item.parts[0]
-	if first.kind != wordPartLiteral || first.quote != quoteUnquoted {
-		return item
-	}
 	_, value, found := strings.Cut(first.text, "=")
-	if !found {
-		return item
-	}
-	// A tilde alone after the `=`, or one before a slash. `q=~x` is a user name in
-	// bash and this shell has no user database to answer it with, so it is left as
-	// written rather than guessed at.
-	if value != "~" && !strings.HasPrefix(value, "~/") {
-		// The tilde may be the whole of the value with the rest coming from an
-		// expansion, as in `q=~$suffix`. That case is `~` exactly, caught above.
+	if first.kind != wordPartLiteral || first.quote != quoteUnquoted || !found || strings.HasPrefix(value, "(") {
 		return item
 	}
 	marked := item
-	marked.parts = append([]wordPart(nil), item.parts...)
 	marked.assignmentTilde = true
 	return marked
 }

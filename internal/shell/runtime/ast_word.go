@@ -35,7 +35,10 @@ type word struct {
 	parts       []wordPart
 	quotedEmpty bool
 	expandTilde bool
-	// assignmentTilde marks a `name=~` word, where the tilde to expand is after
-	// the `=` rather than at the start. See assignment_expand.go.
+	// assignmentTilde marks a `name=value` word, whose tilde-prefixes begin after the
+	// `=` and after every unquoted `:`. See tilde_expand.go.
 	assignmentTilde bool
+	// valueTilde marks an assignment's value standing alone -- an array literal's
+	// `[k]=v` -- whose tilde-prefixes begin at its start and after every unquoted `:`.
+	valueTilde bool
 }
