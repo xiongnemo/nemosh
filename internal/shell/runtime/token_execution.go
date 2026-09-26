@@ -135,27 +135,11 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		}
 		command = remaining
 	}
-	expanded := make([]shellToken, 0, len(command))
 	// Where this command's own substitutions begin, so an assignment-only command can exit
 	// with the status of the last one *it* performed rather than one from an earlier line.
 	mark := r.expansion.substitutionMark()
-	// Leading assignments are expanded unsplit. Recognised on the word rather than
-	// on its expansion, which is the only place the distinction still exists: see
-	// assignment_expand.go for what `d=$(date)` did without this.
-	leading, declaration := true, false
-	for _, item := range command {
-		var values []string
-		if (leading || declaration) && isAssignmentWord(item) {
-			values = r.expandAssignmentWord(ctx, item, declaration, savedStatus)
-		} else {
-			declaration = declaration || leading && isDeclarationUtility(item)
-			leading = false
-			values = r.expandCommandWord(ctx, item, savedStatus)
-		}
-		for _, value := range values {
-			expanded = append(expanded, shellToken{kind: tokenWord, value: value})
-		}
-	}
+	// The words in POSIX's order, the assignments one at a time; see command_words.go.
+	expanded := r.expandCommandWords(ctx, command, savedStatus)
 	if r.shellErrorRaised() {
 		return shellErrorResult()
 	}

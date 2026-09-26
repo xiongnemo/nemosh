@@ -953,5 +953,17 @@
     "stdout": "[{X,Y}]\n[a{1..2}]\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "a=1 b=$a; echo \"[$b]\"",
+    "stdout": "[1]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "p=1 q=$p env | grep '^q='",
+    "stdout": "q=1\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

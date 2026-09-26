@@ -187,7 +187,6 @@
       "\"var d = {}; declare -p d\" does not print anything (OSH)": "fail",
       "'local -a x' does not set variable": "fail",
       "'local x' does not set variable": "fail",
-      "Env binding can use preceding bindings, but not subsequent ones": "fail",
       "Env binding in readonly/declare is NOT exported!  (pitfall)": "ash-only",
       "Escaped = in command name": "fail",
       "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
