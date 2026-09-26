@@ -120,7 +120,9 @@ func literalIn(role operandRole, text string) string {
 	}
 	var out strings.Builder
 	for index := 0; index < len(text); index++ {
-		if strings.IndexByte(`*?[]\`, text[index]) >= 0 {
+		// The parentheses and bar too, since extended patterns are always on here: a
+		// quoted `@(cc)` is five characters, not a pattern that matches cc.
+		if strings.IndexByte(`*?[]\()|`, text[index]) >= 0 {
 			out.WriteByte('\\')
 		}
 		out.WriteByte(text[index])

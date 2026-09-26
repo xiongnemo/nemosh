@@ -725,7 +725,6 @@
       "unset a[-1] in sparse array (bf.bash regression)": "fail"
     },
     "case_.test.sh": {
-      "\\(\\) in pattern (regression)": "fail",
       "case \\n bug regression": "fail"
     },
     "command-parsing.test.sh": {
@@ -766,10 +765,8 @@
       "[[ a 3\u003c b ]] doesn't work (bug regression)": "fail",
       "[[ compare with literal -f (compare with test-builtin.test.sh)": "fail",
       "[[ compound expressions": "fail",
-      "[[ glob matching with escapes": "fail",
       "[[ over multiple lines is OK": "fail",
       "[[ with op variable (compare with test-builtin.test.sh)": "fail",
-      "\\(\\) in pattern (regression)": "fail",
       "more tilde expansion": "fail",
       "negative numbers - zero, decimal, octal, hex, base N": "fail",
       "tilde expansion with =~ (confusing)": "fail"

@@ -56,6 +56,10 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStat
 			terms = append(terms, r.regexOperandTerm(ctx, item, savedStatus))
 			continue
 		}
+		if last := len(terms) - 1; last >= 0 && isPatternOperator(terms[last]) && wordHasQuotedPart(item) {
+			terms = append(terms, r.patternOperandTerm(ctx, item, savedStatus))
+			continue
+		}
 		text, quoted := r.expandConditionWord(ctx, item, savedStatus)
 		terms = append(terms, conditionTerm{text: text, quoted: quoted})
 	}
@@ -85,6 +89,33 @@ type conditionTerm struct {
 	// for the operand of `=~`. See regexOperandTerm.
 	regex    string
 	hasRegex bool
+	// pattern is the term as a pattern, its quoted parts made literal; set only for a
+	// partly quoted operand of `==` or `!=`. See patternOperandTerm.
+	pattern    string
+	hasPattern bool
+}
+
+// isPatternOperator reports an unquoted `==`, `=` or `!=`, whose right side is a pattern.
+func isPatternOperator(term conditionTerm) bool {
+	return !term.quoted && (term.text == "==" || term.text == "=" || term.text == "!=")
+}
+
+// patternOperandTerm is the right side of `==` or `!=` when some of it is quoted: a
+// pattern where it is unquoted and a literal where it is quoted, part by part, as a case
+// arm's is -- so `[[ abc == "$p"* ]]` asks whether abc begins with what p holds. The word
+// was compared literally as a whole, and that was false. Each part is expanded once.
+func (r Runtime) patternOperandTerm(ctx context.Context, item word, savedStatus int) conditionTerm {
+	expander := r.expandingAssignment()
+	var text, pattern strings.Builder
+	for _, part := range item.parts {
+		value := strings.Join(expander.expandWord(ctx, word{parts: []wordPart{part}}, savedStatus), "")
+		text.WriteString(value)
+		if part.quote != quoteUnquoted || part.kind == wordPartEscaped {
+			value = literalIn(operandPattern, value)
+		}
+		pattern.WriteString(value)
+	}
+	return conditionTerm{text: text.String(), quoted: true, pattern: pattern.String(), hasPattern: true}
 }
 
 // expandConditionWord expands one word with neither field splitting nor pathname

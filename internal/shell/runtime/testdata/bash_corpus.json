@@ -701,5 +701,11 @@
     "stdout": "[a b c]\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "p=ab; [[ abc == \"$p\"* ]] && echo yes || echo no",
+    "stdout": "yes\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

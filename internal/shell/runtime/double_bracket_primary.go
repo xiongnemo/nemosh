@@ -70,6 +70,18 @@ func (p *conditionParser) parsePrimary() (bool, error) {
 	return p.runtime.evaluateBinaryCondition(operator.text, left, right)
 }
 
+// matchesOperand is `==`'s answer: a pattern match against a right side that is unquoted,
+// or partly quoted, and a comparison against one that is quoted whole.
+func (r Runtime) matchesOperand(left, right conditionTerm) bool {
+	switch {
+	case right.hasPattern:
+		return r.matchWordPattern(right.pattern, left.text)
+	case right.quoted:
+		return r.equalWords(left.text, right.text)
+	}
+	return r.matchWordPattern(right.text, left.text)
+}
+
 // evaluateBinaryCondition is where `[[ ]]` differs from `[` rather than merely
 // looking different.
 func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionTerm) (bool, error) {
@@ -77,15 +89,9 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 	case "==", "=":
 		// The right side is a *pattern* unless it was quoted. Measured:
 		// `[[ abc == a* ]]` is true and `[[ abc == "a*" ]]` is false.
-		if right.quoted {
-			return r.equalWords(left.text, right.text), nil
-		}
-		return r.matchWordPattern(right.text, left.text), nil
+		return r.matchesOperand(left, right), nil
 	case "!=":
-		if right.quoted {
-			return !r.equalWords(left.text, right.text), nil
-		}
-		return !r.matchWordPattern(right.text, left.text), nil
+		return !r.matchesOperand(left, right), nil
 	case "=~":
 		// An extended regular expression, anchored nowhere -- so `[[ abc =~ b ]]`
 		// is true. A quoted part of it is literal, as bash 3.2 and later have it; see

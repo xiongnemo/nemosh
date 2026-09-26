@@ -30,12 +30,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "p=ab; [[ abc == \"$p\"* ]] && echo yes || echo no",
-    "stdout": "yes\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "f=$(mktemp); printf 'hi\\n' > \"$f\"; x=$(< \"$f\"); rm -f \"$f\"; echo \"[$x]\"",
     "stdout": "[hi]\n",
     "status": 0,
