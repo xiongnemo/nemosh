@@ -60,18 +60,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "s=abcdef; i=2; echo ${s:$i:2}",
-    "stdout": "cd\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
-    "script": "set -- a b c; echo ${*:$#}",
-    "stdout": "c\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "f() if true; then echo yes; fi; f",
     "stdout": "yes\n",
     "status": 0,

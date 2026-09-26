@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1510 of the 2551 cases bash passes: 59.2%.**
+**nemosh passes 1513 of the 2551 cases bash passes: 59.3%.**
 
-Of the other 1041, it does 102 the way the files record of ash, which may be busybox's
-way, and 939 neither way.
+Of the other 1038, it does 102 the way the files record of ash, which may be busybox's
+way, and 936 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 939 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1510 |
+| that nemosh passes of those | 1513 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -45,7 +45,7 @@ of ash.
 | alias.test.sh | 48 | 47 | 22 | 46.8% | 0 | 42 |
 | append.test.sh | 20 | 20 | 15 | 75.0% | 0 | 1 |
 | arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 3 |
-| arith-context.test.sh | 16 | 16 | 10 | 62.5% | 0 | 4 |
+| arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 4 |
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 55 | 74.3% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
@@ -159,7 +159,7 @@ of ash.
 | var-op-bash.test.sh | 27 | 26 | 17 | 65.4% | 0 | 2 |
 | var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 |
 | var-op-patsub.test.sh | 28 | 28 | 19 | 67.9% | 0 | 21 |
-| var-op-slice.test.sh | 22 | 22 | 15 | 68.2% | 0 | 6 |
+| var-op-slice.test.sh | 22 | 22 | 17 | 77.3% | 0 | 6 |
 | var-op-strip.test.sh | 29 | 29 | 25 | 86.2% | 0 | 27 |
 | var-op-test.test.sh | 37 | 37 | 26 | 70.3% | 0 | 20 |
 | var-ref.test.sh | 31 | 31 | 6 | 19.4% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 35 | 66.0% | 4 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 0 | 0.0% | 0 | 2 |
-| all | 2668 | 2551 | 1510 | 59.2% | 102 | 1447 |
+| all | 2668 | 2551 | 1513 | 59.3% | 102 | 1447 |

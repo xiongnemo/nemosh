@@ -53,7 +53,7 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	case "-", ":-", "=", ":=", "+", ":+", "?", ":?":
 		return r.applyDefaultOperator(ctx, name, operator, word, value, set, savedStatus)
 	case ":":
-		return r.parameterSubstring(value, word)
+		return r.parameterSubstring(ctx, value, word, savedStatus)
 	case "/", "//", "/#", "/%":
 		return parameterReplace(value, operator, r.expandReplaceSpec(ctx, word, savedStatus), r.noCaseMatch()), nil
 	case "^", "^^", ",", ",,":

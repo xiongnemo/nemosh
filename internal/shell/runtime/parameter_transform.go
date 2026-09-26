@@ -29,10 +29,10 @@ import (
 // without it `${x:-2}` is the entirely different `:-` default operator. The
 // operator splitter tries `:-` first, so both spellings already land where they
 // should.
-func (r Runtime) parameterSubstring(value, spec string) (string, error) {
+func (r Runtime) parameterSubstring(ctx context.Context, value, spec string, savedStatus int) (string, error) {
 	offsetText, lengthText, hasLength := splitSubstringSpec(spec)
 	runes := []rune(value)
-	offset, err := r.substringNumber(offsetText, "offset")
+	offset, err := r.substringNumber(ctx, offsetText, "offset", savedStatus)
 	if err != nil {
 		return "", err
 	}
@@ -45,7 +45,7 @@ func (r Runtime) parameterSubstring(value, spec string) (string, error) {
 	}
 	end := len(runes)
 	if hasLength {
-		length, err := r.substringNumber(lengthText, "length")
+		length, err := r.substringNumber(ctx, lengthText, "length", savedStatus)
 		if err != nil {
 			return "", err
 		}
@@ -64,8 +64,10 @@ func (r Runtime) parameterSubstring(value, spec string) (string, error) {
 	return string(runes[offset:end]), nil
 }
 
-func (r Runtime) substringNumber(text, what string) (int, error) {
-	trimmed := strings.TrimSpace(text)
+// substringNumber evaluates an offset or a length, expanded first, as $(( )) expands what
+// is in it: evaluated as written, `${s:$i:2}` stopped at the `$` as a syntax error.
+func (r Runtime) substringNumber(ctx context.Context, text, what string, savedStatus int) (int, error) {
+	trimmed := strings.TrimSpace(r.expandArithmeticText(ctx, text, savedStatus))
 	if trimmed == "" {
 		return 0, nil
 	}

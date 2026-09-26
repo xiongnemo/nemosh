@@ -49,7 +49,7 @@ func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatu
 		if name == "@" || name == "*" {
 			elements = append([]string{r.params.name}, elements...)
 		}
-		return r.sliceList(elements, word, name)
+		return r.sliceList(ctx, elements, word, name, savedStatus)
 	case "/", "//", "/#", "/%":
 		pattern := r.expandReplaceSpec(ctx, word, savedStatus)
 		return mapList(elements, func(element string) string {
@@ -94,9 +94,9 @@ func (r Runtime) parameterList(ctx context.Context, name string) ([]string, bool
 // The offset and the length are arithmetic, as they are for a string, and a negative
 // offset counts from the end -- `${a[@]: -2}` is the last two, which needs the space
 // for the same reason `${x: -2}` does.
-func (r Runtime) sliceList(elements []string, spec, name string) ([]string, bool) {
+func (r Runtime) sliceList(ctx context.Context, elements []string, spec, name string, savedStatus int) ([]string, bool) {
 	offsetText, lengthText, hasLength := splitSubstringSpec(spec)
-	offset, err := r.substringNumber(offsetText, "offset")
+	offset, err := r.substringNumber(ctx, offsetText, "offset", savedStatus)
 	if err != nil {
 		r.reportExpansionError(err)
 		return nil, true
@@ -110,7 +110,7 @@ func (r Runtime) sliceList(elements []string, spec, name string) ([]string, bool
 	}
 	end := len(elements)
 	if hasLength {
-		length, err := r.substringNumber(lengthText, "length")
+		length, err := r.substringNumber(ctx, lengthText, "length", savedStatus)
 		if err != nil {
 			r.reportExpansionError(err)
 			return nil, true

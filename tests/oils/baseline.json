@@ -44,8 +44,7 @@
       "$[$undefined] is a synonym for $(($undefined (#2566)": "fail",
       "$[$var is a synonym for $(($var (#2426)": "fail",
       "Ambiguous colon in slice": "fail",
-      "Empty expression a[]": "fail",
-      "Slicing of string with variables": "fail"
+      "Empty expression a[]": "fail"
     },
     "arith-dynamic.test.sh": {
       "Double quotes": "fail",
@@ -1246,9 +1245,7 @@
       "${@:offset} and ${*:offset}": "fail",
       "${array[@]:} vs ${array[@]: }  - bash and zsh inconsistent": "fail",
       "Cannot take length of substring slice": "fail",
-      "Slice undefined": "fail",
-      "Slice with an assoc array": "fail",
-      "Slice with an index that's an array -- silent a[0] decay": "fail"
+      "Slice undefined": "fail"
     },
     "var-op-strip.test.sh": {
       "Append using replacement of %": "fail",
