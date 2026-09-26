@@ -30,10 +30,20 @@ func TestMain(m *testing.M) {
 	// intercept above.
 	AllowJobProcesses()
 	endJobsWithTheTestBinary()
+	// A test that runs this binary again, as a helper, has it use the nemosh already
+	// built rather than build its own. The build is seconds on a CI runner, and a helper
+	// held to a five-second deadline ran out of it there on 2026-09-27.
+	if binary := os.Getenv(jobBinaryVariable); binary != "" {
+		if _, err := os.Stat(binary); err == nil {
+			jobExecutable = func() (string, error) { return binary, nil }
+			os.Exit(m.Run())
+		}
+	}
 	directory, err := os.MkdirTemp("", "nemosh-job-binary-")
 	if err == nil {
 		if binary, built := buildJobBinary(directory); built {
 			jobExecutable = func() (string, error) { return binary, nil }
+			_ = os.Setenv(jobBinaryVariable, binary)
 		}
 	}
 	code := m.Run()
@@ -42,6 +52,10 @@ func TestMain(m *testing.M) {
 	}
 	os.Exit(code)
 }
+
+// jobBinaryVariable names, for a copy of this binary run as a helper, the nemosh the
+// first one built.
+const jobBinaryVariable = "NEMOSH_TEST_JOB_BINARY"
 
 func buildJobBinary(directory string) (string, bool) {
 	binary := filepath.Join(directory, "nemosh")
