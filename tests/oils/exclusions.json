@@ -1,0 +1,42 @@
+{
+  "rules": [
+    {
+      "name": "executable bits",
+      "why": "Windows has no executable bit. A case that gives a file one with chmod, or takes one away, measures Cygwin's imitation of it when bash passes, and a native shell has nothing to read.",
+      "platforms": ["windows"],
+      "code": "\\bchmod\\b"
+    },
+    {
+      "name": "symbolic links",
+      "why": "Making a symbolic link on Windows takes a privilege an ordinary user does not have, and CI's does not either.",
+      "platforms": ["windows"],
+      "code": "\\bln\\s+-s"
+    },
+    {
+      "name": "resource limits",
+      "why": "Windows has no resource limits for ulimit to read or set. nemosh refuses ulimit there, as docs/support-matrix.md says, and bash's answers come from Cygwin's imitation.",
+      "platforms": ["windows"],
+      "code": "\\bulimit\\b"
+    },
+    {
+      "name": "/proc",
+      "why": "Only Linux has /proc.",
+      "platforms": ["windows", "darwin"],
+      "code": "/proc/"
+    },
+    {
+      "name": "descriptors past 2",
+      "why": "A Windows program is handed no descriptor past 2, so read_from_fd.py cannot read the one a case opened for it, whichever shell opened it.",
+      "platforms": ["windows"],
+      "code": "\\bread_from_fd\\.py\\b"
+    },
+    {
+      "name": "HOME",
+      "why": "The harness sets HOME to each case's own directory, where Oils leaves it unset: on Windows every shell measured here would otherwise take the user's profile for it, and a case that wrote under ~ would write into the user's real home.",
+      "platforms": ["windows", "linux", "darwin"],
+      "cases": {
+        "vars-special.test.sh": ["$HOME is NOT set"]
+      }
+    }
+  ]
+}

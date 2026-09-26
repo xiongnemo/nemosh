@@ -47,6 +47,12 @@ difference: `HOME` is the case's directory, where Oils leaves it unset. On Windo
 shell measured here takes the user's profile for an unset `HOME`, and a case that wrote
 under `~` would write into the user's real home.
 
+`exclusions.json` leaves out the cases this harness cannot measure on a platform,
+whichever shell runs them: on Windows those that use `chmod`, `ln -s`, `ulimit` or
+`read_from_fd.py`; off Linux those that read `/proc`; and everywhere the one case about
+an unset `HOME`. Each rule says why. A case nemosh fails on purpose, because it refuses
+what the case asks, is not excluded: it counts.
+
 ## Refreshing
 
 Nothing here is edited by hand. To move to a newer Oils, update the clone in

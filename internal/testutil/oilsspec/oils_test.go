@@ -35,6 +35,10 @@ func TestOilsSpec(t *testing.T) {
 		t.Fatalf("NEMOSH_OILS=%s: want report or calibrate", mode)
 	}
 	record := readUpstream(t)
+	exclusions, err := oilsspec.ReadExclusions(root)
+	if err != nil {
+		t.Fatal(err)
+	}
 	work, err := os.MkdirTemp("", "nemosh-oils-")
 	if err != nil {
 		t.Fatal(err)
@@ -54,8 +58,8 @@ func TestOilsSpec(t *testing.T) {
 	}
 	all := map[string]map[string][]oilsspec.CaseResult{}
 	for i, subject := range subjects {
-		results := runSuite(t, subject, record, filepath.Join(work, fmt.Sprintf("run-%d", i)))
-		reportSuite(t, subject, results)
+		results, left := runSuite(t, subject, record, exclusions, filepath.Join(work, fmt.Sprintf("run-%d", i)))
+		reportSuite(t, subject, results, left)
 		all[subject.Label+" "+filepath.Base(subject.Program)] = results
 	}
 	if out := os.Getenv("NEMOSH_OILS_OUT"); out != "" {
@@ -107,11 +111,12 @@ func referenceSubjects(t *testing.T, installed oilsspec.Installed, work string) 
 
 // runSuite runs every spec file with the subject, the files side by side and the cases of
 // each in order, each file with a $REPO_ROOT of its own, since cases write into it. A file
-// Oils marks `suite: disabled` is left out, as Oils leaves it out.
-func runSuite(t *testing.T, subject oilsspec.Subject, record oilsspec.Upstream, work string) map[string][]oilsspec.CaseResult {
+// Oils marks `suite: disabled` is left out, as Oils leaves it out, and so is a case the
+// exclusions leave out on this platform; it answers how many each rule left out.
+func runSuite(t *testing.T, subject oilsspec.Subject, record oilsspec.Upstream, exclusions oilsspec.Exclusions, work string) (map[string][]oilsspec.CaseResult, map[string]int) {
 	t.Helper()
-	root := filepath.Join("..", "..", "..", "tests", "oils")
 	results := map[string][]oilsspec.CaseResult{}
+	left := map[string]int{}
 	var mu sync.Mutex
 	var group sync.WaitGroup
 	slots := make(chan struct{}, runtime.NumCPU())
@@ -131,6 +136,15 @@ func runSuite(t *testing.T, subject oilsspec.Subject, record oilsspec.Upstream, 
 			continue
 		}
 		file := strings.TrimPrefix(name, "spec/")
+		var measured []oilsspec.Case
+		for _, c := range spec.Cases {
+			if rule, excluded := exclusions.Excluded(file, c, runtime.GOOS); excluded {
+				left[rule.Name]++
+				continue
+			}
+			measured = append(measured, c)
+		}
+		spec.Cases = measured
 		group.Add(1)
 		go func() {
 			defer group.Done()
@@ -152,12 +166,12 @@ func runSuite(t *testing.T, subject oilsspec.Subject, record oilsspec.Upstream, 
 		}()
 	}
 	group.Wait()
-	return results
+	return results, left
 }
 
 // reportSuite says, for the whole suite and file by file, how many cases the subject's
-// runs matched what the files record of bash and of ash.
-func reportSuite(t *testing.T, subject oilsspec.Subject, results map[string][]oilsspec.CaseResult) {
+// runs matched what the files record of bash and of ash, and what was left out.
+func reportSuite(t *testing.T, subject oilsspec.Subject, results map[string][]oilsspec.CaseResult, left map[string]int) {
 	t.Helper()
 	files := make([]string, 0, len(results))
 	for file := range results {
@@ -187,6 +201,12 @@ func reportSuite(t *testing.T, subject oilsspec.Subject, results map[string][]oi
 	t.Logf("%s (%s, held to %s): %d cases in %d files; %d do what bash does, %d what ash does; %d ran out of time",
 		filepath.Base(subject.Program), subject.Name, subject.Label, total, len(files), bash, ash, timedOut)
 	t.Logf("%-32s %4s %4s %4s\n%s", "file", "all", "bash", "ash", strings.Join(lines, "\n"))
+	rules := make([]string, 0, len(left))
+	for rule, count := range left {
+		rules = append(rules, fmt.Sprintf("%s %d", rule, count))
+	}
+	sort.Strings(rules)
+	t.Logf("left out on %s, as cases this harness cannot measure here: %s", runtime.GOOS, strings.Join(rules, ", "))
 }
 
 // passedOn is the variables of this process's environment that are named and set, as
