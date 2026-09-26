@@ -80,10 +80,13 @@ func applyArithmetic(left int64, operator string, right int64) (int64, error) {
 			return left / right, nil
 		}
 		return left % right, nil
+	// The count is taken modulo 64, as the machine does it and both references answer:
+	// `5 << -1` is 5 << 63 and `1 << 64` is 1. Go's shift by 64 or more is 0, so every
+	// out-of-range count, a negative one included, came out 0.
 	case "<<":
-		return left << uint64(right), nil
+		return left << (uint64(right) & 63), nil
 	case ">>":
-		return left >> uint64(right), nil
+		return left >> (uint64(right) & 63), nil
 	case "<":
 		return boolValue(left < right), nil
 	case "<=":
@@ -179,12 +182,42 @@ func parseArithmeticBase(token string) (int64, bool) {
 		return 0, false
 	}
 	radix, err := strconv.ParseInt(base, 10, 32)
-	if err != nil || radix < 2 || radix > 64 {
+	if err != nil || radix < 2 || radix > 64 || digits == "" {
 		return 0, false
 	}
-	value, err := strconv.ParseInt(digits, int(radix), 64)
-	if err != nil {
-		return 0, false
+	var value int64
+	for index := 0; index < len(digits); index++ {
+		digit, ok := arithmeticDigit(digits[index], radix)
+		if !ok {
+			return 0, false
+		}
+		value = value*radix + digit
 	}
 	return value, true
+}
+
+// arithmeticDigit is a digit's value in `base#digits`, and whether the base has it: 0-9, then
+// a-z, then A-Z, then @ and _, which makes the 64 that bash allows. Up to base 36 a letter's
+// case does not matter. The digits were strconv's, which stops at base 36, so anything above
+// it -- `64#@`, `37#A` -- was a syntax error where both references read a number.
+func arithmeticDigit(char byte, radix int64) (int64, bool) {
+	var value int64
+	switch {
+	case char >= '0' && char <= '9':
+		value = int64(char - '0')
+	case char >= 'a' && char <= 'z':
+		value = int64(char-'a') + 10
+	case char >= 'A' && char <= 'Z':
+		value = int64(char-'A') + 10
+		if radix > 36 {
+			value += 26
+		}
+	case char == '@':
+		value = 62
+	case char == '_':
+		value = 63
+	default:
+		return 0, false
+	}
+	return value, value < radix
 }

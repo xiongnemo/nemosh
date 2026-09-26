@@ -941,5 +941,11 @@
     "stdout": "2\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "echo $((64#@)) $(( 37#A )) $(( 1 << 64 ))",
+    "stdout": "62 36 1\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
