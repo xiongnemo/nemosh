@@ -194,8 +194,6 @@
       "Test above without 'local' (which is not POSIX)": "fail",
       "Using ${x-default} after unsetting a temp binding shadowing a global": "fail",
       "aliased assignment doesn't split": "fail",
-      "assign and glob": "fail",
-      "declare and glob": "fail",
       "readonly $x where x='b c'": "fail",
       "readonly a=(1 2) no_value c=(3 4) makes 'no_value' readonly": "fail",
       "readonly array should not be modified by a+=(1)": "fail"
@@ -262,7 +260,6 @@
       "Two kinds of tilde expansion": "fail",
       "double expansion with literal and simple var": "ash-only",
       "double expansion with simple var -- bash bug": "ash-only",
-      "expansion on RHS of assignment": "fail",
       "no expansion with RHS assignment": "fail",
       "regression: 0 step disallowed": "fail",
       "{ in expansion": "ash-only"

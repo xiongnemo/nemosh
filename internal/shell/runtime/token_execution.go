@@ -146,7 +146,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	for _, item := range command {
 		var values []string
 		if (leading || declaration) && isAssignmentWord(item) {
-			values = r.expandAssignmentWord(ctx, item, savedStatus)
+			values = r.expandAssignmentWord(ctx, item, declaration, savedStatus)
 		} else {
 			declaration = declaration || leading && isDeclarationUtility(item)
 			leading = false

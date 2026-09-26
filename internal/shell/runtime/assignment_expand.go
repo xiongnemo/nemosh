@@ -90,8 +90,6 @@ func (r Runtime) expandingAssignment() Runtime {
 	return r
 }
 
-// expandAssignmentWord expands one leading assignment, unsplit, with a tilde after
-// the `=` honoured.
 // isDeclarationUtility reports a command word that is, as written, one of the builtins whose
 // `name=value` operands are assignments: expanded as one, not split and not globbed, which
 // POSIX now says for export and readonly and both references do for all five. They were
@@ -113,8 +111,25 @@ func isDeclarationUtility(item word) bool {
 	return false
 }
 
-func (r Runtime) expandAssignmentWord(ctx context.Context, item word, savedStatus int) []string {
-	return r.expandingAssignment().expandCommandWord(ctx, assignmentTildeWord(item), savedStatus)
+// expandAssignmentWord expands one assignment word, unsplit, with its tildes honoured. It is
+// neither brace-expanded nor globbed: `x={X,Y}` is the text {X,Y} and `foo=*` is a star in
+// both references. Both went through the command word's expansion, so `x={X,Y}` was two
+// assignments, x=X then x=Y, and `foo=*` beside files named foo=a and foo=b globbed the whole
+// word and assigned foo=b.
+//
+// braces is for a declaration utility's operand, which bash does brace-expand: `export
+// y={X,Y}` exports y=X and then y=Y there. busybox has no brace expansion at all. Neither
+// globs one.
+func (r Runtime) expandAssignmentWord(ctx context.Context, item word, braces bool, savedStatus int) []string {
+	expander := r.expandingAssignment()
+	if !braces {
+		return expander.expandWord(ctx, assignmentTildeWord(item), savedStatus)
+	}
+	var values []string
+	for _, braced := range expandBraceWord(item) {
+		values = append(values, expander.expandWord(ctx, assignmentTildeWord(braced), savedStatus)...)
+	}
+	return values
 }
 
 // assignmentTildeWord marks an assignment word, whose tilde-prefixes begin after the `=` and

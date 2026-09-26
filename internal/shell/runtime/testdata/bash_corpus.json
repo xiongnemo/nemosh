@@ -947,5 +947,11 @@
     "stdout": "62 36 1\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x={X,Y}; echo \"[$x]\"; w=a{1..2}; echo \"[$w]\"",
+    "stdout": "[{X,Y}]\n[a{1..2}]\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
