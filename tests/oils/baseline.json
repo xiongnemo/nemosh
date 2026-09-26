@@ -79,7 +79,6 @@
       "declare builtin doesn't allow spaces": "ash-only"
     },
     "array-assoc.test.sh": {
-      "${!ref} and assoc array": "fail",
       "${assoc} is like ${assoc[0]}": "fail",
       "BashAssoc ${a[@]@Q}": "fail",
       "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
@@ -115,7 +114,6 @@
       "non-index forms of element (BashAssoc)": "fail"
     },
     "array-sparse.test.sh": {
-      "${!a[0]}": "fail",
       "${@:offset:length}": "fail",
       "${a-}": "fail",
       "${a[@]#...}": "fail",
@@ -136,8 +134,6 @@
       "xtrace a+=()": "fail"
     },
     "array.test.sh": {
-      "${!a[1]} is named ref in bash": "fail",
-      "${!a} on array": "fail",
       "Array syntax in wrong place": "ash-only",
       "Dynamic parsing of LHS a[$code]=value": "fail",
       "Exporting array doesn't do anything, not even first element": "fail",
@@ -898,10 +894,7 @@
     "nix-idioms.test.sh": {
       "${!ref} to undefined array": "fail",
       "${!ref} to undefined string var is fatal, INCONSISTENT with array": "fail",
-      "Similar to above with set -u": "fail",
-      "export with dynamic var name +=": "fail",
-      "let idiom can be written in POSIX shell - eval \": \\$(( ))\"": "fail",
-      "var ref to array 'preHooks[@]'": "fail"
+      "export with dynamic var name +=": "fail"
     },
     "nul-bytes.test.sh": {
       "Compare \\x00 byte versus \\x01 byte - command sub": "fail",
@@ -1136,7 +1129,6 @@
       "printf / echo -e do NOT check surrogates at runtime": "fail"
     },
     "var-op-bash.test.sh": {
-      "${!r@a} with r='a[0]' (attribute for indirect expansion of an array element)": "fail",
       "-o nounset with var ops": "fail",
       "Array expansion with nullary var op @P": "fail",
       "Array expansion with nullary var op @Q": "fail",
@@ -1174,17 +1166,15 @@
       "$@ (empty) and - and +": "fail",
       "Error when empty": "fail",
       "Error when unset": "fail",
-      "Nix idiom ${!hooksSlice+\"${!hooksSlice}\"} - was workaround for obsolete bash 4.3 bug": "fail",
       "array and - and +": "fail",
       "op-test for ${!array} with array=\"a\" and array=\"a[0]\"": "fail",
-      "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "fail",
+      "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "ash-only",
       "op-test for ${a} and ${a[0]}": "fail"
     },
     "var-ref.test.sh": {
       "${!OPTIND} (used by bash completion": "fail",
       "${!a[@]-'default'} is legal but fails with more than one element": "fail",
       "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
-      "${!ref-default}": "fail",
       "${!undef:-}": "fail",
       "Array indirect expansion with @? conversion": "fail",
       "Array indirect expansion with replacements": "fail",
@@ -1194,18 +1184,8 @@
       "Bizarre tilde expansion in array index": "fail",
       "Indirect expansion TO fancy expansion features bash disallows": "fail",
       "Indirect expansion, THEN suffix operators": "fail",
-      "Var Ref Code Injection $(tee PWNED)": "fail",
-      "Var ref, then assignment with ${ := }": "fail",
       "Var ref, then error with ${ ? }": "fail",
-      "array ref": "fail",
-      "var ref TO array var": "fail",
-      "var ref TO array var, with subscripts": "fail",
-      "var ref TO array with arbitrary subscripts": "fail",
-      "var ref TO assoc array a[key]": "fail",
-      "var ref to $1 and $2 with 1 and 2": "fail",
-      "var ref to $? with '?'": "fail",
-      "var ref to $@ with @": "fail",
-      "var ref: 1, @, *": "fail"
+      "var ref TO assoc array a[key]": "fail"
     },
     "var-sub-quote.test.sh": {
       "$'' allowed within VarSub arguments": "fail",

@@ -67,10 +67,10 @@ func TestParameterTransform_matchesBash(t *testing.T) {
 		},
 		{name: "case conversion of an empty value", script: "x=\necho [${x^^}]\n", want: "[]\n"},
 
-		// Indirection.
+		// Indirection. Through an empty value it is `invalid variable name` in bash 5.3, which
+		// this pinned as empty; see parameter_indirect_test.go.
 		{name: "indirect through a name", script: "a=b\nb=c\necho ${!a}\n", want: "c\n"},
 		{name: "indirect through an unset name is empty", script: "a=nope\necho [${!a}]\n", want: "[]\n"},
-		{name: "indirect through an empty value is empty", script: "a=\necho [${!a}]\n", want: "[]\n"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

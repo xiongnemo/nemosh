@@ -231,26 +231,20 @@ func parameterCase(value, operator, pattern string) string {
 	return string(runes)
 }
 
-// expandIndirectParameter is `${!name}`: the value of the variable whose name this
-// variable holds.
+// expandIndirectParameter is `${!ref...}` where one string is wanted: a here-document, an
+// arithmetic expression, a condition's operand. See parameter_indirect.go; a whole array
+// that ref names is joined with blanks, as `${a[@]}` is in those places.
 //
-// The array forms `${!a[@]}` and `${!a[*]}` are subscripts rather than indirection
-// and are answered before this is reached; see array.go.
+// The array forms `${!a[@]}` and `${!a[*]}` are subscripts rather than indirection, and
+// `${!prefix*}` and `${!prefix@}` the names with a prefix; both are answered before this is
+// reached, see array.go and namesWithPrefix.
 func (r Runtime) expandIndirectParameter(ctx context.Context, name string, savedStatus int) (string, error) {
-	// `${!prefix*}` and `${!prefix@}` are a different question sharing the `!` -- the
-	// names that begin with prefix -- and are answered as the lists they are before this
-	// is reached; see namesWithPrefix.
-	target, set := r.lookupParameter(ctx, name, savedStatus)
-	if !set || target == "" {
-		// bash gives the empty string rather than an error, and a script testing
-		// `${!ref}` for emptiness is asking a reasonable question.
-		return "", nil
+	target, tail, err := r.indirectTarget(ctx, name, savedStatus)
+	if err != nil || target == "" {
+		return "", err
 	}
-	if !isVariableName(target) {
-		return "", fmt.Errorf("%s: invalid variable name", target)
-	}
-	value, _ := r.lookupParameter(ctx, target, savedStatus)
-	return value, nil
+	values := r.expandParameterPart(ctx, wordPart{kind: wordPartParameter, text: "${" + target + tail + "}"}, savedStatus)
+	return strings.Join(values, " "), nil
 }
 
 // namesWithPrefix is `${!prefix@}` and `${!prefix*}`: every set variable or array whose

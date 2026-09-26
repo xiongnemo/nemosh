@@ -989,5 +989,17 @@
     "stdout": "st=127 []\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- a b c; echo ${!#}",
+    "stdout": "c\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(x y z); ref='a[@]'; printf '[%s]' \"${!ref}\"",
+    "stdout": "[x][y][z]",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1619 of the 2551 cases bash passes: 63.5%.**
+**nemosh passes 1639 of the 2551 cases bash passes: 64.2%.**
 
-Of the other 932, it does 102 the way the files record of ash, which may be busybox's
-way, and 830 neither way.
+Of the other 912, it does 103 the way the files record of ash, which may be busybox's
+way, and 809 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 830 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1619 |
+| that nemosh passes of those | 1639 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -49,12 +49,12 @@ of ash.
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 58 | 78.4% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
-| array-assoc.test.sh | 42 | 36 | 27 | 75.0% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 28 | 77.8% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 8 | 50.0% | 0 | 0 |
-| array-sparse.test.sh | 40 | 40 | 21 | 52.5% | 0 | 0 |
-| array.test.sh | 78 | 78 | 64 | 82.1% | 2 | 7 |
+| array-sparse.test.sh | 40 | 40 | 22 | 55.0% | 0 | 0 |
+| array.test.sh | 78 | 78 | 66 | 84.6% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 3 | 33.3% | 1 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | assign-extended.test.sh | 39 | 34 | 18 | 52.9% | 0 | 0 |
@@ -126,7 +126,7 @@ of ash.
 | let.test.sh | 2 | 2 | 2 | 100.0% | 0 | 1 |
 | loop.test.sh | 29 | 28 | 22 | 78.6% | 0 | 23 |
 | nameref.test.sh | 32 | 32 | 6 | 18.8% | 0 | 2 |
-| nix-idioms.test.sh | 6 | 6 | 0 | 0.0% | 0 | 0 |
+| nix-idioms.test.sh | 6 | 6 | 3 | 50.0% | 0 | 0 |
 | nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 3 |
 | nul-bytes.test.sh | 16 | 16 | 0 | 0.0% | 0 | 12 |
 | paren-ambiguity.test.sh | 8 | 8 | 4 | 50.0% | 2 | 8 |
@@ -156,13 +156,13 @@ of ash.
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
 | var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
-| var-op-bash.test.sh | 27 | 26 | 17 | 65.4% | 0 | 2 |
+| var-op-bash.test.sh | 27 | 26 | 18 | 69.2% | 0 | 2 |
 | var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 |
 | var-op-patsub.test.sh | 28 | 28 | 23 | 82.1% | 1 | 21 |
 | var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 6 |
 | var-op-strip.test.sh | 29 | 29 | 25 | 86.2% | 0 | 27 |
-| var-op-test.test.sh | 37 | 37 | 29 | 78.4% | 0 | 20 |
-| var-ref.test.sh | 31 | 31 | 6 | 19.4% | 0 | 0 |
+| var-op-test.test.sh | 37 | 37 | 30 | 81.1% | 1 | 20 |
+| var-ref.test.sh | 31 | 31 | 17 | 54.8% | 0 | 0 |
 | var-sub-quote.test.sh | 41 | 41 | 38 | 92.7% | 0 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
 | vars-bash.test.sh | 1 | 1 | 0 | 0.0% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1619 | 63.5% | 102 | 1447 |
+| all | 2668 | 2551 | 1639 | 64.2% | 103 | 1447 |
