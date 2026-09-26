@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -198,11 +197,12 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			// `a=(one two three)` is an array assignment, not a subshell. The `(
 			// belongs to the word only when it comes directly after `name=` or
 			// `name+=`, which is the test bash applies too -- everywhere else a
-			// parenthesis still starts a subshell.
+			// parenthesis still starts a subshell. What is between them is checked
+			// here and lexed into elements when it runs; see array_literal.go.
 			if char == '(' && looksLikeArrayAssignment(buffer.String()) {
-				end, ok := matchingParenthesis(line, index)
-				if !ok {
-					return nil, nil, fmt.Errorf("%w: missing ) for array assignment", ErrIncompleteScript)
+				end, err := arrayLiteralEnd(line, index, depth)
+				if err != nil {
+					return nil, nil, err
 				}
 				text := line[index : end+1]
 				buffer.WriteString(text)
@@ -211,7 +211,11 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 				index = end
 				continue
 			}
-			if char == ' ' || char == '\t' {
+			// A newline that reaches the lexer unquoted is a blank. The script was cut
+			// into commands at its newlines before this, so one that is left is inside a
+			// construct that spans lines, and in an array literal it separates elements:
+			// it stayed in the element after it, so `a=(\n1\n2\n)` made "1" and "\n2".
+			if char == ' ' || char == '\t' || char == '\n' {
 				if err := flush(index); err != nil {
 					return nil, nil, err
 				}

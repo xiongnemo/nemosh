@@ -129,6 +129,7 @@
       "${sp[i]} with negative invalid index": "fail",
       "((sp[i])) and ((sp[i]++)) with invalid negative index": "fail",
       "(YSH) $[bool(a)]": "fail",
+      "(YSH) append v1 v2... (a)": "fail",
       "Negative out-of-bound index with a[i]=v (1/2)": "fail",
       "Negative out-of-bound index with a[i]=v (2/2)": "fail",
       "Performance demo": "fail",
@@ -159,9 +160,6 @@
       "Set array item to array": "fail",
       "Slice of sparse array with [@]": "fail",
       "array default": "fail",
-      "array over multiple lines": "fail",
-      "array with invalid token": "fail",
-      "space before ( in array initialization": "fail",
       "test -v a[i] with arith expressions": "fail"
     },
     "assign-deferred.test.sh": {

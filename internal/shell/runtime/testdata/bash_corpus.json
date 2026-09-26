@@ -815,5 +815,23 @@
     "stdout": "grouped\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(\n1\n'2 3'\n)\nprintf '[%s]' \"${a[@]}\"",
+    "stdout": "[1][2 3]",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(\n1\n&\n'2 3'\n)",
+    "stdout": "",
+    "status": 2,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a= (1 '2 3')\necho after",
+    "stdout": "",
+    "status": 2,
+    "reference": "bash-5.3"
   }
 ]

@@ -122,6 +122,12 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 				parsed.commands = append(parsed.commands, command[0].group.withRedirects(redirects))
 				continue
 			}
+			// A group anywhere else in a command is a syntax error, as bash has it: `a= (1 2)`,
+			// an array assignment with a stray blank, and `x=1 (echo)`. Its placeholder went
+			// on as an ordinary word, so the shell ran a command named __nemosh_group__.
+			if err := refuseEmbeddedGroup(command); err != nil {
+				return andOr{}, err
+			}
 			words := make([]word, len(command))
 			for index, token := range command {
 				words[index] = parseTypedWord(*token.parsed)
@@ -172,6 +178,21 @@ func isUnquotedLiteralWord(item word) bool {
 		}
 	}
 	return true
+}
+
+// refuseEmbeddedGroup refuses a group that is one word among others in a command, which is
+// the only place a group can reach that is not the start of one.
+func refuseEmbeddedGroup(command []shellToken) error {
+	for _, token := range command {
+		switch {
+		case token.group == nil:
+		case token.group.brace:
+			return fmt.Errorf("syntax error: unexpected {")
+		default:
+			return fmt.Errorf("syntax error: unexpected (")
+		}
+	}
+	return nil
 }
 
 func classifyCommandError(err error) error {
