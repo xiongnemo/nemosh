@@ -26,8 +26,11 @@ type fieldBuilder struct {
 	separators string
 	assignment bool
 	fields     []string
-	globbable  []bool
-	current    strings.Builder
+	// patterns is each field as a pathname pattern, its quoted characters escaped, or the
+	// empty string for a field that is not one. See text.
+	patterns []string
+	current  strings.Builder
+	pattern  strings.Builder
 	// open is whether the field being built has begun: it holds a character, or a quoted
 	// empty string, which begins one.
 	open bool
@@ -54,8 +57,18 @@ func (r Runtime) newFieldBuilder() *fieldBuilder {
 // text adds characters that stand as they are: a literal, a quoted piece, an expansion that
 // is not split. Even an empty one begins a field, which is what makes `""` a word. glob is
 // whether the characters are unquoted, and so may be a pattern.
+//
+// What is quoted goes into the field's pattern escaped, so a quoted pattern character is
+// matched as itself when an unquoted one beside it makes the field a pattern: `\[???\]`
+// matches a file named [abc], and `*.[C\-D]` a file ending in -, in both references. The
+// pattern was the field's text, where the quoting had already gone.
 func (b *fieldBuilder) text(value string, glob bool) {
 	b.current.WriteString(value)
+	if glob {
+		b.pattern.WriteString(value)
+	} else {
+		b.pattern.WriteString(escapeGlob(value))
+	}
 	b.open = true
 	b.glob = b.glob || glob && containsGlobMeta(value)
 	b.delimiter = noDelimiter
@@ -135,16 +148,37 @@ func (b *fieldBuilder) unquotedList(values []string, joiner string) {
 // close ends the field being built, empty or not.
 func (b *fieldBuilder) close() {
 	b.fields = append(b.fields, b.current.String())
-	b.globbable = append(b.globbable, b.glob)
+	pattern := ""
+	if b.glob {
+		pattern = b.pattern.String()
+	}
+	b.patterns = append(b.patterns, pattern)
 	b.current.Reset()
+	b.pattern.Reset()
 	b.open, b.glob = false, false
 }
 
-// finish is the word's fields, and whether each may be a pattern. A delimiter at the end of
-// the word leaves no empty field after it.
-func (b *fieldBuilder) finish() ([]string, []bool) {
+// finish is the word's fields, and each one's pattern, empty for a field that is not one. A
+// delimiter at the end of the word leaves no empty field after it.
+func (b *fieldBuilder) finish() ([]string, []string) {
 	if b.open {
 		b.close()
 	}
-	return b.fields, b.globbable
+	return b.fields, b.patterns
+}
+
+// escapeGlob is text as a pattern that matches it and nothing else: each pattern character
+// escaped, the hyphen too, which inside a bracket expression would make a range.
+func escapeGlob(text string) string {
+	if !strings.ContainsAny(text, `*?[]\-`) {
+		return text
+	}
+	var out strings.Builder
+	for index := 0; index < len(text); index++ {
+		if strings.IndexByte(`*?[]\-`, text[index]) >= 0 {
+			out.WriteByte('\\')
+		}
+		out.WriteByte(text[index])
+	}
+	return out.String()
 }

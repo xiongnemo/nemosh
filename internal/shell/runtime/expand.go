@@ -23,14 +23,14 @@ func (r Runtime) expandCommandWord(ctx context.Context, item word, savedStatus i
 }
 
 func (r Runtime) expandOneCommandWord(ctx context.Context, item word, savedStatus int) []string {
-	fields, globbable := r.expandWordFields(ctx, item, savedStatus)
+	fields, patterns := r.expandWordFields(ctx, item, savedStatus)
 	var expanded []string
 	for index, field := range fields {
-		if !globbable[index] {
+		if patterns[index] == "" {
 			expanded = append(expanded, field)
 			continue
 		}
-		matches := r.expandPathnames(field)
+		matches := r.expandPathnames(patterns[index])
 		if len(matches) == 0 {
 			// A pattern matching nothing stays exactly as written, which is POSIX.
 			// `shopt -s nullglob` asks for the other answer -- the field disappears --
@@ -51,16 +51,16 @@ func (r Runtime) expandWord(ctx context.Context, item word, savedStatus int) []s
 	return fields
 }
 
-// expandWordFields returns the fields and, for each of them, whether an
-// unquoted part contributed a pathname metacharacter to it. Quoting is what
-// decides: `echo "*"` prints a star and `echo *` lists the directory, and the
-// only thing that tells them apart is where the star came from.
+// expandWordFields returns the fields and, for each of them, the pathname pattern it is when
+// an unquoted part contributed a pathname metacharacter to it, or the empty string. Quoting
+// is what decides: `echo "*"` prints a star and `echo *` lists the directory, and the only
+// thing that tells them apart is where the star came from.
 //
 // The parts are expanded in order into a fieldBuilder, which splits what an unquoted
 // expansion produced across the whole word; see field_builder.go. A word that comes to no
 // field at all disappears rather than becoming one empty field -- which is what makes
 // `set -- $empty` leave no positional parameters.
-func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus int) ([]string, []bool) {
+func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus int) ([]string, []string) {
 	build := r.newFieldBuilder()
 	for _, part := range r.tildeParts(item) {
 		switch part.kind {
@@ -93,14 +93,14 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			}
 		}
 	}
-	fields, globbable := build.finish()
+	fields, patterns := build.finish()
 	if len(fields) == 0 {
 		if !item.quotedEmpty {
 			return nil, nil
 		}
-		fields, globbable = []string{""}, []bool{false}
+		fields, patterns = []string{""}, []string{""}
 	}
-	return fields, globbable
+	return fields, patterns
 }
 
 // buildParameter adds a parameter expansion to the word being built.

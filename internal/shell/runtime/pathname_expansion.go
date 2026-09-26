@@ -28,7 +28,9 @@ func (r Runtime) expandPathnames(field string) []string {
 	if fixed == len(segments) {
 		return nil
 	}
-	base := strings.Join(segments[:fixed], "/")
+	// A pattern's quoted characters are escaped (see escapeGlob); a fixed stretch is a path,
+	// so it goes back to the characters it stands for.
+	base := unescapeGlob(strings.Join(segments[:fixed], "/"))
 	if base == "" && fixed > 0 {
 		base = "/"
 	}
@@ -58,7 +60,7 @@ func (r Runtime) expandPathSegment(bases []string, segment string) []string {
 		if !containsGlobMeta(segment) {
 			// A fixed segment after a globbed one still has to exist, or the
 			// branch it sits on is not a match.
-			candidate := joinGlobPath(base, segment)
+			candidate := joinGlobPath(base, unescapeGlob(segment))
 			if r.pathExists(candidate) {
 				matches = append(matches, candidate)
 			}
@@ -131,6 +133,22 @@ func (r Runtime) pathExists(candidate string) bool {
 	}
 	_, statErr := os.Lstat(resolved.Native)
 	return statErr == nil
+}
+
+// unescapeGlob is the text an escaped pattern stands for, each backslash dropped for the
+// character after it.
+func unescapeGlob(pattern string) string {
+	if !strings.Contains(pattern, `\`) {
+		return pattern
+	}
+	var out strings.Builder
+	for index := 0; index < len(pattern); index++ {
+		if pattern[index] == '\\' && index+1 < len(pattern) {
+			index++
+		}
+		out.WriteByte(pattern[index])
+	}
+	return out.String()
 }
 
 func joinGlobPath(base, name string) string {

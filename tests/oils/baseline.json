@@ -791,8 +791,6 @@
       "\\ in unquoted substitutions escapes globchars": "fail",
       "glob can expand to command and arg": "fail",
       "glob double quotes": "fail",
-      "glob escaped": "fail",
-      "glob with escaped - in char class": "fail",
       "shopt -u globskipdots shows . and ..": "fail"
     },
     "globignore.test.sh": {
@@ -1099,7 +1097,6 @@
     },
     "toysh.test.sh": {
       "Brace Expansion": "fail",
-      "char class / extglob": "fail",
       "extglob $IFS 1": "fail",
       "extglob $IFS 2": "fail",
       "patsub of $* - http://landley.net/notes.html#23-04-2020": "fail",
@@ -1216,9 +1213,6 @@
       "\\r at end of line is not special": "fail",
       "\\r in arith expression is allowed by some shells, but not most!": "fail",
       "whitespace in string to integer conversion": "fail"
-    },
-    "word-eval.test.sh": {
-      "Globbing escaping": "fail"
     },
     "word-split.test.sh": {
       "IFS and joining arrays by assignments": "ash-only",
