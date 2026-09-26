@@ -45,6 +45,18 @@ func (a *shellArrays) unsetElement(name string, index int) {
 	delete(a.present[name], index)
 }
 
+// span is one past the highest index of a name that is set, which is what a negative
+// subscript counts back from, as bash counts. Not the slice's length: unsetting the last
+// element leaves its slot in place, and a[-1] counted from there reached the element that
+// was gone.
+func (a *shellArrays) span(name string) int {
+	indices := a.liveIndices(name)
+	if len(indices) == 0 {
+		return 0
+	}
+	return indices[len(indices)-1] + 1
+}
+
 // isLive reports whether one index of a name is set. unsetElement drops only the mark and
 // leaves the old value in its slot, so a read that skips this sees what was removed.
 func (a *shellArrays) isLive(name string, index int) bool {

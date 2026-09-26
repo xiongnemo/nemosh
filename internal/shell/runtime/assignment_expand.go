@@ -166,8 +166,7 @@ func (r Runtime) assignArrayElementText(ctx context.Context, reference arrayRefe
 	// A negative subscript counts from the end, so it needs the length the array has
 	// now. This refused one outright while the literal `a[-1]=x` path counted it; the
 	// two answered the same question differently, and there is one of them now.
-	existing, _ := r.arrays.get(reference.name)
-	index, withinRange := countFromEnd(index, len(existing))
+	index, withinRange := countFromEnd(index, r.arrays.span(reference.name))
 	if !withinRange {
 		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", reference.subscript)
 		return 1

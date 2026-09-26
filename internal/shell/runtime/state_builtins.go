@@ -129,6 +129,13 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 			fmt.Fprintf(r.streams.Stderr, "unset: %s: %v\n", name, err)
 			return 1
 		}
+		// A negative subscript counts back from the last element, so `unset 'a[-1]'` drops
+		// it; it removed nothing at all. One that reaches past the start is bash's error.
+		index, withinRange := countFromEnd(index, r.arrays.span(base))
+		if !withinRange {
+			fmt.Fprintf(r.streams.Stderr, "unset: [%s]: bad array subscript\n", subscript)
+			return 1
+		}
 		r.arrays.unsetElement(base, index)
 		r.markVarMutation(base)
 	}

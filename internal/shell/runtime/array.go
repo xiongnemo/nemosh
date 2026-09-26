@@ -203,7 +203,11 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 	}
 	// A subscript is an expression, not a literal: `${a[$i]}` and `${a[1+1]}` both
 	// have to resolve. See array_subscript.go for what this used to do instead.
-	index, ok := r.subscriptIndex(ctx, reference.subscript, len(elements))
+	span := len(elements)
+	if isArray {
+		span = r.arrays.span(reference.name)
+	}
+	index, ok := r.subscriptIndex(ctx, reference.subscript, span)
 	if !ok || index >= len(elements) || isArray && !r.arrays.isLive(reference.name, index) {
 		// Out of range is the empty string, not an error: a script testing
 		// `${a[9]}` for emptiness is asking a reasonable question. So is an index

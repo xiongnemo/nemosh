@@ -137,7 +137,6 @@
       "a[i]=v with BigInt": "fail",
       "compgen -F _set_COMPREPLY": "fail",
       "crash dump": "fail",
-      "unset -v a[i] for max index": "fail",
       "unset -v a[i] with out-of-bound negative index": "fail",
       "xtrace a+=()": "fail"
     },
@@ -148,13 +147,10 @@
       "Dynamic parsing of LHS a[$code]=value": "fail",
       "Exporting array doesn't do anything, not even first element": "fail",
       "Is element set?  test -v a[i]": "fail",
-      "Length after unset": "fail",
       "Length op, index op, then transform op is not allowed": "ash-only",
       "Multiple subscripts not allowed": "fail",
-      "Negative index and sparse array": "fail",
       "Negative index and sparse array #2": "fail",
       "Negative slice length": "fail",
-      "Regression: Array length after unset": "fail",
       "Regression: Assigning with out-of-range negative index": "fail",
       "Regression: Negative out-of-range index in [[ -v a[index] ]]": "fail",
       "Regression: Out-of-bound negative offset for ${a[@]:offset}": "fail",
@@ -700,9 +696,7 @@
       "export -n foo=bar not allowed": "fail",
       "export -n undefined is ignored": "fail",
       "local after readonly": "fail",
-      "unset -v assoc (related to issue #661)": "fail",
-      "unset a[-1] (bf.bash regression)": "fail",
-      "unset a[-1] in sparse array (bf.bash regression)": "fail"
+      "unset -v assoc (related to issue #661)": "fail"
     },
     "case_.test.sh": {
       "case \\n bug regression": "fail"
