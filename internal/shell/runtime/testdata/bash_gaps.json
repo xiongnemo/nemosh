@@ -10,5 +10,125 @@
     "stdout": "same\ndiffers\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo \"${#IFS}\"",
+    "stdout": "3\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "OLD=$IFS; IFS=:; IFS=$OLD; set -- $(echo a b); echo $#",
+    "stdout": "2\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "a=(); set -- \"${a[@]}\"; echo $#",
+    "stdout": "0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(1 \"2 3\"); set -- ${a[@]}; echo $#",
+    "stdout": "3\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(xa yb); echo \"${a[1]:-d}\"",
+    "stdout": "yb\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "set -- a b c; x=\"$@\"; echo \"[$x]\"",
+    "stdout": "[a b c]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "p=ab; [[ abc == \"$p\"* ]] && echo yes || echo no",
+    "stdout": "yes\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f=$(mktemp); printf 'hi\\n' > \"$f\"; x=$(< \"$f\"); rm -f \"$f\"; echo \"[$x]\"",
+    "stdout": "[hi]\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "set -e; x=$(false; echo hi); echo \"[$x]\"",
+    "stdout": "[hi]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "lib::fn() { echo ok; }; lib::fn",
+    "stdout": "ok\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "my-fn() { echo ok; }; my-fn",
+    "stdout": "ok\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=1; (( x << 2 )); echo $?",
+    "stdout": "0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "cat <<EOF;\nhi\nEOF\necho done",
+    "stdout": "hi\ndone\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=hello; echo ${x:(-1)}",
+    "stdout": "o\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "exec 4>&1 3>&4-; echo hi >&3",
+    "stdout": "hi\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "s=abcdef; i=2; echo ${s:$i:2}",
+    "stdout": "cd\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- a b c; echo ${*:$#}",
+    "stdout": "c\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f() if true; then echo yes; fi; f",
+    "stdout": "yes\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f() for i in 1 2; do echo $i; done; f",
+    "stdout": "1\n2\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "f() [[ -n x ]]; f && echo ok",
+    "stdout": "ok\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

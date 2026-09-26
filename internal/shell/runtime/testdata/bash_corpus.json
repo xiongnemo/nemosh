@@ -677,5 +677,11 @@
     "status": 0,
     "reference": "busybox-w32",
     "jobs": "process"
+  },
+  {
+    "script": "x=abc; echo \"${x/b/[&]}\"",
+    "stdout": "a[&]c\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
