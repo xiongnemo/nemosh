@@ -38,6 +38,11 @@ func rejectDeferredSyntax(line string) error {
 		if quote != 0 {
 			continue
 		}
+		// And so is a conditional, whose parentheses are its own; see double_bracket_span.go.
+		if end, ok := conditionSpanEnd(line, index); ok {
+			index = end - 1
+			continue
+		}
 		// An arithmetic expansion is stepped over whole. Counting it as a
 		// substitution would leave its inner `(` to be read as a grouping this
 		// scan does not allow.

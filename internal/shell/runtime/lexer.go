@@ -222,8 +222,8 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			// part of the conditional's own grammar there, so splitting the line
 			// on them would tear the expression apart -- and `[[ a < b ]]`, which
 			// is a lexical comparison, would create a file called `b`. Measured
-			// before this: it did.
-			if kind, width := activeOperator(line[index:]); width > 0 && !inCondition {
+			// before this: it did. Its parentheses are, as words; see lexedOperator.
+			if kind, width := lexedOperator(line[index:], inCondition, tokens); width > 0 {
 				if kind == tokenRedirect && (isDigits(line[wordStart:index]) || isDescriptorName(line[wordStart:index])) {
 					buffer.WriteString(line[index : index+width])
 					if err := appendToken(shellToken{kind: tokenRedirect, value: buffer.String()}); err != nil {
@@ -240,7 +240,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 					return nil, nil, err
 				}
 				wordStart = index
-				if err := appendToken(shellToken{kind: kind, value: line[index : index+width]}); err != nil {
+				if err := appendToken(operatorToken(kind, line[index:index+width])); err != nil {
 					return nil, nil, err
 				}
 				index += width - 1

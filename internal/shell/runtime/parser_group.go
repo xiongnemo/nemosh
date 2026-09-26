@@ -83,6 +83,13 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			index++
 			continue
 		}
+		// A conditional is stepped over whole: its parentheses group its expression, not
+		// commands, and the lexer reads them as words. See double_bracket_span.go.
+		if end, ok := conditionSpanEnd(line, index); ok {
+			output.WriteString(line[index:end])
+			index = end
+			continue
+		}
 		// An array assignment's parentheses are part of a word, so they are
 		// stepped over whole. Third layer that has to know this -- the scanner
 		// decides where a logical line ends, the lexer where a word ends, and

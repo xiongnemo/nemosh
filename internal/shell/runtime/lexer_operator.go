@@ -5,6 +5,34 @@ import (
 	"strings"
 )
 
+// lexedOperator is the operator at the start of input, and its width, or a width of 0 when
+// there is none there.
+//
+// Inside `[[ ]]` none of the command operators are one, and its own parentheses are, as
+// words of their own: `[[ (a == a) ]]` is five words between the brackets, which is how the
+// condition parser reads a group. Not in the operand of `=~`, whose parentheses belong to
+// the regular expression -- the word being read then is the one after the `=~`.
+func lexedOperator(input string, inCondition bool, tokens []shellToken) (tokenKind, int) {
+	if !inCondition {
+		return activeOperator(input)
+	}
+	afterRegex := len(tokens) > 0 && tokens[len(tokens)-1].kind == tokenWord && tokens[len(tokens)-1].value == "=~"
+	if (input[0] == '(' || input[0] == ')') && !afterRegex {
+		return tokenWord, 1
+	}
+	return tokenWord, 0
+}
+
+// operatorToken is the token for an operator's text. A condition's parenthesis is a word, and
+// a word carries its parsed form.
+func operatorToken(kind tokenKind, text string) shellToken {
+	token := shellToken{kind: kind, value: text}
+	if kind == tokenWord {
+		token.parsed = &word{parts: []wordPart{{kind: wordPartLiteral, text: text}}}
+	}
+	return token
+}
+
 func activeOperator(input string) (tokenKind, int) {
 	if strings.HasPrefix(input, "&&") {
 		return tokenAndIf, 2

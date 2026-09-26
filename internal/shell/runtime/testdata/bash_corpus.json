@@ -803,5 +803,17 @@
     "stdout": "hi\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ ( 1 -eq 2 ) ]]; echo $?",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ ! ( a == b ) ]] && echo grouped",
+    "stdout": "grouped\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
