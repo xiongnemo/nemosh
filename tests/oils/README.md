@@ -53,6 +53,11 @@ difference: `HOME` is the case's directory, where Oils leaves it unset. On Windo
 shell measured here takes the user's profile for an unset `HOME`, and a case that wrote
 under `~` would write into the user's real home.
 
+The headline and a table of it, file by file, are in `docs/testing/oils-spec.md`. The page
+is rendered from the files here alone, so a test renders it again and fails when it is out
+of date; `NEMOSH_OILS=update` rewrites it, and `NEMOSH_OILS_MATRIX=write go test
+./internal/testutil/oilsspec/ -run TestMatrix` rewrites it without running the suite.
+
 `baseline.json` records every measured case nemosh does not pass, and how it stands: `fail`
 when it does neither what the files record of bash nor what they record of ash, and
 `ash-only` when it does what they record of ash, as busybox might. `NEMOSH_OILS=strict`

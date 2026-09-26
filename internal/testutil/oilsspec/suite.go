@@ -19,6 +19,8 @@ type Suite struct {
 	Specs map[string]Spec
 	// Left counts the cases left out, by the exclusion rule that left them out.
 	Left map[string]int
+	// Disabled counts the cases in files Oils marks `suite: disabled`.
+	Disabled int
 	// Parallel is how many files Run runs at once: as many as there are processors when
 	// it is zero.
 	Parallel int
@@ -41,6 +43,7 @@ func LoadSuite(root string, record Upstream, exclusions Exclusions, platform str
 			return Suite{}, fmt.Errorf("%s: %w", name, err)
 		}
 		if spec.Metadata["suite"] == "disabled" {
+			suite.Disabled += len(spec.Cases)
 			continue
 		}
 		file := strings.TrimPrefix(name, "spec/")

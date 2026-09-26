@@ -3,6 +3,7 @@ package oilsspec_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -107,6 +108,9 @@ func updateBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject
 		t.Logf("flaky, left as it was: %s", describe(change))
 	}
 	if err := baseline.Write(suite.Root); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(matrixPage, []byte(renderMatrix(t)), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
