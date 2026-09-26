@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1533 of the 2551 cases bash passes: 60.1%.**
+**nemosh passes 1540 of the 2551 cases bash passes: 60.4%.**
 
-Of the other 1018, it does 103 the way the files record of ash, which may be busybox's
-way, and 915 neither way.
+Of the other 1011, it does 103 the way the files record of ash, which may be busybox's
+way, and 908 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 915 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1533 |
+| that nemosh passes of those | 1540 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -91,7 +91,7 @@ of ash.
 | builtin-times.test.sh | 1 | 1 | 0 | 0.0% | 0 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 4 | 17.4% | 0 | 4 |
 | builtin-trap-err.test.sh | 22 | 22 | 13 | 59.1% | 3 | 22 |
-| builtin-trap.test.sh | 33 | 33 | 14 | 42.4% | 4 | 25 |
+| builtin-trap.test.sh | 33 | 33 | 15 | 45.5% | 4 | 25 |
 | builtin-type-bash.test.sh | 21 | 21 | 12 | 57.1% | 1 | 0 |
 | builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 0 | 4 |
 | builtin-umask.test.sh | 24 | 15 | 5 | 33.3% | 1 | 2 |
@@ -106,8 +106,8 @@ of ash.
 | dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 0 |
 | empty-bodies.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 |
 | errexit-osh.test.sh | 35 | 35 | 30 | 85.7% | 0 | 35 |
-| errexit.test.sh | 35 | 34 | 28 | 82.4% | 0 | 35 |
-| exit-status.test.sh | 11 | 11 | 6 | 54.5% | 0 | 7 |
+| errexit.test.sh | 35 | 34 | 29 | 85.3% | 0 | 35 |
+| exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
 | extglob-files.test.sh | 23 | 23 | 8 | 34.8% | 0 | 0 |
 | extglob-match.test.sh | 29 | 29 | 23 | 79.3% | 0 | 0 |
@@ -137,7 +137,7 @@ of ash.
 | process-sub.test.sh | 9 | 9 | 8 | 88.9% | 0 | 5 |
 | prompt.test.sh | 33 | 26 | 0 | 0.0% | 0 | 0 |
 | quote.test.sh | 35 | 35 | 31 | 88.6% | 1 | 35 |
-| redirect-command.test.sh | 23 | 23 | 19 | 82.6% | 2 | 22 |
+| redirect-command.test.sh | 23 | 23 | 20 | 87.0% | 2 | 22 |
 | redirect-multi.test.sh | 13 | 13 | 8 | 61.5% | 0 | 7 |
 | redirect.test.sh | 39 | 37 | 31 | 83.8% | 1 | 28 |
 | regex.test.sh | 37 | 36 | 25 | 69.4% | 0 | 10 |
@@ -151,7 +151,7 @@ of ash.
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
 | tilde.test.sh | 14 | 12 | 6 | 50.0% | 1 | 10 |
-| toysh-posix.test.sh | 22 | 22 | 11 | 50.0% | 5 | 22 |
+| toysh-posix.test.sh | 22 | 22 | 10 | 45.5% | 5 | 22 |
 | toysh.test.sh | 8 | 7 | 2 | 28.6% | 0 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
@@ -166,10 +166,10 @@ of ash.
 | var-sub-quote.test.sh | 41 | 41 | 30 | 73.2% | 1 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
 | vars-bash.test.sh | 1 | 1 | 0 | 0.0% | 0 | 0 |
-| vars-special.test.sh | 41 | 39 | 21 | 53.8% | 0 | 19 |
+| vars-special.test.sh | 41 | 39 | 22 | 56.4% | 0 | 19 |
 | whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
 | word-eval.test.sh | 8 | 7 | 5 | 71.4% | 0 | 6 |
 | word-split.test.sh | 55 | 53 | 35 | 66.0% | 4 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 0 | 0.0% | 0 | 2 |
-| all | 2668 | 2551 | 1533 | 60.1% | 103 | 1447 |
+| all | 2668 | 2551 | 1540 | 60.4% | 103 | 1447 |

@@ -650,7 +650,6 @@
       "trap EXIT with PARSE error and explicit exit": "fail",
       "trap EXIT, sleep, SIGINT: non-interactively": "fail",
       "trap USR1, sleep, SIGINT: non-interactively": "fail",
-      "trap with command.NoOp - check internal invariant": "fail",
       "traps are cleared in subshell (started with \u0026)": "fail"
     },
     "builtin-type-bash.test.sh": {
@@ -776,14 +775,9 @@
       "bash atoms [[ (( - redir failure checked": "fail",
       "errexit and brace group { }": "fail",
       "errexit and time { }": "fail",
-      "errexit double guard": "fail",
-      "simple command / assign - redir failure DOES respect errexit": "fail"
+      "errexit double guard": "fail"
     },
     "exit-status.test.sh": {
-      "Exit code when command sub evaluates to empty str, e.g. `false` (#2416)": "fail",
-      "If subshell false -- exit code is propagated in a weird way (strict_argv prevents)": "fail",
-      "If subshell true WITH OUTPUT is different": "fail",
-      "More test cases with empty argv": "fail",
       "subshell OverflowError https://github.com/oilshell/oil/issues/996": "fail"
     },
     "explore-parsing.test.sh": {
@@ -1043,7 +1037,6 @@
     },
     "redirect-command.test.sh": {
       "$(\u003c $file) yields the contents of the file": "ash-only",
-      "\u003e$file touches a file": "fail",
       "`\u003c $file` behaves like $(\u003c file)": "ash-only",
       "redirect bash extensions:   [[  ((  for ((": "fail"
     },
@@ -1159,6 +1152,7 @@
       "x=foo:~ has tilde expansion": "fail"
     },
     "toysh-posix.test.sh": {
+      "Failed redirect in assignment, vs. export": "fail",
       "Fatal error": "ash-only",
       "Function def in pipeline": "fail",
       "IFS": "fail",
@@ -1297,7 +1291,6 @@
       "$$ looks like a PID": "fail",
       "$?": "fail",
       "$BASHPID DOES change with subshell and command sub": "fail",
-      "$LINENO in \"bare\" redirect arg (bug regression)": "fail",
       "$LINENO in for (( loop": "fail",
       "$OSTYPE is non-empty": "fail",
       "$PATH is set if unset at startup": "fail",

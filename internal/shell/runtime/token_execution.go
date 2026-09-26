@@ -161,11 +161,15 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	}
 	args := tokenValues(expanded)
 	if len(args) == 0 {
-		return lineResult{}
+		status, _ := r.expansion.substitutionStatusSince(mark)
+		return r.redirectionsOnly(operations, lineResult{status: status})
 	}
 	assignments, commandArgs := leadingAssignments(args)
 	if len(assignments) > 0 && len(commandArgs) == 0 {
 		r.traceCommand(ctx, args, savedStatus)
+		if failed := r.redirectionsOnly(operations, lineResult{}); failed.status != 0 {
+			return failed
+		}
 		status := r.assignmentStatus(assignments, mark)
 		r.vars["_"] = ""
 		return r.abortOnShellError(lineResult{status: status})
@@ -221,6 +225,18 @@ func (r Runtime) dispatchCommand(ctx context.Context, commandArgs []string, assi
 // measured against bash while fixing it.
 //
 // A failed assignment still wins: `readonly x; x=$(true)` is an error about x, not a success.
+// redirectionsOnly performs the redirections of a command with no command name, and
+// answers result when they all succeed. POSIX 2.9.1 performs them, as both references do:
+// `> file` creates or empties the file, `< missing` fails with status 1. They were dropped,
+// so `> file` did nothing. When assignments come with them, a failure here leaves the
+// assignments undone, as busybox-w32 has it; bash assigns first.
+func (r Runtime) redirectionsOnly(operations []redirectOperation, result lineResult) lineResult {
+	if len(operations) == 0 {
+		return result
+	}
+	return r.withAppliedRedirects(operations, func(Runtime) lineResult { return result })
+}
+
 func (r Runtime) assignmentStatus(assignments []assignment, mark int) int {
 	if status := r.assignVars(assignments); status != 0 {
 		return status
