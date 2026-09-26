@@ -104,7 +104,12 @@ func isDeclarationUtility(item word) bool {
 	for _, part := range item.parts {
 		text.WriteString(part.text)
 	}
-	switch text.String() {
+	return isDeclarationName(text.String())
+}
+
+// isDeclarationName reports whether a command name is one of the five declaration utilities.
+func isDeclarationName(name string) bool {
+	switch name {
 	case "export", "readonly", "local", "declare", "typeset":
 		return true
 	}
