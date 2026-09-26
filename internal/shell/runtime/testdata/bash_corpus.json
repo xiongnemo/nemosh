@@ -791,5 +791,11 @@
     "stdout": "[hi]\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "x=hello; echo ${x:(-1)}",
+    "stdout": "o\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

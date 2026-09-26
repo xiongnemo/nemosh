@@ -104,6 +104,11 @@ func rejectDeferredSyntax(line string) error {
 			index = skipBalancedParens(line, index) - 1
 			continue
 		}
+		// Inside ${...} a parenthesis belongs to the expansion: `${x:(-1)}`, the way to write a
+		// negative offset without the space, and `${v:-(none)}`.
+		if (char == '(' || char == ')') && parameterBraces > 0 {
+			continue
+		}
 		if char == '(' || char == ')' {
 			return fmt.Errorf("unsupported syntax: grouping")
 		}

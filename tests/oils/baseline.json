@@ -1347,8 +1347,6 @@
       "xtrace with whitespace, quotes, and backslash": "fail"
     },
     "zsh-idioms.test.sh": {
-      "asdf snippet": "fail",
-      "git-completion snippet": "fail",
       "zsh var sub is rejected at runtime": "fail"
     }
   }
