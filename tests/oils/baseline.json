@@ -93,8 +93,6 @@
       "associative array and brace expansion": "fail",
       "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "fail",
       "bash variable can have an associative array part and a string part": "fail",
-      "coerce to string with ${A[*]}, etc.": "fail",
-      "create empty assoc array, put, then get": "fail",
       "lookup with unquoted $key and quoted \"$i$i\"": "fail",
       "nameref and assoc array": "fail",
       "printf -v and assoc array": "fail",
@@ -104,12 +102,6 @@
       "test -v assoc[key]": "fail",
       "test -v with dynamic parsing": "fail",
       "unset -v and assoc array": "fail"
-    },
-    "array-basic.test.sh": {
-      "${a[@]} and ${a[*]}": "fail",
-      "4 ways to interpolate empty array": "fail",
-      "Empty array with :-": "fail",
-      "empty array": "fail"
     },
     "array-compat.test.sh": {
       "Apply vectorized operations on ${a[*]}": "fail",
@@ -157,7 +149,6 @@
     "array.test.sh": {
       "${!a[1]} is named ref in bash": "fail",
       "${!a} on array": "fail",
-      "All elements unquoted": "fail",
       "Array syntax in wrong place": "ash-only",
       "Dynamic parsing of LHS a[$code]=value": "fail",
       "Exporting array doesn't do anything, not even first element": "fail",
@@ -176,12 +167,9 @@
       "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail",
       "Set array item to array": "fail",
       "Slice of sparse array with [@]": "fail",
-      "Stripping a whole array unquoted": "fail",
       "array default": "fail",
       "array over multiple lines": "fail",
       "array with invalid token": "fail",
-      "declare -a / local -a is empty array": "fail",
-      "nounset / set -u with empty array (bug in bash 4.3, fixed in 4.4)": "fail",
       "space before ( in array initialization": "fail",
       "test -v a[i] with arith expressions": "fail"
     },
@@ -926,9 +914,7 @@
       "shell doesn't load rcfile/rcdir if --norc is given": "fail"
     },
     "introspect.test.sh": {
-      "${BASH_LINENO[@]} is a stack of line numbers for function calls": "fail",
       "${BASH_SOURCE[@]} with line numbers": "fail",
-      "${BASH_SOURCE[@]} with source and function name": "fail",
       "${FUNCNAME} and \"set -u\" (OSH regression)": "fail",
       "FUNCNAME with source (scalar or array)": "fail"
     },
@@ -1019,7 +1005,6 @@
     },
     "pipeline.test.sh": {
       "Exit code is last status": "fail",
-      "Initial value of PIPESTATUS is empty string": "fail",
       "SIGPIPE causes pipeline to die (regression for issue #295)": "fail",
       "shopt -s lastpipe (always on in OSH)": "fail",
       "shopt -s lastpipe (always on in OSH) #2": "fail",
@@ -1275,7 +1260,6 @@
     },
     "var-op-test.test.sh": {
       "$* (\"\" \"\") and - and + (IFS=)": "fail",
-      "$@ (\"\" \"\") and - and +": "fail",
       "$@ (empty) and - and +": "fail",
       "Error when empty": "fail",
       "Error when unset": "fail",

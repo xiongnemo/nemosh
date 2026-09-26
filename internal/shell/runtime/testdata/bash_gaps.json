@@ -12,18 +12,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "a=(); set -- \"${a[@]}\"; echo $#",
-    "stdout": "0\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
-    "script": "a=(1 \"2 3\"); set -- ${a[@]}; echo $#",
-    "stdout": "3\n",
-    "status": 0,
-    "reference": "bash-5.3"
-  },
-  {
     "script": "a=(xa yb); echo \"${a[1]:-d}\"",
     "stdout": "yb\n",
     "status": 0,

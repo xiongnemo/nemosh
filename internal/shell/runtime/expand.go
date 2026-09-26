@@ -96,6 +96,15 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 				contributed = true
 				continue
 			}
+			// Unquoted, `${a[@]}` is split element by element, an empty one vanishing, as
+			// unquoted `$@` is; each element was kept whole.
+			if isArrayAtReference(part.text) && part.quote == quoteUnquoted {
+				var produced bool
+				fields, produced = r.appendUnquotedParameters(fields, values, "$@")
+				contributed = contributed || produced
+				mark(strings.Join(values, " "), part.quote, start)
+				continue
+			}
 			// `"${a[@]}"` is one word per element, exactly as `"$@"` is -- which
 			// is the whole reason arrays are worth having, since it is the only
 			// form that keeps an element containing a blank intact.
