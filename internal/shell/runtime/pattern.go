@@ -90,6 +90,11 @@ func bracketEnd(pattern []rune, start int) (int, bool) {
 			index = end - 1
 			continue
 		}
+		// Nor does an escaped one: `[\]]` is the set holding `]`. See bracketMatches.
+		if pattern[index] == '\\' && index+1 < len(pattern) {
+			index++
+			continue
+		}
 		if pattern[index] == ']' {
 			return index + 1, true
 		}
@@ -97,6 +102,12 @@ func bracketEnd(pattern []rune, start int) (int, bool) {
 	return 0, false
 }
 
+// bracketMatches reports whether char is in the set a bracket expression spells.
+//
+// A backslash makes the character after it an ordinary member, which is how a quoted one
+// reaches here (literalIn): `[\]]` holds `]`, and `[a\-z]` holds a, - and z where `[a-z]` is
+// the range. Neither the escape nor the member was known, so the first bracket closed early
+// and the second was a range -- `case b in [a"-"z])` matched. busybox-w32 and bash agree.
 func bracketMatches(spec []rune, char rune) bool {
 	negated := false
 	if len(spec) > 0 && (spec[0] == '!' || spec[0] == '^') {
@@ -111,16 +122,28 @@ func bracketMatches(spec []rune, char rune) bool {
 			index = end - 1
 			continue
 		}
-		if index+2 < len(spec) && spec[index+1] == '-' {
-			if char >= spec[index] && char <= spec[index+2] {
+		low, next := bracketMember(spec, index)
+		if next+1 < len(spec) && spec[next] == '-' {
+			high, after := bracketMember(spec, next+1)
+			if char >= low && char <= high {
 				matched = true
 			}
-			index += 2
+			index = after - 1
 			continue
 		}
-		if spec[index] == char {
+		if low == char {
 			matched = true
 		}
+		index = next - 1
 	}
 	return matched != negated
+}
+
+// bracketMember is the member of a bracket expression at index -- the character there, or
+// the one after it when it is a backslash -- and where the next one starts.
+func bracketMember(spec []rune, index int) (rune, int) {
+	if spec[index] == '\\' && index+1 < len(spec) {
+		return spec[index+1], index + 2
+	}
+	return spec[index], index + 1
 }

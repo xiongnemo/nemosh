@@ -977,5 +977,11 @@
     "stdout": "c_c\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "case b in [a\"-\"z]) echo y;; *) echo n;; esac; case \"]\" in [\\]]) echo y;; *) echo n;; esac",
+    "stdout": "n\ny\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

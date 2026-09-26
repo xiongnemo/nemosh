@@ -800,8 +800,6 @@
     },
     "glob.test.sh": {
       "Glob ordering respects LC_COLLATE (zsh respects this too)": "ash-only",
-      "PatSub of negated unescaped [[] and []]": "fail",
-      "PatSub of unescaped [[] and []]": "fail",
       "\\ in unquoted substitutions does not match a backslash": "fail",
       "\\ in unquoted substitutions escapes globchars": "fail",
       "glob can expand to command and arg": "fail",
@@ -1161,8 +1159,7 @@
       "Pattern replacement on unset variable": "ash-only",
       "Substitute glob characters in pattern, quoted and unquoted": "fail",
       "When LC_ALL=C, pattern ? doesn't match multibyte character": "fail",
-      "patsub with [^]]": "fail",
-      "patsub with single quotes and hyphen in character class (regression)": "fail"
+      "patsub with [^]]": "fail"
     },
     "var-op-slice.test.sh": {
       "${array[@]:} vs ${array[@]: }  - bash and zsh inconsistent": "fail",
@@ -1215,8 +1212,7 @@
     "var-sub-quote.test.sh": {
       "$'' allowed within VarSub arguments": "fail",
       "Right Brace as argument (similar to #702)": "fail",
-      "Syntax error for single quote in double quote": "fail",
-      "single quotes work inside character classes": "ash-only"
+      "Syntax error for single quote in double quote": "fail"
     },
     "var-sub.test.sh": {
       "Bad var sub": "ash-only",
