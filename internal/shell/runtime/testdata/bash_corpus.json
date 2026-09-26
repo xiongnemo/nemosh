@@ -965,5 +965,11 @@
     "stdout": "q=1\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "set -u; echo \"[${v#x}]\"; echo reached",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
   }
 ]

@@ -11,8 +11,8 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 
 **nemosh passes 1610 of the 2551 cases bash passes: 63.1%.**
 
-Of the other 941, it does 102 the way the files record of ash, which may be busybox's
-way, and 839 neither way.
+Of the other 941, it does 103 the way the files record of ash, which may be busybox's
+way, and 838 neither way.
 
 | | cases |
 |---|---:|
@@ -158,7 +158,7 @@ of ash.
 | var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
 | var-op-bash.test.sh | 27 | 26 | 17 | 65.4% | 0 | 2 |
 | var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 |
-| var-op-patsub.test.sh | 28 | 28 | 19 | 67.9% | 0 | 21 |
+| var-op-patsub.test.sh | 28 | 28 | 19 | 67.9% | 1 | 21 |
 | var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 6 |
 | var-op-strip.test.sh | 29 | 29 | 25 | 86.2% | 0 | 27 |
 | var-op-test.test.sh | 37 | 37 | 29 | 78.4% | 0 | 20 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1610 | 63.1% | 102 | 1447 |
+| all | 2668 | 2551 | 1610 | 63.1% | 103 | 1447 |

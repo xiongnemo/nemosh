@@ -42,6 +42,9 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	}
 	if name, transform, ok := splitTransform(body); ok {
 		value, set := r.operandParameter(ctx, name, savedStatus)
+		if !set {
+			r.reportUnsetParameter(name)
+		}
 		return r.transformParameter(name, transform, value, set)
 	}
 	name, operator, word, ok := splitParameterOperator(body)
@@ -52,6 +55,14 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	switch operator {
 	case "-", ":-", "=", ":=", "+", ":+", "?", ":?":
 		return r.applyDefaultOperator(ctx, name, operator, word, value, set, savedStatus)
+	}
+	// Every other operator works on the value, so under `set -u` an unset one is the error it
+	// is bare. `${v#x}`, `${v/x/y}`, `${v:0}` and the rest went on with the empty string, and
+	// the script with them, where both references stop it; see reportUnsetParameter.
+	if !set {
+		r.reportUnsetParameter(name)
+	}
+	switch operator {
 	case ":":
 		return r.parameterSubstring(ctx, value, word, savedStatus)
 	case "/", "//", "/#", "/%":
@@ -122,13 +133,20 @@ func (r Runtime) expandParameterLength(ctx context.Context, name string, savedSt
 		if !isBareParameterReference(name) {
 			return "", fmt.Errorf("bad substitution: ${#%s}", name)
 		}
-		value, _ := r.lookupParameter(ctx, name, savedStatus)
+		value, set := r.lookupParameter(ctx, name, savedStatus)
+		if !set {
+			r.reportUnsetParameter(name)
+		}
 		return strconv.Itoa(len([]rune(value))), nil
 	}
 	if name == "@" || name == "*" {
 		return strconv.Itoa(len(r.params.values)), nil
 	}
-	value, _ := r.lookupParameter(ctx, name, savedStatus)
+	// The length of an unset name is an error under `set -u`, as the name alone is.
+	value, set := r.lookupParameter(ctx, name, savedStatus)
+	if !set {
+		r.reportUnsetParameter(name)
+	}
 	return strconv.Itoa(len([]rune(value))), nil
 }
 

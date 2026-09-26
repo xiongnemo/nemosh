@@ -1160,7 +1160,7 @@
       "${x//~homedir/}": "fail",
       "Chromium from http://www.oilshell.org/blog/2016/11/07.html": "fail",
       "Confusing unquoted slash matches bash (and ash)": "fail",
-      "Pattern replacement on unset variable": "fail",
+      "Pattern replacement on unset variable": "ash-only",
       "Substitute glob characters in pattern, quoted and unquoted": "fail",
       "Synthesized ${x///} bug (similar to above)": "fail",
       "When LC_ALL=C, pattern ? doesn't match multibyte character": "fail",
