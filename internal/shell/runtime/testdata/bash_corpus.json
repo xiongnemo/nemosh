@@ -899,5 +899,11 @@
     "stdout": "0\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "x=; test -v x; echo $?; [ -v nosuch ]; echo $?",
+    "stdout": "0\n1\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

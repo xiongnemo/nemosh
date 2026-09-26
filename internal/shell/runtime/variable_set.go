@@ -22,3 +22,9 @@ func (r Runtime) variableIsSet(ctx context.Context, name string) bool {
 	_, set := r.lookupParameter(ctx, name, 0)
 	return set
 }
+
+// VariableIsSet answers `test -v` for the applet, which reaches the shell through its process
+// view; see applets.variableView.
+func (r Runtime) VariableIsSet(name string) bool {
+	return r.variableIsSet(context.Background(), name)
+}

@@ -96,8 +96,6 @@
       "readonly associative array can't be modified": "fail",
       "set associative array to indexed array literal (very surprising bash behavior)": "fail",
       "setting key to itself (from bash-bug mailing list)": "ash-only",
-      "test -v assoc[key]": "fail",
-      "test -v with dynamic parsing": "fail",
       "unset -v and assoc array": "fail"
     },
     "array-compat.test.sh": {
@@ -146,7 +144,6 @@
       "Array syntax in wrong place": "ash-only",
       "Dynamic parsing of LHS a[$code]=value": "fail",
       "Exporting array doesn't do anything, not even first element": "fail",
-      "Is element set?  test -v a[i]": "fail",
       "Length op, index op, then transform op is not allowed": "ash-only",
       "Multiple subscripts not allowed": "fail",
       "Negative index and sparse array #2": "fail",
@@ -155,8 +152,7 @@
       "Regression: Negative out-of-range index in [[ -v a[index] ]]": "fail",
       "Regression: silent out-of-bound negative index in ${a[-2]} and $((a[-2]))": "fail",
       "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail",
-      "Set array item to array": "fail",
-      "test -v a[i] with arith expressions": "fail"
+      "Set array item to array": "fail"
     },
     "assign-deferred.test.sh": {
       "'builtin' prefix is allowed on assignments": "fail",
@@ -165,11 +161,6 @@
       "is 'command' prefix and array allowed?  OSH is smarter": "ash-only",
       "local a[3]=4": "fail",
       "readonly a[7]=8": "fail"
-    },
-    "assign-dialects.test.sh": {
-      "test -v with arrays": "fail",
-      "test -v with assoc arrays": "fail",
-      "test -v with strings": "fail"
     },
     "assign-extended.test.sh": {
       "ble.sh: eval -- \"$(declare -p var arr)\"": "fail",
@@ -313,7 +304,6 @@
       "-ef": "fail",
       "-k for sticky bit": "fail",
       "-ot and -nt": "fail",
-      "-v to test variable (bash)": "fail",
       "Looks like octal, but digit is too big": "fail",
       "[ -t invalid ]": "ash-only",
       "operator/operand ambiguity with -a": "fail",

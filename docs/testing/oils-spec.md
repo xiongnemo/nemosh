@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1587 of the 2551 cases bash passes: 62.2%.**
+**nemosh passes 1595 of the 2551 cases bash passes: 62.5%.**
 
-Of the other 964, it does 103 the way the files record of ash, which may be busybox's
-way, and 861 neither way.
+Of the other 956, it does 103 the way the files record of ash, which may be busybox's
+way, and 853 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 861 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1587 |
+| that nemosh passes of those | 1595 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -49,14 +49,14 @@ of ash.
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 55 | 74.3% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
-| array-assoc.test.sh | 42 | 36 | 25 | 69.4% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 27 | 75.0% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 7 | 43.8% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 21 | 52.5% | 0 | 0 |
-| array.test.sh | 78 | 78 | 62 | 79.5% | 2 | 7 |
+| array.test.sh | 78 | 78 | 64 | 82.1% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 3 | 33.3% | 1 | 1 |
-| assign-dialects.test.sh | 4 | 4 | 1 | 25.0% | 0 | 0 |
+| assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | assign-extended.test.sh | 39 | 34 | 18 | 52.9% | 0 | 0 |
 | assign.test.sh | 48 | 45 | 31 | 68.9% | 1 | 28 |
 | background.test.sh | 27 | 25 | 21 | 84.0% | 1 | 18 |
@@ -70,7 +70,7 @@ of ash.
 | bugs.test.sh | 28 | 28 | 19 | 67.9% | 7 | 28 |
 | builtin-bash.test.sh | 13 | 13 | 9 | 69.2% | 0 | 10 |
 | builtin-bind.test.sh | 9 | 8 | 0 | 0.0% | 0 | 0 |
-| builtin-bracket.test.sh | 47 | 45 | 36 | 80.0% | 0 | 36 |
+| builtin-bracket.test.sh | 47 | 45 | 37 | 82.2% | 0 | 36 |
 | builtin-cd.test.sh | 25 | 22 | 11 | 50.0% | 2 | 11 |
 | builtin-completion.test.sh | 51 | 50 | 3 | 6.0% | 0 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 5 | 27.8% | 0 | 2 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1587 | 62.2% | 103 | 1447 |
+| all | 2668 | 2551 | 1595 | 62.5% | 103 | 1447 |
