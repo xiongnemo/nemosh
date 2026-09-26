@@ -10,11 +10,15 @@ import (
 )
 
 // How a case stands for nemosh: it does what the files record of bash, it does what they
-// record of ash instead, as busybox might, or it does neither.
+// record of ash instead, as busybox might, or it does neither. Flaky is one a person has
+// seen stand more than one way, run after run -- one that hangs on timing, or on a race
+// nemosh has not had fixed yet. The baseline says so rather than guessing a way, and a run
+// takes it as it comes.
 const (
 	Passes  = "pass"
 	AshOnly = "ash-only"
 	Fails   = "fail"
+	Flaky   = "flaky"
 )
 
 // Standing is how a result stands, in those terms.
@@ -103,7 +107,8 @@ type Change struct {
 }
 
 // Changes lists, in order, the cases the results stand otherwise for than the baseline
-// says, and the ones it records that the results do not have.
+// says, and the ones it records that the results do not have. A case it records as flaky
+// stands however it comes out.
 func (b Baseline) Changes(results map[string][]CaseResult) []Change {
 	var changes []Change
 	measured := map[string]map[string]bool{}
@@ -111,7 +116,8 @@ func (b Baseline) Changes(results map[string][]CaseResult) []Change {
 		measured[file] = map[string]bool{}
 		for _, result := range fileResults {
 			measured[file][result.ID] = true
-			if was, now := b.Standing(file, result.ID), Standing(result); was != now {
+			was, now := b.Standing(file, result.ID), Standing(result)
+			if was != now && was != Flaky {
 				changes = append(changes, Change{File: file, ID: result.ID, Was: was, Now: now})
 			}
 		}

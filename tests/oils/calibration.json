@@ -65,6 +65,7 @@
           "history usage"
         ],
         "builtin-kill.test.sh": [
+          "kill -15 kills the process with SIGTERM",
           "kill -L checks for invalid input",
           "kill -l 10 TERM translates between names and numbers"
         ],
@@ -90,9 +91,6 @@
         ],
         "builtin-special.test.sh": [
           "bash 'type' gets confused - says 'function', but runs builtin"
-        ],
-        "builtin-trap-err.test.sh": [
-          "trap ERR with redirect"
         ],
         "builtin-umask.test.sh": [
           "'umask 0002' sets the umask",
@@ -980,8 +978,7 @@
           "Case statement with ;\u0026",
           "Case statement with ;;\u0026",
           "Pattern ? matches 1 code point (many bytes), but not multiple code points",
-          "\\(\\) in pattern (regression)",
-          "matching every byte against itself"
+          "\\(\\) in pattern (regression)"
         ],
         "command-sub.test.sh": [
           "Command Sub trailing newline removed",

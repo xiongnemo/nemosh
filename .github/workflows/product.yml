@@ -122,12 +122,15 @@ jobs:
       # tests/oils/baseline.json, and an ordinary test holds that page to the data.
       #
       # The baseline is Windows', so Windows runs strict mode, which fails for a case
-      # that stands otherwise than the baseline says -- but does not gate yet, until
-      # the runs CI gets are shown to be the ones a local run gets. Ubuntu reports.
-      # macOS is left out: its bash is 3.2, and nothing here was measured on it.
+      # that stands otherwise than the baseline says, the one that started passing as
+      # much as the one that stopped: a change to the shell that moves a case records
+      # it with NEMOSH_OILS=update in the same commit. The first CI run under it, not
+      # gating, differed from a local run in two cases; one was the runner's account
+      # and is excluded now, the other hangs on timing and is recorded as flaky.
+      # Ubuntu reports. macOS is left out: its bash is 3.2, and nothing here was
+      # measured on it.
       - name: Oils spec suite
         if: runner.os != 'macOS'
-        continue-on-error: ${{ runner.os == 'Windows' }}
         shell: bash
         env:
           NEMOSH_OILS: ${{ runner.os == 'Windows' && 'strict' || 'report' }}

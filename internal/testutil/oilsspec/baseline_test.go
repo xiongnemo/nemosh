@@ -8,8 +8,8 @@ import (
 	"github.com/xiongnemo/nemosh/internal/testutil/oilsspec"
 )
 
-// baseline.json records only cases nemosh does not pass, as failing or as done the way
-// ash does, and each is a vendored case measured where the baseline was taken.
+// baseline.json records only cases nemosh does not pass -- failing, done the way ash does,
+// or flaky -- and each is a vendored case measured where the baseline was taken.
 func TestBaseline_namesMeasuredCasesNemoshDoesNotPass(t *testing.T) {
 	baseline, err := oilsspec.ReadBaseline(root)
 	if err != nil {
@@ -22,8 +22,8 @@ func TestBaseline_namesMeasuredCasesNemoshDoesNotPass(t *testing.T) {
 	specs := vendoredSpecs(t)
 	for file, cases := range baseline.Cases {
 		for id, standing := range cases {
-			if standing != oilsspec.Fails && standing != oilsspec.AshOnly {
-				t.Errorf("baseline.json has %s: %q as %q, want fail or ash-only", file, id, standing)
+			if standing != oilsspec.Fails && standing != oilsspec.AshOnly && standing != oilsspec.Flaky {
+				t.Errorf("baseline.json has %s: %q as %q, want fail, ash-only or flaky", file, id, standing)
 			}
 			index := slices.IndexFunc(specs[file].Cases, func(c oilsspec.Case) bool { return c.ID == id })
 			if index < 0 {
@@ -39,10 +39,12 @@ func TestBaseline_namesMeasuredCasesNemoshDoesNotPass(t *testing.T) {
 
 // A run is compared with the baseline both ways: a case that stopped passing, one that
 // started, one that changed how it fails, and one the baseline has that the run did not
-// measure all differ, and a case that stands as recorded does not.
+// measure all differ, and a case that stands as recorded does not -- nor one recorded as
+// flaky, however it came out.
 func TestBaseline_changesAreEveryDifferenceBothWays(t *testing.T) {
 	baseline := oilsspec.Baseline{Platform: "windows", Cases: map[string]map[string]string{
-		"a.test.sh": {"started passing": oilsspec.Fails, "still fails": oilsspec.Fails, "now fails outright": oilsspec.AshOnly},
+		"a.test.sh": {"started passing": oilsspec.Fails, "still fails": oilsspec.Fails, "now fails outright": oilsspec.AshOnly,
+			"flaky, passed": oilsspec.Flaky, "flaky, failed": oilsspec.Flaky},
 		"b.test.sh": {"no longer measured": oilsspec.Fails},
 	}}
 	pass := oilsspec.CaseResult{Bash: oilsspec.Pass, Ash: oilsspec.Pass}
@@ -50,6 +52,7 @@ func TestBaseline_changesAreEveryDifferenceBothWays(t *testing.T) {
 	results := map[string][]oilsspec.CaseResult{"a.test.sh": {
 		named(pass, "started passing"), named(fail, "still fails"), named(fail, "now fails outright"),
 		named(fail, "stopped passing"), named(pass, "still passes"),
+		named(pass, "flaky, passed"), named(fail, "flaky, failed"),
 	}}
 
 	changes := baseline.Changes(results)

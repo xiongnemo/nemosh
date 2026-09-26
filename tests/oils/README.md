@@ -64,7 +64,9 @@ when it does neither what the files record of bash nor what they record of ash, 
 fails for every case that stands otherwise, the one that started passing as much as the one
 that stopped, so the baseline always says where nemosh is; `NEMOSH_OILS=update` writes it
 from the run. A case that differs is run twice more, alone, before either mode believes
-it, and one that does not stand the same way every time is reported as flaky instead.
+it, and one that does not stand the same way every time is reported as flaky instead. A
+case seen to stand more than one way from run to run is recorded as `flaky`, by hand, and
+then stands however it comes out.
 
 `exclusions.json` leaves out the cases this harness cannot measure on a platform,
 whichever shell runs them: on Windows those that use `chmod`, `ln -s`, `ulimit` or

@@ -106,6 +106,21 @@ done
 Strict TDD: one failing test first, captured, then the minimum production
 change. Every commit uses `git commit --no-gpg-sign`.
 
+**A change to how the shell behaves also runs the Oils spec suite.** `tests/oils` is
+Oils' own test cases, vendored as a measuring instrument (`tests/oils/README.md`), and
+Windows CI holds nemosh to `tests/oils/baseline.json` with it: a case that starts
+passing fails the build as surely as one that stops. After such a change, record where
+the shell now stands, and commit the baseline and the page it renders with the change:
+
+```bash
+NEMOSH_OILS=update go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
+git add tests/oils/baseline.json docs/testing/oils-spec.md
+```
+
+It takes about a minute here. `NEMOSH_OILS=strict` is what CI runs, and a case that
+differs is run twice more, alone, before either mode believes it. The headline -- of the
+cases bash passes, how many nemosh passes -- is in `docs/testing/oils-spec.md`.
+
 **Green tests do not imply correctness.** Two defects found on 2026-08-07 passed
 the entire suite: `times` reported 215 years because its test asserted only the
 `%dm%fs` shape, and a brace was treated as reserved outside command position.

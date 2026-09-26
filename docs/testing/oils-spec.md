@@ -9,19 +9,19 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1490 of the 2552 cases bash passes: 58.4%.**
+**nemosh passes 1488 of the 2551 cases bash passes: 58.3%.**
 
-Of the other 1062, it does 102 the way the files record of ash, which may be busybox's
-way, and 960 neither way.
+Of the other 1063, it does 102 the way the files record of ash, which may be busybox's
+way, and 961 neither way.
 
 | | cases |
 |---|---:|
 | in the vendored files | 2781 |
 | in files Oils itself does not run | 46 |
-| left out on Windows | 66 |
-| measured | 2669 |
-| that bash passes | 2552 |
-| that nemosh passes of those | 1490 |
+| left out on Windows | 67 |
+| measured | 2668 |
+| that bash passes | 2551 |
+| that nemosh passes of those | 1488 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -32,6 +32,7 @@ Left out on Windows, as cases no shell can be measured on there, for the reasons
 - executable bits: 34
 - resource limits: 17
 - symbolic links: 7
+- writing at the root: 1
 
 ## File by file
 
@@ -78,7 +79,7 @@ of ash.
 | builtin-fc.test.sh | 14 | 14 | 1 | 7.1% | 1 | 2 |
 | builtin-getopts.test.sh | 31 | 31 | 22 | 71.0% | 4 | 31 |
 | builtin-history.test.sh | 17 | 15 | 2 | 13.3% | 0 | 1 |
-| builtin-kill.test.sh | 20 | 18 | 6 | 33.3% | 0 | 11 |
+| builtin-kill.test.sh | 20 | 17 | 5 | 29.4% | 0 | 11 |
 | builtin-meta-assign.test.sh | 11 | 11 | 4 | 36.4% | 1 | 11 |
 | builtin-meta.test.sh | 15 | 15 | 4 | 26.7% | 5 | 13 |
 | builtin-misc.test.sh | 7 | 5 | 2 | 40.0% | 0 | 4 |
@@ -89,13 +90,13 @@ of ash.
 | builtin-special.test.sh | 12 | 11 | 5 | 45.5% | 2 | 10 |
 | builtin-times.test.sh | 1 | 1 | 0 | 0.0% | 0 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 4 | 17.4% | 0 | 4 |
-| builtin-trap-err.test.sh | 23 | 22 | 13 | 59.1% | 3 | 23 |
+| builtin-trap-err.test.sh | 22 | 22 | 13 | 59.1% | 3 | 22 |
 | builtin-trap.test.sh | 33 | 33 | 14 | 42.4% | 4 | 25 |
 | builtin-type-bash.test.sh | 21 | 21 | 12 | 57.1% | 1 | 0 |
 | builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 0 | 4 |
 | builtin-umask.test.sh | 24 | 15 | 5 | 33.3% | 1 | 2 |
 | builtin-vars.test.sh | 41 | 39 | 24 | 61.5% | 1 | 23 |
-| case_.test.sh | 13 | 12 | 10 | 83.3% | 0 | 8 |
+| case_.test.sh | 13 | 12 | 10 | 83.3% | 0 | 9 |
 | command-parsing.test.sh | 5 | 5 | 3 | 60.0% | 0 | 5 |
 | command-sub.test.sh | 30 | 28 | 24 | 85.7% | 1 | 28 |
 | command_.test.sh | 8 | 6 | 2 | 33.3% | 0 | 4 |
@@ -130,7 +131,7 @@ of ash.
 | nul-bytes.test.sh | 16 | 16 | 0 | 0.0% | 0 | 12 |
 | paren-ambiguity.test.sh | 8 | 8 | 4 | 50.0% | 2 | 8 |
 | parse-errors.test.sh | 27 | 25 | 16 | 64.0% | 1 | 22 |
-| pipeline.test.sh | 26 | 26 | 21 | 80.8% | 0 | 17 |
+| pipeline.test.sh | 26 | 26 | 20 | 76.9% | 0 | 17 |
 | posix.test.sh | 15 | 15 | 11 | 73.3% | 0 | 14 |
 | print-source-code.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
 | process-sub.test.sh | 9 | 9 | 8 | 88.9% | 0 | 5 |
@@ -171,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 35 | 66.0% | 4 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 0 | 0.0% | 0 | 2 |
-| all | 2669 | 2552 | 1490 | 58.4% | 102 | 1447 |
+| all | 2668 | 2551 | 1488 | 58.3% | 102 | 1447 |

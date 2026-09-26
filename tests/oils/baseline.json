@@ -244,6 +244,7 @@
       "Wait for job and PIPESTATUS": "fail",
       "Wait for job and PIPESTATUS - cat": "fail",
       "wait -n with arguments - arguments are respected": "fail",
+      "wait for N parallel jobs and check failure": "flaky",
       "wait with invalid arg": "ash-only",
       "wait with jobspec syntax %nonexistent": "fail"
     },
@@ -1024,7 +1025,8 @@
       "Initial value of PIPESTATUS is empty string": "fail",
       "SIGPIPE causes pipeline to die (regression for issue #295)": "fail",
       "shopt -s lastpipe (always on in OSH)": "fail",
-      "shopt -s lastpipe (always on in OSH) #2": "fail"
+      "shopt -s lastpipe (always on in OSH) #2": "fail",
+      "|\u0026": "flaky"
     },
     "posix.test.sh": {
       "Command substitution in default": "fail",

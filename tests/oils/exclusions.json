@@ -31,6 +31,14 @@
       "code": "\\bread_from_fd\\.py\\b"
     },
     {
+      "name": "writing at the root",
+      "why": "The case expects a redirect to /zz to fail. On Windows /zz is the drive's root for a native shell, which an administrator can write -- CI's runner is one -- and for MSYS bash it is MSYS's own root, the Git installation, which its owner can write. So the answer is the account's, and where the write works the case leaves a file behind: calibration left one in Git's directory.",
+      "platforms": ["windows"],
+      "cases": {
+        "builtin-trap-err.test.sh": ["trap ERR with redirect"]
+      }
+    },
+    {
       "name": "HOME",
       "why": "The harness sets HOME to each case's own directory, where Oils leaves it unset: on Windows every shell measured here would otherwise take the user's profile for it, and a case that wrote under ~ would write into the user's real home.",
       "platforms": ["windows", "linux", "darwin"],
