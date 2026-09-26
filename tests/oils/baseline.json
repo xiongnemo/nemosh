@@ -270,7 +270,6 @@
       "test builtin: ( == ) is confusing: equality test or non-empty string test": "fail"
     },
     "brace-expansion.test.sh": {
-      "Empty alternative with empty string suffix": "fail",
       "Mixed case char expansion is invalid": "fail",
       "Singleton char ranges with steps": "fail",
       "Singleton ranges": "fail",
@@ -1139,9 +1138,7 @@
       "Function def in pipeline": "fail",
       "IFS": "fail",
       "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",
-      "IFS - http://landley.net/notes.html#15-02-2020 (TODO: osh)": "fail",
-      "IFS 2 - copied into spec/word-split": "fail",
-      "IFS 4": "fail",
+      "IFS 4": "ash-only",
       "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only",
       "for loop parsing - http://landley.net/notes.html#04-03-2020": "fail",
       "readonly with temp binding": "ash-only",
@@ -1300,26 +1297,19 @@
       "Globbing escaping": "fail"
     },
     "word-split.test.sh": {
-      "\"\"$A\"\" - empty string on both sides - derived from spec/toysh-posix #15": "fail",
-      "4 x 3 table - with for loop": "fail",
-      "Bug #628 split on : with : in literal word": "fail",
       "IFS and joining arrays by assignments": "ash-only",
       "IFS empty doesn't do splitting": "fail",
       "IFS unset behaves like $' \\t\\n'": "fail",
-      "IFS with whitespace and non-whitepace.": "fail",
       "IFS='' with ${!a[@]} and ${!a[*]} (bug #627)": "fail",
       "IFS='' with ${a[@]} and ${a[*]} (bug #627)": "fail",
-      "IFS='\\ '": "fail",
-      "IFS=x and '' and $@ (#2)": "fail",
+      "IFS=x and '' and $@ (#2)": "ash-only",
       "IFS=x and '' and $@ (#3)": "ash-only",
       "IFS=x and '' and $@ - same bug as spec/toysh-posix case #12": "ash-only",
-      "Leading ' ' vs leading ' _ '": "fail",
       "Regression: \"${v:-AxBxC}\"x should not be split": "fail",
       "Unicode in IFS": "ash-only",
       "default value can yield multiple words": "fail",
       "default value can yield multiple words with part joining": "fail",
-      "default value with unquoted IFS char": "fail",
-      "empty literals are not elided": "fail"
+      "default value with unquoted IFS char": "fail"
     },
     "xtrace.test.sh": {
       "Assignments and assign builtins": "fail",

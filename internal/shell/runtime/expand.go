@@ -56,95 +56,23 @@ func (r Runtime) expandWord(ctx context.Context, item word, savedStatus int) []s
 // unquoted part contributed a pathname metacharacter to it. Quoting is what
 // decides: `echo "*"` prints a star and `echo *` lists the directory, and the
 // only thing that tells them apart is where the star came from.
+//
+// The parts are expanded in order into a fieldBuilder, which splits what an unquoted
+// expansion produced across the whole word; see field_builder.go. A word that comes to no
+// field at all disappears rather than becoming one empty field -- which is what makes
+// `set -- $empty` leave no positional parameters.
 func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus int) ([]string, []bool) {
-	fields := []string{""}
-	globbable := []bool{false}
-	// mark records that an unquoted contribution carrying a metacharacter
-	// landed on every field from `from` onwards -- a split expansion can add
-	// several at once.
-	mark := func(text string, quote quoteContext, from int) {
-		if quote != quoteUnquoted || !containsGlobMeta(text) {
-			return
-		}
-		for len(globbable) < len(fields) {
-			globbable = append(globbable, false)
-		}
-		for index := from; index < len(globbable); index++ {
-			globbable[index] = true
-		}
-	}
-	// contributed tracks whether anything at all put a field on the word. An
-	// unquoted expansion that splits to nothing puts nothing, and a word made
-	// only of those disappears rather than becoming one empty field -- which is
-	// what makes `set -- $empty` leave no positional parameters.
-	contributed := false
+	build := r.newFieldBuilder()
 	for _, part := range item.parts {
-		start := len(fields) - 1
 		switch part.kind {
-		case wordPartLiteral, wordPartEscaped:
-			fields[len(fields)-1] += part.text
-			contributed = true
-			// An escaped part had its backslash removed by the lexer, so its
-			// metacharacter is data no matter where it sits.
-			if part.kind == wordPartLiteral {
-				mark(part.text, part.quote, start)
-			}
+		case wordPartLiteral:
+			build.text(part.text, part.quote == quoteUnquoted)
+		case wordPartEscaped:
+			// Its backslash was removed by the lexer, so its metacharacter is data no
+			// matter where it sits.
+			build.text(part.text, false)
 		case wordPartParameter:
-			values := r.expandParameterPart(ctx, part, savedStatus)
-			if joined, isList := r.assignedList(part, values); isList {
-				fields[len(fields)-1] += joined
-				contributed = true
-				continue
-			}
-			// Unquoted, `${a[@]}` is split element by element, an empty one vanishing, as
-			// unquoted `$@` is; each element was kept whole.
-			if isArrayAtReference(part.text) && part.quote == quoteUnquoted {
-				var produced bool
-				fields, produced = r.appendUnquotedParameters(fields, values, "$@")
-				contributed = contributed || produced
-				mark(strings.Join(values, " "), part.quote, start)
-				continue
-			}
-			// `"${a[@]}"` is one word per element, exactly as `"$@"` is -- which
-			// is the whole reason arrays are worth having, since it is the only
-			// form that keeps an element containing a blank intact.
-			if isArrayAtReference(part.text) && part.quote != quoteSingle {
-				if len(values) == 0 {
-					if len(item.parts) == 1 {
-						return nil, nil
-					}
-					continue
-				}
-				fields[len(fields)-1] += values[0]
-				fields = append(fields, values[1:]...)
-				contributed = true
-				mark(strings.Join(values, " "), part.quote, start)
-				continue
-			}
-			if list := positionalList(part.text); (list == "$@" || list == "$*") && part.quote == quoteUnquoted {
-				var produced bool
-				fields, produced = r.appendUnquotedParameters(fields, values, list)
-				contributed = contributed || produced
-				mark(strings.Join(values, " "), part.quote, start)
-				continue
-			}
-			if positionalList(part.text) == "$@" && part.quote != quoteSingle {
-				if len(values) == 0 {
-					if len(item.parts) == 1 {
-						return nil, nil
-					}
-					continue
-				}
-				fields[len(fields)-1] += values[0]
-				fields = append(fields, values[1:]...)
-				contributed = true
-				mark(strings.Join(values, ""), part.quote, start)
-				continue
-			}
-			var produced bool
-			fields, produced = r.appendExpansion(fields, values[0], part.quote)
-			contributed = contributed || produced
-			mark(values[0], part.quote, start)
+			r.buildParameter(ctx, build, part, savedStatus)
 		case wordPartArithmetic:
 			// Expanded before evaluated: the evaluator's lexer has no `$`. See
 			// arithmetic_expand.go.
@@ -153,39 +81,30 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 				r.reportExpansionError(err)
 				return nil, nil
 			}
-			fields[len(fields)-1] += strconv.FormatInt(value, 10)
-			contributed = true
+			build.text(strconv.FormatInt(value, 10), false)
 		case wordPartProcessSubstitution, wordPartOutputSubstitution:
-			var path string
 			if part.kind == wordPartOutputSubstitution {
-				path = r.expandOutputSubstitution(ctx, part.script, savedStatus)
+				build.text(r.expandOutputSubstitution(ctx, part.script, savedStatus), false)
 			} else {
-				path = r.expandProcessSubstitution(ctx, part.script, savedStatus)
+				build.text(r.expandProcessSubstitution(ctx, part.script, savedStatus), false)
 			}
-			var produced bool
-			fields, produced = r.appendExpansion(fields, path, quoteDouble)
-			contributed = contributed || produced
 		case wordPartCommandSubstitution:
 			if part.script != nil {
-				output := r.commandSubstitutionScript(ctx, *part.script, savedStatus)
-				var produced bool
-				fields, produced = r.appendExpansion(fields, output, part.quote)
-				contributed = contributed || produced
-				mark(output, part.quote, start)
+				build.expansion(r.commandSubstitutionScript(ctx, *part.script, savedStatus), part.quote)
 			}
 		}
 	}
-	globbable = append(globbable, make([]bool, len(fields)-len(globbable))...)
-	if len(item.parts) == 0 && !item.quotedEmpty {
-		return nil, nil
+	fields, globbable := build.finish()
+	if len(fields) == 0 {
+		if !item.quotedEmpty {
+			return nil, nil
+		}
+		fields, globbable = []string{""}, []bool{false}
 	}
-	if !contributed && !item.quotedEmpty {
-		return nil, nil
-	}
-	if item.expandTilde && len(fields) > 0 {
+	if item.expandTilde {
 		fields[0] = r.expandHomeTilde(fields[0])
 	}
-	if item.assignmentTilde && len(fields) > 0 {
+	if item.assignmentTilde {
 		// The tilde is after the `=`, so the name and the equals are put back in
 		// front of whatever the tilde expanded to.
 		if name, value, found := strings.Cut(fields[0], "="); found {
@@ -193,4 +112,27 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 		}
 	}
 	return fields, globbable
+}
+
+// buildParameter adds a parameter expansion to the word being built.
+func (r Runtime) buildParameter(ctx context.Context, build *fieldBuilder, part wordPart, savedStatus int) {
+	values := r.expandParameterPart(ctx, part, savedStatus)
+	if joined, isList := r.assignedList(part, values); isList {
+		build.text(joined, false)
+		return
+	}
+	list := positionalList(part.text)
+	switch {
+	// Unquoted, `$@`, `$*` and `${a[@]}` are a field per element, each split in turn, an
+	// empty one vanishing; see unquotedList.
+	case part.quote == quoteUnquoted && (isArrayAtReference(part.text) || list == "$@" || list == "$*"):
+		build.unquotedList(values, r.starSeparator())
+	// `"${a[@]}"` is one word per element, exactly as `"$@"` is -- which is the whole
+	// reason arrays are worth having, since it is the only form that keeps an element
+	// containing a blank intact.
+	case part.quote != quoteSingle && (isArrayAtReference(part.text) || list == "$@"):
+		build.quotedList(values)
+	default:
+		build.expansion(values[0], part.quote)
+	}
 }

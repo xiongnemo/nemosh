@@ -45,6 +45,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 	wordStart := 0
 	inSingle := false
 	inDouble := false
+	quoteOpened := 0
 	escaped := false
 	// inCondition is set between an unquoted `[[` and its `]]`. See the operator
 	// check below for why the lexer has to know.
@@ -101,14 +102,11 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			escaped = true
 			continue
 		}
-		if char == '\'' && !inDouble {
+		if char == '\'' && !inDouble || char == '"' && !inSingle {
 			wordPresent = true
-			inSingle = !inSingle
-			continue
-		}
-		if char == '"' && !inSingle {
-			wordPresent = true
-			inDouble = !inDouble
+			parts, quoteOpened = quoteBoundary(parts, quoteOpened, buffer.Len(), char, inSingle || inDouble)
+			inSingle = inSingle != (char == '\'')
+			inDouble = inDouble != (char == '"')
 			continue
 		}
 		// Before the command substitution branch, because `$((` starts with

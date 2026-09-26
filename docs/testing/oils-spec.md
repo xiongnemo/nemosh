@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1560 of the 2551 cases bash passes: 61.2%.**
+**nemosh passes 1570 of the 2551 cases bash passes: 61.5%.**
 
-Of the other 991, it does 101 the way the files record of ash, which may be busybox's
-way, and 890 neither way.
+Of the other 981, it does 103 the way the files record of ash, which may be busybox's
+way, and 878 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 890 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1560 |
+| that nemosh passes of those | 1570 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -66,7 +66,7 @@ of ash.
 | blog1.test.sh | 9 | 9 | 3 | 33.3% | 1 | 8 |
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
 | bool-parse.test.sh | 8 | 8 | 6 | 75.0% | 0 | 8 |
-| brace-expansion.test.sh | 55 | 54 | 44 | 81.5% | 3 | 8 |
+| brace-expansion.test.sh | 55 | 54 | 45 | 83.3% | 3 | 8 |
 | bugs.test.sh | 28 | 28 | 19 | 67.9% | 7 | 28 |
 | builtin-bash.test.sh | 13 | 13 | 9 | 69.2% | 0 | 10 |
 | builtin-bind.test.sh | 9 | 8 | 0 | 0.0% | 0 | 0 |
@@ -151,7 +151,7 @@ of ash.
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
 | tilde.test.sh | 14 | 12 | 6 | 50.0% | 1 | 10 |
-| toysh-posix.test.sh | 22 | 22 | 10 | 45.5% | 5 | 22 |
+| toysh-posix.test.sh | 22 | 22 | 12 | 54.5% | 6 | 22 |
 | toysh.test.sh | 8 | 7 | 2 | 28.6% | 0 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
@@ -169,7 +169,7 @@ of ash.
 | vars-special.test.sh | 41 | 39 | 22 | 56.4% | 0 | 19 |
 | whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
 | word-eval.test.sh | 8 | 7 | 5 | 71.4% | 0 | 6 |
-| word-split.test.sh | 55 | 53 | 35 | 66.0% | 4 | 53 |
+| word-split.test.sh | 55 | 53 | 42 | 79.2% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1560 | 61.2% | 101 | 1447 |
+| all | 2668 | 2551 | 1570 | 61.5% | 103 | 1447 |

@@ -845,5 +845,29 @@
     "stdout": "()\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "x='a '; y=b; printf '[%s]' $x$y",
+    "stdout": "[a][b]",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "IFS=' :'; x='a : b'; printf '[%s]' $x",
+    "stdout": "[a][b]",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x='a '; printf '[%s]' $x\"\"",
+    "stdout": "[a][]",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "x=; set -- \"\"$x; echo $#",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

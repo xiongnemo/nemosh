@@ -38,6 +38,24 @@ func quoteFor(inSingle, inDouble bool) quoteContext {
 	return quoteUnquoted
 }
 
+// quoteBoundary is the bookkeeping at a quote character. An opening one notes how long the
+// word was, and a closing one that finds it no longer records the pair as an empty quoted
+// part. `""` is a field of its own wherever it sits -- `$x""` with x='a ' is `a` and an empty
+// field -- and with no part it left nothing to say so.
+func quoteBoundary(parts []wordPart, opened, length int, quote byte, closing bool) ([]wordPart, int) {
+	if !closing {
+		return parts, length
+	}
+	if length == opened {
+		context := quoteDouble
+		if quote == '\'' {
+			context = quoteSingle
+		}
+		parts = append(parts, wordPart{kind: wordPartLiteral, quote: context})
+	}
+	return parts, opened
+}
+
 func appendLiteralPart(parts *[]wordPart, text string, quote quoteContext) {
 	if len(*parts) > 0 {
 		last := &(*parts)[len(*parts)-1]
