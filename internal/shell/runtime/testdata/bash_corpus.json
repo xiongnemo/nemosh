@@ -929,5 +929,17 @@
     "stdout": "[]\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x=11; echo $(( 0 || (x=33) )) $x",
+    "stdout": "1 33\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo $(( 1 ? 2 : 1/0 ))",
+    "stdout": "2\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

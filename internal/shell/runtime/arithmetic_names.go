@@ -32,6 +32,9 @@ func isArithmeticName(token string) bool {
 // lookup is a name's value as arithmetic sees it: empty or unset is zero, a number is that
 // number, and anything else is an expression, evaluated.
 func (p *arithmeticParser) lookup(name string) (int64, error) {
+	if p.skipping > 0 {
+		return 0, nil
+	}
 	text := strings.TrimSpace(p.valueText(name))
 	if text == "" {
 		return 0, nil

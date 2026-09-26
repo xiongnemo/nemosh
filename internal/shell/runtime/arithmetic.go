@@ -72,7 +72,7 @@ func (p *arithmeticParser) assignment() (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		if value, err = applyArithmetic(current, strings.TrimSuffix(operator, "="), value); err != nil {
+		if value, err = p.apply(current, strings.TrimSuffix(operator, "="), value); err != nil {
 			return 0, err
 		}
 	}
@@ -108,6 +108,9 @@ type arithmeticParser struct {
 	runtime Runtime
 	// depth is how many variable values deep this evaluation is; see lookup.
 	depth int
+	// skipping is set while an arm of `?:` that the condition did not pick is read: its
+	// shape is checked, and nothing in it is stored, looked up or refused. See branch.
+	skipping int
 }
 
 // The binary operators in order of increasing precedence, which is the order C
@@ -131,7 +134,9 @@ func (p *arithmeticParser) ternary() (int64, error) {
 		return condition, err
 	}
 	p.index++
-	whenTrue, err := p.ternary()
+	// The middle arm is a whole expression, as C has it, so `1 ? a=1 : 42` assigns; the
+	// last is a conditional again. It read a conditional for both and stopped at the `=`.
+	whenTrue, err := p.branch(condition != 0, p.comma)
 	if err != nil {
 		return 0, err
 	}
@@ -139,7 +144,7 @@ func (p *arithmeticParser) ternary() (int64, error) {
 		return 0, fmt.Errorf("arithmetic syntax error: expected :")
 	}
 	p.index++
-	whenFalse, err := p.ternary()
+	whenFalse, err := p.branch(condition == 0, p.ternary)
 	if err != nil {
 		return 0, err
 	}
@@ -147,6 +152,18 @@ func (p *arithmeticParser) ternary() (int64, error) {
 		return whenTrue, nil
 	}
 	return whenFalse, nil
+}
+
+// branch reads one arm of `?:`, evaluating it only when the condition picked it. The other is
+// read for its shape alone: `1 ? 2 : 1/0` is 2 and `0 ? (y=1) : 2` leaves y as it was, in both
+// references, where both arms were evaluated and the first refused the division. A syntax
+// error in either arm is still one.
+func (p *arithmeticParser) branch(taken bool, parse func() (int64, error)) (int64, error) {
+	if !taken {
+		p.skipping++
+		defer func() { p.skipping-- }()
+	}
+	return parse()
 }
 
 func (p *arithmeticParser) binary(level int) (int64, error) {
@@ -175,7 +192,7 @@ func (p *arithmeticParser) binary(level int) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		if left, err = applyArithmetic(left, operator, right); err != nil {
+		if left, err = p.apply(left, operator, right); err != nil {
 			return 0, err
 		}
 	}
@@ -216,8 +233,10 @@ func (p *arithmeticParser) primary() (int64, error) {
 		return 0, fmt.Errorf("arithmetic syntax error: expression ended early")
 	}
 	p.index++
+	// A whole expression inside parentheses, assignments and commas included: `(x = 22)` and
+	// `(1, 2)` are what both references take. It read a conditional and stopped at the `=`.
 	if token == "(" {
-		value, err := p.ternary()
+		value, err := p.comma()
 		if err != nil {
 			return 0, err
 		}

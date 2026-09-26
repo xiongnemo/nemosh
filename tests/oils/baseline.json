@@ -52,7 +52,6 @@
       "Substitutions": "fail"
     },
     "arith.test.sh": {
-      "1 ? a=1 : b=2 ( bug fix)": "fail",
       "Add integer to associative array (a[0] decay)": "fail",
       "Comment not allowed in the middle of multiline arithmetic": "fail",
       "Constant with quotes like '1'": "fail",
@@ -229,7 +228,6 @@
       "is-array with ${var@a}": "fail",
       "recursive arith: recursion": "ash-only",
       "recursive arith: short circuit \u0026\u0026, ||": "ash-only",
-      "recursive arith: short circuit ?:": "ash-only",
       "shift unshift reverse": "fail",
       "shopt -u expand_aliases and eval": "fail"
     },

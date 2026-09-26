@@ -18,6 +18,9 @@ import (
 // tracking read; it was not. `export x=0; : $((x=5))` left a child seeing 0, and
 // `readonly R; : $((R++))` changed R.
 func (p *arithmeticParser) store(name string, value int64) error {
+	if p.skipping > 0 {
+		return nil
+	}
 	if p.runtime.assignVar(name, strconv.FormatInt(value, 10)) != 0 {
 		return errReadonlyTarget
 	}
@@ -133,7 +136,21 @@ func (p *arithmeticParser) power() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return integerPower(left, right)
+	value, err := integerPower(left, right)
+	if err != nil && p.skipping > 0 {
+		return 0, nil
+	}
+	return value, err
+}
+
+// apply is applyArithmetic, except in an arm that is not taken, where a division by zero is
+// not an error because it is not done.
+func (p *arithmeticParser) apply(left int64, operator string, right int64) (int64, error) {
+	value, err := applyArithmetic(left, operator, right)
+	if err != nil && p.skipping > 0 {
+		return 0, nil
+	}
+	return value, err
 }
 
 // integerPower raises left to right by repeated multiplication, because these are

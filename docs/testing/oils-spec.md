@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1602 of the 2551 cases bash passes: 62.8%.**
+**nemosh passes 1604 of the 2551 cases bash passes: 62.9%.**
 
-Of the other 949, it does 103 the way the files record of ash, which may be busybox's
-way, and 846 neither way.
+Of the other 947, it does 102 the way the files record of ash, which may be busybox's
+way, and 845 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 846 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1602 |
+| that nemosh passes of those | 1604 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -47,7 +47,7 @@ of ash.
 | arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 3 |
 | arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 4 |
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
-| arith.test.sh | 74 | 74 | 55 | 74.3% | 1 | 44 |
+| arith.test.sh | 74 | 74 | 56 | 75.7% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
 | array-assoc.test.sh | 42 | 36 | 27 | 75.0% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
@@ -61,7 +61,7 @@ of ash.
 | assign.test.sh | 48 | 45 | 31 | 68.9% | 1 | 28 |
 | background.test.sh | 27 | 25 | 21 | 84.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 3 | 33.3% | 3 | 9 |
-| ble-idioms.test.sh | 26 | 26 | 14 | 53.8% | 3 | 23 |
+| ble-idioms.test.sh | 26 | 26 | 15 | 57.7% | 2 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 2 | 5 |
 | blog1.test.sh | 9 | 9 | 3 | 33.3% | 1 | 8 |
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1602 | 62.8% | 103 | 1447 |
+| all | 2668 | 2551 | 1604 | 62.9% | 102 | 1447 |
