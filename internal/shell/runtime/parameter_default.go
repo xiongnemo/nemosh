@@ -41,19 +41,14 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 		return value, nil
 	}
 	if name, transform, ok := splitTransform(body); ok {
-		value, set := r.lookupParameter(ctx, name, savedStatus)
-		if reference, element := parseArrayReference(name); element {
-			// `${a[1]@Q}`: the element, which the name lookup does not reach.
-			elements, exists := r.elementsFor(ctx, reference)
-			value, set = strings.Join(elements, " "), exists && len(elements) > 0
-		}
+		value, set := r.operandParameter(ctx, name, savedStatus)
 		return r.transformParameter(name, transform, value, set)
 	}
 	name, operator, word, ok := splitParameterOperator(body)
 	if !ok {
 		return "", fmt.Errorf("bad substitution: ${%s}", body)
 	}
-	value, set := r.lookupParameter(ctx, name, savedStatus)
+	value, set := r.operandParameter(ctx, name, savedStatus)
 	switch operator {
 	case "-", ":-", "=", ":=", "+", ":+", "?", ":?":
 		return r.applyDefaultOperator(ctx, name, operator, word, value, set, savedStatus)
@@ -97,6 +92,12 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 		// `=` assigns as well as substitutes, which is the only expansion that
 		// changes the shell's state.
 		assigned := r.expandOperand(ctx, word, operandValue, savedStatus)
+		if reference, element := parseArrayReference(name); element {
+			if r.assignElementByKind(ctx, reference, assigned) != 0 {
+				return "", errReadonlyTarget
+			}
+			return assigned, nil
+		}
 		if !isVariableName(name) {
 			return "", fmt.Errorf("%s: cannot assign in this way", name)
 		}
@@ -112,56 +113,6 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 		}
 		return value, nil
 	}
-}
-
-// trimParameter is the #, ##, % and %% family: strip the shortest or longest
-// matching prefix or suffix, where "matching" is the pattern language of 2.13.1
-// rather than a literal comparison.
-func trimParameter(operator, value, pattern string) string {
-	switch operator {
-	case "#":
-		return trimPatternPrefix(value, pattern, false)
-	case "##":
-		return trimPatternPrefix(value, pattern, true)
-	case "%":
-		return trimPatternSuffix(value, pattern, false)
-	default:
-		return trimPatternSuffix(value, pattern, true)
-	}
-}
-
-func trimPatternPrefix(value, pattern string, longest bool) string {
-	best := -1
-	for end := 0; end <= len(value); end++ {
-		if !matchShellPattern(pattern, value[:end]) {
-			continue
-		}
-		best = end
-		if !longest {
-			break
-		}
-	}
-	if best < 0 {
-		return value
-	}
-	return value[best:]
-}
-
-func trimPatternSuffix(value, pattern string, longest bool) string {
-	best := -1
-	for start := len(value); start >= 0; start-- {
-		if !matchShellPattern(pattern, value[start:]) {
-			continue
-		}
-		best = start
-		if !longest {
-			break
-		}
-	}
-	if best < 0 {
-		return value
-	}
-	return value[:best]
 }
 
 func (r Runtime) expandParameterLength(ctx context.Context, name string, savedStatus int) (string, error) {
@@ -185,7 +136,22 @@ func (r Runtime) expandParameterLength(ctx context.Context, name string, savedSt
 // from the word after it. The two-character forms are tried first so `:-` is not
 // read as a name ending in `:` followed by `-`.
 func splitParameterOperator(body string) (string, string, string, bool) {
+	depth := 0
 	for index := range len(body) {
+		// Nothing inside an element's subscript is the operator: `${a[i+1]:-d}` has
+		// `:-`, not `+`.
+		switch body[index] {
+		case '[':
+			depth++
+		case ']':
+			if depth > 0 {
+				depth--
+				continue
+			}
+		}
+		if depth > 0 {
+			continue
+		}
 		// Longest first at each position, and the `:x` defaults before a bare `:`,
 		// which is what keeps `${x:-2}` a default and `${x: -2}` a substring. The
 		// pairs `//`, `^^` and `,,` likewise precede their single forms.
@@ -204,6 +170,17 @@ func splitParameterOperator(body string) (string, string, string, bool) {
 		}
 	}
 	return "", "", "", false
+}
+
+// operandParameter is the value an operator works on, and whether it is set: an array
+// element's own, for `${a[1]:-d}` and every other operator on one, which lookupParameter
+// does not reach -- each of them read the element as unset.
+func (r Runtime) operandParameter(ctx context.Context, name string, savedStatus int) (string, bool) {
+	if reference, element := parseArrayReference(name); element {
+		elements, exists := r.elementsFor(ctx, reference)
+		return strings.Join(elements, " "), exists && len(elements) > 0
+	}
+	return r.lookupParameter(ctx, name, savedStatus)
 }
 
 // lookupParameter reads a name the way an expansion sees it: a positional

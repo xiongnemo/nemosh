@@ -719,5 +719,11 @@
     "stdout": "3\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(xa yb); echo \"${a[1]:-d}\"",
+    "stdout": "yb\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
