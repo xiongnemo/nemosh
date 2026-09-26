@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1519 of the 2551 cases bash passes: 59.5%.**
+**nemosh passes 1529 of the 2551 cases bash passes: 59.9%.**
 
-Of the other 1032, it does 102 the way the files record of ash, which may be busybox's
-way, and 930 neither way.
+Of the other 1022, it does 103 the way the files record of ash, which may be busybox's
+way, and 919 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 930 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1519 |
+| that nemosh passes of those | 1529 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -49,7 +49,7 @@ of ash.
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 55 | 74.3% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
-| array-assoc.test.sh | 42 | 36 | 24 | 66.7% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 25 | 69.4% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 7 | 43.8% | 0 | 0 |
@@ -67,7 +67,7 @@ of ash.
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
 | bool-parse.test.sh | 8 | 8 | 6 | 75.0% | 0 | 8 |
 | brace-expansion.test.sh | 55 | 54 | 44 | 81.5% | 3 | 8 |
-| bugs.test.sh | 28 | 28 | 18 | 64.3% | 7 | 28 |
+| bugs.test.sh | 28 | 28 | 19 | 67.9% | 7 | 28 |
 | builtin-bash.test.sh | 13 | 13 | 9 | 69.2% | 0 | 10 |
 | builtin-bind.test.sh | 9 | 8 | 0 | 0.0% | 0 | 0 |
 | builtin-bracket.test.sh | 47 | 45 | 36 | 80.0% | 0 | 36 |
@@ -103,7 +103,7 @@ of ash.
 | comments.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
 | dbracket.test.sh | 49 | 49 | 27 | 55.1% | 0 | 19 |
 | divergence.test.sh | 3 | 3 | 1 | 33.3% | 0 | 3 |
-| dparen.test.sh | 15 | 14 | 12 | 85.7% | 0 | 0 |
+| dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 0 |
 | empty-bodies.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 |
 | errexit-osh.test.sh | 35 | 35 | 26 | 74.3% | 0 | 35 |
 | errexit.test.sh | 35 | 34 | 28 | 82.4% | 0 | 35 |
@@ -112,13 +112,13 @@ of ash.
 | extglob-files.test.sh | 23 | 23 | 8 | 34.8% | 0 | 0 |
 | extglob-match.test.sh | 29 | 29 | 23 | 79.3% | 0 | 0 |
 | fatal-errors.test.sh | 5 | 5 | 0 | 0.0% | 3 | 3 |
-| for-expr.test.sh | 9 | 8 | 5 | 62.5% | 0 | 0 |
+| for-expr.test.sh | 9 | 8 | 6 | 75.0% | 0 | 0 |
 | func-parsing.test.sh | 15 | 15 | 12 | 80.0% | 2 | 13 |
 | glob-bash.test.sh | 8 | 8 | 4 | 50.0% | 3 | 8 |
 | glob.test.sh | 39 | 37 | 29 | 78.4% | 0 | 36 |
 | globignore.test.sh | 18 | 17 | 3 | 17.6% | 1 | 1 |
 | globstar.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
-| here-doc.test.sh | 32 | 32 | 24 | 75.0% | 0 | 32 |
+| here-doc.test.sh | 32 | 32 | 28 | 87.5% | 1 | 32 |
 | if_.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
 | interactive.test.sh | 18 | 17 | 2 | 11.8% | 0 | 0 |
 | introspect.test.sh | 13 | 12 | 10 | 83.3% | 0 | 2 |
@@ -132,7 +132,7 @@ of ash.
 | paren-ambiguity.test.sh | 8 | 8 | 4 | 50.0% | 2 | 8 |
 | parse-errors.test.sh | 27 | 25 | 16 | 64.0% | 1 | 22 |
 | pipeline.test.sh | 26 | 26 | 21 | 80.8% | 0 | 17 |
-| posix.test.sh | 15 | 15 | 11 | 73.3% | 0 | 14 |
+| posix.test.sh | 15 | 15 | 13 | 86.7% | 0 | 14 |
 | print-source-code.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
 | process-sub.test.sh | 9 | 9 | 8 | 88.9% | 0 | 5 |
 | prompt.test.sh | 33 | 26 | 0 | 0.0% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 35 | 66.0% | 4 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 0 | 0.0% | 0 | 2 |
-| all | 2668 | 2551 | 1519 | 59.5% | 102 | 1447 |
+| all | 2668 | 2551 | 1529 | 59.9% | 103 | 1447 |

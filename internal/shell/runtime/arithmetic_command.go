@@ -1,5 +1,7 @@
 package runtime
 
+import "strings"
+
 // `((expr))` -- the arithmetic command.
 //
 // It parsed as a subshell containing a subshell, so `((i++))` ran a command named
@@ -41,15 +43,22 @@ func arithmeticCommandText(line string, index, end int) string {
 
 // arithmeticCommandTokens is the two words `((expr))` becomes: `let` and the expression.
 //
-// The expression goes in single-quoted, so its own blanks and stars are data --
-// `(( i < 10 ))` is one argument to let, and the `*` in `(( a * b ))` is not a directory
-// listing.
+// The expression goes in double-quoted, as bash documents `((expr))`: `let "expr"`. So its
+// own blanks and stars are data -- `(( i < 10 ))` is one argument to let, and the `*` in
+// `(( a * b ))` is not a directory listing -- and its expansions are made, as they are in
+// $(( )). It went in single-quoted, and `(( $1 << 1 ))` handed let a `$` it cannot read. A
+// double quote inside is removed, as bash removes it; an expression the lexer cannot read
+// quoted goes in as it did.
 func arithmeticCommandTokens(line string, index, end int) []shellToken {
 	text := arithmeticCommandText(line, index, end)
+	expression := shellToken{kind: tokenWord, value: text, parsed: &word{
+		parts: []wordPart{{kind: wordPartLiteral, text: text, quote: quoteSingle}},
+	}}
+	if tokens, err := scanShellTokens(`"` + strings.ReplaceAll(text, `"`, "") + `"`); err == nil && len(tokens) == 1 && tokens[0].kind == tokenWord {
+		expression = tokens[0]
+	}
 	return []shellToken{
 		{kind: tokenWord, value: "let", parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: "let"}}}},
-		{kind: tokenWord, value: text, parsed: &word{
-			parts: []wordPart{{kind: wordPartLiteral, text: text, quote: quoteSingle}},
-		}},
+		expression,
 	}
 }

@@ -99,6 +99,14 @@ func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHere
 				continue
 			}
 		}
+		// So is an arithmetic command, `(( x << 2 ))`, which went looking for a heredoc
+		// delimited by 2.
+		if char == '(' && quote == 0 && index+1 < len(line) && line[index+1] == '(' {
+			if end, ok := arithmeticExpansionEnd(line, index+2); ok {
+				index = end
+				continue
+			}
+		}
 		if quote != 0 || char != '<' || index+1 >= len(line) || line[index+1] != '<' {
 			if char == '#' && quote == 0 && commentStarts(line, index) {
 				break
@@ -183,7 +191,10 @@ func heredocOperandEnd(line string, start int) int {
 			}
 			continue
 		}
-		if quote == 0 && (char == ' ' || char == '\t' || char == '|' || char == '&' || char == '<' || char == '>') {
+		// Where a word ends: at a blank or an operator character. `;`, `(` and `)` among
+		// them, so `cat <<EOF;` is delimited by EOF; the `;` was taken into the delimiter,
+		// no line matched, and the script was refused as incomplete.
+		if quote == 0 && strings.IndexByte(" \t|&<>;()", char) >= 0 {
 			return index
 		}
 	}

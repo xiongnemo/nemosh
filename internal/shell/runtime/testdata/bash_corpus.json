@@ -767,5 +767,17 @@
     "stdout": "ok\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x=1; (( x << 2 )); echo $?",
+    "stdout": "0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "cat <<EOF;\nhi\nEOF\necho done",
+    "stdout": "hi\ndone\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

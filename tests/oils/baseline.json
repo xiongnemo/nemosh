@@ -84,13 +84,12 @@
     "array-assoc.test.sh": {
       "${!ref} and assoc array": "fail",
       "${assoc} is like ${assoc[0]}": "fail",
-      "Associative array expressions inside (( )) with keys that look like numbers": "fail",
       "BashAssoc ${a[@]@Q}": "fail",
       "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
       "Indexed array as key of associative array coerces to string (without shopt -s strict_array)": "fail",
       "Slice of associative array doesn't make sense in bash": "fail",
       "associative array and brace expansion": "fail",
-      "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "fail",
+      "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "ash-only",
       "bash variable can have an associative array part and a string part": "fail",
       "lookup with unquoted $key and quoted \"$i$i\"": "fail",
       "nameref and assoc array": "fail",
@@ -294,7 +293,6 @@
     },
     "bugs.test.sh": {
       "#2640 Hanging when reading from character devices": "fail",
-      "(( status bug": "fail",
       "Crash after changing $[] to be alias of $(( ))": "ash-only",
       "assign readonly -- multiple lines": "ash-only",
       "assign readonly -- multiple lines -- set -o posix": "ash-only",
@@ -760,7 +758,6 @@
     },
     "dparen.test.sh": {
       "(( )) with redirect": "fail",
-      "Example of incrementing associative array entry with var key (ble.sh)": "fail",
       "literal strings inside (( ))": "fail"
     },
     "empty-bodies.test.sh": {
@@ -831,7 +828,6 @@
     "for-expr.test.sh": {
       "Accepts { } syntax too": "fail",
       "Arith lexer mode": "fail",
-      "Condition that's greater than 32 bits": "fail",
       "For loop with and without semicolon": "fail"
     },
     "func-parsing.test.sh": {
@@ -878,14 +874,10 @@
       "each occurrence of ** recurses through all depths": "fail"
     },
     "here-doc.test.sh": {
-      "Function def and execution with here doc": "fail",
-      "Here Doc in if condition": "fail",
-      "Here doc in while condition and here doc in body": "fail",
       "Here doc line continuation": "fail",
+      "Here doc with bad comsub delimiter": "ash-only",
       "Here doc with line continuation, then pipe.  Syntax error.": "fail",
-      "Here doc with multiline double quoted string": "fail",
-      "Mixing \u003c\u003c and \u003c\u003c-": "fail",
-      "Two compound commands with two here docs": "fail"
+      "Here doc with multiline double quoted string": "fail"
     },
     "interactive.test.sh": {
       "'exit' in oshrc (regression)": "fail",
@@ -1004,9 +996,7 @@
     },
     "posix.test.sh": {
       "Command substitution in default": "fail",
-      "Empty for loop without in.  Do can be on the same line I guess.": "fail",
-      "Multiple here docs on one line": "fail",
-      "cat here doc; echo; cat here doc": "fail"
+      "Empty for loop without in.  Do can be on the same line I guess.": "fail"
     },
     "print-source-code.test.sh": {
       "typeset -f with function keyword (ksh style)": "fail"
