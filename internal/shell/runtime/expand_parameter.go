@@ -96,6 +96,13 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return ""
 	}
+	// `set -e` does not reach inside, in either reference: `x=$(false; echo hi)` is hi, and
+	// $- there has no e. It reached inside, and under the `set -e` heading a script that
+	// substitution ended the whole script. What the substitution returns still counts, and
+	// bash's `shopt -s inherit_errexit` asks for it inside as well.
+	if !child.options.inheritErrExit {
+		child.options.errExit = false
+	}
 	table := child.fds
 	if err := table.bindBorrowedWriter(1, &stdout); err != nil {
 		child.jobScope.cancelAndDrain()

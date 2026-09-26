@@ -204,7 +204,7 @@ func shellOptionFields(o *shellOptions) map[string]*bool {
 		"globStar": &o.globStar, "nullGlob": &o.nullGlob, "dotGlob": &o.dotGlob,
 		"noCaseMatch": &o.noCaseMatch, "noHiddenGlob": &o.noHiddenGlob,
 		"noHidSysGlob": &o.noHidSysGlob, "ignoreEOF": &o.ignoreEOF, "monitor": &o.monitor,
-		"vi": &o.vi, "extGlob": &o.extGlob, "autoCD": &o.autoCD,
+		"vi": &o.vi, "extGlob": &o.extGlob, "autoCD": &o.autoCD, "inheritErrExit": &o.inheritErrExit,
 	}
 }
 

@@ -54,6 +54,9 @@ type shellOptions struct {
 	// autoCD is `shopt -s autocd`: a bare directory name means `cd` to it. Off by
 	// default, as it is in bash, because it changes what a mistyped command does.
 	autoCD bool
+	// inheritErrExit is `shopt -s inherit_errexit`: a command substitution keeps `set -e`,
+	// which it otherwise does not; see commandSubstitutionScript.
+	inheritErrExit bool
 	// invocation is how the shell was started, as `$-` spells it after the options:
 	// c for a command string, s for commands read from standard input, i for an
 	// interactive session. Not options -- `set` cannot change them -- but kept here so

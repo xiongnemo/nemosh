@@ -766,13 +766,9 @@
     },
     "errexit-osh.test.sh": {
       "Regression": "fail",
-      "command sub with command_sub_errexit only": "fail",
-      "command sub: errexit is NOT inherited and outer shell keeps going": "fail",
       "command_sub_errexit and command sub in array": "fail",
       "command_sub_errexit stops at first error": "fail",
-      "global assignment with command sub: middle command fails": "fail",
       "if pipeline doesn't fail fatally": "fail",
-      "local: middle command fails and keeps going": "fail",
       "strict_errexit and errexit disabled": "fail"
     },
     "errexit.test.sh": {
