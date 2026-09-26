@@ -156,7 +156,6 @@
       "Regression: silent out-of-bound negative index in ${a[-2]} and $((a[-2]))": "fail",
       "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail",
       "Set array item to array": "fail",
-      "array default": "fail",
       "test -v a[i] with arith expressions": "fail"
     },
     "assign-deferred.test.sh": {
@@ -1205,7 +1204,6 @@
       "strip all unicode": "fail"
     },
     "var-op-test.test.sh": {
-      "$* (\"\" \"\") and - and + (IFS=)": "fail",
       "$@ (empty) and - and +": "fail",
       "Error when empty": "fail",
       "Error when unset": "fail",
@@ -1213,9 +1211,7 @@
       "array and - and +": "fail",
       "op-test for ${!array} with array=\"a\" and array=\"a[0]\"": "fail",
       "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "fail",
-      "op-test for ${a[@]} and ${a[*]}": "fail",
-      "op-test for ${a} and ${a[0]}": "fail",
-      "op-test for unquoted ${a[*]:-empty} with IFS=": "fail"
+      "op-test for ${a} and ${a[0]}": "fail"
     },
     "var-ref.test.sh": {
       "${!OPTIND} (used by bash completion": "fail",
@@ -1245,16 +1241,9 @@
       "var ref: 1, @, *": "fail"
     },
     "var-sub-quote.test.sh": {
-      "\"${undef-'c d'}\" and \"${foo%'c d'}\" are parsed differently": "fail",
       "$'' allowed within VarSub arguments": "fail",
-      "Mixed inner quotes": "fail",
-      "Multiple words: no outer quotes, inner double quotes": "fail",
-      "Multiple words: no outer quotes, inner double quotes #2": "fail",
-      "Multiple words: no outer quotes, inner single quotes": "fail",
-      "No outer quotes, Multiple internal quotes": "fail",
       "Right Brace as argument (similar to #702)": "fail",
       "Syntax error for single quote in double quote": "fail",
-      "part_value tree with multiple words": "fail",
       "single quotes work inside character classes": "ash-only"
     },
     "var-sub.test.sh": {
@@ -1293,7 +1282,6 @@
       "whitespace in string to integer conversion": "fail"
     },
     "word-eval.test.sh": {
-      "Default values -- more cases": "fail",
       "Globbing escaping": "fail"
     },
     "word-split.test.sh": {
@@ -1305,11 +1293,7 @@
       "IFS=x and '' and $@ (#2)": "ash-only",
       "IFS=x and '' and $@ (#3)": "ash-only",
       "IFS=x and '' and $@ - same bug as spec/toysh-posix case #12": "ash-only",
-      "Regression: \"${v:-AxBxC}\"x should not be split": "fail",
-      "Unicode in IFS": "ash-only",
-      "default value can yield multiple words": "fail",
-      "default value can yield multiple words with part joining": "fail",
-      "default value with unquoted IFS char": "fail"
+      "Unicode in IFS": "ash-only"
     },
     "xtrace.test.sh": {
       "Assignments and assign builtins": "fail",

@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1570 of the 2551 cases bash passes: 61.5%.**
+**nemosh passes 1586 of the 2551 cases bash passes: 62.2%.**
 
-Of the other 981, it does 103 the way the files record of ash, which may be busybox's
-way, and 878 neither way.
+Of the other 965, it does 103 the way the files record of ash, which may be busybox's
+way, and 862 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 878 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1570 |
+| that nemosh passes of those | 1586 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -54,7 +54,7 @@ of ash.
 | array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 7 | 43.8% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 21 | 52.5% | 0 | 0 |
-| array.test.sh | 78 | 78 | 61 | 78.2% | 2 | 7 |
+| array.test.sh | 78 | 78 | 62 | 79.5% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 3 | 33.3% | 1 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 1 | 25.0% | 0 | 0 |
 | assign-extended.test.sh | 39 | 34 | 18 | 52.9% | 0 | 0 |
@@ -161,15 +161,15 @@ of ash.
 | var-op-patsub.test.sh | 28 | 28 | 19 | 67.9% | 0 | 21 |
 | var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 6 |
 | var-op-strip.test.sh | 29 | 29 | 25 | 86.2% | 0 | 27 |
-| var-op-test.test.sh | 37 | 37 | 26 | 70.3% | 0 | 20 |
+| var-op-test.test.sh | 37 | 37 | 29 | 78.4% | 0 | 20 |
 | var-ref.test.sh | 31 | 31 | 6 | 19.4% | 0 | 0 |
-| var-sub-quote.test.sh | 41 | 41 | 30 | 73.2% | 1 | 37 |
+| var-sub-quote.test.sh | 41 | 41 | 37 | 90.2% | 1 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
 | vars-bash.test.sh | 1 | 1 | 0 | 0.0% | 0 | 0 |
 | vars-special.test.sh | 41 | 39 | 22 | 56.4% | 0 | 19 |
 | whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
-| word-eval.test.sh | 8 | 7 | 5 | 71.4% | 0 | 6 |
-| word-split.test.sh | 55 | 53 | 42 | 79.2% | 5 | 53 |
+| word-eval.test.sh | 8 | 7 | 6 | 85.7% | 0 | 6 |
+| word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1570 | 61.5% | 103 | 1447 |
+| all | 2668 | 2551 | 1586 | 62.2% | 103 | 1447 |

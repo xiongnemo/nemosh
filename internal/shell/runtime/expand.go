@@ -116,6 +116,10 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 
 // buildParameter adds a parameter expansion to the word being built.
 func (r Runtime) buildParameter(ctx context.Context, build *fieldBuilder, part wordPart, savedStatus int) {
+	// A default's word is fields of its own; see parameter_default_fields.go.
+	if r.buildDefault(ctx, build, part, savedStatus) {
+		return
+	}
 	values := r.expandParameterPart(ctx, part, savedStatus)
 	if joined, isList := r.assignedList(part, values); isList {
 		build.text(joined, false)

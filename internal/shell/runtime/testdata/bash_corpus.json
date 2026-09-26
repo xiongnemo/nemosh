@@ -869,5 +869,29 @@
     "stdout": "1\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '[%s]' ${undef:-\"a b\"}",
+    "stdout": "[a b]",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- \"1 2\" 3; printf '[%s]' \"${undef:-$@}\"",
+    "stdout": "[1 2][3]",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- a b; printf '[%s]' \"${@:-x}\"",
+    "stdout": "[a][b]",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "default=('1 2' 3); printf '[%s]' \"${undef[@]:-${default[@]}}\"",
+    "stdout": "[1 2][3]",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
