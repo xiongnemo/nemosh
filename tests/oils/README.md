@@ -36,10 +36,16 @@ empty, with `spec/testdata` and `spec/bin` in it, for `$REPO_ROOT` to name.
     NEMOSH_OILS=report go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m
 
 runs every case with nemosh, installed as `bash` because the cases branch on `$SH`, and
-reports how many do what the files record of bash, and of ash. `NEMOSH_OILS=calibrate`
-runs the references instead, bash from `NEMOSH_OILS_BASH` and busybox from
-`NEMOSH_OILS_BUSYBOX`, which is how the harness is shown to be faithful.
-`NEMOSH_OILS_OUT` names a file for every case's result, as JSON.
+reports how many do what the files record of bash, and of ash. The headline is how many
+of the cases bash itself passes nemosh passes too, since Oils recorded its expectations
+with an older bash, on Linux, and a case bash fails here says nothing about nemosh.
+
+`calibration.json` is what the references did, run through this harness: every case bash
+5.3 did not do as the files record of bash, and every case busybox-w32 did not do as they
+record of ash. `NEMOSH_OILS=calibrate` writes it, running bash from `NEMOSH_OILS_BASH` and
+busybox from `NEMOSH_OILS_BUSYBOX`. It is also how the harness is shown to be faithful:
+bash run through it should do what the files record of bash, and on Windows it does in 2552
+of the 2669 cases measured. `NEMOSH_OILS_OUT` names a file for every case's result, as JSON.
 
 A case runs as Oils' `test/sh_spec.py` runs it: its code on the shell's stdin, in a
 directory of its own that `TMP` names too, with an environment made for it. There is one
