@@ -182,6 +182,14 @@ func newRuntimeWithState(registry applets.Registry, streams Streams, state State
 		variables[value.name] = value.value
 	}
 	created := Runtime{initErr: initErr, registry: registry, functions: map[functionName]functionDefinition{}, streams: fds.streams(), fds: fds, vars: variables, traps: map[trapName]string{}, trapRunning: map[trapName]bool{}, signals: newSignalInbox(), params: &parameters{}, options: &shellOptions{extGlob: true}, expansion: newExpansionState(), aliases: map[string]string{}, childCPU: &childCPUTime{}, history: newShellHistory(), arrays: newShellArrays(), dirStack: newDirectoryStack(), loops: newLoopLevels(), special: newSpecialState(), readonly: map[string]struct{}{}, attributes: map[string]variableAttributes{}, mask: newFileModeMask(), paths: &paths, env: state.Env.clone(), jobScope: newRootJobScope(), lifecycle: &shellLifecycle{}, substitutions: &sync.WaitGroup{}}
+	// IFS starts as space, tab and newline whatever the environment says, as in both
+	// references, which POSIX allows (2.5.3). An inherited one is not believed -- it would
+	// let a caller change how every script it runs splits words -- but stays exported,
+	// with the default value, as the references pass it on.
+	created.vars["IFS"] = defaultFieldSeparators
+	if _, inherited := created.env.LookupEnv("IFS"); inherited {
+		created.env.Set("IFS", defaultFieldSeparators)
+	}
 	// $PWD has to answer for this shell's working directory rather than for
 	// whatever launched it. Nemosh's cwd is a value in pathState, not the
 	// process's, so an inherited PWD can be wrong from the very first line.

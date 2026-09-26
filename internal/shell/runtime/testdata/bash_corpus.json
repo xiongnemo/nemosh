@@ -683,5 +683,23 @@
     "stdout": "a[&]c\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "echo \"${#IFS}\"",
+    "stdout": "3\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "OLD=$IFS; IFS=:; IFS=$OLD; set -- $(echo a b); echo $#",
+    "stdout": "2\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- a b c; x=\"$@\"; echo \"[$x]\"",
+    "stdout": "[a b c]\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

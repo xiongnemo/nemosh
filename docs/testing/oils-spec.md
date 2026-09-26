@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1487 of the 2552 cases bash passes: 58.3%.**
+**nemosh passes 1490 of the 2552 cases bash passes: 58.4%.**
 
-Of the other 1065, it does 101 the way the files record of ash, which may be busybox's
-way, and 964 neither way.
+Of the other 1062, it does 102 the way the files record of ash, which may be busybox's
+way, and 960 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 964 neither way.
 | left out on Windows | 66 |
 | measured | 2669 |
 | that bash passes | 2552 |
-| that nemosh passes of those | 1487 |
+| that nemosh passes of those | 1490 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -48,9 +48,9 @@ of ash.
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 55 | 74.3% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
-| array-assoc.test.sh | 42 | 36 | 20 | 55.6% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 21 | 58.3% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 1 | 20.0% | 0 | 0 |
-| array-compat.test.sh | 12 | 12 | 6 | 50.0% | 0 | 1 |
+| array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 7 | 43.8% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 18 | 45.0% | 0 | 0 |
 | array.test.sh | 78 | 78 | 49 | 62.8% | 2 | 7 |
@@ -168,7 +168,7 @@ of ash.
 | vars-special.test.sh | 41 | 39 | 21 | 53.8% | 0 | 19 |
 | whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
 | word-eval.test.sh | 8 | 7 | 5 | 71.4% | 0 | 6 |
-| word-split.test.sh | 55 | 53 | 35 | 66.0% | 3 | 53 |
+| word-split.test.sh | 55 | 53 | 35 | 66.0% | 4 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 0 | 0.0% | 0 | 2 |
-| all | 2669 | 2552 | 1487 | 58.3% | 101 | 1447 |
+| all | 2669 | 2552 | 1490 | 58.4% | 102 | 1447 |

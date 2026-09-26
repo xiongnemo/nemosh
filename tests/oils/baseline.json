@@ -85,7 +85,6 @@
     "array-assoc.test.sh": {
       "${!ref} and assoc array": "fail",
       "${assoc} is like ${assoc[0]}": "fail",
-      "Array stored in associative array gets converted to string (without strict_array)": "fail",
       "Associative array expressions inside (( )) with keys that look like numbers": "fail",
       "BashAssoc ${a[@]@Q}": "fail",
       "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
@@ -115,8 +114,6 @@
     "array-compat.test.sh": {
       "Apply vectorized operations on ${a[*]}": "fail",
       "Array Decay with IFS": "fail",
-      "Assignment Causes Array Decay": "fail",
-      "User arrays decay": "fail",
       "value.BashArray internal representation - Assoc (ordering is a problem)": "fail",
       "value.BashArray internal representation - Indexed": "fail"
     },
@@ -1378,7 +1375,7 @@
       "\"\"$A\"\" - empty string on both sides - derived from spec/toysh-posix #15": "fail",
       "4 x 3 table - with for loop": "fail",
       "Bug #628 split on : with : in literal word": "fail",
-      "IFS and joining arrays by assignments": "fail",
+      "IFS and joining arrays by assignments": "ash-only",
       "IFS empty doesn't do splitting": "fail",
       "IFS unset behaves like $' \\t\\n'": "fail",
       "IFS with whitespace and non-whitepace.": "fail",

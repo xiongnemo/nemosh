@@ -12,18 +12,6 @@
     "reference": "bash-5.3"
   },
   {
-    "script": "echo \"${#IFS}\"",
-    "stdout": "3\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
-    "script": "OLD=$IFS; IFS=:; IFS=$OLD; set -- $(echo a b); echo $#",
-    "stdout": "2\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
     "script": "a=(); set -- \"${a[@]}\"; echo $#",
     "stdout": "0\n",
     "status": 0,
@@ -40,12 +28,6 @@
     "stdout": "yb\n",
     "status": 0,
     "reference": "bash-5.3"
-  },
-  {
-    "script": "set -- a b c; x=\"$@\"; echo \"[$x]\"",
-    "stdout": "[a b c]\n",
-    "status": 0,
-    "reference": "busybox-w32"
   },
   {
     "script": "p=ab; [[ abc == \"$p\"* ]] && echo yes || echo no",
