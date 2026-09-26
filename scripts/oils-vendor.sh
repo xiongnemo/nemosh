@@ -20,6 +20,11 @@
 #     not copied: whatever runs the cases provides its own;
 #   - LICENSE.txt.
 #
+# upstream.json also lists the names at the top of the Oils tree and in spec/,
+# its skeleton. A case that cds to $REPO_ROOT lists and globs them there, as
+# `compgen -A directory c` expecting client, core and cpp does, so the harness
+# builds a tree of those names for $REPO_ROOT to be.
+#
 # The result is staged, because git on Windows cannot see an executable bit on
 # disk: upstream's modes are carried over with `git update-index --chmod`.
 # When the commit changes, change it and its date in THIRD-PARTY-NOTICES.md and
@@ -51,6 +56,14 @@ done < <(git -C "$source_dir" grep -l -e '^## compare_shells:.*bash' HEAD -- ':(
 # One "mode sha path" line per file to copy, sorted as Go sorts map keys.
 listing=$(git -C "$source_dir" ls-tree -r HEAD -- LICENSE.txt spec/testdata "$helper" "${selected[@]}" |
   awk '{ print $1, $3, $4 }' | LC_ALL=C sort -k3)
+
+# The skeleton: each name at the top and in spec/, a directory's with a slash.
+skeleton=$(git -C "$source_dir" ls-tree HEAD -- . spec/ |
+  awk -F'\t' '{ split($1, meta, " "); print (meta[2] == "blob" ? $2 : $2 "/") }' | LC_ALL=C sort)
+if printf '%s\n' "$skeleton" | grep -q '[^A-Za-z0-9._/-]'; then
+  echo "oils-vendor.sh: a name in the skeleton needs JSON escaping, which this script does not do" >&2
+  exit 1
+fi
 
 git rm -r -q -f --ignore-unmatch -- "$dest/spec" "$dest/LICENSE.txt"
 
@@ -88,6 +101,7 @@ awk -v commit="$commit" -v committed="$committed" '
   FNR == 1 { input++ }
   input == 1 { split($0, part, ":"); cases[part[1]] = part[2]; next }
   input == 2 { hash[substr($2, 2)] = $1; next }
+  input == 3 { skeleton[++names] = $0; next }
   !($3 in hash) { print "oils-vendor.sh: no sha256 for " $3 > "/dev/stderr"; failed = 1; exit }
   { entry[++n] = sprintf("\"%s\": {\"mode\": \"%s\", \"sha256\": \"%s\"%s}", $3, $1, hash[$3], ($3 in cases) ? ", \"cases\": " cases[$3] : "") }
   END {
@@ -98,9 +112,12 @@ awk -v commit="$commit" -v committed="$committed" '
     printf "  \"committed\": \"%s\",\n", committed
     print "  \"files\": {"
     for (i = 1; i <= n; i++) printf "    %s%s\n", entry[i], (i < n ? "," : "")
-    print "  }"
+    print "  },"
+    print "  \"skeleton\": ["
+    for (i = 1; i <= names; i++) printf "    \"%s\"%s\n", skeleton[i], (i < names ? "," : "")
+    print "  ]"
     print "}"
-  }' <(printf '%s\n' "$counts") <(printf '%s\n' "$hashes") <(printf '%s\n' "$listing") > "$dest/upstream.json"
+  }' <(printf '%s\n' "$counts") <(printf '%s\n' "$hashes") <(printf '%s\n' "$skeleton") <(printf '%s\n' "$listing") > "$dest/upstream.json"
 
 git add -- "$dest/spec" "$dest/LICENSE.txt" "$dest/upstream.json"
 git update-index --chmod=+x -- "${executable[@]}"

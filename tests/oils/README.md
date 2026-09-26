@@ -21,12 +21,31 @@ do. A behaviour worth keeping is still written into
 - `spec/testdata/`: all of it, since cases source and run the files there by path.
 - `spec/bin/builtins-exec-here-doc-helper.sh`: the one helper a case runs by path. The
   helpers cases call by name (`argv.py`, `printenv.py`, `stdout_stderr.py`,
-  `read_from_fd.py`) are Python programs. They are not copied, and whatever runs these
-  cases has to provide them.
+  `read_from_fd.py`) are Python programs. They are not copied: the harness builds
+  `internal/testutil/oilsspec/spechelper` and installs it under each of those names.
 - `LICENSE.txt`.
 
 `upstream.json` records the commit, and each file's git mode, sha256 and number of cases.
 The tests in `internal/testutil/oilsspec` hold the copy to it, so an edit here fails them.
+It also lists the names at the top of the Oils tree and in its `spec/`, because a case that
+cds to `$REPO_ROOT` lists and globs them there. The harness builds a tree of those names,
+empty, with `spec/testdata` and `spec/bin` in it, for `$REPO_ROOT` to name.
+
+## Running
+
+    NEMOSH_OILS=report go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m
+
+runs every case with nemosh, installed as `bash` because the cases branch on `$SH`, and
+reports how many do what the files record of bash, and of ash. `NEMOSH_OILS=calibrate`
+runs the references instead, bash from `NEMOSH_OILS_BASH` and busybox from
+`NEMOSH_OILS_BUSYBOX`, which is how the harness is shown to be faithful.
+`NEMOSH_OILS_OUT` names a file for every case's result, as JSON.
+
+A case runs as Oils' `test/sh_spec.py` runs it: its code on the shell's stdin, in a
+directory of its own that `TMP` names too, with an environment made for it. There is one
+difference: `HOME` is the case's directory, where Oils leaves it unset. On Windows every
+shell measured here takes the user's profile for an unset `HOME`, and a case that wrote
+under `~` would write into the user's real home.
 
 ## Refreshing
 

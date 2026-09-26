@@ -13,12 +13,15 @@ import (
 
 // Upstream is tests/oils/upstream.json, which scripts/oils-vendor.sh writes: the Oils
 // commit the copy was taken from, and what each file held there, keyed by its
-// slash-separated path in the Oils tree.
+// slash-separated path in the Oils tree. Skeleton is every name at the top of that tree
+// and in its spec/, a directory's ending in a slash, since cases that cd to $REPO_ROOT
+// list and glob them.
 type Upstream struct {
 	Repository string          `json:"repository"`
 	Commit     string          `json:"commit"`
 	Committed  string          `json:"committed"`
 	Files      map[string]File `json:"files"`
+	Skeleton   []string        `json:"skeleton"`
 }
 
 // File is one vendored file: its git mode, its sha256, and for a spec file the number of

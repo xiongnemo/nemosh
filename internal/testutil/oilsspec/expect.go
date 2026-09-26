@@ -37,6 +37,19 @@ func (r Result) String() string {
 // wrong: a pass, or the value of an OK, BUG or N-I line.
 func (r Result) Matched() bool { return r > Fail }
 
+// MarshalText writes a result by the name sh_spec.py's tables give it.
+func (r Result) MarshalText() ([]byte, error) { return []byte(r.String()), nil }
+
+func (r *Result) UnmarshalText(text []byte) error {
+	for i, name := range resultNames {
+		if name == string(text) {
+			*r = Result(i)
+			return nil
+		}
+	}
+	return fmt.Errorf("no result is named %q", text)
+}
+
 // Output is what one run of a case printed and returned.
 type Output struct {
 	Stdout, Stderr string
