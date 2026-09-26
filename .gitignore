@@ -1,6 +1,8 @@
 
 .omo/
 bin/
+# Except the helper a vendored Oils case runs by path, which upstream keeps in spec/bin.
+!/tests/oils/spec/bin/
 dist/
 references/
 # Build output. A stray `go build -o nemosh.exe` in the repository root was

@@ -156,10 +156,22 @@ its required `why`. A case imported from there arrives with the knowledge of whi
 reference disagrees already attached, which is the expensive half of writing one.
 
 Anything imported must carry attribution in `THIRD-PARTY-NOTICES.md` naming the
-suite, its licence, and the commit it came from, and must be translated into this
-repository's own case format rather than vendored as a runnable script — a
-`spec/*.test.sh` runner would be a second test framework, and the corpus already
-has one.
+suite, its licence, and the commit it came from. A case imported to *pin* behaviour
+is translated into this repository's own case format rather than run as upstream
+wrote it: the corpus is the one place a case says what nemosh must do, and a second
+framework beside it would be a second answer to that question.
+
+The Oils files are the one suite also kept whole, and they do a different job.
+`tests/oils/` holds them unmodified, and they run as upstream wrote them, as a
+*measuring instrument*: what they produce is a count — of the cases bash passes, how
+many nemosh passes, file by file — so the distance to bash is a number rather than a
+guess, and a change that moves it is seen. They pin nothing. No case there says what
+nemosh must do, none is edited to make it pass, and a behaviour worth keeping still
+goes into the corpus, measured against the references like any other case.
+`scripts/oils-vendor.sh` replaces the copy whole, and `tests/oils/upstream.json`
+records the commit and every file's hash, which a test checks. Being run rather than
+translated changes nothing about the credit: the copy carries its notices entry like
+any imported case.
 
 Translation does not remove the obligation, and that is worth stating plainly
 because it is the part most easily got wrong: a case rewritten from Rust into TOML
