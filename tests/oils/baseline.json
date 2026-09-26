@@ -1043,9 +1043,7 @@
       "ysh behavior when glob doesn't match": "fail"
     },
     "redirect.test.sh": {
-      "1\u003e\u00262- to move file descriptor": "fail",
       "2\u0026\u003e1 (is it a redirect or is it like a\u0026\u003e1)": "fail",
-      ": 3\u003e\u00263-": "fail",
       "\u003c\u003e for read/write": "fail",
       "\u003c\u003e for read/write named pipes": "fail",
       "Descriptor redirect with filename": "ash-only",

@@ -797,5 +797,11 @@
     "stdout": "o\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "exec 4>&1 3>&4-; echo hi >&3",
+    "stdout": "hi\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

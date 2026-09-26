@@ -59,10 +59,14 @@ func (p *scriptPrinter) redirect(operation redirectOperation) string {
 		if operation.duplicate {
 			return descriptor(1) + ">&" + target
 		}
-		if operation.target == 0 {
-			return "<&" + strconv.Itoa(operation.source)
+		moved := ""
+		if operation.move {
+			moved = "-"
 		}
-		return descriptor(1) + ">&" + strconv.Itoa(operation.source)
+		if operation.target == 0 {
+			return "<&" + strconv.Itoa(operation.source) + moved
+		}
+		return descriptor(1) + ">&" + strconv.Itoa(operation.source) + moved
 	case redirectClose:
 		if operation.target == 0 {
 			return "<&-"

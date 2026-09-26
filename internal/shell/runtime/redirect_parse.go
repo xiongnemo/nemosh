@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -55,6 +56,8 @@ type redirectOperation struct {
 	// source is a word to expand; see redirect_named.go.
 	name      string
 	duplicate bool
+	// move is `n>&m-`: a duplication that closes its source after, moving the descriptor.
+	move bool
 }
 
 func parseRedirects(tokens []shellToken) ([]shellToken, []redirectOperation, error) {
@@ -120,7 +123,7 @@ func parseRedirectsWithBudget(tokens []shellToken, budget *parseBudget) ([]shell
 				// when word is not a descriptor, as `&>word` does; see redirect_named.go.
 				operation.bothStreams = token.value == ">&"
 				written := parseTypedWord(*tokens[index].parsed)
-				if !isUnquotedLiteralWord(written) || operation.bothStreams && !isDigits(operand) && operand != "-" {
+				if !isUnquotedLiteralWord(written) || operation.bothStreams && !isDigits(strings.TrimSuffix(operand, "-")) && operand != "-" {
 					operation.duplicate, operation.operand, operation.path = true, written, operand
 					break
 				}
@@ -221,6 +224,13 @@ func parseDupRedirect(target int, sourceText, value string) (redirectOperation, 
 	}
 	if sourceText == "" {
 		return redirectOperation{}, false, fmt.Errorf("%q: %w", value, errMissingRedirectTarget)
+	}
+	// `n>&m-` moves m to n: ksh's, which bash took up. It was refused as malformed, and the
+	// whole script with it.
+	if moved, ok := strings.CutSuffix(sourceText, "-"); ok && isDigits(moved) {
+		operation, needsOperand, err := parseDupRedirect(target, moved, value)
+		operation.move = true
+		return operation, needsOperand, err
 	}
 	source, err := parseDescriptor(sourceText, -1)
 	if err != nil {

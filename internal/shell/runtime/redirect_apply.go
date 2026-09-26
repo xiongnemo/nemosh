@@ -32,6 +32,9 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 			err = table.bindOwnedReader(operation.target, newMemoryInput([]byte(operation.body)))
 		case redirectDup:
 			err = table.dup(operation.target, operation.source)
+			if err == nil && operation.move {
+				err = table.close(operation.source)
+			}
 		case redirectClose:
 			err = table.close(operation.target)
 		}
