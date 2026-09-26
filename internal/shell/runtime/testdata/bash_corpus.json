@@ -983,5 +983,11 @@
     "stdout": "n\ny\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "v='a=b'; $v 2>/dev/null; echo \"st=$? [$a]\"",
+    "stdout": "st=127 []\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

@@ -26,6 +26,16 @@ func leadingAssignments(args []string) ([]assignment, []string) {
 	return assignments, nil
 }
 
+// splitAssignments separates a command's leading assignments from the command itself, at
+// the count of assignment words it began with. Decided on the words as written, not on what
+// they expanded to: a word that expands to `name=value` is a command name, as are a quoted
+// one and one with its `=` escaped -- `v='a=b'; $v`, `"c=d"` and `e\=f` each run a command of
+// that name in busybox-w32 and bash, where every one of them was taken for an assignment.
+func splitAssignments(args []string, count int) ([]assignment, []string) {
+	assignments, rest := leadingAssignments(args[:count])
+	return assignments, append(rest, args[count:]...)
+}
+
 // assignedValue is what an assignment stores: its value, or the old one with it for `+=`.
 func (r Runtime) assignedValue(assignment assignment) string {
 	if assignment.appended {

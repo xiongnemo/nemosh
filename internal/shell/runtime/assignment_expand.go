@@ -62,7 +62,7 @@ func isAssignmentWord(item word) bool {
 //
 // Judged on the literal parts alone: the name and the brackets are always written,
 // only the subscript and the value can be computed. A `]=` in a *quoted* part does not
-// count, because `x='a]=b'` is a command name.
+// count, because `x='a]=b'` is a command name. `]+=` appends, as `A['x']+='bar'` does.
 func isElementAssignmentWord(item word) bool {
 	first := item.parts[0]
 	name, _, found := strings.Cut(first.text, "[")
@@ -73,7 +73,7 @@ func isElementAssignmentWord(item word) bool {
 		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {
 			continue
 		}
-		if strings.Contains(part.text, "]=") {
+		if strings.Contains(part.text, "]=") || strings.Contains(part.text, "]+=") {
 			return true
 		}
 	}

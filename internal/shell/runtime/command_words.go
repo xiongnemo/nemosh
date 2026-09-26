@@ -17,8 +17,9 @@ import (
 //
 // Leading assignments are expanded unsplit. Recognised on the word rather than on its
 // expansion, which is the only place the distinction still exists: see assignment_expand.go
-// for what `d=$(date)` did without this.
-func (r Runtime) expandCommandWords(ctx context.Context, command []word, savedStatus int) []shellToken {
+// for what `d=$(date)` did without this. The second result is how many of the tokens they
+// are, so the caller can tell them from the command without looking again at the text.
+func (r Runtime) expandCommandWords(ctx context.Context, command []word, savedStatus int) ([]shellToken, int) {
 	prefix := 0
 	for prefix < len(command) && isAssignmentWord(command[prefix]) {
 		prefix++
@@ -35,7 +36,8 @@ func (r Runtime) expandCommandWords(ctx context.Context, command []word, savedSt
 		}
 		rest = appendWordTokens(rest, values)
 	}
-	return append(r.expandLeadingAssignments(ctx, command[:prefix], savedStatus), rest...)
+	leading := r.expandLeadingAssignments(ctx, command[:prefix], savedStatus)
+	return append(leading, rest...), len(leading)
 }
 
 // expandLeadingAssignments expands the assignments in front of a command in order, binding

@@ -139,7 +139,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// with the status of the last one *it* performed rather than one from an earlier line.
 	mark := r.expansion.substitutionMark()
 	// The words in POSIX's order, the assignments one at a time; see command_words.go.
-	expanded := r.expandCommandWords(ctx, command, savedStatus)
+	expanded, assigned := r.expandCommandWords(ctx, command, savedStatus)
 	if r.shellErrorRaised() {
 		return shellErrorResult()
 	}
@@ -148,7 +148,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		status, _ := r.expansion.substitutionStatusSince(mark)
 		return r.redirectionsOnly(operations, lineResult{status: status})
 	}
-	assignments, commandArgs := leadingAssignments(args)
+	assignments, commandArgs := splitAssignments(args, assigned)
 	if len(assignments) > 0 && len(commandArgs) == 0 {
 		r.traceCommand(ctx, args, savedStatus)
 		if failed := r.redirectionsOnly(operations, lineResult{}); failed.status != 0 {
@@ -193,7 +193,7 @@ func (r Runtime) dispatchCommand(ctx context.Context, commandArgs []string, assi
 	if result, handled := r.functionCommand(ctx, commandArgs, assignments, operations); handled {
 		return result
 	}
-	return lineResult{status: r.runCommandWithTokenAssignments(ctx, expanded, operations)}
+	return lineResult{status: r.runCommandWithTokenAssignments(ctx, assignments, expanded[len(expanded)-len(commandArgs):], operations)}
 }
 
 // assignmentStatus is what a command consisting only of assignments exits with.
@@ -278,14 +278,11 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 	return operations, true
 }
 
-func (r Runtime) runCommandWithTokenAssignments(ctx context.Context, tokens []shellToken, operations []redirectOperation) int {
-	args := tokenValues(tokens)
-	assignments, commandArgs := leadingAssignments(args)
-	if len(commandArgs) == 0 {
+func (r Runtime) runCommandWithTokenAssignments(ctx context.Context, assignments []assignment, commandTokens []shellToken, operations []redirectOperation) int {
+	if len(commandTokens) == 0 {
 		return r.assignVars(assignments)
 	}
-	commandStart := len(args) - len(commandArgs)
-	commandTokens := tokens[commandStart:]
+	commandArgs := tokenValues(commandTokens)
 	if len(assignments) == 0 {
 		return r.runCommandWithRedirectOperations(ctx, commandTokens, operations)
 	}

@@ -87,10 +87,11 @@ func TestRuntime_tokenAssignmentMergesRedirectedBuiltinMutation(t *testing.T) {
 	runtime := New(applets.DefaultRegistry, Streams{})
 	runtime.vars["X"] = "parent"
 	path := t.TempDir() + "/redirect.txt"
-	tokens := []shellToken{{kind: tokenWord, value: "X=temporary"}, {kind: tokenWord, value: "command"}, {kind: tokenWord, value: "export"}, {kind: tokenWord, value: "Y=kept"}}
+	assignments := []assignment{{name: "X", value: "temporary"}}
+	tokens := []shellToken{{kind: tokenWord, value: "command"}, {kind: tokenWord, value: "export"}, {kind: tokenWord, value: "Y=kept"}}
 	operations := []redirectOperation{{kind: redirectOutput, target: 1, path: path}}
 
-	status := runtime.runCommandWithTokenAssignments(context.Background(), tokens, operations)
+	status := runtime.runCommandWithTokenAssignments(context.Background(), assignments, tokens, operations)
 
 	if status != 0 {
 		t.Fatalf("status: %d", status)

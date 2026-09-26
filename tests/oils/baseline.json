@@ -188,7 +188,6 @@
       "'local -a x' does not set variable": "fail",
       "'local x' does not set variable": "fail",
       "Env binding in readonly/declare is NOT exported!  (pitfall)": "ash-only",
-      "Escaped = in command name": "fail",
       "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
       "Test above without 'local' (which is not POSIX)": "fail",
       "Using ${x-default} after unsetting a temp binding shadowing a global": "fail",
@@ -259,7 +258,6 @@
       "Two kinds of tilde expansion": "fail",
       "double expansion with literal and simple var": "ash-only",
       "double expansion with simple var -- bash bug": "ash-only",
-      "no expansion with RHS assignment": "fail",
       "regression: 0 step disallowed": "fail",
       "{ in expansion": "ash-only"
     },
