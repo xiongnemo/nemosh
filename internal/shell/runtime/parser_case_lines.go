@@ -38,7 +38,12 @@ func nextCaseLine(stack *[]bool, line string) (string, string) {
 	// and the words in front go back on the header line for the span builder to find.
 	// This pass looked for `case` only at the start of a line, so a case anywhere else
 	// kept its arms on one line and read as a command -- `unexpected ;;`.
-	if prefix, operator, compound, ok := splitCompoundAfterOperator(line); ok {
+	prefix, operator, compound, ok := splitCompoundAfterOperator(line)
+	// `f() case ...`: a function whose body is the case.
+	if name, body, isFunction := functionHeaderBeforeCompound(line); isFunction {
+		prefix, operator, compound, ok = name, "()", body, true
+	}
+	if ok {
 		if header, isCase := compoundHeader(compound, "case"); isCase {
 			through, rest := splitAfterCaseIn(header)
 			*stack = append(*stack, true)

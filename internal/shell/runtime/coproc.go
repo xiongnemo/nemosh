@@ -85,6 +85,9 @@ func lineNodes(line, raw string, budget *parseBudget, depth int) ([]programNode,
 // case begins and ends: `coproc L while read l; do ...; done` is a loop that is a
 // coprocess. The name comes back as the prefix, and "coproc" as the operator.
 func splitCompoundAfterPrefix(line string) (string, string, string, bool) {
+	if name, rest, ok := functionHeaderBeforeCompound(line); ok {
+		return name, "()", rest, true
+	}
 	if rest, ok := strings.CutPrefix(line, "coproc "); ok {
 		name, rest := coprocName(strings.TrimSpace(rest))
 		if beginsWithCompoundKeyword(rest) {

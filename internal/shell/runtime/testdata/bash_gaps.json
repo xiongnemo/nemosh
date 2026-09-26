@@ -46,23 +46,5 @@
     "stdout": "hi\n",
     "status": 0,
     "reference": "bash-5.3"
-  },
-  {
-    "script": "f() if true; then echo yes; fi; f",
-    "stdout": "yes\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
-    "script": "f() for i in 1 2; do echo $i; done; f",
-    "stdout": "1\n2\n",
-    "status": 0,
-    "reference": "busybox-w32"
-  },
-  {
-    "script": "f() [[ -n x ]]; f && echo ok",
-    "stdout": "ok\n",
-    "status": 0,
-    "reference": "busybox-w32"
   }
 ]

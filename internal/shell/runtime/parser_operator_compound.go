@@ -121,8 +121,11 @@ func splitCompoundAfterOperator(line string) (string, string, string, bool) {
 // joinCompoundPrefix puts a prefix back in front of text taken from the compound's header,
 // for the passes that rewrite a header line and must leave the prefix where it was.
 func joinCompoundPrefix(prefix, operator, text string) string {
-	if operator == "!" {
+	switch operator {
+	case "!":
 		return "! " + text
+	case "()":
+		return prefix + "() " + text
 	}
 	return prefix + " " + operator + " " + text
 }
@@ -131,6 +134,13 @@ func joinCompoundPrefix(prefix, operator, text string) string {
 // between them says.
 func wrapCompoundAfterOperator(node programNode, prefix, operator string, budget *parseBudget, depth int) (programNode, error) {
 	switch operator {
+	case "()":
+		// The prefix is a function's name, and the compound its body; see
+		// functionHeaderBeforeCompound. The body is held as a brace group around the
+		// compound, which runs it the same and is how a compound stands where a command
+		// is expected everywhere else.
+		name, _ := newFunctionName(prefix)
+		return functionDefinition{name: name, body: braceGroup{body: Script{program: []programNode{node}}}}, nil
 	case "coproc":
 		// The prefix is the coprocess's name; see splitCompoundAfterPrefix.
 		return coprocNode{name: prefix, body: node}, nil

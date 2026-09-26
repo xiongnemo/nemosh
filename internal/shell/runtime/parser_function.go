@@ -52,6 +52,32 @@ func parseFunctionDefinition(line string, budget *parseBudget, depth int) (funct
 	return functionDefinition{name: name, body: body}, true, nil
 }
 
+// functionHeaderBeforeCompound finds `name() if ...`, a function whose body is a keyword
+// compound rather than a brace group: an if, a loop or a case, which POSIX 2.9.5 allows and
+// both references take. It answers the name and the compound's header, for the span builder
+// to parse the compound as it parses any, with the definition around it; see
+// wrapCompoundAfterOperator.
+func functionHeaderBeforeCompound(line string) (string, string, bool) {
+	text, _ := cutFunctionKeyword(line)
+	open := strings.IndexByte(text, '(')
+	if open <= 0 {
+		return "", "", false
+	}
+	name := strings.TrimSpace(text[:open])
+	if _, ok := newFunctionName(name); !ok {
+		return "", "", false
+	}
+	rest := strings.TrimLeft(text[open+1:], " \t")
+	if !strings.HasPrefix(rest, ")") {
+		return "", "", false
+	}
+	rest = strings.TrimLeft(rest[1:], " \t")
+	if !beginsWithCompoundKeyword(rest) {
+		return "", "", false
+	}
+	return name, rest, true
+}
+
 func standaloneFunctionHeader(line string) bool {
 	rawName, remainder, found := strings.Cut(line, "(")
 	if !found {
@@ -80,6 +106,12 @@ func newFunctionName(value string) (functionName, bool) {
 }
 
 func parseFunctionBody(source string, budget *parseBudget, depth int) (commandNode, error) {
+	// `f() [[ ... ]]` and `f() (( ... ))`: bash's conditional and arithmetic commands are
+	// compound commands too, and are parsed as the brace group around them. The keyword
+	// compounds never arrive here; see functionHeaderBeforeCompound.
+	if strings.HasPrefix(source, "[[") || strings.HasPrefix(source, "((") {
+		source = "{ " + source + "\n}"
+	}
 	masked, groups, err := extractGroupCommands(source, budget, depth+1)
 	if err != nil {
 		return nil, err
