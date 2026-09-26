@@ -29,6 +29,15 @@ func (p *conditionParser) parsePrimary() (bool, error) {
 	if p.done() {
 		return false, fmt.Errorf("expression ended early")
 	}
+	// A binary operator after this term makes it a comparison, whatever the term looks like:
+	// with x=-f, `[[ $x == $x ]]` compares two strings rather than asking whether a file named
+	// `==` exists, and `[[ $p == "(" ]]` with p='(' compares two parentheses rather than
+	// opening a group. It did both, and the leftover term was a syntax error. busybox and bash
+	// agree; POSIX settles test's three-argument form the same way, on its middle word first.
+	if p.binaryFollows() {
+		left, operator, right := p.take(), p.take(), p.take()
+		return p.runtime.evaluateBinaryCondition(operator.text, left, right)
+	}
 	if term := p.peek(); term.text == "(" && !term.quoted {
 		p.take()
 		value, err := p.parseOr()

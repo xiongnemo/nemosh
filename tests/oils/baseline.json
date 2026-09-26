@@ -720,7 +720,6 @@
       "[[ ]] is syntax error": "fail",
       "[[ ]] with redirect": "fail",
       "[[ a 3\u003c b ]] doesn't work (bug regression)": "fail",
-      "[[ compare with literal -f (compare with test-builtin.test.sh)": "fail",
       "[[ compound expressions": "fail",
       "[[ over multiple lines is OK": "fail",
       "[[ with op variable (compare with test-builtin.test.sh)": "fail",

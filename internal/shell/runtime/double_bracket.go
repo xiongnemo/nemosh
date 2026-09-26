@@ -196,12 +196,21 @@ func (p *conditionParser) parseAnd() (bool, error) {
 }
 
 func (p *conditionParser) parseNegation() (bool, error) {
-	if !p.done() && p.peek().text == "!" && !p.peek().quoted {
+	if !p.done() && p.peek().text == "!" && !p.peek().quoted && !p.binaryFollows() {
 		p.take()
 		value, err := p.parseNegation()
 		return !value, err
 	}
 	return p.parsePrimary()
+}
+
+// binaryFollows reports a binary operator after the current term, with a term after it.
+func (p *conditionParser) binaryFollows() bool {
+	if p.at+2 >= len(p.terms) {
+		return false
+	}
+	operator := p.terms[p.at+1]
+	return doubleBracketBinaryOperators[operator.text] && !operator.quoted
 }
 
 // soleLiteralText is a word's text when it is one plain literal part, and "" for
