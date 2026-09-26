@@ -124,7 +124,6 @@
       "${@:offset:length}": "fail",
       "${a-}": "fail",
       "${a[@]#...}": "fail",
-      "${a[@]:offset:length}": "fail",
       "${a[@]@P}, ${a[@]@Q}, and ${a[@]@a}": "fail",
       "${sp[i]} with negative invalid index": "fail",
       "((sp[i])) and ((sp[i]++)) with invalid negative index": "fail",
@@ -154,11 +153,9 @@
       "Negative slice length": "fail",
       "Regression: Assigning with out-of-range negative index": "fail",
       "Regression: Negative out-of-range index in [[ -v a[index] ]]": "fail",
-      "Regression: Out-of-bound negative offset for ${a[@]:offset}": "fail",
       "Regression: silent out-of-bound negative index in ${a[-2]} and $((a[-2]))": "fail",
       "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail",
       "Set array item to array": "fail",
-      "Slice of sparse array with [@]": "fail",
       "array default": "fail",
       "test -v a[i] with arith expressions": "fail"
     },
@@ -1200,8 +1197,6 @@
       "patsub with single quotes and hyphen in character class (regression)": "fail"
     },
     "var-op-slice.test.sh": {
-      "${@:offset:length} and ${*:offset:length}": "fail",
-      "${@:offset} and ${*:offset}": "fail",
       "${array[@]:} vs ${array[@]: }  - bash and zsh inconsistent": "fail",
       "Cannot take length of substring slice": "fail",
       "Slice undefined": "fail"

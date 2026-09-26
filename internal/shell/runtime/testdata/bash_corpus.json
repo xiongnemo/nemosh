@@ -833,5 +833,17 @@
     "stdout": "",
     "status": 2,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "a[33]=1; a[66]=2; a[99]=2; printf '[%s]' \"${a[@]:15:2}\"",
+    "stdout": "[1][2]",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(1 2 3 4); echo \"(${a[*]: -5})\"",
+    "stdout": "()\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

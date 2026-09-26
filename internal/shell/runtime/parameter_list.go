@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -49,7 +51,7 @@ func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatu
 		if name == "@" || name == "*" {
 			elements = append([]string{r.params.name}, elements...)
 		}
-		return r.sliceList(ctx, elements, word, name, savedStatus)
+		return r.sliceList(ctx, elements, r.listIndices(name), word, name, savedStatus)
 	case "/", "//", "/#", "/%":
 		pattern := r.expandReplaceSpec(ctx, word, savedStatus)
 		return mapList(elements, func(element string) string {
@@ -89,48 +91,87 @@ func (r Runtime) parameterList(ctx context.Context, name string) ([]string, bool
 	return elements, exists
 }
 
+// listIndices is the subscripts of the indexed array a list name stands for, in order, and
+// nil for any other list: the positional parameters, an associative array, a scalar.
+func (r Runtime) listIndices(name string) []int {
+	reference, ok := parseArrayReference(name)
+	if !ok || r.arrays.isAssociative(reference.name) {
+		return nil
+	}
+	if _, isArray := r.arrays.get(reference.name); !isArray {
+		return nil
+	}
+	return r.arrays.liveIndices(reference.name)
+}
+
 // sliceList is `${list:offset:length}`.
 //
 // The offset and the length are arithmetic, as they are for a string, and a negative
 // offset counts from the end -- `${a[@]: -2}` is the last two, which needs the space
 // for the same reason `${x: -2}` does.
-func (r Runtime) sliceList(ctx context.Context, elements []string, spec, name string, savedStatus int) ([]string, bool) {
+//
+// The rest is bash's, and was not here:
+//
+//   - An indexed array's offset is an index, not a position, so a sparse array is sliced
+//     by its subscripts: `${a[@]:15:2}` over indices 33, 66 and 99 is the first two of
+//     them. It counted fifteen elements into a list of three and gave nothing. A negative
+//     offset counts back from one past the highest index, as a negative subscript does.
+//   - An offset that reaches back past the start gives nothing. It was moved up to the
+//     start, so `${a[*]: -5}` of four elements was all four.
+//   - A negative length is an error, `substring expression < 0`. It is a count from the end
+//     for a string, and it was one for a list too, so `${a[@]: 1: -3}` of five elements
+//     gave the second where bash runs nothing.
+//
+// indices is the array's subscripts, in order, or nil for a list whose positions are its
+// indices.
+func (r Runtime) sliceList(ctx context.Context, elements []string, indices []int, spec, name string, savedStatus int) ([]string, bool) {
+	sliced := r.sliceElements(ctx, elements, indices, spec, savedStatus)
+	if strings.HasSuffix(name, "[*]") || name == "*" {
+		// The `*` forms join into one field, as they do without an operator -- an empty
+		// one when the slice is empty, which the caller takes as the value.
+		return []string{strings.Join(sliced, r.starSeparator())}, true
+	}
+	return sliced, true
+}
+
+// sliceElements is the elements a slice selects, or none when it selects none or is wrong.
+func (r Runtime) sliceElements(ctx context.Context, elements []string, indices []int, spec string, savedStatus int) []string {
 	offsetText, lengthText, hasLength := splitSubstringSpec(spec)
 	offset, err := r.substringNumber(ctx, offsetText, "offset", savedStatus)
 	if err != nil {
 		r.reportExpansionError(err)
-		return nil, true
+		return nil
+	}
+	span := len(elements)
+	if len(indices) > 0 {
+		span = indices[len(indices)-1] + 1
 	}
 	if offset < 0 {
-		offset += len(elements)
+		offset += span
 	}
-	offset = max(offset, 0)
-	if offset >= len(elements) {
-		return nil, true
+	first := offset
+	if indices != nil {
+		first, _ = slices.BinarySearch(indices, offset)
+	}
+	if offset < 0 || first >= len(elements) {
+		return nil
 	}
 	end := len(elements)
 	if hasLength {
 		length, err := r.substringNumber(ctx, lengthText, "length", savedStatus)
+		if err == nil && length < 0 {
+			err = fmt.Errorf("%s: substring expression < 0", strings.TrimSpace(lengthText))
+		}
 		if err != nil {
 			r.reportExpansionError(err)
-			return nil, true
+			return nil
 		}
-		if length < 0 {
-			end = len(elements) + length
-		} else {
-			end = offset + length
-		}
+		end = min(first+length, end)
 	}
-	end = min(end, len(elements))
-	if end <= offset {
-		return nil, true
+	if end <= first {
+		return nil
 	}
-	sliced := append([]string(nil), elements[offset:end]...)
-	if strings.HasSuffix(name, "[*]") || name == "*" {
-		// The `*` forms join into one field, as they do without an operator.
-		return []string{strings.Join(sliced, r.starSeparator())}, true
-	}
-	return sliced, true
+	return append([]string(nil), elements[first:end]...)
 }
 
 func mapList(elements []string, apply func(string) string) []string {
