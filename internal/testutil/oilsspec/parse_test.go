@@ -10,9 +10,10 @@ import (
 	"github.com/xiongnemo/nemosh/internal/testutil/oilsspec"
 )
 
-// Every vendored file parses, into as many cases as Oils counts in it. The parser is a
-// port of test/sh_spec.py's, and when it was written its reading of all 2781 cases was
-// compared with the original's, field for field; this keeps the count honest after.
+// Every vendored file parses, into as many cases as Oils counts in it, each named apart
+// from the rest of its file. The parser is a port of test/sh_spec.py's, and when it was
+// written its reading of all 2781 cases was compared with the original's, field for
+// field; this keeps the count honest after.
 func TestParse_readsEveryVendoredFileAsOilsCountsIt(t *testing.T) {
 	record := readUpstream(t)
 	files := 0
@@ -32,6 +33,13 @@ func TestParse_readsEveryVendoredFileAsOilsCountsIt(t *testing.T) {
 		}
 		if len(spec.Cases) != file.Cases {
 			t.Errorf("%s: parsed %d cases, and Oils counts %d", name, len(spec.Cases), file.Cases)
+		}
+		ids := map[string]bool{}
+		for _, c := range spec.Cases {
+			if ids[c.ID] {
+				t.Errorf("%s: two cases are named %q", name, c.ID)
+			}
+			ids[c.ID] = true
 		}
 	}
 	if files == 0 {
@@ -88,6 +96,7 @@ func TestParse_readsTheGrammarAsOilsDoes(t *testing.T) {
 				t.Fatal(err)
 			}
 			for i := range test.want {
+				test.want[i].ID = test.want[i].Desc
 				if test.want[i].Shells == nil {
 					test.want[i].Shells = map[string]*oilsspec.Qualified{}
 				}

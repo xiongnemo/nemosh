@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -15,10 +16,13 @@ type Spec struct {
 }
 
 // Case is one case of a spec file: the #### line that begins it, its code, and what it
-// expects. Default holds the expectations every shell is held to, keyed as Oils writes
-// them (stdout, stdout-json, stderr, stderr-json, status). Shells holds the ones a
-// qualified line such as `## N-I dash/ash status: 2` sets for particular shells.
+// expects. ID is its description, with " #2" and on after it for the second and later
+// cases a file describes alike, so it names the case within its file. Default holds the
+// expectations every shell is held to, keyed as Oils writes them (stdout, stdout-json,
+// stderr, stderr-json, status). Shells holds the ones a qualified line such as
+// `## N-I dash/ash status: 2` sets for particular shells.
 type Case struct {
+	ID      string
 	Desc    string
 	Line    int
 	Code    string
@@ -71,10 +75,16 @@ func Parse(content string) (Spec, error) {
 			return Spec{}, err
 		}
 	}
+	described := map[string]int{}
 	for tokens.current.kind != tokenEOF {
 		c, err := parseCase(tokens)
 		if err != nil {
 			return Spec{}, err
+		}
+		described[c.Desc]++
+		c.ID = c.Desc
+		if n := described[c.Desc]; n > 1 {
+			c.ID += " #" + strconv.Itoa(n)
 		}
 		spec.Cases = append(spec.Cases, c)
 	}
