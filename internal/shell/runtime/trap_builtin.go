@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // trap implements the POSIX `trap` builtin over the conditions this shell
@@ -41,7 +42,10 @@ func (r Runtime) trap(args []string) int {
 		return r.listTraps()
 	}
 	action, conditions := "-", args
-	if len(args) > 1 {
+	// An unsigned number first is a condition, not an action, and every operand is then one
+	// to reset, as POSIX has it and both references read it: `trap 0 2` armed INT with a
+	// command named 0.
+	if len(args) > 1 && !isDigits(args[0]) {
 		action, conditions = args[0], args[1:]
 	}
 	status := 0
@@ -100,28 +104,32 @@ func (r Runtime) listTraps() int {
 // result distinguishes an operand that is not a signal at all from one that is
 // a real signal this shell does not implement; the first is empty for the
 // latter. POSIX allows the signal number as well as the name, and 0 for EXIT.
+//
+// A signal's name is read in any case, with SIG in front or not, as both references read it:
+// `trap - int` left INT's trap armed. ERR and RETURN, which are not signals, only as written,
+// as busybox has ERR.
 func trapConditionName(operand string) (trapName, bool) {
 	switch operand {
-	case "EXIT", "SIGEXIT", "0":
-		return trapExit, true
-	case "INT", "SIGINT", "2":
-		return trapINT, true
-	case "HUP", "SIGHUP", "1":
-		return trapHUP, true
-	case "QUIT", "SIGQUIT", "3":
-		return trapQUIT, true
-	case "TERM", "SIGTERM", "15":
-		return trapTERM, true
 	case "ERR":
 		return trapERR, true
 	case "RETURN":
 		return trapRETURN, true
 	}
-	if _, err := strconv.Atoi(operand); err == nil {
-		return "", true
-	}
-	if slices.Contains(portableSignalNames, operand) {
-		return "", true
+	switch name := strings.TrimPrefix(strings.ToUpper(operand), "SIG"); name {
+	case "EXIT", "0":
+		return trapExit, true
+	case "INT", "2":
+		return trapINT, true
+	case "HUP", "1":
+		return trapHUP, true
+	case "QUIT", "3":
+		return trapQUIT, true
+	case "TERM", "15":
+		return trapTERM, true
+	default:
+		if _, err := strconv.Atoi(operand); err == nil || slices.Contains(portableSignalNames, name) {
+			return "", true
+		}
 	}
 	return "", false
 }

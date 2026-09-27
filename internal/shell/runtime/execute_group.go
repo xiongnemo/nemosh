@@ -47,7 +47,7 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 			// Not after an `exec`, which replaced the subshell: nothing is left to
 			// run its trap, in either reference.
 			if control != flowExec {
-				redirected.runOwnExitTrap(ctx, r.traps[trapExit], status)
+				status = redirected.runOwnExitTrap(ctx, r.traps[trapExit], status)
 			}
 			control = flowNone
 		}

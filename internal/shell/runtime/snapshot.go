@@ -28,11 +28,13 @@ func (r Runtime) snapshotShared() (Runtime, error) {
 // Both references agree: `(trap 'echo bye' EXIT; ...)` says bye as the subshell ends, which
 // here it never did. The parent's traps stay visible to the subshell all the same, so the
 // save-and-restore idiom `saved=$(trap)` sees them -- a command substitution started with an
-// empty table, and that idiom saved nothing.
-func (r Runtime) runOwnExitTrap(ctx context.Context, inherited string, status int) {
+// empty table, and that idiom saved nothing. It answers the status the subshell ends with,
+// which an `exit` in the trap decides; see runExitTrap.
+func (r Runtime) runOwnExitTrap(ctx context.Context, inherited string, status int) int {
 	if own := r.traps[trapExit]; own != "" && own != inherited {
-		r.runExitTrap(context.WithoutCancel(ctx), status)
+		return r.runExitTrap(context.WithoutCancel(ctx), status)
 	}
+	return status
 }
 
 // inheritedTraps are the traps a snapshot starts with: all of them, except ERR unless

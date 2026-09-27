@@ -200,7 +200,7 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 			// runs as the job ends, as a subshell's does -- in both references. It never
 			// ran; the process launcher found that by running it.
 			if result.control != flowExec {
-				worker.runOwnExitTrap(worker.jobScope.ctx, "", result.status)
+				result.status = worker.runOwnExitTrap(worker.jobScope.ctx, "", result.status)
 			}
 			return result
 		})

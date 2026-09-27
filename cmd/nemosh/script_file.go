@@ -113,7 +113,7 @@ func (c command) runScriptWith(ctx context.Context, controller *interruptControl
 	stopWatch()
 	stopTerminations()
 	clear()
-	rt.CloseBatch(status)
+	status = rt.CloseBatch(status)
 	if signal, ok := runtime.ExitSignal(executionCtx); ok {
 		return signalExit(signal)
 	}

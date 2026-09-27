@@ -38,10 +38,11 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	}
 	if parseErr != nil && control == flowNone {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", parseErr)
+		status = 2
 		if runExitTrap {
-			r.runExitTrap(context.WithoutCancel(ctx), 2)
+			status = r.runExitTrap(context.WithoutCancel(ctx), status)
 		}
-		return 2, flowNone
+		return status, flowNone
 	}
 	if runExitTrap && control != flowExec {
 		if status == 130 && isShellInterrupt(ctx) {
@@ -52,7 +53,7 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 		if signal, ok := ExitSignal(ctx); ok {
 			r.runTrap(context.WithoutCancel(ctx), signalTraps[signal], status)
 		}
-		r.runExitTrap(context.WithoutCancel(ctx), status)
+		status = r.runExitTrap(context.WithoutCancel(ctx), status)
 	}
 	if control == flowExec {
 		r.lifecycle.exitSuppressed = true
@@ -60,9 +61,12 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	return status, control
 }
 
-func (r Runtime) CloseBatch(savedStatus int) {
+// CloseBatch ends a shell that ran a script or a command, and answers the status it ends with,
+// which an `exit` in its EXIT trap decides when there is one.
+func (r Runtime) CloseBatch(savedStatus int) int {
+	status := savedStatus
 	if !r.lifecycle.exitSuppressed {
-		r.runExitTrap(context.Background(), savedStatus)
+		status = r.runExitTrap(context.Background(), savedStatus)
 	}
 	r.jobScope.seal()
 	// A descriptor an `exec` redirect opened belongs to the shell and outlives
@@ -78,14 +82,21 @@ func (r Runtime) CloseBatch(savedStatus int) {
 	if r.substitutions != nil {
 		r.substitutions.Wait()
 	}
+	return status
 }
 
 func (r Runtime) executePrepared(ctx context.Context, script Script) (int, flowControl) {
 	return r.executeTypedScript(ctx, script)
 }
 
-func (r Runtime) runExitTrap(ctx context.Context, savedStatus int) {
-	r.runTrap(ctx, trapExit, savedStatus)
+// runExitTrap runs the EXIT trap and answers the status the shell ends with: the one it had,
+// or the one an `exit` in the trap gave, as both references end -- a script, a subshell and a
+// command substitution alike. `trap 'exit 42' EXIT` ended with the status before the trap.
+func (r Runtime) runExitTrap(ctx context.Context, savedStatus int) int {
+	if result := r.runTrap(ctx, trapExit, savedStatus); result.control == flowExit {
+		return result.status
+	}
+	return savedStatus
 }
 
 func (r Runtime) runInterruptTrap(ctx context.Context, savedStatus int) {

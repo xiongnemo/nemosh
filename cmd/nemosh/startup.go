@@ -82,6 +82,5 @@ func sourceProfile(ctx context.Context, rt runtime.Runtime, stderr io.Writer, pa
 // EXIT trap and all, as it is in busybox; status 0 is an exitStatus too, so the caller
 // stops rather than carrying on to the script or the prompt.
 func startupExit(rt runtime.Runtime, status int) error {
-	rt.CloseBatch(status)
-	return exitStatus(status)
+	return exitStatus(rt.CloseBatch(status))
 }

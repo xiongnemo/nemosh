@@ -1595,5 +1595,17 @@
     "stdout": "function is a shell keyword\n[[\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "trap 'echo x' int\ntrap 'echo e' EXIT\ntrap 0 2\ntrap\necho end",
+    "stdout": "end\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "( trap 'exit 5' EXIT; true )\necho st=$?\ntrap 'echo in; exit 7' EXIT\nexit 3",
+    "stdout": "st=5\nin\n",
+    "status": 7,
+    "reference": "busybox-w32"
   }
 ]

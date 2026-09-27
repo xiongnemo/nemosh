@@ -206,7 +206,7 @@ func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
 		go r.receiveSignals(control, end)
 	}
 	status, _ := r.executePrepared(ctx, program)
-	r.CloseBatch(status)
+	status = r.CloseBatch(status)
 	if signal, ok := errors.AsType[jobSignal](context.Cause(ctx)); ok {
 		endBySignal(int(signal))
 	}
