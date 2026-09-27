@@ -1493,5 +1493,23 @@
     "stdout": "st=2\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x='a b'\ny=plain\nq=\"it's\"\ndeclare | grep -E '^(x|y|q)='",
+    "stdout": "q='it'\\''s'\nx='a b'\ny=plain\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -i n=5\ndeclare -r r=1\nx=1\ndeclare -i | grep -E ' (n|r|x)='",
+    "stdout": "declare -i n=\"5\"\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "f() { echo hi; }\ndeclare | grep -A3 '^f ()'",
+    "stdout": "f () \n{ \n    echo hi\n}\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

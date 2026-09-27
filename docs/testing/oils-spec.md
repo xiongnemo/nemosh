@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1770 of the 2551 cases bash passes: 69.4%.**
+**nemosh passes 1774 of the 2551 cases bash passes: 69.5%.**
 
-Of the other 781, it does 98 the way the files record of ash, which may be busybox's
-way, and 683 neither way.
+Of the other 777, it does 98 the way the files record of ash, which may be busybox's
+way, and 679 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 683 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1770 |
+| that nemosh passes of those | 1774 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -51,13 +51,13 @@ of ash.
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 0 | 9 |
 | array-assoc.test.sh | 42 | 36 | 31 | 86.1% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
-| array-compat.test.sh | 12 | 12 | 9 | 75.0% | 0 | 1 |
+| array-compat.test.sh | 12 | 12 | 10 | 83.3% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 8 | 50.0% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 22 | 55.0% | 0 | 0 |
 | array.test.sh | 78 | 78 | 67 | 85.9% | 1 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 6 | 66.7% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
-| assign-extended.test.sh | 39 | 34 | 22 | 64.7% | 0 | 0 |
+| assign-extended.test.sh | 39 | 34 | 24 | 70.6% | 0 | 0 |
 | assign.test.sh | 48 | 45 | 37 | 82.2% | 1 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 3 | 33.3% | 3 | 9 |
@@ -141,7 +141,7 @@ of ash.
 | redirect-multi.test.sh | 13 | 13 | 9 | 69.2% | 0 | 7 |
 | redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 28 |
 | regex.test.sh | 37 | 36 | 26 | 72.2% | 0 | 10 |
-| serialize.test.sh | 10 | 9 | 7 | 77.8% | 1 | 10 |
+| serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 10 |
 | sh-func.test.sh | 12 | 12 | 11 | 91.7% | 0 | 10 |
 | sh-options-bash.test.sh | 9 | 9 | 7 | 77.8% | 0 | 0 |
 | sh-options.test.sh | 39 | 39 | 22 | 56.4% | 0 | 12 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1770 | 69.4% | 98 | 1447 |
+| all | 2668 | 2551 | 1774 | 69.5% | 98 | 1447 |

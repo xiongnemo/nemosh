@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/shellquote"
@@ -32,7 +31,10 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 	if options.functionBodies {
 		return r.declareFunctionBodies(names)
 	}
-	if options.print || len(names) == 0 {
+	if len(names) == 0 {
+		return r.listDeclarations(options)
+	}
+	if options.print {
 		return r.printDeclarations(names)
 	}
 	for _, name := range names {
@@ -211,37 +213,20 @@ func (r Runtime) assignElementByKind(ctx context.Context, reference arrayReferen
 	return r.assignArrayElementText(ctx, reference, value)
 }
 
-// printDeclarations is `declare -p`, and `declare` with no operands.
+// printDeclarations is `declare -p name...`; with no names it is listDeclarations.
 //
 // The form is bash's, because it is meant to be read back by the shell: a `declare -p`
 // whose output cannot be pasted into a script is a listing, not a declaration.
 //
 // A name that is not there is 1, as in bash, and the others are printed all the same.
 func (r Runtime) printDeclarations(names []string) int {
-	if len(names) > 0 {
-		status := 0
-		for _, name := range names {
-			if !r.printOneDeclaration(strings.SplitN(name, "=", 2)[0]) {
-				status = 1
-			}
+	status := 0
+	for _, name := range names {
+		if !r.printOneDeclaration(strings.SplitN(name, "=", 2)[0]) {
+			status = 1
 		}
-		return status
 	}
-	for _, name := range r.arrays.associativeNames() {
-		r.printOneDeclaration(name)
-	}
-	scalars := make([]string, 0, len(r.vars))
-	for name := range r.vars {
-		scalars = append(scalars, name)
-	}
-	sort.Strings(scalars)
-	for _, name := range scalars {
-		if r.arrays.isAssociative(name) {
-			continue
-		}
-		r.printOneDeclaration(name)
-	}
-	return 0
+	return status
 }
 
 func (r Runtime) printOneDeclaration(name string) bool {

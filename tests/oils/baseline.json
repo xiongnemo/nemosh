@@ -93,7 +93,6 @@
     },
     "array-compat.test.sh": {
       "Array Decay with IFS": "fail",
-      "value.BashArray internal representation - Assoc (ordering is a problem)": "fail",
       "value.BashArray internal representation - Indexed": "fail"
     },
     "array-literal.test.sh": {
@@ -155,8 +154,6 @@
       "declare -p": "fail",
       "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
       "declare -p and value.Undef": "fail",
-      "declare -paA": "fail",
-      "declare -pnrx": "fail",
       "eval -- \"$(declare -p arr)\" (restore arrays w/ unset elements)": "fail",
       "syntax error in array assignment": "fail",
       "typeset +r removes read-only attribute (TODO: documented in bash to do nothing)": "fail",
@@ -911,7 +908,6 @@
       "unquoted [a  b] as pattern, [a  b|c]": "fail"
     },
     "serialize.test.sh": {
-      "declare": "fail",
       "set": "ash-only"
     },
     "sh-func.test.sh": {

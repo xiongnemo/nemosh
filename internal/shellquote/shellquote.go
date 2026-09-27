@@ -81,6 +81,19 @@ func Double(value string) string {
 	return out.String()
 }
 
+// Reusable is a value as bash's own `set` and a bare `declare` list it: as it is when the
+// shell reads it back as itself, single-quoted when it holds a character the shell treats
+// specially, and the empty value as nothing at all.
+func Reusable(value string) string {
+	switch {
+	case needsANSIC(value):
+		return ANSIC(value)
+	case hasShellMeta(value):
+		return Single(value)
+	}
+	return value
+}
+
 // Key is an associative array's key as `declare -p` writes it: bare when the shell reads it
 // back as itself, and double-quoted when it holds a character the shell treats specially or
 // is @ or * alone, which as a subscript would be every element.

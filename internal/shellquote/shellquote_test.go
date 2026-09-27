@@ -100,6 +100,18 @@ func TestQuoting_dollarQuotesWhatNoOtherQuotingHolds(t *testing.T) {
 	}
 }
 
+// A bare `declare` and bash's `set` quote only a value that needs it, measured.
+func TestReusable_quotesOnlyWhatNeedsIt(t *testing.T) {
+	for value, want := range map[string]string{
+		"plain": "plain", "": "", "a b": "'a b'", "it's": `'it'\''s'`, "a\tb": `$'a\tb'`,
+		"a,b": "a,b", "x=1": "x=1", "~x": "'~x'", "#x": "'#x'", "x#": "x#", "$x": "'$x'",
+	} {
+		if got := Reusable(value); got != want {
+			t.Errorf("Reusable(%q) = %s, want %s", value, got, want)
+		}
+	}
+}
+
 // The empty string, which nothing but a pair of quotes can write.
 func TestQuoting_theEmptyString(t *testing.T) {
 	if got := Backslash(""); got != "''" {
