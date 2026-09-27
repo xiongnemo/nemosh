@@ -562,8 +562,6 @@
       "Command Sub trailing newline removed": "fail",
       "Command Sub trailing whitespace not removed": "fail",
       "Double Quotes in Command Sub in Double Quotes": "fail",
-      "Quoting \\ within ``": "fail",
-      "Quoting \\ within `` within double quotes": "fail",
       "Syntax errors with double quotes within backticks": "ash-only"
     },
     "command_.test.sh": {

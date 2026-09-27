@@ -148,7 +148,7 @@ func splitLeadingReservedWord(segment string) []string {
 		if !ok {
 			continue
 		}
-		if trimmed := strings.Trim(rest, logicalLineCutset); trimmed != "" {
+		if trimmed := trimLogicalSegment(rest); trimmed != "" {
 			return []string{keyword, trimmed}
 		}
 	}

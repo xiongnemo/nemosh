@@ -1703,5 +1703,11 @@
     "stdout": "[${v-(u)}\" (a b)]\n$(a)\" (b c)\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "echo a\\ \necho \"[$(echo b\\ )]\"\necho next",
+    "stdout": "a \n[b ]\nnext\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

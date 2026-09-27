@@ -76,11 +76,25 @@ func (scanner *syntaxScanner) flushLogicalLine() {
 			searched = offset + len(segment)
 		}
 		offset += len(segment) - len(strings.TrimLeft(segment, logicalLineCutset))
-		if normalized := strings.Trim(segment, logicalLineCutset); normalized != "" {
+		if normalized := trimLogicalSegment(segment); normalized != "" {
 			for _, line := range splitLeadingReservedWord(normalized) {
 				scanner.lines = append(scanner.lines, line)
 				scanner.starts = append(scanner.starts, scanner.segmentStart(offset))
 			}
 		}
 	}
+}
+
+// trimLogicalSegment is a segment without the blanks around it -- all but one a backslash
+// escapes at its end, which is part of the last word, as in busybox-w32 and bash: `echo a\ `
+// prints `a ` and a space. Trimmed with the rest, it left the backslash last on the line, and
+// the script was refused as ending in one.
+func trimLogicalSegment(segment string) string {
+	left := strings.TrimLeft(segment, logicalLineCutset)
+	trimmed := strings.TrimRight(left, logicalLineCutset)
+	backslashes := len(trimmed) - len(strings.TrimRight(trimmed, `\`))
+	if backslashes%2 == 1 && len(trimmed) < len(left) && left[len(trimmed)] != '\n' {
+		return left[:len(trimmed)+1]
+	}
+	return trimmed
 }
