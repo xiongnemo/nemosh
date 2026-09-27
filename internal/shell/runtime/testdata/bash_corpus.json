@@ -1553,5 +1553,11 @@
     "stdout": "@(a|*|b)\nempty\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ 'a  b' =~ (a  b) ]] && echo y\n[[ (foo =~ foo) ]] && echo z\n[[ ! (ab =~ x || ab =~ a) ]]; echo st=$?",
+    "stdout": "y\nz\nst=1\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

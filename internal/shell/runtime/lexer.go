@@ -50,7 +50,8 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 	// inCondition is set between an unquoted `[[` and its `]]`. See the operator
 	// check below for why the lexer has to know.
 	inCondition := false
-	// groupDepth is how many parentheses of an extended pattern group are open.
+	// groupDepth is how many parentheses are open of an extended pattern group, or of a
+	// regular expression after `=~`; see regexWordOpens.
 	groupDepth := 0
 	appendToken := func(token shellToken) error {
 		if err := budget.consumeTokens(1); err != nil {
@@ -177,7 +178,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			// what is inside is lexed as any word is, as bash lexes it: the group went
 			// in as its literal characters, so `?($ext|h)` held a `$`, and `@(a|'*')`
 			// its quotes.
-			if groupDepth > 0 || extendedGroupOpensAt(line, index) {
+			if groupDepth > 0 || extendedGroupOpensAt(line, index) || regexWordOpens(char, inCondition, tokens) {
 				groupDepth = extendedGroupDepth(groupDepth, char)
 				if strings.IndexByte(extendedGroupLiterals, char) >= 0 {
 					buffer.WriteByte(char)
@@ -233,7 +234,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			// on them would tear the expression apart -- and `[[ a < b ]]`, which
 			// is a lexical comparison, would create a file called `b`. Measured
 			// before this: it did. Its parentheses are, as words; see lexedOperator.
-			if kind, width := lexedOperator(line[index:], inCondition, tokens); width > 0 {
+			if kind, width := lexedOperator(line[index:], inCondition); width > 0 {
 				if kind == tokenRedirect && (isDigits(line[wordStart:index]) || isDescriptorName(line[wordStart:index])) {
 					buffer.WriteString(line[index : index+width])
 					if err := appendToken(shellToken{kind: tokenRedirect, value: buffer.String()}); err != nil {

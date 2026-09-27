@@ -861,17 +861,11 @@
       "Parsing of x={myvar} and related cases": "fail"
     },
     "regex.test.sh": {
-      "Bug: Nix idiom with closing ) next to pattern": "fail",
       "Fatal error inside [[ =~ ]]": "fail",
-      "Multiple adjacent () groups": "fail",
       "Operator chars ; \u0026 but not |": "fail",
-      "Operators and space lose meaning inside ()": "fail",
       "Parse error with 2 words": "fail",
       "Quotes '' \"\" $'' $\"\" in pattern": "fail",
-      "Unquoted { is a regex parse error": "fail",
-      "make a lisp example": "fail",
-      "unquoted (a  b) as pattern, (a  b|c)": "fail",
-      "unquoted [a  b] as pattern, [a  b|c]": "fail"
+      "Unquoted { is a regex parse error": "fail"
     },
     "serialize.test.sh": {
       "set": "ash-only"

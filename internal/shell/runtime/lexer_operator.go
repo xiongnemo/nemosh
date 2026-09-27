@@ -10,17 +10,27 @@ import (
 //
 // Inside `[[ ]]` none of the command operators are one, and its own parentheses are, as
 // words of their own: `[[ (a == a) ]]` is five words between the brackets, which is how the
-// condition parser reads a group. Not in the operand of `=~`, whose parentheses belong to
-// the regular expression -- the word being read then is the one after the `=~`.
-func lexedOperator(input string, inCondition bool, tokens []shellToken) (tokenKind, int) {
+// condition parser reads a group. The parentheses of a regular expression never reach here:
+// the lexer reads them as a group of the word, as it does an extended pattern's, so a `)`
+// that does reach here after `=~` is one the expression did not open, and closes a group of
+// the condition. See regexWordOpens.
+func lexedOperator(input string, inCondition bool) (tokenKind, int) {
 	if !inCondition {
 		return activeOperator(input)
 	}
-	afterRegex := len(tokens) > 0 && tokens[len(tokens)-1].kind == tokenWord && tokens[len(tokens)-1].value == "=~"
-	if (input[0] == '(' || input[0] == ')') && !afterRegex {
+	if input[0] == '(' || input[0] == ')' {
 		return tokenWord, 1
 	}
 	return tokenWord, 0
+}
+
+// regexWordOpens reports a `(` in the operand of `=~`, the word being read after it, which
+// opens a group of the regular expression: bash reads a blank or a `|` inside one as the
+// expression's own, so `(a  b)` is one word. It was two, the first an unbalanced `(a`, and a
+// `)` after the expression was taken into it: in `[[ (x =~ x) ]]` it was `x)`.
+func regexWordOpens(char byte, inCondition bool, tokens []shellToken) bool {
+	last := len(tokens) - 1
+	return char == '(' && inCondition && last >= 0 && tokens[last].kind == tokenWord && tokens[last].value == "=~"
 }
 
 // operatorToken is the token for an operator's text. A condition's parenthesis is a word, and
