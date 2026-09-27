@@ -40,10 +40,12 @@ type jobState struct {
 	// Seconds is what $SECONDS says now, so the child's count carries on from it.
 	Seconds int `json:"seconds"`
 	// ShellPID and ShellPPID are the shell's `$$` and `$PPID`, which a job keeps.
-	ShellPID          int  `json:"shellPid"`
-	ShellPPID         int  `json:"shellPpid"`
-	FunctionDepth     int  `json:"functionDepth"`
-	SourceDepth       int  `json:"sourceDepth"`
+	ShellPID      int `json:"shellPid"`
+	ShellPPID     int `json:"shellPpid"`
+	FunctionDepth int `json:"functionDepth"`
+	SourceDepth   int `json:"sourceDepth"`
+	// SubshellDepth is the shell's $BASH_SUBSHELL; the job, a subshell, is one deeper.
+	SubshellDepth     int  `json:"subshellDepth"`
 	ErrExitSuppressed bool `json:"errExitSuppressed"`
 	// Descriptors is the job's descriptor table past what the child's standard handles
 	// carry, filled by the launcher rather than captured; see job_descriptors.go.
@@ -84,7 +86,7 @@ func (r Runtime) captureJobState(program programNode) jobState {
 		Invocation: r.options.invocation, Name: r.params.name, Positional: append([]string(nil), r.params.values...),
 		Function: r.params.function, ScriptFile: r.scriptFile, Umask: r.mask.value,
 		DirStack: append([]string(nil), r.dirStack.below...), FunctionDepth: r.functionDepth,
-		SourceDepth: r.sourceDepth, ErrExitSuppressed: r.errExitSuppressed,
+		SourceDepth: r.sourceDepth, ErrExitSuppressed: r.errExitSuppressed, SubshellDepth: r.subshellDepth,
 	}
 	var functions strings.Builder
 	for _, name := range r.sortedFunctionNames() {
@@ -190,6 +192,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		r.special.pid, r.special.ppid = state.ShellPID, state.ShellPPID
 	}
 	r.functionDepth, r.sourceDepth, r.errExitSuppressed = state.FunctionDepth, state.SourceDepth, state.ErrExitSuppressed
+	r.subshellDepth = state.SubshellDepth + 1
 	return parseScriptAt(state.Program, max(state.Line, 1))
 }
 

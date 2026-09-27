@@ -84,6 +84,8 @@ type Runtime struct {
 	mask          *fileModeMask
 	sourceDepth   int
 	functionDepth int
+	// subshellDepth is $BASH_SUBSHELL; see subshellSnapshot.
+	subshellDepth int
 	interactive   interactiveState
 	paths         *pathState
 	env           Environment

@@ -10,6 +10,15 @@ func (r Runtime) snapshot(ctx context.Context) (Runtime, error) {
 	return r.clone(ctx, true)
 }
 
+// subshellSnapshot is a snapshot for a subshell: a `( )`, a command or process
+// substitution, a background job. Each is one deeper in $BASH_SUBSHELL, as bash counts
+// them; a pipeline's stages are snapshots too, and bash does not count those.
+func (r Runtime) subshellSnapshot(ctx context.Context) (Runtime, error) {
+	child, err := r.snapshot(ctx)
+	child.subshellDepth++
+	return child, err
+}
+
 func (r Runtime) snapshotShared() (Runtime, error) {
 	return r.clone(context.Background(), false)
 }
@@ -100,6 +109,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		mask:              &fileModeMask{value: r.mask.value},
 		sourceDepth:       r.sourceDepth,
 		functionDepth:     r.functionDepth,
+		subshellDepth:     r.subshellDepth,
 		interactive:       r.interactive,
 		paths:             &paths,
 		env:               r.env.clone(),

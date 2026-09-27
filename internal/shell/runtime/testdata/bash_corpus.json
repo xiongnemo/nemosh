@@ -1145,5 +1145,11 @@
     "stdout": "on\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo \"$BASH_SUBSHELL\"\n(echo \"$BASH_SUBSHELL\")\necho \"$(echo $BASH_SUBSHELL)\"\necho x | echo \"$BASH_SUBSHELL\"",
+    "stdout": "0\n1\n1\n0\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

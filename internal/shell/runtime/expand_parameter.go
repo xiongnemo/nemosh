@@ -91,7 +91,7 @@ func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedSt
 
 func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, savedStatus int) string {
 	var stdout bytes.Buffer
-	child, err := r.snapshot(ctx)
+	child, err := r.subshellSnapshot(ctx)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return ""

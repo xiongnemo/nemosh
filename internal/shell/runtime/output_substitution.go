@@ -30,7 +30,7 @@ func (r Runtime) expandOutputSubstitution(ctx context.Context, script *Script, s
 	// substituted command finishing, and `exec > >(tee log)` outlives every command after
 	// it. It ends when its input does.
 	lifetime := context.WithoutCancel(ctx)
-	child, err := r.snapshot(lifetime)
+	child, err := r.subshellSnapshot(lifetime)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: process substitution: %v\n", err)
 		return ""

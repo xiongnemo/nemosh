@@ -123,7 +123,7 @@ func (r Runtime) expandProcessSubstitution(ctx context.Context, script *Script, 
 // the substituted command cannot see the consumer's descriptors, no inherited traps, and
 // the job scope drained before the file is closed so nothing is still writing to it.
 func (r Runtime) runIntoFile(ctx context.Context, script Script, file *os.File, savedStatus int) error {
-	child, err := r.snapshot(ctx)
+	child, err := r.subshellSnapshot(ctx)
 	if err != nil {
 		return err
 	}

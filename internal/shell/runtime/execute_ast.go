@@ -134,7 +134,7 @@ func jobAndOr(item andOr) andOr {
 }
 
 func (r Runtime) launchBackground(run func(Runtime) lineResult) lineResult {
-	worker, err := r.snapshot(r.jobScope.ctx)
+	worker, err := r.subshellSnapshot(r.jobScope.ctx)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return lineResult{status: 1}

@@ -90,6 +90,8 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		return "", false
 	case "LINENO":
 		return strconv.Itoa(r.currentLine()), true
+	case "BASH_SUBSHELL":
+		return strconv.Itoa(r.subshellDepth), true
 	case "SHELLOPTS", "BASHOPTS":
 		return r.optionList(name), true
 	case "BASH_SOURCE", "BASH_LINENO":
