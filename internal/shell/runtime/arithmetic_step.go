@@ -21,6 +21,9 @@ func (p *arithmeticParser) store(name string, value int64) error {
 	if p.skipping > 0 {
 		return nil
 	}
+	if err := checkArithmeticSubscript(name, p.depth); err != nil {
+		return err
+	}
 	if p.runtime.assignVar(name, strconv.FormatInt(value, 10)) != 0 {
 		return errReadonlyTarget
 	}

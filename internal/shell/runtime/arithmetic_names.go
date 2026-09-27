@@ -35,6 +35,9 @@ func (p *arithmeticParser) lookup(name string) (int64, error) {
 	if p.skipping > 0 {
 		return 0, nil
 	}
+	if err := checkArithmeticSubscript(name, p.depth); err != nil {
+		return 0, err
+	}
 	text := strings.TrimSpace(p.valueText(name))
 	if text == "" {
 		return 0, nil
