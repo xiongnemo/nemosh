@@ -1032,8 +1032,7 @@
       "Case folding - multi code point": "fail",
       "argv array and @P @Q @a": "fail",
       "assoc array and @P @Q @a": "fail",
-      "undef and @P @Q @a": "fail",
-      "undef vs. empty string in var ops": "fail"
+      "undef and @P @Q @a": "fail"
     },
     "var-op-len.test.sh": {
       "${#s} respects LC_ALL - length in bytes or code points": "fail",

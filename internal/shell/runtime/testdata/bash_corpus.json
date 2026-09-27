@@ -1361,5 +1361,29 @@
     "stdout": "round-trip\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "arr=(a 'b c')\necho \"${arr[@]@K}\"",
+    "stdout": "0 \"a\" 1 \"b c\"\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "arr=(a 'b c')\nprintf '[%s]' \"${arr[@]@k}\"\necho",
+    "stdout": "[0][a][1][b c]\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m=([k]=v)\necho \"${m[@]@K}|\"",
+    "stdout": "k \"v\" |\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "s='p q'\necho \"${s@K}\"",
+    "stdout": "'p q'\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

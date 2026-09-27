@@ -16,9 +16,11 @@ import (
 // Each was `bad substitution`, and `${x@Q}` is how a script builds a command line that
 // survives a value with a quote or a blank in it. bash is the reference; busybox has none.
 //
-// `@P` and `@K` are refused by name. `@P` means the prompt's backslash escapes -- `\u`,
-// `\w` -- and those are drawn by the line editor, outside the shell's reach; half of @P
-// would be a prompt that is almost right.
+// `@K` and `@k` write an array as its pairs, see parameter_kv_transform.go.
+//
+// `@P` is refused by name. It means the prompt's backslash escapes -- `\u`, `\w` -- and
+// those are drawn by the line editor, outside the shell's reach; half of @P would be a
+// prompt that is almost right.
 
 // splitTransform recognises the form: a parameter reference, `@`, and one letter. Whole,
 // rather than through splitParameterOperator, because `@` is a name as well as the
@@ -28,7 +30,7 @@ func splitTransform(body string) (string, byte, bool) {
 		return "", 0, false
 	}
 	name, operator := body[:len(body)-2], body[len(body)-1]
-	if !strings.ContainsRune("QEPAaUuLK", rune(operator)) {
+	if !strings.ContainsRune("QEPAaUuLKk", rune(operator)) {
 		return "", 0, false
 	}
 	if _, element := parseArrayReference(name); !element && !isBareParameterReference(name) {
@@ -41,7 +43,7 @@ func splitTransform(body string) (string, byte, bool) {
 // nothing at all rather than to an empty pair of quotes, which is bash's answer.
 func (r Runtime) transformParameter(name string, operator byte, value string, set bool) (string, error) {
 	switch operator {
-	case 'P', 'K':
+	case 'P':
 		return "", fmt.Errorf("bad substitution: ${%s@%c}: not implemented here", name, operator)
 	case 'a':
 		return r.attributeLetters(name), nil
@@ -50,7 +52,8 @@ func (r Runtime) transformParameter(name string, operator byte, value string, se
 		return "", nil
 	}
 	switch operator {
-	case 'Q':
+	case 'Q', 'K', 'k':
+		// K and k over anything but a whole array quote as Q does.
 		return shellquote.Single(value), nil
 	case 'E':
 		return decodeAnsiText(value), nil
@@ -112,6 +115,13 @@ func (r Runtime) transformList(ctx context.Context, name string, operator byte) 
 		if reference, ok := parseArrayReference(name); ok {
 			text, _ := r.declarationText(reference.name)
 			return []string{text}, true, nil
+		}
+	}
+	if operator == 'K' || operator == 'k' {
+		if reference, ok := parseArrayReference(name); ok && (reference.subscript == "@" || reference.subscript == "*") {
+			if words, isArray := r.keyValueWords(reference, operator); isArray {
+				return words, true, nil
+			}
 		}
 	}
 	transformed := make([]string, 0, len(elements))
