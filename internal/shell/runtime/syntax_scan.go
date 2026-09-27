@@ -180,6 +180,12 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			comment = true
 			continue
 		}
+		// `!(` where a command begins is `! (` to every scan after this one, a negated
+		// subshell; see bangSubshellAt.
+		if char == '!' && index+1 < len(line) && line[index+1] == '(' && scanner.quote() == 0 && bangSubshellAt(line, index) {
+			scanner.logical.WriteString("! ")
+			continue
+		}
 		scanner.logical.WriteByte(char)
 	}
 }

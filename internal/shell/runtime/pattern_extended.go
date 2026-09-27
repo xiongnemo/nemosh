@@ -228,6 +228,10 @@ func extendedGroupOpensAt(line string, index int) bool {
 		// The operator itself was escaped, so it is data.
 		return false
 	}
+	// A `!(` where a command begins is a negated subshell; see bangSubshellAt.
+	if line[index-1] == '!' && bangSubshellAt(line, index-1) {
+		return false
+	}
 	return strings.IndexByte(extendedOpeners, line[index-1]) >= 0
 }
 

@@ -584,7 +584,6 @@
       "negative numbers - zero, decimal, octal, hex, base N": "fail"
     },
     "divergence.test.sh": {
-      "!( as negation and subshell versus extended glob - #2463": "fail",
       "builtin cat crashes a subshell (#2530)": "fail"
     },
     "dparen.test.sh": {

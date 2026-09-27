@@ -1799,5 +1799,11 @@
     "stdout": "stdout\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "if !(false && false); then echo one; fi; !(false) && echo two",
+    "stdout": "one\ntwo\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
