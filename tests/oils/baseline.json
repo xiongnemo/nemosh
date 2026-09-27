@@ -187,10 +187,10 @@
       "shopt -u expand_aliases and eval": "ash-only"
     },
     "ble-unset.test.sh": {
-      "[bash_unset] dynamic-unset for nested localvars": "fail",
-      "[bash_unset] dynamic-unset for nested tempenvs": "fail",
+      "[bash_unset] dynamic-unset for nested localvars": "ash-only",
+      "[bash_unset] dynamic-unset for nested tempenvs": "ash-only",
       "[bash_unset] local-unset / dynamic-unset for localvar on nested-context": "ash-only",
-      "[bash_unset] local-unset for nested tempenvs": "fail",
+      "[bash_unset] local-unset for nested tempenvs": "ash-only",
       "[bash_unset] nested context by tempenv-eval": "ash-only"
     },
     "blog1.test.sh": {

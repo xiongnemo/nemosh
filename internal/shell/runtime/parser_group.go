@@ -27,7 +27,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		// `$((` before `$(`: the command substitution rule counts one closing
 		// paren and would stop at the first of the two that end an arithmetic
 		// expansion, leaving the second to be reported as unexpected.
-		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' {
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' && !escaped {
 			end, ok := arithmeticExpansionEnd(line, index+3)
 			if !ok {
 				return "", nil, fmt.Errorf("%w: unterminated arithmetic expansion", ErrIncompleteScript)
@@ -36,7 +36,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			index = end + 1
 			continue
 		}
-		if char == '$' && index+1 < len(line) && line[index+1] == '(' && quote != '\'' {
+		if char == '$' && index+1 < len(line) && line[index+1] == '(' && quote != '\'' && !escaped {
 			end, ok := commandSubstitutionEnd(line, index+2)
 			if !ok {
 				return "", nil, fmt.Errorf("%w: unterminated command substitution", ErrIncompleteScript)
@@ -45,7 +45,10 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			index = end + 1
 			continue
 		}
-		if char == '$' && index+1 < len(line) && line[index+1] == '{' && quote != '\'' {
+		// Not an escaped `$`: `\${...}` is text, and stepping over it as an expansion left the
+		// escape pending, so the `\"` after it closed the string and `(a b)` later on was taken
+		// for a group. The same goes for the two branches above, and for matchingGroupEnd's.
+		if char == '$' && index+1 < len(line) && line[index+1] == '{' && quote != '\'' && !escaped {
 			end := strings.IndexByte(line[index+2:], '}')
 			if end < 0 {
 				output.WriteString(line[index:])
@@ -222,7 +225,7 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 	escaped := false
 	for index := start + 1; index < len(line); index++ {
 		char := line[index]
-		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' {
+		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' && !escaped {
 			end, ok := arithmeticExpansionEnd(line, index+3)
 			if !ok {
 				return 0, fmt.Errorf("%w: unterminated arithmetic expansion", ErrIncompleteScript)
@@ -230,7 +233,7 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 			index = end
 			continue
 		}
-		if char == '$' && index+1 < len(line) && line[index+1] == '(' && quote != '\'' {
+		if char == '$' && index+1 < len(line) && line[index+1] == '(' && quote != '\'' && !escaped {
 			end, ok := commandSubstitutionEnd(line, index+2)
 			if !ok {
 				return 0, fmt.Errorf("%w: unterminated command substitution", ErrIncompleteScript)

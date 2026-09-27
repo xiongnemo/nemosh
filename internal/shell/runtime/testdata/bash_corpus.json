@@ -1697,5 +1697,11 @@
     "stdout": "2\n2\n2\n 08 31\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x=\"\\${v-(u)}\\\" (a b)\"; printf '[%s]\\n' \"$x\"\n{ echo \"\\$(a)\\\" (b c)\"; }",
+    "stdout": "[${v-(u)}\" (a b)]\n$(a)\" (b c)\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
