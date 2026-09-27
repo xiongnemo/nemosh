@@ -50,6 +50,10 @@ func (r Runtime) expandPathnames(field string) []string {
 			return nil
 		}
 	}
+	// What GLOBIGNORE leaves out is not a match; see glob_ignore.go.
+	if matches = r.withoutIgnored(matches); len(matches) == 0 {
+		return nil
+	}
 	slices.Sort(matches)
 	return matches
 }
@@ -80,8 +84,9 @@ func (r Runtime) globChildren(base, segment string) []string {
 	for _, entry := range entries {
 		name := entry.Name()
 		// A leading dot is matched only by a pattern that spells one out, which
-		// is what keeps `*` from returning every hidden file.
-		if strings.HasPrefix(name, ".") && !strings.HasPrefix(segment, ".") && !r.options.dotGlob {
+		// is what keeps `*` from returning every hidden file -- unless dotglob or
+		// GLOBIGNORE says otherwise.
+		if strings.HasPrefix(name, ".") && !strings.HasPrefix(segment, ".") && !r.options.dotGlob && !r.globIgnoring() {
 			continue
 		}
 		if !r.matchGlobSegment(segment, name) || r.hiddenFromGlob(entry) {

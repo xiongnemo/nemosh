@@ -719,21 +719,8 @@
       "shopt -u globskipdots shows . and ..": "fail"
     },
     "globignore.test.sh": {
-      "Don't glob flags on file system with GLOBIGNORE": "ash-only",
-      "Extended glob expansion combined with GLOBIGNORE": "fail",
-      "Ignore *": "fail",
-      "Ignore *.o:*.h": "fail",
-      "Ignore *.txt": "fail",
       "Ignore .:..": "fail",
-      "Ignore ?.txt": "fail",
-      "Ignore dirs dist/*:node_modules/*": "fail",
-      "Ignore globs with char classes like [[:alnum:]]": "fail",
-      "Ignore globs with char patterns like [!ab]": "fail",
-      "Ignore single file src/__main__.py": "fail",
-      "Quoting GLOBIGNORE": "fail",
-      "When GLOBIGNORE is set, glob may become empty (nullglob too)": "fail",
-      "find files in subdirectory but not the ignored pattern": "fail",
-      "resetting globignore reverts to default behaviour": "fail"
+      "Ignore globs with char patterns like [!ab]": "fail"
     },
     "globstar.test.sh": {
       "each occurrence of ** recurses through all depths": "fail"
