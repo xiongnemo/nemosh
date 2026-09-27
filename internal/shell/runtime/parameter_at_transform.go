@@ -6,6 +6,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // `${name@op}`, bash's parameter transformations: `@Q` quotes a value so the shell reads it
@@ -49,7 +51,7 @@ func (r Runtime) transformParameter(name string, operator byte, value string, se
 	}
 	switch operator {
 	case 'Q':
-		return singleQuoteForReuse(value), nil
+		return shellquote.Single(value), nil
 	case 'E':
 		return decodeAnsiText(value), nil
 	case 'U':
@@ -67,9 +69,9 @@ func (r Runtime) transformParameter(name string, operator byte, value string, se
 			return letter
 		}, r.attributeLetters(name))
 		if flags == "" {
-			return name + "=" + singleQuoteForReuse(value), nil
+			return name + "=" + shellquote.Single(value), nil
 		}
-		return "declare -" + flags + " " + name + "=" + singleQuoteForReuse(value), nil
+		return "declare -" + flags + " " + name + "=" + shellquote.Single(value), nil
 	}
 }
 

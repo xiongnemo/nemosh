@@ -6,6 +6,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // printf implements the POSIX utility rather than handing the format to Go's
@@ -184,7 +186,7 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 		// bash's %q: quote the operand so the shell would read it back as itself.
 		// The point of it is `eval` and generated scripts -- a file name with a
 		// space or a quote in it survives being written into a command line.
-		return fmt.Sprintf(spec+"s", shellQuote(next())), nil
+		return fmt.Sprintf(spec+"s", shellquote.Backslash(next())), nil
 	default:
 		return "", fmt.Errorf("invalid conversion specification %%%c", verb)
 	}

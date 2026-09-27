@@ -935,11 +935,7 @@
       "unquoted [a  b] as pattern, [a  b|c]": "fail"
     },
     "serialize.test.sh": {
-      "${var@Q}": "fail",
       "declare": "fail",
-      "printf %q invalid unicode": "fail",
-      "printf %q newline": "fail",
-      "printf %q unprintable": "fail",
       "set": "ash-only"
     },
     "sh-func.test.sh": {

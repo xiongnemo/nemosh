@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // `declare` and `typeset` -- one name for two spellings, as in bash and ksh.
@@ -257,6 +259,10 @@ func (r Runtime) printOneDeclaration(name string) bool {
 //
 // With the name's attributes as flags, in bash's order: `declare -irx n="5"`. It printed
 // `-a`, `-A` or `--` whatever else was true of the name.
+//
+// Each value and key is quoted as bash quotes it, see internal/shellquote. This used Go's
+// quoting, which is not the shell's: `x=$'a\nb'` came back as the two characters \n, a `$`
+// was left to expand when the line was read back, and a key with a blank came out bare.
 func (r Runtime) declarationText(name string) (string, bool) {
 	flags := r.declareFlags(name)
 	if r.arrays.isAssociative(name) {
@@ -264,7 +270,7 @@ func (r Runtime) declarationText(name string) (string, bool) {
 		fmt.Fprintf(&out, "declare -%s %s=(", flags, name)
 		for _, key := range r.arrays.keysOf(name) {
 			value, _ := r.arrays.lookupKey(name, key)
-			fmt.Fprintf(&out, "[%s]=%q ", key, value)
+			fmt.Fprintf(&out, "[%s]=%s ", shellquote.Key(key), shellquote.Double(value))
 		}
 		// bash leaves the blank before the closing parenthesis for this kind and not
 		// the other, and output meant to be read back is worth matching exactly.
@@ -276,7 +282,7 @@ func (r Runtime) declarationText(name string) (string, bool) {
 		// The set indices only: every slot used to be printed, so a gap came out as
 		// `[1]=""` and an element removed with unset came back with its old value.
 		for _, index := range r.arrays.liveIndices(name) {
-			fmt.Fprintf(&out, "[%d]=%q ", index, elements[index])
+			fmt.Fprintf(&out, "[%d]=%s ", index, shellquote.Double(elements[index]))
 		}
 		return strings.TrimSuffix(out.String(), " ") + ")", true
 	}
@@ -288,7 +294,7 @@ func (r Runtime) declarationText(name string) (string, bool) {
 		}
 		return "", false
 	}
-	return fmt.Sprintf("declare -%s %s=%q", flags, name, value), true
+	return fmt.Sprintf("declare -%s %s=%s", flags, name, shellquote.Double(value)), true
 }
 
 // parenthesisedList reports the inside of a `(one two)` array literal.

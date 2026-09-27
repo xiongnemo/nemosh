@@ -1331,5 +1331,35 @@
     "stdout": "aX cd\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '%q\\n' $'one\\ntwo' 'a=b' 'x#' '~x'",
+    "stdout": "$'one\\ntwo'\na=b\nx#\n\\~x\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "z=$'one\\ntwo'\necho \"${z@Q}\"\ndeclare -p z",
+    "stdout": "$'one\\ntwo'\ndeclare -- z=$'one\\ntwo'\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "s='$HOME \"q\"'\ndeclare -p s",
+    "stdout": "declare -- s=\"\\$HOME \\\"q\\\"\"\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m=([\"k 1\"]=v)\ndeclare -p m",
+    "stdout": "declare -A m=([\"k 1\"]=\"v\" )\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=$'a\\nb'\ns='$HOME'\neval \"$(declare -p x s)\"\n[ \"$x\" = $'a\\nb' ] && [ \"$s\" = '$HOME' ] && echo round-trip",
+    "stdout": "round-trip\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
