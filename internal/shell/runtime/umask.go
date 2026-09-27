@@ -13,22 +13,62 @@ func newFileModeMask() *fileModeMask {
 	return &fileModeMask{value: 0o022}
 }
 
+// umask is the POSIX builtin: with no operand it prints the mask in octal; with one it sets
+// it, in octal or in the symbolic form, `u=rwx,g=rx,o=`. -S prints the mask symbolically, as
+// the permissions it leaves, and with an operand sets it quietly. All as busybox's, which
+// reads the first operand and no other, and refuses any other option; see umask_symbolic.go
+// for the symbolic half, which was "invalid mask". -p is bash's: the mask printed as the
+// command that sets it.
 func (r Runtime) umask(args []string) int {
-	if len(args) == 0 {
-		fmt.Fprintf(r.streams.Stdout, "%04o\n", r.mask.value)
-		return 0
+	symbolic, reusable := false, false
+	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
+		option := args[0]
+		args = args[1:]
+		if option == "--" {
+			break
+		}
+		for _, letter := range option[1:] {
+			switch letter {
+			case 'S':
+				symbolic = true
+			case 'p':
+				reusable = true
+			default:
+				// `umask -rwx` too, which reads as options before it can read as a mode.
+				fmt.Fprintf(r.streams.Stderr, "umask: illegal option -%c\n", letter)
+				return 2
+			}
+		}
 	}
-	if len(args) != 1 {
-		fmt.Fprintln(r.streams.Stderr, "umask: expected at most one operand")
-		return 2
+	if len(args) == 0 {
+		r.printUmask(symbolic, reusable)
+		return 0
 	}
 	mask, err := parseFileModeMask(args[0])
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "umask: %s: invalid mask\n", args[0])
+		mask, err = applySymbolicMask(r.mask.value, args[0])
+	}
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "umask: illegal mode: %s\n", args[0])
 		return 2
 	}
 	r.mask.value = mask
 	return 0
+}
+
+func (r Runtime) printUmask(symbolic, reusable bool) {
+	mask := fmt.Sprintf("%04o", r.mask.value)
+	if symbolic {
+		mask = symbolicMask(r.mask.value)
+	}
+	switch {
+	case reusable && symbolic:
+		fmt.Fprintf(r.streams.Stdout, "umask -S %s\n", mask)
+	case reusable:
+		fmt.Fprintf(r.streams.Stdout, "umask %s\n", mask)
+	default:
+		fmt.Fprintln(r.streams.Stdout, mask)
+	}
 }
 
 func parseFileModeMask(arg string) (uint16, error) {

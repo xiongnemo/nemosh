@@ -33,6 +33,13 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 		return 1
 	}
 	r.writeReadPrompt(options)
+	// `-t 0` reads nothing; see read_ready.go.
+	if options.hasTimeout && options.timeout == 0 {
+		if inputReady(input) {
+			return 0
+		}
+		return 1
+	}
 	if line, handled, err := r.readSilently(ctx, input, options); handled {
 		if err != nil {
 			if ctx.Err() != nil {

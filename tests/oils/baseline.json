@@ -439,8 +439,7 @@
       "kill -l 10 TERM translates between names and numbers": "fail",
       "kill -l with 128 is invalid": "fail",
       "kill -l with exit code": "fail",
-      "kill -n 9 specifies the signal number": "fail",
-      "kill -s TERM specifies the signal name": "fail"
+      "kill -n 9 specifies the signal number": "fail"
     },
     "builtin-meta.test.sh": {
       "builtin": "fail",
@@ -504,7 +503,6 @@
       "read -p (not fully tested)": "fail",
       "read -r -d '' for NUL strings, e.g. find -print0": "fail",
       "read -t -0.5 is invalid": "ash-only",
-      "read -t 0 tests if input is available": "fail",
       "read -u syntax error": "ash-only",
       "read bash bug": "fail",
       "read multiple lines with IFS=:": "fail",
@@ -597,22 +595,21 @@
       "type -\u003e not found": "fail"
     },
     "builtin-umask.test.sh": {
-      "'umask -S' prints symbolic umask": "fail",
-      "'umask -p' prints a form that can be eval'd": "fail",
       "'umask 0002' sets the umask": "fail",
       "'umask' without args prints the umask": "fail",
       "set umask with symbolic mode: g-w,o-w": "fail",
-      "set umask with symbolic mode: u-rw  ...  u=,g+,o-  ...": "fail",
       "symbolic syntax error: empty clause u-r,,u-r": "fail",
       "umask X perm": "fail",
-      "umask a is valid who": "fail",
-      "umask allow overwriting and duplicates": "fail",
+      "umask bare op": "fail",
       "umask default who": "fail",
+      "umask permcopy": "fail",
       "umask permcopy running value": "fail",
       "umask s perm": "fail",
+      "umask sequential actions": "ash-only",
       "umask t perm": "fail",
-      "usage: large octal number": "fail",
-      "usage: too many args": "ash-only"
+      "umask with too many arguments (i.e. extra spaces)": "fail",
+      "usage: empty input, space input": "fail",
+      "usage: large octal number": "fail"
     },
     "builtin-vars.test.sh": {
       "Local without variable is still unset!": "fail",

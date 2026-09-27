@@ -138,6 +138,14 @@ func parseKillSignal(args []string) (int, []string, error) {
 	if spec == "l" {
 		return listSignals, args[1:], nil
 	}
+	// `-s NAME`, the POSIX spelling, which busybox has; it was an unknown signal named s.
+	if spec == "s" && len(args) > 1 {
+		number, err := proc.ParseSignal(args[1])
+		if err != nil {
+			return 0, nil, err
+		}
+		return number, args[2:], nil
+	}
 	number, err := proc.ParseSignal(spec)
 	if err != nil {
 		return 0, nil, err

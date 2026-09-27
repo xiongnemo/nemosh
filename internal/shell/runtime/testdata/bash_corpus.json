@@ -1199,5 +1199,89 @@
     "stdout": "readonly R1='x'\nreadonly R2\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "umask 022\numask -S",
+    "stdout": "u=rwx,g=rx,o=rx\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask u=rwx,g=rx,o=\numask\numask g-x\numask\numask a+r\numask",
+    "stdout": "0027\n0037\n0033\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask -S 077\necho \"st=$?\"\numask",
+    "stdout": "st=0\n0077\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask u=q 2>/dev/null\necho \"st=$?\"",
+    "stdout": "st=2\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "read -t 0 </dev/null\necho \"st=$?\"",
+    "stdout": "st=0\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 0.5 | { read -t 0; echo \"st=$?\"; }",
+    "stdout": "st=1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "echo x | { sleep 0.2; read -t 0; echo \"st=$?\"; read v; echo \"[$v]\"; }",
+    "stdout": "st=0\n[x]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 &\np=$!\nkill -s TERM $p\necho \"st=$?\"\nwait $p\necho \"wait=$?\"",
+    "stdout": "st=0\nwait=143\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask 0124\numask =rx\numask",
+    "stdout": "0326\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask 0124\numask u=rwx,g=u\numask",
+    "stdout": "0004\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask 0124\numask u-r,,u-r\numask",
+    "stdout": "0524\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask 0124\numask -rwx 2>/dev/null\necho \"st=$?\"\numask",
+    "stdout": "st=2\n0124\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask 1 2\necho \"st=$?\"\numask",
+    "stdout": "st=0\n0001\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "umask 0022\numask -p",
+    "stdout": "umask 0022\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

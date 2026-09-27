@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"syscall"
 )
 
 type pipelineStageRun func(context.Context, Runtime, int) lineResult
@@ -30,6 +31,10 @@ type pipelineEndpoint struct {
 }
 
 func (e *pipelineEndpoint) Read(buffer []byte) (int, error) { return e.file.Read(buffer) }
+
+// SyscallConn reaches the pipe's descriptor, which `read -t 0` asks whether anything is
+// waiting; see read_ready.go.
+func (e *pipelineEndpoint) SyscallConn() (syscall.RawConn, error) { return e.file.SyscallConn() }
 func (e *pipelineEndpoint) Write(buffer []byte) (int, error) {
 	written, err := e.file.Write(buffer)
 	return written, normalizePipelineWriteError(err)
