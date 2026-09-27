@@ -83,6 +83,11 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 		if openErr != nil {
 			return fmt.Errorf("open %s: %w", operation.path, openErr)
 		}
+		// `<>` is opened for both, and the descriptor reads as well as writes. It was bound
+		// as a writer, so `exec 3<> f; read <&3` answered "file descriptor is not readable".
+		if operation.kind == redirectReadWrite {
+			return table.bindOwned(operation.target, resource, readWrite)
+		}
 		return table.bindOwnedWriter(operation.target, resource)
 	}
 	path := string(resolved.Canonical)

@@ -855,7 +855,6 @@
     },
     "redirect.test.sh": {
       "2\u0026\u003e1 (is it a redirect or is it like a\u0026\u003e1)": "fail",
-      "\u003c\u003e for read/write": "fail",
       "\u003c\u003e for read/write named pipes": "fail",
       "Descriptor redirect with filename": "ash-only",
       "Parsing of x={myvar} and related cases": "fail"
@@ -884,7 +883,6 @@
       "-n for no execution (useful with --ast-output)": "fail",
       "-u is nounset": "fail",
       "interactive shell starts with emacs mode on": "fail",
-      "noclobber on \u003c\u003e": "fail",
       "nounset": "fail",
       "set -o vi/emacs": "fail",
       "set without args and array variables": "fail",
