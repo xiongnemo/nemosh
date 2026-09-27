@@ -190,7 +190,7 @@ func (r Runtime) dispatchCommand(ctx context.Context, commandArgs []string, assi
 	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, operations, savedStatus); handled {
 		return result
 	}
-	if result, handled := r.functionCommand(ctx, commandArgs, assignments, operations); handled {
+	if result, handled := r.functionCommand(ctx, commandArgs, assignments, operations, savedStatus); handled {
 		return result
 	}
 	return lineResult{status: r.runCommandWithTokenAssignments(ctx, assignments, expanded[len(expanded)-len(commandArgs):], operations)}

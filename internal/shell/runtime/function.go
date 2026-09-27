@@ -23,7 +23,7 @@ const maxFunctionCallDepth = 128
 // declines one. Prefix assignments are the function's for the call and restored after it --
 // both references restore `x` after `x=2 f` even when f assigned x itself -- and whatever
 // else the body changed stays changed.
-func (r Runtime) functionCommand(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation) (lineResult, bool) {
+func (r Runtime) functionCommand(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation, savedStatus int) (lineResult, bool) {
 	if len(args) == 0 || isSpecialBuiltin(args[0]) {
 		return lineResult{}, false
 	}
@@ -40,7 +40,7 @@ func (r Runtime) functionCommand(ctx context.Context, args []string, assignments
 		caller = *temporary
 	}
 	result := caller.withAppliedRedirects(operations, func(redirected Runtime) lineResult {
-		return redirected.callFunctionResult(ctx, definition, args[1:])
+		return redirected.callFunctionResult(ctx, definition, args[1:], savedStatus)
 	})
 	if temporary != nil {
 		for _, assignment := range assignments {
@@ -55,10 +55,13 @@ func (r Runtime) functionCommand(ctx context.Context, args []string, assignments
 }
 
 func (r Runtime) callFunction(ctx context.Context, definition functionDefinition, args []string) int {
-	return r.callFunctionResult(ctx, definition, args).status
+	return r.callFunctionResult(ctx, definition, args, 0).status
 }
 
-func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefinition, args []string) lineResult {
+// callFunctionResult runs the body with `$?` as the caller had it, as both references do, so
+// a bare `return` first thing returns it and an ERR trap's handler sees the status that fired
+// it. It started at 0, and `err() { echo $?; }; trap err ERR` said 0 for every failure.
+func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefinition, args []string, savedStatus int) lineResult {
 	if err := ctx.Err(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: function call: %v\n", err)
 		return lineResult{status: 1}
@@ -77,7 +80,7 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 	r.locals = scope
 	defer scope.restore(r)
 	hidden, wasSet := r.hideReturnTrap()
-	result := r.executeCommandNode(ctx, definition.body, 0)
+	result := r.executeCommandNode(ctx, definition.body, savedStatus)
 	r.finishReturnTrap(ctx, hidden, wasSet, result)
 	if result.control == flowExec {
 		r.lifecycle.exitSuppressed = true

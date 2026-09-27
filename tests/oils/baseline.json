@@ -502,12 +502,9 @@
       "trap DEBUG with non-compound commands": "fail"
     },
     "builtin-trap-err.test.sh": {
-      "error in trap ERR (recursive)": "fail",
       "set -o errtrace - trap ERR runs in shell functions (LINENO)": "fail",
       "set -o errtrace: trap ERR with \u0026": "ash-only",
-      "trap ERR": "fail",
       "trap ERR and pipeline": "ash-only",
-      "trap ERR and pipelines - PIPESTATUS difference": "fail",
       "trap ERR pipelines without simple commands": "ash-only",
       "trap ERR with YSH proc": "fail",
       "trap ERR with for,  case, { }": "fail"

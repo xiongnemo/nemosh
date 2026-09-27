@@ -1631,5 +1631,11 @@
     "stdout": "[a b] 2\n[a b] 2\n[x]\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "f() { echo \"in f: $?\"; }\nfalse\nf\ng() { return; }\nfalse\ng\necho \"st=$?\"",
+    "stdout": "in f: 1\nst=1\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
