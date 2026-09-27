@@ -159,7 +159,7 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 	case options.associative:
 		r.arrays.declareAssociative(name)
 	case options.indexed:
-		if _, exists := r.arrays.get(name); !exists {
+		if !r.arrays.has(name) {
 			r.arrays.set(name, nil)
 		}
 	}
@@ -261,13 +261,14 @@ func (r Runtime) declarationText(name string) (string, bool) {
 		// the other, and output meant to be read back is worth matching exactly.
 		return out.String() + ")", true
 	}
-	if elements, ok := r.arrays.get(name); ok {
+	if r.arrays.has(name) {
 		var out strings.Builder
 		fmt.Fprintf(&out, "declare -%s %s=(", flags, name)
 		// The set indices only: every slot used to be printed, so a gap came out as
 		// `[1]=""` and an element removed with unset came back with its old value.
 		for _, index := range r.arrays.liveIndices(name) {
-			fmt.Fprintf(&out, "[%d]=%s ", index, shellquote.Double(elements[index]))
+			value, _ := r.arrays.valueAt(name, index)
+			fmt.Fprintf(&out, "[%d]=%s ", index, shellquote.Double(value))
 		}
 		return strings.TrimSuffix(out.String(), " ") + ")", true
 	}

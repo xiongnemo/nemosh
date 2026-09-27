@@ -1,10 +1,5 @@
 package runtime
 
-import (
-	"maps"
-	"slices"
-)
-
 // inheritLocal is `shopt -s localvar_inherit`: a new local starts with the value, the array
 // and the attributes the name had where the function was called, as bash's does, rather than
 // with nothing, which is what both references start it with otherwise. The array is copied,
@@ -12,10 +7,7 @@ import (
 // it always does.
 func (r Runtime) inheritLocal(name string, saved savedVariable) {
 	if saved.indexed {
-		r.arrays.values[name] = slices.Clone(saved.elements)
-		if saved.indices != nil {
-			r.arrays.present[name] = maps.Clone(saved.indices)
-		}
+		r.arrays.put(name, saved.array.clone())
 	}
 	if saved.keys != nil {
 		r.arrays.declareAssociative(name)

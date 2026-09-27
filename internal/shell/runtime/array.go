@@ -36,59 +36,40 @@ import (
 // receiver on Runtime can still mutate it, like every other piece of shell state
 // here.
 type shellArrays struct {
-	values map[string][]string
-	// present is which indices of each name are actually set. An indexed array in
-	// bash is sparse: `a=(p); a[3]=z` has two elements, not four, so `${#a[@]}` is 2
-	// and `${!a[@]}` is `0 3`. Held beside the slice rather than replacing it with a
-	// map, because the slice is what keeps the elements in index order for free.
-	//
-	// Without this `"${a[@]}"` over a sparse array produced phantom empty fields --
-	// `p`, ``, ``, `z` -- and a loop over it ran four times.
-	present map[string]map[int]bool
+	// indexed holds each indexed array as the elements it has, by index; see
+	// array_sparse.go. Sparse, as bash's are: `a=(p); a[3]=z` has two elements, not four,
+	// so `${#a[@]}` is 2 and `${!a[@]}` is `0 3`.
+	indexed map[string]*indexedArray
 	// associative holds the `declare -A` names. A separate map because the two kinds
 	// answer different questions; see array_associative.go.
 	associative map[string]*associativeArray
 }
 
 func newShellArrays() *shellArrays {
-	return &shellArrays{values: map[string][]string{}, present: map[string]map[int]bool{}}
+	return &shellArrays{indexed: map[string]*indexedArray{}}
 }
 
-func (a *shellArrays) get(name string) ([]string, bool) {
-	elements, ok := a.values[name]
-	return elements, ok
-}
-
+// set makes the array these elements, at indices 0 onwards.
 func (a *shellArrays) set(name string, elements []string) {
-	a.values[name] = append([]string(nil), elements...)
-	delete(a.present, name)
-	for index := range elements {
-		a.mark(name, index)
+	array := newIndexedArray()
+	for index, value := range elements {
+		array.elements[index] = value
 	}
-	if len(elements) == 0 {
-		a.mark(name)
-	}
+	a.put(name, array)
 }
 
+// append adds elements after the highest index set, which is bash's `a+=(...)`.
 func (a *shellArrays) append(name string, elements []string) {
-	start := len(a.values[name])
-	a.values[name] = append(a.values[name], elements...)
-	for offset := range elements {
-		a.mark(name, start+offset)
+	start := a.span(name)
+	array := a.indexedFor(name)
+	for offset, value := range elements {
+		array.store(start+offset, value)
 	}
 }
 
-// setElement writes one index, growing the array with empty strings if the index
-// is past the end. bash does the same, which is what makes `a[5]=x` on a
-// three-element array leave gaps rather than fail.
+// setElement writes one index. `a[5]=x` on a three-element array leaves a gap, as in bash.
 func (a *shellArrays) setElement(name string, index int, value string) {
-	elements := a.values[name]
-	for len(elements) <= index {
-		elements = append(elements, "")
-	}
-	elements[index] = value
-	a.values[name] = elements
-	a.mark(name, index)
+	a.indexedFor(name).store(index, value)
 }
 
 // unset removes a whole array of either kind.
@@ -101,8 +82,7 @@ func (a *shellArrays) setElement(name string, index int, value string) {
 // The builtin never reached here at all before -- it deleted from the scalar table only --
 // so `unset a` on an indexed array left that behind as well.
 func (a *shellArrays) unset(name string) {
-	delete(a.values, name)
-	delete(a.present, name)
+	delete(a.indexed, name)
 	delete(a.associative, name)
 }
 
@@ -112,24 +92,14 @@ func (a *shellArrays) unset(name string) {
 //	a=(1 2); (echo ${a[0]})   prints 1, so they are inherited
 //	a=(1 2); (a[0]=9); echo ${a[0]}   prints 1, so a write stays inside
 //
-// The elements are copied as well as the map, because appending to an inherited
-// array in a subshell would otherwise write through the shared backing slice into
-// the parent. Leaving this off the snapshot entirely is what made every array
-// assignment in a subshell or a pipeline stage a nil map write: `(a=(1 2))` died
-// with a Go stack trace where a shell should have printed nothing at all.
+// The elements are copied as well as the map, because a write to an inherited array in
+// a subshell would otherwise reach the parent's. Leaving this off the snapshot entirely
+// is what made every array assignment in a subshell or a pipeline stage a nil map write:
+// `(a=(1 2))` died with a Go stack trace where a shell should have printed nothing at all.
 func (a *shellArrays) clone() *shellArrays {
-	copied := &shellArrays{
-		values:  make(map[string][]string, len(a.values)),
-		present: make(map[string]map[int]bool, len(a.present)),
-	}
-	for name, elements := range a.values {
-		copied.values[name] = append([]string(nil), elements...)
-	}
-	for name, set := range a.present {
-		copied.present[name] = make(map[int]bool, len(set))
-		for index := range set {
-			copied.present[name][index] = true
-		}
+	copied := &shellArrays{indexed: make(map[string]*indexedArray, len(a.indexed))}
+	for name, array := range a.indexed {
+		copied.indexed[name] = array.clone()
 	}
 	if len(a.associative) > 0 {
 		copied.associative = make(map[string]*associativeArray, len(a.associative))
@@ -181,7 +151,8 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 		}
 		return []string{value}, true
 	}
-	elements, isArray := r.arrays.get(reference.name)
+	isArray := r.arrays.has(reference.name)
+	var elements []string
 	if !isArray {
 		value, exists := r.vars[reference.name]
 		switch stack, isStack := r.callStackArray(reference.name); {
@@ -208,11 +179,17 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 		span = r.arrays.span(reference.name)
 	}
 	index, ok := r.subscriptIndex(ctx, reference.subscript, span)
-	if !ok || index >= len(elements) || isArray && !r.arrays.isLive(reference.name, index) {
-		// Out of range is the empty string, not an error: a script testing
-		// `${a[9]}` for emptiness is asking a reasonable question. So is an index
-		// that was unset, which used to answer with the value it had held -- `unset
-		// 'a[1]'` and then `${a[1]}` gave back the removed element.
+	// Out of range is the empty string, not an error: a script testing `${a[9]}` for
+	// emptiness is asking a reasonable question. So is an index that was unset.
+	switch {
+	case !ok:
+		return nil, true
+	case isArray:
+		if value, set := r.arrays.valueAt(reference.name, index); set {
+			return []string{value}, true
+		}
+		return nil, true
+	case index >= len(elements):
 		return nil, true
 	}
 	return []string{elements[index]}, true
@@ -240,14 +217,12 @@ func (r Runtime) arrayIndices(name string) []string {
 	if r.arrays.isAssociative(name) {
 		return r.arrays.keysOf(name)
 	}
-	elements, ok := r.arrays.get(name)
-	if !ok {
+	if !r.arrays.has(name) {
 		if _, exists := r.vars[name]; exists {
 			return []string{"0"}
 		}
 		return nil
 	}
-	_ = elements
 	live := r.arrays.liveIndices(name)
 	indices := make([]string, 0, len(live))
 	for _, index := range live {

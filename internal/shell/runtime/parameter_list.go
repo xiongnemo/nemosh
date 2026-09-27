@@ -98,7 +98,7 @@ func (r Runtime) listIndices(name string) []int {
 	if !ok || r.arrays.isAssociative(reference.name) {
 		return nil
 	}
-	if _, isArray := r.arrays.get(reference.name); !isArray {
+	if !r.arrays.has(reference.name) {
 		return nil
 	}
 	return r.arrays.liveIndices(reference.name)

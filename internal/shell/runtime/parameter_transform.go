@@ -279,7 +279,7 @@ func (r Runtime) namesWithPrefix(text string) ([]string, bool) {
 	for name := range r.vars {
 		seen[name] = true
 	}
-	for name := range r.arrays.values {
+	for _, name := range r.arrays.indexedNames() {
 		seen[name] = true
 	}
 	for _, name := range r.arrays.associativeNames() {

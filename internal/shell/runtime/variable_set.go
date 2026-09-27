@@ -15,7 +15,7 @@ func (r Runtime) variableIsSet(ctx context.Context, name string) bool {
 		elements, _ := r.elementsFor(ctx, reference)
 		return len(elements) > 0
 	}
-	if _, isArray := r.arrays.get(name); isArray || r.arrays.isAssociative(name) {
+	if r.arrays.has(name) || r.arrays.isAssociative(name) {
 		elements, _ := r.elementsFor(ctx, arrayReference{name: name, subscript: "0"})
 		return len(elements) > 0
 	}

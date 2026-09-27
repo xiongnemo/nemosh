@@ -1,103 +1,159 @@
 package runtime
 
-import "sort"
+import (
+	"math"
+	"slices"
+	"sort"
+)
 
-// The bookkeeping that makes an indexed array sparse, split from array.go to stay under
-// the 250-line ceiling. See the `present` field there for why it exists.
+// An indexed array's storage, split from array.go to stay under the 250-line ceiling.
+//
+// bash's indexed arrays are sparse, to the largest index an int64 holds: `a=(p); a[3]=z` has
+// two elements and `${!a[@]}` is `0 3`, and `a[0x7FFFFFFFFFFFFFFF]=x` is one element more.
+// An array here was a slice grown to its largest index, with a map beside it saying which
+// slots were set. So `a[10000000]=x` took 160 MB, and that last assignment grew a slice
+// without end. Now an array is the elements it has, by index, and nothing else.
 
-// mark records that an index is set.
-func (a *shellArrays) mark(name string, indices ...int) {
-	if a.present == nil {
-		a.present = map[string]map[int]bool{}
-	}
-	if a.present[name] == nil {
-		a.present[name] = map[int]bool{}
-	}
-	for _, index := range indices {
-		a.present[name][index] = true
-	}
+// indexedArray is one indexed array.
+type indexedArray struct {
+	elements map[int]string
+	// sorted is the indices in order, and nil once a change has made it stale.
+	sorted []int
 }
 
-// unsetElement removes one subscript, leaving a gap.
-//
-// A gap rather than a compaction, which is bash's behaviour and the only safe one:
-// `unset a[1]` on `(x y z)` leaves indices 0 and 2 holding `x` and `z`, so a later
-// `${a[2]}` is still `z`. Compacting would silently shift every later index and quietly
-// change what every subsequent read means.
-//
-// The value stays in the slice and only the mark is dropped, because the slice is
-// positional -- removing from it *is* the compaction this avoids. Every reader already
-// goes through liveIndices, so an unmarked slot is invisible to all of them.
-func (a *shellArrays) unsetElement(name string, index int) {
-	if a.present == nil {
-		a.present = map[string]map[int]bool{}
+func newIndexedArray() *indexedArray { return &indexedArray{elements: map[int]string{}} }
+
+func (array *indexedArray) clone() *indexedArray {
+	copied := newIndexedArray()
+	for index, value := range array.elements {
+		copied.elements[index] = value
 	}
-	if a.present[name] == nil {
-		// A name whose slice was set directly, before any marking: every position
-		// counts, so the set has to be filled in before one can be taken out of it.
-		// Without this the delete would be a no-op against a nil map and the element
-		// would stay -- which is the silent nothing this whole change is about.
-		a.present[name] = map[int]bool{}
-		for position := range a.values[name] {
-			a.present[name][position] = true
+	return copied
+}
+
+// indices is the array's indices in order, which the caller must not change.
+func (array *indexedArray) indices() []int {
+	if array.sorted == nil {
+		array.sorted = make([]int, 0, len(array.elements))
+		for index := range array.elements {
+			array.sorted = append(array.sorted, index)
+		}
+		sort.Ints(array.sorted)
+	}
+	return array.sorted
+}
+
+func (array *indexedArray) store(index int, value string) {
+	if _, exists := array.elements[index]; !exists {
+		array.sorted = nil
+	}
+	array.elements[index] = value
+}
+
+// has reports an indexed array of this name, empty or not.
+func (a *shellArrays) has(name string) bool {
+	_, ok := a.indexed[name]
+	return ok
+}
+
+// valueAt is one element, and whether that index is set.
+func (a *shellArrays) valueAt(name string, index int) (string, bool) {
+	array, ok := a.indexed[name]
+	if !ok {
+		return "", false
+	}
+	value, set := array.elements[index]
+	return value, set
+}
+
+// indexedFor is the array of this name, made empty if there was none.
+func (a *shellArrays) indexedFor(name string) *indexedArray {
+	if a.indexed == nil {
+		a.indexed = map[string]*indexedArray{}
+	}
+	array, ok := a.indexed[name]
+	if !ok {
+		array = newIndexedArray()
+		a.indexed[name] = array
+	}
+	return array
+}
+
+// unsetElement removes one subscript, leaving a gap, as bash does: `unset a[1]` on `(x y z)`
+// leaves indices 0 and 2 holding x and z.
+func (a *shellArrays) unsetElement(name string, index int) {
+	if array, ok := a.indexed[name]; ok {
+		if _, exists := array.elements[index]; exists {
+			delete(array.elements, index)
+			array.sorted = nil
 		}
 	}
-	delete(a.present[name], index)
 }
 
-// span is one past the highest index of a name that is set, which is what a negative
-// subscript counts back from, as bash counts. Not the slice's length: unsetting the last
-// element leaves its slot in place, and a[-1] counted from there reached the element that
-// was gone.
+// span is one past the highest index set, which is what a negative subscript counts back
+// from and where `a+=(x)` begins, as bash counts.
 func (a *shellArrays) span(name string) int {
-	indices := a.liveIndices(name)
+	array, ok := a.indexed[name]
+	if !ok {
+		return 0
+	}
+	indices := array.indices()
 	if len(indices) == 0 {
 		return 0
 	}
-	return indices[len(indices)-1] + 1
+	if last := indices[len(indices)-1]; last < math.MaxInt {
+		return last + 1
+	}
+	return math.MaxInt
 }
 
-// isLive reports whether one index of a name is set. unsetElement drops only the mark and
-// leaves the old value in its slot, so a read that skips this sees what was removed.
+// isLive reports whether one index of a name is set.
 func (a *shellArrays) isLive(name string, index int) bool {
-	set := a.present[name]
-	if set == nil {
-		return index < len(a.values[name])
-	}
-	return set[index]
+	_, set := a.valueAt(name, index)
+	return set
 }
 
-// liveIndices is the set subscripts of a name, in order. This is what `${!a[@]}`
-// answers and what the `[@]` and `[*]` forms are built from.
+// liveIndices is the set subscripts of a name, in order: what `${!a[@]}` answers and what
+// the `[@]` and `[*]` forms are built from.
 func (a *shellArrays) liveIndices(name string) []int {
-	set := a.present[name]
-	if set == nil {
-		// A name written before this bookkeeping existed, or one whose slice was set
-		// directly: every position counts, which is what dense meant.
-		indices := make([]int, 0, len(a.values[name]))
-		for index := range a.values[name] {
-			indices = append(indices, index)
-		}
-		return indices
+	array, ok := a.indexed[name]
+	if !ok {
+		return nil
 	}
-	indices := make([]int, 0, len(set))
-	for index := range set {
-		indices = append(indices, index)
-	}
-	sort.Ints(indices)
-	return indices
+	return slices.Clone(array.indices())
 }
 
-// liveValues is `${a[@]}`: the elements that are set, in index order, with no
-// phantom fields for the gaps.
+// liveValues is `${a[@]}`: the elements that are set, in index order.
 func (a *shellArrays) liveValues(name string) []string {
-	elements := a.values[name]
-	indices := a.liveIndices(name)
-	values := make([]string, 0, len(indices))
-	for _, index := range indices {
-		if index < len(elements) {
-			values = append(values, elements[index])
-		}
+	array, ok := a.indexed[name]
+	if !ok {
+		return nil
+	}
+	values := make([]string, 0, len(array.elements))
+	for _, index := range array.indices() {
+		values = append(values, array.elements[index])
 	}
 	return values
+}
+
+// indexedNames is every indexed array's name.
+func (a *shellArrays) indexedNames() []string {
+	names := make([]string, 0, len(a.indexed))
+	for name := range a.indexed {
+		names = append(names, name)
+	}
+	return names
+}
+
+// take is the array of this name as it stands, for `local` to put back with put.
+func (a *shellArrays) take(name string) (*indexedArray, bool) {
+	array, ok := a.indexed[name]
+	return array, ok
+}
+
+func (a *shellArrays) put(name string, array *indexedArray) {
+	if a.indexed == nil {
+		a.indexed = map[string]*indexedArray{}
+	}
+	a.indexed[name] = array
 }

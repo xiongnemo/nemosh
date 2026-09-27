@@ -17,9 +17,8 @@ type localScope struct {
 type savedVariable struct {
 	value, env string
 	set, inEnv bool
-	elements   []string
+	array      *indexedArray
 	indexed    bool
-	indices    map[int]bool
 	keys       *associativeArray
 	attributes variableAttributes
 	readonly   bool
@@ -41,8 +40,8 @@ func (r Runtime) makeLocal(name string) {
 	saved := savedVariable{attributes: r.attributes[name]}
 	saved.value, saved.set = r.vars[name]
 	saved.env, saved.inEnv = r.env.LookupEnv(name)
-	saved.elements, saved.indexed = r.arrays.values[name]
-	saved.indices, saved.keys = r.arrays.present[name], r.arrays.associative[name]
+	saved.array, saved.indexed = r.arrays.take(name)
+	saved.keys = r.arrays.associative[name]
 	_, saved.readonly = r.readonly[name]
 	r.locals.saved[name] = saved
 	exported := r.isExported(name)
@@ -82,10 +81,7 @@ func (r Runtime) restoreVariable(name string, saved savedVariable) {
 	}
 	r.arrays.unset(name)
 	if saved.indexed {
-		r.arrays.values[name] = saved.elements
-		if saved.indices != nil {
-			r.arrays.present[name] = saved.indices
-		}
+		r.arrays.put(name, saved.array)
 	}
 	if saved.keys != nil {
 		if r.arrays.associative == nil {

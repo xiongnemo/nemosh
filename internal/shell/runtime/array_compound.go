@@ -57,8 +57,8 @@ func (r Runtime) assignCompound(ctx context.Context, name, raw string, extend bo
 func (r Runtime) assignIndexedCompound(name string, elements []arrayElement, extend bool) int {
 	next := 0
 	if extend {
-		existing, _ := r.arrays.get(name)
-		next = len(existing)
+		// After the highest index set, as bash appends.
+		next = r.arrays.span(name)
 	} else {
 		r.arrays.set(name, nil)
 	}

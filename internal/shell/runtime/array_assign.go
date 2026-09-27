@@ -116,12 +116,8 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 // after an array assignment would print nothing, and the difference between an
 // array and a scalar would show up as an empty line rather than as a design.
 func (r Runtime) syncArrayScalar(name string) {
-	elements, ok := r.arrays.get(name)
-	if !ok || len(elements) == 0 {
-		r.vars[name] = ""
-		return
-	}
-	r.vars[name] = elements[0]
+	value, _ := r.arrays.valueAt(name, 0)
+	r.vars[name] = value
 }
 
 // applyMixedAssignments runs a command made only of assignments, some of them arrays, in

@@ -65,15 +65,13 @@ func (r Runtime) arrayPairs(name string) ([]string, []string, bool, bool) {
 		}
 		return keys, values, true, true
 	}
-	elements, ok := r.arrays.get(name)
-	if !ok {
+	if !r.arrays.has(name) {
 		return nil, nil, false, false
 	}
 	indices := r.arrays.liveIndices(name)
 	keys := make([]string, len(indices))
-	values := make([]string, len(indices))
 	for position, index := range indices {
-		keys[position], values[position] = strconv.Itoa(index), elements[index]
+		keys[position] = strconv.Itoa(index)
 	}
-	return keys, values, false, true
+	return keys, r.arrays.liveValues(name), false, true
 }

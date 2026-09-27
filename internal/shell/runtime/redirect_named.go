@@ -53,10 +53,8 @@ func (r Runtime) descriptorVariable(name string) string {
 	if !element {
 		return r.vars[name]
 	}
-	if values, ok := r.arrays.get(base); ok && index < len(values) {
-		return values[index]
-	}
-	return ""
+	value, _ := r.arrays.valueAt(base, index)
+	return value
 }
 
 // splitDescriptorName separates `{name}` from the operator after it.

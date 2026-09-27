@@ -100,8 +100,7 @@ func (r Runtime) attributeLetters(name string) string {
 }
 
 func (r Runtime) hasIndexedArray(name string) bool {
-	_, ok := r.arrays.get(name)
-	return ok
+	return r.arrays.has(name)
 }
 
 // transformList answers `${a[@]@Q}` and `${@@Q}`: each element transformed, except `@A`

@@ -55,6 +55,7 @@ type jobState struct {
 	Control string `json:"control"`
 }
 
+// jobIndexedArray is an indexed array's elements, each value at the index beside it.
 type jobIndexedArray struct {
 	Values []string `json:"values"`
 	Live   []int    `json:"live"`
@@ -95,14 +96,8 @@ func (r Runtime) captureJobState(program programNode) jobState {
 		state.FunctionFiles[name] = definition.file
 	}
 	state.Functions = functions.String()
-	for name, values := range r.arrays.values {
-		live := []int{}
-		for index := range values {
-			if r.arrays.isLive(name, index) {
-				live = append(live, index)
-			}
-		}
-		state.Indexed[name] = jobIndexedArray{Values: append([]string(nil), values...), Live: live}
+	for _, name := range r.arrays.indexedNames() {
+		state.Indexed[name] = jobIndexedArray{Values: r.arrays.liveValues(name), Live: r.arrays.liveIndices(name)}
 	}
 	for name, array := range r.arrays.associative {
 		entry := jobAssociativeArray{Keys: append([]string(nil), array.order...)}
@@ -153,12 +148,10 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		r.vars[name] = value
 	}
 	for name, array := range state.Indexed {
-		r.arrays.values[name] = append([]string(nil), array.Values...)
-		live := map[int]bool{}
-		for _, index := range array.Live {
-			live[index] = true
+		r.arrays.set(name, nil)
+		for position, index := range array.Live {
+			r.arrays.setElement(name, index, array.Values[position])
 		}
-		r.arrays.present[name] = live
 	}
 	for name, array := range state.Associative {
 		r.arrays.declareAssociative(name)

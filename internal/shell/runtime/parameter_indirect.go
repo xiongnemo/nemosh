@@ -68,7 +68,7 @@ func (r Runtime) indirectTarget(ctx context.Context, body string, savedStatus in
 	reference, tail := body[:end], body[end:]
 	target, set := r.operandParameter(ctx, reference, savedStatus)
 	if !set {
-		if _, isArray := r.arrays.get(reference); isArray || r.arrays.isAssociative(reference) {
+		if r.arrays.has(reference) || r.arrays.isAssociative(reference) {
 			return "", tail, nil
 		}
 		return "", "", fmt.Errorf("%s: invalid indirect expansion", reference)

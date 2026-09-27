@@ -108,7 +108,7 @@ func (r Runtime) isArrayName(name string) bool {
 	if r.arrays == nil {
 		return false
 	}
-	_, indexed := r.arrays.get(name)
+	indexed := r.arrays.has(name)
 	return indexed || r.arrays.isAssociative(name)
 }
 
