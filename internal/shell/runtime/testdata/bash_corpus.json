@@ -1625,5 +1625,11 @@
     "stdout": "1\n3\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "set a b\nset +\necho \"[$*] $#\"\nset -\necho \"[$*] $#\"\nset + x\necho \"[$*]\"",
+    "stdout": "[a b] 2\n[a b] 2\n[x]\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

@@ -263,7 +263,6 @@
     "builtin-cd.test.sh": {
       "$OLDPWD": "fail",
       "'unset PWD; pwd' before any cd (tickles a rare corner case)": "fail",
-      "CDPATH is respected": "fail",
       "Change directory in non-shell parent process (make or Python)": "fail",
       "Survey of getcwd() syscall": "fail",
       "What happens when inherited $PWD and current dir disagree?": "fail",
@@ -465,7 +464,6 @@
     "builtin-set.test.sh": {
       "'set' and 'eval' round trip": "fail",
       "A single + is an ignored flag; not an argument": "fail",
-      "set - + and + -": "fail",
       "set - leading single dash is ignored, turns off xtrace verbose (#2364)": "fail",
       "set -eu (flag parsing)": "fail",
       "set -u with undefined var in interactive shell does NOT exit the interpreter": "fail",

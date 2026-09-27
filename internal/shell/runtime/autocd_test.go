@@ -80,9 +80,11 @@ func TestCDPATH(t *testing.T) {
 		want   string
 	}{
 		{
+			// And cd says where it went, as POSIX has it and both references do, before pwd
+			// says it again.
 			name:   "a relative name is searched for",
 			script: "CDPATH=ROOT\ncd /tmp\ncd a\npwd",
-			want:   "R/a\n",
+			want:   "R/a\nR/a\n",
 		},
 		{
 			// Here wins over CDPATH's answer only because the current directory is

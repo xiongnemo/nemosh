@@ -48,10 +48,17 @@ func (r Runtime) applySetOptions(args []string) (int, bool, int) {
 			return index + 1, true, 0
 		}
 		// The obsolescent `set -` of POSIX XCU 2.14: end option processing and
-		// turn off xtrace and verbose, which is what dash does with it.
+		// turn off xtrace and verbose, which is what dash does with it. With nothing
+		// after it the positional parameters stay, as busybox keeps them; they were
+		// cleared.
 		if arg == "-" {
 			r.options.xtrace, r.options.verbose = false, false
-			return index + 1, true, 0
+			return index + 1, false, 0
+		}
+		// A lone `+` is an ignored flag, as busybox reads it: `set +` made `+` the one
+		// positional parameter.
+		if arg == "+" {
+			continue
 		}
 		if len(arg) < 2 || arg[0] != '-' && arg[0] != '+' {
 			return index, false, 0

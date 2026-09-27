@@ -206,7 +206,10 @@ func (r Runtime) changeDirectory(as string, args []string) int {
 	// it always did rather than complaining once per entry.
 	candidates := r.cdPathTargets(target)
 	for _, candidate := range candidates[:len(candidates)-1] {
-		if status := r.tryChangeDirectory(as, candidate, printResult, true, physical); status == 0 {
+		// A directory an entry of CDPATH supplied is printed, as POSIX has it and both
+		// references do, so `cd sub` says which sub it went to; one an empty entry found,
+		// which is the current directory's, is not.
+		if status := r.tryChangeDirectory(as, candidate, printResult || candidate != target, true, physical); status == 0 {
 			return 0
 		}
 	}

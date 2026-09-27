@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1838 of the 2551 cases bash passes: 72.1%.**
+**nemosh passes 1840 of the 2551 cases bash passes: 72.1%.**
 
-Of the other 713, it does 99 the way the files record of ash, which may be busybox's
-way, and 614 neither way.
+Of the other 711, it does 99 the way the files record of ash, which may be busybox's
+way, and 612 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 614 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1838 |
+| that nemosh passes of those | 1840 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -71,7 +71,7 @@ of ash.
 | builtin-bash.test.sh | 13 | 13 | 10 | 76.9% | 0 | 10 |
 | builtin-bind.test.sh | 9 | 8 | 0 | 0.0% | 0 | 0 |
 | builtin-bracket.test.sh | 47 | 45 | 38 | 84.4% | 0 | 36 |
-| builtin-cd.test.sh | 25 | 22 | 11 | 50.0% | 2 | 11 |
+| builtin-cd.test.sh | 25 | 22 | 12 | 54.5% | 2 | 11 |
 | builtin-completion.test.sh | 51 | 50 | 3 | 6.0% | 0 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 5 | 27.8% | 0 | 2 |
 | builtin-echo.test.sh | 27 | 27 | 22 | 81.5% | 5 | 27 |
@@ -86,7 +86,7 @@ of ash.
 | builtin-printf.test.sh | 63 | 55 | 46 | 83.6% | 9 | 57 |
 | builtin-process.test.sh | 10 | 9 | 5 | 55.6% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 50 | 79.4% | 4 | 60 |
-| builtin-set.test.sh | 24 | 24 | 17 | 70.8% | 0 | 20 |
+| builtin-set.test.sh | 24 | 24 | 18 | 75.0% | 0 | 20 |
 | builtin-special.test.sh | 12 | 11 | 6 | 54.5% | 2 | 10 |
 | builtin-times.test.sh | 1 | 1 | 0 | 0.0% | 0 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 4 | 17.4% | 0 | 4 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1838 | 72.1% | 99 | 1447 |
+| all | 2668 | 2551 | 1840 | 72.1% | 99 | 1447 |
