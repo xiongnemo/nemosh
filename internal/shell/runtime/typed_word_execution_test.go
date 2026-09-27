@@ -57,7 +57,10 @@ func TestTypedWordExpansion_preservesPositionalParameterCardinality(t *testing.T
 	}
 }
 
-func TestTypedRedirectExpansion_rejectsMultiplePositionalParameters(t *testing.T) {
+// Two absolute paths in `> $@` are one target, joined by a blank as busybox joins them, and a
+// path with the second drive or root in the middle of it is nowhere: the redirection fails and
+// neither file is made.
+func TestTypedRedirectExpansion_joinsPositionalParametersIntoOneTarget(t *testing.T) {
 	// Given
 	var stderr bytes.Buffer
 	directory := t.TempDir()
@@ -79,7 +82,7 @@ func TestTypedRedirectExpansion_rejectsMultiplePositionalParameters(t *testing.T
 		t.Fatalf("second redirect target unexpectedly exists: %v", err)
 	}
 	if got := stderr.String(); got == "" {
-		t.Fatal("stderr is empty, want ambiguous redirect diagnostic")
+		t.Fatal("stderr is empty, want the redirection's failure reported")
 	}
 }
 

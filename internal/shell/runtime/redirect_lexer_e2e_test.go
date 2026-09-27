@@ -136,19 +136,23 @@ func TestRuntime_quotedAndEscapedIONumbersRemainCommandArguments(t *testing.T) {
 	}
 }
 
-func TestRuntime_rejectsRedirectExpansionWithMultipleFieldsBeforeExecution(t *testing.T) {
-	probe := filepath.ToSlash(filepath.Join(t.TempDir(), "probe.txt"))
+// `>$@` of two parameters is one target, the two joined by a blank, as busybox joins them. It
+// was refused as ambiguous, bash's answer, and the command did not run.
+func TestRuntime_joinsARedirectExpansionOfSeveralFieldsIntoOneTarget(t *testing.T) {
+	directory := t.TempDir()
+	probe := filepath.ToSlash(filepath.Join(directory, "probe.txt"))
 	var stderr bytes.Buffer
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stderr: &stderr})
 
-	status := rt.RunScript(context.Background(), "set -- first second\necho ran >$@ >"+probe+"\n")
+	status := rt.RunScript(context.Background(), "cd '"+filepath.ToSlash(directory)+"'\nset -- first second\necho ran >$@ >"+probe+"\n")
 
-	if status == 0 {
-		t.Fatal("expected ambiguous redirect")
+	if status != 0 {
+		t.Fatalf("status = %d, stderr = %q", status, stderr.String())
 	}
-	if _, err := os.Stat(probe); !os.IsNotExist(err) {
-		t.Fatalf("command executed: %v", err)
+	if _, err := os.Stat(filepath.Join(directory, "first second")); err != nil {
+		t.Fatalf("the joined target was not created: %v", err)
 	}
+	assertFileText(t, probe, "ran\n")
 }
 
 func TestRuntime_redirectExpansionCannotCreateRedirectSyntax(t *testing.T) {

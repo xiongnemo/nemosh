@@ -268,15 +268,15 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 			}
 			continue
 		}
-		fields := r.expandCommandWord(ctx, operation.operand, savedStatus)
-		if r.redirectGlobFailed() {
-			return nil, false
-		}
-		if len(fields) != 1 {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %s: %v\n", operation.path, errAmbiguousRedirect)
-			return nil, false
-		}
-		operations[index].path = fields[0]
+		// The word is one path, expanded as busybox expands it, as POSIX has it: parameters,
+		// command substitutions, arithmetic, a tilde and quote removal, and neither field
+		// splitting nor pathname expansion -- nor brace expansion, which busybox has not got.
+		// A word that came to more fields than one was bash's "ambiguous redirect" and the
+		// command did not run: `> $x` with a blank in x, which on Windows is `C:/Program
+		// Files`, and any Windows path once IFS held a colon. `"$@"` of two is joined, as
+		// busybox joins it.
+		fields := r.expandingAssignment().expandWord(ctx, operation.operand, savedStatus)
+		operations[index].path = strings.Join(fields, " ")
 	}
 	return operations, true
 }

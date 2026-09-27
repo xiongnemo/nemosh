@@ -464,7 +464,6 @@
       "read -t -0.5 is invalid": "ash-only",
       "read -u syntax error": "ash-only",
       "read bash bug": "fail",
-      "read multiple lines with IFS=:": "fail",
       "read usage": "ash-only"
     },
     "builtin-set.test.sh": {
@@ -841,8 +840,12 @@
     },
     "redirect-multi.test.sh": {
       "Extended glob that doesn't match anything": "fail",
+      "File redirect to $var with glob char": "fail",
+      "File redirect with extended glob": "fail",
       "File redirect without matching any file": "fail",
+      "File redirects have word splitting too!": "ash-only",
       "File redirects with glob args (bash and zsh only)": "fail",
+      "Redirect with brace expansion isn't allowed": "ash-only",
       "ysh behavior when glob doesn't match": "fail"
     },
     "redirect.test.sh": {

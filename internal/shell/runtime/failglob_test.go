@@ -9,8 +9,8 @@ import (
 // `shopt -s failglob` makes a pattern that matches nothing an error, where it otherwise
 // stays as written. As in bash, the error abandons the whole command the script was running
 // -- a function it called, a loop it was in -- with status 1, and the script goes on with the
-// next one; under `set -e` it ends there. A redirection's pattern fails only its command.
-// busybox has no shopt.
+// next one; under `set -e` it ends there. A redirection's word is not a pattern, as in
+// busybox, so it has nothing to fail. busybox has no shopt.
 func TestShopt_failglob(t *testing.T) {
 	directory := t.TempDir()
 	if err := os.WriteFile(filepath.Join(directory, "a.txt"), nil, 0o644); err != nil {
@@ -40,7 +40,7 @@ func TestShopt_failglob(t *testing.T) {
 		},
 		{name: "a subshell ends", script: "shopt -s failglob\n(echo *.ZZ; echo in-sub)\necho \"st=$?\"\n", stdout: "st=1\n"},
 		{name: "set -e ends the script", script: "set -e\nshopt -s failglob\necho *.ZZ\necho after\n", stdout: "", status: 1},
-		{name: "a redirection", script: "shopt -s failglob\necho hi > zz-*-xx; echo \"st=$?\"\n", stdout: "st=1\n"},
+		{name: "a redirection's word is no pattern", script: "shopt -s failglob\necho hi > zz-[ab]-xx; echo \"st=$?\"; cat 'zz-[ab]-xx'\n", stdout: "st=0\nhi\n"},
 		{name: "before nullglob", script: "shopt -s failglob nullglob\necho x *.ZZ y\necho \"st=$?\"\n", stdout: "st=1\n"},
 		{name: "a match is a match", script: "shopt -s failglob\necho *.txt\n", stdout: "a.txt\n"},
 		{
