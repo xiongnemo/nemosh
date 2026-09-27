@@ -203,10 +203,6 @@
       "-a -a -a -a -a -a -a": "fail",
       "-a -a -a -a -a -a -a -a": "fail"
     },
-    "bool-parse.test.sh": {
-      "test builtin: ( = ) is confusing: equality test or non-empty string test": "fail",
-      "test builtin: ( == ) is confusing: equality test or non-empty string test": "fail"
-    },
     "brace-expansion.test.sh": {
       "Mixed case char expansion is invalid": "fail",
       "Singleton char ranges with steps": "fail",

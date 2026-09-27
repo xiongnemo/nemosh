@@ -27,8 +27,8 @@ type testEvaluator struct {
 var errTestUnknownOperand = errors.New("unknown operand")
 
 func (e *testEvaluator) evaluate() (bool, error) {
-	if len(e.args) == 0 {
-		return false, nil
+	if result, counted, err := e.countedForm(); counted {
+		return result, err
 	}
 	result, err := e.orExpression()
 	if err != nil {
@@ -38,6 +38,30 @@ func (e *testEvaluator) evaluate() (bool, error) {
 		return false, fmt.Errorf("%s: %w", e.args[e.index], errTestUnknownOperand)
 	}
 	return result, nil
+}
+
+// countedForm is POSIX 2.14's rules by the number of arguments, which busybox's test_main
+// takes before its grammar, each once the leading `!`s are counted off: none is false, one
+// is whether it is non-empty, and three with a binary operator in the middle are that
+// comparison -- so `test '(' = ')'` compares two parentheses and `test ! '(' = ')'` negates
+// that, where the grammar reads a group. Any other form goes to the grammar from the start,
+// its `!`s and all.
+func (e *testEvaluator) countedForm() (result, counted bool, err error) {
+	args, negate := e.args, false
+	for {
+		switch {
+		case len(args) == 0:
+			return false, true, nil
+		case len(args) == 1:
+			return (args[0] != "") != negate, true, nil
+		case len(args) == 3 && isTestBinaryOperator(args[1]):
+			result, err := e.applyBinary(args[0], args[1], args[2])
+			return result != negate, true, err
+		case args[0] != "!":
+			return false, false, nil
+		}
+		args, negate = args[1:], !negate
+	}
 }
 
 func (e *testEvaluator) orExpression() (bool, error) {
@@ -73,11 +97,11 @@ func (e *testEvaluator) andExpression() (bool, error) {
 }
 
 func (e *testEvaluator) notExpression() (bool, error) {
-	// A `!` with a binary operator after it is an operand being compared: `[ "!" = "!" ]`
-	// is true in both references. POSIX settles the three-argument form on $2 first,
-	// and this took the `!` for negation and then found `=` with nothing to its left. A `!`
-	// with nothing after it is the one-argument form, a non-empty string: `test !` is true.
-	if e.peek() != "!" || e.binaryFollows() || e.index+1 >= len(e.args) {
+	// A `!` with nothing after it is an operand, a non-empty string: `[ x -a ! ]` is true. Any
+	// other negates what follows, a comparison too, as busybox's nexpr has it: `[ ! = ! -a x ]`
+	// is an error in both references, the `=` negated and the second `!` left over. It was
+	// compared, which is right only for three arguments, and countedForm takes those.
+	if e.peek() != "!" || e.index+1 >= len(e.args) {
 		return e.primary()
 	}
 	e.index++
@@ -89,11 +113,11 @@ func (e *testEvaluator) primary() (bool, error) {
 	switch {
 	case e.index >= len(e.args):
 		return false, errors.New("argument expected")
-	// Binary before a group for the same reason, `[ "(" = "(" ]`, and a lone `(` is the
-	// one-argument form -- a non-empty string -- rather than a group with nothing in it.
-	case e.binaryFollows():
-		return e.binaryPrimary()
-	case e.args[e.index] == "(" && e.index+1 < len(e.args):
+	// A `(` opens a group before a comparison is looked for, as busybox's primary has it:
+	// `test 0 -eq 0 -a '(' = ')'` is true, its group holding `=`, a non-empty string. The
+	// comparison came first, and compared the two parentheses; the three-argument `test '('
+	// = ')'` does compare them, and countedForm takes it before the grammar.
+	case e.args[e.index] == "(":
 		e.index++
 		result, err := e.orExpression()
 		if err != nil {
@@ -104,6 +128,8 @@ func (e *testEvaluator) primary() (bool, error) {
 		}
 		e.index++
 		return result, nil
+	case e.binaryFollows():
+		return e.binaryPrimary()
 	// A unary operator with nothing after it is the one-argument form -- a
 	// non-empty string -- which is why this insists on having an operand.
 	// `test -f` is true and `test ! -f` is false, both by POSIX 2.14's
@@ -119,9 +145,8 @@ func (e *testEvaluator) primary() (bool, error) {
 }
 
 // binaryFollows reports a binary operator after the current word with an operand after it.
-// Checked before a group, a negation and a unary operator, because POSIX resolves the
-// three-argument form on $2 first: `test -f = -f` compares two strings rather than asking
-// whether a file named `=` exists, and `[ "(" = "(" ]` compares two parentheses.
+// Checked before a unary operator, as busybox's primary does: `test -f = -f x` compares two
+// strings rather than asking whether a file named `=` exists.
 func (e *testEvaluator) binaryFollows() bool {
 	return e.index+2 < len(e.args) && isTestBinaryOperator(e.args[e.index+1])
 }
