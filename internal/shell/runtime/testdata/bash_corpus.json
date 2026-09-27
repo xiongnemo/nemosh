@@ -1157,5 +1157,11 @@
     "stdout": "cd is a shell builtin\nf is a function\ncd is a shell builtin\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "hash nosuch-zz 2>/dev/null\necho \"st=$?\"\nhash cd\necho \"st=$?\"\nhash -r\necho \"st=$?\"",
+    "stdout": "st=1\nst=0\nst=0\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

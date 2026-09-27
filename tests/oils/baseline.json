@@ -671,7 +671,6 @@
       "Command block": "fail",
       "Name too long": "ash-only",
       "Permission denied": "fail",
-      "hash -r doesn't allow additional args": "fail",
       "hash with args": "fail",
       "hash without args prints the cache": "fail"
     },

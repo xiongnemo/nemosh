@@ -180,6 +180,7 @@ var commands = []Command{
 	{Name: "exit", Operand: AnyPath, Builtin: true},
 	{Name: "export", Operand: AnyPath, Builtin: true},
 	{Name: "getopts", Operand: AnyPath, Builtin: true},
+	{Name: "hash", Short: "r", Operand: AnyPath, Builtin: true},
 	{Name: "help", Operand: AnyPath, Builtin: true},
 	{Name: "dirs", Short: "clpv", Operand: AnyPath, Builtin: true},
 	{Name: "history", Operand: AnyPath, Builtin: true},

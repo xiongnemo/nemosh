@@ -28,10 +28,6 @@ type unimplementedBuiltin struct {
 const unimplementedBuiltinStatus = 126
 
 var unimplementedBuiltins = map[string]unimplementedBuiltin{
-	"hash": {
-		reason: "command lookup is not cached, so there is nothing to remember or forget. " +
-			"busybox-w32 does implement it, over a hash table this shell does not have",
-	},
 	"ulimit": {
 		reason: "Windows has no getrlimit. busybox-w32 does not implement it either: " +
 			"it keeps the name and returns 1 with no message (shell/shell_common.c, " +

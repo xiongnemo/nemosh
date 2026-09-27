@@ -16,11 +16,6 @@ func TestRuntime_refusesABuiltinItDoesNotImplement(t *testing.T) {
 		fragments []string
 	}{
 		{
-			name:      "hash",
-			script:    "hash\n",
-			fragments: []string{"hash: not implemented", "not cached", "busybox-w32 does implement it"},
-		},
-		{
 			name:      "ulimit",
 			script:    "ulimit -n\n",
 			fragments: []string{"ulimit: not implemented", "no getrlimit", "busybox-w32 does not implement it either", "returns 1 with no message"},
@@ -29,7 +24,7 @@ func TestRuntime_refusesABuiltinItDoesNotImplement(t *testing.T) {
 		//
 		// "and will not be", because these are settled rather than pending, and a
 		// reader told only "not implemented" may go looking for a flag or a newer
-		// build. hash and ulimit deliberately do *not* say it -- they could be
+		// build. ulimit deliberately does *not* say it -- it could be
 		// implemented any day.
 		//
 		// And the `kill %N` clause, which answers "why does that work then" in

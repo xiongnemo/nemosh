@@ -22,7 +22,7 @@ import (
 // recreates that condition on any platform rather than waiting for the next
 // operating system to disagree.
 func TestRuntime_refusesAnUnimplementedBuiltin_fromCommandVandWhich_evenWhenPathHasOne(t *testing.T) {
-	for _, name := range []string{"ulimit", "hash", "fg", "bg"} {
+	for _, name := range []string{"ulimit", "fg", "bg"} {
 		t.Run(name, func(t *testing.T) {
 			// Given a directory on PATH that really does hold a runnable
 			// program of that name.

@@ -261,6 +261,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.readonlyBuiltin(args[1:])
 	case "set":
 		return r.set(args[1:])
+	case "hash":
+		return r.hashBuiltin(args[1:])
 	case "shift":
 		return r.shift(args[1:])
 	case "trap":
