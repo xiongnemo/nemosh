@@ -53,6 +53,9 @@ func (r Runtime) makeLocal(name string) {
 	if exported {
 		r.markExported(name)
 	}
+	if r.options.localVarInherit {
+		r.inheritLocal(name, saved)
+	}
 	r.markVarMutation(name)
 }
 

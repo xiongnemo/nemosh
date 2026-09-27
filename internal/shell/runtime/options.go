@@ -64,6 +64,9 @@ type shellOptions struct {
 	shiftVerbose bool
 	// xpgEcho is `shopt -s xpg_echo`: echo expands backslash escapes; see xpg_echo.go.
 	xpgEcho bool
+	// localVarInherit is `shopt -s localvar_inherit`: a new local starts as the caller's
+	// variable was; see local_inherit.go.
+	localVarInherit bool
 	// The shopt names of the interactive layer, which are remembered and reported and
 	// change nothing; see shopt_table.go.
 	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool

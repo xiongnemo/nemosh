@@ -1091,5 +1091,11 @@
     "stdout": "a\tb\nc\\td\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s localvar_inherit\nx=outer\nf() { local x; echo \"[$x]\"; x=in; }\nf\necho \"[$x]\"",
+    "stdout": "[outer]\n[outer]\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

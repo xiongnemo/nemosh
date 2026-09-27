@@ -107,7 +107,7 @@ var shoptOptions = []shoptOption{
 		"a # at the start of a word always begins a comment"),
 	acts("lastpipe", func(o *shellOptions) *bool { return &o.lastPipe }),
 	recorded("lithist", false, func(o *shellOptions) *bool { return &o.litHist }, noHistory),
-	fixed("localvar_inherit", false, notYet),
+	acts("localvar_inherit", func(o *shellOptions) *bool { return &o.localVarInherit }),
 	fixed("localvar_unset", true, "unsetting a caller's local leaves it unset until that function returns, as busybox has it"),
 	{name: "login_shell", kind: shoptStartup},
 	recorded("mailwarn", false, func(o *shellOptions) *bool { return &o.mailWarn }, "mail is not watched"),
