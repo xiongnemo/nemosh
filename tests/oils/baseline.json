@@ -147,7 +147,6 @@
       "Set array item to array": "fail"
     },
     "assign-deferred.test.sh": {
-      "'builtin' prefix is allowed on assignments": "fail",
       "export a[7]=8": "fail",
       "local a[3]=4": "fail",
       "readonly a[7]=8": "fail"
@@ -206,7 +205,6 @@
     },
     "ble-idioms.test.sh": {
       "Issue #1069 [49] BUG: \\return 0 does not work (other variations)": "fail",
-      "Issue #1069 [52] BUG: \\builtin local v=1 fails": "fail",
       "Issue #1069 [53] - LHS array parsing a[1 + 2]=3 (see spec/array-assign for more)": "fail",
       "Issue #1069 [53] BUG: a[1 + 1]=2, etc. fails": "fail",
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
@@ -448,26 +446,15 @@
       "kill -l 0 INT lists both signals": "fail",
       "kill -l 0 returns EXIT": "fail",
       "kill -l 10 TERM translates between names and numbers": "fail",
-      "kill -l shows signals": "fail",
       "kill -l with 128 is invalid": "fail",
       "kill -l with exit code": "fail",
       "kill -n 9 specifies the signal number": "fail",
-      "kill -s TERM specifies the signal name": "fail",
-      "kill HUP pid gives the correct error": "fail"
-    },
-    "builtin-meta-assign.test.sh": {
-      "\\builtin declare - ble.sh relies on it": "fail",
-      "builtin declare,local": "fail",
-      "builtin typeset, export,readonly": "fail",
-      "dynamic builtin command ASSIGN, command builtin ASSIGN": "fail",
-      "export, builtin export": "ash-only",
-      "static builtin command ASSIGN, command builtin ASSIGN": "fail"
+      "kill -s TERM specifies the signal name": "fail"
     },
     "builtin-meta.test.sh": {
-      "builtin": "ash-only",
-      "builtin command echo hi": "ash-only",
-      "builtin ls not found": "ash-only",
-      "builtin usage": "ash-only",
+      "builtin": "fail",
+      "builtin ls not found": "fail",
+      "builtin usage": "fail",
       "command -V": "fail",
       "command -V nonexistent": "fail",
       "command -v": "fail",
@@ -547,7 +534,6 @@
       "Special builtins can't be redefined as shell functions (set -o posix)": "fail",
       "Which shells allow special builtins to be redefined?": "fail",
       "bash 'type' gets confused - says 'function', but runs builtin": "fail",
-      "command, builtin - both can be redefined, not special (regression)": "fail",
       "exec without args is a special case of the special case in some shells": "ash-only"
     },
     "builtin-times.test.sh": {
@@ -609,7 +595,6 @@
       "type -P does not find directories (regression)": "fail",
       "type -a -\u003e alias; prints alias definition": "fail",
       "type -f builtin -\u003e not found": "fail",
-      "type -p builtin -\u003e not a file": "fail",
       "type -t -\u003e file": "fail",
       "type -t -\u003e keyword": "fail",
       "type -t -\u003e not found": "fail",
@@ -738,7 +723,6 @@
       "Glob other punctuation chars (lexer mode)": "fail",
       "More glob escaping": "fail",
       "Nested extended glob pattern": "fail",
-      "No extended glob with simple_word_eval (YSH evaluation)": "fail",
       "Two adjacent alternations": "fail",
       "no match": "fail",
       "noglob": "fail",

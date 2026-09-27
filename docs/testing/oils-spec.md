@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1681 of the 2551 cases bash passes: 65.9%.**
+**nemosh passes 1695 of the 2551 cases bash passes: 66.4%.**
 
-Of the other 870, it does 100 the way the files record of ash, which may be busybox's
-way, and 770 neither way.
+Of the other 856, it does 95 the way the files record of ash, which may be busybox's
+way, and 761 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 770 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1681 |
+| that nemosh passes of those | 1695 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -55,13 +55,13 @@ of ash.
 | array-literal.test.sh | 19 | 16 | 8 | 50.0% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 22 | 55.0% | 0 | 0 |
 | array.test.sh | 78 | 78 | 67 | 85.9% | 1 | 7 |
-| assign-deferred.test.sh | 9 | 9 | 5 | 55.6% | 0 | 1 |
+| assign-deferred.test.sh | 9 | 9 | 6 | 66.7% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | assign-extended.test.sh | 39 | 34 | 18 | 52.9% | 0 | 0 |
 | assign.test.sh | 48 | 45 | 36 | 80.0% | 1 | 28 |
 | background.test.sh | 27 | 25 | 21 | 84.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 3 | 33.3% | 3 | 9 |
-| ble-idioms.test.sh | 26 | 26 | 15 | 57.7% | 3 | 23 |
+| ble-idioms.test.sh | 26 | 26 | 16 | 61.5% | 3 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 2 | 5 |
 | blog1.test.sh | 9 | 9 | 4 | 44.4% | 1 | 8 |
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
@@ -79,20 +79,20 @@ of ash.
 | builtin-fc.test.sh | 14 | 14 | 1 | 7.1% | 1 | 2 |
 | builtin-getopts.test.sh | 31 | 31 | 23 | 74.2% | 4 | 31 |
 | builtin-history.test.sh | 17 | 15 | 3 | 20.0% | 0 | 1 |
-| builtin-kill.test.sh | 20 | 17 | 5 | 29.4% | 0 | 11 |
-| builtin-meta-assign.test.sh | 11 | 11 | 5 | 45.5% | 1 | 11 |
-| builtin-meta.test.sh | 15 | 15 | 5 | 33.3% | 5 | 13 |
+| builtin-kill.test.sh | 20 | 17 | 7 | 41.2% | 0 | 11 |
+| builtin-meta-assign.test.sh | 11 | 11 | 11 | 100.0% | 0 | 11 |
+| builtin-meta.test.sh | 15 | 15 | 6 | 40.0% | 1 | 13 |
 | builtin-misc.test.sh | 7 | 5 | 2 | 40.0% | 0 | 4 |
 | builtin-printf.test.sh | 63 | 55 | 40 | 72.7% | 7 | 57 |
 | builtin-process.test.sh | 10 | 9 | 5 | 55.6% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 47 | 74.6% | 4 | 60 |
 | builtin-set.test.sh | 24 | 24 | 17 | 70.8% | 0 | 20 |
-| builtin-special.test.sh | 12 | 11 | 5 | 45.5% | 2 | 10 |
+| builtin-special.test.sh | 12 | 11 | 6 | 54.5% | 2 | 10 |
 | builtin-times.test.sh | 1 | 1 | 0 | 0.0% | 0 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 4 | 17.4% | 0 | 4 |
 | builtin-trap-err.test.sh | 22 | 22 | 13 | 59.1% | 3 | 22 |
 | builtin-trap.test.sh | 33 | 33 | 15 | 45.5% | 4 | 25 |
-| builtin-type-bash.test.sh | 21 | 21 | 12 | 57.1% | 1 | 0 |
+| builtin-type-bash.test.sh | 21 | 21 | 13 | 61.9% | 1 | 0 |
 | builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 0 | 4 |
 | builtin-umask.test.sh | 24 | 15 | 5 | 33.3% | 1 | 2 |
 | builtin-vars.test.sh | 41 | 39 | 26 | 66.7% | 1 | 23 |
@@ -109,7 +109,7 @@ of ash.
 | errexit.test.sh | 35 | 34 | 29 | 85.3% | 0 | 35 |
 | exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
-| extglob-files.test.sh | 23 | 23 | 9 | 39.1% | 0 | 0 |
+| extglob-files.test.sh | 23 | 23 | 10 | 43.5% | 0 | 0 |
 | extglob-match.test.sh | 29 | 29 | 23 | 79.3% | 0 | 0 |
 | fatal-errors.test.sh | 5 | 5 | 0 | 0.0% | 3 | 3 |
 | for-expr.test.sh | 9 | 8 | 6 | 75.0% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1681 | 65.9% | 100 | 1447 |
+| all | 2668 | 2551 | 1695 | 66.4% | 95 | 1447 |

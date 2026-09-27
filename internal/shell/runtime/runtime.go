@@ -123,33 +123,6 @@ func NewRuntime(registry applets.Registry, streams Streams) (Runtime, error) {
 	return NewRuntimeWithState(registry, streams, hostState())
 }
 
-type lineResult struct {
-	status  int
-	control flowControl
-}
-
-type flowControl int
-
-const (
-	flowNone flowControl = iota
-	flowExit
-	flowBreak
-	flowContinue
-	flowExec
-	flowReturn
-	// flowAbort is a shell error in the sense of POSIX 2.8.1 -- an unset parameter
-	// under `set -u`, an assignment to a readonly variable. It unwinds exactly as
-	// far as flowExit does, and differs in one place: a person at a prompt. There
-	// the shell "shall write a diagnostic message ... without exiting", so the rest
-	// of the line is abandoned and the session goes on. These used to be flowExit,
-	// and `set -u; echo $nope` typed at a prompt closed the terminal.
-	flowAbort
-	// flowDiscard is a pattern that matched nothing under `shopt -s failglob`. It unwinds
-	// as flowAbort does, with status 1, and a script goes on with its next command, as a
-	// session does, unless `set -e` ends it; see failglob.go.
-	flowDiscard
-)
-
 func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int {
 	commandArgs, streams, cleanup, err := r.applyRedirects(args)
 	if err != nil {
@@ -261,6 +234,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.readonlyBuiltin(args[1:])
 	case "set":
 		return r.set(args[1:])
+	case "builtin":
+		return r.builtinBuiltin(ctx, args[1:])
 	case "hash":
 		return r.hashBuiltin(args[1:])
 	case "shift":

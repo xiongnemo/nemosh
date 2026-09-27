@@ -1163,5 +1163,11 @@
     "stdout": "st=1\nst=0\nst=0\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "echo() { printf 'f:%s\\n' \"$*\"; builtin echo \"r:$*\"; }\necho x\nbuiltin nosuch-zz 2>/dev/null || echo refused",
+    "stdout": "f:x\nr:x\nf:refused\nr:refused\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
