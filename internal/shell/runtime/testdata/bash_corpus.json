@@ -1607,5 +1607,23 @@
     "stdout": "st=5\nin\n",
     "status": 7,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "for i in 1 2 3; do\n  echo i=$i\n  while break; do echo x; done\ndone\necho done",
+    "stdout": "i=1\ni=2\ni=3\ndone\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "while true; do\n  echo hi\n  break oops\ndone\necho after",
+    "stdout": "hi\n",
+    "status": 2,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "for i in 1 2 3; do [ $i = 2 ] && command continue; echo $i; done",
+    "stdout": "1\n3\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

@@ -101,10 +101,11 @@ func (r Runtime) loopControlResult(name string, args []string) lineResult {
 	count, err := parseLoopLevel(operand, name)
 	if err != nil {
 		fmt.Fprintln(r.streams.Stderr, err)
-		// bash exits 128 for a bad count on a special builtin in POSIX mode and 1
-		// otherwise; 1 is what an interactive shell shows and what a script can
-		// act on, so the flow is left alone and only the status reports.
-		return lineResult{status: 1}
+		// A count that cannot be read is a special builtin's error, and it ends a script
+		// with status 2, as busybox ends it -- a word, 0 and a negative number alike; bash
+		// ends it for the word. Only the status reported it, and the loop went on, so a
+		// misspelled `break $n` in `while true` never ended. A session goes on.
+		return lineResult{status: 2, control: flowAbort}
 	}
 	// Outside any loop this does nothing and the script carries on. Measured:
 	// busybox ash, dash and bash all continue and all exit 0, bash after printing

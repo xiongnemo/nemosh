@@ -39,7 +39,20 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
-		if condition.control != flowNone {
+		// A break or continue in the condition is this loop's, as one in the body is, in both
+		// references: `while break; do ...; done` ends the loop. It went on up, so a nested
+		// one ended the loop outside and a lone one the script.
+		switch condition.control {
+		case flowNone:
+		case flowBreak, flowContinue:
+			if !r.loops.consume() {
+				return lineResult{status: 0, control: condition.control}
+			}
+			if condition.control == flowBreak {
+				return lineResult{status: 0}
+			}
+			continue
+		default:
 			return condition
 		}
 		if node.kind == loopWhile && condition.status != 0 || node.kind == loopUntil && condition.status == 0 {

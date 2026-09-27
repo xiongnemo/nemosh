@@ -10,6 +10,7 @@ import (
 // leading assignments persist after it completes (2.9.1) and are applied here
 // before the transfer leaves.
 func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation, savedStatus int) (lineResult, bool) {
+	args = throughCommandPrefix(args)
 	switch args[0] {
 	case "exit", "exec", "return", "break", "continue", "eval", ".", "source":
 	default:
@@ -46,4 +47,20 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	default:
 		return lineResult{control: flowContinue}, true
 	}
+}
+
+// throughCommandPrefix is the command a bare `command` or `builtin` in front names, when that
+// is one of the builtins that transfer control: `command continue` continues, as it does in
+// both references, and `builtin break` breaks, as it does in bash. Run as ordinary builtins,
+// their control was lost and only a status came back.
+func throughCommandPrefix(args []string) []string {
+	rest := args
+	for len(rest) > 1 && (rest[0] == "command" || rest[0] == "builtin") {
+		rest = rest[1:]
+	}
+	switch rest[0] {
+	case "exit", "exec", "return", "break", "continue", "eval", ".", "source":
+		return rest
+	}
+	return args
 }
