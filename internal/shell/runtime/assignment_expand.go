@@ -43,7 +43,7 @@ func isAssignmentWord(item word) bool {
 	if first.kind != wordPartLiteral || first.quote != quoteUnquoted {
 		return false
 	}
-	target, _, found := strings.Cut(first.text, "=")
+	target, _, found := cutAssignment(first.text)
 	name, _ := splitAssignmentTarget(target)
 	if !found {
 		// The `=` may be past a subscript that is itself an expansion: `m[$k]=v`
@@ -144,7 +144,7 @@ func assignsArrayLiteral(item word) bool {
 		return false
 	}
 	first := item.parts[0]
-	_, value, found := strings.Cut(first.text, "=")
+	_, value, found := cutAssignment(first.text)
 	return first.kind == wordPartLiteral && first.quote == quoteUnquoted && found && strings.HasPrefix(value, "(")
 }
 
@@ -161,7 +161,7 @@ func assignmentTildeWord(item word) word {
 		return item
 	}
 	first := item.parts[0]
-	_, value, found := strings.Cut(first.text, "=")
+	_, value, found := cutAssignment(first.text)
 	if first.kind != wordPartLiteral || first.quote != quoteUnquoted || !found && !isElementAssignmentWord(item) || strings.HasPrefix(value, "(") {
 		return item
 	}

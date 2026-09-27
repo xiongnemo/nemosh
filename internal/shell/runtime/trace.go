@@ -55,7 +55,7 @@ func (r Runtime) tracePrefix(ctx context.Context, ps4 string, savedStatus int) s
 // not traced at all, so a trace could not show where a variable got its value; both
 // references trace it.
 func traceAssignment(arg string) string {
-	name, value, _ := strings.Cut(arg, "=")
+	name, value, _ := cutAssignment(arg)
 	if value == "" {
 		return arg
 	}

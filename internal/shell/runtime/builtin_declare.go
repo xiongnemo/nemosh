@@ -50,8 +50,8 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 // was global, so `f() { declare x=1; }` left x set after f returned, and `typeset` -- the
 // ksh spelling a script uses for a local -- did the same.
 func (r Runtime) declareInFunction(ctx context.Context, options declareOptions, argument string) int {
-	target, _, _ := strings.Cut(argument, "=")
-	if name, _ := splitAssignmentTarget(target); options.global || r.functionDepth == 0 || r.locals == nil || !isVariableName(name) {
+	target, _, _ := cutAssignment(argument)
+	if name, _ := splitAssignmentTarget(target); options.global || r.functionDepth == 0 || r.locals == nil || !isVariableName(assignedName(name)) {
 		return r.declareName(ctx, options, argument)
 	}
 	return r.declareLocal(ctx, "declare", options, argument)
@@ -138,7 +138,7 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 
 // declareName applies one `name` or `name=value`.
 func (r Runtime) declareName(ctx context.Context, options declareOptions, argument string) int {
-	target, value, assigned := strings.Cut(argument, "=")
+	target, value, assigned := cutAssignment(argument)
 	name, appended := splitAssignmentTarget(target)
 	if reference, ok := parseArrayReference(name); ok {
 		// `declare m[k]=v` is not something to encourage, but it is what an

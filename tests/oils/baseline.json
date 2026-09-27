@@ -119,7 +119,6 @@
       "xtrace a+=()": "fail"
     },
     "array.test.sh": {
-      "Dynamic parsing of LHS a[$code]=value": "fail",
       "Exporting array doesn't do anything, not even first element": "fail",
       "Length op, index op, then transform op is not allowed": "ash-only",
       "Multiple subscripts not allowed": "ash-only",
@@ -132,7 +131,6 @@
     },
     "assign-deferred.test.sh": {
       "export a[7]=8": "fail",
-      "local a[3]=4": "fail",
       "readonly a[7]=8": "fail"
     },
     "assign-extended.test.sh": {

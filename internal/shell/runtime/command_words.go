@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"strings"
 )
 
 // expandCommandWords expands a simple command's words in POSIX 2.9.1's order: the command
@@ -63,7 +62,7 @@ func (r Runtime) expandLeadingAssignments(ctx context.Context, assignments []wor
 		values := r.expandAssignmentWord(ctx, item, false, savedStatus)
 		tokens = appendWordTokens(tokens, values)
 		for _, value := range values {
-			target, text, found := strings.Cut(value, "=")
+			target, text, found := cutAssignment(value)
 			name, appended := splitAssignmentTarget(target)
 			if !found || !isValidVariableName(name) {
 				continue

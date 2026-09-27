@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 )
 
 // export's and readonly's options.
@@ -94,7 +93,7 @@ func (r Runtime) listReadonly() int {
 // or -Ar declares it.
 func (r Runtime) readonlyArrays(ctx context.Context, options declareOptions, operands []string) int {
 	for _, operand := range operands {
-		target, _, _ := strings.Cut(operand, "=")
+		target, _, _ := cutAssignment(operand)
 		if name, _ := splitAssignmentTarget(target); !isValidVariableName(name) {
 			return r.refuseName("readonly: ", name)
 		}

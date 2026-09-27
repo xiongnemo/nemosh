@@ -1757,5 +1757,11 @@
     "stdout": "1 0\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "a[x=1]=one; f() { local b[3]=4 b[5]=6; echo \"${!b[@]} ${b[@]}\"; }; f; echo \"x=$x ${a[1]} [${b[3]}]\"",
+    "stdout": "3 5 4 6\nx=1 one []\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

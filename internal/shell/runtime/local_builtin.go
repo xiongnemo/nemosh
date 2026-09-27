@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // local declares variables that belong to the function call that runs it, so
@@ -39,8 +38,8 @@ func (r Runtime) local(ctx context.Context, args []string) int {
 			r.locals.saveOptions(r.options)
 			continue
 		}
-		target, _, _ := strings.Cut(arg, "=")
-		if name, _ := splitAssignmentTarget(target); !isVariableName(name) {
+		target, _, _ := cutAssignment(arg)
+		if name, _ := splitAssignmentTarget(target); !isVariableName(assignedName(name)) {
 			return r.refuseName("local: ", name)
 		}
 		if status := r.declareLocal(ctx, "local", options, arg); status != 0 {
@@ -52,10 +51,12 @@ func (r Runtime) local(ctx context.Context, args []string) int {
 
 // declareLocal makes one `name` or `name=value` the running call's own and then declares
 // it. A read-only name cannot be shadowed, and that refusal is fatal as an assignment to
-// it is.
+// it is. For an element, `local a[3]=4`, it is the array that becomes the call's, as in
+// bash; that was a bad variable name.
 func (r Runtime) declareLocal(ctx context.Context, builtin string, options declareOptions, arg string) int {
-	target, _, _ := strings.Cut(arg, "=")
+	target, _, _ := cutAssignment(arg)
 	name, _ := splitAssignmentTarget(target)
+	name = assignedName(name)
 	if _, already := r.locals.saved[name]; !already && r.isReadonly(name) {
 		return r.refuseReadonly(builtin+": ", name)
 	}

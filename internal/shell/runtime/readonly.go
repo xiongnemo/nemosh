@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 func (r Runtime) readonlyBuiltin(ctx context.Context, args []string) int {
@@ -17,7 +16,7 @@ func (r Runtime) readonlyBuiltin(ctx context.Context, args []string) int {
 		return r.readonlyArrays(ctx, options, args)
 	}
 	for _, arg := range args {
-		target, value, hasValue := strings.Cut(arg, "=")
+		target, value, hasValue := cutAssignment(arg)
 		name, appended := splitAssignmentTarget(target)
 		if !isValidVariableName(name) {
 			return r.refuseName("readonly: ", name)

@@ -19,7 +19,7 @@ func leadingAssignments(args []string) ([]assignment, []string) {
 		if !isAssignment(arg) {
 			return assignments, args[i:]
 		}
-		target, value, _ := strings.Cut(arg, "=")
+		target, value, _ := cutAssignment(arg)
 		name, appended := splitAssignmentTarget(target)
 		assignments = append(assignments, assignment{name: name, value: value, appended: appended})
 	}

@@ -39,7 +39,7 @@ func parseArrayAssignmentWord(item word) (arrayAssignment, bool) {
 	if text == "" {
 		return arrayAssignment{}, false
 	}
-	target, value, found := strings.Cut(text, "=")
+	target, value, found := cutAssignment(text)
 	if !found {
 		return arrayAssignment{}, false
 	}

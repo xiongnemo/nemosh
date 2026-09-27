@@ -54,8 +54,8 @@ func (r Runtime) tildeParts(item word) []wordPart {
 // `A['x']=v`, `a[$k]=v` -- the `]=` in the first unquoted text after it. Only the first part
 // was looked in, so the value of `A['x']=foo:~` kept its tilde. -1 and -1 when there is none.
 func assignmentEquals(item word) (int, int) {
-	if at := strings.IndexByte(item.parts[0].text, '='); at >= 0 {
-		return 0, at
+	if target, _, found := cutAssignment(item.parts[0].text); found {
+		return 0, len(target)
 	}
 	for index, part := range item.parts[1:] {
 		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {

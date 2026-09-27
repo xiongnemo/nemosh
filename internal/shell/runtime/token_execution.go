@@ -195,7 +195,7 @@ func lastArgument(commandArgs []string) string {
 	if len(commandArgs) < 2 || !isDeclarationName(commandArgs[0]) {
 		return last
 	}
-	target, value, found := strings.Cut(last, "=")
+	target, value, found := cutAssignment(last)
 	if name, _ := splitAssignmentTarget(target); found && strings.HasPrefix(value, "(") && isValidVariableName(name) {
 		return name
 	}

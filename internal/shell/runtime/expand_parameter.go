@@ -131,7 +131,7 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 }
 
 func isAssignment(arg string) bool {
-	target, _, ok := strings.Cut(arg, "=")
+	target, _, ok := cutAssignment(arg)
 	name, _ := splitAssignmentTarget(target)
 	if !ok || name == "" {
 		return false

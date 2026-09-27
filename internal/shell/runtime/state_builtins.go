@@ -40,7 +40,7 @@ func (r Runtime) export(args []string) int {
 		return r.listExported()
 	}
 	for _, arg := range args {
-		target, value, hasValue := strings.Cut(arg, "=")
+		target, value, hasValue := cutAssignment(arg)
 		name, appended := splitAssignmentTarget(target)
 		if !isValidVariableName(name) {
 			return r.refuseName("export: ", name)
