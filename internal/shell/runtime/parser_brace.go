@@ -145,10 +145,19 @@ func afterCommandIntroducer(line string, index int) bool {
 	return true
 }
 
-// afterFunctionKeyword reports whether the text before index is exactly
-// `function name`.
+// afterFunctionKeyword reports whether the command before index is exactly `function name`:
+// the text since the last separator, past a `then`, `do` or `else` that begins it. The whole
+// line was asked, so `: prefix; function f {` and `then function g {` were "missing }",
+// where busybox-w32 and bash both define the function.
 func afterFunctionKeyword(line string, index int) bool {
-	rest, ok := cutFunctionKeyword(strings.TrimSpace(line[:index]))
+	command := strings.TrimSpace(line[strings.LastIndexAny(line[:index], ";&|\n(){")+1 : index])
+	for _, keyword := range [...]string{"then", "do", "else"} {
+		if rest, ok := compoundHeader(command, keyword); ok {
+			command = strings.TrimLeft(rest, " \t")
+			break
+		}
+	}
+	rest, ok := cutFunctionKeyword(command)
 	if !ok {
 		return false
 	}

@@ -1769,5 +1769,11 @@
     "stdout": "a\nb\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": ": prefix; function myfunc {\n\techo serialized\n}\nmyfunc",
+    "stdout": "serialized\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

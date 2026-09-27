@@ -731,9 +731,6 @@
     "posix.test.sh": {
       "Command substitution in default": "fail"
     },
-    "print-source-code.test.sh": {
-      "typeset -f with function keyword (ksh style)": "fail"
-    },
     "prompt.test.sh": {
       "@P with array": "fail",
       "Escaped backslash": "fail",
