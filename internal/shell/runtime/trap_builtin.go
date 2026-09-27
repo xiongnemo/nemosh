@@ -34,6 +34,8 @@ func (r Runtime) trap(args []string) int {
 		return r.listKillSignals()
 	case len(args) > 0 && args[0] == "-p":
 		return r.printTraps(args[1:])
+	case len(args) > 0 && args[0] == "-P":
+		return r.printTrapActions(args[1:])
 	}
 	if len(args) == 0 {
 		return r.listTraps()

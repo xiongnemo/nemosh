@@ -1385,5 +1385,29 @@
     "stdout": "'p q'\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "trap 'echo hi' INT\ntrap '' TERM\ntrap -P INT TERM HUP\necho \"st=$?\"",
+    "stdout": "echo hi\n\nst=0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "trap -P 2>/dev/null\necho \"st=$?\"",
+    "stdout": "st=2\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "(exit 4) &\np=$!\nwait -n -p v\necho \"st=$? $([ \"$v\" = \"$p\" ] && echo same)\"",
+    "stdout": "st=4 same\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "v=old\nwait -p v\necho \"st=$? [${v-unset}]\"",
+    "stdout": "st=0 [unset]\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

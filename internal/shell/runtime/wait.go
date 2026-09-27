@@ -20,15 +20,19 @@ import (
 // everywhere else. That includes a job whose end `jobs` has already reported, which the shell
 // no longer knows (POSIX 2.9.3). This used to be 2, "unknown or busy job", for both.
 func (r Runtime) wait(ctx context.Context, args []string) int {
-	if len(args) > 0 && args[0] == "-n" {
-		return r.waitNext(ctx, args[1:])
+	options, args, status := r.parseWaitOptions(args)
+	if status != 0 {
+		return status
+	}
+	r.startWaitVariable(ctx, options)
+	if options.next {
+		return r.waitNext(ctx, args, options)
 	}
 	if len(args) == 0 {
 		return r.waitAll(ctx)
 	}
-	status := 0
 	for _, operand := range args {
-		status = r.waitOperand(ctx, operand)
+		status = r.waitOperand(ctx, operand, options)
 		if ctx.Err() != nil {
 			return status
 		}
@@ -53,7 +57,7 @@ func (r Runtime) waitAll(ctx context.Context) int {
 }
 
 // waitOperand waits for one `%N` or process id, and answers its status.
-func (r Runtime) waitOperand(ctx context.Context, operand string) int {
+func (r Runtime) waitOperand(ctx context.Context, operand string, options waitOptions) int {
 	id, status := r.waitTarget(operand)
 	if status != 0 {
 		return status
@@ -72,6 +76,7 @@ func (r Runtime) waitOperand(ctx context.Context, operand string) int {
 	if !r.jobScope.consumeAll([]*jobRecord{record}) {
 		return 2
 	}
+	r.noteWaited(options, record)
 	return status
 }
 

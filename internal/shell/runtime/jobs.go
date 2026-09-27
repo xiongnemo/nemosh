@@ -112,11 +112,7 @@ func (r Runtime) listedJobs() ([]*jobRecord, bool) {
 func (r Runtime) jobPIDs() int {
 	records, _ := r.listedJobs()
 	for _, record := range records {
-		name := "%" + strconv.FormatUint(uint64(record.id), 10)
-		if record.pid != 0 {
-			name = strconv.Itoa(record.pid)
-		}
-		if _, err := fmt.Fprintln(r.streams.Stdout, name); err != nil {
+		if _, err := fmt.Fprintln(r.streams.Stdout, record.identifier()); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
 			return 1
 		}

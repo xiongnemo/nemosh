@@ -19,7 +19,7 @@ import (
 //
 // The status is the job's own, as bash answers; busybox-w32 answers 0 here even for a job
 // that exited 3, which reads as a fault rather than a choice.
-func (r Runtime) waitNext(ctx context.Context, operands []string) int {
+func (r Runtime) waitNext(ctx context.Context, operands []string, options waitOptions) int {
 	records, status := r.nextCandidates(operands)
 	if status != 0 {
 		return status
@@ -43,6 +43,7 @@ func (r Runtime) waitNext(ctx context.Context, operands []string) int {
 	if !r.jobScope.consumeAll([]*jobRecord{ended}) {
 		return 2
 	}
+	r.noteWaited(options, ended)
 	return ended.status
 }
 
