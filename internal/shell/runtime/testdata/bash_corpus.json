@@ -1307,5 +1307,29 @@
     "stdout": "0\n1\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x='Hello World'\necho \"${x~}|${x~~}|${x~~[lo]}\"",
+    "stdout": "hello World|hELLO wORLD|HeLLO WOrLd\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(ab Cd)\necho \"${a[@]~}|${a[*]~~}\"",
+    "stdout": "Ab cd|AB cD\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(ab cd)\necho \"${a[*]/b/X}|${a[*]#a}|${a[*]^^}\"",
+    "stdout": "aX cd|b cd|AB CD\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "set -- ab cd\necho \"${*/b/X}\"",
+    "stdout": "aX cd\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

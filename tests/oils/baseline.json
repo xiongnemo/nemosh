@@ -92,7 +92,6 @@
       "unset -v and assoc array": "fail"
     },
     "array-compat.test.sh": {
-      "Apply vectorized operations on ${a[*]}": "fail",
       "Array Decay with IFS": "fail",
       "value.BashArray internal representation - Assoc (ordering is a problem)": "fail",
       "value.BashArray internal representation - Indexed": "fail"
@@ -1014,7 +1013,6 @@
       "Brace Expansion": "fail",
       "extglob $IFS 1": "fail",
       "extglob $IFS 2": "fail",
-      "patsub of $* - http://landley.net/notes.html#23-04-2020": "fail",
       "{abc}\u003c\u003c\u003c - http://landley.net/notes-2019.html#09-12-2019": "fail"
     },
     "type-compat.test.sh": {

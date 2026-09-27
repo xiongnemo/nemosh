@@ -67,7 +67,7 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 		return r.parameterSubstring(ctx, value, word, savedStatus)
 	case "/", "//", "/#", "/%":
 		return parameterReplace(value, operator, r.expandReplaceSpec(ctx, word, operator, savedStatus), r.noCaseMatch()), nil
-	case "^", "^^", ",", ",,":
+	case "^", "^^", ",", ",,", "~", "~~":
 		return parameterCase(value, operator, r.expandOperand(ctx, word, operandPattern, savedStatus)), nil
 	default:
 		return trimParameter(operator, value, r.expandOperand(ctx, word, operandPattern, savedStatus)), nil
@@ -172,10 +172,10 @@ func splitParameterOperator(body string) (string, string, string, bool) {
 		}
 		// Longest first at each position, and the `:x` defaults before a bare `:`,
 		// which is what keeps `${x:-2}` a default and `${x: -2}` a substring. The
-		// pairs `//`, `^^` and `,,` likewise precede their single forms.
+		// pairs `//`, `^^`, `,,` and `~~` likewise precede their single forms.
 		for _, operator := range [...]string{
-			":-", ":=", ":+", ":?", "##", "%%", "//", "/#", "/%", "^^", ",,",
-			":", "-", "=", "+", "?", "#", "%", "/", "^", ",",
+			":-", ":=", ":+", ":?", "##", "%%", "//", "/#", "/%", "^^", ",,", "~~",
+			":", "-", "=", "+", "?", "#", "%", "/", "^", ",", "~",
 		} {
 			if !strings.HasPrefix(body[index:], operator) {
 				continue

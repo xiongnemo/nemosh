@@ -200,7 +200,8 @@ func splitReplacementSpec(spec string) (string, string) {
 	return pattern.String(), ""
 }
 
-// parameterCase is `${name^^}`, `${name,,}`, `${name^}` and `${name,}`.
+// parameterCase is `${name^^}`, `${name,,}`, `${name~~}` and their single forms: raised,
+// lowered, or toggled.
 //
 // The doubled forms convert every character and the single ones only the first. An
 // optional pattern narrows which characters are touched: measured, `${x^^[ab]}`
@@ -209,11 +210,13 @@ func parameterCase(value, operator, pattern string) string {
 	if value == "" {
 		return value
 	}
-	upper := operator == "^^" || operator == "^"
-	all := operator == "^^" || operator == ",,"
-	convert := unicode.ToLower
-	if upper {
+	all := len(operator) == 2
+	convert := toggleCase
+	switch operator[0] {
+	case '^':
 		convert = unicode.ToUpper
+	case ',':
+		convert = unicode.ToLower
 	}
 	runes := []rune(value)
 	for index, char := range runes {
@@ -229,6 +232,15 @@ func parameterCase(value, operator, pattern string) string {
 		}
 	}
 	return string(runes)
+}
+
+// toggleCase is `~`'s conversion: an upper-case letter lowered, and any other raised, which
+// leaves a character with no case as it was.
+func toggleCase(char rune) rune {
+	if unicode.IsUpper(char) {
+		return unicode.ToLower(char)
+	}
+	return unicode.ToUpper(char)
 }
 
 // expandIndirectParameter is `${!ref...}` where one string is wanted: a here-document, an

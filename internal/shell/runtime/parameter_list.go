@@ -54,19 +54,19 @@ func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatu
 		return r.sliceList(ctx, elements, r.listIndices(name), word, name, savedStatus)
 	case "/", "//", "/#", "/%":
 		pattern := r.expandReplaceSpec(ctx, word, operator, savedStatus)
-		return mapList(elements, func(element string) string {
+		return r.joinStar(name, mapList(elements, func(element string) string {
 			return parameterReplace(element, operator, pattern, r.noCaseMatch())
-		}), true
-	case "^", "^^", ",", ",,":
+		})), true
+	case "^", "^^", ",", ",,", "~", "~~":
 		pattern := r.expandOperand(ctx, word, operandPattern, savedStatus)
-		return mapList(elements, func(element string) string {
+		return r.joinStar(name, mapList(elements, func(element string) string {
 			return parameterCase(element, operator, pattern)
-		}), true
+		})), true
 	case "#", "##", "%", "%%":
 		pattern := r.expandOperand(ctx, word, operandPattern, savedStatus)
-		return mapList(elements, func(element string) string {
+		return r.joinStar(name, mapList(elements, func(element string) string {
 			return trimParameter(operator, element, pattern)
-		}), true
+		})), true
 	}
 	// A default or an assignment operator on a whole list is not something bash does
 	// either, so it is left to the scalar path to answer as it always has.
@@ -125,13 +125,19 @@ func (r Runtime) listIndices(name string) []int {
 // indices is the array's subscripts, in order, or nil for a list whose positions are its
 // indices.
 func (r Runtime) sliceList(ctx context.Context, elements []string, indices []int, spec, name string, savedStatus int) ([]string, bool) {
-	sliced := r.sliceElements(ctx, elements, indices, spec, savedStatus)
+	return r.joinStar(name, r.sliceElements(ctx, elements, indices, spec, savedStatus)), true
+}
+
+// joinStar is a list operator's result as its form expands it: the `*` forms joined into one
+// field, as they are without an operator -- an empty one when there is nothing, which the
+// caller takes as the value -- and the `@` forms left as a field each. Only the slice joined
+// them, and every other operator on a `*` form kept its first element alone: bash answers
+// `"${a[*]/b/X}"` over (ab cd) with aX cd, and this answered aX.
+func (r Runtime) joinStar(name string, elements []string) []string {
 	if strings.HasSuffix(name, "[*]") || name == "*" {
-		// The `*` forms join into one field, as they do without an operator -- an empty
-		// one when the slice is empty, which the caller takes as the value.
-		return []string{strings.Join(sliced, r.starSeparator())}, true
+		return []string{strings.Join(elements, r.starSeparator())}
 	}
-	return sliced, true
+	return elements
 }
 
 // sliceElements is the elements a slice selects, or none when it selects none or is wrong.

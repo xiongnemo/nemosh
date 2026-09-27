@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1737 of the 2551 cases bash passes: 68.1%.**
+**nemosh passes 1739 of the 2551 cases bash passes: 68.2%.**
 
-Of the other 814, it does 93 the way the files record of ash, which may be busybox's
-way, and 721 neither way.
+Of the other 812, it does 93 the way the files record of ash, which may be busybox's
+way, and 719 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 721 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1737 |
+| that nemosh passes of those | 1739 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -51,7 +51,7 @@ of ash.
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 0 | 9 |
 | array-assoc.test.sh | 42 | 36 | 31 | 86.1% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
-| array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
+| array-compat.test.sh | 12 | 12 | 9 | 75.0% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 8 | 50.0% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 22 | 55.0% | 0 | 0 |
 | array.test.sh | 78 | 78 | 67 | 85.9% | 1 | 7 |
@@ -152,7 +152,7 @@ of ash.
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
 | tilde.test.sh | 14 | 12 | 10 | 83.3% | 1 | 10 |
 | toysh-posix.test.sh | 22 | 22 | 12 | 54.5% | 6 | 22 |
-| toysh.test.sh | 8 | 7 | 3 | 42.9% | 0 | 1 |
+| toysh.test.sh | 8 | 7 | 4 | 57.1% | 0 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
 | var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1737 | 68.1% | 93 | 1447 |
+| all | 2668 | 2551 | 1739 | 68.2% | 93 | 1447 |
