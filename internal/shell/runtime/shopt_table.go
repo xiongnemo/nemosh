@@ -137,9 +137,9 @@ func lookupShoptOption(name string) (shoptOption, bool) {
 }
 
 // newShellOptions is a new shell's options: all of them off, except the ones the table
-// starts on.
+// starts on, and bash's braceexpand and hashall.
 func newShellOptions() *shellOptions {
-	options := &shellOptions{}
+	options := &shellOptions{braceExpand: true, hashAll: true}
 	for _, option := range shoptOptions {
 		if option.field != nil && option.on {
 			*option.field(options) = true

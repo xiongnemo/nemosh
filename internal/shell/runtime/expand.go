@@ -16,7 +16,7 @@ func (r Runtime) expandCommandWord(ctx context.Context, item word, savedStatus i
 	// `echo {$x,2}` prints `1 2`, so the split has to happen while the parameter
 	// is still unexpanded.
 	var expanded []string
-	for _, braced := range expandBraceWord(item) {
+	for _, braced := range r.braceWords(item) {
 		expanded = append(expanded, r.expandOneCommandWord(ctx, braced, savedStatus)...)
 	}
 	return expanded

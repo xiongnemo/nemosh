@@ -208,6 +208,8 @@ func shellOptionFields(o *shellOptions) map[string]*bool {
 		"lastPipe": &o.lastPipe, "expandAliases": &o.expandAliases,
 		"shiftVerbose": &o.shiftVerbose, "xpgEcho": &o.xpgEcho,
 		"localVarInherit": &o.localVarInherit, "sourcePath": &o.sourcePath, "failGlob": &o.failGlob,
+		"braceExpand": &o.braceExpand, "hashAll": &o.hashAll, "histExpand": &o.histExpand, "emacs": &o.emacs,
+		"history": &o.history, "noLog": &o.noLog, "posix": &o.posix,
 		"cdSpell": &o.cdSpell, "checkHash": &o.checkHash, "checkJobs": &o.checkJobs,
 		"checkWinSize": &o.checkWinSize, "cmdHist": &o.cmdHist, "completionStripExe": &o.completionStripExe,
 		"completeFullQuote": &o.completeFullQuote, "dirExpand": &o.dirExpand, "dirSpell": &o.dirSpell,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // These serve nemosh's own command line, `nemosh -eu -o pipefail script`, which a
@@ -28,7 +29,20 @@ func (r Runtime) SetOption(letter byte, name string, enable bool) error {
 // options: c for a command string, s for commands read from standard input, i for an
 // interactive session. `$-` said none of it, so `case $- in *i*)`, the usual way for a
 // startup file to learn whether it is interactive, answered no at a prompt.
-func (r Runtime) SetInvocationMode(letters string) { r.options.invocation = letters }
+//
+// A session also has bash's histexpand, history and emacs on, which a script has off.
+func (r Runtime) SetInvocationMode(letters string) {
+	r.options.invocation = letters
+	if strings.ContainsRune(letters, 'i') {
+		r.options.histExpand, r.options.history, r.options.emacs = true, true, true
+	}
+}
+
+// HistoryExpansion is `set -o histexpand`, -H, which a session asks before it expands `!`.
+func (r Runtime) HistoryExpansion() bool { return r.options.histExpand }
+
+// HistoryRecording is `set -o history`, which a session asks before it keeps a line.
+func (r Runtime) HistoryRecording() bool { return r.options.history }
 
 // MarkLoginShell records that the shell was started as a login shell, which `shopt
 // login_shell` reports. Neither reference puts it in `$-`.

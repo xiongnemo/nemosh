@@ -1115,5 +1115,17 @@
     "stdout": "",
     "status": 1,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "set -e\nset +H\nset -o posix\nset -o igncr\nset +h\necho ok",
+    "stdout": "ok\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "echo {a,b}\nset +B\necho {a,b}\nset -B\necho {c,d}",
+    "stdout": "a b\n{a,b}\nc d\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

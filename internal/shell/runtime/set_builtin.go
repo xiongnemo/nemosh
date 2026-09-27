@@ -103,14 +103,17 @@ func (r Runtime) setNamedOption(name string, enable bool) int {
 // nemosh's own command line uses too (invocation_options.go): the error says what was
 // wrong, and each caller says who it was.
 func (r Runtime) setOptionLetter(letter byte, enable bool) error {
-	flag, ok := r.options.byLetter(letter)
+	spec, ok := shellOptionSpecByLetter(letter)
 	if !ok {
 		return fmt.Errorf("%w %c%c", ErrUnknownOption, optionSign(enable), letter)
 	}
 	if err := inertOptionRefusal(letter, enable); err != nil {
 		return err
 	}
-	*flag = enable
+	if err := fixedOptionRefusal(spec, enable); err != nil {
+		return err
+	}
+	*spec.field(r.options) = enable
 	return nil
 }
 
@@ -124,6 +127,9 @@ func (r Runtime) setOptionName(name string, enable bool) error {
 	}
 	if reason, inert := inertShellOptionNames[name]; inert && enable {
 		return fmt.Errorf("-o %s: not implemented: %s", name, reason)
+	}
+	if err := fixedOptionRefusal(spec, enable); err != nil {
+		return err
 	}
 	*spec.field(r.options) = enable
 	return nil

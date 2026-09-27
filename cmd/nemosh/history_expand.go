@@ -233,7 +233,10 @@ func quickSubstitution(line string, entries []string) (string, bool, error) {
 // An interface rather than the concrete Runtime so the wiring can be driven in a test
 // without building a shell -- and so that the two interactive loops, which differ in
 // almost everything else, demonstrably share this.
-type historySource interface{ HistoryEntries() []string }
+type historySource interface {
+	HistoryEntries() []string
+	HistoryExpansion() bool
+}
 
 // applyHistoryExpansion rewrites a typed line and says whether it should run.
 //
@@ -245,6 +248,10 @@ type historySource interface{ HistoryEntries() []string }
 // The line's own terminator is put back afterwards, because the plain loop accumulates
 // lines with their newlines and the edited one does not.
 func applyHistoryExpansion(source historySource, stderr io.Writer, line string) (string, bool) {
+	// `set +H` turns it off, as in bash.
+	if !source.HistoryExpansion() {
+		return line, true
+	}
 	body := strings.TrimRight(line, "\r\n")
 	terminator := line[len(body):]
 	expanded, changed, err := expandHistory(body, source.HistoryEntries())

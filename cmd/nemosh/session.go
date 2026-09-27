@@ -144,8 +144,10 @@ sessionLoop:
 		// shell was interactive without a terminal -- and, once history expansion
 		// landed, made `!!` answer "event not found" on the very path that had just
 		// run a command. An interactive session is an interactive session however its
-		// lines arrive.
-		rt.RecordInteractiveLine(strings.TrimRight(input.String(), "\n"))
+		// lines arrive. `set +o history` stops it, as in bash.
+		if rt.HistoryRecording() {
+			rt.RecordInteractiveLine(strings.TrimRight(input.String(), "\n"))
+		}
 		input.Reset()
 		if parseErr != nil {
 			rt.ReportInteractiveParseError(parseErr)

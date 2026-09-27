@@ -79,6 +79,9 @@ type shellOptions struct {
 	completeFullQuote, dirExpand, dirSpell, forceFignore, histAppend, histReedit bool
 	histVerify, hostComplete, hupOnExit, interactiveComments, litHist, mailWarn  bool
 	noEmptyCmdCompletion, progComp, progCompAlias, promptVars                    bool
+	// bash's `set -o` names; see set_options_bash.go. braceExpand and hashAll are on in a
+	// new shell, and histExpand, history and emacs in a session.
+	braceExpand, hashAll, histExpand, emacs, history, noLog, posix bool
 	// login is whether the shell was started as a login shell, which `shopt login_shell`
 	// reports.
 	login bool
@@ -93,29 +96,35 @@ type shellOptionSpec struct {
 	letter byte
 	name   string
 	field  func(*shellOptions) *bool
+	// bash marks a letter of bash's that busybox has not got, which `$-` leaves out; see
+	// set_options_bash.go.
+	bash bool
 }
+
+// shellOptionSpecs are busybox's options and then bash's.
+var shellOptionSpecs = append(busyboxOptionSpecs, bashOptionSpecs...)
 
 // A zero letter means the option has an `-o` name and no short form, which is
 // how busybox carries pipefail.
-var shellOptionSpecs = []shellOptionSpec{
-	{'a', "allexport", func(o *shellOptions) *bool { return &o.allExport }},
-	{'b', "notify", func(o *shellOptions) *bool { return &o.notify }},
-	{'C', "noclobber", func(o *shellOptions) *bool { return &o.noClobber }},
-	{'e', "errexit", func(o *shellOptions) *bool { return &o.errExit }},
-	{'E', "errtrace", func(o *shellOptions) *bool { return &o.errTrace }},
-	{'T', "functrace", func(o *shellOptions) *bool { return &o.funcTrace }},
-	{'f', "noglob", func(o *shellOptions) *bool { return &o.noGlob }},
-	{'I', "ignoreeof", func(o *shellOptions) *bool { return &o.ignoreEOF }},
-	{'m', "monitor", func(o *shellOptions) *bool { return &o.monitor }},
-	{'n', "noexec", func(o *shellOptions) *bool { return &o.noExec }},
-	{'u', "nounset", func(o *shellOptions) *bool { return &o.noUnset }},
-	{'v', "verbose", func(o *shellOptions) *bool { return &o.verbose }},
-	{'x', "xtrace", func(o *shellOptions) *bool { return &o.xtrace }},
-	{0, "pipefail", func(o *shellOptions) *bool { return &o.pipefail }},
-	{0, "nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }},
-	{0, "nohiddenglob", func(o *shellOptions) *bool { return &o.noHiddenGlob }},
-	{0, "nohidsysglob", func(o *shellOptions) *bool { return &o.noHidSysGlob }},
-	{0, "vi", func(o *shellOptions) *bool { return &o.vi }},
+var busyboxOptionSpecs = []shellOptionSpec{
+	{'a', "allexport", func(o *shellOptions) *bool { return &o.allExport }, false},
+	{'b', "notify", func(o *shellOptions) *bool { return &o.notify }, false},
+	{'C', "noclobber", func(o *shellOptions) *bool { return &o.noClobber }, false},
+	{'e', "errexit", func(o *shellOptions) *bool { return &o.errExit }, false},
+	{'E', "errtrace", func(o *shellOptions) *bool { return &o.errTrace }, false},
+	{'T', "functrace", func(o *shellOptions) *bool { return &o.funcTrace }, false},
+	{'f', "noglob", func(o *shellOptions) *bool { return &o.noGlob }, false},
+	{'I', "ignoreeof", func(o *shellOptions) *bool { return &o.ignoreEOF }, false},
+	{'m', "monitor", func(o *shellOptions) *bool { return &o.monitor }, false},
+	{'n', "noexec", func(o *shellOptions) *bool { return &o.noExec }, false},
+	{'u', "nounset", func(o *shellOptions) *bool { return &o.noUnset }, false},
+	{'v', "verbose", func(o *shellOptions) *bool { return &o.verbose }, false},
+	{'x', "xtrace", func(o *shellOptions) *bool { return &o.xtrace }, false},
+	{0, "pipefail", func(o *shellOptions) *bool { return &o.pipefail }, false},
+	{0, "nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }, false},
+	{0, "nohiddenglob", func(o *shellOptions) *bool { return &o.noHiddenGlob }, false},
+	{0, "nohidsysglob", func(o *shellOptions) *bool { return &o.noHidSysGlob }, false},
+	{0, "vi", func(o *shellOptions) *bool { return &o.vi }, false},
 }
 
 func (o *shellOptions) clone() *shellOptions {
@@ -123,13 +132,13 @@ func (o *shellOptions) clone() *shellOptions {
 	return &copied
 }
 
-func (o *shellOptions) byLetter(letter byte) (*bool, bool) {
+func shellOptionSpecByLetter(letter byte) (shellOptionSpec, bool) {
 	for _, spec := range shellOptionSpecs {
 		if spec.letter != 0 && spec.letter == letter {
-			return spec.field(o), true
+			return spec, true
 		}
 	}
-	return nil, false
+	return shellOptionSpec{}, false
 }
 
 func shellOptionSpecByName(name string) (shellOptionSpec, bool) {
@@ -147,7 +156,7 @@ func shellOptionSpecByName(name string) (shellOptionSpec, bool) {
 func (o *shellOptions) letters() string {
 	var enabled strings.Builder
 	for _, spec := range shellOptionSpecs {
-		if spec.letter != 0 && *spec.field(o) {
+		if spec.letter != 0 && !spec.bash && *spec.field(o) {
 			enabled.WriteByte(spec.letter)
 		}
 	}

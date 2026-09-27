@@ -131,7 +131,7 @@ func (r Runtime) expandAssignmentWord(ctx context.Context, item word, braces boo
 		return expander.expandWord(ctx, assignmentTildeWord(item), savedStatus)
 	}
 	var values []string
-	for _, braced := range expandBraceWord(item) {
+	for _, braced := range r.braceWords(item) {
 		values = append(values, expander.expandWord(ctx, assignmentTildeWord(braced), savedStatus)...)
 	}
 	return values

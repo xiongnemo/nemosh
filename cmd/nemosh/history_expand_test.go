@@ -133,6 +133,7 @@ func TestExpandHistory_refusesWhatItCannotFind(t *testing.T) {
 type fakeHistory []string
 
 func (f fakeHistory) HistoryEntries() []string { return f }
+func (f fakeHistory) HistoryExpansion() bool   { return true }
 
 // The wiring: an expansion is echoed on stderr before it runs, an unchanged line is not,
 // and the line's own terminator survives -- the plain loop accumulates lines with their

@@ -207,6 +207,24 @@ func TestInvocation_exitInENVEndsTheSession(t *testing.T) {
 	}
 }
 
+// A session starts with bash's histexpand and history on, and `set +H` and `set +o history`
+// turn them off there as they do in bash: `!!` is then two characters, and `history` keeps
+// no more lines. A script starts with both off.
+func TestInvocation_sessionHistoryOptions(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("HISTFILE", "")
+
+	result := runInvocation(t, "set -o | grep -E '^(histexpand|history) '\necho one\nset +H\necho !!\nset +o history\necho two\nhistory | grep -c two\n", "-i")
+	want := "histexpand  \ton\nhistory     \ton\none\n!!\ntwo\n0\n"
+	if result.stdout != want {
+		t.Fatalf("stdout %q, want %q (stderr %q)", result.stdout, want, result.stderr)
+	}
+	script := runInvocation(t, "", "-c", "set -o | grep -E '^(histexpand|history) '")
+	if want := "histexpand  \toff\nhistory     \toff\n"; script.stdout != want {
+		t.Fatalf("a script's stdout %q, want %q", script.stdout, want)
+	}
+}
+
 // ignoreeof refuses an end of input at the prompt with busybox's words, fifty times in a
 // row and then leaves, as busybox does -- so a pipe that has ended cannot hold the shell.
 func TestInvocation_ignoreeofRefusesEndOfInput(t *testing.T) {
