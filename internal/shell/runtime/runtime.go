@@ -231,7 +231,7 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	case "read":
 		return r.read(ctx, args[1:])
 	case "readonly":
-		return r.readonlyBuiltin(args[1:])
+		return r.readonlyBuiltin(ctx, args[1:])
 	case "set":
 		return r.set(args[1:])
 	case "builtin":

@@ -31,8 +31,7 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 		return r.declareFunctionBodies(names)
 	}
 	if options.print || len(names) == 0 {
-		r.printDeclarations(names)
-		return 0
+		return r.printDeclarations(names)
 	}
 	for _, name := range names {
 		if status := r.declareInFunction(ctx, options, name); status != 0 {
@@ -214,12 +213,17 @@ func (r Runtime) assignElementByKind(ctx context.Context, reference arrayReferen
 //
 // The form is bash's, because it is meant to be read back by the shell: a `declare -p`
 // whose output cannot be pasted into a script is a listing, not a declaration.
-func (r Runtime) printDeclarations(names []string) {
+//
+// A name that is not there is 1, as in bash, and the others are printed all the same.
+func (r Runtime) printDeclarations(names []string) int {
 	if len(names) > 0 {
+		status := 0
 		for _, name := range names {
-			r.printOneDeclaration(strings.SplitN(name, "=", 2)[0])
+			if !r.printOneDeclaration(strings.SplitN(name, "=", 2)[0]) {
+				status = 1
+			}
 		}
-		return
+		return status
 	}
 	for _, name := range r.arrays.associativeNames() {
 		r.printOneDeclaration(name)
@@ -235,15 +239,17 @@ func (r Runtime) printDeclarations(names []string) {
 		}
 		r.printOneDeclaration(name)
 	}
+	return 0
 }
 
-func (r Runtime) printOneDeclaration(name string) {
+func (r Runtime) printOneDeclaration(name string) bool {
 	text, found := r.declarationText(name)
 	if !found {
 		fmt.Fprintf(r.streams.Stderr, "declare: %s: not found\n", name)
-		return
+		return false
 	}
 	fmt.Fprintln(r.streams.Stdout, text)
+	return true
 }
 
 // declarationText is a name written as the declaration that recreates it, which is what

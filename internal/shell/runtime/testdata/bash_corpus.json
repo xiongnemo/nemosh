@@ -1187,5 +1187,17 @@
     "stdout": "jam\njam jam\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "export A=1\nexport -n A\necho \"[$(printenv A)] [$A]\"",
+    "stdout": "[] [1]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "readonly R1=x R2\nreadonly | grep '^readonly R'",
+    "stdout": "readonly R1='x'\nreadonly R2\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

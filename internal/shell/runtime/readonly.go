@@ -6,7 +6,16 @@ import (
 	"strings"
 )
 
-func (r Runtime) readonlyBuiltin(args []string) int {
+func (r Runtime) readonlyBuiltin(ctx context.Context, args []string) int {
+	options, args, ok := r.readonlyOptions(args)
+	switch {
+	case !ok:
+		return 2
+	case len(args) == 0:
+		return r.listReadonly()
+	case options.indexed || options.associative:
+		return r.readonlyArrays(ctx, options, args)
+	}
 	for _, arg := range args {
 		target, value, hasValue := strings.Cut(arg, "=")
 		name, appended := splitAssignmentTarget(target)

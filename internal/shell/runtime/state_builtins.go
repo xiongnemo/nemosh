@@ -32,7 +32,11 @@ func (r Runtime) export(args []string) int {
 	// No operands, or -p, lists what is exported. POSIX specifies the -p form;
 	// busybox lists for both, and a shell that prints nothing leaves a user no
 	// way to see the environment at all (nemosh issue #10).
-	if len(args) == 0 || (len(args) == 1 && args[0] == "-p") {
+	unexport, args, status, done := r.exportOptions(args)
+	if done {
+		return status
+	}
+	if len(args) == 0 {
 		return r.listExported()
 	}
 	for _, arg := range args {
@@ -40,6 +44,10 @@ func (r Runtime) export(args []string) int {
 		name, appended := splitAssignmentTarget(target)
 		if !isValidVariableName(name) {
 			return r.refuseName("export: ", name)
+		}
+		if !hasValue && unexport {
+			r.unexport(name)
+			continue
 		}
 		if !hasValue {
 			r.markExported(name)
@@ -56,7 +64,10 @@ func (r Runtime) export(args []string) int {
 		if status := r.assignVar(name, value); status != 0 {
 			return status
 		}
-		r.env.Set(name, r.vars[name])
+		// -n assigns and leaves the export as it was, which is busybox's reading.
+		if !unexport {
+			r.env.Set(name, r.vars[name])
+		}
 	}
 	return 0
 }

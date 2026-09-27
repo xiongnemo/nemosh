@@ -76,7 +76,7 @@
       "Nested a[i[0]]=0": "fail",
       "Tricky parsing - a[ a[0]=1 ]=X  a[ a[0]+=1 ]+=X": "fail",
       "argv.py a[1 + 2]=": "fail",
-      "declare builtin doesn't allow spaces": "ash-only"
+      "declare builtin doesn't allow spaces": "fail"
     },
     "array-assoc.test.sh": {
       "${assoc} is like ${assoc[0]}": "fail",
@@ -156,23 +156,18 @@
       "declare -p": "fail",
       "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
       "declare -p and value.Undef": "fail",
-      "declare -p foo=bar doesn't make sense": "fail",
-      "declare -p var": "fail",
-      "declare -p var (exit status)": "fail",
       "declare -paA": "fail",
       "declare -pnrx": "fail",
       "eval -- \"$(declare -p arr)\" (restore arrays w/ unset elements)": "fail",
       "syntax error in array assignment": "fail",
       "typeset +r removes read-only attribute (TODO: documented in bash to do nothing)": "fail",
       "typeset -ar makes it readonly": "fail",
-      "typeset -p": "fail",
       "typeset -r makes a string readonly": "fail",
       "unset and shell funcs": "fail"
     },
     "assign.test.sh": {
       "\"declare -a arr\" and \"readonly -a a\" creates an empty array (OSH)": "fail",
-      "\"readonly -a arr\" and \"readonly -A dict\" should not not remove existing arrays": "fail",
-      "\"var d = {}; declare -p d\" does not print anything (OSH)": "fail",
+      "\"var d = {}; declare -p d\" does not print anything (OSH)": "ash-only",
       "'local -a x' does not set variable": "fail",
       "'local x' does not set variable": "fail",
       "Env binding in readonly/declare is NOT exported!  (pitfall)": "ash-only",
@@ -620,7 +615,6 @@
       "usage: too many args": "ash-only"
     },
     "builtin-vars.test.sh": {
-      "Export sets a global variable that persists after export -n": "fail",
       "Local without variable is still unset!": "fail",
       "Make an existing local variable readonly": "fail",
       "Unset a function without -f": "fail",
@@ -631,8 +625,6 @@
       "assign to readonly variable": "fail",
       "assign to readonly variable - errexit": "fail",
       "can't export array (strict_array)": "fail",
-      "export -n foo=bar not allowed": "fail",
-      "export -n undefined is ignored": "fail",
       "local after readonly": "fail",
       "unset -v assoc (related to issue #661)": "fail"
     },
@@ -691,7 +683,6 @@
     },
     "errexit-osh.test.sh": {
       "Regression": "fail",
-      "command_sub_errexit and command sub in array": "fail",
       "command_sub_errexit stops at first error": "fail",
       "if pipeline doesn't fail fatally": "fail",
       "strict_errexit and errexit disabled": "fail"
