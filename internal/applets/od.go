@@ -135,7 +135,12 @@ func (r dumpRequest) write(stdout io.Writer, reader io.Reader) error {
 		}
 	}
 	// The final line is the length, which is how a reader knows where the dump
-	// stopped without counting the rows.
+	// stopped without counting the rows. With -A n there is no address to give, and so
+	// no line, as in busybox: it was an empty one, which every `... | od -A n -c` then
+	// carried into whatever read it.
+	if !r.showAddress {
+		return nil
+	}
 	if _, err := fmt.Fprintln(stdout, strings.TrimSpace(r.address(len(data)))); err != nil {
 		return err
 	}

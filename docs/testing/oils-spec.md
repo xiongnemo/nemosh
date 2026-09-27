@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1746 of the 2551 cases bash passes: 68.4%.**
+**nemosh passes 1756 of the 2551 cases bash passes: 68.8%.**
 
-Of the other 805, it does 93 the way the files record of ash, which may be busybox's
-way, and 712 neither way.
+Of the other 795, it does 96 the way the files record of ash, which may be busybox's
+way, and 699 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 712 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1746 |
+| that nemosh passes of those | 1756 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -74,7 +74,7 @@ of ash.
 | builtin-cd.test.sh | 25 | 22 | 11 | 50.0% | 2 | 11 |
 | builtin-completion.test.sh | 51 | 50 | 3 | 6.0% | 0 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 5 | 27.8% | 0 | 2 |
-| builtin-echo.test.sh | 27 | 27 | 16 | 59.3% | 2 | 27 |
+| builtin-echo.test.sh | 27 | 27 | 22 | 81.5% | 5 | 27 |
 | builtin-eval-source.test.sh | 23 | 21 | 12 | 57.1% | 0 | 13 |
 | builtin-fc.test.sh | 14 | 14 | 1 | 7.1% | 1 | 2 |
 | builtin-getopts.test.sh | 31 | 31 | 23 | 74.2% | 4 | 31 |
@@ -83,7 +83,7 @@ of ash.
 | builtin-meta-assign.test.sh | 11 | 11 | 11 | 100.0% | 0 | 11 |
 | builtin-meta.test.sh | 15 | 15 | 6 | 40.0% | 1 | 13 |
 | builtin-misc.test.sh | 7 | 5 | 2 | 40.0% | 0 | 4 |
-| builtin-printf.test.sh | 63 | 55 | 40 | 72.7% | 7 | 57 |
+| builtin-printf.test.sh | 63 | 55 | 42 | 76.4% | 7 | 57 |
 | builtin-process.test.sh | 10 | 9 | 5 | 55.6% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 48 | 76.2% | 4 | 60 |
 | builtin-set.test.sh | 24 | 24 | 17 | 70.8% | 0 | 20 |
@@ -136,7 +136,7 @@ of ash.
 | print-source-code.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
 | process-sub.test.sh | 9 | 9 | 9 | 100.0% | 0 | 5 |
 | prompt.test.sh | 33 | 26 | 0 | 0.0% | 0 | 0 |
-| quote.test.sh | 35 | 35 | 31 | 88.6% | 1 | 35 |
+| quote.test.sh | 35 | 35 | 33 | 94.3% | 1 | 35 |
 | redirect-command.test.sh | 23 | 23 | 22 | 95.7% | 0 | 22 |
 | redirect-multi.test.sh | 13 | 13 | 9 | 69.2% | 0 | 7 |
 | redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 28 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1746 | 68.4% | 93 | 1447 |
+| all | 2668 | 2551 | 1756 | 68.8% | 96 | 1447 |

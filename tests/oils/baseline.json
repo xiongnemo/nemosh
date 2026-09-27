@@ -360,17 +360,11 @@
       "pushd/popd": "fail"
     },
     "builtin-echo.test.sh": {
-      "\\0 \\1 \\8": "fail",
-      "\\0377 is the highest octal byte": "fail",
-      "\\0400 is one more than the highest octal byte": "fail",
-      "\\0777 is out of range": "fail",
-      "\\u6": "fail",
-      "\\x": "fail",
+      "\\0 \\1 \\8": "ash-only",
+      "\\u6": "ash-only",
       "echo -e with 4 digit unicode escape": "ash-only",
       "echo -e with 8 digit unicode escape": "ash-only",
-      "incomplete hex escape": "fail",
-      "incomplete octal escape": "fail",
-      "incomplete unicode escape": "fail"
+      "incomplete unicode escape": "ash-only"
     },
     "builtin-eval-source.test.sh": {
       "Eval in bash does tilde expansion in array": "fail",
@@ -472,8 +466,6 @@
       "printf # flag": "fail",
       "printf %b respects \\c early return": "fail",
       "printf %b unicode escapes": "ash-only",
-      "printf %b with truncated octal escapes": "fail",
-      "printf %c unicode - prints the first BYTE of a string - it does not respect UTF-8": "fail",
       "printf negative integer overflow": "ash-only",
       "printf negative numbers": "fail",
       "printf octal backslash escapes": "fail",
@@ -901,8 +893,6 @@
     },
     "quote.test.sh": {
       "$\"\" is a synonym for \"\"": "ash-only",
-      "$'' octal escapes don't have leading 0": "fail",
-      "$'' octal escapes with fewer than 3 chars": "fail",
       "$'' supports \\cA escape for Ctrl-A - mask with 0x1f": "fail"
     },
     "redirect-command.test.sh": {
