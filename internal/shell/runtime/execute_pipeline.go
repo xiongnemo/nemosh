@@ -6,7 +6,13 @@ import (
 )
 
 func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, savedStatus int) lineResult {
-	result := r.executeTypedPipelineStages(ctx, value, savedStatus)
+	// Everything inside `!` is exempt from `set -e` and the ERR trap, not only the pipeline's
+	// own status, as in both references: `set -e; ! { false; }` ended the script at the false.
+	stages := r
+	if value.negated {
+		stages = r.suppressingErrExit()
+	}
+	result := stages.executeTypedPipelineStages(ctx, value, savedStatus)
 	// POSIX 2.9.2: `!` gives the logical NOT of the pipeline's exit status. A
 	// control transfer is not a status, so `! exit 3` still exits with 3.
 	if value.negated && result.control == flowNone {
@@ -19,11 +25,17 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 	// POSIX 2.9.1 exempts a negated pipeline from `set -e`, along with the
 	// places the caller marks by suppressing it. The ERR trap runs in exactly
 	// the same places, and first, so a handler set with `set -e` still runs.
-	if r.errTrapTriggers(result) && !value.negated {
-		r.runTrap(ctx, trapERR, result.status)
-	}
-	if r.errExitTriggers(result) && !value.negated {
-		result.control = flowExit
+	// A lone brace group is not a second turn: its status is its last command's,
+	// which had its own, so `set -e; { false && true; }` goes on as both
+	// references go on, and `{ false; }` fires the trap once. A subshell still
+	// fails in the shell that ran it.
+	if !value.negated && !isLoneBraceGroup(value) {
+		if r.errTrapTriggers(result) {
+			r.runTrap(ctx, trapERR, result.status)
+		}
+		if r.errExitTriggers(result) {
+			result.control = flowExit
+		}
 	}
 	// A signal that arrived while the pipeline ran has its trap run now; see
 	// signal_inbox.go.
@@ -31,6 +43,14 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 		result = r.deliverSignals(ctx, result)
 	}
 	return result
+}
+
+func isLoneBraceGroup(value pipeline) bool {
+	if len(value.commands) != 1 {
+		return false
+	}
+	_, group := value.commands[0].(braceGroup)
+	return group
 }
 
 func (r Runtime) errExitTriggers(result lineResult) bool {

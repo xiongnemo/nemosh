@@ -506,8 +506,7 @@
       "set -o errtrace: trap ERR with \u0026": "ash-only",
       "trap ERR and pipeline": "ash-only",
       "trap ERR pipelines without simple commands": "ash-only",
-      "trap ERR with YSH proc": "fail",
-      "trap ERR with for,  case, { }": "fail"
+      "trap ERR with YSH proc": "fail"
     },
     "builtin-trap.test.sh": {
       "Register the same handler for multiple signals": "ash-only",
@@ -631,9 +630,11 @@
     "errexit.test.sh": {
       "More \u0026\u0026 ||": "fail",
       "bash atoms [[ (( - redir failure checked": "fail",
-      "errexit and brace group { }": "fail",
+      "brace group - redir failure checked": "ash-only",
       "errexit and time { }": "fail",
-      "errexit double guard": "fail"
+      "errexit double guard": "fail",
+      "set -e in function #2": "ash-only",
+      "while loop - redirect failure checked": "ash-only"
     },
     "exit-status.test.sh": {
       "subshell OverflowError https://github.com/oilshell/oil/issues/996": "fail"

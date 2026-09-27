@@ -11,8 +11,8 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 
 **nemosh passes 1843 of the 2551 cases bash passes: 72.2%.**
 
-Of the other 708, it does 99 the way the files record of ash, which may be busybox's
-way, and 609 neither way.
+Of the other 708, it does 101 the way the files record of ash, which may be busybox's
+way, and 607 neither way.
 
 | | cases |
 |---|---:|
@@ -90,7 +90,7 @@ of ash.
 | builtin-special.test.sh | 12 | 11 | 6 | 54.5% | 2 | 10 |
 | builtin-times.test.sh | 1 | 1 | 0 | 0.0% | 0 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 4 | 17.4% | 0 | 4 |
-| builtin-trap-err.test.sh | 22 | 22 | 16 | 72.7% | 3 | 22 |
+| builtin-trap-err.test.sh | 22 | 22 | 17 | 77.3% | 3 | 22 |
 | builtin-trap.test.sh | 33 | 33 | 18 | 54.5% | 4 | 25 |
 | builtin-type-bash.test.sh | 21 | 21 | 13 | 61.9% | 1 | 0 |
 | builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 0 | 4 |
@@ -106,7 +106,7 @@ of ash.
 | dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 0 |
 | empty-bodies.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 |
 | errexit-osh.test.sh | 35 | 35 | 31 | 88.6% | 0 | 35 |
-| errexit.test.sh | 35 | 34 | 29 | 85.3% | 0 | 35 |
+| errexit.test.sh | 35 | 34 | 28 | 82.4% | 2 | 35 |
 | exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
 | extglob-files.test.sh | 23 | 23 | 18 | 78.3% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1843 | 72.2% | 99 | 1447 |
+| all | 2668 | 2551 | 1843 | 72.2% | 101 | 1447 |

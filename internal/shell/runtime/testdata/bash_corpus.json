@@ -1637,5 +1637,17 @@
     "stdout": "in f: 1\nst=1\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "set -e\n{ false && true; }\n! { false; }\necho after",
+    "stdout": "after\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "trap 'echo ERR' ERR\n{ false; }\n( false )\necho after",
+    "stdout": "ERR\nERR\nafter\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
