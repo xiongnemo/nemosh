@@ -85,6 +85,12 @@ func TestShopt_answersAsBashDoes(t *testing.T) {
 			stdout: "st=0\n",
 		},
 		{
+			// It reports what the shell does: & in a replacement is itself, as in busybox.
+			name:   "a fixed name tells the truth",
+			script: "shopt -p patsub_replacement\nx=abc\necho \"${x/b/[&]}\"\n",
+			stdout: "shopt -u patsub_replacement\na[&]c\n",
+		},
+		{
 			name:   "and refuses the other",
 			script: "shopt -s extquote 2>/dev/null; echo \"st=$?\"\n",
 			stdout: "st=1\n",

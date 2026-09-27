@@ -116,7 +116,7 @@ var shoptOptions = []shoptOption{
 	acts("nocasematch", func(o *shellOptions) *bool { return &o.noCaseMatch }),
 	fixed("noexpand_translation", false, "there is no message catalog to translate $\"...\" from"),
 	acts("nullglob", func(o *shellOptions) *bool { return &o.nullGlob }),
-	fixed("patsub_replacement", true, notYet),
+	fixed("patsub_replacement", false, "& in a replacement stands for itself, as it does in busybox"),
 	recorded("progcomp", true, func(o *shellOptions) *bool { return &o.progComp }, noCompletion),
 	recorded("progcomp_alias", false, func(o *shellOptions) *bool { return &o.progCompAlias }, noCompletion),
 	recorded("promptvars", true, func(o *shellOptions) *bool { return &o.promptVars },
