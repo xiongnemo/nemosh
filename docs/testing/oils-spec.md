@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1790 of the 2551 cases bash passes: 70.2%.**
+**nemosh passes 1797 of the 2551 cases bash passes: 70.4%.**
 
-Of the other 761, it does 97 the way the files record of ash, which may be busybox's
-way, and 664 neither way.
+Of the other 754, it does 97 the way the files record of ash, which may be busybox's
+way, and 657 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 664 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1790 |
+| that nemosh passes of those | 1797 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -47,20 +47,20 @@ of ash.
 | arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 3 |
 | arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 4 |
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
-| arith.test.sh | 74 | 74 | 58 | 78.4% | 1 | 44 |
+| arith.test.sh | 74 | 74 | 59 | 79.7% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 0 | 9 |
-| array-assoc.test.sh | 42 | 36 | 31 | 86.1% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 33 | 91.7% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 10 | 83.3% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 8 | 50.0% | 0 | 0 |
-| array-sparse.test.sh | 40 | 40 | 23 | 57.5% | 0 | 0 |
+| array-sparse.test.sh | 40 | 40 | 24 | 60.0% | 0 | 0 |
 | array.test.sh | 78 | 78 | 68 | 87.2% | 1 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 6 | 66.7% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | assign-extended.test.sh | 39 | 34 | 24 | 70.6% | 0 | 0 |
 | assign.test.sh | 48 | 45 | 37 | 82.2% | 1 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
-| ble-features.test.sh | 9 | 9 | 3 | 33.3% | 3 | 9 |
+| ble-features.test.sh | 9 | 9 | 4 | 44.4% | 3 | 9 |
 | ble-idioms.test.sh | 26 | 26 | 16 | 61.5% | 3 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 2 | 5 |
 | blog1.test.sh | 9 | 9 | 4 | 44.4% | 1 | 8 |
@@ -161,7 +161,7 @@ of ash.
 | var-op-patsub.test.sh | 28 | 28 | 23 | 82.1% | 1 | 21 |
 | var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 6 |
 | var-op-strip.test.sh | 29 | 29 | 25 | 86.2% | 0 | 27 |
-| var-op-test.test.sh | 37 | 37 | 30 | 81.1% | 1 | 20 |
+| var-op-test.test.sh | 37 | 37 | 32 | 86.5% | 1 | 20 |
 | var-ref.test.sh | 31 | 31 | 19 | 61.3% | 0 | 0 |
 | var-sub-quote.test.sh | 41 | 41 | 38 | 92.7% | 0 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1790 | 70.2% | 97 | 1447 |
+| all | 2668 | 2551 | 1797 | 70.4% | 97 | 1447 |

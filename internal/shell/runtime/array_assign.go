@@ -120,6 +120,22 @@ func (r Runtime) syncArrayScalar(name string) {
 	r.vars[name] = value
 }
 
+// scalarVariable is a name read as a scalar, as `$name` reads it. An array read that way is
+// its element 0 -- key 0, for an associative one -- and is unset when it has none, as bash
+// reads it. This read the stored scalar: an associative array has none, so `$m` was empty
+// whatever m held, and an indexed one's is the copy above, which `unset 'a[0]'` left behind.
+func (r Runtime) scalarVariable(name string) (string, bool) {
+	switch {
+	case r.arrays == nil:
+	case r.arrays.isAssociative(name):
+		return r.arrays.lookupKey(name, "0")
+	case r.arrays.has(name):
+		return r.arrays.valueAt(name, 0)
+	}
+	value, set := r.vars[name]
+	return value, set
+}
+
 // applyMixedAssignments runs a command made only of assignments, some of them arrays, in
 // the order written. The array pass stopped at the first word that was not an array, so in
 // `IFS=, parts=($line)` -- the way to split a line into an array -- the array came after a

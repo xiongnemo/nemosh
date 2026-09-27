@@ -52,7 +52,6 @@
       "Substitutions": "fail"
     },
     "arith.test.sh": {
-      "Add integer to associative array (a[0] decay)": "fail",
       "Comment not allowed in the middle of multiline arithmetic": "fail",
       "Constant with quotes like '1'": "fail",
       "Double subscript": "fail",
@@ -79,13 +78,11 @@
       "declare builtin doesn't allow spaces": "fail"
     },
     "array-assoc.test.sh": {
-      "${assoc} is like ${assoc[0]}": "fail",
       "BashAssoc ${a[@]@Q}": "fail",
       "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
       "Slice of associative array doesn't make sense in bash": "fail",
       "associative array and brace expansion": "fail",
       "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "ash-only",
-      "bash variable can have an associative array part and a string part": "fail",
       "readonly associative array can't be modified": "fail",
       "set associative array to indexed array literal (very surprising bash behavior)": "fail",
       "setting key to itself (from bash-bug mailing list)": "ash-only",
@@ -110,7 +107,6 @@
     },
     "array-sparse.test.sh": {
       "${@:offset:length}": "fail",
-      "${a-}": "fail",
       "${a[@]#...}": "fail",
       "${a[@]@P}, ${a[@]@Q}, and ${a[@]@a}": "fail",
       "${sp[i]} with negative invalid index": "fail",
@@ -182,8 +178,7 @@
       "[bash_unset] local-unset / dynamic-unset for localvar": "ash-only",
       "[bash_unset] local-unset / dynamic-unset for localvar (mutated from tempenv)": "ash-only",
       "[bash_unset] local-unset / dynamic-unset for tempenv": "ash-only",
-      "[bash_unset] localvar-inherit from tempenv": "fail",
-      "[compat_array] scalar write to associative arrays": "fail"
+      "[bash_unset] localvar-inherit from tempenv": "fail"
     },
     "ble-idioms.test.sh": {
       "Issue #1069 [49] BUG: \\return 0 does not work (other variations)": "fail",
@@ -1016,9 +1011,7 @@
       "Error when empty": "fail",
       "Error when unset": "fail",
       "array and - and +": "fail",
-      "op-test for ${!array} with array=\"a\" and array=\"a[0]\"": "fail",
-      "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "ash-only",
-      "op-test for ${a} and ${a[0]}": "fail"
+      "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "ash-only"
     },
     "var-ref.test.sh": {
       "${!a[@]-'default'} is legal but fails with more than one element": "fail",

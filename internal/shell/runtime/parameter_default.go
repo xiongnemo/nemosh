@@ -223,7 +223,7 @@ func (r Runtime) lookupParameter(ctx context.Context, name string, savedStatus i
 	} else if target != name {
 		return r.operandParameter(ctx, target, savedStatus)
 	}
-	if value, set := r.vars[name]; set {
+	if value, set := r.scalarVariable(name); set {
 		return value, true
 	}
 	// After the stored variables, so a script that set one of these names sees what

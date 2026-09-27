@@ -76,7 +76,7 @@ func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedSt
 		return []string{expanded}
 	}
 	name := strings.TrimPrefix(text, "$")
-	value, set := r.vars[name]
+	value, set := r.scalarVariable(name)
 	if !set {
 		// The computed names -- $RANDOM, $SECONDS, $PPID -- are not stored, so a
 		// bare `$RANDOM` has to ask for them here as well as through the braced

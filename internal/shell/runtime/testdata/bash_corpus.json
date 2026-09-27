@@ -1529,5 +1529,17 @@
     "stdout": "0 1\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m=([0]=zero [k]=v)\necho \"[$m] [${#m}] [${m/z/Z}]\"\nm+=s\necho \"${m[0]}\"",
+    "stdout": "[zero] [4] [Zero]\nzeros\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(x y)\nunset 'a[0]'\necho \"[${a-unset}] [$a]\"",
+    "stdout": "[unset] []\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
