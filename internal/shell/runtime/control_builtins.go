@@ -31,10 +31,16 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	case "exit":
 		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}, true
 	case "exec":
-		if len(args) == 1 {
+		// `--` ends exec's options, as in both references: `exec -- 3>&1` is exec with only
+		// redirections, and `exec -- echo hi` runs echo. It ran a command called --.
+		command := args[1:]
+		if len(command) > 0 && command[0] == "--" {
+			command = command[1:]
+		}
+		if len(command) == 0 {
 			return lineResult{status: r.execRedirect(operations)}, true
 		}
-		return lineResult{status: r.execBuiltin(ctx, args[1:]), control: flowExec}, true
+		return lineResult{status: r.execBuiltin(ctx, command), control: flowExec}, true
 	case "return":
 		status := exitStatus(args[1:], savedStatus)
 		if r.sourceDepth == 0 && r.functionDepth == 0 {

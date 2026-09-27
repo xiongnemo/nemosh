@@ -424,9 +424,7 @@
     },
     "builtin-process.test.sh": {
       "Exit builtin with too many args": "fail",
-      "exec -- 2\u003e\u00261": "fail",
       "exec -a sets argv[0]": "fail",
-      "exec builtin accepts --": "fail",
       "time with brace group argument": "fail"
     },
     "builtin-read.test.sh": {
