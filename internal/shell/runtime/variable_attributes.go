@@ -28,6 +28,8 @@ type variableAttributes struct {
 	upper   bool
 	// exported is a name marked for export that had no value then; see export_pending.go.
 	exported bool
+	// nameref is `declare -n`: the value is the name this one leads to; see nameref.go.
+	nameref bool
 }
 
 // attributesOf answers for a name or for the array an element belongs to.
@@ -76,6 +78,8 @@ func (r Runtime) applyDeclaredAttributes(name string, options declareOptions) {
 			attributes.lower = false
 		case 'u':
 			attributes.upper = false
+		case 'n':
+			attributes.nameref = false
 		}
 	}
 	if attributes == (variableAttributes{}) {
@@ -86,7 +90,7 @@ func (r Runtime) applyDeclaredAttributes(name string, options declareOptions) {
 }
 
 // declareFlags are a name's attributes in the order `declare -p` prints them, which is
-// bash's table order: a A i r x l u. "-" when there are none, making `declare --`.
+// bash's table order: a A i n r x l u. "-" when there are none, making `declare --`.
 func (r Runtime) declareFlags(name string) string {
 	var flags strings.Builder
 	switch {
@@ -98,6 +102,9 @@ func (r Runtime) declareFlags(name string) string {
 	attributes := r.attributes[name]
 	if attributes.integer {
 		flags.WriteByte('i')
+	}
+	if attributes.nameref {
+		flags.WriteByte('n')
 	}
 	if r.isReadonly(name) {
 		flags.WriteByte('r')

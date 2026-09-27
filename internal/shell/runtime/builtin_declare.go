@@ -70,6 +70,8 @@ type declareOptions struct {
 	functionBodies bool
 	// global is -g: inside a function the names are the caller's rather than the call's.
 	global bool
+	// nameref is -n; see nameref.go.
+	nameref bool
 }
 
 func parseDeclareOptions(args []string) (declareOptions, []string, error) {
@@ -83,8 +85,8 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 		}
 		if len(argument) >= 2 && argument[0] == '+' {
 			for _, letter := range argument[1:] {
-				if !strings.ContainsRune("ilux", letter) {
-					return options, nil, fmt.Errorf("+%c: not an attribute this build can take away; it takes +i +l +u +x", letter)
+				if !strings.ContainsRune("ilunx", letter) {
+					return options, nil, fmt.Errorf("+%c: not an attribute this build can take away; it takes +i +l +u +n +x", letter)
 				}
 			}
 			options.removed += argument[1:]
@@ -117,9 +119,11 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 				options.print = true
 			case 'g':
 				options.global = true
+			case 'n':
+				options.nameref = true
 			default:
 				return options, nil, fmt.Errorf(
-					"-%c: not an option this build has; it takes -A -a -i -l -u -r -x -p -g -f -F", letter)
+					"-%c: not an option this build has; it takes -A -a -i -l -u -n -r -x -p -g -f -F", letter)
 			}
 		}
 	}
@@ -158,7 +162,11 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 	}
 	// Before the value, so `declare -i n=2+3` stores 5.
 	r.applyDeclaredAttributes(name, options)
-	if assigned {
+	if options.nameref {
+		if status := r.declareNameref(name, value, assigned); status != 0 {
+			return status
+		}
+	} else if assigned {
 		// `declare -a x=(one two)`. The lexer keeps the parenthesised list in one
 		// word -- the `(` follows `x=`, which is the test it applies -- so it
 		// arrives here whole and has to be split into elements. Without this it

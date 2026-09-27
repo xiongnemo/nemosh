@@ -218,6 +218,11 @@ func (r Runtime) lookupParameter(ctx context.Context, name string, savedStatus i
 	case "0", "?", "#", "@", "-", "$":
 		return r.expandScalarParameterText(ctx, "$"+name, savedStatus), true
 	}
+	if target, looped := r.namerefTarget(name); looped {
+		return "", false
+	} else if target != name {
+		return r.operandParameter(ctx, target, savedStatus)
+	}
 	if value, set := r.vars[name]; set {
 		return value, true
 	}

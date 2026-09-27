@@ -110,6 +110,12 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 
 // buildParameter adds a parameter expansion to the word being built.
 func (r Runtime) buildParameter(ctx context.Context, build *fieldBuilder, part wordPart, savedStatus int) {
+	// Through a nameref, `${!ref}` is the name it leads to; see nameref.go.
+	if name, ok := r.namerefIndirection(part.text); ok {
+		build.expansion(name, part.quote)
+		return
+	}
+	part.text = r.namerefText(part.text)
 	// `${!ref...}` is the expansion of the parameter ref names; see parameter_indirect.go.
 	if text, indirect, err := r.indirectText(ctx, part.text, savedStatus); indirect {
 		if err != nil || text == "" {

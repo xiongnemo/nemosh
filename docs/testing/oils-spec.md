@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1695 of the 2551 cases bash passes: 66.4%.**
+**nemosh passes 1719 of the 2551 cases bash passes: 67.4%.**
 
-Of the other 856, it does 95 the way the files record of ash, which may be busybox's
-way, and 761 neither way.
+Of the other 832, it does 95 the way the files record of ash, which may be busybox's
+way, and 737 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 761 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1695 |
+| that nemosh passes of those | 1719 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -49,7 +49,7 @@ of ash.
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 58 | 78.4% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 1 | 9 |
-| array-assoc.test.sh | 42 | 36 | 28 | 77.8% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 29 | 80.6% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 8 | 66.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 8 | 50.0% | 0 | 0 |
@@ -57,7 +57,7 @@ of ash.
 | array.test.sh | 78 | 78 | 67 | 85.9% | 1 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 6 | 66.7% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
-| assign-extended.test.sh | 39 | 34 | 18 | 52.9% | 0 | 0 |
+| assign-extended.test.sh | 39 | 34 | 19 | 55.9% | 0 | 0 |
 | assign.test.sh | 48 | 45 | 36 | 80.0% | 1 | 28 |
 | background.test.sh | 27 | 25 | 21 | 84.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 3 | 33.3% | 3 | 9 |
@@ -125,7 +125,7 @@ of ash.
 | known-differences.test.sh | 2 | 2 | 1 | 50.0% | 1 | 2 |
 | let.test.sh | 2 | 2 | 2 | 100.0% | 0 | 1 |
 | loop.test.sh | 29 | 28 | 22 | 78.6% | 1 | 23 |
-| nameref.test.sh | 32 | 32 | 6 | 18.8% | 0 | 2 |
+| nameref.test.sh | 32 | 32 | 28 | 87.5% | 0 | 2 |
 | nix-idioms.test.sh | 6 | 6 | 3 | 50.0% | 0 | 0 |
 | nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 3 |
 | nul-bytes.test.sh | 16 | 16 | 0 | 0.0% | 0 | 12 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1695 | 66.4% | 95 | 1447 |
+| all | 2668 | 2551 | 1719 | 67.4% | 95 | 1447 |

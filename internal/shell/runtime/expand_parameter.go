@@ -26,7 +26,7 @@ func positionalList(text string) string {
 }
 
 func (r Runtime) expandParameterPart(ctx context.Context, part wordPart, savedStatus int) []string {
-	text := positionalList(part.text)
+	text := r.namerefText(positionalList(part.text))
 	switch text {
 	case "$0":
 		return []string{r.params.name}

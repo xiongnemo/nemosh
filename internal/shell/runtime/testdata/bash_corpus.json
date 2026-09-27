@@ -1169,5 +1169,17 @@
     "stdout": "f:x\nr:x\nf:refused\nr:refused\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "set1() { local -n a=$1; a[1]=$2; }\nshadock=(a b c d)\nset1 shadock ZZZ\necho \"${shadock[@]}\"",
+    "stdout": "a ZZZ c d\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "x=foo\ntypeset -n ref=x\nref=bar\necho \"$x ${!ref}\"\nunset ref\necho \"[${x-unset}]\"",
+    "stdout": "bar x\n[unset]\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

@@ -30,6 +30,17 @@ type arrayElement struct {
 // it for `+=`. A readonly name is refused as any assignment to one is -- this path had no
 // check, so `readonly a; a=(1 2)` replaced it.
 func (r Runtime) assignCompound(ctx context.Context, name, raw string, extend bool, savedStatus int) int {
+	// Through a nameref, the array it leads to; see nameref.go. One that leads nowhere yet
+	// becomes the array itself, and says so, as bash's does.
+	if _, set := r.vars[name]; !set && r.attributes[name].nameref {
+		fmt.Fprintf(r.streams.Stderr, "warning: %s: removing nameref attribute\n", name)
+		r.applyDeclaredAttributes(name, declareOptions{removed: "n"})
+	}
+	name, err := r.namerefBase(name)
+	if err != nil {
+		fmt.Fprintln(r.streams.Stderr, err)
+		return 1
+	}
 	if r.isReadonly(name) {
 		return r.refuseReadonly("", name)
 	}

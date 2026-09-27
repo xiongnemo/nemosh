@@ -37,11 +37,24 @@ func (r Runtime) readonlyBuiltin(args []string) int {
 // map themselves, so each of them skipped all of that: `readonly R; : $((R=5))` changed R,
 // and `export x=0; for x in 5; do env; done` showed a child `x=0`.
 func (r Runtime) assignVar(name string, value string) int {
+	// Through a nameref, to what it leads to; see nameref.go.
+	target, handled, err := r.namerefAssignment(name, value)
+	if err != nil {
+		fmt.Fprintln(r.streams.Stderr, err)
+		return 1
+	}
+	if handled {
+		return 0
+	}
+	if name, err = r.namerefElement(target); err != nil {
+		fmt.Fprintln(r.streams.Stderr, err)
+		return 1
+	}
 	if r.isReadonly(name) {
 		return r.refuseReadonly("", name)
 	}
 	// `declare -i -l -u`, here so every way a value arrives is treated alike.
-	value, err := r.applyAttributes(name, value)
+	value, err = r.applyAttributes(name, value)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
 		return 1

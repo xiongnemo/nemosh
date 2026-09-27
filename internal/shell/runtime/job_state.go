@@ -66,7 +66,7 @@ type jobAssociativeArray struct {
 }
 
 type jobAttributes struct {
-	Integer, Lower, Upper, Exported bool
+	Integer, Lower, Upper, Exported, Nameref bool
 }
 
 type jobFrame struct {
@@ -112,7 +112,7 @@ func (r Runtime) captureJobState(program programNode) jobState {
 		state.Associative[name] = entry
 	}
 	for name, attributes := range r.attributes {
-		state.Attributes[name] = jobAttributes{attributes.integer, attributes.lower, attributes.upper, attributes.exported}
+		state.Attributes[name] = jobAttributes{attributes.integer, attributes.lower, attributes.upper, attributes.exported, attributes.nameref}
 	}
 	for name := range r.readonly {
 		state.Readonly = append(state.Readonly, name)
@@ -167,7 +167,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		}
 	}
 	for name, attributes := range state.Attributes {
-		r.attributes[name] = variableAttributes{integer: attributes.Integer, lower: attributes.Lower, upper: attributes.Upper, exported: attributes.Exported}
+		r.attributes[name] = variableAttributes{integer: attributes.Integer, lower: attributes.Lower, upper: attributes.Upper, exported: attributes.Exported, nameref: attributes.Nameref}
 	}
 	for _, name := range state.Readonly {
 		r.readonly[name] = struct{}{}

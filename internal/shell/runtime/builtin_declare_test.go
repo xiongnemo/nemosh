@@ -129,16 +129,15 @@ func TestDeclare_readonlyIsEnforced(t *testing.T) {
 	}
 }
 
-// An option this build cannot honour is refused by name. An ignored `-n` would leave a
-// plain variable and a script that believes it is a reference. (`-i` was the example until
-// it was implemented; see variable_attributes_test.go.)
+// An option this build cannot honour is refused by name. An ignored `-t` would leave a
+// function a script believes is traced. (`-i` and then `-n` were the example until each was
+// implemented; see variable_attributes_test.go and nameref_test.go.)
 func TestDeclare_refusesWhatItCannotHonour(t *testing.T) {
 	tests := []struct {
 		name     string
 		script   string
 		fragment string
 	}{
-		{name: "nameref", script: "declare -n ref=x\n", fragment: "not an option this build has"},
 		{name: "trace", script: "declare -t f\n", fragment: "not an option this build has"},
 		{name: "both kinds at once", script: "declare -Aa m\n", fragment: "cannot both be given"},
 		{name: "not a name", script: "declare 9bad=1\n", fragment: "not a valid name"},

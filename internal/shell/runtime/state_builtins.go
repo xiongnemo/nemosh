@@ -74,7 +74,7 @@ func (r Runtime) export(args []string) int {
 // the function defined, and succeeded. A plain `unset f` does not reach a function either,
 // which is busybox's reading of POSIX; bash falls back to one.
 func (r Runtime) unset(ctx context.Context, args []string) int {
-	functions := false
+	functions, nameref := false, false
 	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
 		if args[0] == "--" {
 			args = args[1:]
@@ -86,12 +86,18 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 				functions = true
 			case 'v':
 				functions = false
+			case 'n':
+				nameref = true
 			default:
-				fmt.Fprintf(r.streams.Stderr, "unset: -%c: invalid option; it takes -f -v\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "unset: -%c: invalid option; it takes -f -v -n\n", letter)
 				return 2
 			}
 		}
 		args = args[1:]
+	}
+	// Through a nameref, what it leads to, unless -n asks for the nameref itself.
+	if !nameref {
+		args = r.unsetTargets(args)
 	}
 	if functions {
 		for _, name := range args {
