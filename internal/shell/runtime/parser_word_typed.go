@@ -44,10 +44,13 @@ func containsError(err, target error) bool {
 // nested default silently produced a stray brace instead of a value.
 //
 // Quotes are skipped, so a `}` written as data inside the expansion -- `${x:-"}"}` --
-// does not end it either.
+// does not end it either. Only a `${` nests: a bare `{` is text, and the first `}` after it
+// ends the expansion, in busybox-w32 and bash alike -- `${x:-{b}}` with x set is a and a }.
+// Every `{` was counted, so that ran on to the second `}` and the } after it was lost.
 func bracedParameterEnd(text string, start int) (int, bool) {
 	depth := 0
 	quote := byte(0)
+	dollar := -1
 	for index := start; index < len(text); index++ {
 		char := text[index]
 		// A backslash escapes the next character everywhere but inside single quotes, so
@@ -70,8 +73,12 @@ func bracedParameterEnd(text string, start int) (int, bool) {
 		switch char {
 		case '\'', '"':
 			quote = char
+		case '$':
+			dollar = index
 		case '{':
-			depth++
+			if index == start || dollar == index-1 {
+				depth++
+			}
 		case '}':
 			depth--
 			if depth == 0 {

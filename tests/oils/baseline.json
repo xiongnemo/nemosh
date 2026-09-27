@@ -864,7 +864,6 @@
       "Failed redirect in assignment, vs. export": "fail",
       "Fatal error": "ash-only",
       "Function def in pipeline": "fail",
-      "IFS": "fail",
       "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",
       "IFS 4": "ash-only",
       "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only",
