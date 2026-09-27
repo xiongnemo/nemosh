@@ -74,8 +74,8 @@ func TestJobs_reportsAFinishedJobOnceAndThenForgetsIt(t *testing.T) {
 
 	shell.run("blocker &\n")
 	<-started
-	if running := shell.run("jobs\n"); running != "[1] Running\n" {
-		t.Fatalf("while running, jobs = %q, want %q", running, "[1] Running\n")
+	if running := shell.run("jobs\n"); running != jobsLine("[1]+  Running") {
+		t.Fatalf("while running, jobs = %q, want %q", running, jobsLine("[1]+  Running"))
 	}
 
 	// `kill` does not claim the record, so `jobs` is the only thing that can consume it --
@@ -121,7 +121,7 @@ func TestJobs_doesNotForgetAJobStillRunning(t *testing.T) {
 	shell.run("worker &\n")
 	<-started
 	for attempt := range 3 {
-		if listed := shell.run("jobs\n"); listed != "[1] Running\n" {
+		if listed := shell.run("jobs\n"); listed != jobsLine("[1]+  Running") {
 			t.Fatalf("ask %d: jobs = %q, want the job still listed", attempt+1, listed)
 		}
 	}

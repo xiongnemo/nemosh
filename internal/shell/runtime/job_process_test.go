@@ -37,7 +37,9 @@ func TestProcessJobs_behaveAsTheReferencesDo(t *testing.T) {
 		}
 	})
 	t.Run("kill by pid and by job, and the status says which signal", func(t *testing.T) {
-		stdout, stderr := run(t, "sleep 5 & p=$!\nkill $p; wait $p; echo \"pid=$?\"\nsleep 5 & kill %2; wait %2; echo \"job=$?\"\n")
+		// %1 for the second job too: the first is reaped by its wait, and the next takes its
+		// number, as in busybox.
+		stdout, stderr := run(t, "sleep 5 & p=$!\nkill $p; wait $p; echo \"pid=$?\"\nsleep 5 & kill %1; wait %1; echo \"job=$?\"\n")
 		if stdout != "pid=143\njob=143\n" || !strings.Contains(stderr, "Terminated") {
 			t.Fatalf("stdout %q stderr %q", stdout, stderr)
 		}
@@ -79,7 +81,7 @@ func TestProcessJobs_behaveAsTheReferencesDo(t *testing.T) {
 		d := filepath.ToSlash(t.TempDir())
 		stdout, stderr := run(t, "sleep 2 & a=$!\njobs -p > '"+d+"/p'\njobs -l > '"+d+"/l'\n"+
 			"read p < '"+d+"/p'\n[ \"$p\" = \"$a\" ] && echo p-ok\n"+
-			"read l < '"+d+"/l'\n[ \"$l\" = \"[1] $a Running\" ] && echo l-ok\nkill %1; wait\n")
+			"read l < '"+d+"/l'\n[ \"$l\" = \"[1]+  $a Running\" ] && echo l-ok\nkill %1; wait\n")
 		if stdout != "p-ok\nl-ok\n" {
 			t.Fatalf("stdout %q stderr %q", stdout, stderr)
 		}

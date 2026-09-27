@@ -86,11 +86,7 @@ func (r Runtime) killOne(operand string, signal int) error {
 // second is the one a script is actually writing, and it is the same answer
 // `kill PID` gives for a process that has exited.
 func (r Runtime) killJob(spec string, signal int) error {
-	value, err := strconv.ParseUint(strings.TrimPrefix(spec, "%"), 10, 64)
-	if err != nil || value == 0 {
-		return fmt.Errorf("invalid job: %s", spec)
-	}
-	record, ok := r.jobScope.lookup(jobID(value))
+	record, ok := r.jobScope.lookup(r.jobScope.resolveJobSpec(spec))
 	if !ok {
 		return fmt.Errorf("%s: no such job", spec)
 	}

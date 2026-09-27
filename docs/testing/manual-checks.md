@@ -101,7 +101,8 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 
 ## D. Job control
 
-- `sleep 20 &` then `jobs` -- `[1] Running`.
+- `sleep 20 &` then `jobs` -- `[1]+  Running`. A second `sleep 20 &` lists as `[2]+`
+  first and `[1]-` after it; `kill %-` ends the first.
 - **`$!` is a process**: `sleep 30 &`, then `tasklist /FI "PID eq $!"` names it, and
   `taskkill /PID $! /F` ends it, after which `wait $!` answers.
 - **`kill -0` in a loop**: `sleep 3 & p=$!; while kill -0 $p 2>/dev/null; do echo alive;

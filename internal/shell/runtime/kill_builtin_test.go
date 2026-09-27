@@ -75,7 +75,7 @@ func TestKill_refusesWhatItCannotDo(t *testing.T) {
 	}{
 		{name: "no such job", script: "kill %9\n", want: "no such job", status: 1},
 		{name: "not a job and not a number", script: "kill nope\n", want: "illegal pid: nope", status: 1},
-		{name: "job zero", script: "kill %0\n", want: "invalid job", status: 1},
+		{name: "job zero", script: "kill %0\n", want: "%0: no such job", status: 1},
 		// 1, which both references answer; this used to be 2.
 		{name: "an unknown signal", script: "kill -BOGUS 1\n", want: "invalid signal", status: 1},
 		{name: "nothing at all", script: "kill\n", want: "expected a job or a process id", status: 2},

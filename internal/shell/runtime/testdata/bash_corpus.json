@@ -1439,5 +1439,23 @@
     "stdout": "w=137\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "sleep 5 & sleep 5 & sleep 5 &\njobs\nkill %1 %2 %3; wait",
+    "stdout": "[3]+  Running                    \n[2]-  Running                    \n[1]   Running                    \n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 & sleep 5 & sleep 5 &\nkill %1; wait %1\nsleep 5 &\njobs\nkill %1 %2 %3; wait",
+    "stdout": "[1]+  Running                    \n[3]-  Running                    \n[2]   Running                    \n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 & sleep 5 &\nkill %-; wait %-; echo \"prev=$?\"\nkill %%; wait %%; echo \"cur=$?\"",
+    "stdout": "prev=143\ncur=143\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

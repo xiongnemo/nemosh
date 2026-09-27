@@ -17,7 +17,20 @@ import (
 //
 // A job `kill` ended is named for the signal -- `Terminated`, `Killed` -- as both
 // references name it, rather than `Done(143)`: done is what it was not.
-func jobLine(record *jobRecord) (string, bool) {
+//
+// The line is both references': `[1]+  Running`, the mark saying which job is current (see
+// job_spec.go), and with -l the pid before the state. It was `[1] Running`.
+func jobLine(record *jobRecord, marker byte, long bool) (string, bool) {
+	state, finished := jobCondition(record)
+	prefix := fmt.Sprintf("[%d]%c  ", record.id, marker)
+	if long && record.pid != 0 {
+		prefix += strconv.Itoa(record.pid) + " "
+	}
+	return padJobLine(prefix+state) + "\n", finished
+}
+
+// jobCondition is a job's state as `jobs` names it, and whether it is final.
+func jobCondition(record *jobRecord) (string, bool) {
 	select {
 	case <-record.done:
 		state := "Done"
@@ -27,10 +40,17 @@ func jobLine(record *jobRecord) (string, bool) {
 		if record.signal != 0 {
 			state = proc.SignalWord(record.signal)
 		}
-		return fmt.Sprintf("[%d] %s\n", record.id, state), true
+		return state, true
 	default:
-		return fmt.Sprintf("[%d] Running\n", record.id), false
+		return "Running", false
 	}
+}
+
+// padJobLine pads a job's line to column 33, where both references go on to write the
+// command the job runs. A command here keeps no written form, so nothing follows, as in a
+// busybox script.
+func padJobLine(text string) string {
+	return text + strings.Repeat(" ", max(33-len(text), 1))
 }
 
 // reportSignalled says, on stderr, how each of these jobs ended if kill ended it: the word
@@ -46,37 +66,70 @@ func (r Runtime) reportSignalled(records []*jobRecord) {
 	}
 }
 
-// jobs lists the job table. `-l` adds each job's pid and `-p` prints the pids alone, as in
-// both references. A job that is a goroutine has no pid: `-p` gives the `%N` its `$!` holds,
-// which `kill` and `wait` take the same way, and `-l` leaves its line as it was.
-func (r Runtime) jobs(args []string) int {
-	long, pids := false, false
-	for _, arg := range args {
-		switch arg {
-		case "-l":
-			long = true
-		case "-p":
-			pids = true
-		default:
-			fmt.Fprintf(r.streams.Stderr, "jobs: %s: expected -l or -p, and no job operands\n", arg)
-			return 2
+// jobsRequest is what `jobs` was asked for: -l and -p, as in both references, and bash's
+// -r and -s, the running jobs and the stopped ones -- of which there are never any here.
+type jobsRequest struct {
+	long, pids, running, stopped bool
+	operands                     []string
+}
+
+func parseJobsArgs(args []string) (jobsRequest, error) {
+	var request jobsRequest
+	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
+		option := args[0]
+		args = args[1:]
+		if option == "--" {
+			break
+		}
+		for _, letter := range option[1:] {
+			switch letter {
+			case 'l':
+				request.long = true
+			case 'p':
+				request.pids = true
+			case 'r':
+				request.running = true
+			case 's':
+				request.stopped = true
+			default:
+				return request, fmt.Errorf("-%c: invalid option; it takes -l -p -r -s", letter)
+			}
 		}
 	}
-	if pids {
-		return r.jobPIDs()
+	request.operands = args
+	return request, nil
+}
+
+// jobs lists the job table, newest first, as busybox lists it. `-l` adds each job's pid and
+// `-p` prints the pids alone. A job that is a goroutine has no pid: `-p` gives the `%N` its
+// `$!` holds, which `kill` and `wait` take the same way, and `-l` leaves its line as it was.
+// Operands list the jobs they name, and one that names none is status 2, as in busybox.
+func (r Runtime) jobs(args []string) int {
+	request, err := parseJobsArgs(args)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
+		return 2
+	}
+	records, own := r.listedJobs()
+	current, previous := jobID(0), jobID(0)
+	if len(records) > 0 {
+		current = records[0].id
+	}
+	if len(records) > 1 {
+		previous = records[1].id
+	}
+	records, status := r.selectJobs(records, request)
+	if request.pids {
+		return max(status, r.jobPIDs(records))
 	}
 	// Reported is consumed: POSIX 2.9.3 removes a job from the list once the shell has
 	// reported its status, and busybox agrees -- `[1]+ Done` appears once and `jobs`
 	// afterwards says nothing. This used to answer `[1] Done(1)` every time it was asked.
 	var reported []*jobRecord
-	records, own := r.listedJobs()
 	for _, record := range records {
-		line, finished := jobLine(record)
+		line, finished := jobLine(record, jobMarker(record.id, current, previous), request.long)
 		if finished && own {
 			reported = append(reported, record)
-		}
-		if long && record.pid != 0 {
-			line = strings.Replace(line, "] ", "] "+strconv.Itoa(record.pid)+" ", 1)
 		}
 		if _, err := r.streams.Stdout.Write([]byte(line)); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
@@ -87,7 +140,39 @@ func (r Runtime) jobs(args []string) int {
 		}
 	}
 	r.jobScope.forget(reported)
-	return 0
+	return status
+}
+
+// selectJobs is the listing's records narrowed to the operands and to -r and -s, with the
+// status a missing operand leaves.
+func (r Runtime) selectJobs(records []*jobRecord, request jobsRequest) ([]*jobRecord, int) {
+	status := 0
+	if len(request.operands) > 0 {
+		var named []*jobRecord
+		for _, operand := range request.operands {
+			record, ok := r.jobScope.lookup(r.jobScope.resolveJobSpec(operand))
+			if !ok {
+				fmt.Fprintf(r.streams.Stderr, "jobs: %s: no such job\n", operand)
+				status = 2
+				continue
+			}
+			named = append(named, record)
+		}
+		records = named
+	}
+	if request.stopped && !request.running {
+		return nil, status
+	}
+	if request.running {
+		var running []*jobRecord
+		for _, record := range records {
+			if _, finished := jobCondition(record); !finished {
+				running = append(running, record)
+			}
+		}
+		records = running
+	}
+	return records, status
 }
 
 // listedJobs are the jobs `jobs` lists, and whether they are this scope's own. A pipeline
@@ -109,8 +194,7 @@ func (r Runtime) listedJobs() ([]*jobRecord, bool) {
 }
 
 // jobPIDs is `jobs -p`. It reports no status, so it consumes nothing.
-func (r Runtime) jobPIDs() int {
-	records, _ := r.listedJobs()
+func (r Runtime) jobPIDs(records []*jobRecord) int {
 	for _, record := range records {
 		if _, err := fmt.Fprintln(r.streams.Stdout, record.identifier()); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
@@ -135,8 +219,10 @@ func (r Runtime) jobPIDs() int {
 func (r Runtime) ReportFinishedJobs() {
 	var reported []*jobRecord
 	var notice strings.Builder
-	for _, record := range r.jobScope.snapshot() {
-		line, finished := jobLine(record)
+	records := r.jobScope.snapshot()
+	current, previous := r.jobScope.currentAndPrevious()
+	for _, record := range records {
+		line, finished := jobLine(record, jobMarker(record.id, current, previous), false)
 		if !finished {
 			continue
 		}

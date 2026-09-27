@@ -21,7 +21,8 @@ func TestRuntime_waitAllConsumesCapturedJobs_andJobsIsObservational(t *testing.T
 	status := rt.RunScript(context.Background(), "false & true & jobs\nwait\njobs\n")
 
 	// Then
-	if status != 0 || !validJobLines(stdout.String(), 1, 2) {
+	// Newest first, as busybox lists them.
+	if status != 0 || !validJobLines(stdout.String(), 2, 1) {
 		t.Fatalf("status = %d, stdout = %q", status, stdout.String())
 	}
 }
@@ -34,8 +35,9 @@ func TestRuntime_waitRejectsBadOperands_andRetainsExactJob(t *testing.T) {
 		script string
 		status int
 	}{
-		{script: "wait %x", status: 2},
-		{script: "wait %0", status: 2},
+		// A spec that names no job is the same 127, whatever it looks like.
+		{script: "wait %x", status: 127},
+		{script: "wait %0", status: 127},
 		{script: "wait nope", status: 2},
 		{script: "wait 1", status: 127},
 		{script: "wait %99", status: 127},
@@ -56,7 +58,9 @@ func TestRuntime_waitRejectsBadOperands_andRetainsExactJob(t *testing.T) {
 	}
 }
 
-func TestRuntime_jobIDsAreMonotonic_andUnconsumedJobsAreCapped(t *testing.T) {
+// A job takes the lowest number free, as busybox numbers it: once the 64 have been waited
+// for, the next is %1 again.
+func TestRuntime_jobIDsTakeTheLowestFree_andUnconsumedJobsAreCapped(t *testing.T) {
 	// Given
 	firstStarted := make(chan struct{}, 64)
 	firstRelease := make(chan struct{})
@@ -102,14 +106,15 @@ func TestRuntime_jobIDsAreMonotonic_andUnconsumedJobsAreCapped(t *testing.T) {
 	<-secondStarted
 	secondJobsStatus := rt.RunScript(context.Background(), "jobs\n")
 	close(secondRelease)
-	lastWaitStatus := rt.RunScript(context.Background(), "wait %65\n")
+	lastWaitStatus := rt.RunScript(context.Background(), "wait %1\n")
 
 	// Then
 	if status != 1 || jobsStatus != 0 || waitStatus != 0 || launchStatus != 0 || secondJobsStatus != 0 || lastWaitStatus != 0 {
 		t.Fatalf("statuses = %d, %d, %d, %d, %d, %d", status, jobsStatus, waitStatus, launchStatus, secondJobsStatus, lastWaitStatus)
 	}
-	lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
-	if len(lines) != 65 || lines[0] != "[1] Running" || lines[63] != "[64] Running" || lines[64] != "[65] Running" {
+	// Newest first: the 64 from [64] down to [1], and then the one after them, [1] again.
+	lines := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\n")
+	if len(lines) != 65 || lines[0]+"\n" != jobsLine("[64]+  Running") || lines[63]+"\n" != jobsLine("[1]   Running") || lines[64]+"\n" != jobsLine("[1]+  Running") {
 		t.Fatalf("unexpected jobs output: %q", stdout.String())
 	}
 }
@@ -159,14 +164,21 @@ func TestRuntime_jobLimitIsSessionWide_acrossRootAndPrivateScopes(t *testing.T) 
 	}
 }
 
+// validJobLines reports lines of `jobs`, one per id in order: `[N]`, the current-job mark,
+// two blanks, and a state, padded out.
 func validJobLines(output string, ids ...int) bool {
-	lines := strings.Split(strings.TrimSpace(output), "\n")
+	lines := strings.Split(strings.TrimSuffix(output, "\n"), "\n")
 	if len(lines) != len(ids) {
 		return false
 	}
 	for index, id := range ids {
-		prefix := fmt.Sprintf("[%d] ", id)
-		if !strings.HasPrefix(lines[index], prefix) || (lines[index] != prefix+"Running" && lines[index] != prefix+"Done" && !strings.HasPrefix(lines[index], prefix+"Done(")) {
+		prefix := fmt.Sprintf("[%d]", id)
+		line := strings.TrimRight(lines[index], " ")
+		if !strings.HasPrefix(line, prefix) || len(line) < len(prefix)+3 || line[len(prefix)+1:len(prefix)+3] != "  " {
+			return false
+		}
+		state := line[len(prefix)+3:]
+		if state != "Running" && state != "Done" && !strings.HasPrefix(state, "Done(") {
 			return false
 		}
 	}

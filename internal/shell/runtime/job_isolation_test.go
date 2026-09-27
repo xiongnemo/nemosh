@@ -57,7 +57,8 @@ func TestRuntime_backgroundStdinDefaultsToNullUnlessRedirected(t *testing.T) {
 	rt := runtime.NewWithState(registry, runtime.Streams{Stdin: parentStdin}, runtime.State{Cwd: runtime.WorkingDirectory(dir)})
 
 	// When
-	status := rt.RunScript(context.Background(), "capture-stdin & wait %1\ncapture-stdin < input & wait %2\n")
+	// %1 both times: the first job is reaped by its wait, and the next takes its number.
+	status := rt.RunScript(context.Background(), "capture-stdin & wait %1\ncapture-stdin < input & wait %1\n")
 	nullRead := <-reads
 	redirectedRead := <-reads
 
@@ -110,7 +111,7 @@ func TestRuntime_outerJobBecomesDoneAfterNestedScopeDrains(t *testing.T) {
 	jobsStatus := rt.RunScript(context.Background(), "jobs\n")
 	// Asserted before the release, because this is the property in the name: the nested job
 	// is still there, so the outer job is Running and its echo has not run at all.
-	if jobsStatus != 0 || stdout.String() != "[1] Running\n" {
+	if jobsStatus != 0 || stdout.String() != jobsLine("[1]+  Running") {
 		close(release)
 		t.Fatalf("with the nested job still alive: jobs status = %d, stdout = %q", jobsStatus, stdout.String())
 	}
@@ -118,7 +119,7 @@ func TestRuntime_outerJobBecomesDoneAfterNestedScopeDrains(t *testing.T) {
 	waitStatus := rt.RunScript(context.Background(), "wait %1\n")
 
 	// Then
-	if waitStatus != 0 || stdout.String() != "[1] Running\n\n" {
+	if waitStatus != 0 || stdout.String() != jobsLine("[1]+  Running")+"\n" {
 		t.Fatalf("wait status = %d, stdout = %q", waitStatus, stdout.String())
 	}
 }

@@ -36,7 +36,7 @@ func TestWait_answersAsBothReferencesDo(t *testing.T) {
 			// It used to be refused, and the plain `wait` a script puts after it hid that.
 			name:   "wait -n returns when the first job does",
 			script: "sleep 0.1 &\nsleep 5 &\nwait -n\necho \"st=$?\"\njobs\nkill %2\n",
-			want:   "st=0\n[2] Running\n",
+			want:   "st=0\n" + jobsLine("[2]+  Running"),
 		},
 		{
 			// bash's answer; busybox-w32 says 0 for a job that exited 3.

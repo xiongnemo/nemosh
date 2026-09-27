@@ -171,8 +171,12 @@ func (t *fdTable) freeOr(fd int) int {
 func (s *jobScope) newest() (*jobRecord, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	record, ok := s.records[s.next]
-	return record, ok
+	for _, record := range s.records {
+		if record.started == s.started {
+			return record, true
+		}
+	}
+	return nil, false
 }
 
 func (r Runtime) coprocFailure(err error) lineResult {

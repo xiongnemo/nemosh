@@ -127,7 +127,7 @@ func TestBackgroundJobs_finishedJobRemainsReportableBelowTheLimit(t *testing.T) 
 	}
 
 	// Then
-	if got, want := stdout.String(), "[1] Done\n"; got != want {
+	if got, want := stdout.String(), padJobLine("[1]+  Done")+"\n"; got != want {
 		t.Fatalf("jobs printed %q, want %q", got, want)
 	}
 }

@@ -96,12 +96,13 @@ func (r Runtime) waitTarget(operand string) (jobID, int) {
 		fmt.Fprintf(r.streams.Stderr, "wait: `%s': not a pid or valid job spec\n", operand)
 		return 0, 2
 	}
-	value, err := strconv.ParseUint(strings.TrimPrefix(operand, "%"), 10, 64)
-	if err != nil || value == 0 {
-		fmt.Fprintf(r.streams.Stderr, "wait: %s: invalid job\n", operand)
-		return 0, 2
+	// %%, %- and the rest; see job_spec.go. A spec that names no job is the 127 above.
+	id := r.jobScope.resolveJobSpec(operand)
+	if id == 0 {
+		fmt.Fprintf(r.streams.Stderr, "wait: %s: no such job\n", operand)
+		return 0, 127
 	}
-	return jobID(value), 0
+	return id, 0
 }
 
 // unclaimable says why a job could not be waited for. Another `wait` holding it is a

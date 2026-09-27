@@ -115,7 +115,7 @@ func TestRuntime_jobsObservesRunningAndWaitReturnsCachedStatus_whenWorkerComplet
 	waitStatus := rt.RunScript(context.Background(), "wait %1\n")
 
 	// Then
-	if jobsStatus != 0 || stdout.String() != "[1] Running\n" {
+	if jobsStatus != 0 || stdout.String() != jobsLine("[1]+  Running") {
 		t.Fatalf("jobs status = %d, stdout = %q", jobsStatus, stdout.String())
 	}
 	if waitStatus != 1 || stderr.String() != "" {

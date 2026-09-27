@@ -21,7 +21,8 @@ func TestJobs_listsTheShellsJobsInAStageOrASubstitution(t *testing.T) {
 // still reports a finished job itself.
 func TestJobs_aSubstitutionConsumesNothingOfTheShells(t *testing.T) {
 	status, stdout, _ := runSetScript(t, "true &\nwait %1 2>/dev/null; sleep 0.1\nfalse &\nsleep 0.2\nseen=$(jobs)\njobs\n")
-	if status != 0 || stdout != "[2] Done(1)\n" {
+	// %1 again: the first job was reaped by its wait, and the second took its number.
+	if status != 0 || stdout != jobsLine("[1]+  Done(1)") {
 		t.Fatalf("status %d stdout %q", status, stdout)
 	}
 }

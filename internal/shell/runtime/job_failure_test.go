@@ -130,7 +130,8 @@ func TestRuntime_jobsDisplaysCompletedStatus_atomically(t *testing.T) {
 	status := rt.jobs(nil)
 
 	// Then
-	if status != 0 || len(writer.writes) != 2 || string(writer.writes[0]) != "[1] Done\n" || string(writer.writes[1]) != "[2] Done(1)\n" {
+	// Newest first, each line whole, and the second marked as the previous job.
+	if status != 0 || len(writer.writes) != 2 || string(writer.writes[0]) != padJobLine("[2]+  Done(1)")+"\n" || string(writer.writes[1]) != padJobLine("[1]-  Done")+"\n" {
 		t.Fatalf("status = %d, writes = %q", status, writer.writes)
 	}
 }

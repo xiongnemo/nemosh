@@ -15,7 +15,10 @@ var errJobScopeSealed = errors.New("job scope sealed")
 type jobID uint64
 
 type jobRecord struct {
-	id      jobID
+	id jobID
+	// started orders the jobs by when each began, which is what the current and previous
+	// jobs are; see job_spec.go.
+	started uint64
 	done    chan struct{}
 	status  int
 	claimed bool
@@ -43,7 +46,7 @@ type jobRecord struct {
 
 type jobScope struct {
 	mu         sync.Mutex
-	next       jobID
+	started    uint64
 	records    map[jobID]*jobRecord
 	ctx        context.Context
 	cancel     context.CancelFunc
@@ -87,8 +90,15 @@ func (s *jobScope) registerCancellable(cancel context.CancelFunc) (*jobRecord, e
 	if err != nil {
 		return nil, err
 	}
-	s.next++
-	record := &jobRecord{id: s.next, done: make(chan struct{}), cancel: cancel}
+	// The lowest number free, as busybox numbers a job: once %1 is reaped, the next job is
+	// %1 again. Each new job was numbered past every one before it, so a script that
+	// started and reaped a job and then started another had to know to call it %2.
+	id := jobID(1)
+	for s.records[id] != nil {
+		id++
+	}
+	s.started++
+	record := &jobRecord{id: id, started: s.started, done: make(chan struct{}), cancel: cancel}
 	s.records[record.id] = record
 	return record, nil
 }
@@ -180,17 +190,6 @@ func (s *jobScope) markSignalled(record *jobRecord, signal int) bool {
 	}
 	record.signal = signal
 	return true
-}
-
-func (s *jobScope) snapshot() []*jobRecord {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	records := make([]*jobRecord, 0, len(s.records))
-	for _, record := range s.records {
-		records = append(records, record)
-	}
-	sort.Slice(records, func(i, j int) bool { return records[i].id < records[j].id })
-	return records
 }
 
 // lookup finds a job without claiming it. `kill` is not waiting for the job, so
