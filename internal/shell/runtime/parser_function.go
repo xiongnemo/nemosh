@@ -95,9 +95,18 @@ func standaloneFunctionHeader(line string) bool {
 // that is something else is refused: one with blanks, quoting, an expansion, an operator,
 // a bracket, a comment's `#`, or the `=` of an assignment. So is one ending in ?, *, +,
 // @ or !, since here `@(` always begins an extended pattern.
+//
+// An `=` is an assignment's only after a name, as both references read it: `a=b() {...}` is
+// an assignment and then a `(`, a syntax error, where `func-name=ext () {...}` defines a
+// function called that. Every `=` was refused, and so was that definition.
 func newFunctionName(value string) (functionName, bool) {
-	if value == "" || strings.ContainsAny(value, " \t\n\"'\\$`()<>|&;={}[]#") {
+	if value == "" || strings.ContainsAny(value, " \t\n\"'\\$`()<>|&;{}[]#") {
 		return functionName{}, false
+	}
+	if target, _, found := strings.Cut(value, "="); found {
+		if name, _ := splitAssignmentTarget(target); isValidVariableName(name) {
+			return functionName{}, false
+		}
 	}
 	if strings.IndexByte("?*+@!", value[len(value)-1]) >= 0 {
 		return functionName{}, false

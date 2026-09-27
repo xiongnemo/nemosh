@@ -639,7 +639,6 @@
       "Arith lexer mode": "fail"
     },
     "func-parsing.test.sh": {
-      "= in function name": "fail",
       "Function name with $": "ash-only",
       "Function name with command sub": "ash-only"
     },

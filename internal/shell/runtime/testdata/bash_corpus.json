@@ -1775,5 +1775,11 @@
     "stdout": "serialized\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "func-name=ext ( ) { echo func-name=ext; }\nfunc-name=ext",
+    "stdout": "func-name=ext\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
