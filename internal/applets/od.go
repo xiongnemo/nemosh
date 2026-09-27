@@ -44,10 +44,9 @@ func newDumperApplet(name string) Applet {
 		if err != nil {
 			return err
 		}
-		request := dumpRequest{
-			format:      defaultDumpFormat(name),
-			showAddress: true,
-			octalOffset: name == "od",
+		request := dumpRequest{format: defaultDumpFormat(name), radix: 'X'}
+		if name == "od" {
+			request.radix = 'o'
 		}
 		if err := request.apply(name, options); err != nil {
 			return err
@@ -69,9 +68,12 @@ func defaultDumpFormat(name string) dumpFormat {
 }
 
 type dumpRequest struct {
-	format      dumpFormat
-	showAddress bool
-	octalOffset bool
+	format dumpFormat
+	// more is the formats after the first, each a line of its own; see dumpBodies.
+	more []dumpFormat
+	// radix is the address's: 'o', 'd' or 'x' as -A names them, 'n' for none, and 'X' for
+	// hexdump's own seven hex digits.
+	radix byte
 }
 
 func (r *dumpRequest) apply(name string, options appletOptions) error {
@@ -89,32 +91,31 @@ func (r *dumpRequest) apply(name string, options appletOptions) error {
 	}
 	if options.has('A') {
 		// -A n suppresses the address entirely, which is what makes `od -An -tx1`
-		// the usual way to get a bare hex stream.
+		// the usual way to get a bare hex stream. -A d was hex, and -A x seven digits
+		// where busybox and GNU print six.
 		value := options.value('A')
 		switch value {
-		case "n":
-			r.showAddress = false
-		case "o":
-			r.octalOffset = true
-		case "d", "x":
-			r.octalOffset = false
+		case "n", "o", "d", "x":
+			r.radix = value[0]
 		default:
 			return fmt.Errorf("invalid address radix '%s'", value)
 		}
 	}
-	if options.has('t') {
-		switch options.value('t') {
-		case "x1", "x":
-			r.format = dumpHexBytes
-		case "c", "a":
-			r.format = dumpChars
-		case "o2", "o":
-			r.format = dumpOctalWords
-		case "x2":
-			r.format = dumpHexWords
-		default:
-			return fmt.Errorf("invalid type string '%s'", options.value('t'))
+	// Each -t is a format of its own, after any the letters asked for, as in both: only the
+	// last one was used.
+	var formats []dumpFormat
+	if options.has('C') || options.has('c') || options.has('x') || options.has('o') {
+		formats = append(formats, r.format)
+	}
+	for _, value := range options.all('t') {
+		format, ok := map[string]dumpFormat{"x1": dumpHexBytes, "x": dumpHexBytes, "c": dumpChars, "a": dumpChars, "o2": dumpOctalWords, "o": dumpOctalWords, "x2": dumpHexWords}[value]
+		if !ok {
+			return fmt.Errorf("invalid type string '%s'", value)
 		}
+		formats = append(formats, format)
+	}
+	if len(formats) > 0 {
+		r.format, r.more = formats[0], formats[1:]
 	}
 	return nil
 }
@@ -130,15 +131,21 @@ func (r dumpRequest) write(stdout io.Writer, reader io.Reader) error {
 		// Not trimmed: hexdump's word form pads its line out to eight slots and
 		// od's does not, so the padding is part of the body rather than something
 		// to tidy away here. Measured against both.
-		if _, err := fmt.Fprintln(stdout, r.address(offset)+r.body(data[offset:end])); err != nil {
-			return err
+		address := r.address(offset)
+		for index, body := range r.bodies(data[offset:end]) {
+			if index > 0 {
+				address = strings.Repeat(" ", len(address))
+			}
+			if _, err := fmt.Fprintln(stdout, address+body); err != nil {
+				return err
+			}
 		}
 	}
 	// The final line is the length, which is how a reader knows where the dump
 	// stopped without counting the rows. With -A n there is no address to give, and so
 	// no line, as in busybox: it was an empty one, which every `... | od -A n -c` then
 	// carried into whatever read it.
-	if !r.showAddress {
+	if r.radix == 'n' {
 		return nil
 	}
 	if _, err := fmt.Fprintln(stdout, strings.TrimSpace(r.address(len(data)))); err != nil {
@@ -148,23 +155,65 @@ func (r dumpRequest) write(stdout io.Writer, reader io.Reader) error {
 }
 
 func (r dumpRequest) address(offset int) string {
-	if !r.showAddress {
-		return ""
-	}
-	if r.format == dumpCanonical {
+	if r.format == dumpCanonical && r.radix != 'n' {
 		return fmt.Sprintf("%08x  ", offset)
 	}
 	// No trailing space: every body form supplies its own separator, because the
 	// character form's field is four wide *including* it. Adding one here put an
 	// extra space before every `od -c` line.
-	if r.octalOffset {
+	switch r.radix {
+	case 'n':
+		return ""
+	case 'o':
 		return fmt.Sprintf("%07o", offset)
+	case 'd':
+		return fmt.Sprintf("%07d", offset)
+	case 'x':
+		return fmt.Sprintf("%06x", offset)
 	}
 	return fmt.Sprintf("%07x", offset)
 }
 
-func (r dumpRequest) body(chunk []byte) string {
-	switch r.format {
+// bodies is a chunk as each format shows it, a line apiece. When every format shows a byte to
+// a field, each field is as wide as the widest format's, so the lines stand in columns --
+// `-t c -t x1` puts each byte's number under its character -- as GNU od has them.
+func (r dumpRequest) bodies(chunk []byte) []string {
+	formats := append([]dumpFormat{r.format}, r.more...)
+	width := 0
+	for _, format := range formats {
+		switch format {
+		case dumpChars:
+			width = max(width, 4)
+		case dumpHexBytes:
+			width = max(width, 3)
+		default:
+			width = -1
+		}
+		if width < 0 {
+			break
+		}
+	}
+	bodies := make([]string, 0, len(formats))
+	for _, format := range formats {
+		if width < 0 || len(formats) == 1 {
+			bodies = append(bodies, dumpBody(format, chunk))
+			continue
+		}
+		var out strings.Builder
+		for _, b := range chunk {
+			field := dumpCharName(b)
+			if format == dumpHexBytes {
+				field = fmt.Sprintf("%02x", b)
+			}
+			fmt.Fprintf(&out, "%*s", width, field)
+		}
+		bodies = append(bodies, out.String())
+	}
+	return bodies
+}
+
+func dumpBody(format dumpFormat, chunk []byte) string {
+	switch format {
 	case dumpCanonical:
 		return canonicalDumpBody(chunk)
 	case dumpChars:

@@ -720,11 +720,7 @@
       "export with dynamic var name +=": "fail"
     },
     "nul-bytes.test.sh": {
-      "NUL bytes with echo $'\\0' (OSH and zsh agree)": "fail",
-      "NUL bytes with echo -e": "fail",
       "NUL bytes with test -f": "ash-only",
-      "printf - NUL byte in value (OSH and zsh agree)": "fail",
-      "printf - \\0 escape shows NUL byte": "fail",
       "printf - literal NUL in format string": "fail"
     },
     "paren-ambiguity.test.sh": {
@@ -790,8 +786,7 @@
       "username": "fail"
     },
     "quote.test.sh": {
-      "$\"\" is a synonym for \"\"": "ash-only",
-      "$'' supports \\cA escape for Ctrl-A - mask with 0x1f": "fail"
+      "$\"\" is a synonym for \"\"": "ash-only"
     },
     "redirect-command.test.sh": {
       "redirect bash extensions:   [[  ((  for ((": "fail"

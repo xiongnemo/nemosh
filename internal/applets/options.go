@@ -8,11 +8,15 @@ import "fmt"
 type appletOptions struct {
 	given  map[byte]bool
 	values map[byte]string
+	// every is each value a letter was given, in order, for an option that may be repeated.
+	every map[byte][]string
 }
 
 func (o appletOptions) has(letter byte) bool { return o.given[letter] }
 
 func (o appletOptions) value(letter byte) string { return o.values[letter] }
+
+func (o appletOptions) all(letter byte) []string { return o.every[letter] }
 
 // parseAppletOptions splits the leading options off an applet's arguments.
 // `flags` lists the letters that stand alone, `valued` the ones that take the
@@ -27,7 +31,7 @@ func (o appletOptions) value(letter byte) string { return o.values[letter] }
 // says so in one line instead, which is the divergence recorded in
 // docs/design/v0-readiness.md.
 func parseAppletOptions(args []string, flags, valued string) (appletOptions, []string, error) {
-	parsed := appletOptions{given: map[byte]bool{}, values: map[byte]string{}}
+	parsed := appletOptions{given: map[byte]bool{}, values: map[byte]string{}, every: map[byte][]string{}}
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
 		if arg == "--" {
@@ -48,6 +52,7 @@ func parseAppletOptions(args []string, flags, valued string) (appletOptions, []s
 				}
 				parsed.given[letter] = true
 				parsed.values[letter] = value
+				parsed.every[letter] = append(parsed.every[letter], value)
 				index += consumed
 				position = len(arg)
 			default:

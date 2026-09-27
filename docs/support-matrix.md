@@ -682,7 +682,7 @@ behaviour this shell deliberately does not have.
 | `nano` | `-H -R`; one file at a time | refused by name |
 | `nc` | `-l -p -w`; `-e` **refused by name** | refused by name |
 | `nl` | `-b t\|a\|n` | refused by name |
-| `od` | `-b -c -C -d -o -x -v -A -t` | refused by name |
+| `od` | `-b -c -C -d -o -x -v -A -t`; `-t` again for another format, each a line of its own, in columns when each shows a byte to a field, as GNU od lays them out | refused by name |
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
