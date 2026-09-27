@@ -21,13 +21,14 @@ func TestDeclare_associativeArrays(t *testing.T) {
 			name: "two keys", script: "declare -A m\nm[k]=v\nm[o]=2\necho \"${m[k]} ${m[o]}\"\n", want: "v 2\n",
 		},
 		{name: "count", script: "declare -A m\nm[a]=1\nm[b]=2\necho ${#m[@]}\n", want: "2\n"},
-		{name: "keys", script: "declare -A m\nm[a]=1\nm[b]=2\necho ${!m[@]}\n", want: "a b\n"},
-		{name: "values", script: "declare -A m\nm[a]=1\nm[b]=2\necho ${m[@]}\n", want: "1 2\n"},
+		// In bash's hash order, b before a; see array_associative_order.go.
+		{name: "keys", script: "declare -A m\nm[a]=1\nm[b]=2\necho ${!m[@]}\n", want: "b a\n"},
+		{name: "values", script: "declare -A m\nm[a]=1\nm[b]=2\necho ${m[@]}\n", want: "2 1\n"},
 		{name: "overwriting a key", script: "declare -A m\nm[k]=1\nm[k]=2\necho ${m[k]}\n", want: "2\n"},
 		{
 			// A key that was overwritten keeps its place, so the listing is stable.
 			name:   "a rewritten key keeps its position",
-			script: "declare -A m\nm[a]=1\nm[b]=2\nm[a]=3\necho ${!m[@]}\n", want: "a b\n",
+			script: "declare -A m\nm[a]=1\nm[b]=2\nm[a]=3\necho ${!m[@]}\n", want: "b a\n",
 		},
 		{name: "a missing key is empty", script: "declare -A m\necho [${m[nope]}]\n", want: "[]\n"},
 		{name: "an empty one", script: "declare -A e\necho ${#e[@]}\n", want: "0\n"},
@@ -48,7 +49,7 @@ func TestDeclare_associativeArrays(t *testing.T) {
 		{
 			name:   "walking the keys",
 			script: "declare -A m\nm[a]=1\nm[b]=2\nfor k in \"${!m[@]}\"; do printf '%s=%s ' \"$k\" \"${m[$k]}\"; done\necho\n",
-			want:   "a=1 b=2 \n",
+			want:   "b=2 a=1 \n",
 		},
 		{name: "typeset is the same builtin", script: "typeset -A t\nt[z]=9\necho ${t[z]}\n", want: "9\n"},
 		{

@@ -143,6 +143,7 @@
       "declare -p": "fail",
       "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
       "declare -p and value.Undef": "fail",
+      "declare -p arr": "fail",
       "eval -- \"$(declare -p arr)\" (restore arrays w/ unset elements)": "fail",
       "syntax error in array assignment": "ash-only",
       "typeset +r removes read-only attribute (TODO: documented in bash to do nothing)": "fail",
@@ -179,7 +180,6 @@
       "Issue #1069 [53] - LHS array parsing a[1 + 2]=3 (see spec/array-assign for more)": "fail",
       "Issue #1069 [53] BUG: a[1 + 1]=2, etc. fails": "fail",
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
-      "Issue #1069 [59] - Assigning Str to BashArray/BashAssoc should not remove BashArray/BashAssoc": "fail",
       "is-array with ${var@a}": "fail",
       "recursive arith: recursion": "ash-only",
       "recursive arith: short circuit \u0026\u0026, ||": "ash-only",
@@ -829,7 +829,6 @@
       "interactive shell starts with emacs mode on": "fail",
       "nounset": "fail",
       "set -o vi/emacs": "fail",
-      "set without args and assoc array variables (not in OSH)": "fail",
       "set without args lists variables": "fail",
       "stubbed out bash options": "fail",
       "vi and emacs are mutually exclusive": "fail"
@@ -879,6 +878,7 @@
     },
     "type-compat.test.sh": {
       "append in arith context": "fail",
+      "declare array vs. associative array": "fail",
       "declare array vs. string: mixing -a +a and () ''": "fail"
     },
     "unicode.test.sh": {

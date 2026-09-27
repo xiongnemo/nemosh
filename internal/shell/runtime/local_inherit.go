@@ -11,9 +11,7 @@ func (r Runtime) inheritLocal(name string, saved savedVariable) {
 	}
 	if saved.keys != nil {
 		r.arrays.declareAssociative(name)
-		for _, key := range saved.keys.order {
-			r.arrays.setKey(name, key, saved.keys.entries[key])
-		}
+		r.arrays.associative[name] = saved.keys.clone()
 	}
 	if saved.attributes != (variableAttributes{}) {
 		r.attributes[name] = saved.attributes

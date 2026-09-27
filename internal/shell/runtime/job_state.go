@@ -67,6 +67,9 @@ type jobIndexedArray struct {
 type jobAssociativeArray struct {
 	Keys   []string `json:"keys"`
 	Values []string `json:"values"`
+	// Buckets is the size of its hash table, which with the keys' order is where they sit;
+	// see bashHashTable.
+	Buckets uint32 `json:"buckets"`
 }
 
 type jobAttributes struct {
@@ -104,8 +107,8 @@ func (r Runtime) captureJobState(program programNode) jobState {
 		state.Indexed[name] = jobIndexedArray{Values: r.arrays.liveValues(name), Live: r.arrays.liveIndices(name)}
 	}
 	for name, array := range r.arrays.associative {
-		entry := jobAssociativeArray{Keys: append([]string(nil), array.order...)}
-		for _, key := range array.order {
+		entry := jobAssociativeArray{Keys: append([]string(nil), array.keys()...), Buckets: array.table.size}
+		for _, key := range entry.Keys {
 			entry.Values = append(entry.Values, array.entries[key])
 		}
 		state.Associative[name] = entry
@@ -159,9 +162,12 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 	}
 	for name, array := range state.Associative {
 		r.arrays.declareAssociative(name)
+		restored := r.arrays.associative[name]
 		for index, key := range array.Keys {
-			r.arrays.setKey(name, key, array.Values[index])
+			restored.entries[key] = array.Values[index]
 		}
+		// Rebuilt as it walks, so the job's keys come out as the shell's do.
+		restored.table.rebuild(array.Buckets, array.Keys)
 	}
 	for name, attributes := range state.Attributes {
 		r.attributes[name] = variableAttributes{integer: attributes.Integer, lower: attributes.Lower, upper: attributes.Upper, exported: attributes.Exported, nameref: attributes.Nameref}

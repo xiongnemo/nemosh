@@ -8,19 +8,19 @@ import "sort"
 // string keys, because the two answer different questions. An indexed array has an
 // order and gaps -- `a[5]=x` on a three-element array leaves two empty slots, which
 // is bash's behaviour and something a map cannot express. An associative array has
-// keys and no order at all.
+// keys and no order of its own.
 //
-// The keys are kept in the order they were first set, which bash does not promise:
-// its `${!m[@]}` comes out in hash order. Insertion order is chosen here because an
-// answer that changes between two runs of the same script is not something anyone
-// can build on, and it is the only order available that a reader could predict.
+// The keys come out in bash's order, busybox having no associative arrays: its hash
+// table's, which is the same on every run and so can be kept to. See bashHashTable. They
+// came out in the order they were first set, on the belief that bash's changed from one
+// run to the next, and every `declare -p` and `${!m[@]}` of more than one key disagreed.
 
 // associativeArray is one `declare -A` name.
 type associativeArray struct {
 	entries map[string]string
-	// order is the keys as they were first set. A key overwritten keeps its place,
-	// so `m[a]=1; m[b]=2; m[a]=3` still lists a before b.
-	order []string
+	// table is where the keys sit, and so the order they come out in. A key overwritten
+	// keeps its place, as in bash.
+	table bashHashTable
 }
 
 func newAssociativeArray() *associativeArray {
@@ -29,37 +29,31 @@ func newAssociativeArray() *associativeArray {
 
 func (a *associativeArray) set(key, value string) {
 	if _, existing := a.entries[key]; !existing {
-		a.order = append(a.order, key)
+		a.table.insert(key)
 	}
 	a.entries[key] = value
 }
 
 // remove takes a key out, keeping the order of the ones that remain.
-//
-// The order slice is filtered rather than rebuilt from the map, because the map has no
-// order to rebuild it from -- that is the whole reason `order` exists.
 func (a *associativeArray) remove(key string) {
 	if _, present := a.entries[key]; !present {
 		return
 	}
 	delete(a.entries, key)
-	remaining := a.order[:0]
-	for _, existing := range a.order {
-		if existing != key {
-			remaining = append(remaining, existing)
-		}
-	}
-	a.order = remaining
+	a.table.remove(key)
+}
+
+// keys is the keys in the order they come out in.
+func (a *associativeArray) keys() []string {
+	return a.table.order()
 }
 
 func (a *associativeArray) clone() *associativeArray {
-	copied := &associativeArray{
-		entries: make(map[string]string, len(a.entries)),
-		order:   append([]string(nil), a.order...),
-	}
+	copied := &associativeArray{entries: make(map[string]string, len(a.entries))}
 	for key, value := range a.entries {
 		copied.entries[key] = value
 	}
+	copied.table.rebuild(a.table.size, a.keys())
 	return copied
 }
 
@@ -97,7 +91,7 @@ func (a *shellArrays) keysOf(name string) []string {
 	if !ok {
 		return nil
 	}
-	return append([]string(nil), array.order...)
+	return append([]string(nil), array.keys()...)
 }
 
 // valuesOf is `${m[@]}`, in the same order the keys come out in, so a script can walk
@@ -107,8 +101,9 @@ func (a *shellArrays) valuesOf(name string) []string {
 	if !ok {
 		return nil
 	}
-	values := make([]string, 0, len(array.order))
-	for _, key := range array.order {
+	keys := array.keys()
+	values := make([]string, 0, len(keys))
+	for _, key := range keys {
 		values = append(values, array.entries[key])
 	}
 	return values

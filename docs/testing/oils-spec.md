@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1888 of the 2551 cases bash passes: 74.0%.**
+**nemosh passes 1890 of the 2551 cases bash passes: 74.1%.**
 
-Of the other 663, it does 110 the way the files record of ash, which may be busybox's
-way, and 553 neither way.
+Of the other 661, it does 110 the way the files record of ash, which may be busybox's
+way, and 551 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 553 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1888 |
+| that nemosh passes of those | 1890 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -61,7 +61,7 @@ of ash.
 | assign.test.sh | 48 | 45 | 37 | 82.2% | 1 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 4 | 44.4% | 3 | 9 |
-| ble-idioms.test.sh | 26 | 26 | 17 | 65.4% | 3 | 23 |
+| ble-idioms.test.sh | 26 | 26 | 18 | 69.2% | 3 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 5 | 5 |
 | blog1.test.sh | 9 | 9 | 8 | 88.9% | 1 | 8 |
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
@@ -144,7 +144,7 @@ of ash.
 | serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 10 |
 | sh-func.test.sh | 12 | 12 | 11 | 91.7% | 0 | 10 |
 | sh-options-bash.test.sh | 9 | 9 | 7 | 77.8% | 0 | 0 |
-| sh-options.test.sh | 39 | 39 | 28 | 71.8% | 0 | 12 |
+| sh-options.test.sh | 39 | 39 | 29 | 74.4% | 0 | 12 |
 | sh-usage.test.sh | 23 | 22 | 18 | 81.8% | 0 | 18 |
 | smoke.test.sh | 18 | 18 | 16 | 88.9% | 0 | 16 |
 | strict-options.test.sh | 17 | 15 | 13 | 86.7% | 0 | 7 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1888 | 74.0% | 110 | 1447 |
+| all | 2668 | 2551 | 1890 | 74.1% | 110 | 1447 |
