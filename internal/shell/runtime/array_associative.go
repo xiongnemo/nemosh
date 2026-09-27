@@ -1,10 +1,6 @@
 package runtime
 
-import (
-	"context"
-	"sort"
-	"strings"
-)
+import "sort"
 
 // Associative arrays: `declare -A m`, `m[key]=value`, `${m[key]}`, `${!m[@]}`.
 //
@@ -135,22 +131,4 @@ func (a *shellArrays) associativeNames() []string {
 	}
 	sort.Strings(names)
 	return names
-}
-
-// resolveKey turns a subscript into an associative key.
-//
-// Unlike an indexed subscript this is *not* arithmetic: `m[k]` means the key `k`, and
-// evaluating it would look up a variable called k and use its number. The `$` forms
-// are still unwrapped, because `m[$key]` is how a key held in a variable is written --
-// the same limited unwrapping the indexed side does, and with the same gap for a
-// subscript needing full expansion.
-func (r Runtime) resolveKey(ctx context.Context, subscript string) string {
-	text := strings.TrimSpace(subscript)
-	if inner, ok := unwrapSubscriptParameter(text); ok {
-		value, _ := r.lookupParameter(ctx, inner, 0)
-		return value
-	}
-	// A quoted key -- `m["with space"]` -- keeps its text and loses the quotes, which
-	// is what makes a key with a blank in it writable at all.
-	return strings.Trim(text, `"'`)
 }

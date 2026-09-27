@@ -82,12 +82,10 @@
       "${assoc} is like ${assoc[0]}": "fail",
       "BashAssoc ${a[@]@Q}": "fail",
       "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
-      "Indexed array as key of associative array coerces to string (without shopt -s strict_array)": "fail",
       "Slice of associative array doesn't make sense in bash": "fail",
       "associative array and brace expansion": "fail",
       "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "ash-only",
       "bash variable can have an associative array part and a string part": "fail",
-      "lookup with unquoted $key and quoted \"$i$i\"": "fail",
       "readonly associative array can't be modified": "fail",
       "set associative array to indexed array literal (very surprising bash behavior)": "fail",
       "setting key to itself (from bash-bug mailing list)": "ash-only",
@@ -1100,8 +1098,7 @@
       "Bizarre tilde expansion in array index": "fail",
       "Indirect expansion TO fancy expansion features bash disallows": "fail",
       "Indirect expansion, THEN suffix operators": "fail",
-      "Var ref, then error with ${ ? }": "fail",
-      "var ref TO assoc array a[key]": "fail"
+      "Var ref, then error with ${ ? }": "fail"
     },
     "var-sub-quote.test.sh": {
       "$'' allowed within VarSub arguments": "fail",

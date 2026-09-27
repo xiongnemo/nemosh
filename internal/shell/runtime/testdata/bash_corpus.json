@@ -1181,5 +1181,11 @@
     "stdout": "bar x\n[unset]\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m=([sunday]=jam)\nf() { echo \"${m[$1]}\"; }\nf sunday\nk=sunday\necho \"${m[\"$k\"]} ${m[$(echo sunday)]}\"",
+    "stdout": "jam\njam jam\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
