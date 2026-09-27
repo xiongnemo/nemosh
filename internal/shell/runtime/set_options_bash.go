@@ -6,16 +6,17 @@ import "fmt"
 // many scripts, and both were "illegal option": status 2, and under `set -e` the end of the
 // script. Now each is one of these:
 //
-//   - acting: braceexpand (-B) turns brace expansion off and on; histexpand (-H) and history
-//     are the prompt's `!` expansion and its history, on in a session and off in a script,
-//     as in bash;
+//   - acting: braceexpand (-B) turns brace expansion off and on; physical (-P) makes cd and
+//     pwd follow links, see directory_options.go; histexpand (-H) and history are the
+//     prompt's `!` expansion and its history, on in a session and off in a script, as in
+//     bash;
 //   - recorded: remembered and reported, changing nothing -- emacs, the only editing mode
 //     there is; hashall (-h), since a command is looked up afresh each time; nolog, which
 //     bash ignores too; posix, since the behaviour here is busybox ash's, a POSIX shell's,
 //     either way; interactive-comments, shared with shopt's name;
 //   - fixed: igncr is always on, as a script's carriage returns are dropped here as in
-//     busybox-w32; keyword (-k), onecmd (-t), physical (-P) and privileged (-p) are always
-//     off. The value there is is accepted, and the other refused with the reason.
+//     busybox-w32; keyword (-k), onecmd (-t) and privileged (-p) are always off. The value
+//     there is is accepted, and the other refused with the reason.
 //
 // Their letters are left out of `$-`: bash spells B and h there, and busybox, which decides
 // what `$-` says, has neither.
@@ -30,7 +31,7 @@ var bashOptionSpecs = []shellOptionSpec{
 	{letter: 'k', name: "keyword", field: alwaysOff, bash: true},
 	{name: "nolog", field: func(o *shellOptions) *bool { return &o.noLog }},
 	{letter: 't', name: "onecmd", field: alwaysOff, bash: true},
-	{letter: 'P', name: "physical", field: alwaysOff, bash: true},
+	{letter: 'P', name: "physical", field: func(o *shellOptions) *bool { return &o.physical }, bash: true},
 	{name: "posix", field: func(o *shellOptions) *bool { return &o.posix }},
 	{letter: 'p', name: "privileged", field: alwaysOff, bash: true},
 }
@@ -40,7 +41,6 @@ var fixedShellOptions = map[string]string{
 	"igncr":      "a carriage return before a newline is dropped, as busybox-w32 drops it",
 	"keyword":    "an assignment after the command name is an argument",
 	"onecmd":     "a script runs to its end",
-	"physical":   "cd and pwd keep the path as it was given",
 	"privileged": "there is no set-user-ID on Windows to keep",
 }
 

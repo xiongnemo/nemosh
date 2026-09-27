@@ -81,7 +81,7 @@ type shellOptions struct {
 	noEmptyCmdCompletion, progComp, progCompAlias, promptVars                    bool
 	// bash's `set -o` names; see set_options_bash.go. braceExpand and hashAll are on in a
 	// new shell, and histExpand, history and emacs in a session.
-	braceExpand, hashAll, histExpand, emacs, history, noLog, posix bool
+	braceExpand, hashAll, histExpand, emacs, history, noLog, posix, physical bool
 	// login is whether the shell was started as a login shell, which `shopt login_shell`
 	// reports.
 	login bool

@@ -12,8 +12,10 @@ import (
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
 )
 
-func (r Runtime) pwd() int {
-	_, err := fmt.Fprintln(r.streams.Stdout, r.WorkingDirectory())
+func (r Runtime) pwd() int { return r.printDirectory(r.WorkingDirectory()) }
+
+func (r Runtime) printDirectory(directory string) int {
+	_, err := fmt.Fprintln(r.streams.Stdout, directory)
 	// A reader that has gone -- `... | head -1` -- ends the output quietly, as every other
 	// writer here takes it and busybox does; this said `pwd: pipeline downstream closed`.
 	if err != nil && errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
@@ -172,6 +174,10 @@ func (r Runtime) cd(args []string) int { return r.changeDirectory("cd", args) }
 // reported their failures as `cd:` -- so `pushd nosuchdir` blamed a builtin the user had
 // not typed. bash attributes it to the one that was run, and so does this.
 func (r Runtime) changeDirectory(as string, args []string) int {
+	physical, args, ok := r.directoryOptions(as, args)
+	if !ok {
+		return 2
+	}
 	target, printResult, ok := r.cdTarget(as, args)
 	if !ok {
 		return 1
@@ -181,12 +187,12 @@ func (r Runtime) changeDirectory(as string, args []string) int {
 	// it always did rather than complaining once per entry.
 	candidates := r.cdPathTargets(target)
 	for _, candidate := range candidates[:len(candidates)-1] {
-		if status := r.tryChangeDirectory(as, candidate, printResult, true); status == 0 {
+		if status := r.tryChangeDirectory(as, candidate, printResult, true, physical); status == 0 {
 			return 0
 		}
 	}
 	target = candidates[len(candidates)-1]
-	return r.tryChangeDirectory(as, target, printResult, false)
+	return r.tryChangeDirectory(as, target, printResult, false, physical)
 }
 
 // reportCD prints a cd diagnostic unless this attempt is a silent CDPATH probe.
@@ -199,7 +205,7 @@ func reportCD(r Runtime, quiet bool, format string, args ...any) {
 
 // tryChangeDirectory is one attempt. quiet suppresses the diagnostics, which is what lets
 // the CDPATH search try several places without narrating each miss.
-func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet bool) int {
+func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet, physical bool) int {
 	resolved, err := r.ResolveNemoshPath(target)
 	if err != nil {
 		// A host-only UNC path is not a missing directory, it is not a
@@ -245,6 +251,9 @@ func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet bool) 
 	if !info.IsDir() {
 		reportCD(r, quiet, "%s: %s: Not a directory\n", as, target)
 		return 1
+	}
+	if physical {
+		resolved = r.physicalPath(resolved)
 	}
 	previous := r.WorkingDirectory()
 	// The directory is stored under the spelling on disk, so `pwd` and every

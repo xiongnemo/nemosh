@@ -81,7 +81,7 @@ func realpath(path string) (string, error) {
 // printed a path and exited 0, which is `realpath -m` behaviour that neither reference has
 // and that no operand asked for.
 func realpathAbs(path string, missingAllowed bool) (string, error) {
-	resolved, err := filepath.EvalSymlinks(path)
+	resolved, err := FollowLinks(path)
 	if err == nil {
 		return filepath.ToSlash(filepath.Clean(resolved)), nil
 	}
@@ -102,7 +102,7 @@ func realpathAbs(path string, missingAllowed bool) (string, error) {
 	}
 
 	parent, leaf := splitFinalPathElement(path)
-	resolvedParent, parentErr := filepath.EvalSymlinks(parent)
+	resolvedParent, parentErr := FollowLinks(parent)
 	if parentErr != nil {
 		return "", parentErr
 	}

@@ -245,7 +245,7 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 	case "dirs":
 		return r.dirs(args[1:])
 	case "pwd":
-		return r.pwd()
+		return r.pwdBuiltin(args[1:])
 	case "shopt":
 		return r.shoptBuiltin(args[1:])
 	case "declare", "typeset":
