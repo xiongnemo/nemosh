@@ -30,7 +30,7 @@ import (
 // below rather than quietly becoming zero, because zero is a valid index and would
 // silently read the wrong element.
 func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, error) {
-	text := strings.TrimSpace(subscript)
+	text := strings.TrimSpace(withoutDoubleQuotes(subscript))
 	if text == "" {
 		return 0, fmt.Errorf("array subscript: empty")
 	}
@@ -55,6 +55,39 @@ func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, e
 	// same, and refuses one that reaches past the start rather than clamping it:
 	// `${a[-9]}` on three elements is `bad array subscript`, not the first element.
 	return int(value), nil
+}
+
+// withoutDoubleQuotes is an indexed subscript with its double quotes removed, which bash
+// removes before the arithmetic: `${a["0"]}` and `${a["$i"]}` are elements, where they were
+// arithmetic errors that read as nothing. Not a single quote, which bash leaves to be the
+// error, nor a quote escaped or inside a command substitution, nor one without its pair:
+// `a[1"]` is bash's bad substitution, and stays an error.
+func withoutDoubleQuotes(subscript string) string {
+	if !strings.Contains(subscript, `"`) {
+		return subscript
+	}
+	var out strings.Builder
+	depth, quotes := 0, 0
+	for index := 0; index < len(subscript); index++ {
+		switch char := subscript[index]; {
+		case char == '\\' && index+1 < len(subscript):
+			out.WriteString(subscript[index : index+2])
+			index++
+			continue
+		case char == '(' && index > 0 && subscript[index-1] == '$', char == '(' && depth > 0:
+			depth++
+		case char == ')' && depth > 0:
+			depth--
+		case char == '"' && depth == 0:
+			quotes++
+			continue
+		}
+		out.WriteByte(subscript[index])
+	}
+	if quotes%2 != 0 {
+		return subscript
+	}
+	return out.String()
 }
 
 // unwrapSubscriptParameter strips `$name` and `${name}` down to the name, so the

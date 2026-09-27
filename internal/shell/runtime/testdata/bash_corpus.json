@@ -1571,5 +1571,17 @@
     "stdout": "3\n[]\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x=([3]=-{a,b}- y{1,2})\ndeclare -p x\ndeclare -A m=([k]={1..3})\necho \"${m[k]}\"",
+    "stdout": "declare -a x=([3]=\"-{a,b}-\" [4]=\"y1\" [5]=\"y2\")\n{1..3}\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A d=([k]=v [x]=y)\nkey=k\nunset 'd[\"$key\"]'\necho \"${!d[@]}\"\na=(p q r)\necho \"${a[\"1\"]}\"",
+    "stdout": "x\nq\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

@@ -124,10 +124,11 @@ func isDeclarationName(name string) bool {
 //
 // braces is for a declaration utility's operand, which bash does brace-expand: `export
 // y={X,Y}` exports y=X and then y=Y there. busybox has no brace expansion at all. Neither
-// globs one.
+// globs one. Not an array literal, whose elements are expanded one by one when the literal
+// is taken apart: `declare -A m=([k]=-{a,b}-)` was two operands, and m ended as `-b-`.
 func (r Runtime) expandAssignmentWord(ctx context.Context, item word, braces bool, savedStatus int) []string {
 	expander := r.expandingAssignment()
-	if !braces {
+	if !braces || assignsArrayLiteral(item) {
 		return expander.expandWord(ctx, assignmentTildeWord(item), savedStatus)
 	}
 	var values []string
@@ -135,6 +136,16 @@ func (r Runtime) expandAssignmentWord(ctx context.Context, item word, braces boo
 		values = append(values, expander.expandWord(ctx, assignmentTildeWord(braced), savedStatus)...)
 	}
 	return values
+}
+
+// assignsArrayLiteral reports an assignment word whose value is an array literal, `a=(...)`.
+func assignsArrayLiteral(item word) bool {
+	if len(item.parts) == 0 {
+		return false
+	}
+	first := item.parts[0]
+	_, value, found := strings.Cut(first.text, "=")
+	return first.kind == wordPartLiteral && first.quote == quoteUnquoted && found && strings.HasPrefix(value, "(")
 }
 
 // assignmentTildeWord marks an assignment word, whose tilde-prefixes begin after the `=` and

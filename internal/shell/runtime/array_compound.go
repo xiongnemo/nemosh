@@ -119,8 +119,9 @@ func (r Runtime) attributedOrAsWritten(name, value string) string {
 // what keeps `"two words"` one element. Lexing rather than splitting on blanks: the quoting,
 // the parameters and the command substitutions inside all have to work, and the lexer
 // already knows how. A keyed element's value is expanded as an assignment is -- unsplit, with
-// a tilde at its start or after a `:` expanded, as bash 5.3 has `[2]=~:~` -- and its
-// subscript is expanded unsplit too.
+// a tilde at its start or after a `:` expanded, as bash 5.3 has `[2]=~:~`, and neither
+// brace-expanded nor globbed: `[3]=*.py` is the star and `[5]=-{a,b}-` those characters, where
+// they were the matches and `-a- -b-`, joined -- and its subscript is expanded the same way.
 func (r Runtime) compoundElements(ctx context.Context, raw string, savedStatus int) []arrayElement {
 	tokens, err := scanShellTokens(strings.TrimSpace(raw))
 	if err != nil {
@@ -146,7 +147,7 @@ func (r Runtime) compoundElements(ctx context.Context, raw string, savedStatus i
 }
 
 func (r Runtime) expandUnsplit(ctx context.Context, item word, savedStatus int) string {
-	return strings.Join(r.expandingAssignment().expandCommandWord(ctx, item, savedStatus), " ")
+	return strings.Join(r.expandingAssignment().expandWord(ctx, item, savedStatus), " ")
 }
 
 // splitKeyedElement cuts `[subscript]=value` at the `]=` that closes the subscript. The

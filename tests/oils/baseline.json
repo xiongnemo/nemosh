@@ -81,12 +81,10 @@
       "BashAssoc ${a[@]@Q}": "fail",
       "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
       "Slice of associative array doesn't make sense in bash": "fail",
-      "associative array and brace expansion": "fail",
       "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "ash-only",
       "readonly associative array can't be modified": "fail",
       "set associative array to indexed array literal (very surprising bash behavior)": "fail",
-      "setting key to itself (from bash-bug mailing list)": "ash-only",
-      "unset -v and assoc array": "fail"
+      "setting key to itself (from bash-bug mailing list)": "ash-only"
     },
     "array-compat.test.sh": {
       "Array Decay with IFS": "fail",
@@ -98,9 +96,7 @@
       "(strict_array) s+=()": "fail",
       "BashArray cannot be changed to BashAssoc and vice versa": "fail",
       "Tilde expansions in RHS of [k]=v (BashAssoc)": "ash-only",
-      "[k1]=v1 (BashArray)": "fail",
-      "[k1]=v1 looking like brace expansions (BashArray)": "fail",
-      "[k1]=v1 looking like brace expansions (BashAssoc)": "fail",
+      "[k1]=v1 looking like brace expansions (BashArray)": "ash-only",
       "append to element (BashArray)": "fail",
       "append to element (BashAssoc)": "fail",
       "non-index forms of element (BashAssoc)": "fail"
@@ -588,8 +584,7 @@
       "assign to readonly variable": "fail",
       "assign to readonly variable - errexit": "fail",
       "can't export array (strict_array)": "fail",
-      "local after readonly": "fail",
-      "unset -v assoc (related to issue #661)": "fail"
+      "local after readonly": "fail"
     },
     "command-parsing.test.sh": {
       "Redirect on control flow (ignored in OSH)": "fail",

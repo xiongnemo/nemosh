@@ -137,9 +137,11 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 		// arithmetic: `m[k]` removes the key `k`, where `a[k]` on an indexed array
 		// evaluates `k` as a variable and removes that index. Checked before the
 		// arithmetic path because `m[0]` is a perfectly good key and would otherwise be
-		// read as an index into an array that has none.
+		// read as an index into an array that has none. The key is its subscript expanded as a
+		// word, as an assignment's is: `unset 'm[$k]'` and `unset 'm["$k"]'` looked for the
+		// key spelled `$k`, quotes and all, and removed nothing.
 		if array, ok := r.arrays.associative[base]; ok {
-			array.remove(subscript)
+			array.remove(r.resolveKey(ctx, subscript))
 			r.markVarMutation(base)
 			continue
 		}

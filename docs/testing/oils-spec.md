@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1822 of the 2551 cases bash passes: 71.4%.**
+**nemosh passes 1827 of the 2551 cases bash passes: 71.6%.**
 
-Of the other 729, it does 97 the way the files record of ash, which may be busybox's
-way, and 632 neither way.
+Of the other 724, it does 97 the way the files record of ash, which may be busybox's
+way, and 627 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 632 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1822 |
+| that nemosh passes of those | 1827 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -49,10 +49,10 @@ of ash.
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
 | arith.test.sh | 74 | 74 | 59 | 79.7% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 2 | 22.2% | 0 | 9 |
-| array-assoc.test.sh | 42 | 36 | 33 | 91.7% | 0 | 0 |
+| array-assoc.test.sh | 42 | 36 | 35 | 97.2% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 10 | 83.3% | 0 | 1 |
-| array-literal.test.sh | 19 | 16 | 8 | 50.0% | 0 | 0 |
+| array-literal.test.sh | 19 | 16 | 10 | 62.5% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 24 | 60.0% | 0 | 0 |
 | array.test.sh | 78 | 78 | 68 | 87.2% | 1 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 6 | 66.7% | 0 | 1 |
@@ -95,7 +95,7 @@ of ash.
 | builtin-type-bash.test.sh | 21 | 21 | 13 | 61.9% | 1 | 0 |
 | builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 0 | 4 |
 | builtin-umask.test.sh | 24 | 15 | 9 | 60.0% | 0 | 2 |
-| builtin-vars.test.sh | 41 | 39 | 29 | 74.4% | 1 | 23 |
+| builtin-vars.test.sh | 41 | 39 | 30 | 76.9% | 1 | 23 |
 | case_.test.sh | 13 | 12 | 12 | 100.0% | 0 | 9 |
 | command-parsing.test.sh | 5 | 5 | 3 | 60.0% | 0 | 5 |
 | command-sub.test.sh | 30 | 28 | 24 | 85.7% | 1 | 28 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1822 | 71.4% | 97 | 1447 |
+| all | 2668 | 2551 | 1827 | 71.6% | 97 | 1447 |
