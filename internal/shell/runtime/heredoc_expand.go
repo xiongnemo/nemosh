@@ -21,8 +21,10 @@ func (r Runtime) expandHeredocBody(ctx context.Context, body string, savedStatus
 		// A backquoted command, which POSIX expands in a heredoc as it does `$(...)`. The
 		// backquote rewrite runs after the bodies are taken out, so it never reached one,
 		// and `cat <<EOF` with `date` in backquotes printed the backquotes.
+		// Its `\"` is a quote there as in double quotes, busybox's answer; bash keeps the
+		// backslash.
 		if body[index] == '`' {
-			if inner, end, ok := backquoteBody(body, index); ok {
+			if inner, end, ok := backquoteBody(body, index, true); ok {
 				if script, err := r.parseHere(inner); err == nil {
 					expanded.WriteString(r.commandSubstitutionScript(ctx, script, savedStatus))
 					index = end + 1

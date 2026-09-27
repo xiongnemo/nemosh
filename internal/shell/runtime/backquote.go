@@ -47,7 +47,7 @@ func rewriteBackquotes(source string) (string, error) {
 			out.WriteByte(char)
 			continue
 		}
-		body, end, ok := backquoteBody(source, index)
+		body, end, ok := backquoteBody(source, index, quote == '"')
 		if !ok {
 			return "", fmt.Errorf("%w: unterminated command substitution", ErrIncompleteScript)
 		}
@@ -64,8 +64,10 @@ func rewriteBackquotes(source string) (string, error) {
 }
 
 // backquoteBody reads from the backquote at start to its match, dropping the
-// backslashes POSIX makes special there, and reports where the match was.
-func backquoteBody(source string, start int) (string, int, bool) {
+// backslashes POSIX makes special there, and reports where the match was. Inside double
+// quotes a `\"` is one of them, as both references have it: "x `echo \"hi\"`" runs
+// echo "hi". Its backslash was kept, and echo printed the quotes.
+func backquoteBody(source string, start int, inDouble bool) (string, int, bool) {
 	var body strings.Builder
 	for index := start + 1; index < len(source); index++ {
 		char := source[index]
@@ -76,9 +78,9 @@ func backquoteBody(source string, start int) (string, int, bool) {
 			body.WriteByte(char)
 			continue
 		}
-		switch source[index+1] {
-		case '$', '`', '\\':
-			body.WriteByte(source[index+1])
+		switch next := source[index+1]; {
+		case next == '$' || next == '`' || next == '\\' || next == '"' && inDouble:
+			body.WriteByte(next)
 			index++
 		default:
 			body.WriteByte(char)
