@@ -135,7 +135,8 @@ func TestKill_listsSignals(t *testing.T) {
 	if status != 0 {
 		t.Fatalf("status = %d", status)
 	}
-	for _, want := range []string{"SIGHUP", "SIGKILL", "SIGTERM"} {
+	// Without SIG, as busybox lists them.
+	for _, want := range []string{" 1) HUP\n", " 9) KILL\n", "15) TERM\n"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("kill -l did not list %s:\n%s", want, stdout)
 		}

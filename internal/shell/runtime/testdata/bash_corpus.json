@@ -1409,5 +1409,35 @@
     "stdout": "st=0 [unset]\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "kill -l | head -2",
+    "stdout": " 1) HUP\n 2) INT\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "kill -l 0 INT 143 64 SIGKILL",
+    "stdout": "EXIT\n2\nTERM\n64\n9\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "kill -l NOPE 2>/dev/null\necho \"st=$?\"",
+    "stdout": "st=1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 &\np=$!\nkill -9999 $p 2>/dev/null\necho \"st=$?\"\nkill $p\nwait $p\necho \"w=$?\"",
+    "stdout": "st=1\nw=143\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "sleep 5 &\np=$!\nkill -n 9 $p\nwait $p\necho \"w=$?\"",
+    "stdout": "w=137\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

@@ -55,6 +55,12 @@ func ParseSignal(spec string) (int, error) {
 				return 0, fmt.Errorf("%d is SIG%s: %w", number, name, ErrCannotSuspend)
 			}
 		}
+		// A number is a signal only if the table has it, as busybox-w32 has it: `kill -9999`
+		// was accepted, and ended its target as though by a signal of that number, status
+		// 10127.
+		if number != 0 && !isSignalNumber(number) {
+			return 0, fmt.Errorf("%w: %s", ErrUnknownSignal, spec)
+		}
 		return number, nil
 	}
 	name := strings.TrimPrefix(strings.ToUpper(spec), "SIG")
@@ -65,6 +71,16 @@ func ParseSignal(spec string) (int, error) {
 		return 0, fmt.Errorf("%s: %w", name, ErrCannotSuspend)
 	}
 	return 0, fmt.Errorf("%w: %s", ErrUnknownSignal, spec)
+}
+
+// isSignalNumber reports a number the table has.
+func isSignalNumber(number int) bool {
+	for _, known := range signalNumbers {
+		if known == number {
+			return true
+		}
+	}
+	return false
 }
 
 // Signal is one entry of the table, for listing.

@@ -33,7 +33,7 @@ func (r Runtime) killBuiltin(args []string) int {
 		return 1
 	}
 	if signal == listSignals {
-		return r.listKillSignals()
+		return r.listKillSignals(operands)
 	}
 	if len(operands) == 0 {
 		fmt.Fprintln(r.streams.Stderr, "kill: expected a job or a process id")
@@ -135,11 +135,16 @@ func parseKillSignal(args []string) (int, []string, error) {
 		return signal, args, nil
 	}
 	spec := args[0][1:]
-	if spec == "l" {
+	// -L is bash's spelling of -l.
+	if spec == "l" || spec == "L" {
 		return listSignals, args[1:], nil
 	}
-	// `-s NAME`, the POSIX spelling, which busybox has; it was an unknown signal named s.
-	if spec == "s" && len(args) > 1 {
+	// `-s NAME`, the POSIX spelling, which busybox has, and bash's `-n NUMBER`; each was an
+	// unknown signal named s or n.
+	if spec == "n" && len(args) == 1 {
+		return 0, nil, fmt.Errorf("-n: option requires an argument")
+	}
+	if (spec == "s" || spec == "n") && len(args) > 1 {
 		number, err := proc.ParseSignal(args[1])
 		if err != nil {
 			return 0, nil, err
@@ -151,15 +156,6 @@ func parseKillSignal(args []string) (int, []string, error) {
 		return 0, nil, err
 	}
 	return number, args[1:], nil
-}
-
-// listKillSignals lists what the shell can act on, not the whole POSIX set: a
-// name it would accept and then ignore would be worse than one it refuses.
-func (r Runtime) listKillSignals() int {
-	for _, signal := range proc.Signals() {
-		fmt.Fprintf(r.streams.Stdout, "%2d) SIG%s\n", signal.Number, signal.Name)
-	}
-	return 0
 }
 
 // defaultKillSignal is TERM, as everywhere.

@@ -423,15 +423,10 @@
     "builtin-kill.test.sh": {
       "kill -15 %% kills current job": "fail",
       "kill -15 %- kills previous job": "fail",
-      "kill -9999 is an invalid signal": "fail",
-      "kill -L also shows signals": "fail",
       "kill -L checks for invalid input": "fail",
-      "kill -l 0 INT lists both signals": "fail",
-      "kill -l 0 returns EXIT": "fail",
       "kill -l 10 TERM translates between names and numbers": "fail",
       "kill -l with 128 is invalid": "fail",
-      "kill -l with exit code": "fail",
-      "kill -n 9 specifies the signal number": "fail"
+      "kill -l with exit code": "fail"
     },
     "builtin-meta.test.sh": {
       "builtin": "fail",

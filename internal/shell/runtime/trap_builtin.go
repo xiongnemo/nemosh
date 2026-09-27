@@ -31,7 +31,7 @@ func (r Runtime) trap(args []string) int {
 		args = args[1:]
 	case len(args) > 0 && args[0] == "-l":
 		// bash's `trap -l` is `kill -l`, and so is this.
-		return r.listKillSignals()
+		return r.listKillSignals(nil)
 	case len(args) > 0 && args[0] == "-p":
 		return r.printTraps(args[1:])
 	case len(args) > 0 && args[0] == "-P":
