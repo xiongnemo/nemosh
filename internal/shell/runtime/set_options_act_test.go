@@ -126,12 +126,12 @@ func TestRuntime_usesPS4AsTheTracePrefix(t *testing.T) {
 	}
 }
 
-// -n and -v both need input that is still unread when the option is set, and a
-// script here is parsed in full before any of it runs. Half-working would be
-// the same lie as storing the flag and reporting it through `$-`.
+// -v needs input that is still unread when the option is set, to echo it as it is read, and
+// a script here is parsed in full before any of it runs. Half-working would be the same lie
+// as storing the flag and reporting it through `$-`. -n, which only has to run nothing
+// more, acts; see set_noexec_test.go.
 func TestRuntime_refusesTheOptionsThatNeedUnreadInput(t *testing.T) {
 	for _, testCase := range []struct{ option, fragment string }{
-		{option: "-n", fragment: "no unread input left"},
 		{option: "-v", fragment: "read one by one to be echoed"},
 	} {
 		t.Run(testCase.option, func(t *testing.T) {

@@ -1559,5 +1559,17 @@
     "stdout": "y\nz\nst=1\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo 1\nset -n\necho 2\nexit 5",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "( set -n; echo 2 ); echo 3\nx=$(set -n; echo hi); echo \"[$x]\"",
+    "stdout": "3\n[]\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

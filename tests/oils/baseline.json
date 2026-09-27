@@ -880,7 +880,6 @@
       "$- with -c": "fail",
       "$- with interactive shell": "fail",
       "$- with pipefail": "fail",
-      "-n for no execution (useful with --ast-output)": "fail",
       "-u is nounset": "fail",
       "interactive shell starts with emacs mode on": "fail",
       "nounset": "fail",

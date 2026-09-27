@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 func (r Runtime) executeTypedScript(ctx context.Context, script Script) (int, flowControl) {
@@ -55,7 +56,19 @@ func (r Runtime) executeStatements(ctx context.Context, program []programNode, s
 	return status, flowNone
 }
 
+// readsWithoutExecuting is `set -n` in a shell that is not a session: nothing after it runs,
+// and the shell ends as an `exec` ends it, with status 0 and no EXIT trap, which is something
+// to run too. Both references go on reading instead and skip each command, which comes to the
+// same everywhere but a loop: there they skip its commands for ever. A session ignores it, as
+// bash's does. It was refused, as needing input still unread, and the script went on.
+func (r Runtime) readsWithoutExecuting() bool {
+	return r.options != nil && r.options.noExec && !strings.Contains(r.options.invocation, "i")
+}
+
 func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus int) lineResult {
+	if r.readsWithoutExecuting() {
+		return lineResult{control: flowExec}
+	}
 	switch value := node.(type) {
 	case backgroundNode:
 		body := jobBody(value.value)

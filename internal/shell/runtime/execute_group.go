@@ -7,6 +7,11 @@ import (
 )
 
 func (r Runtime) executeCommandNode(ctx context.Context, command commandNode, savedStatus int) lineResult {
+	// A command after `set -n` on the same line, or in the same group; see
+	// readsWithoutExecuting.
+	if r.readsWithoutExecuting() {
+		return lineResult{control: flowExec}
+	}
 	switch value := command.(type) {
 	case simpleCommand:
 		return r.executeSimpleCommand(ctx, value, savedStatus)

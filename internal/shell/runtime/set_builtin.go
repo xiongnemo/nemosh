@@ -157,9 +157,6 @@ func inertOptionRefusal(letter byte, enable bool) error {
 var inertShellOptions = map[byte]string{
 	'b': "asynchronous job completion is reported when `wait` or `jobs` asks, " +
 		"not the moment it happens; there is no notification channel to switch on",
-	'n': "a script is parsed in full before any of it runs, so by the time this " +
-		"option is set there is no unread input left to withhold; " +
-		"`nemosh -n SCRIPT` is the syntax check",
 	'v': "a script is parsed in full before any of it runs, so there is no " +
 		"moment at which its lines are read one by one to be echoed",
 	'm': "there is no job control to switch on: nothing here can stop a job " +

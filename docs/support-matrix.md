@@ -46,7 +46,7 @@ these names why, and names what busybox-w32 does with the same name.
 | `ulimit` | 126 | Windows has no `getrlimit`. busybox-w32 does not implement it either — it keeps the name and returns 1 with no message. |
 | `fg`, `bg` | 126 | They resume a *suspended* job and nothing here can suspend one — see **Process control** below, which is the long answer. busybox-w32 compiles both out under `#if JOBS`. These two say **"not implemented, and will not be"** where the rows above say only "not implemented", because they are settled rather than pending. |
 | `set -b` | 2 | Completion is already reported at the next prompt, which is the default behaviour it would be switching off. What `-b` asks for is the report *immediately*, mid-command, and there is no notification channel to switch on for that. |
-| `set -n`, `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to withhold or echo. `nemosh -n SCRIPT` is the syntax check; `nemosh -v` is refused for the same reason. |
+| `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to echo. `nemosh -v` is refused for the same reason. `set -n` acts: nothing after it runs, as in both references, and `nemosh -n SCRIPT` is the syntax check. |
 | `set -m`, `set -o monitor` | 2 | There is no job control to switch on: nothing here can stop a job and resume it, which is what `fg` and `bg` are refused for too. busybox-w32 accepts the option, with job control compiled out. |
 | `set -o vi` | 2 | The line editor's keys are emacs's, and there is no vi mode to switch to. busybox-w32 has one. |
 
