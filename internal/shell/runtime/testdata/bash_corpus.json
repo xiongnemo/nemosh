@@ -1079,5 +1079,11 @@
     "stdout": "st=127\nback\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "set -- a\nshopt -s shift_verbose\nshift 5 2>/dev/null\necho \"st=$? $#\"",
+    "stdout": "st=1 1\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

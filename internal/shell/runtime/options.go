@@ -60,6 +60,8 @@ type shellOptions struct {
 	// expandAliases is `shopt -s expand_aliases`, on in a new shell: an alias is substituted
 	// for the command name it matches; see substituteAliases.
 	expandAliases bool
+	// shiftVerbose is `shopt -s shift_verbose`: a shift past the last parameter says so.
+	shiftVerbose bool
 	// The shopt names of the interactive layer, which are remembered and reported and
 	// change nothing; see shopt_table.go.
 	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool

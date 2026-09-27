@@ -122,7 +122,7 @@ var shoptOptions = []shoptOption{
 	recorded("promptvars", true, func(o *shellOptions) *bool { return &o.promptVars },
 		"the prompt's parameters are expanded either way"),
 	{name: "restricted_shell", kind: shoptStartup},
-	fixed("shift_verbose", false, notYet),
+	acts("shift_verbose", func(o *shellOptions) *bool { return &o.shiftVerbose }),
 	fixed("sourcepath", false, notYet),
 	fixed("varredir_close", false, "a {name} redirection's descriptor stays open after the command"),
 	fixed("xpg_echo", false, notYet),

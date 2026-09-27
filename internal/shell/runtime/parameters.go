@@ -35,6 +35,13 @@ func (r Runtime) shift(args []string) int {
 		count = parsed
 	}
 	if count > len(r.params.values) {
+		// Both references are silent here; bash says so under `shopt -s shift_verbose`, in
+		// these words.
+		if r.options.shiftVerbose && len(args) > 0 {
+			fmt.Fprintf(r.streams.Stderr, "shift: %s: shift count out of range\n", args[0])
+		} else if r.options.shiftVerbose {
+			fmt.Fprintln(r.streams.Stderr, "shift: shift count out of range")
+		}
 		return 1
 	}
 	r.params.values = r.params.values[count:]
