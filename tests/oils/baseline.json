@@ -230,8 +230,7 @@
     },
     "builtin-bash.test.sh": {
       "bad help topic": "fail",
-      "help": "fail",
-      "mapfile (delimiter): -d '' (null-separated)": "fail"
+      "help": "fail"
     },
     "builtin-bind.test.sh": {
       "bind -X": "fail",
@@ -721,19 +720,9 @@
       "export with dynamic var name +=": "fail"
     },
     "nul-bytes.test.sh": {
-      "Compare \\x00 byte versus \\x01 byte - command sub": "fail",
-      "Compare \\x00 byte versus \\x01 byte - mapfile builtin": "fail",
-      "Compare \\x00 byte versus \\x01 byte - read -n": "fail",
-      "Compare \\x00 byte versus \\x01 byte - read builtin": "fail",
-      "Issue 2269 - Do NUL bytes match ? in ${a#?}": "fail",
-      "Issue 2269 Reduction": "fail",
-      "NUL bytes and IFS splitting": "fail",
-      "NUL bytes with ${#s} (OSH and zsh agree)": "fail",
       "NUL bytes with echo $'\\0' (OSH and zsh agree)": "fail",
       "NUL bytes with echo -e": "fail",
-      "NUL bytes with test -f": "fail",
-      "NUL bytes with test -n": "fail",
-      "Strip ops # ## % %% with NUL bytes": "fail",
+      "NUL bytes with test -f": "ash-only",
       "printf - NUL byte in value (OSH and zsh agree)": "fail",
       "printf - \\0 escape shows NUL byte": "fail",
       "printf - literal NUL in format string": "fail"

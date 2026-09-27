@@ -40,6 +40,11 @@ func collectReadLine(ctx context.Context, input io.Reader, options readOptions) 
 		count, err := readWithContext(ctx, input, buffer)
 		if count > 0 {
 			char := buffer[0]
+			// A NUL is dropped, as both references drop it, unless it is the delimiter:
+			// `read -d ''` reads up to one.
+			if char == 0 && options.delimiter != 0 {
+				continue
+			}
 			switch {
 			case pendingEscape:
 				pendingEscape = false

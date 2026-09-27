@@ -39,8 +39,10 @@ func decodeAnsiQuote(input string) (string, int, bool) {
 			index++
 			continue
 		}
+		// A NUL an escape makes is dropped, as busybox drops it: a shell string holds none.
+		// bash ends the string there instead.
 		text, width := decodeAnsiEscape(input[index:])
-		out.WriteString(text)
+		out.WriteString(strings.ReplaceAll(text, "\x00", ""))
 		index += width
 	}
 	// Unterminated. Reported as not an ANSI quote at all, so the caller's ordinary
@@ -111,13 +113,10 @@ func decodeAnsiEscape(input string) (string, int) {
 		return decodeAnsiControl(input)
 	}
 	if input[1] >= '0' && input[1] <= '7' {
-		// Octal, up to three digits, and the leading zero is optional -- `\101` is
-		// A and so is `\0101`.
-		start := 1
-		if input[1] == '0' && len(input) > 2 {
-			start = 2
-		}
-		return decodeAnsiNumber(input, start, 8, 3)
+		// Octal, one to three digits, a leading 0 among them, as both references read it:
+		// `\101` is A, `\0101` is \010 and a 1, and `\0` is NUL. The 0 was taken for a
+		// prefix, so `\0101` was A and `\0` alone the two characters.
+		return decodeAnsiNumber(input, 1, 8, 3)
 	}
 	return input[:2], 2
 }

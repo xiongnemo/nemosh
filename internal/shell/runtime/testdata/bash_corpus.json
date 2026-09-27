@@ -1691,5 +1691,11 @@
     "stdout": "2 25 25 5 2 25 y\n1 z\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x=$(printf '.\\0.'); echo ${#x}\nprintf '.\\0.\\n' | { read x; echo ${#x}; }\nx=$'a\\0b'; echo ${#x}\nprintf %s $'\\0101' | od -A n -t x1",
+    "stdout": "2\n2\n2\n 08 31\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

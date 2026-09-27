@@ -33,7 +33,8 @@ func TestAnsiQuoting_decodesTheEscapes(t *testing.T) {
 		{name: "a vertical tab", script: "printf '%s' $'\\v'\n", want: "\v"},
 		{name: "hex", script: "printf '%s' $'\\x41'\n", want: "A"},
 		{name: "octal", script: "printf '%s' $'\\101'\n", want: "A"},
-		{name: "octal with a leading zero", script: "printf '%s' $'\\0101'\n", want: "A"},
+		// Three digits at most, a leading 0 among them, in busybox-w32 and bash alike: \010 and a 1.
+		{name: "octal with a leading zero", script: "printf '%s' $'\\0101'\n", want: "\b1"},
 		{name: "a unicode code point", script: "printf '%s' $'\\u00e9'\n", want: "é"},
 		{name: "a long unicode code point", script: "printf '%s' $'\\U0001F600'\n", want: "😀"},
 		{name: "a control character", script: "printf '%s' $'\\cA'\n", want: "\x01"},

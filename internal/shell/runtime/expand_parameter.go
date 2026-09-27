@@ -125,7 +125,9 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return ""
 	}
-	return strings.TrimRight(stdout.String(), "\n")
+	// Without its NUL bytes, as both references take it -- a shell string holds none -- and
+	// then without its trailing newlines. bash warns of it; busybox does not.
+	return strings.TrimRight(strings.ReplaceAll(stdout.String(), "\x00", ""), "\n")
 }
 
 func isAssignment(arg string) bool {

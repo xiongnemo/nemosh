@@ -107,6 +107,11 @@ func readMapfileLines(ctx context.Context, input io.Reader, options mapfileOptio
 		if options.strip {
 			chunk = strings.TrimSuffix(chunk, string(options.delimiter))
 		}
+		// A line ends at its first NUL, as bash's mapfile ends it -- `read` drops the NUL
+		// instead, in bash as here -- and so does a `-d ''` element without -t.
+		if before, _, cut := strings.Cut(chunk, "\x00"); cut {
+			chunk = before
+		}
 		lines = append(lines, chunk)
 		if err != nil {
 			break

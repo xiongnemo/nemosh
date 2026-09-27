@@ -138,7 +138,8 @@ func (r Runtime) transformList(ctx context.Context, name string, operator byte) 
 	return transformed, true, nil
 }
 
-// decodeAnsiText decodes backslash escapes the way `$'...'` does, over a whole value.
+// decodeAnsiText decodes backslash escapes the way `$'...'` does, over a whole value. A NUL
+// one makes ends the text, as bash ends it; `@E` is bash's, which busybox has not got.
 func decodeAnsiText(text string) string {
 	var out strings.Builder
 	for index := 0; index < len(text); {
@@ -148,6 +149,10 @@ func decodeAnsiText(text string) string {
 			continue
 		}
 		decoded, width := decodeAnsiEscape(text[index:])
+		if before, _, cut := strings.Cut(decoded, "\x00"); cut {
+			out.WriteString(before)
+			break
+		}
 		out.WriteString(decoded)
 		index += width
 	}
