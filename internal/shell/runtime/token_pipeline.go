@@ -13,6 +13,9 @@ type pipelineStageRun func(context.Context, Runtime, int) lineResult
 type tokenPipelineStage struct {
 	runtime Runtime
 	run     pipelineStageRun
+	// inShell is the last stage under lastpipe, whose runtime is the shell's own; see
+	// lastpipe.go. Its jobs are the shell's, and are left running when it ends.
+	inShell bool
 }
 
 type tokenPipeline struct {
@@ -50,11 +53,11 @@ func (r Runtime) prepareTokenPipeline(ctx context.Context, commands [][]shellTok
 func (r Runtime) preparePipeline(ctx context.Context, runs []pipelineStageRun) (tokenPipeline, error) {
 	stages := make([]tokenPipelineStage, len(runs))
 	for index, run := range runs {
-		stage, err := r.snapshot(ctx)
+		stage, inShell, err := r.stageRuntime(ctx, index == len(runs)-1)
 		if err != nil {
 			return tokenPipeline{}, errors.Join(err, closeTokenPipelineStages(stages[:index]))
 		}
-		stages[index] = tokenPipelineStage{runtime: stage, run: run}
+		stages[index] = tokenPipelineStage{runtime: stage, run: run, inShell: inShell}
 	}
 	pipeline := tokenPipeline{stages: stages, endpoints: make([]*pipelineEndpoint, 0, 2*(len(stages)-1))}
 	for index := 0; index < len(stages)-1; index++ {
@@ -91,7 +94,9 @@ func closeTokenPipelineStages(stages []tokenPipelineStage) error {
 	var closeErr error
 	for index := range stages {
 		if stages[index].runtime.fds != nil {
-			stages[index].runtime.jobScope.cancelAndDrain()
+			if !stages[index].inShell {
+				stages[index].runtime.jobScope.cancelAndDrain()
+			}
 			closeErr = errors.Join(closeErr, stages[index].runtime.fds.closeAll())
 		}
 	}
@@ -109,7 +114,9 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 			result := stage.runtime.guardedRun("running a pipeline stage", func() lineResult {
 				return stage.run(ctx, stage.runtime, savedStatus)
 			})
-			stage.runtime.jobScope.cancelAndDrain()
+			if !stage.inShell {
+				stage.runtime.jobScope.cancelAndDrain()
+			}
 			if err := stage.runtime.fds.closeAll(); err != nil && result.status == 0 {
 				fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 				result.status = 1
@@ -135,6 +142,10 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 		statuses = append(statuses, result.status)
 	}
 	r.recordPipeStatus(statuses...)
+	// An exit, return or break in a stage that ran in the shell is the shell's.
+	if last := results[len(results)-1]; last.control != flowNone && pipeline.stages[len(results)-1].inShell {
+		return last
+	}
 	status := results[len(results)-1].status
 	if r.options.pipefail {
 		for index := len(results) - 1; index >= 0; index-- {

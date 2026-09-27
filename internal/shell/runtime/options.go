@@ -54,6 +54,9 @@ type shellOptions struct {
 	// inheritErrExit is `shopt -s inherit_errexit`: a command substitution keeps `set -e`,
 	// which it otherwise does not; see commandSubstitutionScript.
 	inheritErrExit bool
+	// lastPipe is `shopt -s lastpipe`: a pipeline's last stage runs in the shell; see
+	// lastpipe.go.
+	lastPipe bool
 	// The shopt names of the interactive layer, which are remembered and reported and
 	// change nothing; see shopt_table.go.
 	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool

@@ -99,7 +99,7 @@ var shoptOptions = []shoptOption{
 	acts("inherit_errexit", func(o *shellOptions) *bool { return &o.inheritErrExit }),
 	recorded("interactive_comments", true, func(o *shellOptions) *bool { return &o.interactiveComments },
 		"a # at the start of a word always begins a comment"),
-	fixed("lastpipe", false, notYet),
+	acts("lastpipe", func(o *shellOptions) *bool { return &o.lastPipe }),
 	recorded("lithist", false, func(o *shellOptions) *bool { return &o.litHist }, noHistory),
 	fixed("localvar_inherit", false, notYet),
 	fixed("localvar_unset", true, "unsetting a caller's local leaves it unset until that function returns, as busybox has it"),

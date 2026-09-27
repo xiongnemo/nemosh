@@ -1049,5 +1049,29 @@
     "stdout": "st=0\nshopt -u login_shell\n",
     "status": 1,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s lastpipe\necho y | read w\necho \"[$w]\"",
+    "stdout": "[y]\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s lastpipe\nn=0\nprintf 'a\\nb\\nc\\n' | while read l; do n=$((n+1)); done\necho \"n=$n\"",
+    "stdout": "n=3\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s lastpipe\nf() { echo | return 4; echo after; }\nf\necho \"st=$?\"",
+    "stdout": "st=4\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s lastpipe\necho | exit 3\necho after",
+    "stdout": "",
+    "status": 3,
+    "reference": "bash-5.3"
   }
 ]

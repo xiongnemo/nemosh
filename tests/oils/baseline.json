@@ -229,8 +229,7 @@
       "${###2}": "fail",
       "${###}": "fail",
       "${##2}": "fail",
-      "${#1#'###'}": "ash-only",
-      "Julia example from spec/oil-user-feedback": "fail"
+      "${#1#'###'}": "ash-only"
     },
     "blog2.test.sh": {
       "-a -a": "fail",
@@ -267,8 +266,7 @@
     "builtin-bash.test.sh": {
       "bad help topic": "fail",
       "help": "fail",
-      "mapfile (delimiter): -d '' (null-separated)": "fail",
-      "mapfile / readarray stdin  TODO: Fix me.": "fail"
+      "mapfile (delimiter): -d '' (null-separated)": "fail"
     },
     "builtin-bind.test.sh": {
       "bind -X": "fail",
@@ -922,8 +920,6 @@
     "pipeline.test.sh": {
       "Exit code is last status": "fail",
       "SIGPIPE causes pipeline to die (regression for issue #295)": "fail",
-      "shopt -s lastpipe (always on in OSH)": "fail",
-      "shopt -s lastpipe (always on in OSH) #2": "fail",
       "|\u0026": "flaky"
     },
     "posix.test.sh": {

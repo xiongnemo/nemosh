@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1661 of the 2551 cases bash passes: 65.1%.**
+**nemosh passes 1665 of the 2551 cases bash passes: 65.3%.**
 
-Of the other 890, it does 103 the way the files record of ash, which may be busybox's
-way, and 787 neither way.
+Of the other 886, it does 103 the way the files record of ash, which may be busybox's
+way, and 783 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 787 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1661 |
+| that nemosh passes of those | 1665 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -63,12 +63,12 @@ of ash.
 | ble-features.test.sh | 9 | 9 | 3 | 33.3% | 3 | 9 |
 | ble-idioms.test.sh | 26 | 26 | 15 | 57.7% | 3 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 2 | 5 |
-| blog1.test.sh | 9 | 9 | 3 | 33.3% | 1 | 8 |
+| blog1.test.sh | 9 | 9 | 4 | 44.4% | 1 | 8 |
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
 | bool-parse.test.sh | 8 | 8 | 6 | 75.0% | 0 | 8 |
 | brace-expansion.test.sh | 55 | 54 | 47 | 87.0% | 3 | 8 |
 | bugs.test.sh | 28 | 28 | 19 | 67.9% | 7 | 28 |
-| builtin-bash.test.sh | 13 | 13 | 9 | 69.2% | 0 | 10 |
+| builtin-bash.test.sh | 13 | 13 | 10 | 76.9% | 0 | 10 |
 | builtin-bind.test.sh | 9 | 8 | 0 | 0.0% | 0 | 0 |
 | builtin-bracket.test.sh | 47 | 45 | 37 | 82.2% | 0 | 36 |
 | builtin-cd.test.sh | 25 | 22 | 11 | 50.0% | 2 | 11 |
@@ -131,7 +131,7 @@ of ash.
 | nul-bytes.test.sh | 16 | 16 | 0 | 0.0% | 0 | 12 |
 | paren-ambiguity.test.sh | 8 | 8 | 4 | 50.0% | 2 | 8 |
 | parse-errors.test.sh | 27 | 25 | 19 | 76.0% | 2 | 22 |
-| pipeline.test.sh | 26 | 26 | 21 | 80.8% | 0 | 17 |
+| pipeline.test.sh | 26 | 26 | 23 | 88.5% | 0 | 17 |
 | posix.test.sh | 15 | 15 | 13 | 86.7% | 0 | 14 |
 | print-source-code.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
 | process-sub.test.sh | 9 | 9 | 9 | 100.0% | 0 | 5 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1661 | 65.1% | 103 | 1447 |
+| all | 2668 | 2551 | 1665 | 65.3% | 103 | 1447 |
