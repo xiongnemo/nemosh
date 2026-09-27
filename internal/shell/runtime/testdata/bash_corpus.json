@@ -1073,5 +1073,11 @@
     "stdout": "",
     "status": 3,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s expand_aliases\nalias e=echo\nshopt -u expand_aliases\ne hi 2>/dev/null\necho \"st=$?\"\nshopt -s expand_aliases\ne back",
+    "stdout": "st=127\nback\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

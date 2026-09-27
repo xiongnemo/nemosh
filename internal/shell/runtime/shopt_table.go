@@ -27,7 +27,7 @@ type shoptOption struct {
 	name  string
 	kind  shoptKind
 	field func(*shellOptions) *bool
-	// on is a fixed option's value, and a recorded option's value in a new shell.
+	// on is a fixed option's value, and any other's in a new shell.
 	on bool
 	// why says what a recorded option would do, or why a fixed one has the value it has.
 	why string
@@ -35,6 +35,11 @@ type shoptOption struct {
 
 func acts(name string, field func(*shellOptions) *bool) shoptOption {
 	return shoptOption{name: name, kind: shoptActs, field: field}
+}
+
+// actsOn is an option that acts and is on in a new shell.
+func actsOn(name string, field func(*shellOptions) *bool) shoptOption {
+	return shoptOption{name: name, kind: shoptActs, field: field, on: true}
 }
 
 func recorded(name string, on bool, field func(*shellOptions) *bool, why string) shoptOption {
@@ -80,7 +85,8 @@ var shoptOptions = []shoptOption{
 	recorded("dirspell", false, func(o *shellOptions) *bool { return &o.dirSpell }, noCompletion),
 	acts("dotglob", func(o *shellOptions) *bool { return &o.dotGlob }),
 	fixed("execfail", false, "an exec that cannot run its command ends a script"),
-	fixed("expand_aliases", true, "aliases are expanded in a script as well as at the prompt, as busybox expands them"),
+	// On in a new shell, script or prompt, as busybox expands aliases in both.
+	actsOn("expand_aliases", func(o *shellOptions) *bool { return &o.expandAliases }),
 	fixed("extdebug", false, "there is no debugger support"),
 	fixed("extglob", true, "the matcher knows ?() *() +() @() !() whether or not it is asked to"),
 	fixed("extquote", false, "$'...' inside a double-quoted ${...} stays as written, as it does in busybox"),
@@ -131,12 +137,12 @@ func lookupShoptOption(name string) (shoptOption, bool) {
 	return shoptOption{}, false
 }
 
-// newShellOptions is a new shell's options: all of them off, except the recorded ones bash
-// starts with on.
+// newShellOptions is a new shell's options: all of them off, except the ones the table
+// starts on.
 func newShellOptions() *shellOptions {
 	options := &shellOptions{}
 	for _, option := range shoptOptions {
-		if option.kind == shoptRecorded && option.on {
+		if option.field != nil && option.on {
 			*option.field(options) = true
 		}
 	}

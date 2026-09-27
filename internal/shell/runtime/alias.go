@@ -90,8 +90,10 @@ func (r Runtime) unalias(args []string) int {
 // `alias ls='ls --color'` mean what it looks like. A value ending in a blank
 // makes the word after it eligible too, which is what `alias sudo='sudo '` is
 // for.
+//
+// `shopt -u expand_aliases` turns it off, as it does in bash.
 func (r Runtime) substituteAliases(args []string) []string {
-	if len(r.aliases) == 0 || len(args) == 0 {
+	if !r.options.expandAliases || len(r.aliases) == 0 || len(args) == 0 {
 		return args
 	}
 	seen := make(map[string]bool, maxAliasSubstitutions)

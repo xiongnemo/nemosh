@@ -57,6 +57,9 @@ type shellOptions struct {
 	// lastPipe is `shopt -s lastpipe`: a pipeline's last stage runs in the shell; see
 	// lastpipe.go.
 	lastPipe bool
+	// expandAliases is `shopt -s expand_aliases`, on in a new shell: an alias is substituted
+	// for the command name it matches; see substituteAliases.
+	expandAliases bool
 	// The shopt names of the interactive layer, which are remembered and reported and
 	// change nothing; see shopt_table.go.
 	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool

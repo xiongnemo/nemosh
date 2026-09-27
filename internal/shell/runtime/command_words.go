@@ -84,7 +84,7 @@ func (r Runtime) expandLeadingAssignments(ctx context.Context, assignments []wor
 // x=$words` exports the value whole in busybox-w32, where it was split and only its first
 // word exported. bash expands no alias in a script.
 func (r Runtime) aliasDeclares(item word) bool {
-	if !isUnquotedLiteralWord(item) {
+	if !r.options.expandAliases || !isUnquotedLiteralWord(item) {
 		return false
 	}
 	value, defined := r.aliases[soleLiteralText(item)]
