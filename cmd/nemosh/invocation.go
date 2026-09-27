@@ -167,6 +167,7 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 		}
 	}
 	rt.SetInvocationMode(mode)
+	rt.EnterShellLevel()
 	if c.invocation.login {
 		rt.MarkLoginShell()
 	}

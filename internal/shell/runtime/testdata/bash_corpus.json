@@ -1127,5 +1127,11 @@
     "stdout": "a b\n{a,b}\nc d\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo \"[$OPTIND] [$PS4]\"",
+    "stdout": "[1] [+ ]\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

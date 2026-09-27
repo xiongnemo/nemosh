@@ -417,7 +417,6 @@
       "More Smooshing 1": "ash-only",
       "More Smooshing 2": "ash-only",
       "OPTARG is empty (not unset) after parsing a flag doesn't take an arg": "ash-only",
-      "OPTIND": "fail",
       "OPTIND after multiple getopts with different spec": "fail",
       "OPTIND after multiple getopts with same spec": "fail",
       "flag and arg: -c10": "fail",
@@ -1135,7 +1134,6 @@
       "op-test for ${a} and ${a[0]}": "fail"
     },
     "var-ref.test.sh": {
-      "${!OPTIND} (used by bash completion": "fail",
       "${!a[@]-'default'} is legal but fails with more than one element": "fail",
       "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
       "${!undef:-}": "fail",
@@ -1166,6 +1164,7 @@
       "$$ looks like a PID": "fail",
       "$?": "fail",
       "$BASHPID DOES change with subshell and command sub": "fail",
+      "$HOSTNAME": "fail",
       "$LINENO in for (( loop": "fail",
       "$OSTYPE is non-empty": "fail",
       "$PATH is set if unset at startup": "fail",

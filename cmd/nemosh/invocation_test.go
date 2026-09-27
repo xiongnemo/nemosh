@@ -207,6 +207,21 @@ func TestInvocation_exitInENVEndsTheSession(t *testing.T) {
 	}
 }
 
+// A shell's start puts SHLVL up by one and exports it, as both references do; it stayed what
+// was inherited. Not a number counts as none, as in busybox, and below zero is zero, as in
+// bash. A subshell is the same shell.
+func TestInvocation_shellLevel(t *testing.T) {
+	for _, test := range []struct{ inherited, want string }{
+		{"4", "5 5 5\n"}, {"abc", "1 1 1\n"}, {"-5", "0 0 0\n"},
+	} {
+		t.Setenv("SHLVL", test.inherited)
+		result := runInvocation(t, "", "-c", `echo "$SHLVL $(printenv SHLVL) $(echo $SHLVL)"`)
+		if result.stdout != test.want {
+			t.Errorf("SHLVL=%s: stdout %q, want %q (stderr %q)", test.inherited, result.stdout, test.want, result.stderr)
+		}
+	}
+}
+
 // A session starts with bash's histexpand and history on, and `set +H` and `set +o history`
 // turn them off there as they do in bash: `!!` is then two characters, and `history` keeps
 // no more lines. A script starts with both off.
