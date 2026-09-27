@@ -55,7 +55,13 @@ func rewriteBackquotes(source string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// A body that begins with `(` is a subshell, and `$(` before it made `$((`, an
+		// arithmetic expansion: `(cd dir && pwd)` in backquotes was an arithmetic syntax
+		// error, where busybox-w32 and bash run it.
 		out.WriteString("$(")
+		if strings.HasPrefix(rewritten, "(") {
+			out.WriteByte(' ')
+		}
 		out.WriteString(rewritten)
 		out.WriteString(")")
 		index = end
