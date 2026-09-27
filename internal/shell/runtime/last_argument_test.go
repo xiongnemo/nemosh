@@ -19,6 +19,14 @@ func TestLastArgument_followsEachCommand(t *testing.T) {
 		{name: "a function's own", script: "f() { :; }\nf x y\necho \"$_\"\n", want: "y\n"},
 		{name: "the last command inside a loop", script: "for i in 1 2; do :; done\necho \"$_\"\n", want: ":\n"},
 		{name: "a subshell sees it", script: "echo x >/dev/null\n(echo \"$_\")\n", want: "x\n"},
+		// An arithmetic command and a conditional leave it as it was. `((expr))` is let here,
+		// and set it to the expression.
+		{name: "not by (( )) or [[ ]]", script: "echo simple\n(( a = 2 + 3 ))\necho \"(( $_\"\n[[ a == *.py ]]\necho \"[[ $_\"\n", want: "simple\n(( simple\n[[ (( simple\n"},
+		{name: "a let is a command", script: "let 'z = 1'\necho \"[$_]\"\n", want: "[z = 1]\n"},
+		// An array assignment empties it as any other assignment does; it was left alone.
+		{name: "empty after an array assignment", script: ": foo\na=(1 2)\necho \"[$_]\"\nx=1 y=(3)\necho \"[$_]\"\n", want: "[]\n[]\n"},
+		// A declaration's `name=(...)` leaves the name, where `name=value` is left whole.
+		{name: "a declared array's name", script: "declare s=bar\necho \"[$_]\"\ndeclare b=(1 2)\necho \"[$_]\"\ndeclare -g d=(1 2)\necho \"[$_]\"\nf() { local e=(1); echo \"[$_]\"; }\nf\n", want: "[s=bar]\n[b]\n[d]\n[e]\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if stdout, _ := runScriptCapturing(test.script); stdout != test.want {

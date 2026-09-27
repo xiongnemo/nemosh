@@ -41,4 +41,7 @@ type word struct {
 	// valueTilde marks an assignment's value standing alone -- an array literal's
 	// `[k]=v` -- whose tilde-prefixes begin at its start and after every unquoted `:`.
 	valueTilde bool
+	// arithmetic marks the `let` that an arithmetic command, `((expr))`, becomes: it leaves
+	// `$_` as it was, as bash's does. See arithmetic_command.go.
+	arithmetic bool
 }

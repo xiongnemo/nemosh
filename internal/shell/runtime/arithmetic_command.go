@@ -58,7 +58,7 @@ func arithmeticCommandTokens(line string, index, end int) []shellToken {
 		expression = tokens[0]
 	}
 	return []shellToken{
-		{kind: tokenWord, value: "let", parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: "let"}}}},
+		{kind: tokenWord, value: "let", parsed: &word{parts: []wordPart{{kind: wordPartLiteral, text: "let"}}, arithmetic: true}},
 		expression,
 	}
 }

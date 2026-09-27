@@ -131,6 +131,8 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 			return r.shellErrorResult()
 		}
 		if len(remaining) == 0 {
+			// Assignments alone empty `$_`, arrays among them, as in bash.
+			r.vars["_"] = ""
 			return lineResult{}
 		}
 		command = remaining
@@ -178,8 +180,26 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// it had none, and it is set after the command -- so a function's own `$_` is its
 	// last argument once it returns, whatever its body did. It was whatever the
 	// environment brought in, for the whole session. bash's rule; busybox has no `$_`.
-	r.vars["_"] = commandArgs[len(commandArgs)-1]
+	// An arithmetic command leaves it, as a conditional does.
+	if !command[0].arithmetic {
+		r.vars["_"] = lastArgument(commandArgs)
+	}
 	return r.abortOnShellError(result)
+}
+
+// lastArgument is what `$_` becomes after a command: its last argument, except that a
+// declaration's `name=(...)` leaves the name, as bash has it -- `declare a=(1 2)` is a, where
+// `declare s=bar` is s=bar.
+func lastArgument(commandArgs []string) string {
+	last := commandArgs[len(commandArgs)-1]
+	if len(commandArgs) < 2 || !isDeclarationName(commandArgs[0]) {
+		return last
+	}
+	target, value, found := strings.Cut(last, "=")
+	if name, _ := splitAssignmentTarget(target); found && strings.HasPrefix(value, "(") && isValidVariableName(name) {
+		return name
+	}
+	return last
 }
 
 // dispatchCommand runs a simple command once it is expanded. On the command, not on
