@@ -84,6 +84,8 @@ func (e *testEvaluator) unaryPrimary(operator, operand string) (bool, error) {
 		return e.isTerminal(operand)
 	case "-v":
 		return e.variableIsSet(operand), nil
+	case "-o":
+		return e.optionIsOn(operand), nil
 	case "-h", "-L":
 		info, err := e.stat(operand, true)
 		return err == nil && info.Mode()&os.ModeSymlink != 0, nil

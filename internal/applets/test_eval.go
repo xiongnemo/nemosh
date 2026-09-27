@@ -142,10 +142,12 @@ func (e *testEvaluator) peek() string {
 	return e.args[e.index]
 }
 
+// isTestUnaryOperator includes -o, which is bash's option test where an operand follows it
+// and test's OR between two expressions, where orExpression takes it first.
 func isTestUnaryOperator(word string) bool {
 	switch word {
 	case "-b", "-c", "-d", "-e", "-f", "-g", "-h", "-k", "-L", "-p", "-r",
-		"-s", "-S", "-t", "-u", "-w", "-x", "-z", "-n", "-O", "-G", "-v":
+		"-s", "-S", "-t", "-u", "-w", "-x", "-z", "-n", "-O", "-G", "-v", "-o":
 		return true
 	}
 	return false

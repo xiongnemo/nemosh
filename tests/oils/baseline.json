@@ -277,7 +277,6 @@
       "[ -t invalid ]": "ash-only",
       "operator/operand ambiguity with -a": "fail",
       "operator/operand ambiguity with ]": "fail",
-      "test -o for options": "fail",
       "test -p named pipe": "fail"
     },
     "builtin-cd.test.sh": {

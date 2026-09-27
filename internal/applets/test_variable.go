@@ -20,3 +20,18 @@ func (e *testEvaluator) variableIsSet(name string) bool {
 	_, set := e.view.LookupEnv(name)
 	return set
 }
+
+// optionView is the shell behind a process view, asked whether one of its options is on.
+type optionView interface {
+	ShellOptionIsOn(name string) bool
+}
+
+// optionIsOn is `test -o name` and `[ -o name ]`, bash's: whether a `set -o` option is on,
+// and off for a name that is not one. busybox's test calls the name an unknown operand. Run
+// on its own, test has no shell and no options, so every name is off.
+func (e *testEvaluator) optionIsOn(name string) bool {
+	if shell, ok := e.view.(optionView); ok {
+		return shell.ShellOptionIsOn(name)
+	}
+	return false
+}

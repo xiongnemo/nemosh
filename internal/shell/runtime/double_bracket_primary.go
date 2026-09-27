@@ -57,6 +57,10 @@ func (p *conditionParser) parsePrimary() (bool, error) {
 		p.take()
 		return p.runtime.variableIsSet(context.Background(), p.take().text), nil
 	}
+	if term := p.peek(); term.text == "-o" && !term.quoted && p.at+1 < len(p.terms) {
+		p.take()
+		return p.runtime.ShellOptionIsOn(p.take().text), nil
+	}
 	if term := p.peek(); applets.IsUnaryConditionOperator(term.text) && !term.quoted && p.at+1 < len(p.terms) {
 		operator := p.take().text
 		operand := p.take()

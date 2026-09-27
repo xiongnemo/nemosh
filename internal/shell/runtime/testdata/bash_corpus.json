@@ -1283,5 +1283,29 @@
     "stdout": "umask 0022\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ -o errexit ]]; echo $?\nset -e\n[[ -o errexit ]]; echo $?",
+    "stdout": "1\n0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[[ -o nosuch ]]; echo $?",
+    "stdout": "1\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "test -o nounset; echo $?\nset -o nounset\ntest -o nounset; echo $?\n[ ! -o pipefail ]; echo $?",
+    "stdout": "1\n0\n0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "[ a -o b ]; echo $?\n[ \"\" -o \"\" ]; echo $?",
+    "stdout": "0\n1\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
