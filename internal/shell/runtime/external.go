@@ -78,15 +78,8 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		defer releaseStdin()
 	}
 	// Hand over the real handle where there is one, so the child inherits the
-	// console instead of a pipe this process copies. See nativeWriter.
-	cmd.Stdout = r.streams.Stdout
-	if native := nativeWriter(r.streams.Stdout); native != nil {
-		cmd.Stdout = native
-	}
-	cmd.Stderr = r.streams.Stderr
-	if native := nativeWriter(r.streams.Stderr); native != nil {
-		cmd.Stderr = native
-	}
+	// console instead of a pipe this process copies. See externalStreams.
+	cmd.Stdout, cmd.Stderr = r.externalStreams()
 	runErr := cmd.Run()
 	// Recorded whether the child succeeded or failed: the CPU it used is spent
 	// either way, and this is the one moment Go reports it.

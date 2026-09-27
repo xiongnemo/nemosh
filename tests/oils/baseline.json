@@ -943,9 +943,7 @@
     },
     "sh-options-bash.test.sh": {
       "OSH calling bash with SHELLOPTS does not change braceexpand": "fail",
-      "SHELLOPTS is readonly": "fail",
-      "export SHELLOPTS does cross-process tracing": "fail",
-      "export SHELLOPTS does cross-process tracing with bash": "fail"
+      "SHELLOPTS is readonly": "fail"
     },
     "sh-options.test.sh": {
       "$- with -c": "fail",
