@@ -668,10 +668,7 @@
       "each occurrence of ** recurses through all depths": "fail"
     },
     "here-doc.test.sh": {
-      "Here doc line continuation": "fail",
-      "Here doc with bad comsub delimiter": "ash-only",
-      "Here doc with line continuation, then pipe.  Syntax error.": "fail",
-      "Here doc with multiline double quoted string": "fail"
+      "Here doc with bad comsub delimiter": "ash-only"
     },
     "interactive.test.sh": {
       "'exit' in oshrc (regression)": "fail",

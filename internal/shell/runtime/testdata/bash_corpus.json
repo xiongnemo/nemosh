@@ -1721,5 +1721,11 @@
     "stdout": "[-] [-]\n[μX]\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "cat <<EOF; echo \"two\nthree\"\none\nEOF",
+    "stdout": "one\ntwo\nthree\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

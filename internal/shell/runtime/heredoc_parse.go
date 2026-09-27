@@ -21,14 +21,21 @@ type pendingHeredoc struct {
 // The source must already have been through normalizeLineEndings. The third answer is,
 // for each line left in the output, the index of the source line it was, so $LINENO can
 // count past the bodies taken out (line_numbers.go).
+//
+// A body begins after the line its command is on has ended, and a line left inside a quote
+// or ending in a backslash goes on into the next: `cat <<EOF \` then `; echo two`, or `cat
+// <<EOF; echo "two` then `three"`, as busybox and bash both read them, at the next newline
+// token. The body was taken from the very next line, which refused both as incomplete, and
+// each line was scanned as if no quote were open, so one left open hid the next line's `<<`.
 func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 	lines := strings.Split(source, "\n")
 	var output strings.Builder
-	var records []pendingHeredoc
+	var records, pending []pendingHeredoc
 	var origins []int
+	quote, continued := byte(0), false
 	for index := 0; index < len(lines); index++ {
 		line := lines[index]
-		declarations, err := heredocDeclarations(line, index+1, len(records))
+		declarations, open, joined, err := heredocDeclarations(line, index+1, len(records)+len(pending), quote)
 		if err != nil {
 			return "", nil, nil, err
 		}
@@ -37,8 +44,12 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 		if index+1 < len(lines) {
 			output.WriteByte('\n')
 		}
-		for declarationIndex := range declarations {
-			declaration := &declarations[declarationIndex]
+		pending, quote, continued = append(pending, declarations...), open, joined
+		if quote != 0 || continued {
+			continue
+		}
+		for declarationIndex := range pending {
+			declaration := &pending[declarationIndex]
 			var body strings.Builder
 			terminated := false
 			for index++; index < len(lines); index++ {
@@ -65,13 +76,19 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 			declaration.body = body.String()
 			records = append(records, *declaration)
 		}
+		pending = nil
+	}
+	if len(pending) > 0 {
+		return "", nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, pending[0].delimiter)
 	}
 	return output.String(), records, origins, nil
 }
 
-func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHeredoc, error) {
+// heredocDeclarations finds the heredocs a line declares, the line beginning inside quote
+// when the one before left it open. It says too which quote this line leaves open, and
+// whether it ends in a backslash that joins the next line on.
+func heredocDeclarations(line string, lineNumber, startOrder int, quote byte) ([]pendingHeredoc, byte, bool, error) {
 	var records []pendingHeredoc
-	quote := byte(0)
 	escaped := false
 	for index := 0; index < len(line); index++ {
 		char := line[index]
@@ -135,11 +152,11 @@ func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHere
 		}
 		operandEnd := heredocOperandEnd(line, operandStart)
 		if operandEnd == operandStart {
-			return nil, fmt.Errorf("%w: %w", ErrIncompleteScript, errMissingRedirectTarget)
+			return nil, 0, false, fmt.Errorf("%w: %w", ErrIncompleteScript, errMissingRedirectTarget)
 		}
 		tokens, err := scanShellTokens(line[operandStart:operandEnd])
 		if err != nil || len(tokens) != 1 || tokens[0].kind != tokenWord {
-			return nil, fmt.Errorf("heredoc delimiter: %w", errMalformedRedirect)
+			return nil, 0, false, fmt.Errorf("heredoc delimiter: %w", errMalformedRedirect)
 		}
 		delimiterWord := parseTypedWord(*tokens[0].parsed)
 		delimiter, quoted := quoteRemovedDelimiter(delimiterWord)
@@ -156,7 +173,7 @@ func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHere
 		})
 		index = operandEnd - 1
 	}
-	return records, nil
+	return records, quote, escaped, nil
 }
 
 func markHeredocOperands(line string, records []pendingHeredoc) string {
