@@ -65,6 +65,7 @@ func (r Runtime) assignVar(name string, value string) int {
 	value, err = r.applyAttributes(name, value)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+		r.failAssignment()
 		return 1
 	}
 	// On Windows a list of directories takes `:` as well as `;`; see path_list.go.

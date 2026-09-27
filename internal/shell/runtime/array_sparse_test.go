@@ -90,10 +90,11 @@ func TestSparseArrays_negativeSubscriptsCountFromTheEnd(t *testing.T) {
 }
 
 // Assigning past the start is refused rather than wrapped, because wrapping would write
-// to the first element and look like it worked.
+// to the first element and look like it worked. A plain assignment's refusal ends the script,
+// as bash's does (assignment_failure_test.go); declare's goes on, to show the array untouched.
 func TestSparseArrays_refusesAnAssignmentPastTheStart(t *testing.T) {
 	// When
-	_, stdout, stderr := runSetScript(t, "a=(p q r)\na[-9]=x\necho \"${a[@]}\"\n")
+	_, stdout, stderr := runSetScript(t, "a=(p q r)\ndeclare a[-9]=x\necho \"${a[@]}\"\n")
 
 	// Then
 	if want := "p q r\n"; stdout != want {

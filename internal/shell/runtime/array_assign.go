@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"strings"
 )
 
@@ -97,7 +98,16 @@ func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, save
 }
 
 func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, savedStatus int) {
+	r = r.assigningPlainly()
+	target := assignment.name + "[" + assignment.subscript + "]"
 	if assignment.list {
+		// A list is an array's and not an element's: bash refuses `a[0]=(3 4)` and ends the
+		// script, where the list was written over the whole of a.
+		if assignment.subscript != "" {
+			fmt.Fprintf(r.streams.Stderr, "%s: cannot assign list to array member\n", target)
+			r.failAssignment()
+			return
+		}
 		r.assignCompound(ctx, assignment.name, assignment.raw, assignment.append, savedStatus)
 		return
 	}
@@ -106,7 +116,6 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 	// itself and so skipped the first two -- and ignored `+=`, so `a[1]+=z` replaced the
 	// element where bash appends to it.
 	value := strings.Join(r.expandWord(ctx, assignment.value, savedStatus), " ")
-	target := assignment.name + "[" + assignment.subscript + "]"
 	if assignment.append {
 		value = r.appendedValue(target, value)
 	}
