@@ -68,6 +68,8 @@ func (r Runtime) assignVar(name string, value string) int {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
 		return 1
 	}
+	// On Windows a list of directories takes `:` as well as `;`; see path_list.go.
+	value = windowsPathList(name, value)
 	// RANDOM and SECONDS take an assignment as a seed and a reset rather than
 	// storing it. Storing would make the next read return a constant, and a
 	// `$RANDOM` that is always the same is the kind of thing noticed after the

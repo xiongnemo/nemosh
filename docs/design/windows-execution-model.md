@@ -304,6 +304,15 @@ boundary. Nemosh command lookup must understand `;` as the Windows `PATH`
 separator instead of trying to use POSIX `:`, which conflicts with drive paths
 such as `C:/...`.
 
+A script written for Unix still writes `PATH=$dir:$PATH`, so an assignment to
+`PATH`, `CDPATH` or `MANPATH` rewrites each `:` that separates directories into
+`;`, as busybox-w32's `fix_pathvar` does (its `shell/ash.c`): a colon after a
+single letter at the start of a directory is that drive's and stays, and every
+other one becomes `;`. Lookup still splits on `;` alone, and a program the shell
+starts is handed a list it can read. The rule is busybox-w32's to the letter, so
+a one-letter directory first in a list reads as a drive there too:
+`PATH=e:$PATH` keeps the colon after `e`. See `path_list.go`.
+
 ## Job Control And Signals
 
 Native Windows v0 should follow the lightweight busybox-w32 direction. The

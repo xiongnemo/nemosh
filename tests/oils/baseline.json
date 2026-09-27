@@ -357,10 +357,7 @@
       "eval YSH block with 'break continue return error'": "fail",
       "eval accepts/ignores --": "fail",
       "eval usage": "fail",
-      "source accepts/ignores --": "fail",
-      "source finds files in PATH before current dir": "fail",
-      "source looks in PATH for files": "fail",
-      "sourcing along PATH should ignore directories": "fail"
+      "source accepts/ignores --": "fail"
     },
     "builtin-fc.test.sh": {
       "fc -l [first] [last] where first and last are indexes": "fail",
