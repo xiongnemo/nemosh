@@ -1685,5 +1685,11 @@
     "stdout": "12\n7 6\nafter 1\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "set -- $(seq 25)\necho ${##} ${###} ${####} ${##2} ${#%5} ${#-x} ${#:+y}\nfalse\necho \"${?:-x} ${$:+z}\"",
+    "stdout": "2 25 25 5 2 25 y\n1 z\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

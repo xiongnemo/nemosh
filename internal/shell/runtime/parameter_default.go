@@ -20,7 +20,7 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	if body == "" {
 		return "", fmt.Errorf("bad substitution: ${}")
 	}
-	if length, ok := strings.CutPrefix(body, "#"); ok && length != "" {
+	if length, ok := lengthOperand(body); ok {
 		return r.expandParameterLength(ctx, length, savedStatus)
 	}
 	// A body that is a parameter reference and nothing else: a name, a
@@ -148,46 +148,6 @@ func (r Runtime) expandParameterLength(ctx context.Context, name string, savedSt
 		r.reportUnsetParameter(name)
 	}
 	return strconv.Itoa(len([]rune(value))), nil
-}
-
-// splitParameterOperator finds the operator that separates the parameter name
-// from the word after it. The two-character forms are tried first so `:-` is not
-// read as a name ending in `:` followed by `-`.
-func splitParameterOperator(body string) (string, string, string, bool) {
-	depth := 0
-	for index := range len(body) {
-		// Nothing inside an element's subscript is the operator: `${a[i+1]:-d}` has
-		// `:-`, not `+`.
-		switch body[index] {
-		case '[':
-			depth++
-		case ']':
-			if depth > 0 {
-				depth--
-				continue
-			}
-		}
-		if depth > 0 {
-			continue
-		}
-		// Longest first at each position, and the `:x` defaults before a bare `:`,
-		// which is what keeps `${x:-2}` a default and `${x: -2}` a substring. The
-		// pairs `//`, `^^`, `,,` and `~~` likewise precede their single forms.
-		for _, operator := range [...]string{
-			":-", ":=", ":+", ":?", "##", "%%", "//", "/#", "/%", "^^", ",,", "~~",
-			":", "-", "=", "+", "?", "#", "%", "/", "^", ",", "~",
-		} {
-			if !strings.HasPrefix(body[index:], operator) {
-				continue
-			}
-			name := body[:index]
-			if name == "" {
-				return "", "", "", false
-			}
-			return name, operator, body[index+len(operator):], true
-		}
-	}
-	return "", "", "", false
 }
 
 // operandParameter is the value an operator works on, and whether it is set: an array

@@ -195,10 +195,6 @@
       "[bash_unset] nested context by tempenv-eval": "ash-only"
     },
     "blog1.test.sh": {
-      "${####}": "fail",
-      "${###2}": "fail",
-      "${###}": "fail",
-      "${##2}": "fail",
       "${#1#'###'}": "ash-only"
     },
     "blog2.test.sh": {
