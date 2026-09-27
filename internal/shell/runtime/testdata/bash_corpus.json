@@ -1583,5 +1583,17 @@
     "stdout": "x\nq\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "command -v for\nalias ll='ls -l'\ncommand -v ll",
+    "stdout": "for\nalias ll='ls -l'\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "type function\ncommand -v '[['",
+    "stdout": "function is a shell keyword\n[[\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

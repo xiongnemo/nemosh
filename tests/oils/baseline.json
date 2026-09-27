@@ -356,8 +356,7 @@
       "Source with syntax error": "ash-only",
       "eval YSH block with 'break continue return error'": "fail",
       "eval accepts/ignores --": "fail",
-      "eval usage": "fail",
-      "source accepts/ignores --": "fail"
+      "eval usage": "fail"
     },
     "builtin-fc.test.sh": {
       "fc -l [first] [last] where first and last are indexes": "fail",
@@ -412,7 +411,6 @@
       "builtin usage": "fail",
       "command -V": "fail",
       "command -V nonexistent": "fail",
-      "command -v": "fail",
       "command -v doesn't find executable dir": "fail",
       "command -v executable, builtin": "fail",
       "command -v with multiple names": "ash-only"

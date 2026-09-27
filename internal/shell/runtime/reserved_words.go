@@ -38,13 +38,18 @@ var commandIntroducers = map[string]bool{
 	"{": true,
 }
 
+// bashReservedWords are the ones bash adds that this shell implements. To a reader of the
+// line they are keywords whatever POSIX calls them, and bash's `type` calls them so: `type
+// [[` named whatever `[[.exe` there was on PATH.
+var bashReservedWords = map[string]bool{
+	"select": true, "[[": true, "]]": true, "function": true, "coproc": true,
+}
+
 // ReservedWord reports whether word is one of the shell's reserved words, so that something
-// drawing a line can say so rather than calling it a command that does not exist.
-//
-// `select` is included: this shell implements it, and to a reader of the line it is a
-// keyword whatever POSIX calls it.
+// drawing a line can say so rather than calling it a command that does not exist, and `type`
+// and `command -v` can call it a keyword.
 func ReservedWord(word string) bool {
-	return reservedWords[word] || word == "select"
+	return reservedWords[word] || bashReservedWords[word]
 }
 
 // CommandFollows reports whether a command may begin immediately after word.

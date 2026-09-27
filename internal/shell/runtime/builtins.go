@@ -24,6 +24,11 @@ func (r Runtime) dot(ctx context.Context, args []string) int {
 }
 
 func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
+	// `--` before the file, which busybox's `.` and bash's source both take; it was read as
+	// the file's name.
+	if len(args) > 0 && args[0] == "--" {
+		args = args[1:]
+	}
 	if len(args) == 0 {
 		fmt.Fprintln(r.streams.Stderr, ".: missing file")
 		return lineResult{status: 2}

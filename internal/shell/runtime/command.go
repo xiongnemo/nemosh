@@ -36,7 +36,13 @@ func (r Runtime) commandV(args []string) int {
 		return 0
 	}
 	name := args[0]
-	if r.isKnownCommand(name) {
+	// An alias is answered with the definition that makes it and a reserved word with its
+	// name, as busybox answers them: `command -v for` and an alias were not found.
+	if value, ok := r.aliases[name]; ok {
+		fmt.Fprintf(r.streams.Stdout, "alias %s=%s\n", name, singleQuoteForReuse(value))
+		return 0
+	}
+	if ReservedWord(name) || r.isKnownCommand(name) {
 		fmt.Fprintln(r.streams.Stdout, name)
 		return 0
 	}
