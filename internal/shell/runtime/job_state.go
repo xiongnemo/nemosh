@@ -37,6 +37,9 @@ type jobState struct {
 	Traps         map[string]string              `json:"traps"`
 	Umask         uint16                         `json:"umask"`
 	DirStack      []string                       `json:"dirStack"`
+	// Getopts is where getopts is in Positional: the next word and the letter in the one
+	// before it; see getoptsState.
+	Getopts [2]int `json:"getopts"`
 	// Seconds is what $SECONDS says now, so the child's count carries on from it.
 	Seconds int `json:"seconds"`
 	// ShellPID and ShellPPID are the shell's `$$` and `$PPID`, which a job keeps.
@@ -85,7 +88,8 @@ func (r Runtime) captureJobState(program programNode) jobState {
 		Indexed: map[string]jobIndexedArray{}, Associative: map[string]jobAssociativeArray{},
 		Attributes: map[string]jobAttributes{}, Options: map[string]bool{}, Traps: map[string]string{},
 		Invocation: r.options.invocation, Name: r.params.name, Positional: append([]string(nil), r.params.values...),
-		Function: r.params.function, ScriptFile: r.scriptFile, Umask: r.mask.value,
+		Function: r.params.function, Getopts: [2]int{r.params.getopts.next, r.params.getopts.sub},
+		ScriptFile: r.scriptFile, Umask: r.mask.value,
 		DirStack: append([]string(nil), r.dirStack.below...), FunctionDepth: r.functionDepth,
 		SourceDepth: r.sourceDepth, ErrExitSuppressed: r.errExitSuppressed, SubshellDepth: r.subshellDepth,
 	}
@@ -171,6 +175,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 	}
 	r.options.invocation = state.Invocation
 	r.params = &parameters{name: state.Name, values: append([]string(nil), state.Positional...), function: state.Function}
+	r.params.getopts = getoptsState{next: state.Getopts[0], sub: state.Getopts[1]}
 	for name, action := range state.Traps {
 		r.setTrap(trapName(name), action)
 	}

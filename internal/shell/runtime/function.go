@@ -74,15 +74,20 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 	// have it, so an ERR trap its failure fires in the caller names the caller's line. It
 	// named the function's last one.
 	defer r.enterLine(r.currentLine())
+	caller := r.params
 	r = r.enterFrame(definition.name.value, definition.file)
 	r.params = &parameters{name: r.params.name, values: append([]string(nil), args...), function: definition.name.value}
 	r.functionDepth++
 	// A call gets its own local scope, and whatever `local` shadowed inside it
 	// is put back on the way out -- including when the body returns early or
-	// breaks out of a loop, which is why the restore is deferred.
+	// breaks out of a loop, which is why the restore is deferred. Put back beside the
+	// caller's parameters, so a local OPTIND restored is where the caller's getopts starts
+	// over, as busybox has it.
 	scope := newLocalScope()
 	r.locals = scope
-	defer scope.restore(r)
+	restoring := r
+	restoring.params = caller
+	defer scope.restore(restoring)
 	hidden, wasSet := r.hideReturnTrap()
 	result := r.executeCommandNode(ctx, definition.body, savedStatus)
 	r.finishReturnTrap(ctx, hidden, wasSet, result)

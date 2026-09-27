@@ -33,6 +33,7 @@ func (r Runtime) set(args []string) int {
 	}
 	if index < len(args) || replacePositional {
 		r.params.values = append(r.params.values[:0], args[index:]...)
+		r.params.getopts = getoptsState{}
 	}
 	return 0
 }

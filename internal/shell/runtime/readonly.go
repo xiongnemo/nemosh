@@ -158,4 +158,8 @@ func (r Runtime) markVarMutation(name string) {
 	if r.mutatedVars != nil {
 		r.mutatedVars[name] = struct{}{}
 	}
+	// OPTIND assigned, unset or made local is where getopts starts over; see getoptsState.
+	if name == "OPTIND" && r.params != nil {
+		r.params.getopts = getoptsFrom(r.vars["OPTIND"])
+	}
 }

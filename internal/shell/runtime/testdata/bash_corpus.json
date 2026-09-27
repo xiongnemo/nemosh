@@ -1661,5 +1661,11 @@
     "stdout": "yes\nsub\n1\nin\na\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "set -- -h -c foo x\nwhile getopts hc: opt; do echo \"$opt\"; done\necho \"O=$OPTIND A=${OPTARG-unset}\"\nset -- -a -b\ngetopts ab opt\nshift\ngetopts ab opt\necho \"$opt $OPTIND\"\nf() { getopts x opt; echo \"f: $opt $OPTIND\"; }\nOPTIND=7\nf -x",
+    "stdout": "h\nc\nO=4 A=unset\nb 2\nf: x 2\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

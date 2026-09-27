@@ -12,7 +12,8 @@ type parameters struct {
 	// `$FUNCNAME` answers; empty outside one. Kept here because a call already
 	// makes a new set of parameters and restores the caller's on the way out.
 	function string
-	// getopts is where getopts left off inside a group of letters; see getopts.go.
+	// getopts is where getopts is in these parameters, so replacing them starts it again;
+	// see getopts.go.
 	getopts getoptsState
 }
 
@@ -22,6 +23,7 @@ type parameters struct {
 func (r Runtime) SetArguments(name string, positional []string) {
 	r.params.name = name
 	r.params.values = append(r.params.values[:0], positional...)
+	r.params.getopts = getoptsState{}
 }
 
 func (r Runtime) shift(args []string) int {
@@ -45,5 +47,6 @@ func (r Runtime) shift(args []string) int {
 		return 1
 	}
 	r.params.values = r.params.values[count:]
+	r.params.getopts = getoptsState{}
 	return 0
 }

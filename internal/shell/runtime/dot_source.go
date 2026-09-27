@@ -51,13 +51,14 @@ func (r Runtime) readableOnPath(name string) (string, bool) {
 
 // withDotArguments runs a sourced file with its own positional parameters when `.` was given
 // any, and gives the caller's back afterwards -- even ones the file set, which is busybox's
-// answer; bash keeps what the file set. Given none, the file shares the caller's.
+// answer; bash keeps what the file set. Given none, the file shares the caller's. Where
+// getopts was comes back with them, as busybox restores it too.
 func (r Runtime) withDotArguments(arguments []string, run func() lineResult) lineResult {
 	if len(arguments) == 0 {
 		return run()
 	}
-	saved := r.params.values
+	saved, place := r.params.values, r.params.getopts
 	r.params.values = append([]string(nil), arguments...)
-	defer func() { r.params.values = saved }()
+	defer func() { r.params.values, r.params.getopts = saved, place }()
 	return run()
 }

@@ -375,10 +375,9 @@
       "More Smooshing 1": "ash-only",
       "More Smooshing 2": "ash-only",
       "OPTARG is empty (not unset) after parsing a flag doesn't take an arg": "ash-only",
-      "OPTIND after multiple getopts with different spec": "fail",
-      "OPTIND after multiple getopts with same spec": "fail",
-      "flag and arg: -c10": "fail",
-      "getopts with invalid variable name": "fail",
+      "OPTIND after multiple getopts with different spec": "ash-only",
+      "OPTIND narrowed down": "ash-only",
+      "getopts with invalid variable name": "ash-only",
       "two flags: -ab": "ash-only"
     },
     "builtin-history.test.sh": {
