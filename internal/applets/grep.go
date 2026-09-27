@@ -15,6 +15,17 @@ func newGrepApplet() Applet {
 	}}
 }
 
+// egrep and fgrep are grep -E and grep -F under names of their own, as busybox's grep_main
+// has them: it reads the option off the name it was run as.
+func newEgrepApplet() Applet { return grepAs("egrep", "-E") }
+func newFgrepApplet() Applet { return grepAs("fgrep", "-F") }
+
+func grepAs(name, option string) Applet {
+	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+		return grepStatus(runGrep(ctx, append([]string{option}, args...), stdin, stdout, stderr))
+	}}
+}
+
 // grep_main raises xfunc_error_retval to 2 before it parses anything, so that 1
 // stays reserved for "no match" (findutils/grep.c:718). Every other failure --
 // usage, a bad pattern, an unreadable operand -- carries 2 out with it.

@@ -25,8 +25,7 @@
       "define and use alias on a single line": "fail",
       "defining multiple aliases, then unalias": "fail",
       "first and second word are the same alias, but no trailing space": "fail",
-      "first and second word are the same alias, with trailing space": "fail",
-      "unalias -a": "fail"
+      "first and second word are the same alias, with trailing space": "fail"
     },
     "append.test.sh": {
       "Try to append list to element": "fail",
@@ -401,7 +400,6 @@
       "builtin ls not found": "fail",
       "builtin usage": "fail",
       "command -V": "fail",
-      "command -V nonexistent": "fail",
       "command -v doesn't find executable dir": "fail",
       "command -v executable, builtin": "fail",
       "command -v with multiple names": "ash-only"
@@ -470,9 +468,6 @@
       "bash 'type' gets confused - says 'function', but runs builtin": "fail",
       "exec without args is a special case of the special case in some shells": "ash-only"
     },
-    "builtin-times.test.sh": {
-      "times shows two formatted lines": "fail"
-    },
     "builtin-trap-bash.test.sh": {
       "Combine DEBUG trap and ERR trap": "fail",
       "Combine DEBUG trap and USR1 trap": "fail",
@@ -528,8 +523,7 @@
       "type prints function source code": "fail"
     },
     "builtin-type.test.sh": {
-      "special builtins are called out": "fail",
-      "type -\u003e not found": "fail"
+      "special builtins are called out": "fail"
     },
     "builtin-umask.test.sh": {
       "'umask 0002' sets the umask": "fail",
@@ -761,7 +755,6 @@
       "} on the second line": "fail"
     },
     "pipeline.test.sh": {
-      "Exit code is last status": "fail",
       "SIGPIPE causes pipeline to die (regression for issue #295)": "fail",
       "|\u0026": "flaky"
     },
@@ -857,8 +850,6 @@
       "set -o vi/emacs": "fail",
       "set without args and assoc array variables (not in OSH)": "fail",
       "set without args lists variables": "fail",
-      "shopt -o prints 'set' options": "fail",
-      "shopt -p -o prints 'set' options": "fail",
       "stubbed out bash options": "fail",
       "vi and emacs are mutually exclusive": "fail"
     },
@@ -985,7 +976,6 @@
       "$SHELL is set to what is in /etc/passwd": "fail"
     },
     "vars-special.test.sh": {
-      "$$ looks like a PID": "fail",
       "$?": "fail",
       "$BASHPID DOES change with subshell and command sub": "fail",
       "$HOSTNAME": "fail",
@@ -993,15 +983,12 @@
       "$OSTYPE is non-empty": "fail",
       "$PATH is set if unset at startup": "fail",
       "$PIPESTATUS": "fail",
-      "$PPID": "fail",
-      "$RANDOM": "fail",
       "$UID and $EUID": "fail",
       "$_ is not reset with (( and [[": "fail",
       "$_ is not undefined on first use": "fail",
       "$_ with assignments, arrays, etc.": "fail",
       "$_ with pipeline and subshell": "fail",
       "BASH_VERSION / OILS_VERSION": "fail",
-      "Background PID $! looks like a PID": "fail",
       "Some vars are set, even without startup file, or env: PATH, PWD": "fail",
       "UID EUID PPID can't be changed": "fail",
       "Vars set interactively only: $HISTFILE": "fail"

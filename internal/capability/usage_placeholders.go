@@ -93,6 +93,8 @@ var valuePlaceholders = map[string]string{
 	"cutf":              "LIST",
 	"dated":             "DATESTRING",
 	"grepm":             "COUNT",
+	"egrepm":            "COUNT",
+	"fgrepm":            "COUNT",
 	"headn":             "LINES",
 	"headc":             "BYTES",
 	"mkdirm":            "MODE",

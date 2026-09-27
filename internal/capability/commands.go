@@ -38,6 +38,8 @@ var commands = []Command{
 	{Name: "expr", Operand: AnyPath},
 	{Name: "find", Operand: AnyPath},
 	{Name: "grep", Short: "invrRlcqwxFoshHEm", ValueShort: "m", Long: []string{"color"}, Operand: AnyPath},
+	{Name: "egrep", Short: "invrRlcqwxFoshHEm", ValueShort: "m", Long: []string{"color"}, Operand: AnyPath},
+	{Name: "fgrep", Short: "invrRlcqwxFoshHEm", ValueShort: "m", Long: []string{"color"}, Operand: AnyPath},
 	{Name: "head", Short: "nc", ValueShort: "nc", Operand: AnyPath},
 	{Name: "id", Short: "ugGn", Operand: AnyPath},
 	{Name: "ln", Short: "s", Operand: AnyPath},

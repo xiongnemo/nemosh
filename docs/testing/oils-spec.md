@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1853 of the 2551 cases bash passes: 72.6%.**
+**nemosh passes 1864 of the 2551 cases bash passes: 73.1%.**
 
-Of the other 698, it does 106 the way the files record of ash, which may be busybox's
-way, and 592 neither way.
+Of the other 687, it does 106 the way the files record of ash, which may be busybox's
+way, and 581 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 592 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1853 |
+| that nemosh passes of those | 1864 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -42,7 +42,7 @@ of ash.
 
 | file | measured | bash | nemosh | % | as ash | busybox |
 |---|---:|---:|---:|---:|---:|---:|
-| alias.test.sh | 48 | 47 | 22 | 46.8% | 0 | 42 |
+| alias.test.sh | 48 | 47 | 23 | 48.9% | 0 | 42 |
 | append.test.sh | 20 | 20 | 15 | 75.0% | 0 | 1 |
 | arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 3 |
 | arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 4 |
@@ -81,19 +81,19 @@ of ash.
 | builtin-history.test.sh | 17 | 15 | 3 | 20.0% | 0 | 1 |
 | builtin-kill.test.sh | 20 | 17 | 15 | 88.2% | 0 | 11 |
 | builtin-meta-assign.test.sh | 11 | 11 | 11 | 100.0% | 0 | 11 |
-| builtin-meta.test.sh | 15 | 15 | 7 | 46.7% | 1 | 13 |
+| builtin-meta.test.sh | 15 | 15 | 8 | 53.3% | 1 | 13 |
 | builtin-misc.test.sh | 7 | 5 | 2 | 40.0% | 0 | 4 |
 | builtin-printf.test.sh | 63 | 55 | 46 | 83.6% | 9 | 57 |
 | builtin-process.test.sh | 10 | 9 | 5 | 55.6% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 50 | 79.4% | 4 | 60 |
 | builtin-set.test.sh | 24 | 24 | 18 | 75.0% | 0 | 20 |
 | builtin-special.test.sh | 12 | 11 | 6 | 54.5% | 2 | 10 |
-| builtin-times.test.sh | 1 | 1 | 0 | 0.0% | 0 | 1 |
+| builtin-times.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 4 | 17.4% | 0 | 4 |
 | builtin-trap-err.test.sh | 22 | 22 | 18 | 81.8% | 3 | 22 |
 | builtin-trap.test.sh | 33 | 33 | 18 | 54.5% | 4 | 25 |
 | builtin-type-bash.test.sh | 21 | 21 | 13 | 61.9% | 1 | 0 |
-| builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 0 | 4 |
+| builtin-type.test.sh | 4 | 4 | 3 | 75.0% | 0 | 4 |
 | builtin-umask.test.sh | 24 | 15 | 9 | 60.0% | 0 | 2 |
 | builtin-vars.test.sh | 41 | 39 | 30 | 76.9% | 1 | 23 |
 | case_.test.sh | 13 | 12 | 12 | 100.0% | 0 | 9 |
@@ -131,7 +131,7 @@ of ash.
 | nul-bytes.test.sh | 16 | 16 | 0 | 0.0% | 0 | 12 |
 | paren-ambiguity.test.sh | 8 | 8 | 4 | 50.0% | 2 | 8 |
 | parse-errors.test.sh | 27 | 25 | 19 | 76.0% | 2 | 22 |
-| pipeline.test.sh | 26 | 26 | 23 | 88.5% | 0 | 17 |
+| pipeline.test.sh | 26 | 26 | 24 | 92.3% | 0 | 17 |
 | posix.test.sh | 15 | 15 | 13 | 86.7% | 0 | 14 |
 | print-source-code.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
 | process-sub.test.sh | 9 | 9 | 9 | 100.0% | 0 | 5 |
@@ -144,7 +144,7 @@ of ash.
 | serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 10 |
 | sh-func.test.sh | 12 | 12 | 11 | 91.7% | 0 | 10 |
 | sh-options-bash.test.sh | 9 | 9 | 7 | 77.8% | 0 | 0 |
-| sh-options.test.sh | 39 | 39 | 26 | 66.7% | 0 | 12 |
+| sh-options.test.sh | 39 | 39 | 28 | 71.8% | 0 | 12 |
 | sh-usage.test.sh | 23 | 22 | 18 | 81.8% | 0 | 18 |
 | smoke.test.sh | 18 | 18 | 16 | 88.9% | 0 | 16 |
 | strict-options.test.sh | 17 | 15 | 13 | 86.7% | 0 | 7 |
@@ -166,10 +166,10 @@ of ash.
 | var-sub-quote.test.sh | 41 | 41 | 38 | 92.7% | 0 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
 | vars-bash.test.sh | 1 | 1 | 0 | 0.0% | 0 | 0 |
-| vars-special.test.sh | 41 | 39 | 21 | 53.8% | 0 | 19 |
+| vars-special.test.sh | 41 | 39 | 25 | 64.1% | 0 | 19 |
 | whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
 | word-eval.test.sh | 8 | 7 | 7 | 100.0% | 0 | 6 |
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1853 | 72.6% | 106 | 1447 |
+| all | 2668 | 2551 | 1864 | 73.1% | 106 | 1447 |

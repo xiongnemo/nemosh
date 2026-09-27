@@ -175,10 +175,10 @@ file -- so shadowing them breaks scripts that never asked for this shell. An
 install that changes what a name means is worse than one that makes you type
 `nemosh find`; `scoop shim add` covers the case where someone wants one anyway.
 
-**Applet parity with BusyBox.** 111 applets against busybox-w32's 179. The
-archivers, the compression filters, the text tools and the whole networking group
-busybox-w32 keeps are all in now; what stays out is `awk`, `vi` and `bc`, which are
-an interpreter each, and the formats with no Go support -- `xz`, `lzma`, and bzip2
+**Applet parity with BusyBox.** 136 applets against busybox-w32's 179. The
+archivers, the compression filters, the text tools, `awk`, `bc` and the whole
+networking group busybox-w32 keeps are all in now; what stays out includes `vi` and
+`make`, and the formats with no Go support -- `xz`, `lzma`, and bzip2
 *compression*, whose names are left unregistered so PATH still finds a real one.
 What matters more than the count is that an option this shell does not implement is
 refused by name rather than doing something else, which `docs/support-matrix.md`
