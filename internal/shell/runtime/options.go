@@ -62,6 +62,8 @@ type shellOptions struct {
 	expandAliases bool
 	// shiftVerbose is `shopt -s shift_verbose`: a shift past the last parameter says so.
 	shiftVerbose bool
+	// xpgEcho is `shopt -s xpg_echo`: echo expands backslash escapes; see xpg_echo.go.
+	xpgEcho bool
 	// The shopt names of the interactive layer, which are remembered and reported and
 	// change nothing; see shopt_table.go.
 	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool

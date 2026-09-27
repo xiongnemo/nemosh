@@ -1085,5 +1085,11 @@
     "stdout": "st=1 1\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s xpg_echo\necho 'a\\tb'\necho -E 'c\\td'",
+    "stdout": "a\tb\nc\\td\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

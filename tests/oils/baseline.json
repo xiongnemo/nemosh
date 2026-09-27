@@ -1026,8 +1026,6 @@
       "$- with pipefail": "fail",
       "-n for no execution (useful with --ast-output)": "fail",
       "-u is nounset": "fail",
-      "Unimplemented options - OSH shopt -s ignore_shopt_not_impl": "fail",
-      "Unimplemented options - print, query, set, unset": "fail",
       "interactive shell starts with emacs mode on": "fail",
       "noclobber on \u003c\u003e": "fail",
       "nounset": "fail",

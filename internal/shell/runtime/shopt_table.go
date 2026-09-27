@@ -125,7 +125,7 @@ var shoptOptions = []shoptOption{
 	acts("shift_verbose", func(o *shellOptions) *bool { return &o.shiftVerbose }),
 	fixed("sourcepath", false, notYet),
 	fixed("varredir_close", false, "a {name} redirection's descriptor stays open after the command"),
-	fixed("xpg_echo", false, notYet),
+	acts("xpg_echo", func(o *shellOptions) *bool { return &o.xpgEcho }),
 }
 
 func lookupShoptOption(name string) (shoptOption, bool) {
