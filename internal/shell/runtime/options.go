@@ -48,15 +48,21 @@ type shellOptions struct {
 	// inertShellOptionNames.
 	monitor bool
 	vi      bool
-	// extGlob is reported by `shopt` and is always true: the matcher recognises the
-	// extended operators whether or not it is asked to. See pattern_extended.go.
-	extGlob bool
 	// autoCD is `shopt -s autocd`: a bare directory name means `cd` to it. Off by
 	// default, as it is in bash, because it changes what a mistyped command does.
 	autoCD bool
 	// inheritErrExit is `shopt -s inherit_errexit`: a command substitution keeps `set -e`,
 	// which it otherwise does not; see commandSubstitutionScript.
 	inheritErrExit bool
+	// The shopt names of the interactive layer, which are remembered and reported and
+	// change nothing; see shopt_table.go.
+	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool
+	completeFullQuote, dirExpand, dirSpell, forceFignore, histAppend, histReedit bool
+	histVerify, hostComplete, hupOnExit, interactiveComments, litHist, mailWarn  bool
+	noEmptyCmdCompletion, progComp, progCompAlias, promptVars                    bool
+	// login is whether the shell was started as a login shell, which `shopt login_shell`
+	// reports.
+	login bool
 	// invocation is how the shell was started, as `$-` spells it after the options:
 	// c for a command string, s for commands read from standard input, i for an
 	// interactive session. Not options -- `set` cannot change them -- but kept here so

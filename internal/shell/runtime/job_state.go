@@ -204,7 +204,15 @@ func shellOptionFields(o *shellOptions) map[string]*bool {
 		"globStar": &o.globStar, "nullGlob": &o.nullGlob, "dotGlob": &o.dotGlob,
 		"noCaseMatch": &o.noCaseMatch, "noHiddenGlob": &o.noHiddenGlob,
 		"noHidSysGlob": &o.noHidSysGlob, "ignoreEOF": &o.ignoreEOF, "monitor": &o.monitor,
-		"vi": &o.vi, "extGlob": &o.extGlob, "autoCD": &o.autoCD, "inheritErrExit": &o.inheritErrExit,
+		"vi": &o.vi, "autoCD": &o.autoCD, "inheritErrExit": &o.inheritErrExit, "login": &o.login,
+		"cdSpell": &o.cdSpell, "checkHash": &o.checkHash, "checkJobs": &o.checkJobs,
+		"checkWinSize": &o.checkWinSize, "cmdHist": &o.cmdHist, "completionStripExe": &o.completionStripExe,
+		"completeFullQuote": &o.completeFullQuote, "dirExpand": &o.dirExpand, "dirSpell": &o.dirSpell,
+		"forceFignore": &o.forceFignore, "histAppend": &o.histAppend, "histReedit": &o.histReedit,
+		"histVerify": &o.histVerify, "hostComplete": &o.hostComplete, "hupOnExit": &o.hupOnExit,
+		"interactiveComments": &o.interactiveComments, "litHist": &o.litHist, "mailWarn": &o.mailWarn,
+		"noEmptyCmdCompletion": &o.noEmptyCmdCompletion, "progComp": &o.progComp,
+		"progCompAlias": &o.progCompAlias, "promptVars": &o.promptVars,
 	}
 }
 

@@ -112,6 +112,44 @@ func TestInvocation_loginReadsTheProfile(t *testing.T) {
 	}
 }
 
+// -O NAME and +O NAME are `shopt -s NAME` and `shopt -u NAME` before the script, as bash
+// has them; -O was an invalid option. A name bash does not have ends the shell with 2
+// before anything runs, which is bash's answer.
+func TestInvocation_shoptOptions(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		args   []string
+		stdout string
+		status int
+	}{
+		{name: "-O sets", args: []string{"-O", "nullglob", "-c", "echo foo *.none bar"}, stdout: "foo bar\n"},
+		{name: "+O unsets", args: []string{"+O", "nullglob", "-c", "echo foo *.none bar"}, stdout: "foo *.none bar\n"},
+		{name: "among letters", args: []string{"-eO", "dotglob", "-c", "shopt -p dotglob; echo $-"}, stdout: "shopt -s dotglob\nec\n"},
+		{name: "an unknown name", args: []string{"-O", "nosuch", "-c", "echo ran"}, stdout: "", status: 2},
+		// Only as the last argument: bash takes whatever follows -O as its name, -c included.
+		{name: "+O last lists commands", args: []string{"+O"}, stdout: "shopt -u array_expand_once\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			result := runInvocation(t, "", test.args...)
+			if !strings.HasPrefix(result.stdout, test.stdout) || test.stdout == "" && result.stdout != "" || result.status != test.status {
+				t.Fatalf("got %q/%d, want %q/%d (stderr %q)", result.stdout, result.status, test.stdout, test.status, result.stderr)
+			}
+		})
+	}
+}
+
+// `shopt login_shell` says whether the shell was started with -l, as bash's does.
+func TestInvocation_loginShellIsReported(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	login := runInvocation(t, "", "-l", "-c", "shopt -p login_shell")
+	plain := runInvocation(t, "", "-c", "shopt -p login_shell")
+	if login.stdout != "shopt -s login_shell\n" || plain.stdout != "shopt -u login_shell\n" {
+		t.Fatalf("stdout %q and %q, want login_shell on with -l only (stderr %q %q)",
+			login.stdout, plain.stdout, login.stderr, plain.stderr)
+	}
+}
+
 // A session says it is one: `case $- in *i*)` is how a startup file tells, and $0 is the
 // shell's name. `$-` had no i and $0 was empty.
 func TestInvocation_sessionReportsItself(t *testing.T) {

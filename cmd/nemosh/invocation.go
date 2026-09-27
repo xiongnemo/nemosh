@@ -27,7 +27,12 @@ type invocation struct {
 	checkOnly   bool // -n: parse the script and run none of it
 	listOptions bool // -o with nothing after it
 	options     []invocationOption
-	operands    []string
+	// shopts are bash's -O NAME and +O NAME, `shopt -s NAME` and `shopt -u NAME` before
+	// the script. -O with nothing after it lists them, and +O lists them as commands.
+	shopts        []invocationOption
+	listShopts    bool
+	reusableShopt bool
+	operands      []string
 }
 
 // invocationOption is one option for `set` to apply: a letter, or the name after -o.
@@ -60,13 +65,18 @@ func parseInvocation(args []string) (invocation, error) {
 		enable := arg[0] == '-'
 		for _, letter := range []byte(arg[1:]) {
 			switch {
-			case letter != 'o':
+			case letter != 'o' && letter != 'O':
 				parsed.letter(letter, enable)
-			case index+1 == len(args):
+			case index+1 == len(args) && letter == 'o':
 				parsed.listOptions = true
-			default:
+			case index+1 == len(args):
+				parsed.listShopts, parsed.reusableShopt = true, !enable
+			case letter == 'o':
 				index++
 				parsed.named(args[index], enable)
+			default:
+				index++
+				parsed.shopts = append(parsed.shopts, invocationOption{name: args[index], enable: enable})
 			}
 		}
 	}
@@ -150,9 +160,21 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 			return exitStatus(2)
 		}
 	}
+	for _, option := range c.invocation.shopts {
+		if err := rt.SetShopt(option.name, option.enable); err != nil {
+			fmt.Fprintf(c.stderr, "nemosh: %v\n", err)
+			return exitStatus(2)
+		}
+	}
 	rt.SetInvocationMode(mode)
+	if c.invocation.login {
+		rt.MarkLoginShell()
+	}
 	if c.invocation.listOptions {
 		rt.ListOptions()
+	}
+	if c.invocation.listShopts {
+		rt.ListShopts(c.invocation.reusableShopt)
 	}
 	if c.invocation.login && !c.invocation.checkOnly {
 		if status, exited := sourceLoginProfiles(ctx, rt, c.stderr); exited {

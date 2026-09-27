@@ -7,11 +7,9 @@ import (
 	"strings"
 )
 
-// shellOptionLine is how both option listings print a row, and it is one constant because the
-// two were not the same: `shopt` padded the name to twelve and then added a tab, `set -o`
-// padded to twelve and added nothing at all. Two listings of the same shell's own options did
-// not line up with each other. bash pads to fifteen and adds a tab; twelve fits every name
-// here, and the tab is what bash and busybox both put there.
+// shellOptionLine is how the `set -o` listing prints a row. bash pads to fifteen and adds a
+// tab; twelve fits every name here, and the tab is what bash and busybox both put there.
+// shopt, which has bash's names, has bash's width too; see shoptLine.
 const shellOptionLine = "%-12s\t%s\n"
 
 // set implements the POSIX `set` builtin. With no arguments it lists the shell

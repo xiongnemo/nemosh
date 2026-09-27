@@ -63,6 +63,7 @@ Options:
   -n            parse the script and report syntax errors without running it
   -aCeEfux      the "set" options of the same letters; +LETTER turns one off
   -o NAME       the "set -o" option NAME, such as pipefail; +o NAME turns it off
+  -O NAME       the "shopt" option NAME, such as nullglob; +O NAME turns it off
   - or --       end the options
   --version     print the version and exit
   --list        print every bundled applet, one per line, and exit

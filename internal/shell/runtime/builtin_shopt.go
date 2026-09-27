@@ -2,96 +2,42 @@ package runtime
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 )
 
-// `shopt` -- the option builtin bash keeps separate from `set -o`.
-//
-// It was not a builtin, so `shopt -s globstar` failed with `shopt: not found`, and
-// the three glob options it is nearly always used for could not be turned on at all.
-//
-// Only the options this shell can honour are named. `shopt -s extglob` is refused
-// rather than accepted, because accepting it would leave a script believing `@(a|b)`
-// works -- and a pattern that silently matches nothing is the failure this whole pass
-// has been about.
+// `shopt` -- the option builtin bash keeps apart from `set -o`, with bash's names and bash's
+// answers, since busybox has no shopt. The names and what each does are in shopt_table.go.
 
-// shoptOption is one settable name.
-type shoptOption struct {
-	name  string
-	field func(*shellOptions) *bool
-	// why says what it does, for the listing.
-	why string
+// shoptLine is how shopt prints a name and its state: bash's, padded to twenty. The whole
+// `set -o` listing has its own; see shellOptionLine.
+const shoptLine = "%-20s\t%s\n"
+
+// shoptRequest is what shopt's options asked for.
+type shoptRequest struct {
+	set, unset, quiet, print, setO bool
 }
 
-var shoptOptions = []shoptOption{
-	{"autocd", func(o *shellOptions) *bool { return &o.autoCD }, "a bare directory name means cd to it"},
-	{"dotglob", func(o *shellOptions) *bool { return &o.dotGlob }, "a leading dot is matched by * as well"},
-	{"globstar", func(o *shellOptions) *bool { return &o.globStar }, "** matches across directories"},
-	{"inherit_errexit", func(o *shellOptions) *bool { return &o.inheritErrExit }, "a command substitution keeps set -e"},
-	{"nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }, "patterns match without regard to case"},
-	{"nocasematch", func(o *shellOptions) *bool { return &o.noCaseMatch }, "case and [[ ]] match without regard to case"},
-	{"nullglob", func(o *shellOptions) *bool { return &o.nullGlob }, "a pattern matching nothing expands to nothing"},
-	{"extglob", func(o *shellOptions) *bool { return &o.extGlob }, "?() *() +() @() !() in patterns; always on here"},
-}
-
-func lookupShoptOption(name string) (shoptOption, bool) {
-	for _, option := range shoptOptions {
-		if option.name == name {
-			return option, true
-		}
-	}
-	return shoptOption{}, false
-}
-
-// shoptBuiltin is `shopt [-suqp] [name ...]`.
+// shoptBuiltin is `shopt [-pqsu] [-o] [name ...]`.
 func (r Runtime) shoptBuiltin(args []string) int {
-	set, unset, quiet, names, err := parseShoptArgs(args)
+	request, names, err := parseShoptArgs(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "shopt: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "shopt: %v\nshopt: usage: shopt [-pqsu] [-o] [optname ...]\n", err)
 		return 2
 	}
-	if len(names) == 0 {
-		if set || unset {
-			return r.listShoptOptions(set)
-		}
-		return r.listShoptOptions(false, true)
+	if request.set && request.unset {
+		fmt.Fprintln(r.streams.Stderr, "shopt: cannot set and unset shell options simultaneously")
+		return 1
 	}
-	status := 0
-	for _, name := range names {
-		option, known := lookupShoptOption(name)
-		if !known {
-			fmt.Fprintf(r.streams.Stderr,
-				"shopt: %s: not an option this build has; it has %s\n", name, strings.Join(shoptOptionNames(), ", "))
-			status = 1
-			continue
-		}
-		switch {
-		case set:
-			*option.field(r.options) = true
-		case unset:
-			// extglob cannot be turned off: the matcher recognises the operators
-			// unconditionally, for the reason pattern_extended.go gives. Saying so beats
-			// accepting the request and going on matching them.
-			if name == "extglob" {
-				fmt.Fprintln(r.streams.Stderr,
-					"shopt: extglob is always on in this build and cannot be turned off")
-				status = 1
-				continue
-			}
-			*option.field(r.options) = false
-		case quiet:
-			if !*option.field(r.options) {
-				status = 1
-			}
-		default:
-			r.printShoptOption(option)
-		}
+	switch {
+	case request.setO:
+		return r.shoptSetOptions(request, names)
+	case len(names) > 0 && (request.set || request.unset):
+		return r.toggleShopts(request.set, names)
 	}
-	return status
+	return r.listShopts(request, names)
 }
 
-func parseShoptArgs(args []string) (set, unset, quiet bool, names []string, err error) {
+func parseShoptArgs(args []string) (shoptRequest, []string, error) {
+	var request shoptRequest
 	index := 0
 	for ; index < len(args); index++ {
 		argument := args[index]
@@ -105,57 +51,149 @@ func parseShoptArgs(args []string) (set, unset, quiet bool, names []string, err 
 		for _, letter := range argument[1:] {
 			switch letter {
 			case 's':
-				set = true
+				request.set = true
 			case 'u':
-				unset = true
+				request.unset = true
 			case 'q':
-				quiet = true
+				request.quiet = true
 			case 'p':
-				// The default listing is already in a form `shopt` reads back.
+				request.print = true
 			case 'o':
-				return false, false, false, nil, fmt.Errorf(
-					"-o: the `set -o` options are reached with `set`, not with shopt")
+				request.setO = true
 			default:
-				return false, false, false, nil, fmt.Errorf("-%c: not an option; shopt takes -s -u -q -p", letter)
+				return request, nil, fmt.Errorf("-%c: invalid option", letter)
 			}
 		}
 	}
-	if set && unset {
-		return false, false, false, nil, fmt.Errorf("-s and -u cannot both be given")
-	}
-	return set, unset, quiet, args[index:], nil
+	return request, args[index:], nil
 }
 
-func shoptOptionNames() []string {
-	names := make([]string, 0, len(shoptOptions))
-	for _, option := range shoptOptions {
-		names = append(names, option.name)
+// listShopts prints the named options, or every one: with -s only those on, with -u only
+// those off. Named, the status is 1 unless all of them are on, which is bash's and makes
+// `shopt name` a test the way `shopt -q name` is. -p prints each as the command that sets it
+// back.
+func (r Runtime) listShopts(request shoptRequest, names []string) int {
+	if len(names) == 0 {
+		for _, option := range shoptOptions {
+			value := r.shoptValue(option)
+			if request.set && !value || request.unset && value {
+				continue
+			}
+			r.printShopt(request, option.name, value)
+		}
+		return 0
 	}
-	sort.Strings(names)
-	return names
-}
-
-// listShoptOptions prints every option, or only the ones that are on when `-s` was
-// given with no names -- which is bash's arrangement and how a script asks what is
-// enabled.
-func (r Runtime) listShoptOptions(onlyEnabled bool, all ...bool) int {
-	for _, option := range shoptOptions {
-		enabled := *option.field(r.options)
-		if onlyEnabled && !enabled {
+	status := 0
+	for _, name := range names {
+		option, known := lookupShoptOption(name)
+		if !known {
+			fmt.Fprintf(r.streams.Stderr, "shopt: %s: invalid shell option name\n", name)
+			status = 1
 			continue
 		}
-		if len(all) == 0 && !onlyEnabled && !enabled {
-			continue
+		value := r.shoptValue(option)
+		if !value {
+			status = 1
 		}
-		r.printShoptOption(option)
+		r.printShopt(request, name, value)
 	}
-	return 0
+	return status
 }
 
-func (r Runtime) printShoptOption(option shoptOption) {
-	state := "off"
-	if *option.field(r.options) {
-		state = "on"
+func (r Runtime) printShopt(request shoptRequest, name string, value bool) {
+	switch {
+	case request.quiet:
+	case request.print && value:
+		fmt.Fprintf(r.streams.Stdout, "shopt -s %s\n", name)
+	case request.print:
+		fmt.Fprintf(r.streams.Stdout, "shopt -u %s\n", name)
+	default:
+		fmt.Fprintf(r.streams.Stdout, shoptLine, name, onOff(value))
 	}
-	fmt.Fprintf(r.streams.Stdout, shellOptionLine, option.name, state)
+}
+
+// toggleShopts is -s or -u with names. Each is set or refused on its own, so a name this
+// shell does not have leaves the others set, and the status is 1 -- bash's arrangement.
+func (r Runtime) toggleShopts(value bool, names []string) int {
+	status := 0
+	for _, name := range names {
+		if err := r.setShopt(name, value); err != nil {
+			fmt.Fprintf(r.streams.Stderr, "shopt: %v\n", err)
+			status = 1
+			continue
+		}
+		// At a prompt, where an option of the interactive layer is meant to act, it says it
+		// does not.
+		if option, _ := lookupShoptOption(name); option.kind == shoptRecorded && r.interactive.session {
+			fmt.Fprintf(r.streams.Stderr, "shopt: %s: recorded, and changes nothing here: %s\n", name, option.why)
+		}
+	}
+	return status
+}
+
+// setShopt sets one name, or says why it cannot. A startup name is accepted and keeps its
+// value, which is bash's answer for both.
+func (r Runtime) setShopt(name string, value bool) error {
+	option, known := lookupShoptOption(name)
+	switch {
+	case !known:
+		return fmt.Errorf("%s: invalid shell option name", name)
+	case option.kind == shoptActs || option.kind == shoptRecorded:
+		*option.field(r.options) = value
+	case option.kind == shoptFixed && value != option.on:
+		return fmt.Errorf("%s: always %s here: %s", name, onOff(option.on), option.why)
+	}
+	return nil
+}
+
+// shoptSetOptions is -o: the names are `set -o`'s and so is what they do. Named options are
+// printed in shopt's form, and the whole listing in `set -o`'s, as bash prints them.
+func (r Runtime) shoptSetOptions(request shoptRequest, names []string) int {
+	if len(names) == 0 {
+		for _, spec := range shellOptionSpecs {
+			value := *spec.field(r.options)
+			switch {
+			case request.quiet, request.set && !value, request.unset && value:
+			case request.print:
+				fmt.Fprintf(r.streams.Stdout, "set %co %s\n", optionSign(value), spec.name)
+			default:
+				fmt.Fprintf(r.streams.Stdout, shellOptionLine, spec.name, onOff(value))
+			}
+		}
+		return 0
+	}
+	status := 0
+	for _, name := range names {
+		spec, known := shellOptionSpecByName(name)
+		switch {
+		case !known:
+			fmt.Fprintf(r.streams.Stderr, "shopt: %s: invalid option name\n", name)
+			status = 1
+		case request.set || request.unset:
+			if err := r.setOptionName(name, request.set); err != nil {
+				fmt.Fprintf(r.streams.Stderr, "shopt: %v\n", err)
+				status = 1
+			}
+		default:
+			value := *spec.field(r.options)
+			if !value {
+				status = 1
+			}
+			switch {
+			case request.quiet:
+			case request.print:
+				fmt.Fprintf(r.streams.Stdout, "set %co %s\n", optionSign(value), name)
+			default:
+				fmt.Fprintf(r.streams.Stdout, shoptLine, name, onOff(value))
+			}
+		}
+	}
+	return status
+}
+
+func onOff(value bool) string {
+	if value {
+		return "on"
+	}
+	return "off"
 }

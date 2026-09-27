@@ -120,17 +120,13 @@ func TestShopt_reportsAndSetsState(t *testing.T) {
 		status   int
 	}{
 		{name: "the listing", script: "shopt\n", contains: "globstar", status: 0},
-		{name: "after setting", script: "shopt -s globstar\nshopt\n", contains: "globstar    \ton", status: 0},
-		{name: "after unsetting", script: "shopt -s globstar\nshopt -u globstar\nshopt\n", contains: "globstar    \toff", status: 0},
+		{name: "after setting", script: "shopt -s globstar\nshopt\n", contains: "globstar            \ton", status: 0},
+		{name: "after unsetting", script: "shopt -s globstar\nshopt -u globstar\nshopt\n", contains: "globstar            \toff", status: 0},
 		{name: "-q on an option that is off", script: "shopt -q globstar\n", contains: "", status: 1},
 		{name: "-q on an option that is on", script: "shopt -s nullglob\nshopt -q nullglob\n", contains: "", status: 0},
 		{
-			// Refused rather than accepted: accepting it would leave a script
-			// believing `@(a|b)` works.
-			// The example was extglob until the pattern operators were implemented. It is
-			// `failglob` now, which this build does not have.
-			name: "an option this build does not have", script: "shopt -s failglob\n",
-			contains: "not an option this build has", status: 1,
+			name: "a name bash does not have", script: "shopt -s nosuch\n",
+			contains: "shopt: nosuch: invalid shell option name", status: 1,
 		},
 		{name: "extglob is on", script: "shopt -q extglob\n", contains: "", status: 0},
 		{
@@ -138,13 +134,16 @@ func TestShopt_reportsAndSetsState(t *testing.T) {
 			// whether or not it is asked to. Saying so beats accepting the request and
 			// going on matching them.
 			name: "extglob cannot be turned off", script: "shopt -u extglob\n",
-			contains: "always on in this build", status: 1,
+			contains: "shopt: extglob: always on here", status: 1,
 		},
 		{
-			name: "the set -o options are not shopt's", script: "shopt -o errexit\n",
-			contains: "reached with `set`", status: 2,
+			name: "-o reaches the set -o options", script: "set -o pipefail\nshopt -o pipefail\n",
+			contains: "pipefail            \ton", status: 0,
 		},
-		{name: "-s and -u together", script: "shopt -s -u globstar\n", contains: "cannot both be given", status: 2},
+		{
+			name: "-s and -u together", script: "shopt -s -u globstar\n",
+			contains: "cannot set and unset shell options simultaneously", status: 1,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

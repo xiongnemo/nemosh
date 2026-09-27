@@ -215,7 +215,7 @@
       "recursive arith: recursion": "ash-only",
       "recursive arith: short circuit \u0026\u0026, ||": "ash-only",
       "shift unshift reverse": "fail",
-      "shopt -u expand_aliases and eval": "fail"
+      "shopt -u expand_aliases and eval": "ash-only"
     },
     "ble-unset.test.sh": {
       "[bash_unset] dynamic-unset for nested localvars": "fail",
@@ -442,8 +442,7 @@
       "history -w writes out the in-memory history to the history file": "fail",
       "history usage": "ash-only",
       "recording history can be toggled with set -o/+o history": "fail",
-      "shopt histappend - osh ignores shopt and appends, bash sometimes overwrites": "fail",
-      "shopt histappend toggle check": "fail"
+      "shopt histappend - osh ignores shopt and appends, bash sometimes overwrites": "fail"
     },
     "builtin-kill.test.sh": {
       "kill -15 %% kills current job": "fail",
@@ -1023,8 +1022,7 @@
       "SHELLOPTS is updated when options are changed": "fail",
       "SHELLOPTS reflects flags like sh -x": "fail",
       "export SHELLOPTS does cross-process tracing": "fail",
-      "export SHELLOPTS does cross-process tracing with bash": "fail",
-      "shopt -s progcomp hostcomplete are stubs (bash-completion)": "fail"
+      "export SHELLOPTS does cross-process tracing with bash": "fail"
     },
     "sh-options.test.sh": {
       "$- with -c": "fail",
@@ -1035,23 +1033,16 @@
       "Unimplemented options - OSH shopt -s ignore_shopt_not_impl": "fail",
       "Unimplemented options - print, query, set, unset": "fail",
       "interactive shell starts with emacs mode on": "fail",
-      "no-ops not shown by shopt -p": "ash-only",
       "noclobber on \u003c\u003e": "fail",
       "nounset": "fail",
-      "pass shopt options like sh -O nullglob": "fail",
       "set -o vi/emacs": "fail",
       "set without args and array variables": "fail",
       "set without args and assoc array variables (not in OSH)": "fail",
       "set without args lists variables": "fail",
       "shopt -o prints 'set' options": "fail",
       "shopt -p -o prints 'set' options": "fail",
-      "shopt -p -o validates option names": "fail",
-      "shopt -p prints 'shopt' options": "fail",
-      "shopt -p validates option names": "fail",
       "shopt -q": "fail",
       "shopt -s nounset works in YSH, not in bash": "fail",
-      "shopt allows for backward compatibility like bash": "fail",
-      "shopt with no flags prints options": "fail",
       "stubbed out bash options": "fail",
       "vi and emacs are mutually exclusive": "fail"
     },

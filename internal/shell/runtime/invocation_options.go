@@ -30,9 +30,21 @@ func (r Runtime) SetOption(letter byte, name string, enable bool) error {
 // startup file to learn whether it is interactive, answered no at a prompt.
 func (r Runtime) SetInvocationMode(letters string) { r.options.invocation = letters }
 
+// MarkLoginShell records that the shell was started as a login shell, which `shopt
+// login_shell` reports. Neither reference puts it in `$-`.
+func (r Runtime) MarkLoginShell() { r.options.login = true }
+
 // ListOptions prints what `set -o` prints, which is what `nemosh -o` with no name after
 // it does in both references.
 func (r Runtime) ListOptions() { r.listShellOptions(true) }
+
+// SetShopt is `shopt -s NAME`, or `shopt -u NAME` when enable is false, for nemosh's own
+// -O NAME and +O NAME, which are bash's. busybox has neither.
+func (r Runtime) SetShopt(name string, enable bool) error { return r.setShopt(name, enable) }
+
+// ListShopts prints what `shopt` prints, or with reusable what `shopt -p` prints: bash's
+// -O and +O with no name after them.
+func (r Runtime) ListShopts(reusable bool) { r.listShopts(shoptRequest{print: reusable}, nil) }
 
 // SourceStartup runs a startup file -- $ENV, or a login shell's profiles -- as part of the
 // shell rather than as a script of its own. Its EXIT trap is the shell's, left for when the

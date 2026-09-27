@@ -1013,5 +1013,41 @@
     "stdout": "",
     "status": 2,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "set -e\nshopt -s nullglob globstar checkwinsize histappend progcomp\necho ok",
+    "stdout": "ok\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -p nullglob; echo \"st=$?\"; shopt -s nullglob; shopt -p nullglob; echo \"st=$?\"",
+    "stdout": "shopt -u nullglob\nst=1\nshopt -s nullglob\nst=0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s nullglob nosuch 2>/dev/null; echo \"st=$?\"; shopt -q nullglob; echo \"q=$?\"",
+    "stdout": "st=1\nq=0\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -so pipefail; shopt -po pipefail errexit",
+    "stdout": "set -o pipefail\nset +o errexit\n",
+    "status": 1,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s histappend; shopt -u checkwinsize; shopt -p histappend checkwinsize",
+    "stdout": "shopt -s histappend\nshopt -u checkwinsize\n",
+    "status": 1,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s login_shell; echo \"st=$?\"; shopt -p login_shell",
+    "stdout": "st=0\nshopt -u login_shell\n",
+    "status": 1,
+    "reference": "bash-5.3"
   }
 ]
