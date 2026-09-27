@@ -163,9 +163,15 @@ func matchGroupRepeated(group extendedGroup, rest, value []rune, least, most int
 		return false
 	}
 	for _, alternative := range group.alternatives {
-		// Every prefix the alternative could account for. A prefix of length zero is
-		// skipped, or a `*(a)` would recurse for ever on the same position.
-		for taken := 1; taken <= len(value); taken++ {
+		// Every prefix the alternative could account for. A prefix of length zero only
+		// while the group still owes a match, or a `*(a)` would recurse for ever on the same
+		// position -- and then it has to count, or `@()` and the empty arm of `@(a||b)`
+		// could never match the empty string they match in bash.
+		first := 1
+		if least > 0 {
+			first = 0
+		}
+		for taken := first; taken <= len(value); taken++ {
 			if !matchExtendedPattern(alternative, value[:taken]) {
 				continue
 			}
@@ -244,11 +250,18 @@ func skipBalancedParens(line string, index int) int {
 	return len(line)
 }
 
-// extendedGroupText is the whole `X(...)` starting at index, for the scans that copy it
-// through rather than only stepping over it.
-func extendedGroupText(line string, index int) (string, bool) {
-	if !extendedGroupOpensAt(line, index) {
-		return "", false
+// extendedGroupLiterals are the characters that inside a group are the pattern's own, where
+// outside one they would end the word: the pipe, the blanks, the other operators, and the
+// parentheses, which nest.
+const extendedGroupLiterals = "()| \t\n&;<>"
+
+// extendedGroupDepth is how many of a group's parentheses are open once char is read.
+func extendedGroupDepth(depth int, char byte) int {
+	switch char {
+	case '(':
+		return depth + 1
+	case ')':
+		return depth - 1
 	}
-	return line[index:skipBalancedParens(line, index)], true
+	return depth
 }

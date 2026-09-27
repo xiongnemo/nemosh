@@ -149,7 +149,9 @@ func (b *fieldBuilder) unquotedList(values []string, joiner string) {
 func (b *fieldBuilder) close() {
 	b.fields = append(b.fields, b.current.String())
 	pattern := ""
-	if b.glob {
+	// An extended group is looked for in the whole field too, since it can arrive in pieces:
+	// a default's word is added a character at a time, so `${u:-@(a|b)}` never globbed.
+	if b.glob || hasExtendedPattern(b.pattern.String()) {
 		pattern = b.pattern.String()
 	}
 	b.patterns = append(b.patterns, pattern)
@@ -168,14 +170,15 @@ func (b *fieldBuilder) finish() ([]string, []string) {
 }
 
 // escapeGlob is text as a pattern that matches it and nothing else: each pattern character
-// escaped, the hyphen too, which inside a bracket expression would make a range.
+// escaped, the hyphen too, which inside a bracket expression would make a range, and the
+// parentheses and bar, so a quoted `@(a|b)` is those six characters and not a group.
 func escapeGlob(text string) string {
-	if !strings.ContainsAny(text, `*?[]\-`) {
+	if !strings.ContainsAny(text, `*?[]\-()|`) {
 		return text
 	}
 	var out strings.Builder
 	for index := 0; index < len(text); index++ {
-		if strings.IndexByte(`*?[]\-`, text[index]) >= 0 {
+		if strings.IndexByte(`*?[]\-()|`, text[index]) >= 0 {
 			out.WriteByte('\\')
 		}
 		out.WriteByte(text[index])

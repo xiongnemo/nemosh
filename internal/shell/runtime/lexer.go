@@ -50,6 +50,8 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 	// inCondition is set between an unquoted `[[` and its `]]`. See the operator
 	// check below for why the lexer has to know.
 	inCondition := false
+	// groupDepth is how many parentheses of an extended pattern group are open.
+	groupDepth := 0
 	appendToken := func(token shellToken) error {
 		if err := budget.consumeTokens(1); err != nil {
 			return err
@@ -167,16 +169,22 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 				index = end
 				continue
 			}
-			// `@(a|b)` and its four siblings: the whole group is one word, and the
-			// `|` inside it is not a pipe. Eighth scan to need this -- without it the
-			// group reached the case parser intact and then tokenized into three
-			// words, reported as `case: invalid pattern`. See pattern_extended.go.
-			if text, ok := extendedGroupText(line, index); ok {
-				buffer.WriteString(text)
-				appendLiteralPart(&parts, text, quoteUnquoted)
-				wordPresent = true
-				index += len(text) - 1
-				continue
+			// `@(a|b)` and its four siblings: the whole group is one word, and a `|`, a
+			// blank or a parenthesis inside it is its own character, not a pipe, a
+			// separator or a subshell. Eighth scan to need this -- without it the group
+			// reached the case parser intact and then tokenized into three words,
+			// reported as `case: invalid pattern`. See pattern_extended.go. The rest of
+			// what is inside is lexed as any word is, as bash lexes it: the group went
+			// in as its literal characters, so `?($ext|h)` held a `$`, and `@(a|'*')`
+			// its quotes.
+			if groupDepth > 0 || extendedGroupOpensAt(line, index) {
+				groupDepth = extendedGroupDepth(groupDepth, char)
+				if strings.IndexByte(extendedGroupLiterals, char) >= 0 {
+					buffer.WriteByte(char)
+					appendLiteralPart(&parts, line[index:index+1], quoteUnquoted)
+					wordPresent = true
+					continue
+				}
 			}
 			// `$'...'` -- ANSI-C quoting. Before the array-assignment branch only
 			// because both start from an unquoted position; they cannot overlap.

@@ -167,8 +167,11 @@ func joinGlobPath(base, name string) string {
 	}
 }
 
+// containsGlobMeta reports a pattern character in text: `*`, `?` or `[`, or the opening of an
+// extended group, which makes a pattern with none of them. `rm !(keep)` and `echo
+// @(foo|bar).py` were left as written, since they had no star, question mark or bracket.
 func containsGlobMeta(text string) bool {
-	return strings.ContainsAny(text, "*?[")
+	return strings.ContainsAny(text, "*?[") || hasExtendedPattern(text)
 }
 
 // matchGlobSegment applies `set -o nocaseglob`, which busybox implements as

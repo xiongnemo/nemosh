@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1797 of the 2551 cases bash passes: 70.4%.**
+**nemosh passes 1812 of the 2551 cases bash passes: 71.0%.**
 
-Of the other 754, it does 97 the way the files record of ash, which may be busybox's
-way, and 657 neither way.
+Of the other 739, it does 97 the way the files record of ash, which may be busybox's
+way, and 642 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 657 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1797 |
+| that nemosh passes of those | 1812 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -109,8 +109,8 @@ of ash.
 | errexit.test.sh | 35 | 34 | 29 | 85.3% | 0 | 35 |
 | exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
-| extglob-files.test.sh | 23 | 23 | 10 | 43.5% | 0 | 0 |
-| extglob-match.test.sh | 29 | 29 | 23 | 79.3% | 0 | 0 |
+| extglob-files.test.sh | 23 | 23 | 18 | 78.3% | 0 | 0 |
+| extglob-match.test.sh | 29 | 29 | 28 | 96.6% | 0 | 0 |
 | fatal-errors.test.sh | 5 | 5 | 0 | 0.0% | 3 | 3 |
 | for-expr.test.sh | 9 | 8 | 6 | 75.0% | 0 | 0 |
 | func-parsing.test.sh | 15 | 15 | 12 | 80.0% | 2 | 13 |
@@ -152,7 +152,7 @@ of ash.
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
 | tilde.test.sh | 14 | 12 | 10 | 83.3% | 1 | 10 |
 | toysh-posix.test.sh | 22 | 22 | 12 | 54.5% | 6 | 22 |
-| toysh.test.sh | 8 | 7 | 4 | 57.1% | 0 | 1 |
+| toysh.test.sh | 8 | 7 | 6 | 85.7% | 0 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
 | var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1797 | 70.4% | 97 | 1447 |
+| all | 2668 | 2551 | 1812 | 71.0% | 97 | 1447 |

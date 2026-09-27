@@ -1541,5 +1541,17 @@
     "stdout": "[unset] []\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s extglob\next=.py\n[[ foo.py == foo?($ext|.h) ]] && echo m\ncase foo.h in foo?($ext|.h)) echo n;; esac",
+    "stdout": "m\nn\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s extglob\nset -f\necho @(a|'*'|b)\n[[ '' == @(a||b) ]] && echo empty",
+    "stdout": "@(a|*|b)\nempty\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

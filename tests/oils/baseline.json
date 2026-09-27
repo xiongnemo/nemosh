@@ -663,27 +663,14 @@
       "readonly +": "fail"
     },
     "extglob-files.test.sh": {
-      "+() matches 1 or more": "fail",
       "?() matches 0 or 1": "fail",
       "Escaping of pipe (glibc bug, see demo/glibc_fnmatch.c)": "fail",
-      "Extended glob as argument to ${undef:-} (dynamic globbing)": "fail",
-      "Extended glob patterns with spaces": "fail",
-      "Filenames with spaces": "fail",
       "Glob other punctuation chars (lexer mode)": "fail",
       "More glob escaping": "fail",
-      "Nested extended glob pattern": "fail",
-      "Two adjacent alternations": "fail",
-      "no match": "fail",
-      "noglob": "fail",
-      "nullglob with extended glob": "fail"
+      "no match": "fail"
     },
     "extglob-match.test.sh": {
-      "@() with variable arms": "fail",
-      "Turning extglob on changes the meaning of [[ !(str) ]] in bash": "fail",
-      "[[ $x == !($str) ]]": "fail",
-      "extglob empty pattern": "fail",
-      "extglob empty string": "fail",
-      "nested @() with quotes and vars": "fail"
+      "Turning extglob on changes the meaning of [[ !(str) ]] in bash": "fail"
     },
     "fatal-errors.test.sh": {
       "${undef} with nounset": "fail",
@@ -956,8 +943,6 @@
     },
     "toysh.test.sh": {
       "Brace Expansion": "fail",
-      "extglob $IFS 1": "fail",
-      "extglob $IFS 2": "fail",
       "{abc}\u003c\u003c\u003c - http://landley.net/notes-2019.html#09-12-2019": "fail"
     },
     "type-compat.test.sh": {
