@@ -1745,5 +1745,11 @@
     "stdout": "x:/h/y /h\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "echo ${foo:-$({ echo hi; })} \"${foo:-$(echo \"}\")}\"",
+    "stdout": "hi }\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

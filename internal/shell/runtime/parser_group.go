@@ -49,14 +49,13 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		// escape pending, so the `\"` after it closed the string and `(a b)` later on was taken
 		// for a group. The same goes for the two branches above, and for matchingGroupEnd's.
 		if char == '$' && index+1 < len(line) && line[index+1] == '{' && quote != '\'' && !escaped {
-			end := strings.IndexByte(line[index+2:], '}')
-			if end < 0 {
+			end, ok := bracedParameterEnd(line, index+1)
+			if !ok {
 				output.WriteString(line[index:])
 				break
 			}
-			end += index + 2
-			output.WriteString(line[index : end+1])
-			index = end + 1
+			output.WriteString(line[index:end])
+			index = end
 			continue
 		}
 		if escaped {

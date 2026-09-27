@@ -709,7 +709,6 @@
       "readonly var can't be assigned through nameref": "fail"
     },
     "nix-idioms.test.sh": {
-      "${!ref} to undefined array": "fail",
       "${!ref} to undefined string var is fatal, INCONSISTENT with array": "fail",
       "export with dynamic var name +=": "fail"
     },

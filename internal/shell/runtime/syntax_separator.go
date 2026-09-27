@@ -172,11 +172,8 @@ func expansionEnd(line string, index int) (int, bool) {
 		}
 		return commandSubstitutionEnd(line, index+2)
 	case '{':
-		end := strings.IndexByte(line[index+2:], '}')
-		if end < 0 {
-			return 0, false
-		}
-		return index + 2 + end, true
+		end, ok := bracedParameterEnd(line, index+1)
+		return end - 1, ok
 	}
 	return 0, false
 }

@@ -63,6 +63,9 @@ func bracedParameterEnd(text string, start int) (int, bool) {
 		if quote != 0 {
 			if char == quote {
 				quote = 0
+			} else if end, ok := substitutionEnd(text, index); ok && quote == '"' {
+				// Inside double quotes a substitution is still one, quotes of its own and all.
+				index = end
 			}
 			continue
 		}
@@ -75,6 +78,12 @@ func bracedParameterEnd(text string, start int) (int, bool) {
 			quote = char
 		case '$':
 			dollar = index
+			// A command substitution or an arithmetic expansion is stepped over whole, so a
+			// `}` in one does not end this: `${x:-$({ echo hi; })}`, and a backquoted `echo
+			// }`, which is one by now. The group's `}` ended it and left `)}` behind.
+			if end, ok := substitutionEnd(text, index); ok {
+				index = end
+			}
 		case '{':
 			if index == start || dollar == index-1 {
 				depth++
@@ -87,4 +96,18 @@ func bracedParameterEnd(text string, start int) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// substitutionEnd is the last byte of the `$(...)` or `$((...))` at index, and false when
+// there is none there or it does not close.
+func substitutionEnd(text string, index int) (int, bool) {
+	if index+1 >= len(text) || text[index] != '$' || text[index+1] != '(' {
+		return 0, false
+	}
+	if index+2 < len(text) && text[index+2] == '(' {
+		if end, ok := arithmeticExpansionEnd(text, index+3); ok {
+			return end, true
+		}
+	}
+	return commandSubstitutionEnd(text, index+2)
 }
