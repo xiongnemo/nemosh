@@ -1739,5 +1739,11 @@
     "stdout": "[a\nb]\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "HOME=/h; a[0]=x:~/y; declare -A A; A[k]=~; echo \"${a[0]} ${A[k]}\"",
+    "stdout": "x:/h/y /h\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

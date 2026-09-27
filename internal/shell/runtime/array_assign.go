@@ -68,7 +68,9 @@ func parseArrayAssignmentWord(item word) (arrayAssignment, bool) {
 	if assignment.subscript == "" {
 		return arrayAssignment{}, false
 	}
-	assignment.value = word{parts: []wordPart{{kind: wordPartLiteral, text: value}}}
+	// The value's tilde-prefixes begin at its start and after each `:`, as an assignment's
+	// do: `a[0]=~/x` and `a[0]=x:~/y` kept the tilde, where bash gives HOME.
+	assignment.value = word{parts: []wordPart{{kind: wordPartLiteral, text: value}}, valueTilde: true}
 	return assignment, true
 }
 

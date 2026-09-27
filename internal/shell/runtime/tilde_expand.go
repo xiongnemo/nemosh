@@ -26,6 +26,10 @@ func (r Runtime) tildeParts(item word) []wordPart {
 		return item.parts
 	}
 	colons := item.assignmentTilde || item.valueTilde
+	equalsPart, equalsAt := -1, -1
+	if item.assignmentTilde {
+		equalsPart, equalsAt = assignmentEquals(item)
+	}
 	var parts []wordPart
 	for index, part := range item.parts {
 		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {
@@ -33,18 +37,44 @@ func (r Runtime) tildeParts(item word) []wordPart {
 			continue
 		}
 		leading := index == 0 && (item.expandTilde || item.valueTilde)
-		equals := index == 0 && item.assignmentTilde
+		// A subscript's text, before the assignment's `=`, takes none after a `:`:
+		// `A[$k:~]=v` is keyed k:~ in bash.
+		equals, partColons := -1, colons && index >= equalsPart
+		if index == equalsPart {
+			equals = equalsAt
+		}
 		last := index == len(item.parts)-1
-		parts = append(parts, r.tildeLiteral(part.text, leading, equals, colons, last)...)
+		parts = append(parts, r.tildeLiteral(part.text, leading, equals, partColons, last)...)
 	}
 	return parts
 }
 
+// assignmentEquals finds an assignment word's own `=`: which part it is in, and where. The
+// first part's for `name=value`, and for an element whose subscript is quoted or expanded --
+// `A['x']=v`, `a[$k]=v` -- the `]=` in the first unquoted text after it. Only the first part
+// was looked in, so the value of `A['x']=foo:~` kept its tilde. -1 and -1 when there is none.
+func assignmentEquals(item word) (int, int) {
+	if at := strings.IndexByte(item.parts[0].text, '='); at >= 0 {
+		return 0, at
+	}
+	for index, part := range item.parts[1:] {
+		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {
+			continue
+		}
+		if at := strings.Index(part.text, "]"); at >= 0 && strings.HasPrefix(part.text[at+1:], "=") {
+			return index + 1, at + 1
+		} else if at >= 0 && strings.HasPrefix(part.text[at+1:], "+=") {
+			return index + 1, at + 2
+		}
+	}
+	return -1, -1
+}
+
 // tildeLiteral expands the tilde-prefixes in one unquoted literal part. leading is whether a
-// prefix may begin at its start, equals whether one may begin after its first `=` -- an
-// assignment's -- colons whether one may begin after each `:`, and last whether a prefix may
-// run to the end of the part.
-func (r Runtime) tildeLiteral(text string, leading, equals, colons, last bool) []wordPart {
+// prefix may begin at its start, equals where in it an assignment's `=` is, or -1, colons
+// whether one may begin after each `:` past that `=`, and last whether a prefix may run to
+// the end of the part.
+func (r Runtime) tildeLiteral(text string, leading bool, equals int, colons, last bool) []wordPart {
 	var parts []wordPart
 	literal := func(value string) {
 		if value != "" {
@@ -55,7 +85,7 @@ func (r Runtime) tildeLiteral(text string, leading, equals, colons, last bool) [
 	for index := 0; index < len(text); index++ {
 		begins := index == 0 && leading
 		if index > 0 {
-			begins = colons && text[index-1] == ':' || equals && text[index-1] == '=' && !strings.Contains(text[:index-1], "=")
+			begins = colons && text[index-1] == ':' && index > equals || index-1 == equals
 		}
 		if !begins || text[index] != '~' {
 			continue

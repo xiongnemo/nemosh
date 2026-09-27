@@ -853,7 +853,6 @@
     "tilde.test.sh": {
       "${x//~/~root}": "fail",
       "No tilde expansion in word that looks like assignment but isn't": "ash-only",
-      "a[x]=foo:~ has tilde expansion": "fail",
       "temp assignment x=~ env": "fail"
     },
     "toysh-posix.test.sh": {

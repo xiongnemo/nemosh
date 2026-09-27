@@ -153,14 +153,16 @@ func assignsArrayLiteral(item word) bool {
 // tilde_expand.go; only the leading one after the `=` was expanded.
 //
 // Not an array literal, whose text is its elements': they are expanded one by one when the
-// literal is taken apart, and a tilde pass over the whole text half-expanded `[k]=~:~:~`.
+// literal is taken apart, and a tilde pass over the whole text half-expanded `[k]=~:~:~`. An
+// element whose subscript is quoted or expanded, `A['x']=~`, is marked too; see
+// assignmentEquals.
 func assignmentTildeWord(item word) word {
 	if len(item.parts) == 0 {
 		return item
 	}
 	first := item.parts[0]
 	_, value, found := strings.Cut(first.text, "=")
-	if first.kind != wordPartLiteral || first.quote != quoteUnquoted || !found || strings.HasPrefix(value, "(") {
+	if first.kind != wordPartLiteral || first.quote != quoteUnquoted || !found && !isElementAssignmentWord(item) || strings.HasPrefix(value, "(") {
 		return item
 	}
 	marked := item
