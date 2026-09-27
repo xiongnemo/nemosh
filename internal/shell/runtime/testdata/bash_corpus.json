@@ -1655,5 +1655,11 @@
     "stdout": "line=6\nline=4\nline=8\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "if { true; } then echo yes; fi\nif ( true ) then echo sub; fi\nfor i in 1; do { echo $i; } done\nf() { { echo in; } }\nf\n{ if true; then echo a; fi }",
+    "stdout": "yes\nsub\n1\nin\na\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

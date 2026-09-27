@@ -631,7 +631,6 @@
       "bash atoms [[ (( - redir failure checked": "fail",
       "brace group - redir failure checked": "ash-only",
       "errexit and time { }": "fail",
-      "errexit double guard": "fail",
       "set -e in function #2": "ash-only",
       "while loop - redirect failure checked": "ash-only"
     },
@@ -660,8 +659,7 @@
     },
     "for-expr.test.sh": {
       "Accepts { } syntax too": "fail",
-      "Arith lexer mode": "fail",
-      "For loop with and without semicolon": "fail"
+      "Arith lexer mode": "fail"
     },
     "func-parsing.test.sh": {
       "= in function name": "fail",

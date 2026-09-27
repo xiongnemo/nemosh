@@ -19,6 +19,15 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	if !found || isCommandSeparator(previous) {
 		return true
 	}
+	// A `}` right after another group's `}` closes its own group too, as POSIX has it and both
+	// references read it: `f() { { echo in; } }` was "missing }". Only after a `}` that is
+	// itself a delimiter, so `echo } }` still prints two braces.
+	if delimiter == '}' && previous == '}' && braceDelimiterAt(line, previousNonBlankIndex(line, index), '}') {
+		return true
+	}
+	if delimiter == '}' && afterCompoundCloser(line, index) {
+		return true
+	}
 	if delimiter == '{' && (previous == ')' || previous == '(' || previous == '{') {
 		return true
 	}
@@ -30,6 +39,42 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	// `echo {` printing a brace. Sixth layer to need telling about a construct, and
 	// the reason the count is worth stating: see array.go.
 	return delimiter == '{' && (afterFunctionKeyword(line, index) || afterCoprocKeyword(line, index))
+}
+
+// previousNonBlank reports the last character before index that is not a blank,
+// and whether the scan found one before running off the front of the line.
+func previousNonBlank(line string, index int) (byte, bool) {
+	if back := previousNonBlankIndex(line, index); back >= 0 {
+		return line[back], true
+	}
+	return 0, false
+}
+
+// previousNonBlankIndex is where previousNonBlank's byte is, and -1 when there is none.
+func previousNonBlankIndex(line string, index int) int {
+	for back := index - 1; back >= 0; back-- {
+		if line[back] != ' ' && line[back] != '\t' {
+			return back
+		}
+	}
+	return -1
+}
+
+// afterCompoundCloser reports a `}` right after the `fi`, `done` or `esac` that ends an if, a
+// loop or a case -- one with a separator before it, so not `echo fi }` -- which is where a
+// reserved word may stand, as both references read it: `{ if x; then y; fi }`.
+func afterCompoundCloser(line string, index int) bool {
+	end := previousNonBlankIndex(line, index)
+	start := end
+	for start >= 0 && !isCommandBoundary(line[start]) {
+		start--
+	}
+	switch line[start+1 : end+1] {
+	case "fi", "done", "esac":
+		previous, found := previousNonBlank(line, start+1)
+		return !found || isCommandSeparator(previous)
+	}
+	return false
 }
 
 // afterCoprocKeyword reports whether the words since the last separator are `coproc` or

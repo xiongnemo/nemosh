@@ -87,10 +87,18 @@ func splitSequentialSegments(line string) ([]string, error) {
 		// stopped splitting.
 		if char == ')' && len(openers) > 0 && openers[len(openers)-1] == '(' {
 			openers = openers[:len(openers)-1]
+			if len(openers) == 0 && reservedWordAfterGroup(line, index) {
+				segments = append(segments, line[start:index+1])
+				start = index + 1
+			}
 			continue
 		}
 		if braceDelimiterAt(line, index, '}') && len(openers) > 0 && openers[len(openers)-1] == '{' {
 			openers = openers[:len(openers)-1]
+			if len(openers) == 0 && reservedWordAfterGroup(line, index) {
+				segments = append(segments, line[start:index+1])
+				start = index + 1
+			}
 			continue
 		}
 		// A background `&` ends a command as `;` does, and before a reserved word it has
@@ -215,6 +223,23 @@ func endsWithBackgroundOperator(segment string) bool {
 func isCaseTerminator(segment string) bool {
 	switch segment {
 	case ";;", ";;&", ";&":
+		return true
+	}
+	return false
+}
+
+// reservedWordAfterGroup reports a reserved word that ends or goes on with a compound right
+// after the `)` or `}` at index that closed the last open group: `if { true; } then`, `if (
+// x ) then`, `{ echo g; } fi`. The group is a complete command, so what follows it is a
+// reserved word where one may stand, as POSIX has it and both references read it; left in the
+// segment it was an argument, and the compound never closed.
+func reservedWordAfterGroup(line string, index int) bool {
+	fields := strings.Fields(line[index+1:])
+	if len(fields) == 0 {
+		return false
+	}
+	switch strings.TrimRight(fields[0], ";") {
+	case "then", "do", "done", "fi", "elif", "else", "esac":
 		return true
 	}
 	return false

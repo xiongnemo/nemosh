@@ -15,9 +15,29 @@ func hasBraceSeparator(body string) bool {
 		return true
 	}
 	if !strings.HasSuffix(trimmed, ";") {
-		return false
+		return endsWithCompound(trimmed)
 	}
 	return separatorPositions(trimmed)[len(trimmed)-1]
+}
+
+// endsWithCompound reports a body whose last command is a compound one -- a group, a
+// subshell, an if, a loop, a case -- after which the `}` stands where a reserved word may, so
+// it needs no separator, as POSIX has it and both references read it: `{ { echo in; } }` and
+// `{ if x; then y; fi }` were "expected separator before }". After a simple command the `}`
+// is an argument still, so `{ echo $(echo s) }` is refused, as in both.
+func endsWithCompound(body string) bool {
+	segments, err := splitSequentialSegments(body)
+	if err != nil || len(segments) == 0 {
+		return false
+	}
+	last := strings.TrimSpace(segments[len(segments)-1])
+	switch {
+	case last == "fi" || last == "done" || last == "esac":
+		return true
+	case strings.HasPrefix(last, "(") && strings.HasSuffix(last, ")"):
+		return true
+	}
+	return strings.HasSuffix(last, "}") && braceDelimiterAt(last, len(last)-1, '}')
 }
 
 func normalizeGroupSeparators(body string) string {

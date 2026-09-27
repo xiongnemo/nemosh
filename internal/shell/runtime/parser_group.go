@@ -210,16 +210,6 @@ func isCommandBoundary(char byte) bool {
 //     `{ echo $((1+2))}; }` is text and only the second one closes.
 //
 // bash, dash, and busybox ash agree on every case above.
-// previousNonBlank reports the last character before index that is not a blank,
-// and whether the scan found one before running off the front of the line.
-func previousNonBlank(line string, index int) (byte, bool) {
-	for back := index - 1; back >= 0; back-- {
-		if line[back] != ' ' && line[back] != '\t' {
-			return line[back], true
-		}
-	}
-	return 0, false
-}
 
 // isCommandSeparator reports whether a character ends one command and so leaves
 // the next byte in command position.
