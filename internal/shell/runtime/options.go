@@ -67,6 +67,9 @@ type shellOptions struct {
 	// localVarInherit is `shopt -s localvar_inherit`: a new local starts as the caller's
 	// variable was; see local_inherit.go.
 	localVarInherit bool
+	// sourcePath is `shopt -s sourcepath`, on in a new shell: `. name` looks on PATH; see
+	// dot_source.go.
+	sourcePath bool
 	// The shopt names of the interactive layer, which are remembered and reported and
 	// change nothing; see shopt_table.go.
 	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool

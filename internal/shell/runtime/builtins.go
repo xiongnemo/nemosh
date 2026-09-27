@@ -28,30 +28,28 @@ func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
 		fmt.Fprintln(r.streams.Stderr, ".: missing file")
 		return lineResult{status: 2}
 	}
-	resolved, err := r.ResolveNemoshPath(args[0])
+	native, err := r.dotSource(args[0])
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, ".: %s: %v\n", args[0], err)
 		return lineResult{status: 1}
 	}
-	if resolved.Device {
-		fmt.Fprintf(r.streams.Stderr, ".: %s: not a regular file\n", args[0])
-		return lineResult{status: 1}
-	}
-	data, err := os.ReadFile(resolved.Native)
+	data, err := os.ReadFile(native)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, ".: %s: %v\n", args[0], err)
 		return lineResult{status: 1}
 	}
 	child := r.enterFrame("source", args[0])
 	child.sourceDepth++
-	status, control := child.runScriptResult(ctx, string(data), 1, false)
-	if _, set := r.traps[trapRETURN]; set && (control == flowNone || control == flowReturn) {
-		child.runTrap(ctx, trapRETURN, status)
-	}
-	if control == flowReturn {
-		return lineResult{status: status}
-	}
-	return lineResult{status: status, control: control}
+	return child.withDotArguments(args[1:], func() lineResult {
+		status, control := child.runScriptResult(ctx, string(data), 1, false)
+		if _, set := r.traps[trapRETURN]; set && (control == flowNone || control == flowReturn) {
+			child.runTrap(ctx, trapRETURN, status)
+		}
+		if control == flowReturn {
+			return lineResult{status: status}
+		}
+		return lineResult{status: status, control: control}
+	})
 }
 
 func (r Runtime) eval(ctx context.Context, args []string) int {
