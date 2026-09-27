@@ -1673,5 +1673,11 @@
     "stdout": "q'r\ntwo\nu'v\nhit\ns't\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "pushd -n x >/dev/null; echo st=$?\npopd zzz 2>/dev/null; echo st=$?\npopd -n >/dev/null; echo st=$?\ndirs -lv 2>/dev/null; echo st=$?\ndirs -- >/dev/null; echo st=$?",
+    "stdout": "st=0\nst=2\nst=0\nst=2\nst=0\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

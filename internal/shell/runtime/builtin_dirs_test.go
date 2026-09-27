@@ -135,7 +135,8 @@ func TestDirs_refusals(t *testing.T) {
 		{name: "bare pushd with nothing under it", script: "pushd", says: "no other directory"},
 		{name: "index past the end", script: "pushd a >/dev/null\ndirs +9", says: "out of range"},
 		{name: "popd index past the end", script: "pushd a >/dev/null\npopd +9", says: "out of range"},
-		{name: "an option that is not one", script: "dirs -z", says: "invalid option"},
+		{name: "a dash word that is not a number", script: "dirs -z", says: "invalid number"},
+		{name: "a word that is not an option", script: "dirs zzz", says: "invalid option"},
 		{name: "two directories", script: "pushd a b", says: "too many arguments"},
 		// And the one that blamed the wrong builtin: pushd moves by calling cd's body,
 		// and before that body took a name to report as, `pushd nosuchdir` said `cd:`.

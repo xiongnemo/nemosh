@@ -336,8 +336,6 @@
       "dirs test of path alias `..`": "fail",
       "dirs tilde test when $HOME is exactly $PWD": "fail",
       "dirs to print using tilde-prefix format": "fail",
-      "popd usage error": "fail",
-      "pushd usage": "fail",
       "pushd/popd": "fail"
     },
     "builtin-echo.test.sh": {
