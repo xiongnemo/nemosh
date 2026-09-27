@@ -90,6 +90,8 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		return "", false
 	case "LINENO":
 		return strconv.Itoa(r.currentLine()), true
+	case "SHELLOPTS", "BASHOPTS":
+		return r.optionList(name), true
 	case "BASH_SOURCE", "BASH_LINENO":
 		// The first element, as a bare array name is; see call_stack.go.
 		if stack, _ := r.callStackArray(name); len(stack) > 0 {

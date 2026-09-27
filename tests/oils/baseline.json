@@ -1005,10 +1005,7 @@
     },
     "sh-options-bash.test.sh": {
       "OSH calling bash with SHELLOPTS does not change braceexpand": "fail",
-      "SHELLOPTS and BASHOPTS are non-empty": "fail",
       "SHELLOPTS is readonly": "fail",
-      "SHELLOPTS is updated when options are changed": "fail",
-      "SHELLOPTS reflects flags like sh -x": "fail",
       "export SHELLOPTS does cross-process tracing": "fail",
       "export SHELLOPTS does cross-process tracing with bash": "fail"
     },

@@ -32,7 +32,7 @@ var launchPathVariables = map[string]bool{
 
 // childEnvironment is what a launched program receives.
 func (r Runtime) childEnvironment() []string {
-	items := r.env.childEnviron(hostEnvironmentPlatform())
+	items := r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform()))
 	if hostEnvironmentPlatform() != windowsEnvironment {
 		return items
 	}

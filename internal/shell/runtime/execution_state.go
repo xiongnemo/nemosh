@@ -191,6 +191,7 @@ func newRuntimeWithState(registry applets.Registry, streams Streams, state State
 		created.env.Set("IFS", defaultFieldSeparators)
 	}
 	created.setStartupVariables()
+	created.adoptOptionLists()
 	// $PWD has to answer for this shell's working directory rather than for
 	// whatever launched it. Nemosh's cwd is a value in pathState, not the
 	// process's, so an inherited PWD can be wrong from the very first line.
@@ -210,7 +211,7 @@ func (r Runtime) WorkingDirectory() string {
 	}
 	return r.paths.workingDirectory()
 }
-func (r Runtime) Environ() []string                    { return r.env.Environ() }
+func (r Runtime) Environ() []string                    { return r.withOptionLists(r.env.Environ()) }
 func (r Runtime) LookupEnv(name string) (string, bool) { return r.env.LookupEnv(name) }
 func (r Runtime) LookupVariable(name string) (string, bool) {
 	value, present := r.vars[name]
