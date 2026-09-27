@@ -38,7 +38,7 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 
 	items, ok := r.selectItems(ctx, node, savedStatus)
 	if !ok {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	// An empty list runs nothing at all, as an empty `for` does -- there is no question
 	// to ask. bash agrees: `select x in; do echo no; done` prints nothing.

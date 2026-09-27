@@ -121,7 +121,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 // is readonly has been reported already, by assignVar, and is a shell error.
 func (r Runtime) arithmeticForFailure(err error) lineResult {
 	if r.shellErrorRaised() {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
 	return lineResult{status: 1}

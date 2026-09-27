@@ -28,7 +28,12 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	prepared, parseErr := parseScriptAt(script, first)
 	status := 0
 	control := flowNone
-	if parseErr == nil {
+	switch {
+	// The script's own run, the one with an EXIT trap to run, is the top level; eval and
+	// `.` are not.
+	case parseErr == nil && runExitTrap:
+		status, control = r.executeTopLevel(ctx, prepared.program)
+	case parseErr == nil:
 		status, control = r.executePrepared(ctx, prepared)
 	}
 	if parseErr != nil && control == flowNone {

@@ -54,7 +54,6 @@ const (
 	noHistory    = "there is no history here to change"
 	noCompletion = "completion here follows nemosh's own specs, which this does not reach"
 	noCompat     = "there is one compatibility level, bash 5.3's where busybox is silent"
-	notYet       = "not implemented yet"
 )
 
 // shoptOptions are in the order bash lists them, which is its Windows build's: that one adds
@@ -90,7 +89,7 @@ var shoptOptions = []shoptOption{
 	fixed("extdebug", false, "there is no debugger support"),
 	fixed("extglob", true, "the matcher knows ?() *() +() @() !() whether or not it is asked to"),
 	fixed("extquote", false, "$'...' inside a double-quoted ${...} stays as written, as it does in busybox"),
-	fixed("failglob", false, notYet),
+	acts("failglob", func(o *shellOptions) *bool { return &o.failGlob }),
 	recorded("force_fignore", true, func(o *shellOptions) *bool { return &o.forceFignore }, noCompletion),
 	fixed("globasciiranges", true, "a range in a bracket expression is by character code"),
 	fixed("globskipdots", true, "a pattern never matches . or .."),

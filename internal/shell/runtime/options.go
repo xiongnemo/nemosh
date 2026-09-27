@@ -70,6 +70,9 @@ type shellOptions struct {
 	// sourcePath is `shopt -s sourcepath`, on in a new shell: `. name` looks on PATH; see
 	// dot_source.go.
 	sourcePath bool
+	// failGlob is `shopt -s failglob`: a pattern that matches nothing is an error; see
+	// failglob.go.
+	failGlob bool
 	// The shopt names of the interactive layer, which are remembered and reported and
 	// change nothing; see shopt_table.go.
 	cdSpell, checkHash, checkJobs, checkWinSize, cmdHist, completionStripExe     bool

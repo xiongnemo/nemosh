@@ -24,10 +24,24 @@ func (r Runtime) executeTypedScriptFrom(ctx context.Context, script Script, save
 }
 
 func (r Runtime) executeProgram(ctx context.Context, program []programNode, savedStatus int) (int, flowControl) {
+	return r.executeStatements(ctx, program, savedStatus, false)
+}
+
+// executeTopLevel is executeProgram for a script's own commands. A pattern that matched
+// nothing under failglob abandons the one it was in, and the script goes on with the next,
+// unless `set -e`; see failglob.go.
+func (r Runtime) executeTopLevel(ctx context.Context, program []programNode) (int, flowControl) {
+	return r.executeStatements(ctx, program, 0, true)
+}
+
+func (r Runtime) executeStatements(ctx context.Context, program []programNode, savedStatus int, topLevel bool) (int, flowControl) {
 	status := savedStatus
 	for _, item := range program {
 		result := r.executeNode(ctx, item, status)
 		status = result.status
+		if result.control == flowDiscard && topLevel && !r.options.errExit {
+			result.control = flowNone
+		}
 		if result.control != flowNone {
 			return status, result.control
 		}

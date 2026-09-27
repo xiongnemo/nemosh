@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1669 of the 2551 cases bash passes: 65.4%.**
+**nemosh passes 1675 of the 2551 cases bash passes: 65.7%.**
 
-Of the other 882, it does 103 the way the files record of ash, which may be busybox's
-way, and 779 neither way.
+Of the other 876, it does 100 the way the files record of ash, which may be busybox's
+way, and 776 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 779 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1669 |
+| that nemosh passes of those | 1675 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -109,12 +109,12 @@ of ash.
 | errexit.test.sh | 35 | 34 | 29 | 85.3% | 0 | 35 |
 | exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
-| extglob-files.test.sh | 23 | 23 | 8 | 34.8% | 0 | 0 |
+| extglob-files.test.sh | 23 | 23 | 9 | 39.1% | 0 | 0 |
 | extglob-match.test.sh | 29 | 29 | 23 | 79.3% | 0 | 0 |
 | fatal-errors.test.sh | 5 | 5 | 0 | 0.0% | 3 | 3 |
 | for-expr.test.sh | 9 | 8 | 6 | 75.0% | 0 | 0 |
 | func-parsing.test.sh | 15 | 15 | 12 | 80.0% | 2 | 13 |
-| glob-bash.test.sh | 8 | 8 | 4 | 50.0% | 3 | 8 |
+| glob-bash.test.sh | 8 | 8 | 7 | 87.5% | 0 | 8 |
 | glob.test.sh | 39 | 37 | 33 | 89.2% | 0 | 36 |
 | globignore.test.sh | 18 | 17 | 3 | 17.6% | 1 | 1 |
 | globstar.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
@@ -138,13 +138,13 @@ of ash.
 | prompt.test.sh | 33 | 26 | 0 | 0.0% | 0 | 0 |
 | quote.test.sh | 35 | 35 | 31 | 88.6% | 1 | 35 |
 | redirect-command.test.sh | 23 | 23 | 22 | 95.7% | 0 | 22 |
-| redirect-multi.test.sh | 13 | 13 | 8 | 61.5% | 0 | 7 |
+| redirect-multi.test.sh | 13 | 13 | 9 | 69.2% | 0 | 7 |
 | redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 28 |
 | regex.test.sh | 37 | 36 | 26 | 72.2% | 0 | 10 |
 | serialize.test.sh | 10 | 9 | 3 | 33.3% | 1 | 10 |
 | sh-func.test.sh | 12 | 12 | 11 | 91.7% | 0 | 10 |
 | sh-options-bash.test.sh | 9 | 9 | 2 | 22.2% | 0 | 0 |
-| sh-options.test.sh | 39 | 39 | 21 | 53.8% | 0 | 12 |
+| sh-options.test.sh | 39 | 39 | 22 | 56.4% | 0 | 12 |
 | sh-usage.test.sh | 23 | 22 | 18 | 81.8% | 0 | 18 |
 | smoke.test.sh | 18 | 18 | 16 | 88.9% | 0 | 16 |
 | strict-options.test.sh | 17 | 15 | 13 | 86.7% | 0 | 7 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1669 | 65.4% | 103 | 1447 |
+| all | 2668 | 2551 | 1675 | 65.7% | 100 | 1447 |

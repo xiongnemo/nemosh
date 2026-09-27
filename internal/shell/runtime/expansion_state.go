@@ -16,6 +16,9 @@ type expansionState struct {
 	// variable. Raised wherever it happens and read at the checkpoints, which turn
 	// it into flowAbort.
 	shellError bool
+	// discard is set with shellError by a failed glob under failglob, which abandons the
+	// command rather than the shell; see failglob.go.
+	discard bool
 	// warnedDebugChannels remembers which unknown NEMOSH_DEBUG names have
 	// already been complained about, so the complaint does not bury the
 	// diagnostics it is attached to.
@@ -103,8 +106,12 @@ func (r Runtime) raiseShellError() {
 // shellErrorResult is what every checkpoint returns: status 2 from busybox's
 // error path, and an abort rather than a status because POSIX makes a shell
 // error fatal to a non-interactive shell -- and only to the line, at a prompt.
-// See flowAbort.
-func shellErrorResult() lineResult {
+// See flowAbort. A failed glob under failglob is status 1 and flowDiscard instead.
+func (r Runtime) shellErrorResult() lineResult {
+	if r.expansion.discard {
+		r.expansion.discard = false
+		return lineResult{status: 1, control: flowDiscard}
+	}
 	return lineResult{status: 2, control: flowAbort}
 }
 
@@ -113,7 +120,7 @@ func shellErrorResult() lineResult {
 // readonly R, or the `R=2` in front of any command -- is turned into the abort here.
 func (r Runtime) abortOnShellError(result lineResult) lineResult {
 	if r.shellErrorRaised() {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	return result
 }

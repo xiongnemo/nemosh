@@ -84,7 +84,7 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 		}
 		values := r.expandCommandWord(ctx, item, savedStatus)
 		if r.shellErrorRaised() {
-			return shellErrorResult()
+			return r.shellErrorResult()
 		}
 	iteration:
 		for _, value := range values {
@@ -125,7 +125,7 @@ func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatu
 	// busybox-w32 and bash 5.3 alike, and `case $@ in` saw only "$1".
 	values := r.expandingAssignment().expandWord(ctx, node.word, savedStatus)
 	if r.shellErrorRaised() {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	value := ""
 	if len(values) > 0 {
@@ -181,7 +181,7 @@ func (r Runtime) caseArmMatches(ctx context.Context, arm caseArmNode, value stri
 // environment -- `export x; for x in 5` left a child seeing the old value.
 func (r Runtime) loopVariableRefused() lineResult {
 	if r.shellErrorRaised() {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	return lineResult{status: 1}
 }

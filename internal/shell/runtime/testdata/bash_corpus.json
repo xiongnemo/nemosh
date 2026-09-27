@@ -1097,5 +1097,23 @@
     "stdout": "[outer]\n[outer]\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s failglob\necho *.nonexistent-zz\necho \"st=$?\"",
+    "stdout": "st=1\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s failglob\nf() {\n  echo *.nonexistent-zz\n  echo in-f\n}\nf\necho \"after st=$?\"",
+    "stdout": "after st=1\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "set -e\nshopt -s failglob\necho *.nonexistent-zz\necho after",
+    "stdout": "",
+    "status": 1,
+    "reference": "bash-5.3"
   }
 ]

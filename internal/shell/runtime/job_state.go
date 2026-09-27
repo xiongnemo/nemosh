@@ -207,7 +207,7 @@ func shellOptionFields(o *shellOptions) map[string]*bool {
 		"vi": &o.vi, "autoCD": &o.autoCD, "inheritErrExit": &o.inheritErrExit, "login": &o.login,
 		"lastPipe": &o.lastPipe, "expandAliases": &o.expandAliases,
 		"shiftVerbose": &o.shiftVerbose, "xpgEcho": &o.xpgEcho,
-		"localVarInherit": &o.localVarInherit, "sourcePath": &o.sourcePath,
+		"localVarInherit": &o.localVarInherit, "sourcePath": &o.sourcePath, "failGlob": &o.failGlob,
 		"cdSpell": &o.cdSpell, "checkHash": &o.checkHash, "checkJobs": &o.checkJobs,
 		"checkWinSize": &o.checkWinSize, "cmdHist": &o.cmdHist, "completionStripExe": &o.completionStripExe,
 		"completeFullQuote": &o.completeFullQuote, "dirExpand": &o.dirExpand, "dirSpell": &o.dirSpell,

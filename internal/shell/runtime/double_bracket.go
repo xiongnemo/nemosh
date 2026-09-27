@@ -64,7 +64,7 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStat
 		terms = append(terms, conditionTerm{text: text, quoted: quoted})
 	}
 	if r.shellErrorRaised() {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	parser := &conditionParser{terms: terms, runtime: r}
 	value, err := parser.parseOr()

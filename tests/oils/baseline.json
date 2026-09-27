@@ -743,7 +743,6 @@
       "Nested extended glob pattern": "fail",
       "No extended glob with simple_word_eval (YSH evaluation)": "fail",
       "Two adjacent alternations": "fail",
-      "failglob": "fail",
       "no match": "fail",
       "noglob": "fail",
       "nullglob with extended glob": "fail"
@@ -774,10 +773,7 @@
       "Function name with command sub": "ash-only"
     },
     "glob-bash.test.sh": {
-      "shopt -s failglob behavior on single line with semicolon": "ash-only",
-      "shopt -s failglob in array literal context": "fail",
-      "shopt -s failglob in command context": "ash-only",
-      "shopt -s failglob in loop context": "ash-only"
+      "shopt -s failglob behavior on single line with semicolon": "fail"
     },
     "glob.test.sh": {
       "Glob ordering respects LC_COLLATE (zsh respects this too)": "ash-only",
@@ -974,7 +970,6 @@
     "redirect-multi.test.sh": {
       "Extended glob that doesn't match anything": "fail",
       "File redirect without matching any file": "fail",
-      "File redirect without matching any file, with failglob": "fail",
       "File redirects with glob args (bash and zsh only)": "fail",
       "ysh behavior when glob doesn't match": "fail"
     },
@@ -1033,7 +1028,6 @@
       "set without args lists variables": "fail",
       "shopt -o prints 'set' options": "fail",
       "shopt -p -o prints 'set' options": "fail",
-      "shopt -q": "fail",
       "shopt -s nounset works in YSH, not in bash": "fail",
       "stubbed out bash options": "fail",
       "vi and emacs are mutually exclusive": "fail"

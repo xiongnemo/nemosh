@@ -35,7 +35,12 @@ func (r Runtime) expandOneCommandWord(ctx context.Context, item word, savedStatu
 			// A pattern matching nothing stays exactly as written, which is POSIX.
 			// `shopt -s nullglob` asks for the other answer -- the field disappears --
 			// which is what makes `for f in *.none` iterate zero times instead of once
-			// over the pattern itself.
+			// over the pattern itself. `shopt -s failglob` makes it an error, and comes
+			// first, as in bash; see failglob.go.
+			if r.options.failGlob {
+				r.reportGlobFailure(field)
+				continue
+			}
 			if !r.options.nullGlob {
 				expanded = append(expanded, field)
 			}

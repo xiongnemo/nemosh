@@ -112,7 +112,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	var ok bool
 	operations, ok = r.expandRedirectOperations(ctx, operations, savedStatus)
 	if r.shellErrorRaised() {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	if !ok {
 		return lineResult{status: 1}
@@ -128,7 +128,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// the quotes are gone. See array_assign.go.
 	if remaining, applied := r.applyArrayAssignments(ctx, command, savedStatus); applied {
 		if r.shellErrorRaised() {
-			return shellErrorResult()
+			return r.shellErrorResult()
 		}
 		if len(remaining) == 0 {
 			return lineResult{}
@@ -141,7 +141,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// The words in POSIX's order, the assignments one at a time; see command_words.go.
 	expanded, assigned := r.expandCommandWords(ctx, command, savedStatus)
 	if r.shellErrorRaised() {
-		return shellErrorResult()
+		return r.shellErrorResult()
 	}
 	args := tokenValues(expanded)
 	if len(args) == 0 {
@@ -269,6 +269,9 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 			continue
 		}
 		fields := r.expandCommandWord(ctx, operation.operand, savedStatus)
+		if r.redirectGlobFailed() {
+			return nil, false
+		}
 		if len(fields) != 1 {
 			fmt.Fprintf(r.streams.Stderr, "nemosh: %s: %v\n", operation.path, errAmbiguousRedirect)
 			return nil, false
