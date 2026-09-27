@@ -889,7 +889,6 @@
       "set without args lists variables": "fail",
       "shopt -o prints 'set' options": "fail",
       "shopt -p -o prints 'set' options": "fail",
-      "shopt -s nounset works in YSH, not in bash": "fail",
       "stubbed out bash options": "fail",
       "vi and emacs are mutually exclusive": "fail"
     },
