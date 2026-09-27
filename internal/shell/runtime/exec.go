@@ -24,8 +24,11 @@ func (r Runtime) execRedirect(operations []redirectOperation) int {
 	if len(operations) == 0 {
 		return 0
 	}
+	// A special builtin's failed redirection ends the script, as busybox has it: `exec >log`
+	// with no such directory went on writing where it had been. See withAppliedRedirectsFor.
 	if err := r.applyRedirectOperations(r.fds, operations); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		r.raiseShellErrorWith(1)
 		return 1
 	}
 	return 0

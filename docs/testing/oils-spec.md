@@ -9,9 +9,9 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1891 of the 2551 cases bash passes: 74.1%.**
+**nemosh passes 1890 of the 2551 cases bash passes: 74.1%.**
 
-Of the other 660, it does 110 the way the files record of ash, which may be busybox's
+Of the other 661, it does 111 the way the files record of ash, which may be busybox's
 way, and 550 neither way.
 
 | | cases |
@@ -21,7 +21,7 @@ way, and 550 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1891 |
+| that nemosh passes of those | 1890 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -139,7 +139,7 @@ of ash.
 | quote.test.sh | 35 | 35 | 34 | 97.1% | 1 | 35 |
 | redirect-command.test.sh | 23 | 23 | 22 | 95.7% | 0 | 22 |
 | redirect-multi.test.sh | 13 | 13 | 5 | 38.5% | 2 | 7 |
-| redirect.test.sh | 39 | 37 | 34 | 91.9% | 1 | 28 |
+| redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 28 |
 | regex.test.sh | 37 | 36 | 32 | 88.9% | 0 | 10 |
 | serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 10 |
 | sh-func.test.sh | 12 | 12 | 11 | 91.7% | 0 | 10 |
@@ -151,7 +151,7 @@ of ash.
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
 | tilde.test.sh | 14 | 12 | 10 | 83.3% | 1 | 10 |
-| toysh-posix.test.sh | 22 | 22 | 13 | 59.1% | 6 | 22 |
+| toysh-posix.test.sh | 22 | 22 | 13 | 59.1% | 7 | 22 |
 | toysh.test.sh | 8 | 7 | 6 | 85.7% | 0 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1891 | 74.1% | 110 | 1447 |
+| all | 2668 | 2551 | 1890 | 74.1% | 111 | 1447 |

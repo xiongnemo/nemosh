@@ -21,11 +21,11 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	}
 	switch args[0] {
 	case "eval":
-		return r.withAppliedRedirects(operations, func(redirected Runtime) lineResult {
+		return r.withAppliedRedirectsFor(true, operations, func(redirected Runtime) lineResult {
 			return redirected.evalResult(ctx, args[1:])
 		}), true
 	case ".", "source":
-		return r.withAppliedRedirects(operations, func(redirected Runtime) lineResult {
+		return r.withAppliedRedirectsFor(true, operations, func(redirected Runtime) lineResult {
 			return redirected.dotResult(ctx, args[1:])
 		}), true
 	case "exit":

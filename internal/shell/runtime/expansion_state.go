@@ -16,6 +16,9 @@ type expansionState struct {
 	// variable. Raised wherever it happens and read at the checkpoints, which turn
 	// it into flowAbort.
 	shellError bool
+	// shellErrorStatus is the status the raised error ends the script with when it is not
+	// busybox's usual 2: a special builtin's failed redirection is 1. See raiseShellErrorWith.
+	shellErrorStatus int
 	// discard is set with shellError by a failed glob under failglob, which abandons the
 	// command rather than the shell; see failglob.go.
 	discard bool
@@ -103,6 +106,13 @@ func (r Runtime) raiseShellError() {
 	r.expansion.shellError = true
 }
 
+// raiseShellErrorWith is raiseShellError for an error that ends the script with a status of
+// its own.
+func (r Runtime) raiseShellErrorWith(status int) {
+	r.expansion.shellError = true
+	r.expansion.shellErrorStatus = status
+}
+
 // shellErrorResult is what every checkpoint returns: status 2 from busybox's
 // error path, and an abort rather than a status because POSIX makes a shell
 // error fatal to a non-interactive shell -- and only to the line, at a prompt.
@@ -112,7 +122,11 @@ func (r Runtime) shellErrorResult() lineResult {
 		r.expansion.discard = false
 		return lineResult{status: 1, control: flowDiscard}
 	}
-	return lineResult{status: 2, control: flowAbort}
+	status := 2
+	if r.expansion.shellErrorStatus != 0 {
+		status, r.expansion.shellErrorStatus = r.expansion.shellErrorStatus, 0
+	}
+	return lineResult{status: status, control: flowAbort}
 }
 
 // abortOnShellError is the checkpoint after a simple command has run. A builtin

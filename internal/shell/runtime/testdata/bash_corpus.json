@@ -1709,5 +1709,11 @@
     "stdout": "a \n[b ]\nnext\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "export abc=def > /does/not/exist2 2>/dev/null; echo after",
+    "stdout": "",
+    "status": 1,
+    "reference": "busybox-w32"
   }
 ]

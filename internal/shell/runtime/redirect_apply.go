@@ -31,6 +31,13 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 		case redirectHeredoc, redirectHereString:
 			err = table.bindOwnedReader(operation.target, newMemoryInput([]byte(operation.body)))
 		case redirectDup:
+			// A descriptor made a copy of itself is left as it is, open or not, as both
+			// references leave it (busybox's `if (fd == newfd) continue`); `3>&3` with 3
+			// closed was an error, which a special builtin's now ends the script with.
+			// Moved onto itself, `3>&3-`, it stays too, as in bash.
+			if operation.target == operation.source {
+				break
+			}
 			err = table.dup(operation.target, operation.source)
 			if err == nil && operation.move {
 				err = table.close(operation.source)
