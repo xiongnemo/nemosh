@@ -205,9 +205,25 @@ func (r Runtime) listShellOptions(long bool) {
 }
 
 // The listing is single-quoted so it can be read back in, matching what
-// busybox's showvars does through single_quote (libbb/).
+// busybox's showvars does through single_quote (libbb/). An array, which busybox
+// has not got, is its compound value, as bash lists it: an indexed one was its
+// element 0, and an associative one was left out. One declared and never given a
+// key is left out, as bash leaves out a variable with no value.
 func (r Runtime) listShellVariables() int {
-	for _, name := range slices.Sorted(maps.Keys(r.vars)) {
+	names := slices.Collect(maps.Keys(r.vars))
+	if r.arrays != nil {
+		for _, name := range r.arrays.associativeNames() {
+			if len(r.arrays.keysOf(name)) > 0 {
+				names = append(names, name)
+			}
+		}
+	}
+	slices.Sort(names)
+	for _, name := range slices.Compact(names) {
+		if list, ok := r.arrayLiteralText(name); ok {
+			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, list)
+			continue
+		}
 		fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, singleQuoteForReuse(r.vars[name]))
 	}
 	return 0

@@ -250,27 +250,8 @@ func (r Runtime) printOneDeclaration(name string) bool {
 // was left to expand when the line was read back, and a key with a blank came out bare.
 func (r Runtime) declarationText(name string) (string, bool) {
 	flags := r.declareFlags(name)
-	if r.arrays.isAssociative(name) {
-		var out strings.Builder
-		fmt.Fprintf(&out, "declare -%s %s=(", flags, name)
-		for _, key := range r.arrays.keysOf(name) {
-			value, _ := r.arrays.lookupKey(name, key)
-			fmt.Fprintf(&out, "[%s]=%s ", shellquote.Key(key), shellquote.Double(value))
-		}
-		// bash leaves the blank before the closing parenthesis for this kind and not
-		// the other, and output meant to be read back is worth matching exactly.
-		return out.String() + ")", true
-	}
-	if r.arrays.has(name) {
-		var out strings.Builder
-		fmt.Fprintf(&out, "declare -%s %s=(", flags, name)
-		// The set indices only: every slot used to be printed, so a gap came out as
-		// `[1]=""` and an element removed with unset came back with its old value.
-		for _, index := range r.arrays.liveIndices(name) {
-			value, _ := r.arrays.valueAt(name, index)
-			fmt.Fprintf(&out, "[%d]=%s ", index, shellquote.Double(value))
-		}
-		return strings.TrimSuffix(out.String(), " ") + ")", true
+	if list, ok := r.arrayLiteralText(name); ok {
+		return fmt.Sprintf("declare -%s %s=%s", flags, name, list), true
 	}
 	value, set := r.vars[name]
 	if !set {
@@ -281,6 +262,35 @@ func (r Runtime) declarationText(name string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("declare -%s %s=%s", flags, name, shellquote.Double(value)), true
+}
+
+// arrayLiteralText is an array as the compound value that recreates it, `([0]="a" [2]="c")`
+// or `([k]="v" )`: what declare -p writes after the name, and a bare `set` after the `=`.
+func (r Runtime) arrayLiteralText(name string) (string, bool) {
+	if r.arrays == nil {
+		return "", false
+	}
+	var out strings.Builder
+	out.WriteString("(")
+	switch {
+	case r.arrays.isAssociative(name):
+		for _, key := range r.arrays.keysOf(name) {
+			value, _ := r.arrays.lookupKey(name, key)
+			fmt.Fprintf(&out, "[%s]=%s ", shellquote.Key(key), shellquote.Double(value))
+		}
+		// bash leaves the blank before the closing parenthesis for this kind and not
+		// the other, and output meant to be read back is worth matching exactly.
+		return out.String() + ")", true
+	case r.arrays.has(name):
+		// The set indices only: every slot used to be printed, so a gap came out as
+		// `[1]=""` and an element removed with unset came back with its old value.
+		for _, index := range r.arrays.liveIndices(name) {
+			value, _ := r.arrays.valueAt(name, index)
+			fmt.Fprintf(&out, "[%d]=%s ", index, shellquote.Double(value))
+		}
+		return strings.TrimSuffix(out.String(), " ") + ")", true
+	}
+	return "", false
 }
 
 // parenthesisedList reports the inside of a `(one two)` array literal.

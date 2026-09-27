@@ -156,6 +156,11 @@ func (r Runtime) assignReadResult(options readOptions, line readLineResult) int 
 		return r.assignVar("REPLY", line.text)
 	}
 	fields := splitReadFields(line.text, line.escaped, separators, len(options.names))
+	// -N is bash's, and what it read goes to the first name whole, neither split nor trimmed,
+	// as bash documents it; busybox's read has no -N. It was split as -n's is.
+	if options.exactly {
+		fields = []string{line.text}
+	}
 	for index, name := range options.names {
 		value := ""
 		if index < len(fields) {
