@@ -115,29 +115,36 @@ func parameterReplace(value, operator, spec string, fold bool) string {
 	if fold {
 		subject, pattern = foldASCII(value), foldASCII(pattern)
 	}
+	characters := cutsCharacters(subject, pattern)
 	switch operator {
 	case "/#":
-		if width, ok := longestPatternMatchAt(subject, pattern, 0); ok {
+		if width, ok := longestPatternMatchAt(subject, pattern, 0, characters); ok {
 			return replacement + value[width:]
 		}
 		return value
 	case "/%":
 		for start := 0; start <= len(subject); start++ {
-			if matchShellPattern(pattern, subject[start:]) {
+			if isCut(subject, start, characters) && matchShellPattern(pattern, subject[start:]) {
 				return value[:start] + replacement
 			}
 		}
 		return value
 	}
-	return replaceMatches(value, subject, pattern, replacement, operator == "//")
+	return replaceMatches(value, subject, pattern, replacement, operator == "//", characters)
 }
 
 // replaceMatches finds matches in subject and writes value around them: the two are the
-// same string, or one is the other folded, with the same offsets.
-func replaceMatches(value, subject, pattern, replacement string, all bool) string {
+// same string, or one is the other folded, with the same offsets. A match begins and ends
+// only between characters when characters is set (cutsCharacters).
+func replaceMatches(value, subject, pattern, replacement string, all, characters bool) string {
 	var out strings.Builder
 	for index := 0; index <= len(value); {
-		width, ok := longestPatternMatchAt(subject, pattern, index)
+		if !isCut(subject, index, characters) {
+			out.WriteByte(value[index])
+			index++
+			continue
+		}
+		width, ok := longestPatternMatchAt(subject, pattern, index, characters)
 		if !ok {
 			if index == len(value) {
 				break
@@ -177,9 +184,9 @@ func replaceMatches(value, subject, pattern, replacement string, all bool) strin
 // Built on matchShellPattern rather than on a new matcher, because that one is
 // already the shell's definition of a pattern and is already fuzzed. The cost is a
 // scan per position, which is nothing at the sizes a variable holds.
-func longestPatternMatchAt(value, pattern string, index int) (int, bool) {
+func longestPatternMatchAt(value, pattern string, index int, characters bool) (int, bool) {
 	for end := len(value); end >= index; end-- {
-		if matchShellPattern(pattern, value[index:end]) {
+		if isCut(value, end, characters) && matchShellPattern(pattern, value[index:end]) {
 			return end - index, true
 		}
 	}

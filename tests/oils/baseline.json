@@ -918,9 +918,7 @@
     },
     "var-op-strip.test.sh": {
       "Append using replacement of %": "fail",
-      "Prepend using replacement of #": "fail",
-      "Strip unicode prefix": "fail",
-      "strip all unicode": "fail"
+      "Prepend using replacement of #": "fail"
     },
     "var-op-test.test.sh": {
       "$@ (empty) and - and +": "fail",
