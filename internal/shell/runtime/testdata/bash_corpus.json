@@ -1763,5 +1763,11 @@
     "stdout": "3 5 4 6\nx=1 one []\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "set -- a b\nfor x do echo $x; done",
+    "stdout": "a\nb\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

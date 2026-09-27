@@ -729,8 +729,7 @@
       "|\u0026": "flaky"
     },
     "posix.test.sh": {
-      "Command substitution in default": "fail",
-      "Empty for loop without in.  Do can be on the same line I guess.": "fail"
+      "Command substitution in default": "fail"
     },
     "print-source-code.test.sh": {
       "typeset -f with function keyword (ksh style)": "fail"

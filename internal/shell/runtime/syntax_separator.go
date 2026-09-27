@@ -143,6 +143,9 @@ func splitSequentialSegments(line string) ([]string, error) {
 // body. They are reserved words in POSIX 2.4 rather than commands, so splitting
 // them off is recovering the structure, not guessing at it.
 func splitLeadingReservedWord(segment string) []string {
+	if parts := splitForWithoutIn(segment); parts != nil {
+		return parts
+	}
 	for _, keyword := range [...]string{"then", "else", "do"} {
 		rest, ok := compoundHeader(segment, keyword)
 		if !ok {
@@ -176,6 +179,26 @@ func expansionEnd(line string, index int) (int, bool) {
 		return end - 1, ok
 	}
 	return 0, false
+}
+
+// splitForWithoutIn peels the `do` off `for name do ...`, the loop with no `in` and no `;`
+// that POSIX's grammar allows (for_clause: For name do_group) and busybox-w32 and bash both
+// run over "$@". The `do` shared the header's segment, so the loop was "done before do".
+func splitForWithoutIn(segment string) []string {
+	rest, ok := compoundHeader(segment, "for")
+	if !ok {
+		return nil
+	}
+	rest = strings.TrimLeft(rest, " \t")
+	end := strings.IndexAny(rest, " \t")
+	if end <= 0 || !isValidVariableName(rest[:end]) {
+		return nil
+	}
+	after := strings.TrimLeft(rest[end:], " \t")
+	if after != "do" && !strings.HasPrefix(after, "do ") && !strings.HasPrefix(after, "do\t") {
+		return nil
+	}
+	return append([]string{"for " + rest[:end]}, splitLeadingReservedWord(after)...)
 }
 
 // Two things can precede a separator and must not. Nothing at all is one:
