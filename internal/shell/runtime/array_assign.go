@@ -158,7 +158,11 @@ func (r Runtime) applyMixedAssignments(ctx context.Context, command []word, save
 			r.assignArray(ctx, assignment, savedStatus)
 			continue
 		}
-		assignments, _ := leadingAssignments(r.expandAssignmentWord(ctx, item, false, savedStatus))
+		fields := r.expandAssignmentWord(ctx, item, false, savedStatus)
+		for index := range fields {
+			fields[index] = keepEmptySubscript(fields[index])
+		}
+		assignments, _ := leadingAssignments(fields)
 		if r.assignVars(assignments) != 0 {
 			return true
 		}

@@ -177,7 +177,6 @@ func assignmentTildeWord(item word) word {
 func (r Runtime) assignArrayElementText(ctx context.Context, reference arrayReference, value string) int {
 	index, err := r.resolveSubscript(ctx, reference.subscript)
 	if err != nil {
-		fmt.Fprintln(r.streams.Stderr, err)
 		return 1
 	}
 	// A negative subscript counts from the end, so it needs the length the array has

@@ -32,8 +32,28 @@ func leadingAssignments(args []string) ([]assignment, []string) {
 // one and one with its `=` escaped -- `v='a=b'; $v`, `"c=d"` and `e\=f` each run a command of
 // that name in busybox-w32 and bash, where every one of them was taken for an assignment.
 func splitAssignments(args []string, count int) ([]assignment, []string) {
-	assignments, rest := leadingAssignments(args[:count])
+	counted := make([]string, count)
+	for index, arg := range args[:count] {
+		counted[index] = keepEmptySubscript(arg)
+	}
+	assignments, rest := leadingAssignments(counted)
 	return assignments, append(rest, args[count:]...)
+}
+
+// keepEmptySubscript keeps an element assignment whose subscript came to nothing an element
+// assignment. `a[$e]=1` with e empty, or `m[""]=1`, is `a[]=1` once expanded, which is not an
+// assignment's shape, and was run as a command of that name; bash assigns element 0. The
+// subscript is written `""` instead, which an indexed array reads as 0 and an associative
+// one refuses, as bash has them.
+func keepEmptySubscript(arg string) string {
+	open := strings.Index(arg, "[]")
+	if open <= 0 || !isValidVariableName(arg[:open]) {
+		return arg
+	}
+	if rest := arg[open+2:]; strings.HasPrefix(rest, "=") || strings.HasPrefix(rest, "+=") {
+		return arg[:open] + `[""]` + rest
+	}
+	return arg
 }
 
 // assignedValue is what an assignment stores: its value, or the old one with it for `+=`.

@@ -1679,5 +1679,11 @@
     "stdout": "st=0\nst=2\nst=0\nst=2\nst=0\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "e=; a[$e]=1; a[$e]+=2; echo \"${a[0]}\"\na=(5 6); a[\" \"]=7; echo \"${a[@]}\"\n( b[1+]=2; echo not here ) 2>/dev/null; echo \"after $(( $? != 0 ))\"",
+    "stdout": "12\n7 6\nafter 1\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

@@ -11,8 +11,8 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 
 **nemosh passes 1849 of the 2551 cases bash passes: 72.5%.**
 
-Of the other 702, it does 104 the way the files record of ash, which may be busybox's
-way, and 598 neither way.
+Of the other 702, it does 106 the way the files record of ash, which may be busybox's
+way, and 596 neither way.
 
 | | cases |
 |---|---:|
@@ -54,10 +54,10 @@ of ash.
 | array-compat.test.sh | 12 | 12 | 10 | 83.3% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 10 | 62.5% | 0 | 0 |
 | array-sparse.test.sh | 40 | 40 | 24 | 60.0% | 0 | 0 |
-| array.test.sh | 78 | 78 | 68 | 87.2% | 1 | 7 |
+| array.test.sh | 78 | 78 | 68 | 87.2% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 6 | 66.7% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
-| assign-extended.test.sh | 39 | 34 | 24 | 70.6% | 0 | 0 |
+| assign-extended.test.sh | 39 | 34 | 24 | 70.6% | 1 | 0 |
 | assign.test.sh | 48 | 45 | 37 | 82.2% | 1 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 4 | 44.4% | 3 | 9 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1849 | 72.5% | 104 | 1447 |
+| all | 2668 | 2551 | 1849 | 72.5% | 106 | 1447 |

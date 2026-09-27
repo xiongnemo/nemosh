@@ -207,7 +207,15 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 // number.
 func (r Runtime) assignElementByKind(ctx context.Context, reference arrayReference, value string) int {
 	if r.arrays.isAssociative(reference.name) {
-		r.arrays.setKey(reference.name, r.resolveKey(ctx, reference.subscript), value)
+		key := r.resolveKey(ctx, reference.subscript)
+		// An empty key names nothing, and bash refuses it and ends the script, as an
+		// assignment error does; here it was a key of its own.
+		if key == "" {
+			fmt.Fprintf(r.streams.Stderr, "%s[%s]: bad array subscript\n", reference.name, reference.subscript)
+			r.raiseShellError()
+			return 1
+		}
+		r.arrays.setKey(reference.name, key, value)
 		return 0
 	}
 	return r.assignArrayElementText(ctx, reference, value)

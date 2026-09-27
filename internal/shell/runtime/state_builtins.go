@@ -145,9 +145,9 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 			r.markVarMutation(base)
 			continue
 		}
+		// An arithmetic error in it has been said, and ends the script; see resolveSubscript.
 		index, err := r.resolveSubscript(ctx, subscript)
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "unset: %s: %v\n", name, err)
 			return 1
 		}
 		// A negative subscript counts back from the last element, so `unset 'a[-1]'` drops

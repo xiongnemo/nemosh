@@ -31,9 +31,6 @@ import (
 // silently read the wrong element.
 func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, error) {
 	text := strings.TrimSpace(withoutDoubleQuotes(subscript))
-	if text == "" {
-		return 0, fmt.Errorf("array subscript: empty")
-	}
 	if inner, ok := unwrapSubscriptParameter(text); ok {
 		text = inner
 	} else if strings.ContainsAny(text, "$`") {
@@ -42,13 +39,21 @@ func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, e
 		// outright, which was better than reading the wrong element but is not an
 		// answer.
 		text = strings.TrimSpace(r.expandEmbeddedParameters(ctx, text, 0))
-		if text == "" {
-			return 0, fmt.Errorf("array subscript %q: expanded to nothing", subscript)
-		}
+	}
+	// A blank subscript is 0, as bash 5.3's empty expression is: `a[" "]=x` is element 0
+	// there, where it was "array subscript: empty".
+	if text == "" {
+		return 0, nil
 	}
 	value, err := r.evaluateArithmetic(text)
 	if err != nil {
-		return 0, fmt.Errorf("array subscript %q: %w", subscript, err)
+		// An arithmetic error, which ends the script as one in `$((...))` does, bash's answer
+		// with busybox having no arrays; see reportExpansionError. It was said and passed
+		// over, so `a[1+]=2` went on with status 0 and `${a[1+]}` was empty. The callers
+		// stop at it without saying it again.
+		err = fmt.Errorf("array subscript %q: %w", subscript, err)
+		r.reportExpansionError(err)
+		return 0, err
 	}
 	// A negative subscript is returned as it is and counted from the end by the
 	// caller, which is the only place that knows how long the array is. bash does the
