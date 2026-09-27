@@ -318,8 +318,11 @@ func (s *jobScope) cancelAndDrain() {
 	s.mu.Unlock()
 }
 
+// seal is the shell ending: no job is started after it, and one just started is given its
+// state before the shell goes.
 func (s *jobScope) seal() {
 	s.mu.Lock()
 	s.sealed = true
 	s.mu.Unlock()
+	s.supervisor.awaitHandoffs()
 }

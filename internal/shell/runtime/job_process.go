@@ -142,10 +142,10 @@ func (r Runtime) startJobProcess(command *exec.Cmd, handoff *jobHandoff, executa
 	if err := handoff.started(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 	}
-	go func() {
+	r.jobScope.supervisor.handOff(func() {
 		_, _ = writer.Write(data)
 		_ = writer.Close()
-	}()
+	})
 	return nil
 }
 
