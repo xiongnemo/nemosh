@@ -52,7 +52,10 @@ func (r Runtime) expandOperand(ctx context.Context, word string, role operandRol
 			switch {
 			case role == operandPattern:
 				out.WriteString(word[index : index+2])
-			case r.operandQuoted && strings.IndexByte("$`\"\\\n", next) < 0:
+			// A value in double quotes keeps a backslash as a double-quoted word does, but
+			// before the `}` that would end the expansion too: `"${v-\}}"` is }, in both. A
+			// replacement drops it as it would unquoted: `"${x/b/\a}"` is aac.
+			case r.operandQuoted && role == operandValue && strings.IndexByte("$`\"\\\n}", next) < 0:
 				out.WriteString(word[index : index+2])
 			default:
 				out.WriteByte(next)
@@ -74,7 +77,9 @@ func (r Runtime) expandOperand(ctx context.Context, word string, role operandRol
 			}
 			out.WriteString(literalIn(role, r.expandDoubleQuotedText(ctx, word[index+1:end], savedStatus)))
 			index = end + 1
-		case char == '$' && !r.operandQuoted && ansiQuoteClose(word, index) >= 0:
+		// `$'...'` quotes where a single quote does: `"${x%$'b'*}"` is a, which git-prompt.sh
+		// relies on, where a double-quoted value takes it as its text.
+		case char == '$' && !(r.operandQuoted && role == operandValue) && ansiQuoteClose(word, index) >= 0:
 			text, width, _ := decodeAnsiQuote(word[index:])
 			out.WriteString(literalIn(role, text))
 			index += width

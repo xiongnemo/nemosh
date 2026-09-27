@@ -157,6 +157,11 @@ func replaceMatches(value, subject, pattern, replacement string, all bool) strin
 			index++
 		} else {
 			index += width
+			// A match that reached the end leaves nothing: the empty tail is no second match,
+			// so `${v//*/-}` is one -, as in bash. It was two; busybox loops for ever.
+			if all && index == len(value) {
+				break
+			}
 		}
 		if !all {
 			out.WriteString(value[index:])

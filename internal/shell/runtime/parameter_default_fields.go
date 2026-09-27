@@ -133,7 +133,8 @@ func (r Runtime) buildOperand(ctx context.Context, build *fieldBuilder, word str
 			switch next := word[index+1]; {
 			case !quoted:
 				build.text(word[index+1:index+2], false)
-			case strings.IndexByte("$`\"\\\n", next) >= 0:
+			// The `}` that would end the expansion too, as in operand_quoting.go.
+			case strings.IndexByte("$`\"\\\n}", next) >= 0:
 				build.text(word[index+1:index+2], false)
 			default:
 				build.text(word[index:index+2], false)

@@ -911,7 +911,6 @@
     "var-op-patsub.test.sh": {
       "${x//~homedir/}": "fail",
       "Pattern replacement on unset variable": "ash-only",
-      "Substitute glob characters in pattern, quoted and unquoted": "fail",
       "When LC_ALL=C, pattern ? doesn't match multibyte character": "fail",
       "patsub with [^]]": "fail"
     },
@@ -948,8 +947,6 @@
       "Var ref, then error with ${ ? }": "fail"
     },
     "var-sub-quote.test.sh": {
-      "$'' allowed within VarSub arguments": "fail",
-      "Right Brace as argument (similar to #702)": "fail",
       "Syntax error for single quote in double quote": "fail"
     },
     "var-sub.test.sh": {
