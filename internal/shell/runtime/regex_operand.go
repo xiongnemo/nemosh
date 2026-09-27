@@ -17,7 +17,10 @@ import (
 func (r Runtime) regexOperandTerm(ctx context.Context, item word, savedStatus int) conditionTerm {
 	var text, source strings.Builder
 	quoted := false
-	for _, part := range item.parts {
+	// Tilde-prefixes first, over the whole word: each part below is expanded on its own,
+	// as a word that has lost the mark saying where a tilde may begin, so `=~ ~` was left
+	// a tilde. The directory comes back quoted, and is matched as the characters it is.
+	for _, part := range r.tildeParts(item) {
 		value := strings.Join(r.expandWord(ctx, word{parts: []wordPart{part}}, savedStatus), " ")
 		text.WriteString(value)
 		if part.quote != quoteUnquoted || part.kind == wordPartEscaped {
