@@ -74,6 +74,10 @@ func (r Runtime) expandOperand(ctx context.Context, word string, role operandRol
 			}
 			out.WriteString(literalIn(role, r.expandDoubleQuotedText(ctx, word[index+1:end], savedStatus)))
 			index = end + 1
+		case char == '$' && !r.operandQuoted && ansiQuoteClose(word, index) >= 0:
+			text, width, _ := decodeAnsiQuote(word[index:])
+			out.WriteString(literalIn(role, text))
+			index += width
 		case char == '$':
 			end := expansionEndAt(word, index)
 			out.WriteString(r.expandEmbeddedParameters(ctx, word[index:end], savedStatus))
@@ -208,7 +212,11 @@ func unquotedSlash(text string) int {
 			}
 			index = end
 		case '$':
-			index = expansionEndAt(text, index) - 1
+			if end := ansiQuoteClose(text, index); end >= 0 {
+				index = end
+			} else {
+				index = expansionEndAt(text, index) - 1
+			}
 		case '/':
 			return index
 		}

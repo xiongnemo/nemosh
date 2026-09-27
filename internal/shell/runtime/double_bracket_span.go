@@ -35,6 +35,8 @@ func conditionSpanEnd(line string, index int) (int, bool) {
 		switch {
 		case char == '\\':
 			at++
+		case quote == 0 && ansiQuoteClose(line, at) >= 0:
+			at = ansiQuoteClose(line, at)
 		case strings.HasPrefix(line[at:], "$(("):
 			if end, ok := arithmeticExpansionEnd(line, at+3); ok {
 				at = end

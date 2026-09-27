@@ -29,6 +29,11 @@ func rewriteBackquotes(source string) (string, error) {
 			out.WriteByte(source[index])
 			continue
 		}
+		if end := ansiQuoteClose(source, index); quote == 0 && end >= 0 {
+			out.WriteString(source[index : end+1])
+			index = end
+			continue
+		}
 		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {
 			if quote == char {
 				quote = 0

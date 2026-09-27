@@ -41,6 +41,12 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	return delimiter == '{' && (afterFunctionKeyword(line, index) || afterCoprocKeyword(line, index))
 }
 
+// isCommandSeparator reports whether a character ends one command and so leaves
+// the next byte in command position.
+func isCommandSeparator(char byte) bool {
+	return char == ';' || char == '&' || char == '|' || char == '\n'
+}
+
 // previousNonBlank reports the last character before index that is not a blank,
 // and whether the scan found one before running off the front of the line.
 func previousNonBlank(line string, index int) (byte, bool) {

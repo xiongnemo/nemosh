@@ -91,6 +91,10 @@ func heredocDeclarations(line string, lineNumber, startOrder int) ([]pendingHere
 			}
 			continue
 		}
+		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+			index = end
+			continue
+		}
 		// An arithmetic expansion is stepped over whole, because `$((1<<4))`
 		// carries a `<<` that is a shift and not a heredoc.
 		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' {
@@ -189,6 +193,10 @@ func heredocOperandEnd(line string, start int) int {
 			} else if quote == 0 {
 				quote = char
 			}
+			continue
+		}
+		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+			index = end
 			continue
 		}
 		// Where a word ends: at a blank or an operator character. `;`, `(` and `)` among

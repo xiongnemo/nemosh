@@ -43,6 +43,8 @@ func topLevelOperators(line string) []operatorAt {
 			if char == quote {
 				quote = 0
 			}
+		case ansiQuoteClose(line, index) >= 0:
+			index = ansiQuoteClose(line, index)
 		case char == '\'' || char == '"':
 			quote = char
 		// A pattern's `)` closes nothing (case_pattern_position.go). Counting it took the

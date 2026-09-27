@@ -159,6 +159,11 @@ func (r Runtime) buildOperand(ctx context.Context, build *fieldBuilder, word str
 			}
 			r.buildQuotedText(ctx, build, word[index+1:end], savedStatus)
 			index = end + 1
+		case char == '$' && !quoted && ansiQuoteClose(word, index) >= 0:
+			// `${u:-$'a\'b'}` is a'b in both references; inside double quotes it is the text.
+			text, width, _ := decodeAnsiQuote(word[index:])
+			build.text(text, false)
+			index += width
 		case char == '$':
 			index = r.buildEmbedded(ctx, build, word, index, quoted, savedStatus)
 		case quoted:

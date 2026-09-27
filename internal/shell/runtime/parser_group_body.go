@@ -57,7 +57,7 @@ func separatorPositions(body string) map[int]bool {
 	positions := make(map[int]bool)
 	quote := byte(0)
 	escaped := false
-	for index := range len(body) {
+	for index := 0; index < len(body); index++ {
 		char := body[index]
 		if escaped {
 			escaped = false
@@ -65,6 +65,10 @@ func separatorPositions(body string) map[int]bool {
 		}
 		if char == '\\' && quote != '\'' {
 			escaped = true
+			continue
+		}
+		if end := ansiQuoteClose(body, index); quote == 0 && end >= 0 {
+			index = end
 			continue
 		}
 		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {

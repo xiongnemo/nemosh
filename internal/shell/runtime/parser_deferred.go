@@ -19,6 +19,10 @@ func rejectDeferredSyntax(line string) error {
 			escaped = true
 			continue
 		}
+		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+			index = end
+			continue
+		}
 		if char == '\'' && quote != '"' {
 			if quote == '\'' {
 				quote = 0

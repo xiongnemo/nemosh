@@ -75,6 +75,8 @@ func regexOperandEnd(line string, start int) int {
 			}
 		case char == '\\':
 			index++
+		case ansiQuoteClose(line, index) >= 0:
+			index = ansiQuoteClose(line, index)
 		case char == '\'' || char == '"':
 			quote = char
 		case char == '(' || char == '[':

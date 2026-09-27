@@ -63,6 +63,10 @@ func bracedParameterEnd(text string, start int) (int, bool) {
 			}
 			continue
 		}
+		if end := ansiQuoteClose(text, index); end >= 0 {
+			index = end
+			continue
+		}
 		switch char {
 		case '\'', '"':
 			quote = char

@@ -252,12 +252,21 @@ func isArrayElementTarget(text string) bool {
 
 // matchingParenthesis finds the `)` that closes the `(` at open, counting nesting
 // so `a=(one (two))` -- which bash rejects, but which must not run off the end
-// here -- terminates.
+// here -- terminates. An escaped character and a `$'...'` are data, as in bash, so
+// `a=(x\) $'it\'s')` is two elements.
 func matchingParenthesis(line string, open int) (int, bool) {
 	depth := 0
 	inSingle, inDouble := false, false
 	for index := open; index < len(line); index++ {
+		if end := ansiQuoteClose(line, index); !inSingle && !inDouble && end >= 0 {
+			index = end
+			continue
+		}
 		switch line[index] {
+		case '\\':
+			if !inSingle {
+				index++
+			}
 		case '\'':
 			if !inDouble {
 				inSingle = !inSingle

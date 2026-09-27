@@ -155,7 +155,7 @@ func splitLeadingReservedWord(segment string) []string {
 	return []string{segment}
 }
 
-// expansionEnd steps over a `$(...)` or `${...}` that starts at index and
+// expansionEnd steps over a `$(...)`, `${...}` or `$'...'` that starts at index and
 // reports the last byte it occupies. An unterminated one is left to the scanner
 // that reports it, so this only claims what it can measure.
 func expansionEnd(line string, index int) (int, bool) {
@@ -163,6 +163,9 @@ func expansionEnd(line string, index int) (int, bool) {
 		return 0, false
 	}
 	switch line[index+1] {
+	case '\'':
+		end := ansiQuoteClose(line, index)
+		return end, end >= 0
 	case '(':
 		if index+2 < len(line) && line[index+2] == '(' {
 			return arithmeticExpansionEnd(line, index+3)

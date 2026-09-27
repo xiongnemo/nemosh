@@ -20,6 +20,10 @@ func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 			escaped = true
 			continue
 		}
+		if end := ansiQuoteClose(input, index); quote == 0 && end >= 0 {
+			index = end
+			continue
+		}
 		if char == '\'' && quote == 0 {
 			quotes[len(quotes)-1] = char
 			continue

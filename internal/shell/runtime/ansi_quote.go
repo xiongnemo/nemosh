@@ -49,6 +49,27 @@ func decodeAnsiQuote(input string) (string, int, bool) {
 	return "", 0, false
 }
 
+// ansiQuoteClose is the index of the quote that closes the `$'...'` whose `$` is at index,
+// or -1 when there is none there or it never closes. A backslash escapes the character after
+// it, `\'` included, and that is what every scan stepping over quoted text has to know: read
+// as a plain single-quoted string, `$'it\'s'` closed at the escaped quote and left the rest
+// of the line -- `; echo two`, the `}` of a group -- inside a quote that never ended.
+// The scans call it only outside quotes, where `$'` opens one.
+func ansiQuoteClose(line string, index int) int {
+	if index+1 >= len(line) || line[index] != '$' || line[index+1] != '\'' {
+		return -1
+	}
+	for at := index + 2; at < len(line); at++ {
+		switch line[at] {
+		case '\\':
+			at++
+		case '\'':
+			return at
+		}
+	}
+	return -1
+}
+
 // decodeAnsiEscape reads one backslash escape, returning its text and the bytes it
 // took. An escape that is not one of these keeps the backslash, which is what bash
 // does: `\q` is a backslash and a q.

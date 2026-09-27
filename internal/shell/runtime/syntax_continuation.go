@@ -18,6 +18,13 @@ func hasTrailingSyntaxOperator(line string) bool {
 			escaped = true
 			continue
 		}
+		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+			index = end
+			if depth == 0 {
+				trailing = false
+			}
+			continue
+		}
 		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {
 			if quote == char {
 				quote = 0

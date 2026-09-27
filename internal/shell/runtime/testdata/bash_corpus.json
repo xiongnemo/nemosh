@@ -1667,5 +1667,11 @@
     "stdout": "h\nc\nO=4 A=unset\nb 2\nf: x 2\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "echo $'q\\'r'; echo two\nf() { echo $'u\\'v'; }; f\ncase \"w'x\" in $'w\\'x') echo hit;; esac\nx=$(echo $'s\\'t'); echo \"$x\"",
+    "stdout": "q'r\ntwo\nu'v\nhit\ns't\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

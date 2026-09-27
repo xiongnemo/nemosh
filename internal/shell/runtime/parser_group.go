@@ -68,6 +68,11 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			index++
 			continue
 		}
+		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+			output.WriteString(line[index : end+1])
+			index = end + 1
+			continue
+		}
 		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {
 			if quote == char {
 				quote = 0
@@ -211,12 +216,6 @@ func isCommandBoundary(char byte) bool {
 //
 // bash, dash, and busybox ash agree on every case above.
 
-// isCommandSeparator reports whether a character ends one command and so leaves
-// the next byte in command position.
-func isCommandSeparator(char byte) bool {
-	return char == ';' || char == '&' || char == '|' || char == '\n'
-}
-
 func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 	closers := []byte{closerFor(opener)}
 	quote := byte(0)
@@ -245,6 +244,10 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 		}
 		if char == '\\' && quote != '\'' {
 			escaped = true
+			continue
+		}
+		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+			index = end
 			continue
 		}
 		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {

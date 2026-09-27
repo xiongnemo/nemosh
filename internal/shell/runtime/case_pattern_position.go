@@ -68,6 +68,11 @@ func casePatternPosition(prefix string) bool {
 	escaped := false
 	for index := 0; index < len(prefix); index++ {
 		char := prefix[index]
+		if end := ansiQuoteClose(prefix, index); !escaped && quote == 0 && end >= 0 {
+			word.WriteString(prefix[index : end+1])
+			index = end
+			continue
+		}
 		switch {
 		case escaped:
 			escaped = false
