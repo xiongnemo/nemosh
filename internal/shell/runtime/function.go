@@ -70,6 +70,10 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 		fmt.Fprintf(r.streams.Stderr, "nemosh: function call depth exceeds %d\n", maxFunctionCallDepth)
 		return lineResult{status: 1}
 	}
+	// Once the call returns, `$LINENO` is the line that made it again, as both references
+	// have it, so an ERR trap its failure fires in the caller names the caller's line. It
+	// named the function's last one.
+	defer r.enterLine(r.currentLine())
 	r = r.enterFrame(definition.name.value, definition.file)
 	r.params = &parameters{name: r.params.name, values: append([]string(nil), args...), function: definition.name.value}
 	r.functionDepth++

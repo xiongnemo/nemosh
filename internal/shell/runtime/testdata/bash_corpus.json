@@ -1649,5 +1649,11 @@
     "stdout": "ERR\nERR\nafter\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "trap 'echo line=$LINENO' ERR\nfailing() {\n  true\n  false\n}\nfailing\nset -o errtrace\nfailing\ntrue",
+    "stdout": "line=6\nline=4\nline=8\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]
