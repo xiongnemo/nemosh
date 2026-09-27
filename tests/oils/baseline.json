@@ -792,8 +792,7 @@
       "Fatal error inside [[ =~ ]]": "fail",
       "Operator chars ; \u0026 but not |": "fail",
       "Parse error with 2 words": "fail",
-      "Quotes '' \"\" $'' $\"\" in pattern": "fail",
-      "Unquoted { is a regex parse error": "fail"
+      "Quotes '' \"\" $'' $\"\" in pattern": "fail"
     },
     "serialize.test.sh": {
       "set": "ash-only"

@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1906 of the 2551 cases bash passes: 74.7%.**
+**nemosh passes 1907 of the 2551 cases bash passes: 74.8%.**
 
-Of the other 645, it does 111 the way the files record of ash, which may be busybox's
-way, and 534 neither way.
+Of the other 644, it does 111 the way the files record of ash, which may be busybox's
+way, and 533 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 534 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1906 |
+| that nemosh passes of those | 1907 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -140,7 +140,7 @@ of ash.
 | redirect-command.test.sh | 23 | 23 | 22 | 95.7% | 0 | 22 |
 | redirect-multi.test.sh | 13 | 13 | 5 | 38.5% | 2 | 7 |
 | redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 28 |
-| regex.test.sh | 37 | 36 | 32 | 88.9% | 0 | 10 |
+| regex.test.sh | 37 | 36 | 33 | 91.7% | 0 | 10 |
 | serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 10 |
 | sh-func.test.sh | 12 | 12 | 11 | 91.7% | 0 | 10 |
 | sh-options-bash.test.sh | 9 | 9 | 7 | 77.8% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1906 | 74.7% | 111 | 1447 |
+| all | 2668 | 2551 | 1907 | 74.8% | 111 | 1447 |

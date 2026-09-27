@@ -114,6 +114,10 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 		if right.hasRegex {
 			source = right.regex
 		}
+		source, err := posixIntervals(source)
+		if err != nil {
+			return false, fmt.Errorf("invalid regular expression: %s", right.text)
+		}
 		if r.noCaseMatch() {
 			source = "(?i)" + source
 		}
