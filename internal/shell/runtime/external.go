@@ -123,6 +123,9 @@ func (r Runtime) externalCommandPath(name string) (string, error) {
 		return executableCandidate(resolved.Native)
 	}
 	pathValue, present := r.vars["PATH"]
+	if r.searchPath != "" {
+		pathValue, present = r.searchPath, true
+	}
 	if !present || pathValue == "" {
 		return "", errExternalNotFound
 	}

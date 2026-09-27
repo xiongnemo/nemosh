@@ -8,13 +8,23 @@ import (
 )
 
 func (r Runtime) command(ctx context.Context, args []string) int {
-	if len(args) == 0 {
+	request, operands, err := parseCommandArgs(args)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "command: %v\n", err)
+		return 2
+	}
+	if request.defaultPath {
+		r.searchPath = defaultSearchPath()
+	}
+	switch {
+	case len(operands) == 0:
 		return 0
+	case request.describe == 'v':
+		return r.commandV(operands)
+	case request.describe == 'V':
+		return r.commandVerbose(operands[0])
 	}
-	if args[0] == "-v" {
-		return r.commandV(args[1:])
-	}
-	return r.runCommandResolved(ctx, args, false)
+	return r.runCommandResolved(ctx, operands, false)
 }
 
 // commandV answers POSIX's `command -v`: a builtin, function, or applet is

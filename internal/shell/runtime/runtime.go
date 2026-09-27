@@ -86,11 +86,14 @@ type Runtime struct {
 	functionDepth int
 	// subshellDepth is $BASH_SUBSHELL; see subshellSnapshot.
 	subshellDepth int
-	interactive   interactiveState
-	paths         *pathState
-	env           Environment
-	jobScope      *jobScope
-	lifecycle     *shellLifecycle
+	// searchPath, when set, is where a command is looked for instead of PATH: `command -p`;
+	// see command_options.go.
+	searchPath  string
+	interactive interactiveState
+	paths       *pathState
+	env         Environment
+	jobScope    *jobScope
+	lifecycle   *shellLifecycle
 }
 
 type shellLifecycle struct {

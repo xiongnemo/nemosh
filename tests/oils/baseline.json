@@ -470,7 +470,6 @@
       "builtin usage": "ash-only",
       "command -V": "fail",
       "command -V nonexistent": "fail",
-      "command -p (find hidden tool in default path)": "fail",
       "command -v": "fail",
       "command -v doesn't find executable dir": "fail",
       "command -v executable, builtin": "fail",

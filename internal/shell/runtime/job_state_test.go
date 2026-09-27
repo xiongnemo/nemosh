@@ -49,6 +49,7 @@ var jobStateCoverage = map[string]string{
 	"sourceDepth":       "encoded: SourceDepth",
 	"functionDepth":     "encoded: FunctionDepth",
 	"subshellDepth":     "encoded: SubshellDepth, and the job one deeper",
+	"searchPath":        "not inherited: per command",
 	"interactive":       "not inherited: a job is not a session",
 	"paths":             "rebuilt: the process starts in the working directory",
 	"env":               "rebuilt: the process starts with the environment",
