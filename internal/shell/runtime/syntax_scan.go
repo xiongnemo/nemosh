@@ -15,7 +15,7 @@ type syntaxScanner struct {
 	breaks        []int
 	logical       strings.Builder
 	quotes        []byte
-	substitutions int
+	substitutions []openSubstitution
 	groupClosers  []byte
 	syntaxErr     error
 	escaped       bool
@@ -105,24 +105,23 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			}
 		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' && scanner.quote() != '\'' {
-			scanner.substitutions++
 			scanner.quotes = append(scanner.quotes, 0)
 			scanner.logical.WriteString("$(")
+			scanner.substitutions = append(scanner.substitutions, openSubstitution{body: scanner.logical.Len()})
 			index++
 			continue
 		}
-		if char == ')' && scanner.substitutions > 0 && scanner.quote() == 0 {
-			scanner.substitutions--
-			scanner.popQuote()
+		if (char == '(' || char == ')') && len(scanner.substitutions) > 0 && scanner.quote() == 0 {
+			scanner.substitutionParenthesis(char)
 			scanner.logical.WriteByte(char)
 			continue
 		}
-		if scanner.quote() == 0 && scanner.substitutions == 0 && braceDelimiterAt(line, index, '{') {
+		if scanner.quote() == 0 && len(scanner.substitutions) == 0 && braceDelimiterAt(line, index, '{') {
 			scanner.groupClosers = append(scanner.groupClosers, '}')
 			scanner.logical.WriteByte(char)
 			continue
 		}
-		if scanner.quote() == 0 && scanner.substitutions == 0 && char == '(' {
+		if scanner.quote() == 0 && len(scanner.substitutions) == 0 && char == '(' {
 			// `a=(one two three)` is an array assignment, and the parentheses are
 			// part of the word rather than a subshell. The scanner has to know
 			// too, not only the lexer: it decides where a logical line ends, and
@@ -153,7 +152,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteByte(char)
 			continue
 		}
-		if scanner.quote() == 0 && scanner.substitutions == 0 && (char == ')' || braceDelimiterAt(line, index, '}')) {
+		if scanner.quote() == 0 && len(scanner.substitutions) == 0 && (char == ')' || braceDelimiterAt(line, index, '}')) {
 			if len(scanner.groupClosers) == 0 {
 				scanner.logical.WriteByte(char)
 				continue
@@ -185,11 +184,35 @@ func (scanner *syntaxScanner) scanLine(line string) {
 	}
 }
 
+// openSubstitution is a `$(` the scan is inside: body is where in logical its body begins,
+// and depth how many of the body's own parentheses are open.
+type openSubstitution struct{ body, depth int }
+
+// substitutionParenthesis follows an unquoted parenthesis inside a `$(`. One of the body's
+// own opens a level and closes it -- a subshell's, a function's, an array's, a `<(`'s -- and a
+// case pattern's opens and closes nothing, as commandSubstitutionEnd reads them. Every `)`
+// was taken for the substitution's, so a subshell or a pattern ended it early: `{ x=$( (a) );
+// }` was `unexpected ), expected }`, and `x=$(case x in` then `x) echo hit;;` then `esac)`
+// an unterminated command substitution, where busybox-w32 and bash run both.
+func (scanner *syntaxScanner) substitutionParenthesis(char byte) {
+	open := &scanner.substitutions[len(scanner.substitutions)-1]
+	switch {
+	case insideCase(scanner.logical.String()[open.body:]):
+	case char == '(':
+		open.depth++
+	case open.depth > 0:
+		open.depth--
+	default:
+		scanner.substitutions = scanner.substitutions[:len(scanner.substitutions)-1]
+		scanner.popQuote()
+	}
+}
+
 func (scanner *syntaxScanner) finishPhysicalLine(line string) {
 	if scanner.continued {
 		return
 	}
-	if scanner.quote() != 0 || scanner.substitutions != 0 || len(scanner.groupClosers) != 0 {
+	if scanner.quote() != 0 || len(scanner.substitutions) != 0 || len(scanner.groupClosers) != 0 {
 		scanner.logical.WriteByte('\n')
 		return
 	}
@@ -217,7 +240,7 @@ func (scanner *syntaxScanner) incompleteError() error {
 	if scanner.quote() != 0 {
 		return fmt.Errorf("%w: unterminated quote", ErrIncompleteScript)
 	}
-	if scanner.substitutions != 0 {
+	if len(scanner.substitutions) != 0 {
 		return fmt.Errorf("%w: unterminated command substitution", ErrIncompleteScript)
 	}
 	if len(scanner.groupClosers) != 0 {

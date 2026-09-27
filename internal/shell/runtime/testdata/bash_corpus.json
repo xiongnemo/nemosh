@@ -1727,5 +1727,11 @@
     "stdout": "one\ntwo\nthree\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "x=$(case x in\nx) echo hit;;\nesac)\n{ y=$( (echo a) ); echo \"$x $y\"; }",
+    "stdout": "hit a\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1895 of the 2551 cases bash passes: 74.3%.**
+**nemosh passes 1896 of the 2551 cases bash passes: 74.3%.**
 
-Of the other 656, it does 111 the way the files record of ash, which may be busybox's
-way, and 545 neither way.
+Of the other 655, it does 111 the way the files record of ash, which may be busybox's
+way, and 544 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 545 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1895 |
+| that nemosh passes of those | 1896 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -129,7 +129,7 @@ of ash.
 | nix-idioms.test.sh | 6 | 6 | 3 | 50.0% | 0 | 0 |
 | nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 3 |
 | nul-bytes.test.sh | 16 | 16 | 14 | 87.5% | 1 | 12 |
-| paren-ambiguity.test.sh | 8 | 8 | 4 | 50.0% | 2 | 8 |
+| paren-ambiguity.test.sh | 8 | 8 | 5 | 62.5% | 2 | 8 |
 | parse-errors.test.sh | 27 | 25 | 19 | 76.0% | 2 | 22 |
 | pipeline.test.sh | 26 | 26 | 24 | 92.3% | 0 | 17 |
 | posix.test.sh | 15 | 15 | 13 | 86.7% | 0 | 14 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 9 | 52.9% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1895 | 74.3% | 111 | 1447 |
+| all | 2668 | 2551 | 1896 | 74.3% | 111 | 1447 |

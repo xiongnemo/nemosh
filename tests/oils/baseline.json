@@ -720,7 +720,6 @@
     "paren-ambiguity.test.sh": {
       "$(( closed with ) ) after multiple lines is command - #2337": "ash-only",
       "$((which example - command sub versus arith sub - gnunet-gtk package": "ash-only",
-      "((gzip example - zdiff package - #2337": "fail",
       "((pkg-config example - postfix package - #2337": "fail"
     },
     "parse-errors.test.sh": {
