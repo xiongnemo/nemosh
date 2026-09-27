@@ -34,7 +34,7 @@ func resolvePrintfStars(spec string, next func() string) (string, error) {
 			out.WriteByte(spec[index])
 			continue
 		}
-		value, err := printfInteger(next())
+		value, err := printfSigned(next())
 		if err != nil && firstErr == nil {
 			firstErr = err
 		}

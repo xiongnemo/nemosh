@@ -1457,5 +1457,41 @@
     "stdout": "prev=143\ncur=143\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '[%u][%x]\\n' -42 -42",
+    "stdout": "[18446744073709551574][ffffffffffffffd6]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '%d\\n' ' -123 ' 2>/dev/null\necho \"st=$?\"",
+    "stdout": "0\nst=1\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '[%#x][%#o]\\n' 0 0",
+    "stdout": "[0][0]\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '[%b]\\n' 'ab\\cd'\necho",
+    "stdout": "[ab\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "printf '%s\\c' x y\necho",
+    "stdout": "x\n",
+    "status": 0,
+    "reference": "busybox-w32"
+  },
+  {
+    "script": "printf 2>/dev/null\necho \"st=$?\"",
+    "stdout": "st=2\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

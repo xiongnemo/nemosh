@@ -29,13 +29,17 @@ func newPrintfApplet() Applet {
 			args = args[1:]
 		}
 		if len(args) == 0 {
-			return missingOperand()
+			// A usage error, 2, as busybox's printf answers it.
+			return ExitStatusMessage(2, missingOperand())
 		}
 		format, operands := args[0], args[1:]
 		invalid := false
 		for pass := 0; ; pass++ {
 			consumed, failed, err := writePrintfPass(stdout, stderr, format, operands)
 			invalid = invalid || failed
+			if errors.Is(err, errPrintfStop) {
+				break
+			}
 			if err != nil {
 				return err
 			}
@@ -60,6 +64,10 @@ type errPrintfNumber struct{ operand string }
 
 func (e errPrintfNumber) Error() string { return fmt.Sprintf("%s: invalid number", e.operand) }
 
+// errPrintfStop is \c, in the format or in a %b operand: output ends there, and no operand
+// after it is used -- `printf '%s\c' x y` is x, as in busybox, where it went on to y.
+var errPrintfStop = errors.New("stopped by \\c")
+
 // writePrintfPass walks the format once and reports how many operands it used, and whether
 // one of them was not the number its conversion wanted.
 func writePrintfPass(out, diagnostics io.Writer, format string, operands []string) (int, bool, error) {
@@ -80,8 +88,7 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			text.WriteString(replacement)
 			index += width
 			if stop {
-				_, err := io.WriteString(out, text.String())
-				return used, failed, err
+				return used, failed, writePrintfStop(out, text.String())
 			}
 			continue
 		}
@@ -114,6 +121,10 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 		if err == nil {
 			err = renderErr
 		}
+		if errors.Is(err, errPrintfStop) {
+			text.WriteString(rendered)
+			return used, failed, writePrintfStop(out, text.String())
+		}
 		var number errPrintfNumber
 		if errors.As(err, &number) {
 			// Said now, in order with the output, and processing goes on.
@@ -128,6 +139,14 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 	}
 	_, err := io.WriteString(out, text.String())
 	return used, failed, err
+}
+
+// writePrintfStop writes what came before a \c, and says that it came.
+func writePrintfStop(out io.Writer, text string) error {
+	if _, err := io.WriteString(out, text); err != nil {
+		return err
+	}
+	return errPrintfStop
 }
 
 // printfSpecification reads `%[flags][width][.precision]verb` and reports the
@@ -152,12 +171,16 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 	case 'd', 'i':
 		// The zero an unreadable operand stands for is rendered with the operand's own
 		// width and flags, and the error goes back beside it for the caller to report.
-		value, err := printfInteger(next())
+		value, err := printfSigned(next())
 		return fmt.Sprintf(spec+"d", value), err
 	case 'o', 'x', 'X', 'u':
-		value, err := printfInteger(next())
+		value, err := printfUnsigned(next())
 		if verb == 'u' {
 			return fmt.Sprintf(spec+"d", value), err
+		}
+		if value == 0 {
+			// C's # puts no 0x on a zero, where Go's writes 0x0.
+			spec = strings.ReplaceAll(spec, "#", "")
 		}
 		return fmt.Sprintf(spec+string(verb), value), err
 	case 'e', 'E', 'f', 'F', 'g', 'G':
@@ -179,8 +202,12 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 	case 's':
 		return fmt.Sprintf(spec+"s", next()), nil
 	case 'b':
-		// XSI's %b: the operand's own escape sequences are processed.
-		expanded, _ := expandEchoEscapes(next())
+		// XSI's %b: the operand's own escape sequences are processed. A \c among them ends
+		// all output, the rest of the format and every operand to come, as in busybox.
+		expanded, stop := expandEchoEscapes(next())
+		if stop {
+			return fmt.Sprintf(spec+"s", expanded), errPrintfStop
+		}
 		return fmt.Sprintf(spec+"s", expanded), nil
 	case 'q':
 		// bash's %q: quote the operand so the shell would read it back as itself.
@@ -190,25 +217,6 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 	default:
 		return "", fmt.Errorf("invalid conversion specification %%%c", verb)
 	}
-}
-
-// An operand that is not a number is zero with a diagnostic, in POSIX and in both
-// references -- measured, and not the rejection this comment used to claim.
-func printfInteger(operand string) (int64, error) {
-	trimmed := strings.TrimSpace(operand)
-	if trimmed == "" {
-		return 0, nil
-	}
-	// A leading quote makes the operand the code of the character after it, which POSIX
-	// specifies and both references do: `printf '%d' "'A"` is 65. It was a non-number.
-	if code, ok := printfCharacterCode(trimmed); ok {
-		return code, nil
-	}
-	value, err := strconv.ParseInt(trimmed, 0, 64)
-	if err != nil {
-		return 0, errPrintfNumber{operand: operand}
-	}
-	return value, nil
 }
 
 // printfEscape reads the sequence after a backslash in the format and reports

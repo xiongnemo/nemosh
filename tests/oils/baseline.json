@@ -451,17 +451,13 @@
       "Runtime error for invalid integer": "ash-only",
       "Too large": "fail",
       "bash truncates long strftime string at 128": "ash-only",
-      "leading spaces are accepted in value given to %d %X, but not trailing spaces": "fail",
-      "negative numbers with unsigned / octal / hex": "fail",
-      "printf # flag": "fail",
-      "printf %b respects \\c early return": "fail",
+      "leading spaces are accepted in value given to %d %X, but not trailing spaces": "ash-only",
       "printf %b unicode escapes": "ash-only",
       "printf negative integer overflow": "ash-only",
-      "printf negative numbers": "fail",
+      "printf negative numbers": "ash-only",
       "printf octal backslash escapes": "fail",
-      "printf positive integer overflow": "fail",
-      "printf unicode backslash escapes": "ash-only",
-      "printf with no args": "fail"
+      "printf positive integer overflow": "ash-only",
+      "printf unicode backslash escapes": "ash-only"
     },
     "builtin-process.test.sh": {
       "Exit builtin with too many args": "fail",
