@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1958 of the 2551 cases bash passes: 76.8%.**
+**nemosh passes 1965 of the 2551 cases bash passes: 77.0%.**
 
-Of the other 593, it does 112 the way the files record of ash, which may be busybox's
-way, and 481 neither way.
+Of the other 586, it does 106 the way the files record of ash, which may be busybox's
+way, and 480 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 481 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1958 |
+| that nemosh passes of those | 1965 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -74,7 +74,7 @@ of ash.
 | builtin-cd.test.sh | 25 | 22 | 12 | 54.5% | 2 | 11 |
 | builtin-completion.test.sh | 51 | 50 | 3 | 6.0% | 0 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 7 | 38.9% | 0 | 2 |
-| builtin-echo.test.sh | 27 | 27 | 22 | 81.5% | 5 | 27 |
+| builtin-echo.test.sh | 27 | 27 | 26 | 96.3% | 1 | 27 |
 | builtin-eval-source.test.sh | 23 | 21 | 16 | 76.2% | 0 | 13 |
 | builtin-fc.test.sh | 14 | 14 | 1 | 7.1% | 1 | 2 |
 | builtin-getopts.test.sh | 31 | 31 | 24 | 77.4% | 7 | 31 |
@@ -83,7 +83,7 @@ of ash.
 | builtin-meta-assign.test.sh | 11 | 11 | 11 | 100.0% | 0 | 11 |
 | builtin-meta.test.sh | 15 | 15 | 8 | 53.3% | 1 | 13 |
 | builtin-misc.test.sh | 7 | 5 | 2 | 40.0% | 0 | 4 |
-| builtin-printf.test.sh | 63 | 55 | 46 | 83.6% | 9 | 57 |
+| builtin-printf.test.sh | 63 | 55 | 48 | 87.3% | 7 | 57 |
 | builtin-process.test.sh | 10 | 9 | 7 | 77.8% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 56 | 88.9% | 4 | 60 |
 | builtin-set.test.sh | 24 | 24 | 18 | 75.0% | 0 | 20 |
@@ -154,7 +154,7 @@ of ash.
 | toysh-posix.test.sh | 22 | 22 | 14 | 63.6% | 7 | 22 |
 | toysh.test.sh | 8 | 7 | 6 | 85.7% | 0 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
-| unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
+| unicode.test.sh | 7 | 2 | 1 | 50.0% | 0 | 2 |
 | var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
 | var-op-bash.test.sh | 27 | 26 | 21 | 80.8% | 0 | 2 |
 | var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1958 | 76.8% | 112 | 1447 |
+| all | 2668 | 2551 | 1965 | 77.0% | 106 | 1447 |

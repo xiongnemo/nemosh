@@ -228,6 +228,9 @@ func printfEscape(rest string) (string, int, bool) {
 	if rest[0] == 'c' {
 		return "", 1, true
 	}
+	if value, width, ok := unicodeEscape(rest); ok {
+		return value, width, false
+	}
 	if value, width, ok := numericEscape(rest, false); ok {
 		return string([]byte{value}), width, false
 	}

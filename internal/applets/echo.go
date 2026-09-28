@@ -71,6 +71,11 @@ func expandEchoEscapes(text string) (string, bool) {
 		if text[index] == 'c' {
 			return out.String(), true
 		}
+		if value, width, ok := unicodeEscape(text[index:]); ok {
+			out.WriteString(value)
+			index += width - 1
+			continue
+		}
 		if value, width, ok := numericEscape(text[index:], true); ok {
 			out.WriteByte(value)
 			index += width - 1
@@ -166,6 +171,35 @@ func numericEscape(rest string, leadingZero bool) (byte, int, bool) {
 		return 0, 0, false
 	}
 	return value, digits, true
+}
+
+// unicodeEscape reads `\uHHHH` and `\UHHHHHHHH`, one to four and one to eight hex digits, as
+// the character they name in UTF-8, and reports how much of rest it consumed.
+//
+// rest begins after the backslash, as numericEscape's does. bash has both in echo -e, in
+// printf's format and in %b, as it has them in $'...', which this shell already read.
+// busybox-w32 has none of them and prints the sequence back, so bash fills the gap:
+// `printf '\u2500'` drew a box line in bash and printed six characters here.
+func unicodeEscape(rest string) (string, int, bool) {
+	if rest == "" || rest[0] != 'u' && rest[0] != 'U' {
+		return "", 0, false
+	}
+	limit := 4
+	if rest[0] == 'U' {
+		limit = 8
+	}
+	digits := 0
+	for digits < limit && digits+1 < len(rest) && isHexDigit(rest[digits+1]) {
+		digits++
+	}
+	if digits == 0 {
+		return "", 0, false
+	}
+	value, err := strconv.ParseUint(rest[1:1+digits], 16, 32)
+	if err != nil {
+		return "", 0, false
+	}
+	return string(rune(value)), digits + 1, true
 }
 
 // octalDigits reads at most limit octal digits and reports how many it used.

@@ -311,11 +311,7 @@
       "pushd/popd": "fail"
     },
     "builtin-echo.test.sh": {
-      "\\0 \\1 \\8": "ash-only",
-      "\\u6": "ash-only",
-      "echo -e with 4 digit unicode escape": "ash-only",
-      "echo -e with 8 digit unicode escape": "ash-only",
-      "incomplete unicode escape": "ash-only"
+      "\\0 \\1 \\8": "ash-only"
     },
     "builtin-eval-source.test.sh": {
       "Eval in bash does tilde expansion in array": "fail",
@@ -399,12 +395,10 @@
       "Too large": "fail",
       "bash truncates long strftime string at 128": "ash-only",
       "leading spaces are accepted in value given to %d %X, but not trailing spaces": "ash-only",
-      "printf %b unicode escapes": "ash-only",
       "printf negative integer overflow": "ash-only",
       "printf negative numbers": "ash-only",
       "printf octal backslash escapes": "fail",
-      "printf positive integer overflow": "ash-only",
-      "printf unicode backslash escapes": "ash-only"
+      "printf positive integer overflow": "ash-only"
     },
     "builtin-process.test.sh": {
       "Exit builtin with too many args": "fail",
@@ -816,7 +810,6 @@
       "$'' does not check for surrogate range at parse time": "fail",
       "Max code point U+10ffff can escaped with $''  printf  echo -e": "fail",
       "OSH source code doesn't have to be valid Unicode (like other shells)": "fail",
-      "Unicode escapes \\u03bc \\U000003bc in $'', echo -e, printf": "fail",
       "printf / echo -e do NOT check max code point at runtime": "fail",
       "printf / echo -e do NOT check surrogates at runtime": "fail"
     },
