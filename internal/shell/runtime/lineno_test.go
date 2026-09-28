@@ -47,6 +47,15 @@ func TestLineno_isTheLineTheCommandStartsOn(t *testing.T) {
 	}
 }
 
+// An arithmetic for's condition and step are on the loop's line, as bash has them; busybox has
+// no arithmetic for. They were on the line of the body's last command, so this counted to 3.
+func TestLineno_arithmeticForPartsAreOnTheLoopsLine(t *testing.T) {
+	script := "echo one\nfor (( i = 0; i < $LINENO; i++ )); do\n  echo $i\ndone\nfor (( j = 0; j < 1; j += $LINENO )); do\n  echo j=$j\n  :\ndone; echo \"after j=$j\"\n"
+	if stdout, _ := runScriptCapturing(script); stdout != "one\n0\n1\nj=0\nafter j=5\n" {
+		t.Fatalf("stdout = %q", stdout)
+	}
+}
+
 // A sourced file counts its own lines, and the caller's resume after it.
 func TestLineno_sourcedFileCountsItsOwnLines(t *testing.T) {
 	sourced := filepath.Join(t.TempDir(), "lib.sh")

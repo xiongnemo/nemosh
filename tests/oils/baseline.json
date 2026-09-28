@@ -903,7 +903,6 @@
       "$?": "fail",
       "$BASHPID DOES change with subshell and command sub": "fail",
       "$HOSTNAME": "fail",
-      "$LINENO in for (( loop": "fail",
       "$OSTYPE is non-empty": "fail",
       "$PATH is set if unset at startup": "fail",
       "$PIPESTATUS": "fail",

@@ -86,6 +86,9 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
+		// The condition and the step are on the loop's line, and so is their $LINENO, as in
+		// bash: `for ((i = 0; i < $LINENO; i++))` counted to the line of the body's last command.
+		r.enterLine(node.line)
 		if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.condition), savedStatus); ended {
 			return result
 		}
@@ -116,6 +119,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 		default:
 			return lineResult{status: status, control: control}
 		}
+		r.enterLine(node.line)
 		if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.step), savedStatus); ended {
 			return result
 		}
