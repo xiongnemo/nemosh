@@ -21,12 +21,17 @@ func parseFunctionDefinition(line string, budget *parseBudget, depth int) (funct
 		line = rest
 	}
 	nameEnd := strings.IndexByte(line, '(')
+	// `function name { body; }`: no parentheses after the name, so it ends at the blank or brace
+	// before the body. A parenthesis in the body, as in `function f { echo $(date); }`, was
+	// taken for the name's, and the definition read as a command: "unexpected {".
+	if blank := strings.IndexAny(line, " \t{"); hasKeyword && blank > 0 && (nameEnd < 0 || blank < nameEnd) &&
+		!strings.HasPrefix(strings.TrimLeft(line[blank:], " \t"), "(") {
+		return parseKeywordFunction(line, budget, depth)
+	}
 	if nameEnd < 0 {
 		if !hasKeyword {
 			return functionDefinition{}, false, nil
 		}
-		// `function name { body; }`: no parentheses, so the name ends at the blank
-		// before the body.
 		return parseKeywordFunction(line, budget, depth)
 	}
 	rawName := strings.TrimSpace(line[:nameEnd])
