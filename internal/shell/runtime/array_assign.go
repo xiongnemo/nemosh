@@ -35,9 +35,12 @@ type arrayAssignment struct {
 //
 // The word must be a single unquoted literal: `a=(x)` is written, not computed.
 // bash agrees -- a variable holding `a=(x)` is a command name, not an assignment.
+// So is a quoted one, which was taken for a literal all the same: `echo "a=(1 2)"` was
+// refused as an array literal after a command name, and `"a=(1 2)"` alone made an array
+// where both references look for a command of that name.
 func parseArrayAssignmentWord(item word) (arrayAssignment, bool) {
 	text := soleLiteralText(item)
-	if text == "" {
+	if text == "" || item.parts[0].quote != quoteUnquoted {
 		return arrayAssignment{}, false
 	}
 	target, value, found := cutAssignment(text)

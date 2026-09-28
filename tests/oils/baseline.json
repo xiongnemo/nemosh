@@ -79,9 +79,7 @@
       "value.BashArray internal representation - Indexed": "fail"
     },
     "array-literal.test.sh": {
-      "(strict_array) assoc=(key value ...) is not allowed": "fail",
       "(strict_array) declare -A s+=()": "fail",
-      "(strict_array) s+=()": "fail",
       "BashArray cannot be changed to BashAssoc and vice versa": "fail",
       "Tilde expansions in RHS of [k]=v (BashAssoc)": "ash-only",
       "[k1]=v1 looking like brace expansions (BashArray)": "ash-only",
