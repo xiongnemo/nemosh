@@ -184,33 +184,6 @@ func isTrDigit(c rune) bool { return c >= '0' && c <= '9' }
 func isTrUpper(c rune) bool { return c >= 'A' && c <= 'Z' }
 func isTrLower(c rune) bool { return c >= 'a' && c <= 'z' }
 
-// unescapeTrSet reads the backslash escapes tr defines. A set is nearly always
-// single-quoted, so the shell hands `\r` over as two characters and tr is the
-// one that has to know what they mean.
-func unescapeTrSet(set string) string {
-	var out strings.Builder
-	for index := 0; index < len(set); index++ {
-		if set[index] != '\\' || index+1 == len(set) {
-			out.WriteByte(set[index])
-			continue
-		}
-		index++
-		switch set[index] {
-		case 'n':
-			out.WriteByte('\n')
-		case 'r':
-			out.WriteByte('\r')
-		case 't':
-			out.WriteByte('\t')
-		case '\\':
-			out.WriteByte('\\')
-		default:
-			out.WriteByte(set[index])
-		}
-	}
-	return out.String()
-}
-
 // run reads the stream a rune at a time, because a translation is defined on
 // characters and a byte-wise pass would cut a multi-byte one in half.
 func (t trTable) run(ctx context.Context, stdout io.Writer, stdin io.Reader) error {

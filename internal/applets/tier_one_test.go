@@ -67,6 +67,29 @@ func TestTr_readsCharacterClasses(t *testing.T) {
 	}
 }
 
+// A set names a character by octal, NUL among them, and by the letter escapes C has, as
+// busybox's tr reads them. Every answer is busybox-w32's, measured.
+func TestTr_readsOctalAndLetterEscapes(t *testing.T) {
+	for _, test := range []struct {
+		input string
+		args  []string
+		want  string
+	}{
+		{input: "a\x00b", args: []string{`\0`, "Z"}, want: "aZb"},
+		{input: "a\x00b", args: []string{"-d", `\000`}, want: "ab"},
+		{input: "a\nb\n", args: []string{`\012`, " "}, want: "a b "},
+		{input: "abc", args: []string{`\141\142`, "XY"}, want: "XYc"},
+		{input: "x\x01y", args: []string{`\1`, "Z"}, want: "xZy"},
+		{input: "\a\b\f\v.", args: []string{`\a\b\f\v`, "ABFV"}, want: "ABFV."},
+		{input: "a b0", args: []string{`\400`, "Q"}, want: "aQbQ"},
+	} {
+		stdout, _, err := runAppletWithInput(t, test.input, "tr", test.args...)
+		if err != nil || stdout != test.want {
+			t.Errorf("tr %q over %q = %q (err %v), want %q", test.args, test.input, stdout, err, test.want)
+		}
+	}
+}
+
 func TestTee(t *testing.T) {
 	// Given
 	directory := t.TempDir()
