@@ -28,8 +28,13 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 		return r.withAppliedRedirectsFor(true, operations, func(redirected Runtime) lineResult {
 			return redirected.dotResult(ctx, args[1:], savedStatus)
 		}), true
-	case "exit":
-		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}, true
+	case "exit", "return", "break", "continue":
+		// Their redirections are made as any command's are, though nothing is written through
+		// them but a diagnostic: `break > log` creates log in both references. They were not
+		// made at all.
+		return r.withAppliedRedirectsFor(true, operations, func(redirected Runtime) lineResult {
+			return redirected.transferControl(args, savedStatus)
+		}), true
 	case "exec":
 		// `--` ends exec's options, as in both references: `exec -- 3>&1` is exec with only
 		// redirections, and `exec -- echo hi` runs echo. It ran a command called --.
@@ -48,6 +53,16 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 			runner = *temporary
 		}
 		return lineResult{status: runner.execBuiltin(ctx, command), control: flowExec}, true
+	default:
+		return lineResult{control: flowContinue}, true
+	}
+}
+
+// transferControl is exit, return, break or continue, once their redirections are made.
+func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
+	switch args[0] {
+	case "exit":
+		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}
 	case "return":
 		status := exitStatus(args[1:], savedStatus)
 		if r.sourceDepth == 0 && r.functionDepth == 0 {
@@ -58,16 +73,13 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 			// it everywhere: `trap 'return 42' DEBUG` is bash's alone, and bash goes on.
 			if r.interactive.session && r.subshellDepth == 0 || len(r.trapRunning) > 0 {
 				fmt.Fprintln(r.streams.Stderr, "return: not in a sourced script")
-				return lineResult{status: status}, true
+				return lineResult{status: status}
 			}
-			return lineResult{status: status, control: flowExit}, true
+			return lineResult{status: status, control: flowExit}
 		}
-		return lineResult{status: status, control: flowReturn}, true
-	case "break", "continue":
-		return r.loopControlResult(args[0], args[1:]), true
-	default:
-		return lineResult{control: flowContinue}, true
+		return lineResult{status: status, control: flowReturn}
 	}
+	return r.loopControlResult(args[0], args[1:])
 }
 
 // throughCommandPrefix is the command a bare `command` or `builtin` in front names, when that

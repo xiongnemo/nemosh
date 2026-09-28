@@ -508,10 +508,6 @@
       "can't export array (strict_array)": "fail",
       "local after readonly": "fail"
     },
-    "command-parsing.test.sh": {
-      "Redirect on control flow (ignored in OSH)": "fail",
-      "Redirect on control flow with ysh:all (no_parse_ignored)": "fail"
-    },
     "command-sub.test.sh": {
       "Command Sub trailing newline removed": "fail",
       "Command Sub trailing whitespace not removed": "fail",
