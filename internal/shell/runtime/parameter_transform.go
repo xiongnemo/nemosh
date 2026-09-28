@@ -109,6 +109,16 @@ func splitSubstringSpec(spec string) (string, string, bool) {
 func parameterReplace(value, operator, spec string, fold bool) string {
 	pattern, replacement := splitReplacementSpec(spec)
 	if pattern == "" {
+		// An empty pattern replaces nothing, except anchored: `${x/#/p-}` prefixes and
+		// `${x/%/-s}` appends, as bash has them, and `${files[@]/#/--include=}` is how a
+		// script puts a prefix on every element. Both returned the value unchanged.
+		// busybox-w32 has neither anchor.
+		switch operator {
+		case "/#":
+			return replacement + value
+		case "/%":
+			return value + replacement
+		}
 		return value
 	}
 	subject := value
