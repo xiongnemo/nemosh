@@ -157,12 +157,14 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				index = end - 1
 				continue
 			}
-			scanner.groupClosers = append(scanner.groupClosers, ')')
+			if !scanner.casePattern() {
+				scanner.groupClosers = append(scanner.groupClosers, ')')
+			}
 			scanner.logical.WriteByte(char)
 			continue
 		}
 		if scanner.quote() == 0 && len(scanner.substitutions) == 0 && (char == ')' || braceDelimiterAt(line, index, '}')) {
-			if len(scanner.groupClosers) == 0 {
+			if len(scanner.groupClosers) == 0 || char == ')' && scanner.casePattern() {
 				scanner.logical.WriteByte(char)
 				continue
 			}
