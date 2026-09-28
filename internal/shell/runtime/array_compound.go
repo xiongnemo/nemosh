@@ -57,6 +57,11 @@ func (r Runtime) assignCompound(ctx context.Context, name, raw string, extend bo
 func (r Runtime) assignIndexedCompound(name string, elements []arrayElement, extend bool) int {
 	next := 0
 	if extend {
+		// A scalar appended to becomes the array's element 0, empty or not, as in bash:
+		// `s=abc; s+=(d e)` is abc, d and e. Its value was dropped.
+		if value, set := r.vars[name]; set && !r.arrays.has(name) {
+			r.arrays.setElement(name, 0, value)
+		}
 		// After the highest index set, as bash appends.
 		next = r.arrays.span(name)
 	} else {

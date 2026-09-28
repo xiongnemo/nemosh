@@ -23,6 +23,8 @@ func TestCompoundAssignment_honoursSubscripts(t *testing.T) {
 		{name: "a subscript is arithmetic", script: "i=1\na=([i+1]=v)\necho \"${!a[@]}\"\n", want: "2\n"},
 		{name: "mixed with plain words", script: "x=(one \"two words\" [3]=three)\necho \"${#x[@]} ${x[1]} ${x[3]}\"\n", want: "3 two words three\n"},
 		{name: "appending indices", script: "a=(x y)\na+=([5]=f g)\necho \"${!a[@]}: ${a[@]}\"\n", want: "0 1 5 6: x y f g\n"},
+		// A scalar appended to is the array's element 0, an empty one too; it was dropped.
+		{name: "appending to a scalar", script: "s=abc; s+=(d e f); printf '[%s]' \"${s[@]}\"; echo\nt=abc; declare t+=(d e); printf '[%s]' \"${t[@]}\"; echo\nx=; x+=(1); printf '[%s]' \"${x[@]}\"; echo\nunset w; w+=(1); printf '[%s]' \"${w[@]}\"; echo\n", want: "[abc][d][e][f]\n[abc][d][e]\n[][1]\n[1]\n"},
 		{name: "a quoted bracket is a value", script: "a=(\"[k]=v\")\necho \"${a[0]}\"\n", want: "[k]=v\n"},
 		// declare -p prints only the indices that are set; it printed every slot, so a
 		// gap came out as `[1]=""` and an unset element came back with its old value.

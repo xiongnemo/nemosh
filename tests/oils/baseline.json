@@ -27,10 +27,6 @@
       "first and second word are the same alias, but no trailing space": "fail",
       "first and second word are the same alias, with trailing space": "fail"
     },
-    "append.test.sh": {
-      "error: s+=(my array)": "fail",
-      "typeset s+=(my array)": "fail"
-    },
     "arg-parse.test.sh": {
       "continue 1 extra, break, etc.": "ash-only",
       "shift 1 extra": "ash-only"
