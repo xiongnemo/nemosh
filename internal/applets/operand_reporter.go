@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -23,6 +24,13 @@ type operandReporterKey struct{}
 
 func withOperandReporter(ctx context.Context, name string, stderr io.Writer) context.Context {
 	return context.WithValue(ctx, operandReporterKey{}, operandReporter{name: name, stderr: stderr})
+}
+
+// isOperandFailure is whether err is one operand's own failure, which the applet goes on past,
+// rather than one that ends it: a cancelled context, a write that failed.
+func isOperandFailure(err error) bool {
+	var failure operandError
+	return errors.As(err, &failure)
 }
 
 // reportOperand writes err as the applet's diagnostic line. It answers false when no applet is

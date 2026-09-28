@@ -146,14 +146,23 @@ func newMkdirApplet() Applet {
 			return err
 		}
 		view := ProcessViewFromContext(ctx)
+		made := true
 		for _, path := range operands {
 			native, err := resolveHostPath(view, path)
 			if err != nil {
 				return err
 			}
 			if err := makeDirectory(native, mode, options.has('p')); err != nil {
-				return cannotCreateDirectory(path, err)
+				// Of several operands, one that cannot be made is named and the rest made; see
+				// operand_reporter.go.
+				if len(operands) == 1 || !reportOperand(ctx, cannotCreateDirectory(path, err)) {
+					return cannotCreateDirectory(path, err)
+				}
+				made = false
 			}
+		}
+		if !made {
+			return ExitStatus(1)
 		}
 		return nil
 	}}
@@ -199,10 +208,19 @@ func newRmdirApplet() Applet {
 			return missingOperand()
 		}
 		view := ProcessViewFromContext(ctx)
+		removed := true
 		for _, path := range operands {
 			if err := removeDirectoryTree(view, path, options.has('p')); err != nil {
-				return err
+				// Of several operands, one that cannot be removed is named and the rest removed; see
+				// operand_reporter.go.
+				if len(operands) == 1 || !reportOperand(ctx, err) {
+					return err
+				}
+				removed = false
 			}
+		}
+		if !removed {
+			return ExitStatus(1)
 		}
 		return nil
 	}}

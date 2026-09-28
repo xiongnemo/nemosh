@@ -23,6 +23,7 @@ func newLsApplet() Applet {
 			paths = []string{"."}
 		}
 		view := ProcessViewFromContext(ctx)
+		listed := true
 		for _, target := range paths {
 			// A device is described from the table rather than resolved to a host
 			// path it has not got. `ls -l /dev/null` answered "is not a host path"
@@ -49,8 +50,16 @@ func newLsApplet() Applet {
 				return err
 			}
 			if err := listPath(stdout, native, target, options); err != nil {
-				return err
+				// Of several operands, one that is not there is named and the rest listed; see
+				// operand_reporter.go.
+				if len(paths) == 1 || !isOperandFailure(err) || !reportOperand(ctx, err) {
+					return err
+				}
+				listed = false
 			}
+		}
+		if !listed {
+			return ExitStatus(1)
 		}
 		return nil
 	}}

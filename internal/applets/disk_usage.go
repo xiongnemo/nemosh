@@ -45,6 +45,7 @@ func newDuApplet() Applet {
 			paths = []string{"."}
 		}
 		view := ProcessViewFromContext(ctx)
+		measured := true
 		for _, path := range paths {
 			// A device tree has no blocks: every entry is synthetic, so the total is
 			// zero and saying so is more useful than refusing the path. `du -s /dev`
@@ -66,8 +67,16 @@ func newDuApplet() Applet {
 			// `dutest/C:/Users/...`.
 			native = filepath.Clean(native)
 			if err := reportUsage(ctx, stdout, stderr, native, path, options.has('s'), options.has('h')); err != nil {
-				return err
+				// Of several operands, one that is not there is named and the rest measured; see
+				// operand_reporter.go.
+				if len(paths) == 1 || !isOperandFailure(err) || !reportOperand(ctx, err) {
+					return err
+				}
+				measured = false
 			}
+		}
+		if !measured {
+			return ExitStatus(1)
 		}
 		return nil
 	}}
@@ -85,7 +94,13 @@ func reportUsage(ctx context.Context, stdout, stderr io.Writer, native, shown st
 	// parents and not to itself, which is right for a file *inside* a tree and wrong for
 	// one named on the command line. So `du somefile` printed nothing at all and exited 0,
 	// and `du -sh somefile` printed `0K` for a file with bytes in it. Both silent.
-	if info, err := os.Stat(native); err == nil && !info.IsDir() {
+	// An operand that is not there is an error, as busybox's is. It was walked, the walk said so
+	// on stderr and went on, and `du -s missing` printed `0 missing` and exited 0.
+	info, err := os.Stat(native)
+	if err != nil {
+		return operandFailure(shown, err)
+	}
+	if !info.IsDir() {
 		return writeUsageLine(stdout, usageBlocks(native, info.Size(), false), shown, human)
 	}
 	totals := map[string]int64{}
@@ -194,6 +209,7 @@ func newStatApplet() Applet {
 			return missingOperand()
 		}
 		view := ProcessViewFromContext(ctx)
+		stated := true
 		for _, path := range paths {
 			native, err := resolveHostPath(view, path)
 			if err != nil {
@@ -201,7 +217,13 @@ func newStatApplet() Applet {
 			}
 			info, err := os.Stat(native)
 			if err != nil {
-				return cannotOpen(path, err)
+				// Of several operands, one that is not there is named and the rest described; see
+				// operand_reporter.go.
+				if len(paths) == 1 || !reportOperand(ctx, cannotOpen(path, err)) {
+					return cannotOpen(path, err)
+				}
+				stated = false
+				continue
 			}
 			line, err := formatStat(options.value('c'), path, info)
 			if err != nil {
@@ -210,6 +232,9 @@ func newStatApplet() Applet {
 			if _, err := fmt.Fprintln(stdout, line); err != nil {
 				return err
 			}
+		}
+		if !stated {
+			return ExitStatus(1)
 		}
 		return nil
 	}}
