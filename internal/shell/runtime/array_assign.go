@@ -93,6 +93,10 @@ func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, save
 		}
 		r.assignArray(ctx, assignment, savedStatus)
 		applied = true
+		// A failed one abandons the command, the assignments after it too; see failAssignment.
+		if r.expansion.shellError {
+			return nil, applied
+		}
 	}
 	return nil, applied
 }
@@ -101,8 +105,8 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 	r = r.assigningPlainly()
 	target := assignment.name + "[" + assignment.subscript + "]"
 	if assignment.list {
-		// A list is an array's and not an element's: bash refuses `a[0]=(3 4)` and ends the
-		// script, where the list was written over the whole of a.
+		// A list is an array's and not an element's: bash refuses `a[0]=(3 4)` and abandons the
+		// command, where the list was written over the whole of a.
 		if assignment.subscript != "" {
 			fmt.Fprintf(r.streams.Stderr, "%s: cannot assign list to array member\n", target)
 			r.failAssignment()
@@ -166,7 +170,9 @@ func (r Runtime) applyMixedAssignments(ctx context.Context, command []word, save
 	}
 	for _, item := range command {
 		if assignment, ok := parseArrayAssignmentWord(item); ok {
-			r.assignArray(ctx, assignment, savedStatus)
+			if r.assignArray(ctx, assignment, savedStatus); r.expansion.shellError {
+				return true
+			}
 			continue
 		}
 		fields := r.expandAssignmentWord(ctx, item, false, savedStatus)

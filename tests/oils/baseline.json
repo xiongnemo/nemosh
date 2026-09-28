@@ -28,7 +28,6 @@
       "first and second word are the same alias, with trailing space": "fail"
     },
     "append.test.sh": {
-      "Try to append list to element": "fail",
       "assign builtin appending array: declare d+=(d e)": "fail",
       "error: s+=(my array)": "fail",
       "export+=array disallowed (strict_array)": "fail",
@@ -126,8 +125,7 @@
       "Regression: Assigning with out-of-range negative index": "fail",
       "Regression: Negative out-of-range index in [[ -v a[index] ]]": "fail",
       "Regression: silent out-of-bound negative index in ${a[-2]} and $((a[-2]))": "fail",
-      "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail",
-      "Set array item to array": "fail"
+      "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail"
     },
     "assign-deferred.test.sh": {
       "export a[7]=8": "fail",

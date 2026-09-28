@@ -81,14 +81,17 @@ func (r Runtime) assigningPlainly() Runtime {
 	return r
 }
 
-// failAssignment ends the script after an assignment statement's write that could not be
-// made, status 1, as bash's does: a subscript before the front of an array, a list for one
-// element, an integer's value that is no expression. Each was said and the script went on.
-// The same write from declare, read or printf -v is status 1 and the next line there, and
-// so is a nameref's circle anywhere; a read-only name has raised its own, busybox's 2.
+// failAssignment abandons the command an assignment statement's failed write was in, status
+// 1, as bash does: a subscript before the front of an array, a list for one element, an
+// integer's value that is no expression. As with failglob's, the whole command the shell was
+// running goes -- the function it called, the loop it was in -- and the script goes on with
+// the next, unless `set -e` ends it there; see flowDiscard. Each was said and the rest of the
+// command went on as if nothing had happened. The same write from declare, read or printf -v
+// is status 1 and the next command there, and so is a nameref's circle anywhere; a read-only
+// name has raised its own, busybox's status 2 and the end of the script.
 func (r Runtime) failAssignment() {
 	if r.plainAssignment && !r.expansion.shellError {
-		r.raiseShellErrorWith(1)
+		r.expansion.shellError, r.expansion.discard = true, true
 	}
 }
 

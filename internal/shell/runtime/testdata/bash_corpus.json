@@ -1789,9 +1789,9 @@
     "reference": "busybox-w32"
   },
   {
-    "script": "a=(1); declare a[-5]=x 2>/dev/null; echo \"declare $?\"; a[-5]=x 2>/dev/null; echo after",
-    "stdout": "declare 1\n",
-    "status": 1,
+    "script": "a=(1)\ndeclare a[-5]=x 2>/dev/null\necho \"declare $?\"\na[-5]=x 2>/dev/null\necho \"after $?\"",
+    "stdout": "declare 1\nafter 1\n",
+    "status": 0,
     "reference": "bash-5.3"
   },
   {
