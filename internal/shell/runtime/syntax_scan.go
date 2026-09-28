@@ -92,9 +92,10 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteByte(char)
 			continue
 		}
-		// Inside double quotes a `${...}` holds quotes of its own, and what they quote is no
-		// operator or comment: `"${u:-"a ( b"}"`. Stepped over whole when it closes on this line.
-		if char == '$' && scanner.quote() == '"' && index+1 < len(line) && line[index+1] == '{' {
+		// A `${...}` holds quotes of its own, and what they quote is no operator or comment:
+		// `"${u:-"a ( b"}"`. Its `}` is no group's either, after a `;` as in `s=${s%;}`. Stepped
+		// over whole when it closes on this line.
+		if char == '$' && (scanner.quote() == '"' || scanner.quote() == 0) && index+1 < len(line) && line[index+1] == '{' {
 			if end, ok := bracedParameterEnd(line, index+1); ok {
 				scanner.logical.WriteString(line[index:end])
 				index = end - 1

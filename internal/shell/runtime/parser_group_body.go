@@ -71,6 +71,12 @@ func separatorPositions(body string) map[int]bool {
 			index = end
 			continue
 		}
+		// An expansion's `;` is its own: `${s%;}` in a function was cut into `${s%` and `}`,
+		// "missing '}'".
+		if end := patternExpansionEnd(body, index); quote == 0 && end > 0 {
+			index = end
+			continue
+		}
 		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {
 			if quote == char {
 				quote = 0

@@ -56,6 +56,10 @@ func previousNonBlank(line string, index int) (byte, bool) {
 	return 0, false
 }
 
+func isCommandBoundary(char byte) bool {
+	return char == ' ' || char == '\t' || char == '\n' || char == '|' || char == '&' || char == '(' || char == '{' || char == ';'
+}
+
 // previousNonBlankIndex is where previousNonBlank's byte is, and -1 when there is none.
 func previousNonBlankIndex(line string, index int) int {
 	for back := index - 1; back >= 0; back-- {

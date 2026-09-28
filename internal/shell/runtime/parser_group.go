@@ -196,10 +196,6 @@ func groupOpenerAt(line string, index int) (int, byte, bool) {
 	return index, line[index], true
 }
 
-func isCommandBoundary(char byte) bool {
-	return char == ' ' || char == '\t' || char == '\n' || char == '|' || char == '&' || char == '(' || char == '{' || char == ';'
-}
-
 // braceDelimiterAt reports whether the brace at index is the reserved word
 // rather than an ordinary character. POSIX 2.4 makes `{` and `}` reserved only
 // where a command name could start, which is why `echo a}b` prints `a}b` and
@@ -237,6 +233,11 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 			if !ok {
 				return 0, fmt.Errorf("%w: unterminated command substitution", ErrIncompleteScript)
 			}
+			index = end
+			continue
+		}
+		// And so is a `${...}`, whose `}` after a `;` read as the group's: `{ s=${s%;}; }`.
+		if end := patternExpansionEnd(line, index); end > 0 && quote != '\'' && !escaped {
 			index = end
 			continue
 		}
