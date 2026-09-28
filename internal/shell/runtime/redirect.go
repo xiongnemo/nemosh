@@ -32,9 +32,26 @@ func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error,
 
 func (r Runtime) runCommandWithRedirectOperations(ctx context.Context, command []shellToken, operations []redirectOperation) int {
 	args := tokenValues(command)
+	r.arrayOperands = arrayLiteralOperands(command)
 	return r.withAppliedRedirectsFor(len(args) > 0 && isSpecialBuiltin(args[0]), operations, func(redirected Runtime) lineResult {
 		return lineResult{status: redirected.runCommand(ctx, args)}
 	}).status
+}
+
+// arrayLiteralOperands is which of a declaration utility's operands were written as array
+// literals, `x=(a b)`, by their text. The builtin sees only text, and a quoted `x='(a b)'` is
+// the same text, where bash makes a string of it; see declareName.
+func arrayLiteralOperands(command []shellToken) map[string]bool {
+	var operands map[string]bool
+	for _, token := range command {
+		if token.arrayLiteral {
+			if operands == nil {
+				operands = make(map[string]bool)
+			}
+			operands[token.value] = true
+		}
+	}
+	return operands
 }
 
 // withAppliedRedirects runs a command with its redirections, already expanded, in force for

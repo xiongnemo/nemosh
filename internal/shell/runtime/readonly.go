@@ -21,6 +21,14 @@ func (r Runtime) readonlyBuiltin(ctx context.Context, args []string) int {
 		if !isValidVariableName(name) {
 			return r.refuseName("readonly: ", name)
 		}
+		// An array literal makes a read-only array, as bash's `declare -ar` would: `readonly
+		// r=(r e)` held the text (r e). See arrayLiteralOperands.
+		if hasValue && r.arrayOperands[arg] {
+			if status := r.declareName(ctx, declareOptions{readonly: true}, arg); status != 0 {
+				return status
+			}
+			continue
+		}
 		// A name with no value stays unset, read-only from now on: `readonly X` made X
 		// empty, where both references leave `${X-unset}` saying unset.
 		if hasValue {

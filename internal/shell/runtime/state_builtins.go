@@ -56,6 +56,14 @@ func (r Runtime) export(args []string) int {
 		if r.isReadonly(name) {
 			return r.refuseReadonly("export: ", name)
 		}
+		// An array literal makes an exported array, as bash's `declare -ax` would, and `+=(v)`
+		// appends to one: `export e=(e x)` held the text (e x), and `x+=(2)` made 1(2).
+		if hasValue && r.arrayOperands[arg] {
+			if status := r.declareName(context.Background(), declareOptions{export: true}, arg); status != 0 {
+				return status
+			}
+			continue
+		}
 		// Through assignVar like any assignment -- an attribute applies, `+=`
 		// appends -- rather than written into the map, which skipped both.
 		if appended {

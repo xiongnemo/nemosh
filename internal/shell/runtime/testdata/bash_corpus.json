@@ -1823,5 +1823,11 @@
     "stdout": "x\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "declare s='(a b)'; readonly r=(r e); echo \"$s ${#r[@]}\"",
+    "stdout": "(a b) 2\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

@@ -42,6 +42,7 @@ var jobStateCoverage = map[string]string{
 	"noFieldSplit":      "not inherited: per word",
 	"errExitSuppressed": "encoded: ErrExitSuppressed",
 	"plainAssignment":   "not inherited: per assignment statement",
+	"arrayOperands":     "not inherited: per command",
 	"operandQuoted":     "not inherited: per word",
 	"readonly":          "encoded: Readonly",
 	"attributes":        "encoded: Attributes",

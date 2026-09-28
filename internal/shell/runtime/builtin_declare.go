@@ -173,8 +173,10 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		// `declare -a x=(one two)`. The lexer keeps the parenthesised list in one
 		// word -- the `(` follows `x=`, which is the test it applies -- so it
 		// arrives here whole and has to be split into elements. Without this it
-		// became the single string `(one two)`.
-		if inner, ok := parenthesisedList(value); ok {
+		// became the single string `(one two)`. Only a literal written so is a list,
+		// or any text like one under -a or -A: `declare x='(a b)'` is a string in
+		// bash, and was an array here (arrayLiteralOperands).
+		if inner, ok := parenthesisedList(value); ok && (options.indexed || options.associative || r.arrayOperands[argument]) {
 			if status := r.assignCompound(ctx, name, inner, appended, 0); status != 0 {
 				return status
 			}

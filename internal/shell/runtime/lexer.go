@@ -24,6 +24,9 @@ type shellToken struct {
 	literalDollarAt map[int]struct{}
 	parsed          *word
 	group           *parsedGroup
+	// arrayLiteral marks a declaration utility's operand written as an array literal,
+	// `x=(a b)`, and not one that only expanded to text like it; see arrayOperands.
+	arrayLiteral bool
 }
 
 func scanShellTokens(line string) ([]shellToken, error) {

@@ -75,9 +75,12 @@ type Runtime struct {
 	// errExitSuppressed, so it cannot leak past the word it was set for.
 	noFieldSplit      bool
 	errExitSuppressed bool
-	// plainAssignment marks the writes of an assignment statement, which end the script when
-	// they cannot be made; see failAssignment. On the value for the same reason.
+	// plainAssignment marks the writes of an assignment statement, which abandon the command
+	// when they cannot be made; see failAssignment. On the value for the same reason.
 	plainAssignment bool
+	// arrayOperands is the running command's operands written as array literals; see
+	// arrayLiteralOperands. On the value, so it is that command's alone.
+	arrayOperands map[string]bool
 	// operandQuoted marks a `${...}` inside double quotes, which changes what a single quote
 	// in its operator's word means; see operand_quoting.go. On the value for the same reason.
 	operandQuoted bool

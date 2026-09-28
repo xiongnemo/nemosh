@@ -27,13 +27,19 @@ func (r Runtime) expandCommandWords(ctx context.Context, command []word, savedSt
 	declaration := false
 	for index, item := range command[prefix:] {
 		var values []string
+		literal := false
 		if declaration && isAssignmentWord(item) {
 			values = r.expandAssignmentWord(ctx, item, true, savedStatus)
+			literal = assignsArrayLiteral(item)
 		} else {
 			declaration = declaration || index == 0 && (isDeclarationUtility(item) || r.aliasDeclares(item))
 			values = r.expandCommandWord(ctx, item, savedStatus)
 		}
+		start := len(rest)
 		rest = appendWordTokens(rest, values)
+		for marked := start; marked < len(rest); marked++ {
+			rest[marked].arrayLiteral = literal
+		}
 	}
 	leading := r.expandLeadingAssignments(ctx, command[:prefix], savedStatus)
 	return append(leading, rest...), len(leading)
