@@ -10,35 +10,12 @@ func parseTypedProgram(lines []string, spans []compoundSpan, byStart map[int]int
 	for index := start; index < end; index++ {
 		budget.enterLine(index)
 		if spanIndex, ok := byStart[index]; ok {
-			span := spans[spanIndex]
-			node, err := parseTypedCompound(lines, spans, byStart, span, budget, depth)
+			node, last, err := compoundProgramNode(lines, spans, byStart, spans[spanIndex], budget, depth)
 			if err != nil {
 				return nil, err
 			}
-			// The words after the closer are on the closer's line, and the ones before the
-			// opener on the opener's; the body in between moved the line on.
-			budget.enterLine(span.end)
-			if span.suffix != "" {
-				// A compound with a redirection or a pipe after it is exactly a brace
-				// group holding that compound: same scope, same redirects, same
-				// behaviour as a pipeline stage. Reusing the group rather than adding
-				// a second thing that carries redirects is what keeps the two from
-				// disagreeing -- `{ ...; } < file` already worked.
-				if node, err = wrapCompoundWithSuffix(node, span.suffix, budget, depth); err != nil {
-					return nil, err
-				}
-			}
-			if span.prefixOperator != "" {
-				budget.enterLine(span.start)
-				if node, err = wrapCompoundAfterOperator(node, span.prefix, span.prefixOperator, budget, depth); err != nil {
-					return nil, err
-				}
-			}
-			if span.background {
-				node = backgroundNode{value: node}
-			}
 			program = append(program, node)
-			index = span.end
+			index = last
 			continue
 		}
 		line := lines[index]

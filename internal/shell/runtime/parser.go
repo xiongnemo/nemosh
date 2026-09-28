@@ -8,55 +8,6 @@ import (
 
 var ErrIncompleteScript = errors.New("incomplete script")
 
-type compoundKind uint8
-
-const (
-	compoundIf compoundKind = iota
-	compoundLoop
-	compoundCase
-)
-
-// suffix is what followed the closer -- a redirection, or a pipe into another
-// command. Empty for the ordinary case.
-type compoundSpan struct {
-	kind       compoundKind
-	background bool
-	start      int
-	thenIndex  int
-	elseIndex  int
-	doIndex    int
-	end        int
-	caseArms   []caseArmSpan
-	// suffix is what followed the closer -- a redirection, or a pipe into another
-	// command. Empty for the ordinary case; see splitCompoundCloser.
-	suffix string
-	// prefix is what stood before the compound on its line: the words before the `|`
-	// in `cmd | while read ...`, or the `&&` in `cmd && if ...`. prefixOperator is
-	// that operator, and `!` with an empty prefix for a negated compound. Both empty
-	// for the ordinary case; see parser_operator_compound.go.
-	prefix         string
-	prefixOperator string
-	// header is the compound's own header when the line held something before it, so
-	// the readers see `while read -r l` rather than `cmd | while read -r l`. Empty
-	// means the whole line is the header.
-	header string
-}
-
-type caseArmSpan struct {
-	patternIndex int
-	bodyStart    int
-	bodyEnd      int
-	// terminator is `;;`, `;;&` or `;&`, which decides what happens after the body
-	// runs. See caseArmNode.
-	terminator string
-}
-
-type compoundFrame struct {
-	span           compoundSpan
-	casePattern    int
-	casePatternSet bool
-}
-
 func ParseScript(source string) (Script, error) {
 	return parseScriptAt(source, 1)
 }
@@ -141,8 +92,17 @@ func compoundSpans(lines []string) ([]compoundSpan, error) {
 			if len(stack) >= maxParseDepth {
 				return nil, fmt.Errorf("compound depth: %w", errParseLimit)
 			}
+			// `done | while read l`: the words before the operator close the compound the new
+			// one follows; see parser_compound_chain.go.
+			chained, err := closeChainedCompound(&stack, &spans, pipelinePrefix, prefixOperator, index)
+			if err != nil {
+				return nil, err
+			}
+			if chained {
+				pipelinePrefix = ""
+			}
 			stack = append(stack, compoundFrame{span: compoundSpan{
-				kind: kind, start: index, thenIndex: -1, elseIndex: -1, doIndex: -1,
+				kind: kind, start: index, thenIndex: -1, elseIndex: -1, doIndex: -1, afterCompound: chained,
 				prefix: pipelinePrefix, prefixOperator: prefixOperator, header: compoundHeaderLine,
 			}})
 			continue
