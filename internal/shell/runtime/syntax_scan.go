@@ -132,6 +132,10 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			continue
 		}
 		if scanner.quote() == 0 && len(scanner.substitutions) == 0 && char == '(' {
+			// `if(true)`: the reserved word ends at the `(`; see reservedWordBeforeParen.
+			if reservedWordBeforeParen(line, index) {
+				scanner.logical.WriteByte(' ')
+			}
 			// `a=(one two three)` is an array assignment, and the parentheses are
 			// part of the word rather than a subshell. The scanner has to know
 			// too, not only the lexer: it decides where a logical line ends, and
