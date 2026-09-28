@@ -125,3 +125,17 @@ func TestParameterList_sliceOutOfRangeIsEmpty(t *testing.T) {
 		t.Fatalf("stdout = %q, want the loop not to run", stdout)
 	}
 }
+
+// An operator on the [@] of an array that is not set is no word at all, as "${u[@]}" is, and
+// set -u lets it pass, as it lets "${u[@]}"; the [*] forms quoted are one empty word. Each is
+// bash's answer, measured; busybox has no arrays. They were one empty word, and under set -u
+// the script ended with "u[@]: parameter not set".
+func TestParameterList_operatorsOnAnUnsetArrayAreNoWords(t *testing.T) {
+	script := "set -u\nf() { echo \"$#\"; }\n" +
+		"f \"${u[@]/x/y}\"; f \"${u[@]:0}\"; f \"${u[@]^^}\"; f \"${u[@]#x}\"; f \"${u[@]@Q}\"\n" +
+		"f \"${u[*]@Q}\"; f \"${u[*]/x/y}\"\ne=(); f \"${e[@]@Q}\"; echo end\n"
+	status, stdout, stderr := runSetScript(t, script)
+	if want := "0\n0\n0\n0\n0\n1\n1\n0\nend\n"; status != 0 || stdout != want {
+		t.Fatalf("got %q/%d %q, want %q/0", stdout, status, stderr, want)
+	}
+}

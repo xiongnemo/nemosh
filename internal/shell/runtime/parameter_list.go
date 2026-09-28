@@ -79,6 +79,10 @@ func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatu
 // `@` and `*` are the positional parameters, `$1` onwards. The slice operator adds
 // `$0` in front of them itself, because it is the only one that counts it -- see the
 // `:` case above.
+//
+// An array that is not set is a list with nothing in it, as bash has it: an operator on
+// "${u[@]}" is no word, and set -u lets it pass as it lets "${u[@]}". It was no list, so the
+// scalar path made one empty word of it, and under set -u ended the script.
 func (r Runtime) parameterList(ctx context.Context, name string) ([]string, bool) {
 	if name == "@" || name == "*" {
 		return append([]string(nil), r.params.values...), true
@@ -87,8 +91,8 @@ func (r Runtime) parameterList(ctx context.Context, name string) ([]string, bool
 	if !ok || (reference.subscript != "@" && reference.subscript != "*") {
 		return nil, false
 	}
-	elements, exists := r.elementsFor(ctx, reference)
-	return elements, exists
+	elements, _ := r.elementsFor(ctx, reference)
+	return elements, true
 }
 
 // listIndices is the subscripts of the indexed array a list name stands for, in order, and

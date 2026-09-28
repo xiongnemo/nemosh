@@ -838,8 +838,6 @@
     "var-op-bash.test.sh": {
       "-o nounset with var ops": "fail",
       "Array expansion with nullary var op @P": "fail",
-      "Array expansion with nullary var op @Q": "fail",
-      "Array expansion with nullary var op @a": "fail",
       "Case folding - multi code point": "fail",
       "argv array and @P @Q @a": "fail",
       "assoc array and @P @Q @a": "fail",

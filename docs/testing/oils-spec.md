@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1942 of the 2551 cases bash passes: 76.1%.**
+**nemosh passes 1944 of the 2551 cases bash passes: 76.2%.**
 
-Of the other 609, it does 110 the way the files record of ash, which may be busybox's
-way, and 499 neither way.
+Of the other 607, it does 110 the way the files record of ash, which may be busybox's
+way, and 497 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 499 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1942 |
+| that nemosh passes of those | 1944 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -156,7 +156,7 @@ of ash.
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 0 | 0.0% | 0 | 2 |
 | var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
-| var-op-bash.test.sh | 27 | 26 | 19 | 73.1% | 0 | 2 |
+| var-op-bash.test.sh | 27 | 26 | 21 | 80.8% | 0 | 2 |
 | var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 |
 | var-op-patsub.test.sh | 28 | 28 | 25 | 89.3% | 1 | 21 |
 | var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 6 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 46 | 86.8% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1942 | 76.1% | 110 | 1447 |
+| all | 2668 | 2551 | 1944 | 76.2% | 110 | 1447 |
