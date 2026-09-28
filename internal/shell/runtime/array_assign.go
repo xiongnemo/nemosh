@@ -85,6 +85,12 @@ func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, save
 	if applied := r.applyMixedAssignments(ctx, command, savedStatus); applied {
 		return nil, true
 	}
+	// In front of a command an array assignment is none, as bash reads it: a list is the
+	// command's temporary string, `(1 2)`, left to the ordinary prefix path, and an element is
+	// not a valid identifier. Both were made as arrays, and for good.
+	if commandFollowsAssignments(command) {
+		return r.refusePrefixElements(command)
+	}
 	applied := false
 	for index, item := range command {
 		assignment, ok := parseArrayAssignmentWord(item)
@@ -99,6 +105,36 @@ func (r Runtime) applyArrayAssignments(ctx context.Context, command []word, save
 		}
 	}
 	return nil, applied
+}
+
+// commandFollowsAssignments reports a command word after a command's leading assignments.
+func commandFollowsAssignments(command []word) bool {
+	for _, item := range command {
+		if _, ok := parseArrayAssignmentWord(item); !ok && !isAssignmentWord(item) {
+			return true
+		}
+	}
+	return false
+}
+
+// refusePrefixElements drops the element assignments in front of a command, each said to be
+// no valid identifier as bash says it, and answers whether it dropped any.
+func (r Runtime) refusePrefixElements(command []word) ([]word, bool) {
+	kept := make([]word, 0, len(command))
+	dropped := false
+	for index, item := range command {
+		assignment, ok := parseArrayAssignmentWord(item)
+		if !ok && !isAssignmentWord(item) {
+			return append(kept, command[index:]...), dropped
+		}
+		if ok && !assignment.list {
+			fmt.Fprintf(r.streams.Stderr, "`%s[%s]': not a valid identifier\n", assignment.name, assignment.subscript)
+			dropped = true
+			continue
+		}
+		kept = append(kept, item)
+	}
+	return kept, dropped
 }
 
 func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, savedStatus int) {
