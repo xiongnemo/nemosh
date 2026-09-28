@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -33,12 +32,12 @@ func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
 		fmt.Fprintln(r.streams.Stderr, ".: missing file")
 		return lineResult{status: 2}
 	}
-	native, err := r.dotSource(args[0])
+	native, device, err := r.dotSource(args[0])
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, ".: %s: %v\n", args[0], err)
 		return lineResult{status: 1}
 	}
-	data, err := os.ReadFile(native)
+	data, err := r.readDotSource(native, device)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, ".: %s: %v\n", args[0], err)
 		return lineResult{status: 1}

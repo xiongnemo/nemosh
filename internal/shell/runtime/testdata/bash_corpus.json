@@ -1835,5 +1835,11 @@
     "stdout": "next=1\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": ". /dev/null; echo \"null $?\"\n. /dev/stdin <<EOF\necho heredoc\nEOF",
+    "stdout": "null 0\nheredoc\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

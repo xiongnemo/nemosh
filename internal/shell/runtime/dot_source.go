@@ -1,7 +1,7 @@
 package runtime
 
 import (
-	"errors"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -12,23 +12,47 @@ import (
 // failed. Not found on PATH, the name is read as it stands, which is bash's second step;
 // busybox stops at PATH. `shopt -u sourcepath` leaves the search out, as it does in bash.
 
-var errNotRegularFile = errors.New("not a regular file")
-
-// dotSource is the native path of the file `. name` reads.
-func (r Runtime) dotSource(name string) (string, error) {
+// dotSource is what `. name` reads: the native path of a file, or the name of a device.
+func (r Runtime) dotSource(name string) (string, string, error) {
 	if r.options.sourcePath && !hasPathSeparator(name) {
 		if found, ok := r.readableOnPath(name); ok {
-			return found, nil
+			return found, "", nil
 		}
 	}
 	resolved, err := r.ResolveNemoshPath(name)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if resolved.Device {
-		return "", errNotRegularFile
+		return "", string(resolved.Canonical), nil
 	}
-	return resolved.Native, nil
+	return resolved.Native, "", nil
+}
+
+// readDotSource is the text `. name` runs. A device is read to its end as a file is, as both
+// references read it: `. /dev/null` is an empty script, and `. /dev/stdin <<EOF` and `... |
+// . /dev/stdin` run what arrives on the shell's input. Each was "not a regular file".
+func (r Runtime) readDotSource(native, device string) ([]byte, error) {
+	if device == "" {
+		return os.ReadFile(native)
+	}
+	fd, alias, err := deviceAlias(device)
+	if err != nil {
+		return nil, err
+	}
+	if alias {
+		reader, err := r.fds.reader(fd)
+		if err != nil {
+			return nil, err
+		}
+		return io.ReadAll(reader)
+	}
+	resource, err := openInputDevice(device)
+	if err != nil {
+		return nil, err
+	}
+	defer resource.Close()
+	return io.ReadAll(resource)
 }
 
 // readableOnPath is the first regular file called name in a directory on PATH.
