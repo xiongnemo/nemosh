@@ -301,8 +301,20 @@ func (scanner *syntaxScanner) toggleDoubleQuote() {
 	}
 }
 
-// commentStarts is whether the `#` at index begins a word, and so a comment. A newline before it
-// counts for the passes that read a whole script at once.
+// commentStarts is whether the `#` at index begins a word, and so a comment: at a line's start,
+// after a blank, and after `;`, `&`, `|` or `(`, as in `echo a;# c`, which both references read
+// as a comment and nemosh ran as a command called `#`. A newline before it counts for the passes
+// that read a whole script at once. After the `(` of an extended pattern it is the pattern's,
+// as in bash's `[[ "#a" == @(#*) ]]`.
 func commentStarts(line string, index int) bool {
-	return index == 0 || line[index-1] == ' ' || line[index-1] == '\t' || line[index-1] == '\n'
+	if index == 0 {
+		return true
+	}
+	switch line[index-1] {
+	case ' ', '\t', '\n', ';', '&', '|':
+		return true
+	case '(':
+		return index < 2 || strings.IndexByte("@!?*+", line[index-2]) < 0
+	}
+	return false
 }
