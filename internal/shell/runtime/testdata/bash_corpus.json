@@ -1811,5 +1811,11 @@
     "stdout": "before\ncleanup 3\n",
     "status": 3,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "HOME=/h; x=/h/a; echo ${x//~/z} \"${x#~}\"",
+    "stdout": "z/a /a\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

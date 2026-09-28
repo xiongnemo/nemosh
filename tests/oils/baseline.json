@@ -883,7 +883,6 @@
       "Length operator can't be followed by test operator": "ash-only"
     },
     "var-op-patsub.test.sh": {
-      "${x//~homedir/}": "fail",
       "Pattern replacement on unset variable": "ash-only",
       "When LC_ALL=C, pattern ? doesn't match multibyte character": "fail",
       "patsub with [^]]": "fail"

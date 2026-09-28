@@ -33,11 +33,14 @@ const (
 
 // expandOperand expands an operator's word in the role it plays.
 func (r Runtime) expandOperand(ctx context.Context, word string, role operandRole, savedStatus int) string {
-	// A value's leading tilde-prefix is the directory it names: `: ${x:=~}` assigns HOME in
-	// both references. See tilde_expand.go.
-	if role == operandValue && !r.operandQuoted && strings.HasPrefix(word, "~") {
+	// A leading tilde-prefix is the directory it names: `: ${x:=~}` assigns HOME in both
+	// references. A pattern's and a replacement's take it inside double quotes too, where a
+	// value's does not -- `"${x#~}"` strips HOME and `"${x/a/~}"` puts it in, as both have it
+	// -- and a pattern matches the directory literally. Only a value's was expanded, so
+	// `${path//~/z}` left the path as it was. See tilde_expand.go.
+	if strings.HasPrefix(word, "~") && (role != operandValue || !r.operandQuoted) {
 		if directory, width, ok := r.tildePrefix(word, r.noFieldSplit, true); ok {
-			return directory + r.expandOperand(ctx, word[width:], role, savedStatus)
+			return literalIn(role, directory) + r.expandOperand(ctx, word[width:], role, savedStatus)
 		}
 	}
 	if !strings.ContainsAny(word, "\"'\\") {
