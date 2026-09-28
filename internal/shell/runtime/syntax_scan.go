@@ -92,6 +92,15 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteByte(char)
 			continue
 		}
+		// Inside double quotes a `${...}` holds quotes of its own, and what they quote is no
+		// operator or comment: `"${u:-"a ( b"}"`. Stepped over whole when it closes on this line.
+		if char == '$' && scanner.quote() == '"' && index+1 < len(line) && line[index+1] == '{' {
+			if end, ok := bracedParameterEnd(line, index+1); ok {
+				scanner.logical.WriteString(line[index:end])
+				index = end - 1
+				continue
+			}
+		}
 		// An arithmetic expansion is stepped over whole, before the command
 		// substitution branch below can claim its first `(`. Otherwise the `))`
 		// that closes it is counted as one substitution close and one group

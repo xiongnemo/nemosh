@@ -70,7 +70,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			index++
 			continue
 		}
-		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+		if end := quotedSpanEnd(line, index, quote); end >= 0 {
 			output.WriteString(line[index : end+1])
 			index = end + 1
 			continue
@@ -248,7 +248,7 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 			escaped = true
 			continue
 		}
-		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+		if end := quotedSpanEnd(line, index, quote); end >= 0 {
 			index = end
 			continue
 		}

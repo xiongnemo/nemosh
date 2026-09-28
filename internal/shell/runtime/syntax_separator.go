@@ -47,6 +47,10 @@ func splitSequentialSegments(line string) ([]string, error) {
 			}
 			continue
 		}
+		if end := quotedSpanEnd(line, index, quote); quote == '"' && end >= 0 {
+			index = end
+			continue
+		}
 		if quote != 0 {
 			continue
 		}
@@ -179,6 +183,23 @@ func expansionEnd(line string, index int) (int, bool) {
 		return end - 1, ok
 	}
 	return 0, false
+}
+
+// quotedSpanEnd is the last byte of what the scans step over whole at index, or -1: a `$'...'`
+// outside quotes, and inside double quotes a `$(...)`, `$((...))` or `${...}`, whose quotes are
+// its own. `"$(echo "a ; b")"` and `"${u:-"a ; b"}"` are one word each, and the scans took the
+// second `"` for the first one's close, which left the `;` outside any quote.
+func quotedSpanEnd(line string, index int, quote byte) int {
+	switch {
+	case quote == 0:
+		return ansiQuoteClose(line, index)
+	case quote != '"' || index+1 >= len(line) || line[index] != '$' || line[index+1] != '(' && line[index+1] != '{':
+		return -1
+	}
+	if end, ok := expansionEnd(line, index); ok {
+		return end
+	}
+	return -1
 }
 
 // splitForWithoutIn peels the `do` off `for name do ...`, the loop with no `in` and no `;`

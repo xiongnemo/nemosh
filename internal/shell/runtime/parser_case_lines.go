@@ -151,7 +151,7 @@ func unquotedMask(text string) []bool {
 			escaped = true
 			continue
 		}
-		if end := ansiQuoteClose(text, index); quote == 0 && end >= 0 {
+		if end := quotedSpanEnd(text, index, quote); end >= 0 {
 			index = end
 			continue
 		}

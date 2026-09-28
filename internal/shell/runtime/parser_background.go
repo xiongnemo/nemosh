@@ -19,7 +19,7 @@ func trailingBackground(line string) (string, bool) {
 			escaped = true
 			continue
 		}
-		if end := ansiQuoteClose(trimmed, index); quote == 0 && end >= 0 {
+		if end := quotedSpanEnd(trimmed, index, quote); end >= 0 {
 			index = end
 			continue
 		}

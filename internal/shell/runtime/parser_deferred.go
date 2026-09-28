@@ -19,7 +19,7 @@ func rejectDeferredSyntax(line string) error {
 			escaped = true
 			continue
 		}
-		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+		if end := quotedSpanEnd(line, index, quote); end >= 0 {
 			index = end
 			continue
 		}

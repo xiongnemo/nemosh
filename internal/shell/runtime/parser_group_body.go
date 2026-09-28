@@ -67,7 +67,7 @@ func separatorPositions(body string) map[int]bool {
 			escaped = true
 			continue
 		}
-		if end := ansiQuoteClose(body, index); quote == 0 && end >= 0 {
+		if end := quotedSpanEnd(body, index, quote); end >= 0 {
 			index = end
 			continue
 		}
