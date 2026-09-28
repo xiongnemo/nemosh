@@ -425,7 +425,6 @@
     },
     "builtin-read.test.sh": {
       "mapfile from directory (bash doesn't handle errors)": "fail",
-      "read -a reads into array": "fail",
       "read -n with invalid arg": "ash-only",
       "read -p (not fully tested)": "fail",
       "read -r -d '' for NUL strings, e.g. find -print0": "fail",

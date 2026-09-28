@@ -133,13 +133,10 @@ func (o *readOptions) apply(letter byte, value string) error {
 	return nil
 }
 
+// validate checks the names. With -a they are checked and then ignored, as bash 5.3 ignores
+// them, which the line goes to the array instead of: `read -r -a words rest` fills words. It
+// was refused, as bash was said to refuse it; busybox has no -a.
 func (o *readOptions) validate() error {
-	if o.arrayName != "" && len(o.names) > 0 {
-		// bash refuses the combination too. Splitting the same line into an
-		// array and into names would have to pick one, and either choice makes
-		// the other half of the command a lie.
-		return fmt.Errorf("-a and variable names cannot both be given")
-	}
 	for _, name := range o.names {
 		if !isValidVariableName(name) {
 			return fmt.Errorf("%s: not a valid variable name", name)

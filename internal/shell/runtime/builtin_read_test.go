@@ -123,6 +123,8 @@ func TestRead_splitsAsBothReferencesDo(t *testing.T) {
 		{"\n", "IFS= read -a a\n" + array, "[] 0\n"},
 		{"a b\\\nc d\n", "read -d ,; printf '[%s]\\n' \"$REPLY\"\n", "[a bc d\n]\n"},
 		{"a b\\,c d\n", "read -d ,; printf '[%s]\\n' \"$REPLY\"\n", "[a b,c d\n]\n"},
+		// Names after -a are checked and ignored, as bash 5.3 ignores them.
+		{"a b c\\ d\n", "read -r -a a x y\n" + array + "echo \"[$x$y]\"\n", "[a][b][c\\][d] 4\n[]\n"},
 	} {
 		if status, stdout, stderr := runReadScript(t, test.stdin, test.script); stdout != test.want || status != 0 {
 			t.Errorf("%q over %q: got %q/%d %q, want %q/0", test.script, test.stdin, stdout, status, stderr, test.want)
@@ -329,7 +331,7 @@ func TestRead_refusesWhatItCannotDo(t *testing.T) {
 		{name: "a bad timeout", script: "read -t abc x\n", fragment: "invalid timeout"},
 		{name: "a bad descriptor", script: "read -u abc x\n", fragment: "invalid file descriptor"},
 		{name: "not a variable name", script: "read 9bad\n", fragment: "not a valid variable name"},
-		{name: "-a with names too", script: "read -a arr x\n", fragment: "cannot both be given"},
+		{name: "-a with a bad name after it", script: "read -a arr 9bad\n", fragment: "not a valid variable name"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
