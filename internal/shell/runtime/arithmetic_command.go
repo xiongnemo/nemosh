@@ -62,3 +62,22 @@ func arithmeticCommandTokens(line string, index, end int) []shellToken {
 		expression,
 	}
 }
+
+// printArithmeticCommand is the `((expr))` a `let` from arithmeticCommandTokens was written as,
+// which is how bash's `declare -f` and $BASH_COMMAND show it: `(( x++ ))`, where this showed
+// `let " x++ "`. The expression's parts come out as they were read, without the quotes it went
+// into let in.
+func printArithmeticCommand(value simpleCommand) (string, bool) {
+	if len(value.words) != 2 || !value.words[0].arithmetic {
+		return "", false
+	}
+	var out strings.Builder
+	for _, part := range value.words[1].parts {
+		if part.kind == wordPartLiteral {
+			out.WriteString(part.text)
+			continue
+		}
+		out.WriteString(printPart(part, false))
+	}
+	return "((" + out.String() + "))", true
+}

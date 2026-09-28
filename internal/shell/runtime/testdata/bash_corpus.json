@@ -1871,5 +1871,11 @@
     "stdout": "x\nerr 3 [false y]\n",
     "status": 1,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "f() { ((z<<1)); }; declare -f f",
+    "stdout": "f () \n{ \n    ((z<<1))\n}\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

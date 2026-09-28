@@ -20,6 +20,15 @@ func TestDeclareF_printsTheDefinition(t *testing.T) {
 	}
 }
 
+// An arithmetic command prints as it was written, as bash prints it. It printed as the let it
+// runs as, `let "z<<1"`.
+func TestDeclareF_printsAnArithmeticCommandAsWritten(t *testing.T) {
+	stdout, _ := runScriptCapturing("f() { ((z<<1)); (( y = 2 * $1 )); }\ndeclare -f f\n")
+	if want := "f () \n{ \n    ((z<<1))\n    (( y = 2 * $1 ))\n}\n"; stdout != want {
+		t.Fatalf("declare -f = %q, want %q", stdout, want)
+	}
+}
+
 // What declare -f prints reads back as the same function. Every construct the printer has
 // a case for is here, and the copy is run beside the original.
 func TestDeclareF_readsBackAsTheSameFunction(t *testing.T) {

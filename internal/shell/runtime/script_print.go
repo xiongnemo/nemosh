@@ -231,6 +231,9 @@ func (p *scriptPrinter) andOr(value andOr) string {
 func (p *scriptPrinter) command(node commandNode) string {
 	switch value := node.(type) {
 	case simpleCommand:
+		if text, ok := printArithmeticCommand(value); ok {
+			return text + p.redirects(value.redirects)
+		}
 		words := make([]string, len(value.words))
 		for index, word := range value.words {
 			words[index] = printWord(word)
