@@ -126,6 +126,14 @@ func TestRuntime_usesPS4AsTheTracePrefix(t *testing.T) {
 	}
 }
 
+// With PS4 unset a trace has no prefix at all, as in both references; it was the default again.
+func TestRuntime_tracesWithNoPrefixOncePS4IsUnset(t *testing.T) {
+	_, _, stderr := runSetScript(t, "set -x\necho 1\nunset PS4\necho 2\n")
+	if want := "+ echo 1\n+ unset PS4\necho 2\n"; stderr != want {
+		t.Fatalf("stderr = %q, want %q", stderr, want)
+	}
+}
+
 // -v needs input that is still unread when the option is set, to echo it as it is read, and
 // a script here is parsed in full before any of it runs. Half-working would be the same lie
 // as storing the flag and reporting it through `$-`. -n, which only has to run nothing

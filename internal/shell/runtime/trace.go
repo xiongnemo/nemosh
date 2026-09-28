@@ -6,19 +6,19 @@ import (
 	"strings"
 )
 
-// tracePrefix is what `set -x` writes before each command. POSIX says the
-// prefix comes from PS4 and defaults to "+ ".
-const defaultTracePrefix = "+ "
-
 // traceCommand is `set -x`: write the command about to run to stderr, after
 // expansion, so what is shown is what will actually happen. Quoting is added
 // where a word would not survive being read back, which is what makes the trace
 // of an empty or space-bearing argument readable.
+//
+// The prefix is PS4, which POSIX defaults to "+ " and a new shell sets to that
+// (setStartupVariables). Unset, it is nothing, as in both references: after
+// `unset PS4` a trace line is the bare command. It was "+ " again.
 func (r Runtime) traceCommand(ctx context.Context, args []string, savedStatus int) {
 	if !r.options.xtrace || len(args) == 0 {
 		return
 	}
-	prefix := defaultTracePrefix
+	prefix := ""
 	if custom, ok := r.vars["PS4"]; ok {
 		prefix = r.tracePrefix(ctx, custom, savedStatus)
 	}

@@ -938,7 +938,6 @@
       "Regression: xtrace for \"declare -a a+=(v)\"": "fail",
       "[[ ]]": "fail",
       "set -o verbose prints unevaluated code": "fail",
-      "unset PS4": "fail",
       "xtrace with unprintable chars": "fail",
       "xtrace with whitespace, quotes, and backslash": "fail"
     },
