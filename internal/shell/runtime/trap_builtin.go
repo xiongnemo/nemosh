@@ -37,6 +37,13 @@ func (r Runtime) trap(args []string) int {
 		return r.printTraps(args[1:])
 	case len(args) > 0 && args[0] == "-P":
 		return r.printTrapActions(args[1:])
+	case len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-':
+		// Any other option is refused, as in both references, and ends the script as a
+		// special builtin's usage error does in busybox. `trap -1 EXIT` armed EXIT with a
+		// command named -1, which ran as the shell exited.
+		fmt.Fprintf(r.streams.Stderr, "trap: illegal option %s\n", args[0])
+		r.raiseShellError()
+		return 2
 	}
 	if len(args) == 0 {
 		return r.listTraps()
