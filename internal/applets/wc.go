@@ -17,6 +17,7 @@ func newWcApplet() Applet {
 		if err != nil {
 			return err
 		}
+		flags.manyFiles = len(paths) > 1
 		if len(paths) == 0 {
 			counts, err := countBytes(stdin)
 			if err != nil {
@@ -83,6 +84,8 @@ type wcFlags struct {
 	// neither reference's answer -- busybox says 3, having its own trouble with
 	// multibyte input. The newline does not count.
 	longest bool
+	// manyFiles is more than one operand, which pads even a single count; see printWcCounts.
+	manyFiles bool
 }
 
 type wcCounts struct {
@@ -148,12 +151,12 @@ func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string
 	if flags.longest {
 		values = append(values, counts.longest)
 	}
-	// Padded only when there is more than one count, which is the rule busybox-w32
-	// applies: `wc -l f` prints `0 f` and `wc f` aligns its three columns. Measured,
-	// because the references disagree on the width -- busybox pads to nine and GNU to
-	// seven -- and the primary reference settles it.
+	// Padded unless there is one count for at most one file, which is the rule busybox-w32
+	// applies (coreutils/wc.c:134): `wc -l f` prints `0 f`, and `wc f` and `wc -l f g` align.
+	// The second had its counts unpadded. Measured, because the references disagree on the
+	// width -- busybox pads to nine and GNU to seven -- and the primary reference settles it.
 	width := 0
-	if len(values) > 1 {
+	if len(values) > 1 || flags.manyFiles {
 		width = wcColumnWidth
 	}
 	for i, value := range values {

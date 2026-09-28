@@ -29,8 +29,8 @@ func TestP05WaveA_streamingInputApplets_preserveOrdinaryHostFileBehavior(t *test
 	}{
 		{name: "cat preserves operand order", args: []string{"cat", first, second}, want: "beta one\nalpha two\nalpha two\nalpha two\n"},
 		// The trailing total is new and both references print it. `-l` alone is a single
-		// count, so the columns stay unpadded here.
-		{name: "wc preserves operand labels", args: []string{"wc", "-l", first, second}, want: "2 " + first + "\n2 " + second + "\n4 total\n"},
+		// count, but for two files, so busybox pads it to nine columns.
+		{name: "wc preserves operand labels", args: []string{"wc", "-l", first, second}, want: "        2 " + first + "\n        2 " + second + "\n        4 total\n"},
 		{name: "head streams host input", args: []string{"head", "-n", "1", first}, want: "beta one\n"},
 		{name: "tail streams host input", args: []string{"tail", "-n", "1", first}, want: "alpha two\n"},
 		{name: "grep streams host input", args: []string{"grep", "alpha", first}, want: "alpha two\n"},

@@ -157,8 +157,9 @@ func TestP05WaveA_mixedAndRepeatedDeviceOperands_preserveOrderLabelsAndOwnership
 
 	// Then
 	// Three operands, so wc ends with a total, which both references print and this
-	// shell did not until the padding work. `-l` is one count, so it stays unpadded.
-	want := "host\ndevice\n1 input.txt\n0 /dev/null\n0 /dev/null\n1 total\n"
+	// shell did not until the padding work. `-l` is one count, but for several files, so
+	// busybox pads it.
+	want := "host\ndevice\n        1 input.txt\n        0 /dev/null\n        0 /dev/null\n        1 total\n"
 	if status != 0 || stdout.String() != want || stderr.Len() != 0 {
 		t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
 	}
