@@ -90,6 +90,9 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 		return "", false
 	case "LINENO":
 		return strconv.Itoa(r.currentLine()), true
+	case "BASH_COMMAND":
+		// bash's, which busybox has not got; see enterCommand.
+		return r.bashCommand(), true
 	case "BASH_SUBSHELL":
 		return strconv.Itoa(r.subshellDepth), true
 	case "SHELLOPTS", "BASHOPTS":

@@ -1847,5 +1847,11 @@
     "stdout": "in (1 2)\nafter []\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "trap 'echo \"failed: [$BASH_COMMAND]\"' ERR\nfalse x \"y z\"\necho after",
+    "stdout": "failed: [false x \"y z\"]\nafter\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]
