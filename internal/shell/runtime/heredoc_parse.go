@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -16,6 +17,8 @@ type pendingHeredoc struct {
 	marker        string
 	operandStart  int
 	operandEnd    int
+	// depth is how many substitutions its `<<` was inside; see heredocScan.
+	depth int
 }
 
 // The source must already have been through normalizeLineEndings. The third answer is,
@@ -32,10 +35,10 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 	var output strings.Builder
 	var records, pending []pendingHeredoc
 	var origins []int
-	quote, continued := byte(0), false
+	var scan heredocScan
 	for index := 0; index < len(lines); index++ {
 		line := lines[index]
-		declarations, open, joined, err := heredocDeclarations(line, index+1, len(records)+len(pending), quote)
+		declarations, next, err := heredocDeclarations(line, index+1, len(records)+len(pending), scan)
 		if err != nil {
 			return "", nil, nil, err
 		}
@@ -44,12 +47,17 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 		if index+1 < len(lines) {
 			output.WriteByte('\n')
 		}
-		pending, quote, continued = append(pending, declarations...), open, joined
-		if quote != 0 || continued {
+		pending, scan = append(pending, declarations...), next
+		if scan.inString() || scan.joined {
 			continue
 		}
+		var waiting []pendingHeredoc
 		for declarationIndex := range pending {
 			declaration := &pending[declarationIndex]
+			if declaration.depth < len(scan.quotes) {
+				waiting = append(waiting, *declaration)
+				continue
+			}
 			var body strings.Builder
 			terminated := false
 			for index++; index < len(lines); index++ {
@@ -76,7 +84,7 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 			declaration.body = body.String()
 			records = append(records, *declaration)
 		}
-		pending = nil
+		pending = waiting
 	}
 	if len(pending) > 0 {
 		return "", nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, pending[0].delimiter)
@@ -84,14 +92,39 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 	return output.String(), records, origins, nil
 }
 
-// heredocDeclarations finds the heredocs a line declares, the line beginning inside quote
-// when the one before left it open. It says too which quote this line leaves open, and
-// whether it ends in a backslash that joins the next line on.
-func heredocDeclarations(line string, lineNumber, startOrder int, quote byte) ([]pendingHeredoc, byte, bool, error) {
+// heredocScan is where a line leaves the scan for heredocs: the quoting it ends inside,
+// innermost last, and whether it ends in a backslash that joins the next line on. A `(` there
+// is a `$(`, or a parenthesis within one, whose text is quoted afresh: in `x="$(cat <<EOF` the
+// `<<` is a heredoc's, and its body begins on the next line. One heredoc outside the `$(` takes
+// its body after the line the `$(` closes on. Both references read them so. One quote was all
+// the scan kept, so the `"` hid the `<<`, and `cat <<EOF; x=$(` took its body from inside
+// the substitution; each script was refused.
+type heredocScan struct {
+	quotes []byte
+	joined bool
+}
+
+func (scan heredocScan) quote() byte {
+	if len(scan.quotes) == 0 {
+		return 0
+	}
+	return scan.quotes[len(scan.quotes)-1]
+}
+
+// inString is whether the line ended inside a quoted string, whose newline is the string's.
+func (scan heredocScan) inString() bool {
+	return scan.quote() == '\'' || scan.quote() == '"'
+}
+
+// heredocDeclarations finds the heredocs a line declares, the line beginning inside the
+// quoting the one before left open, and says where this one leaves it.
+func heredocDeclarations(line string, lineNumber, startOrder int, scan heredocScan) ([]pendingHeredoc, heredocScan, error) {
 	var records []pendingHeredoc
+	scan.quotes = slices.Clone(scan.quotes)
 	escaped := false
 	for index := 0; index < len(line); index++ {
-		char := line[index]
+		char, quote := line[index], scan.quote()
+		unquoted := quote == 0 || quote == '('
 		if escaped {
 			escaped = false
 			continue
@@ -100,15 +133,15 @@ func heredocDeclarations(line string, lineNumber, startOrder int, quote byte) ([
 			escaped = true
 			continue
 		}
-		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {
-			if quote == char {
-				quote = 0
-			} else if quote == 0 {
-				quote = char
-			}
+		if char == quote && (char == '\'' || char == '"') {
+			scan.quotes = scan.quotes[:len(scan.quotes)-1]
 			continue
 		}
-		if end := ansiQuoteClose(line, index); quote == 0 && end >= 0 {
+		if unquoted && (char == '\'' || char == '"') {
+			scan.quotes = append(scan.quotes, char)
+			continue
+		}
+		if end := ansiQuoteClose(line, index); unquoted && end >= 0 {
 			index = end
 			continue
 		}
@@ -122,14 +155,26 @@ func heredocDeclarations(line string, lineNumber, startOrder int, quote byte) ([
 		}
 		// So is an arithmetic command, `(( x << 2 ))`, which went looking for a heredoc
 		// delimited by 2.
-		if char == '(' && quote == 0 && index+1 < len(line) && line[index+1] == '(' {
+		if char == '(' && unquoted && index+1 < len(line) && line[index+1] == '(' {
 			if end, ok := arithmeticExpansionEnd(line, index+2); ok {
 				index = end
 				continue
 			}
 		}
-		if quote != 0 || char != '<' || index+1 >= len(line) || line[index+1] != '<' {
-			if char == '#' && quote == 0 && commentStarts(line, index) {
+		switch {
+		case quote != '\'' && char == '$' && index+1 < len(line) && line[index+1] == '(':
+			scan.quotes = append(scan.quotes, '(')
+			index++
+			continue
+		case quote == '(' && char == '(':
+			scan.quotes = append(scan.quotes, '(')
+			continue
+		case quote == '(' && char == ')':
+			scan.quotes = scan.quotes[:len(scan.quotes)-1]
+			continue
+		}
+		if !unquoted || char != '<' || index+1 >= len(line) || line[index+1] != '<' {
+			if char == '#' && unquoted && commentStarts(line, index) {
 				break
 			}
 			continue
@@ -152,11 +197,11 @@ func heredocDeclarations(line string, lineNumber, startOrder int, quote byte) ([
 		}
 		operandEnd := heredocOperandEnd(line, operandStart)
 		if operandEnd == operandStart {
-			return nil, 0, false, fmt.Errorf("%w: %w", ErrIncompleteScript, errMissingRedirectTarget)
+			return nil, scan, fmt.Errorf("%w: %w", ErrIncompleteScript, errMissingRedirectTarget)
 		}
 		tokens, err := scanShellTokens(line[operandStart:operandEnd])
 		if err != nil || len(tokens) != 1 || tokens[0].kind != tokenWord {
-			return nil, 0, false, fmt.Errorf("heredoc delimiter: %w", errMalformedRedirect)
+			return nil, scan, fmt.Errorf("heredoc delimiter: %w", errMalformedRedirect)
 		}
 		delimiterWord := parseTypedWord(*tokens[0].parsed)
 		delimiter, quoted := quoteRemovedDelimiter(delimiterWord)
@@ -170,10 +215,12 @@ func heredocDeclarations(line string, lineNumber, startOrder int, quote byte) ([
 			marker:        fmt.Sprintf("__nemosh_heredoc_%d__", startOrder+len(records)),
 			operandStart:  operandStart,
 			operandEnd:    operandEnd,
+			depth:         len(scan.quotes),
 		})
 		index = operandEnd - 1
 	}
-	return records, quote, escaped, nil
+	scan.joined = escaped
+	return records, scan, nil
 }
 
 func markHeredocOperands(line string, records []pendingHeredoc) string {
