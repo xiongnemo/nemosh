@@ -621,9 +621,6 @@
       "Ignore .:..": "fail",
       "Ignore globs with char patterns like [!ab]": "fail"
     },
-    "globstar.test.sh": {
-      "each occurrence of ** recurses through all depths": "fail"
-    },
     "here-doc.test.sh": {
       "Here doc with bad comsub delimiter": "ash-only"
     },

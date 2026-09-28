@@ -60,6 +60,26 @@ func TestShopt_globstarCrossesDirectories(t *testing.T) {
 	})
 }
 
+// A `**` that ends the pattern is every file and directory beneath, and the directory itself
+// when the pattern names it; one that more of the pattern follows reaches each directory once,
+// however many `**` there are; and a directory that is not there is no match. Measured from
+// bash over the same tree. The trailing one found directories alone, `**/**/*.go` named each
+// file three times, and `x/**` answered x.
+func TestShopt_globstarAtTheEndMatchesFilesAndEachPathOnce(t *testing.T) {
+	root := globTree(t)
+	script := "cd " + root + "\nshopt -s globstar\necho **/**/*.go\necho **\necho a/**\necho a/**/**/two.go\necho **/\necho x/**\necho **/b/**\n"
+	want := "a/b/c/three.go a/b/two.go a/one.go top.go\n" +
+		"a a/b a/b/c a/b/c/three.go a/b/two.go a/one.go top.go\n" +
+		"a/ a/b a/b/c a/b/c/three.go a/b/two.go a/one.go\n" +
+		"a/b/two.go\n" +
+		"a/ a/b/ a/b/c/\n" +
+		"x/**\n" +
+		"a/b a/b/c a/b/c/three.go a/b/two.go\n"
+	if status, stdout, stderr := runSetScript(t, script); status != 0 || stdout != want {
+		t.Fatalf("got %q/%d %q, want %q/0", stdout, status, stderr, want)
+	}
+}
+
 func TestShopt_nullglobDropsAPatternThatMatchesNothing(t *testing.T) {
 	root := globTree(t)
 	tests := []struct {

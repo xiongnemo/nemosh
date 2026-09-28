@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1945 of the 2551 cases bash passes: 76.2%.**
+**nemosh passes 1946 of the 2551 cases bash passes: 76.3%.**
 
-Of the other 606, it does 110 the way the files record of ash, which may be busybox's
-way, and 496 neither way.
+Of the other 605, it does 110 the way the files record of ash, which may be busybox's
+way, and 495 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 496 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1945 |
+| that nemosh passes of those | 1946 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -117,7 +117,7 @@ of ash.
 | glob-bash.test.sh | 8 | 8 | 8 | 100.0% | 0 | 8 |
 | glob.test.sh | 39 | 37 | 33 | 89.2% | 0 | 36 |
 | globignore.test.sh | 18 | 17 | 16 | 94.1% | 0 | 1 |
-| globstar.test.sh | 4 | 4 | 3 | 75.0% | 0 | 0 |
+| globstar.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | here-doc.test.sh | 32 | 32 | 31 | 96.9% | 1 | 32 |
 | if_.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
 | interactive.test.sh | 18 | 17 | 2 | 11.8% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1945 | 76.2% | 110 | 1447 |
+| all | 2668 | 2551 | 1946 | 76.3% | 110 | 1447 |

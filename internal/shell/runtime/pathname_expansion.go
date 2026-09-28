@@ -35,11 +35,11 @@ func (r Runtime) expandPathnames(field string) []string {
 		base = "/"
 	}
 	matches := []string{base}
-	for _, segment := range segments[fixed:] {
+	for index, segment := range segments[fixed:] {
 		// `**` crosses directories, but only when asked: without globstar bash reads
 		// it as an ordinary `*`, and so does this.
 		if segment == "**" && r.options.globStar {
-			matches = r.expandGlobStar(matches)
+			matches = r.expandGlobStar(matches, fixed+index == len(segments)-1, index == 0)
 			if len(matches) == 0 {
 				return nil
 			}
@@ -50,12 +50,15 @@ func (r Runtime) expandPathnames(field string) []string {
 			return nil
 		}
 	}
-	// What GLOBIGNORE leaves out is not a match; see glob_ignore.go.
-	if matches = r.withoutIgnored(matches); len(matches) == 0 {
+	// What GLOBIGNORE leaves out is not a match; see glob_ignore.go. Nor is the current
+	// directory, which `**/` reaches as nothing, and a path two `**` reach is one match:
+	// `**/**/*.md` names each file once.
+	matches = slices.DeleteFunc(r.withoutIgnored(matches), func(match string) bool { return match == "" })
+	if len(matches) == 0 {
 		return nil
 	}
 	slices.Sort(matches)
-	return matches
+	return slices.Compact(matches)
 }
 
 func (r Runtime) expandPathSegment(bases []string, segment string) []string {
@@ -187,16 +190,20 @@ func (r Runtime) matchGlobSegment(segment, name string) bool {
 
 // expandGlobStar answers a `**` segment: each base, and every directory beneath it.
 //
-// Directories only, because `**` is a path segment and what follows it has to be
-// looked up inside something. `**/*.go` is the shape it exists for: the bases become
-// every directory in the tree and the next segment matches files in each.
+// Directories only when more of the pattern follows, because what follows has to be looked
+// up inside something. `**/*.go` is the shape it exists for: the bases become every directory
+// in the tree and the next segment matches files in each. As the pattern's last segment it is
+// bash's "all files and zero or more directories": every file beneath the base too, and the
+// base itself -- spelled with its slash, `c/`, when it is the pattern's literal start, as bash
+// spells it. It gave the directories alone, so `echo dir/**` listed no file. A base that is no
+// directory is no match, so `x/**` stays as written.
 //
 // Bounded by globStarDepth. A pattern is not worth an unbounded walk of a filesystem
 // that may be a network drive, and a shell that appears to hang while a user waits
 // for a prompt is worse than one that misses a very deep file.
-func (r Runtime) expandGlobStar(bases []string) []string {
-	matches := append([]string(nil), bases...)
-	frontier := append([]string(nil), bases...)
+func (r Runtime) expandGlobStar(bases []string, last, literal bool) []string {
+	var matches []string
+	frontier := bases
 	for depth := 0; depth < globStarDepth && len(frontier) > 0; depth++ {
 		var next []string
 		for _, base := range frontier {
@@ -204,21 +211,40 @@ func (r Runtime) expandGlobStar(bases []string) []string {
 			if err != nil {
 				continue
 			}
+			if depth == 0 {
+				matches = append(matches, globStarBase(base, last, literal)...)
+			}
 			for _, entry := range entries {
-				if !entry.IsDir() {
-					continue
-				}
 				name := entry.Name()
 				if strings.HasPrefix(name, ".") && !r.options.dotGlob || r.hiddenFromGlob(entry) {
 					continue
 				}
-				next = append(next, joinGlobPath(base, name))
+				if entry.IsDir() {
+					next = append(next, joinGlobPath(base, name))
+				}
+				if entry.IsDir() || last {
+					matches = append(matches, joinGlobPath(base, name))
+				}
 			}
 		}
-		matches = append(matches, next...)
 		frontier = next
 	}
 	return matches
+}
+
+// globStarBase is a base as `**`'s match of zero directories: the base itself, and with a
+// slash when it is the literal start of a pattern that ends there, `c/**`. The current
+// directory has no name, and ends a pattern as nothing.
+func globStarBase(base string, last, literal bool) []string {
+	switch {
+	case !last:
+		return []string{base}
+	case base == "":
+		return nil
+	case literal:
+		return []string{strings.TrimSuffix(base, "/") + "/"}
+	}
+	return []string{base}
 }
 
 // globStarDepth is how far `**` descends. Deep enough for a source tree -- the
