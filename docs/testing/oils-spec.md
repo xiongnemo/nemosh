@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1957 of the 2551 cases bash passes: 76.7%.**
+**nemosh passes 1956 of the 2551 cases bash passes: 76.7%.**
 
-Of the other 594, it does 110 the way the files record of ash, which may be busybox's
-way, and 484 neither way.
+Of the other 595, it does 112 the way the files record of ash, which may be busybox's
+way, and 483 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 484 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1957 |
+| that nemosh passes of those | 1956 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -124,7 +124,7 @@ of ash.
 | introspect.test.sh | 13 | 12 | 10 | 83.3% | 0 | 2 |
 | known-differences.test.sh | 2 | 2 | 1 | 50.0% | 1 | 2 |
 | let.test.sh | 2 | 2 | 2 | 100.0% | 0 | 1 |
-| loop.test.sh | 29 | 28 | 25 | 89.3% | 1 | 23 |
+| loop.test.sh | 29 | 28 | 25 | 89.3% | 2 | 23 |
 | nameref.test.sh | 32 | 32 | 28 | 87.5% | 0 | 2 |
 | nix-idioms.test.sh | 6 | 6 | 4 | 66.7% | 0 | 0 |
 | nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 3 |
@@ -147,7 +147,7 @@ of ash.
 | sh-options.test.sh | 39 | 39 | 29 | 74.4% | 0 | 12 |
 | sh-usage.test.sh | 23 | 22 | 18 | 81.8% | 0 | 18 |
 | smoke.test.sh | 18 | 18 | 16 | 88.9% | 0 | 16 |
-| strict-options.test.sh | 17 | 15 | 13 | 86.7% | 0 | 7 |
+| strict-options.test.sh | 17 | 15 | 12 | 80.0% | 1 | 7 |
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
 | tilde.test.sh | 14 | 12 | 11 | 91.7% | 1 | 10 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1957 | 76.7% | 110 | 1447 |
+| all | 2668 | 2551 | 1956 | 76.7% | 112 | 1447 |

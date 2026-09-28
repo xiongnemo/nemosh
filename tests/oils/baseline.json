@@ -646,7 +646,7 @@
       "bad arg to break": "fail",
       "for loop with invalid identifier": "ash-only",
       "too many args to continue": "fail",
-      "top-level break/continue/return (without strict_control_flow)": "fail"
+      "top-level break/continue/return (without strict_control_flow)": "ash-only"
     },
     "nameref.test.sh": {
       "a[@] in nameref": "fail",
@@ -783,8 +783,9 @@
     "strict-options.test.sh": {
       "Control flow must be static in YSH (strict_control_flow)": "fail",
       "errexit and top-level control flow": "ash-only",
-      "return at top level is an error": "fail",
-      "shopt -s strict_binding: Persistent prefix bindings not allowed on special builtins": "fail"
+      "return at top level is an error": "ash-only",
+      "shopt -s strict_binding: Persistent prefix bindings not allowed on special builtins": "fail",
+      "top level control flow": "ash-only"
     },
     "temp-binding.test.sh": {
       "Temp bindings with local": "ash-only",

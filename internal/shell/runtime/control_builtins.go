@@ -51,8 +51,16 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	case "return":
 		status := exitStatus(args[1:], savedStatus)
 		if r.sourceDepth == 0 && r.functionDepth == 0 {
-			fmt.Fprintln(r.streams.Stderr, "return: not in a sourced script")
-			return lineResult{status: status}, true
+			// Outside a function and a sourced file, return ends the shell as exit does, as
+			// busybox-w32 reads it: `return 3` ends a script with 3, the EXIT trap seeing 3, and
+			// ends the subshell or $(...) it is in. It was reported, and the script went on.
+			// At a prompt, and in a trap's action, it is still only reported, as bash reports
+			// it everywhere: `trap 'return 42' DEBUG` is bash's alone, and bash goes on.
+			if r.interactive.session && r.subshellDepth == 0 || len(r.trapRunning) > 0 {
+				fmt.Fprintln(r.streams.Stderr, "return: not in a sourced script")
+				return lineResult{status: status}, true
+			}
+			return lineResult{status: status, control: flowExit}, true
 		}
 		return lineResult{status: status, control: flowReturn}, true
 	case "break", "continue":
