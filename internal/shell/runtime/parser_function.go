@@ -78,7 +78,14 @@ func functionHeaderBeforeCompound(line string) (string, string, bool) {
 	return name, rest, true
 }
 
+// standaloneFunctionHeader is a line holding only a function's header, the body's brace to
+// come on the next: `name ()`, `function name ()` or `function name`, each of which both
+// references take. With the keyword it was "missing function body".
 func standaloneFunctionHeader(line string) bool {
+	line, keyword := cutFunctionKeyword(strings.TrimSpace(line))
+	if _, ok := newFunctionName(line); keyword && ok {
+		return true
+	}
 	rawName, remainder, found := strings.Cut(line, "(")
 	if !found {
 		return false

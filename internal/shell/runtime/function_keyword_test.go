@@ -33,6 +33,14 @@ func TestFunctionKeyword_definesAFunction(t *testing.T) {
 			name:   "redefining",
 			script: "function g { echo first; }\nfunction g { echo second; }\ng\n", want: "second\n",
 		},
+		// The body's brace on the line after the header, which both references take for each
+		// spelling. With the keyword it was "missing function body".
+		{
+			name: "the body on the next line",
+			script: "function f ()\n{\n\techo in1\n}\nf\nfunction g()\n{\n\techo in2\n}\ng\n" +
+				"function h\n{\n\techo in3\n}\nh\nfunction k () # a comment\n{\n\techo in4\n}\nk\n",
+			want: "in1\nin2\nin3\nin4\n",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
