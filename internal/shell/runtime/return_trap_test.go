@@ -3,7 +3,6 @@ package runtime_test
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -42,14 +41,10 @@ func TestReturnTrap_firesAsASourcedFileFinishes(t *testing.T) {
 }
 
 // `trap -p` prints and `trap -l` lists, as in bash; `trap -p RETURN` armed RETURN with a
-// command named -p. DEBUG is refused with its reason rather than called invalid.
-func TestTrap_printsListsAndRefusesDebug(t *testing.T) {
+// command named -p. DEBUG is in debug_trap_test.go.
+func TestTrap_printsAndLists(t *testing.T) {
 	stdout, _ := runScriptCapturing("trap 'echo x' EXIT\ntrap -p EXIT\ntrap -- 'echo y' EXIT\ntrap -p\ntrap -l | head -1\ntrap - EXIT\n")
 	if stdout != "trap -- 'echo x' EXIT\ntrap -- 'echo y' EXIT\n 1) HUP\n" {
 		t.Fatalf("stdout = %q", stdout)
-	}
-	status, _, stderr := runSetScript(t, "trap 'echo d' DEBUG\n")
-	if status != 1 || !strings.Contains(stderr, "DEBUG: not implemented") {
-		t.Fatalf("trap DEBUG = %d %q, want a refusal saying why", status, stderr)
 	}
 }

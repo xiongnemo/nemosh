@@ -53,11 +53,19 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 	reader := bufio.NewReader(input)
 
 	status := 0
-	showMenu := true
+	showMenu, again := true, false
 	for {
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
+		// Each question is a command of its own to the DEBUG trap, but not one a blank answer
+		// asks again, as bash's select asks it inside the one command.
+		if !again {
+			if result, ended := r.debugTrapHead(ctx, node.line, loopHead(node), savedStatus); ended {
+				return result
+			}
+		}
+		again = false
 		if showMenu {
 			r.writeSelectMenu(items)
 		}
@@ -74,7 +82,7 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 		}
 		if strings.TrimSpace(line) == "" {
 			// A blank answer asks to see the list again, and does not run the body.
-			showMenu = true
+			showMenu, again = true, true
 			if readErr != nil {
 				return lineResult{status: status}
 			}

@@ -88,10 +88,18 @@ func (r Runtime) executeTypedPipelineStages(ctx context.Context, value pipeline,
 		r.recordPipeStatus(result.status)
 		return result
 	}
+	if result, ended := r.debugTrapStages(ctx, value, savedStatus); ended {
+		return result
+	}
 	stages := make([]pipelineStageRun, len(value.commands))
 	for index, command := range value.commands {
 		command := command
 		stages[index] = func(ctx context.Context, stage Runtime, status int) lineResult {
+			// A simple command's DEBUG trap has run, in the shell; see debugTrapStages.
+			if simple, ok := command.(simpleCommand); ok && !stage.readsWithoutExecuting() {
+				stage.enterSimpleCommand(simple)
+				return stage.runSimpleCommand(ctx, simple, status)
+			}
 			return stage.executeCommandNode(ctx, command, status)
 		}
 	}

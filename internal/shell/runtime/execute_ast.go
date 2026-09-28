@@ -110,6 +110,11 @@ func (r Runtime) executeTypedList(ctx context.Context, item list, savedStatus in
 	status := savedStatus
 	for _, entry := range item.items {
 		var result lineResult
+		if entry.background {
+			if trapped, ended := r.debugTrapJob(ctx, entry.value, status); ended {
+				return trapped
+			}
+		}
 		if entry.background && r.processJobsEnabled() {
 			result = r.launchProcessJob(listNode{value: list{items: []listItem{{value: jobAndOr(entry.value)}}}})
 		} else if entry.background {

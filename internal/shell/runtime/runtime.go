@@ -115,6 +115,8 @@ const (
 	trapERR trapName = "ERR"
 	// trapRETURN runs as a function returns or a sourced file finishes; see return_trap.go.
 	trapRETURN trapName = "RETURN"
+	// trapDEBUG runs before each command; see debug_trap.go.
+	trapDEBUG trapName = "DEBUG"
 	// The signals a trap can catch besides INT; see signal_inbox.go.
 	trapHUP  trapName = "HUP"
 	trapQUIT trapName = "QUIT"

@@ -92,8 +92,10 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 	restoring.params = caller
 	defer scope.restore(restoring)
 	hidden, wasSet := r.hideReturnTrap()
+	debug, debugSet := r.hideDebugTrap()
 	result := r.executeCommandNode(ctx, definition.body, savedStatus)
 	r.finishReturnTrap(ctx, hidden, wasSet, result)
+	r.restoreDebugTrap(debug, debugSet)
 	if result.control == flowExec {
 		r.lifecycle.exitSuppressed = true
 	}

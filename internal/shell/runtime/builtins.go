@@ -45,6 +45,8 @@ func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
 	child := r.enterFrame("source", args[0])
 	child.sourceDepth++
 	return child.withDotArguments(args[1:], func() lineResult {
+		debug, debugSet := child.hideDebugTrap()
+		defer child.restoreDebugTrap(debug, debugSet)
 		status, control := child.runScriptResult(ctx, string(data), 1, false)
 		if _, set := r.traps[trapRETURN]; set && (control == flowNone || control == flowReturn) {
 			child.runTrap(ctx, trapRETURN, status)

@@ -72,6 +72,10 @@ func splitArithmeticForParts(text string) []string {
 func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedStatus int) lineResult {
 	r.loops.enter()
 	defer r.loops.leave()
+	// Each of the three parts is a command of its own to the DEBUG trap, on the loop's line.
+	if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.initialize), savedStatus); ended {
+		return result
+	}
 	if node.arith.initialize != "" {
 		if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.initialize, savedStatus)); err != nil {
 			return r.arithmeticForFailure(err)
@@ -81,6 +85,9 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 	for {
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
+		}
+		if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.condition), savedStatus); ended {
+			return result
 		}
 		keepGoing, err := r.arithmeticLoopCondition(r.expandArithmeticText(ctx, node.arith.condition, savedStatus))
 		if err != nil {
@@ -108,6 +115,9 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 			return lineResult{status: 0}
 		default:
 			return lineResult{status: status, control: control}
+		}
+		if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.step), savedStatus); ended {
+			return result
 		}
 		if node.arith.step != "" {
 			if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.step, savedStatus)); err != nil {

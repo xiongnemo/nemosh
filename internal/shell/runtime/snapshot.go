@@ -39,11 +39,15 @@ func (r Runtime) runOwnExitTrap(ctx context.Context, inherited string, status in
 
 // inheritedTraps are the traps a snapshot starts with: all of them, except ERR unless
 // `set -E` asks for it. In both references `(false)` fires the trap once, in the parent,
-// for the subshell's status -- not a second time inside it.
+// for the subshell's status -- not a second time inside it. Nor DEBUG unless `set -T`, as in
+// bash; see debug_trap.go.
 func (r Runtime) inheritedTraps() map[trapName]string {
 	traps := cloneMap(r.traps)
 	if !r.options.errTrace {
 		delete(traps, trapERR)
+	}
+	if !r.options.funcTrace {
+		delete(traps, trapDEBUG)
 	}
 	return traps
 }
@@ -73,7 +77,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		fds:         table,
 		vars:        cloneMap(r.vars),
 		traps:       r.inheritedTraps(),
-		trapRunning: map[trapName]bool{},
+		trapRunning: r.runningInSnapshot(),
 		signals:     signals,
 		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...), function: r.params.function, getopts: r.params.getopts},
 		options:     r.options.clone(),

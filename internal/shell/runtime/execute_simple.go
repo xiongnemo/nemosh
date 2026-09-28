@@ -3,9 +3,22 @@ package runtime
 import "context"
 
 func (r Runtime) executeSimpleCommand(ctx context.Context, command simpleCommand, savedStatus int) lineResult {
+	r.enterSimpleCommand(command)
+	if result, ended := r.debugTrap(ctx, savedStatus); ended {
+		return result
+	}
+	return r.runSimpleCommand(ctx, command, savedStatus)
+}
+
+// runSimpleCommand runs a command whose DEBUG trap has run: a pipeline's stage, whose trap ran
+// before the pipeline started; see debugTrapStages.
+func (r Runtime) runSimpleCommand(ctx context.Context, command simpleCommand, savedStatus int) lineResult {
+	return r.runParsedWords(ctx, command.words, cloneRedirects(command.redirects), savedStatus)
+}
+
+func (r Runtime) enterSimpleCommand(command simpleCommand) {
 	r.enterLine(command.line)
 	r.enterCommand(command)
-	return r.runParsedWords(ctx, command.words, cloneRedirects(command.redirects), savedStatus)
 }
 
 // enterCommand makes command the one running, $BASH_COMMAND, as bash has it -- except while a
@@ -13,7 +26,14 @@ func (r Runtime) executeSimpleCommand(ctx context.Context, command simpleCommand
 // failed and an EXIT trap's the last one run. It was never set.
 func (r Runtime) enterCommand(command simpleCommand) {
 	if r.expansion != nil && len(r.trapRunning) == 0 {
-		r.expansion.command, r.expansion.ran = command, true
+		r.expansion.command, r.expansion.head, r.expansion.ran = command, "", true
+	}
+}
+
+// enterHead makes a compound command's head the one running, for its DEBUG trap.
+func (r Runtime) enterHead(head string) {
+	if r.expansion != nil && len(r.trapRunning) == 0 {
+		r.expansion.head, r.expansion.ran = head, true
 	}
 }
 
@@ -22,6 +42,9 @@ func (r Runtime) enterCommand(command simpleCommand) {
 func (r Runtime) bashCommand() string {
 	if r.expansion == nil || !r.expansion.ran {
 		return ""
+	}
+	if r.expansion.head != "" {
+		return r.expansion.head
 	}
 	var printer scriptPrinter
 	return printer.command(r.expansion.command)

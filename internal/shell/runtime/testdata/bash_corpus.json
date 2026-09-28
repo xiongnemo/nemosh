@@ -1853,5 +1853,17 @@
     "stdout": "failed: [false x \"y z\"]\nafter\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "trap 'echo dbg' DEBUG; echo one",
+    "stdout": "dbg\none\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "trap 'echo \"[$LINENO] $BASH_COMMAND\"' DEBUG\nfor x in 1 2; do :; done\nf() { echo in-f; }\nf | cat",
+    "stdout": "[2] for x in 1 2\n[2] :\n[2] for x in 1 2\n[2] :\n[4] f\n[4] cat\nin-f\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

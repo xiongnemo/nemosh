@@ -50,13 +50,6 @@ func (r Runtime) trap(args []string) int {
 	}
 	status := 0
 	for _, condition := range conditions {
-		if condition == "DEBUG" {
-			// Named rather than called invalid: bash has it, and what it needs is missing.
-			fmt.Fprintln(r.streams.Stderr, "trap: DEBUG: not implemented: it runs before every command "+
-				"with $BASH_COMMAND, the command as written, and a command here keeps no written form")
-			status = 1
-			continue
-		}
 		name, ok := trapConditionName(condition)
 		if !ok {
 			// bash's wording, which busybox copies deliberately.
@@ -107,13 +100,16 @@ func (r Runtime) listTraps() int {
 //
 // A signal's name is read in any case, with SIG in front or not, as both references read it:
 // `trap - int` left INT's trap armed. ERR and RETURN, which are not signals, only as written,
-// as busybox has ERR.
+// as busybox has ERR; DEBUG, which busybox has not got, in any case but without SIG, as bash.
 func trapConditionName(operand string) (trapName, bool) {
 	switch operand {
 	case "ERR":
 		return trapERR, true
 	case "RETURN":
 		return trapRETURN, true
+	}
+	if strings.EqualFold(operand, "DEBUG") {
+		return trapDEBUG, true
 	}
 	switch name := strings.TrimPrefix(strings.ToUpper(operand), "SIG"); name {
 	case "EXIT", "0":

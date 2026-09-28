@@ -101,6 +101,10 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 		}
 	iteration:
 		for _, value := range values {
+			// Each turn is a command of its own to the DEBUG trap, on the loop's line.
+			if result, ended := r.debugTrapHead(ctx, node.line, loopHead(node), savedStatus); ended {
+				return result
+			}
 			if r.assignVar(node.name, value) != 0 {
 				return r.loopVariableRefused()
 			}
@@ -136,6 +140,9 @@ func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatu
 	// and the patterns every expansion but field splitting. Both were split and cut to the
 	// first field, so `x="a b"; case $x in "a b")` matched nothing, where it matches in
 	// busybox-w32 and bash 5.3 alike, and `case $@ in` saw only "$1".
+	if result, ended := r.debugTrapHead(ctx, node.line, caseHead(node), savedStatus); ended {
+		return result
+	}
 	values := r.expandingAssignment().expandWord(ctx, node.word, savedStatus)
 	if r.shellErrorRaised() {
 		return r.shellErrorResult()
@@ -204,6 +211,9 @@ func (r Runtime) executeForOverArguments(ctx context.Context, node loopNode, sav
 	for _, value := range r.params.values {
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
+		}
+		if result, ended := r.debugTrapHead(ctx, node.line, loopHead(node), savedStatus); ended {
+			return result
 		}
 		if r.assignVar(node.name, value) != 0 {
 			return r.loopVariableRefused()
