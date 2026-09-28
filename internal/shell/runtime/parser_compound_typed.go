@@ -110,12 +110,18 @@ func parseTypedLoop(lines []string, spans []compoundSpan, byStart map[int]int, s
 func parseTypedLoopHeader(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, body []programNode, budget *parseBudget, depth int) (programNode, error) {
 	line := spanHeaderLine(lines, span)
 	if header, ok := compoundHeader(line, "for"); ok {
+		if err := refuseBeforeDo(lines, span); err != nil {
+			return nil, err
+		}
 		return parseTypedFor(header, body, budget, depth)
 	}
 	// select is parsed exactly as `for` is -- the header has the same shape and the
 	// same defaults, down to a missing list meaning "$@" -- and differs only in what
 	// iterating means. So it borrows the parser and changes the kind.
 	if header, ok := compoundHeader(line, "select"); ok {
+		if err := refuseBeforeDo(lines, span); err != nil {
+			return nil, err
+		}
 		node, err := parseTypedFor(header, body, budget, depth)
 		if loop, isLoop := node.(loopNode); isLoop && err == nil {
 			loop.kind = loopSelect

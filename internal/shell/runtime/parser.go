@@ -48,6 +48,7 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 // (budget.numbering) through them.
 func prepareScript(lines []string, budget *parseBudget, depth int) (Script, error) {
 	at := budget.numbering.at
+	lines, at = joinLinebreakIn(lines, at)
 	lines, at = splitCompoundConditions(lines, at)
 	lines, at = expandCaseArmLines(lines, at)
 	lines, at = expandElifLines(lines, at)
