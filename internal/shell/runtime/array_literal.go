@@ -55,10 +55,12 @@ func hasUnquotedSemicolon(item word) bool {
 // and `case a=() in` are syntax errors in busybox-w32 and bash, where the literal was taken
 // as a word and its text used. It may stand in front of a command, as any assignment may,
 // and after a declaration utility, which assigns its operands. `let x=( 1 )` is arithmetic,
-// and the operand of `[[ x =~ a=(x) ]]` a regular expression, so both keep theirs.
+// and the operand of `[[ x =~ a=(x) ]]` a regular expression, so both keep theirs. So does
+// eval's, which bash reads as it reads a declaration's: `eval a=( ${list[@]} )` hands eval the
+// literal to run, and was refused, so the script never began.
 
 // refuseMisplacedArrayLiteral refuses an array literal after a command name that is not a
-// declaration utility, let, or `[[`.
+// declaration utility, let, eval, or `[[`.
 func refuseMisplacedArrayLiteral(words []word) error {
 	command := 0
 	for command < len(words) && isAssignmentWord(words[command]) {
@@ -67,7 +69,7 @@ func refuseMisplacedArrayLiteral(words []word) error {
 	if command >= len(words) || isDeclarationUtility(words[command]) {
 		return nil
 	}
-	if name := soleLiteralText(words[command]); name == "let" || name == "[[" {
+	if name := soleLiteralText(words[command]); name == "let" || name == "[[" || name == "eval" {
 		return nil
 	}
 	for _, item := range words[command+1:] {
