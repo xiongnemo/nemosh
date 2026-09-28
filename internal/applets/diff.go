@@ -118,7 +118,9 @@ func readDiffLines(ctx context.Context, path string, stdin io.Reader, absentIsEm
 			// whole new file rather than failing on it.
 			return nil, nil
 		}
-		return nil, err
+		// Trouble is 2, as busybox's diff has it, apart from 1 for files that differ. A missing
+		// operand answered 1, and a script could not tell it from a difference.
+		return nil, ExitStatusMessage(2, err)
 	}
 	return lines, nil
 }

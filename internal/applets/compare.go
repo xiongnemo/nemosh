@@ -39,7 +39,9 @@ func newCmpApplet() Applet {
 		for index, path := range paths {
 			data, err := readOperand(ctx, view, path, stdin)
 			if err != nil {
-				return err
+				// Trouble is 2, as busybox's cmp has it, apart from 1 for files that differ. A
+				// missing operand answered 1, and a script could not tell it from a difference.
+				return ExitStatusMessage(2, err)
 			}
 			contents[index] = data
 		}
