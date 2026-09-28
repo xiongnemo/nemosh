@@ -12,31 +12,39 @@ package runtime
 //
 // Only `if` frames can owe anything, but every compound opener is tracked so
 // the `fi` that closes an if is not confused with the `done` that closes a loop
-// nested inside its body.
+// nested inside its body. An opener counts after other words, as in `true && if`, and a
+// closer with words after it, as in `fi > log` and `fi | while read l`, which closes one
+// compound and opens the next. Only a line that was exactly an opener or a closer counted,
+// so the elif chain in `true && if ...` paid its `fi` to the wrong frame ("duplicate
+// then"), and the one in `if ...; elif ...; fi | cat` never paid it ("missing fi").
 func expandElifLines(lines []string, at []int) ([]string, []int) {
 	var expanded []string
 	var expandedAt []int
 	var owed []int
 	for index, line := range lines {
 		start := startOf(at, index)
+		header := line
+		if prefix, operator, rest, ok := splitCompoundAfterPrefix(line); ok {
+			if closer, _, closes := chainedCloser(prefix, operator); closes {
+				expanded, expandedAt, owed = payOwedClosers(expanded, expandedAt, owed, closer, start)
+			}
+			header = rest
+		}
 		switch {
-		case hasCompoundHeader(line, "if"):
+		case hasCompoundHeader(header, "if"):
 			owed = append(owed, 0)
-		case hasCompoundHeader(line, "for"), hasCompoundHeader(line, "while"),
-			hasCompoundHeader(line, "until"), hasCompoundHeader(line, "case"),
-			hasCompoundHeader(line, "select"):
+		case hasCompoundHeader(header, "for"), hasCompoundHeader(header, "while"),
+			hasCompoundHeader(header, "until"), hasCompoundHeader(header, "case"),
+			hasCompoundHeader(header, "select"):
 			// Not an if, so it can never owe an extra closer; the -1 marks it.
 			owed = append(owed, -1)
-		case line == "fi" || line == "done" || line == "esac":
-			extra := 0
-			if len(owed) > 0 {
-				extra = max(owed[len(owed)-1], 0)
-				owed = owed[:len(owed)-1]
-			}
-			for range extra {
-				expanded, expandedAt = appendNumbered(expanded, expandedAt, line, start)
-			}
 		default:
+			if closer, ok := compoundCloserWord(line); ok {
+				// The extra closers come first, so what follows this one stays on the
+				// outermost if.
+				expanded, expandedAt, owed = payOwedClosers(expanded, expandedAt, owed, closer, start)
+				break
+			}
 			condition, ok := compoundHeader(line, "elif")
 			if !ok || len(owed) == 0 || owed[len(owed)-1] < 0 {
 				break
@@ -49,4 +57,24 @@ func expandElifLines(lines []string, at []int) ([]string, []int) {
 		expanded, expandedAt = appendNumbered(expanded, expandedAt, line, start)
 	}
 	return expanded, expandedAt
+}
+
+// payOwedClosers closes the innermost compound's frame, adding the closers its elif chain owes.
+func payOwedClosers(expanded []string, at []int, owed []int, closer string, start int) ([]string, []int, []int) {
+	if len(owed) == 0 {
+		return expanded, at, owed
+	}
+	for range max(owed[len(owed)-1], 0) {
+		expanded, at = appendNumbered(expanded, at, closer, start)
+	}
+	return expanded, at, owed[:len(owed)-1]
+}
+
+// compoundCloserWord is the closer a line is, alone or with words after it.
+func compoundCloserWord(line string) (string, bool) {
+	if line == "fi" || line == "done" || line == "esac" {
+		return line, true
+	}
+	closer, _, ok := splitCompoundCloser(line)
+	return closer, ok
 }

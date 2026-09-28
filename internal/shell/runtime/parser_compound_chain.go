@@ -13,19 +13,25 @@ import "strings"
 // the first and marks the second afterCompound, and the program builder joins the two nodes
 // the way the operator between them says.
 
-// closeChainedCompound closes the compound a line ends when the words before the operator that
-// opens another are that compound's closer, perhaps with a redirection or more of a list after
-// it: `done < in | cat | while ...`. It answers whether it did.
-func closeChainedCompound(stack *[]compoundFrame, spans *[]compoundSpan, prefix, operator string, index int) (bool, error) {
+// chainedCloser is the closer that the words before the operator opening another compound are,
+// and the redirection or more of a list after it, as in `done < in | cat | while ...`.
+func chainedCloser(prefix, operator string) (string, string, bool) {
 	if operator != "|" && operator != "|&" && operator != "&&" && operator != "||" && operator != "&" {
-		return false, nil
+		return "", "", false
 	}
-	closer, suffix := strings.TrimSpace(prefix), ""
-	if closer != "fi" && closer != "done" && closer != "esac" {
-		var ok bool
-		if closer, suffix, ok = splitCompoundCloser(closer); !ok {
-			return false, nil
-		}
+	closer := strings.TrimSpace(prefix)
+	if closer == "fi" || closer == "done" || closer == "esac" {
+		return closer, "", true
+	}
+	return splitCompoundCloser(closer)
+}
+
+// closeChainedCompound closes the compound a line ends when the words before the operator that
+// opens another are its closer; see chainedCloser. It answers whether it did.
+func closeChainedCompound(stack *[]compoundFrame, spans *[]compoundSpan, prefix, operator string, index int) (bool, error) {
+	closer, suffix, ok := chainedCloser(prefix, operator)
+	if !ok {
+		return false, nil
 	}
 	closed, err := closeCompound(*stack, closer, index)
 	if err != nil {
