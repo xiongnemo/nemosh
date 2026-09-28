@@ -101,10 +101,17 @@ func eachSizedChecksum(ctx context.Context, paths []string, stdin io.Reader, std
 		return err
 	}
 	view := ProcessViewFromContext(ctx)
+	opened := true
 	for _, path := range paths {
 		file, err := OpenProcessOperand(ctx, view, path, stdin)
 		if err != nil {
-			return cannotOpen(path, err)
+			// Of several operands, one that cannot be opened is named and the rest summed; see
+			// operand_reporter.go.
+			if len(paths) == 1 || !reportOperand(ctx, cannotOpen(path, err)) {
+				return cannotOpen(path, err)
+			}
+			opened = false
+			continue
 		}
 		digest, readErr := readSizedDigest(file)
 		closeErr := file.Close()
@@ -122,6 +129,9 @@ func eachSizedChecksum(ctx context.Context, paths []string, stdin io.Reader, std
 		if _, err := fmt.Fprintln(stdout, format(digest, name, len(paths))); err != nil {
 			return err
 		}
+	}
+	if !opened {
+		return ExitStatus(1)
 	}
 	return nil
 }

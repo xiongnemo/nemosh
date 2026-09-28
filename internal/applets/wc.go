@@ -30,10 +30,17 @@ func newWcApplet() Applet {
 		// did not: `wc a b` stopped after the second line, so a script adding up a
 		// directory of files got no answer and no indication that it was missing.
 		var total wcCounts
+		opened := true
 		for _, path := range paths {
 			file, err := OpenProcessOperand(ctx, view, path, stdin)
 			if err != nil {
-				return operandFailure(path, err)
+				// Of several operands, one that cannot be opened is named and the rest counted, the
+				// total too; see operand_reporter.go.
+				if len(paths) == 1 || !reportOperand(ctx, operandFailure(path, err)) {
+					return operandFailure(path, err)
+				}
+				opened = false
+				continue
 			}
 			counts, countErr := countBytes(file)
 			closeErr := file.Close()
@@ -46,7 +53,12 @@ func newWcApplet() Applet {
 			}
 		}
 		if len(paths) > 1 {
-			return printWcCounts(stdout, flags, total, "total")
+			if err := printWcCounts(stdout, flags, total, "total"); err != nil {
+				return err
+			}
+		}
+		if !opened {
+			return ExitStatus(1)
 		}
 		return nil
 	}}

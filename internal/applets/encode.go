@@ -159,16 +159,26 @@ func newChecksumAppletWith(name, valued string, resolve func(appletOptions) (fun
 			return writeSum(stdout, newHash, stdin, "-")
 		}
 		view := ProcessViewFromContext(ctx)
+		opened := true
 		for _, path := range paths {
 			file, err := OpenProcessOperand(ctx, view, path, stdin)
 			if err != nil {
-				return cannotOpen(path, err)
+				// Of several operands, one that cannot be opened is named and the rest summed; see
+				// operand_reporter.go.
+				if len(paths) == 1 || !reportOperand(ctx, cannotOpen(path, err)) {
+					return cannotOpen(path, err)
+				}
+				opened = false
+				continue
 			}
 			sumErr := writeSum(stdout, newHash, file, path)
 			file.Close()
 			if sumErr != nil {
 				return sumErr
 			}
+		}
+		if !opened {
+			return ExitStatus(1)
 		}
 		return nil
 	}}

@@ -33,6 +33,12 @@ func grepStatus(err error) error {
 	if err == nil || errors.Is(err, ErrExitFalse) {
 		return err
 	}
+	// A bare status is already the answer: 2 after an operand that could not be read.
+	if _, isStatus := StatusCode(err); isStatus {
+		if _, carriesMessage := StatusMessage(err); !carriesMessage {
+			return err
+		}
+	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return err
 	}
@@ -63,9 +69,16 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 		return err
 	}
 	withNames := flags.showNames(len(targets))
-	matched := false
+	matched, unread := false, false
 	for _, target := range targets {
 		found, err := grepOne(target, expr, flags, withNames, printer)
+		// Of several operands, one that cannot be opened is named and the rest searched; see
+		// operand_reporter.go. The status is 2 at the end, as busybox's is, whatever matched.
+		var unreadable unreadableOperand
+		if errors.As(err, &unreadable) && len(targets) > 1 && reportOperand(ctx, unreadable.error) {
+			unread = true
+			continue
+		}
 		if err != nil {
 			return err
 		}
@@ -77,8 +90,15 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 			return nil
 		}
 	}
+	if unread {
+		return ExitStatus(2)
+	}
 	return grepMatchStatus(flags, matched, printer)
 }
+
+// unreadableOperand is an operand grep could not open, which it goes on past when there are
+// others to search.
+type unreadableOperand struct{ error }
 
 // grepMatchStatus turns what happened into an exit status.
 //
@@ -112,7 +132,7 @@ func grepOne(target grepTarget, expr *regexp.Regexp, flags grepFlags, withNames 
 		if flags.noMessages {
 			return false, nil
 		}
-		return false, operandFailure(target.name, err)
+		return false, unreadableOperand{operandFailure(target.name, err)}
 	}
 	// Closed explicitly and joined rather than deferred: a close error is a real
 	// failure -- a truncated read on a device -- and swallowing it would report a

@@ -24,6 +24,8 @@ func TestFilters_goOnPastAnOperandTheyCannotOpen(t *testing.T) {
 		applet string
 		args   []string
 		want   string
+		// status is 1 unless set: grep's is 2, as busybox's is.
+		status int
 	}{
 		{applet: "cat", want: "hi there\n"},
 		{applet: "tac", want: "hi there\n"},
@@ -32,6 +34,14 @@ func TestFilters_goOnPastAnOperandTheyCannotOpen(t *testing.T) {
 		{applet: "expand", want: "hi there\n"},
 		{applet: "strings", want: "hi there\n"},
 		{applet: "nl", want: "     1\thi there\n"},
+		{applet: "md5sum", want: "12f6bb1941df66b8f138a446d4e8670c  ok.txt\n"},
+		{applet: "sha1sum", want: "279d9035886d4c0427549863c4c2101e4a63e041  ok.txt\n"},
+		{applet: "sha256sum", want: "c641344867e9806fadfd219f25b62b97c94db0eed04a1d79e93676533cfb782b  ok.txt\n"},
+		{applet: "cksum", want: "3310114445 9 ok.txt\n"},
+		{applet: "sum", want: "31345     1 ok.txt\n"},
+		{applet: "wc", want: "        1         2         9 ok.txt\n        1         2         9 total\n"},
+		{applet: "grep", args: []string{"hi"}, want: "ok.txt:hi there\n", status: 2},
+		{applet: "egrep", args: []string{"hi"}, want: "ok.txt:hi there\n", status: 2},
 	} {
 		t.Run(test.applet, func(t *testing.T) {
 			applet, ok := applets.DefaultRegistry.Lookup(test.applet)
@@ -40,8 +50,9 @@ func TestFilters_goOnPastAnOperandTheyCannotOpen(t *testing.T) {
 			}
 			var stdout, stderr bytes.Buffer
 			err := applet.Run(ctx, append(test.args, "missing.txt", "ok.txt"), &bytes.Buffer{}, &stdout, &stderr)
-			if code, isStatus := applets.StatusCode(err); !isStatus || code != 1 {
-				t.Fatalf("returned %v, want status 1", err)
+			want := max(test.status, 1)
+			if code, isStatus := applets.StatusCode(err); !isStatus || code != want {
+				t.Fatalf("returned %v, want status %d", err, want)
 			}
 			if stdout.String() != test.want {
 				t.Fatalf("stdout = %q, want %q: the readable operand, read", stdout.String(), test.want)
