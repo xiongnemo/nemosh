@@ -84,6 +84,7 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 	if err != nil {
 		return Script{}, err
 	}
+	source = quoteAssignmentSubscripts(source)
 	lines, starts, err := numberedLogicalLines(source)
 	if err != nil {
 		return Script{}, err

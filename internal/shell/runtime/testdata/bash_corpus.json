@@ -1877,5 +1877,11 @@
     "stdout": "f () \n{ \n    ((z<<1))\n}\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "a[1 + 1]=x; c[5&3]=h; c[(1+2)*3]=9; printf '<%s>' \"${a[2]}\" \"${c[1]}\" \"${c[9]}\"",
+    "stdout": "<x><h><9>",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

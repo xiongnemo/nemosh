@@ -62,11 +62,7 @@
     },
     "array-assign.test.sh": {
       "Are quotes allowed?": "fail",
-      "Indexed LHS with spaces": "fail",
-      "Multiple LHS array words": "fail",
-      "Nested a[i[0]]=0": "fail",
       "Tricky parsing - a[ a[0]=1 ]=X  a[ a[0]+=1 ]+=X": "fail",
-      "argv.py a[1 + 2]=": "fail",
       "declare builtin doesn't allow spaces": "fail"
     },
     "array-assoc.test.sh": {
@@ -167,8 +163,6 @@
       "[bash_unset] localvar-inherit from tempenv": "fail"
     },
     "ble-idioms.test.sh": {
-      "Issue #1069 [53] - LHS array parsing a[1 + 2]=3 (see spec/array-assign for more)": "fail",
-      "Issue #1069 [53] BUG: a[1 + 1]=2, etc. fails": "fail",
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
       "is-array with ${var@a}": "fail",
       "recursive arith: recursion": "ash-only",

@@ -132,9 +132,37 @@ func (r Runtime) refusePrefixElements(command []word) ([]word, bool) {
 			dropped = true
 			continue
 		}
+		// So is one whose subscript or value is computed, as in `a[$i]=x f` and `a[0]=$v f`, and
+		// `a[1 + 1]=x f`, whose subscript is quoted by now. Each was made, and for good.
+		if target, element := writtenElementTarget(item); !ok && element {
+			fmt.Fprintf(r.streams.Stderr, "`%s': not a valid identifier\n", target)
+			dropped = true
+			continue
+		}
 		kept = append(kept, item)
 	}
 	return kept, dropped
+}
+
+// writtenElementTarget is an element assignment's `name[subscript]` as written, and whether the
+// word is one.
+func writtenElementTarget(item word) (string, bool) {
+	if !isAssignmentWord(item) {
+		return "", false
+	}
+	text := printWord(item)
+	name, _, found := strings.Cut(text, "[")
+	if !found || !isValidVariableName(name) {
+		return "", false
+	}
+	end := strings.Index(text, "]=")
+	if appended := strings.Index(text, "]+="); appended >= 0 && (end < 0 || appended < end) {
+		end = appended
+	}
+	if end < 0 {
+		return "", false
+	}
+	return text[:end+1], true
 }
 
 func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, savedStatus int) {
