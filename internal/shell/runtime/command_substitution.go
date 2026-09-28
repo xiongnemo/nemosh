@@ -2,6 +2,11 @@ package runtime
 
 func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 	quotes := []byte{0}
+	// starts is where each level's text begins, which is what a case in it is looked for in: a
+	// `)` that closes a `$(` in a case's arm is its own, and no pattern's. The case check read
+	// from the outermost level's start, so it skipped that `)` too, and `x=$(` then `a)
+	// y=$(echo b);;` ran on to the end as an unterminated substitution.
+	starts := []int{bodyStart}
 	escaped := false
 	for index := bodyStart; index < len(input); index++ {
 		char := input[index]
@@ -49,7 +54,7 @@ func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 			}
 		}
 		if char == '$' && index+1 < len(input) && input[index+1] == '(' && quote != '\'' {
-			quotes = append(quotes, 0)
+			quotes, starts = append(quotes, 0), append(starts, index+2)
 			index++
 			continue
 		}
@@ -71,7 +76,7 @@ func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 		// only one of the two would leave the count off by one, which is why both live
 		// under the same test. `echo $(case x in x) echo hit;; esac)` was cut off at the
 		// pattern before this. See case_awareness.go.
-		if quote == 0 && (char == '(' || char == ')') && insideCase(input[bodyStart:index]) {
+		if quote == 0 && (char == '(' || char == ')') && insideCase(input[starts[len(starts)-1]:index]) {
 			continue
 		}
 		if char == '(' && quote == 0 {
@@ -82,11 +87,11 @@ func commandSubstitutionEnd(input string, bodyStart int) (int, bool) {
 			// A subshell inside a substitution: `$( (cd x && pwd) )`. Only `$(` pushed a
 			// level, so the subshell's `)` popped the substitution's own and the body
 			// was cut off there.
-			quotes = append(quotes, 0)
+			quotes, starts = append(quotes, 0), append(starts, index+1)
 			continue
 		}
 		if char == ')' && quote == 0 {
-			quotes = quotes[:len(quotes)-1]
+			quotes, starts = quotes[:len(quotes)-1], starts[:len(starts)-1]
 			if len(quotes) == 0 {
 				return index, true
 			}
