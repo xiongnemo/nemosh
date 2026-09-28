@@ -19,10 +19,10 @@ import (
 // beside the other builtins whose answer is more than a status.
 
 func (r Runtime) dot(ctx context.Context, args []string) int {
-	return r.dotResult(ctx, args).status
+	return r.dotResult(ctx, args, 0).status
 }
 
-func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
+func (r Runtime) dotResult(ctx context.Context, args []string, savedStatus int) lineResult {
 	// `--` before the file, which busybox's `.` and bash's source both take; it was read as
 	// the file's name.
 	if len(args) > 0 && args[0] == "--" {
@@ -47,7 +47,7 @@ func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
 	return child.withDotArguments(args[1:], func() lineResult {
 		debug, debugSet := child.hideDebugTrap()
 		defer child.restoreDebugTrap(debug, debugSet)
-		status, control := child.runScriptResult(ctx, string(data), 1, false)
+		status, control := child.runScriptResult(ctx, string(data), 1, false, savedStatus)
 		if _, set := r.traps[trapRETURN]; set && (control == flowNone || control == flowReturn) {
 			child.runTrap(ctx, trapRETURN, status)
 		}
@@ -59,13 +59,13 @@ func (r Runtime) dotResult(ctx context.Context, args []string) lineResult {
 }
 
 func (r Runtime) eval(ctx context.Context, args []string) int {
-	return r.evalResult(ctx, args).status
+	return r.evalResult(ctx, args, 0).status
 }
 
-func (r Runtime) evalResult(ctx context.Context, args []string) lineResult {
+func (r Runtime) evalResult(ctx context.Context, args []string, savedStatus int) lineResult {
 	if len(args) == 0 {
 		return lineResult{}
 	}
-	status, control := r.runScriptResult(ctx, strings.Join(args, " "), r.currentLine(), false)
+	status, control := r.runScriptResult(ctx, strings.Join(args, " "), r.currentLine(), false, savedStatus)
 	return lineResult{status: status, control: control}
 }

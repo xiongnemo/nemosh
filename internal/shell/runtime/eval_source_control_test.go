@@ -82,3 +82,15 @@ func TestInteractive_aShellErrorDoesNotEndTheSession(t *testing.T) {
 		t.Fatalf("stderr = %q, want the diagnostic", stderr.String())
 	}
 }
+
+// eval's text and a sourced file begin with `$?` as it was before them, and text that runs
+// nothing answers 0, as in both references. It began at 0, so `false; eval 'echo $?'` said 0.
+func TestEvalAndSource_beginWithTheStatusBeforeThem(t *testing.T) {
+	var stdout bytes.Buffer
+	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: new(bytes.Buffer)})
+	script := "false; eval 'echo $?'\nf() { return 3; }; f; eval 'echo $?'\nfalse; . /dev/stdin <<END\necho \\$?\nEND\n" +
+		"false; eval '(exit $?)'; echo \"d=$?\"\nfalse; eval ' '; echo \"a=$?\"\nfalse; . /dev/null; echo \"c=$?\"\n"
+	if status := rt.RunScript(context.Background(), script); status != 0 || stdout.String() != "1\n3\n1\nd=1\na=0\nc=0\n" {
+		t.Fatalf("got %q/%d, want each text to begin with the status before it", stdout.String(), status)
+	}
+}

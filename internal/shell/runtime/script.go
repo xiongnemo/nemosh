@@ -18,13 +18,15 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 }
 
 func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool) int {
-	status, _ := r.runScriptResult(ctx, script, 1, runExitTrap)
+	status, _ := r.runScriptResult(ctx, script, 1, runExitTrap, 0)
 	return status
 }
 
 // runScriptResult parses script as beginning on source line first, for $LINENO: 1 for a
-// script of its own, the running command's line for eval.
-func (r Runtime) runScriptResult(ctx context.Context, script string, first int, runExitTrap bool) (int, flowControl) {
+// script of its own, the running command's line for eval. savedStatus is `$?` as the text
+// begins: eval's and a sourced file's is the status before them, as both references have it.
+// It was 0, so `false; eval 'echo $?'` said 0. Text that runs nothing answers 0, as there.
+func (r Runtime) runScriptResult(ctx context.Context, script string, first int, runExitTrap bool, savedStatus int) (int, flowControl) {
 	prepared, parseErr := parseScriptAt(script, first)
 	status := 0
 	control := flowNone
@@ -33,8 +35,8 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	// `.` are not.
 	case parseErr == nil && runExitTrap:
 		status, control = r.executeTopLevel(ctx, prepared.program)
-	case parseErr == nil:
-		status, control = r.executePrepared(ctx, prepared)
+	case parseErr == nil && len(prepared.program) > 0:
+		status, control = r.executeProgram(ctx, prepared.program, savedStatus)
 	}
 	if parseErr != nil && control == flowNone {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", parseErr)
