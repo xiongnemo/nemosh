@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestInterruptController_firstInterruptDoesNotPoisonNextExecution(t *testing.T) {
@@ -108,5 +109,8 @@ func TestSignalHelperProcess(t *testing.T) {
 		return
 	}
 	fmt.Println("READY")
-	select {}
+	// Asleep on a timer and not in `select {}`: with nothing else running, the runtime takes a
+	// bare select for a deadlock and exits 2 at once. That raced the interrupt the test sends,
+	// and macOS CI lost the race, the helper's 2 standing in for the 130 the kill leaves.
+	time.Sleep(time.Hour)
 }
