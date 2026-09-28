@@ -35,7 +35,7 @@ func newTacApplet() Applet {
 		if err != nil {
 			return err
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			lines, finalNewline, err := readLinesWithEnding(reader)
 			if err != nil {
 				return err
@@ -68,7 +68,7 @@ func newRevApplet() Applet {
 		if err != nil {
 			return err
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			return eachLine(reader, func(line string, ending string) error {
 				// By character for UTF-8 and by byte for anything else, because
 				// rewriting bytes it cannot read is how this destroyed a GBK file.
@@ -109,7 +109,7 @@ func newNlApplet() Applet {
 			return fmt.Errorf("unsupported numbering style: %s", style)
 		}
 		number := 0
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			// A newline rather than the ending the input had, which is the one
 			// place here that deliberately does *not* preserve it. nl produces a
 			// new document -- every line gains a number and a tab -- rather than
@@ -244,6 +244,38 @@ func eachTextInput(ctx context.Context, paths []string, stdin io.Reader, body fu
 		if err := errors.Join(bodyErr, closeErr); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// eachTextFile is eachTextInput for the filters that read any number of files, as busybox's
+// tac, rev, nl, fold, expand, unexpand, strings and od do. Of several operands, one that cannot
+// be opened is named and the rest read; see operand_reporter.go. A single one is still the
+// error the applet returns. The applets that read one input, xxd and base64 among them, stop at
+// it as busybox's do.
+func eachTextFile(ctx context.Context, paths []string, stdin io.Reader, body func(io.Reader) error) error {
+	if len(paths) < 2 {
+		return eachTextInput(ctx, paths, stdin, body)
+	}
+	view := ProcessViewFromContext(ctx)
+	opened := true
+	for _, path := range paths {
+		file, err := OpenProcessOperand(ctx, view, path, stdin)
+		if err != nil {
+			if !reportOperand(ctx, cannotOpen(path, err)) {
+				return cannotOpen(path, err)
+			}
+			opened = false
+			continue
+		}
+		bodyErr := body(file)
+		closeErr := file.Close()
+		if err := errors.Join(bodyErr, closeErr); err != nil {
+			return err
+		}
+	}
+	if !opened {
+		return ExitStatus(1)
 	}
 	return nil
 }

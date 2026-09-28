@@ -27,7 +27,7 @@ func newExpandApplet() Applet {
 		if err != nil {
 			return err
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			// The ending is written back rather than replaced by a newline:
 			// expand changes tabs to spaces and nothing else, so a CRLF file stays
 			// CRLF and a file with no final newline stays that way. Measured
@@ -83,7 +83,7 @@ func newUnexpandApplet() Applet {
 		if err != nil {
 			return err
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			// The ending preserved, for the same reason as expand above.
 			return eachLine(reader, func(line, ending string) error {
 				_, err := io.WriteString(stdout, unexpandTabs(line, stop, options.has('a'))+ending)

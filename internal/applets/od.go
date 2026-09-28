@@ -51,7 +51,7 @@ func newDumperApplet(name string) Applet {
 		if err := request.apply(name, options); err != nil {
 			return err
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			return request.write(stdout, reader)
 		})
 	}}

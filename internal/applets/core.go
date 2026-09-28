@@ -21,7 +21,7 @@ func (a simpleApplet) Run(ctx context.Context, args []string, stdin io.Reader, s
 		return ctx.Err()
 	default:
 		if a.runContext != nil {
-			return a.runContext(ctx, args, stdin, stdout, stderr)
+			return a.runContext(withOperandReporter(ctx, a.name, stderr), args, stdin, stdout, stderr)
 		}
 		return a.run(args, stdin, stdout, stderr)
 	}

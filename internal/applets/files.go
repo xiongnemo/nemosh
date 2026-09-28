@@ -69,7 +69,8 @@ func copyWithContext(ctx context.Context, stdout io.Writer, stdin io.Reader) (in
 
 func newCatApplet() Applet     { return catApplet{} }
 func (catApplet) Name() string { return "cat" }
-func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
+func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	ctx = withOperandReporter(ctx, "cat", stderr)
 	// An option cat does not implement is refused by name instead of being
 	// opened as a file and reported missing.
 	given, paths, err := streamOptionsAndOperands("cat", args, "-n")
@@ -84,18 +85,28 @@ func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 		return err
 	}
 	view := ProcessViewFromContext(ctx)
+	opened := true
 	for _, path := range paths {
 		// A lone `-` is the stdin, which is how `cat header.txt - footer.txt`
 		// mixes a stream into a list of files. See OpenProcessOperand.
 		file, err := OpenProcessOperand(ctx, view, path, stdin)
 		if err != nil {
-			return cannotOpen(path, err)
+			// Of several operands, one that cannot be opened is named and the rest are read; see
+			// operand_reporter.go.
+			if len(paths) == 1 || !reportOperand(ctx, cannotOpen(path, err)) {
+				return cannotOpen(path, err)
+			}
+			opened = false
+			continue
 		}
 		_, copyErr := number.copy(ctx, stdout, file)
 		closeErr := file.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
 			return err
 		}
+	}
+	if !opened {
+		return ExitStatus(1)
 	}
 	return nil
 }

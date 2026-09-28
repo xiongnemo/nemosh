@@ -92,7 +92,7 @@ func newFoldApplet() Applet {
 			}
 			width = parsed
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			// The breaks fold *inserts* are newlines; the ending the input had goes
 			// on the last piece only. Measured against busybox, which is the only
 			// way to know: folding a CRLF line at width three answers three pieces,
@@ -249,7 +249,7 @@ func newStringsApplet() Applet {
 		if err != nil {
 			return err
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
 			return writePrintableRuns(stdout, reader, least, radix)
 		})
 	}}
