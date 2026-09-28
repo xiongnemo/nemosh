@@ -1829,5 +1829,11 @@
     "stdout": "(a b) 2\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "shopt -s failglob\necho *.ZZ 2>/dev/null; echo same=$?\necho next=$?",
+    "stdout": "next=1\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

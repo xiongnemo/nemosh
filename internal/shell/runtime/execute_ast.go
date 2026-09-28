@@ -37,11 +37,20 @@ func (r Runtime) executeTopLevel(ctx context.Context, program []programNode) (in
 
 func (r Runtime) executeStatements(ctx context.Context, program []programNode, savedStatus int, topLevel bool) (int, flowControl) {
 	status := savedStatus
+	discarded := 0
 	for _, item := range program {
+		// bash drops the rest of the line with the command it abandons: after `echo *.zz;
+		// echo same` under failglob, same is never said, and the next line runs. The
+		// commands after it on its line were run here, each a statement of its own.
+		if discarded > 0 && statementLine(item) == discarded {
+			continue
+		}
+		discarded = 0
 		result := r.executeNode(ctx, item, status)
 		status = result.status
 		if result.control == flowDiscard && topLevel && !r.options.errExit {
 			result.control = flowNone
+			discarded = statementLine(item)
 		}
 		if result.control != flowNone {
 			return status, result.control

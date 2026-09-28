@@ -634,9 +634,6 @@
       "Function name with $": "ash-only",
       "Function name with command sub": "ash-only"
     },
-    "glob-bash.test.sh": {
-      "shopt -s failglob behavior on single line with semicolon": "fail"
-    },
     "glob.test.sh": {
       "Glob ordering respects LC_COLLATE (zsh respects this too)": "ash-only",
       "\\ in unquoted substitutions does not match a backslash": "fail",
