@@ -14,6 +14,8 @@ func TestRuntime_bashCommandIsTheRunningCommand(t *testing.T) {
 		{"f() { echo \"[$BASH_COMMAND]\"; }; f a\n", "[echo \"[$BASH_COMMAND]\"]\n"},
 		{"trap 'echo \"[$BASH_COMMAND]\"' EXIT\necho hi\n", "hi\n[echo hi]\n"},
 		{"v=$(echo \"[$BASH_COMMAND]\"); echo \"$v\"\n", "[echo \"[$BASH_COMMAND]\"]\n"},
+		// After a pipeline, its last simple command, in the shell, and that command's line.
+		{"trap 'echo \"err $LINENO [$BASH_COMMAND]\"' ERR\necho x\ntrue | false y\ntrue | { false; }\necho end\n", "x\nerr 3 [false y]\nerr 4 [true]\nend\n"},
 	} {
 		if stdout, status := runScriptCapturing(test.script); stdout != test.want || status != 0 {
 			t.Errorf("%d: %q: got %q/%d, want %q/0, as bash answers", index, test.script, stdout, status, test.want)

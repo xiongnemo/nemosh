@@ -1865,5 +1865,11 @@
     "stdout": "[2] for x in 1 2\n[2] :\n[2] for x in 1 2\n[2] :\n[4] f\n[4] cat\nin-f\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "trap 'echo \"err $LINENO [$BASH_COMMAND]\"' ERR\necho x\ntrue | false y",
+    "stdout": "x\nerr 3 [false y]\n",
+    "status": 1,
+    "reference": "bash-5.3"
   }
 ]

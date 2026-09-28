@@ -46,12 +46,14 @@ func (r Runtime) debugTrapHead(ctx context.Context, line int, head func() string
 	return r.debugTrap(ctx, savedStatus)
 }
 
-// debugTrapStages runs the trap for each stage of a pipeline that is a simple command, before
-// any starts. The stages then run without it; see executeTypedPipelineStages.
-func (r Runtime) debugTrapStages(ctx context.Context, value pipeline, savedStatus int) (lineResult, bool) {
-	if r.traps[trapDEBUG] == "" || r.trapRunning[trapDEBUG] {
-		return lineResult{}, false
-	}
+// enterStages makes each stage of a pipeline that is a simple command the one running in turn,
+// in the shell, before any starts, as bash does before it forks each, and runs the DEBUG trap
+// for it. The stages then run without it; see executeTypedPipelineStages. So an ERR trap after
+// the pipeline has the last such stage's $LINENO and $BASH_COMMAND, as bash's has: both were the
+// command's before the pipeline, since the stages ran in snapshots of their own. busybox-w32's
+// $LINENO there is that line before too, which is a line left stale rather than a choice, so
+// bash's answer is the one taken.
+func (r Runtime) enterStages(ctx context.Context, value pipeline, savedStatus int) (lineResult, bool) {
 	for _, command := range value.commands {
 		if simple, ok := command.(simpleCommand); ok {
 			r.enterSimpleCommand(simple)
@@ -66,10 +68,10 @@ func (r Runtime) debugTrapStages(ctx context.Context, value pipeline, savedStatu
 // debugTrapJob is the trap for a job's commands, which bash runs before it forks them when
 // the job is one pipeline, and not at all when it is an and-or list, which it forks whole.
 func (r Runtime) debugTrapJob(ctx context.Context, value andOr, savedStatus int) (lineResult, bool) {
-	if len(value.pipelines) != 1 {
+	if len(value.pipelines) != 1 || r.traps[trapDEBUG] == "" {
 		return lineResult{}, false
 	}
-	return r.debugTrapStages(ctx, value.pipelines[0], savedStatus)
+	return r.enterStages(ctx, value.pipelines[0], savedStatus)
 }
 
 // hideDebugTrap takes the trap away from a function's body or a sourced file, which do not
