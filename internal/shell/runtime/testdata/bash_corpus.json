@@ -1817,5 +1817,11 @@
     "stdout": "z/a /a\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "pre=x exec printenv pre",
+    "stdout": "x\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

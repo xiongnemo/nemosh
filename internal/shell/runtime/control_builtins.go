@@ -40,7 +40,14 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 		if len(command) == 0 {
 			return lineResult{status: r.execRedirect(operations)}, true
 		}
-		return lineResult{status: r.execBuiltin(ctx, command), control: flowExec}, true
+		// A prefix assignment is in the environment of the command exec runs, as it is for
+		// any command: `pre=x exec printenv pre` says x in both references. It was made in
+		// the shell alone, above, and the command never saw it.
+		runner := r
+		if temporary := r.withLocalAssignments(assignments); temporary != nil {
+			runner = *temporary
+		}
+		return lineResult{status: runner.execBuiltin(ctx, command), control: flowExec}, true
 	case "return":
 		status := exitStatus(args[1:], savedStatus)
 		if r.sourceDepth == 0 && r.functionDepth == 0 {
