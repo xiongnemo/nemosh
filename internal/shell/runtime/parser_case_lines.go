@@ -103,11 +103,28 @@ func splitCasePatternLine(line string) (string, string, bool) {
 			index = skipBalancedParens(line, index) - 1
 			continue
 		}
+		if end := patternExpansionEnd(line, index); unquoted[index] && end > 0 {
+			index = end
+			continue
+		}
 		if unquoted[index] && line[index] == ')' {
 			return line[:index+1], strings.TrimLeft(line[index+1:], " \t"), true
 		}
 	}
 	return line, "", false
+}
+
+// patternExpansionEnd is the last byte of the `$(...)`, `$((...))` or `${...}` at index, whose
+// `)` and `|` are its own and neither a pattern's end nor an alternative's, or 0 for none:
+// `$((i+2)))` is one pattern. It was cut at the arithmetic's first `)`.
+func patternExpansionEnd(text string, index int) int {
+	if index+1 >= len(text) || text[index] != '$' || text[index+1] != '(' && text[index+1] != '{' {
+		return 0
+	}
+	if end, ok := expansionEnd(text, index); ok {
+		return end
+	}
+	return 0
 }
 
 // splitCaseAlternatives cuts a case pattern at the top-level `|` POSIX 2.9.4.3
@@ -121,6 +138,10 @@ func splitCaseAlternatives(pattern string) []string {
 		// group, and splitting there left `xyz)` whose `)` reached the line parser.
 		if unquoted[index] && wordGroupOpensAt(pattern, index) {
 			index = skipBalancedParens(pattern, index) - 1
+			continue
+		}
+		if end := patternExpansionEnd(pattern, index); unquoted[index] && end > 0 {
+			index = end
 			continue
 		}
 		if !unquoted[index] || pattern[index] != '|' {

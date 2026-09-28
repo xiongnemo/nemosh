@@ -87,6 +87,24 @@ func casePatternPosition(prefix string) bool {
 		case quote != 0:
 			// Inside quotes nothing is a keyword, so a `"case"` in a string counts for
 			// nothing -- the same trade insideCase makes, for the same reason.
+		case char == '$' && index+1 < len(prefix) && (prefix[index+1] == '(' || prefix[index+1] == '{'):
+			// An expansion is the word's, its parentheses too: `$((i+2)))` is one pattern and
+			// its `)`. Its first `)` ended the pattern, so the last was read as a subshell's.
+			end, ok := expansionEnd(prefix, index)
+			if !ok {
+				return false
+			}
+			word.WriteString(prefix[index : end+1])
+			index = end
+		case char == '(' && index+1 < len(prefix) && prefix[index+1] == '(':
+			// An arithmetic command's `;;` is its own, in `for ((i = 0;; i++))`, and a prefix
+			// that ends inside one is at no pattern's place.
+			end := arithmeticCommandEnd(prefix, index)
+			if end == 0 {
+				return false
+			}
+			endWord()
+			index = end
 		case char == ';':
 			endWord()
 			// `;;` and `;;&` open the next pattern; a single `;` ends a command inside an
