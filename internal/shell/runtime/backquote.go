@@ -34,6 +34,18 @@ func rewriteBackquotes(source string) (string, error) {
 			index = end
 			continue
 		}
+		// A comment is text to its line's end, a quote or backquote in it too: `# don't` opened a
+		// quote that hid every backquote after it, and "# the `iota' function" was a
+		// substitution that never closed.
+		if char == '#' && quote == 0 && commentStarts(source, index) {
+			end := strings.IndexByte(source[index:], '\n')
+			if end < 0 {
+				end = len(source) - index
+			}
+			out.WriteString(source[index : index+end])
+			index += end - 1
+			continue
+		}
 		if char == '\'' && quote != '"' || char == '"' && quote != '\'' {
 			if quote == char {
 				quote = 0

@@ -290,6 +290,8 @@ func (scanner *syntaxScanner) toggleDoubleQuote() {
 	}
 }
 
+// commentStarts is whether the `#` at index begins a word, and so a comment. A newline before it
+// counts for the passes that read a whole script at once.
 func commentStarts(line string, index int) bool {
-	return index == 0 || line[index-1] == ' ' || line[index-1] == '\t'
+	return index == 0 || line[index-1] == ' ' || line[index-1] == '\t' || line[index-1] == '\n'
 }
