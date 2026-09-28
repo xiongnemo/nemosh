@@ -455,7 +455,6 @@
       "Prefix assignments persist after readonly, but NOT exported (set -o posix)": "ash-only",
       "Prefix binding for exec is a special case (versus e.g. readonly)": "fail",
       "Special builtins can't be redefined as shell functions (set -o posix)": "fail",
-      "Which shells allow special builtins to be redefined?": "fail",
       "bash 'type' gets confused - says 'function', but runs builtin": "fail",
       "exec without args is a special case of the special case in some shells": "ash-only"
     },

@@ -207,10 +207,10 @@ func lastArgument(commandArgs []string) string {
 // one turned `V=x break` into a lookup for a command named `break`. In a `while true`
 // loop that never ended.
 func (r Runtime) dispatchCommand(ctx context.Context, commandArgs []string, assignments []assignment, expanded []shellToken, operations []redirectOperation, savedStatus int) lineResult {
-	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, operations, savedStatus); handled {
+	if result, handled := r.functionCommand(ctx, commandArgs, assignments, operations, savedStatus); handled {
 		return result
 	}
-	if result, handled := r.functionCommand(ctx, commandArgs, assignments, operations, savedStatus); handled {
+	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, operations, savedStatus); handled {
 		return result
 	}
 	return lineResult{status: r.runCommandWithTokenAssignments(ctx, assignments, expanded[len(expanded)-len(commandArgs):], operations)}

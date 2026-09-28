@@ -1805,5 +1805,11 @@
     "stdout": "one\ntwo\n",
     "status": 0,
     "reference": "busybox-w32"
+  },
+  {
+    "script": "exit() { echo \"cleanup $1\"; command exit \"$1\"; }; echo before; exit 3; echo after",
+    "stdout": "before\ncleanup 3\n",
+    "status": 3,
+    "reference": "busybox-w32"
   }
 ]

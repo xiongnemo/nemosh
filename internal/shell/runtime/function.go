@@ -19,12 +19,15 @@ const maxFunctionCallDepth = 128
 // carries on out, as it does in both references. busybox lets a `break` in a function leave
 // the caller's loop, and so does this.
 //
-// A special builtin is found before a function, as runCommandResolved has it, so this
-// declines one. Prefix assignments are the function's for the call and restored after it --
-// both references restore `x` after `x=2 f` even when f assigned x itself -- and whatever
-// else the body changed stays changed.
+// A function is found before any builtin of its name, a special one too, as busybox-w32 and
+// bash both look a command up: `exit() { cleanup; command exit "$@"; }` wraps exit. The
+// special builtins, and before them the ones that change the flow of control, were found
+// first, POSIX's order, so such a function was defined and never called. `command` still
+// skips it. Prefix assignments are the function's for the call and restored after it -- both
+// references restore `x` after `x=2 f` even when f assigned x itself -- and whatever else the
+// body changed stays changed.
 func (r Runtime) functionCommand(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation, savedStatus int) (lineResult, bool) {
-	if len(args) == 0 || isSpecialBuiltin(args[0]) {
+	if len(args) == 0 {
 		return lineResult{}, false
 	}
 	definition, found := r.calledFunction(args[0])
