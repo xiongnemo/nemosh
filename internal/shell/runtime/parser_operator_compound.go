@@ -47,6 +47,11 @@ func topLevelOperators(line string) []operatorAt {
 			index = ansiQuoteClose(line, index)
 		case char == '\'' || char == '"':
 			quote = char
+		// An expansion's parentheses are its own. With `$((1+1))` as a case pattern, the
+		// first `(` was taken for the pattern's and the second `)` for a close, so a function
+		// body's depth fell to nothing and an arm's `&&` read as the definition's own.
+		case patternExpansionEnd(line, index) > 0:
+			index = patternExpansionEnd(line, index)
 		// A pattern's `)` closes nothing (case_pattern_position.go). Counting it took the
 		// depth to zero inside a function whose body held a case, so an `||` further down
 		// the body read as the definition's own: `f() { case ...; *) ...;; esac; (x) ||
