@@ -44,6 +44,12 @@ func parseFunctionDefinition(line string, budget *parseBudget, depth int) (funct
 		index++
 	}
 	if index >= len(line) || line[index] != ')' {
+		// `@(a|b)` and `!(cmd)` where a command begins: a name ending in a pattern character
+		// is a function's only when its parentheses are empty, and otherwise its `(` begins
+		// an extended pattern or a negated subshell.
+		if endsInPatternCharacter(rawName) {
+			return functionDefinition{}, false, nil
+		}
 		return functionDefinition{}, true, fmt.Errorf("%w: missing ) in function definition", ErrIncompleteScript)
 	}
 	remainder := strings.TrimSpace(line[index+1:])
@@ -105,14 +111,18 @@ func standaloneFunctionHeader(line string) bool {
 // lib::fn, my-fn, a.b and 1fn are the names library code gives functions to fake
 // namespaces, and each was a syntax error that stopped the whole script. Only a word
 // that is something else is refused: one with blanks, quoting, an expansion, an operator,
-// a bracket, a comment's `#`, or the `=` of an assignment. So is one ending in ?, *, +,
-// @ or !, since here `@(` always begins an extended pattern.
+// a bracket, a comment's leading `#`, or the `=` of an assignment.
 //
 // An `=` is an assignment's only after a name, as both references read it: `a=b() {...}` is
 // an assignment and then a `(`, a syntax error, where `func-name=ext () {...}` defines a
 // function called that. Every `=` was refused, and so was that definition.
+//
+// A name may end in ?, *, +, @ or !, `f+() {...}`, and hold a `#` after its first character,
+// `f#x() {...}`, as busybox-w32 and bash with extglob off, its default, both read them. Both
+// were refused, since here `+(` begins an extended pattern; parseFunctionDefinition tells
+// the two apart by the parentheses, which are empty only in a definition.
 func newFunctionName(value string) (functionName, bool) {
-	if value == "" || strings.ContainsAny(value, " \t\n\"'\\$`()<>|&;{}[]#") {
+	if value == "" || value[0] == '#' || strings.ContainsAny(value, " \t\n\"'\\$`()<>|&;{}[]") {
 		return functionName{}, false
 	}
 	if target, _, found := strings.Cut(value, "="); found {
@@ -120,10 +130,13 @@ func newFunctionName(value string) (functionName, bool) {
 			return functionName{}, false
 		}
 	}
-	if strings.IndexByte("?*+@!", value[len(value)-1]) >= 0 {
-		return functionName{}, false
-	}
 	return functionName{value: value}, true
+}
+
+// endsInPatternCharacter reports a name that ends in a character that begins an extended
+// pattern before a `(`.
+func endsInPatternCharacter(name string) bool {
+	return name != "" && strings.IndexByte("?*+@!", name[len(name)-1]) >= 0
 }
 
 func parseFunctionBody(source string, budget *parseBudget, depth int) (commandNode, error) {
