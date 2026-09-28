@@ -131,7 +131,12 @@ func (r Runtime) buildParameter(ctx context.Context, build *fieldBuilder, part w
 	if r.buildDefault(ctx, build, part, savedStatus) {
 		return
 	}
-	values := r.expandParameterPart(ctx, part, savedStatus)
+	// Unquoted, an array's `*` forms are a field per element, as `$*` is: with IFS empty,
+	// `${a[*]}` over (a 'b c') is a and b c, in bash. They were joined first, into ab c.
+	star := part.quote == quoteUnquoted && isArrayStarReference(part.text)
+	expander := r
+	expander.starFields = star
+	values := expander.expandParameterPart(ctx, part, savedStatus)
 	if joined, isList := r.assignedList(part, values); isList {
 		build.text(joined, false)
 		return
@@ -140,7 +145,7 @@ func (r Runtime) buildParameter(ctx context.Context, build *fieldBuilder, part w
 	switch {
 	// Unquoted, `$@`, `$*` and `${a[@]}` are a field per element, each split in turn, an
 	// empty one vanishing; see unquotedList.
-	case part.quote == quoteUnquoted && (isArrayAtReference(part.text) || list == "$@" || list == "$*"):
+	case part.quote == quoteUnquoted && (isArrayAtReference(part.text) || star || list == "$@" || list == "$*"):
 		build.unquotedList(values, r.starSeparator())
 	// `"${a[@]}"` is one word per element, exactly as `"$@"` is -- which is the whole
 	// reason arrays are worth having, since it is the only form that keeps an element

@@ -48,3 +48,19 @@ func TestRuntime_fieldSplittingAtExpansionEdges(t *testing.T) {
 		})
 	}
 }
+
+// Unquoted, an array's `*` forms are a field per element, as unquoted `$*` is: with IFS empty
+// nothing splits them, and they stay apart. Quoted, and in an assignment, they are joined with
+// IFS's first character. bash's answers, measured; busybox has no arrays. They were joined
+// first, so with IFS empty `${a[*]}` over (a 'b c') was the one field ab c.
+func TestRuntime_unquotedArrayStarIsAFieldPerElement(t *testing.T) {
+	script := "a=(a \"b c\"); IFS=\n" +
+		"printf '<%s>' ${a[*]}; echo; printf '<%s>' ${a[*]/b/X}; echo; printf '<%s>' ${a[*]@Q}; echo\n" +
+		"x=${a[*]}; echo \"[$x]\"; printf '<%s>' \"${a[*]}\"; echo; printf '<%s>' ${#a[*]}; echo\n" +
+		"IFS=:; printf '<%s>' ${a[*]}; echo; e=(); printf '<%s>' ${e[*]}; echo '|'\n" +
+		"set -- p \"q r\"; IFS=; printf '<%s>' ${*/p/P}; echo\n"
+	want := "<a><b c>\n<a><X c>\n<'a'><'b c'>\n[ab c]\n<ab c>\n<2>\n<a><b c>\n<>|\n<P><q r>\n"
+	if stdout, status := runScriptCapturing(script); stdout != want || status != 0 {
+		t.Fatalf("got %q/%d, want %q/0, as bash answers", stdout, status, want)
+	}
+}

@@ -920,7 +920,6 @@
       "IFS empty doesn't do splitting": "fail",
       "IFS unset behaves like $' \\t\\n'": "fail",
       "IFS='' with ${!a[@]} and ${!a[*]} (bug #627)": "fail",
-      "IFS='' with ${a[@]} and ${a[*]} (bug #627)": "fail",
       "IFS=x and '' and $@ (#2)": "ash-only",
       "IFS=x and '' and $@ (#3)": "ash-only",
       "IFS=x and '' and $@ - same bug as spec/toysh-posix case #12": "ash-only",

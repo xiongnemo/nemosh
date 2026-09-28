@@ -35,6 +35,32 @@ func isArrayAtReference(text string) bool {
 	return isListOperatorReference(body)
 }
 
+// isArrayStarReference reports the `*` forms of an array: `${a[*]}`, its subscripts
+// `${!a[*]}`, and an operator on it or on `$*`. Unquoted, each is a field per element, as
+// unquoted `$*` is; see buildParameter.
+func isArrayStarReference(text string) bool {
+	body, ok := strings.CutPrefix(text, "${")
+	if !ok {
+		return false
+	}
+	body, ok = strings.CutSuffix(body, "}")
+	if !ok {
+		return false
+	}
+	if reference, ok := parseArrayReference(strings.TrimPrefix(body, "!")); ok {
+		return reference.subscript == "*"
+	}
+	name, _, _, ok := splitParameterOperator(body)
+	if transformed, _, isTransform := splitTransform(body); isTransform {
+		name, ok = transformed, true
+	}
+	if !ok {
+		return false
+	}
+	reference, isElement := parseArrayReference(name)
+	return name == "*" || isElement && reference.subscript == "*"
+}
+
 // isListOperatorReference reports whether a body is `@op`, `name[@]op` -- a list with
 // an operator applied to it. The `*` forms are excluded because they join into one
 // word, which is exactly what makes them the `*` forms.

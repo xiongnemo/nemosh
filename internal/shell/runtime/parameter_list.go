@@ -138,7 +138,7 @@ func (r Runtime) sliceList(ctx context.Context, elements []string, indices []int
 // them, and every other operator on a `*` form kept its first element alone: bash answers
 // `"${a[*]/b/X}"` over (ab cd) with aX cd, and this answered aX.
 func (r Runtime) joinStar(name string, elements []string) []string {
-	if strings.HasSuffix(name, "[*]") || name == "*" {
+	if (strings.HasSuffix(name, "[*]") || name == "*") && !r.starFields {
 		return []string{strings.Join(elements, r.starSeparator())}
 	}
 	return elements

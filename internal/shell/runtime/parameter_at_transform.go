@@ -131,8 +131,9 @@ func (r Runtime) transformList(ctx context.Context, name string, operator byte) 
 		}
 		transformed = append(transformed, value)
 	}
-	if reference, ok := parseArrayReference(name); name == "*" || ok && reference.subscript == "*" {
-		// The `*` forms join into one word, transformed or not.
+	if reference, ok := parseArrayReference(name); (name == "*" || ok && reference.subscript == "*") && !r.starFields {
+		// The `*` forms join into one word, transformed or not, unless unquoted; see
+		// buildParameter.
 		return []string{strings.Join(transformed, r.starSeparator())}, true, nil
 	}
 	return transformed, true, nil

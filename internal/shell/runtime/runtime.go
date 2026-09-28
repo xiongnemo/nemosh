@@ -84,6 +84,9 @@ type Runtime struct {
 	// operandQuoted marks a `${...}` inside double quotes, which changes what a single quote
 	// in its operator's word means; see operand_quoting.go. On the value for the same reason.
 	operandQuoted bool
+	// starFields marks an unquoted `*` list, `${a[*]}`, which is a field per element as
+	// unquoted `$*` is; see buildParameter. On the value, so it is that word's alone.
+	starFields    bool
 	readonly      map[string]struct{}
 	attributes    map[string]variableAttributes
 	mutatedVars   map[string]struct{}
