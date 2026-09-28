@@ -231,7 +231,11 @@ func (scanner *syntaxScanner) finishPhysicalLine(line string) {
 		scanner.logical.WriteByte('\n')
 		return
 	}
-	if hasTrailingSyntaxOperator(line) {
+	// Asked of the logical line so far, which knows the quotes and substitutions that began
+	// on earlier lines and has no comments left in it. Asked of this line alone, `esac)" ||`
+	// read its `"` as opening a quote, and a line after `&&` that was blank or a comment
+	// ended the command there, both missing their second half.
+	if hasTrailingSyntaxOperator(scanner.logical.String()) {
 		scanner.logical.WriteByte(' ')
 		scanner.continued = true
 		return
