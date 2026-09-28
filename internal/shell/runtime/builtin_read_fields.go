@@ -48,10 +48,11 @@ func collectReadLine(ctx context.Context, input io.Reader, options readOptions) 
 			switch {
 			case pendingEscape:
 				pendingEscape = false
-				// A backslash before the delimiter is a continuation: both
-				// vanish and the line keeps going. Measured: `a\` then `b` reads
-				// as `ab`.
-				if char == options.delimiter {
+				// A backslash before a newline is a continuation, whatever the delimiter:
+				// both vanish and the line keeps going. Measured: `a\` then `b` reads as
+				// `ab`, under `-d ,` too, where `\,` is a comma and ends nothing, as both
+				// references read it. It was the delimiter that the backslash swallowed.
+				if char == '\n' {
 					continue
 				}
 				text, escaped = append(text, char), append(escaped, true)
@@ -96,73 +97,109 @@ func trimCarriageReturn(text string, options readOptions) string {
 // splitReadFields cuts a line for `read`, which is not quite ordinary field
 // splitting: the *last* name takes everything left, separators and all.
 //
-// Measured against bash:
+// Measured against bash, and busybox-w32 answers the same:
 //
 //	read a b      over `one two three`   a=one   b=two three
 //	read a b      over `  a  b  c  `     a=a     b=b  c        -- inner run kept
 //	IFS=: read a b over `a:b:c:d`        a=a     b=b:c:d
+//	IFS=: read a b over `a:b:`           a=a     b=b           -- one field left
 //	IFS=: read a b c over `a::b`         a=a     b=        c=b -- empty kept
 //	IFS=: read a b c over `:a:`          a=      b=a       c=
+//	IFS=': ' read a b over `a : b :  `   a=a     b=b
 //	IFS= read x   over ` a b `           x= a b            -- no splitting at all
 //
 // limit is how many fields to produce at most; 0 means as many as there are,
 // which is what `-a` wants.
+//
+// The last name gets the rest of the line less the IFS whitespace at its end, unless what is
+// left is a single field, which it gets without the delimiter after it: bash's read checks
+// whether the fields are exactly as many as the names. The rest was taken whole, so `IFS=:
+// read a b` over `a:b:` left b as `b:`.
 func splitReadFields(text string, escaped []bool, separators string, limit int) []string {
-	// IFS set to the empty string turns splitting off, and with it the trimming:
-	// the line arrives whole, leading and trailing blanks included.
-	if separators == "" {
-		return []string{text}
-	}
-	isSeparator := func(index int) bool {
-		if index >= len(text) || (index < len(escaped) && escaped[index]) {
-			return false
-		}
-		return strings.IndexByte(separators, text[index]) >= 0
-	}
-	isBlankSeparator := func(index int) bool {
-		return isSeparator(index) && isFieldWhitespace(text[index])
-	}
-	start, end := 0, len(text)
-	for start < end && isBlankSeparator(start) {
-		start++
-	}
-	for end > start && isBlankSeparator(end-1) {
-		end--
+	line := readSplitter{text: text, escaped: escaped, separators: separators}
+	if limit == 0 {
+		return line.fields()
 	}
 	var fields []string
-	position := start
-	for {
-		if limit > 0 && len(fields) == limit-1 {
-			return append(fields, text[position:end])
-		}
-		fieldStart := position
-		for position < end && !isSeparator(position) {
-			position++
-		}
-		fields = append(fields, text[fieldStart:position])
-		if position >= end {
-			return fields
-		}
-		// A run of IFS whitespace is one delimiter. A non-whitespace separator is
-		// a delimiter on its own, and may be trailed by whitespace that belongs
-		// to the same one -- which is why `IFS=:` over `a: b` gives `a` and `b`.
-		if isBlankSeparator(position) {
-			for position < end && isBlankSeparator(position) {
-				position++
-			}
-		} else {
-			position++
-			for position < end && isBlankSeparator(position) {
-				position++
-			}
-		}
-		if position >= end {
-			// The line ended on a separator, so there is one more field and it
-			// is empty. Only reachable for a non-whitespace separator, because a
-			// trailing whitespace run was trimmed above.
-			return append(fields, "")
-		}
+	position := line.skipBlanks(0)
+	for len(fields) < limit-1 && position < len(text) {
+		var field string
+		field, position = line.field(position)
+		fields = append(fields, field)
 	}
+	if position >= len(text) {
+		return fields
+	}
+	if field, next := line.field(position); next == len(text) {
+		return append(fields, field)
+	}
+	end := len(text)
+	for end > position && line.blank(end-1) {
+		end--
+	}
+	return append(fields, text[position:end])
+}
+
+// readSplitter is a line read and the IFS it is split by. An escaped byte is data, never a
+// separator; see readLineResult. IFS empty splits nothing, and the line arrives whole, its
+// blanks and all.
+type readSplitter struct {
+	text       string
+	escaped    []bool
+	separators string
+}
+
+func (s readSplitter) separator(index int) bool {
+	if index >= len(s.text) || (index < len(s.escaped) && s.escaped[index]) {
+		return false
+	}
+	return strings.IndexByte(s.separators, s.text[index]) >= 0
+}
+
+func (s readSplitter) blank(index int) bool {
+	return s.separator(index) && isFieldWhitespace(s.text[index])
+}
+
+func (s readSplitter) skipBlanks(position int) int {
+	for position < len(s.text) && s.blank(position) {
+		position++
+	}
+	return position
+}
+
+// field is the field at position and where the next one starts, past its delimiter: the
+// separator that ends it and the IFS whitespace after that, and, when that separator was
+// whitespace, a separator that is not and the whitespace after it too -- POSIX 2.6.5's "IFS
+// white space ... adjacent" to one. Whitespace before a `:` was a delimiter of its own, so
+// `IFS=': '` over `a : b` gave a, an empty field, and b.
+func (s readSplitter) field(position int) (string, int) {
+	start := position
+	for position < len(s.text) && !s.separator(position) {
+		position++
+	}
+	value := s.text[start:position]
+	if position == len(s.text) {
+		return value, position
+	}
+	blank := s.blank(position)
+	position = s.skipBlanks(position + 1)
+	if blank && s.separator(position) {
+		position = s.skipBlanks(position + 1)
+	}
+	return value, position
+}
+
+// fields is every field of the line, for `read -a`: one that ends in a delimiter ends there,
+// as a word's expansion does, and an empty line is none at all. Each made an empty field more.
+func (s readSplitter) fields() []string {
+	var fields []string
+	position := s.skipBlanks(0)
+	for position < len(s.text) {
+		var value string
+		value, position = s.field(position)
+		fields = append(fields, value)
+	}
+	return fields
 }
 
 func isFieldWhitespace(char byte) bool {

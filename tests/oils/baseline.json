@@ -424,11 +424,6 @@
       "time with brace group argument": "fail"
     },
     "builtin-read.test.sh": {
-      "\"backslash + newline\" should be swallowed regardless of \"-d \u003cdelim\u003e\"": "fail",
-      "IFS='x ' read -a: intermediate spaces (unlimited split)": "fail",
-      "IFS='x ' read -a: trailing spaces (unlimited split)": "fail",
-      "IFS=x read a b \u003c\u003c\u003c xxxxxx": "fail",
-      "empty input and splitting": "fail",
       "mapfile from directory (bash doesn't handle errors)": "fail",
       "read -a reads into array": "fail",
       "read -n with invalid arg": "ash-only",

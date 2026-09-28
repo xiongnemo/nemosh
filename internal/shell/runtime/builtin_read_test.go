@@ -99,6 +99,37 @@ func TestRead_splitsFieldsAcrossNames(t *testing.T) {
 	}
 }
 
+// IFS whitespace beside a separator that is not whitespace is part of the one delimiter, the
+// last name gets a lone field left without the delimiter after it, `-a` makes no empty field of
+// a delimiter at the end nor any of an empty line, and a backslash before a newline continues
+// the line under `-d` too. busybox-w32 and bash answer every row the same, `-a` aside, which
+// busybox has not got.
+func TestRead_splitsAsBothReferencesDo(t *testing.T) {
+	const pair, triple = "echo \"[$a][$b]\"\n", "echo \"[$a][$b][$c]\"\n"
+	const array = "printf '[%s]' \"${a[@]}\"; echo \" ${#a[@]}\"\n"
+	for _, test := range []struct{ stdin, script, want string }{
+		{"a:b:\n", "IFS=: read a b\n" + pair, "[a][b]\n"},
+		{"a:b:c:\n", "IFS=: read a b\n" + pair, "[a][b:c:]\n"},
+		{"a : b :  \n", "IFS=': ' read a b\n" + pair, "[a][b]\n"},
+		{"a :: b\n", "IFS=': ' read a b c\n" + triple, "[a][][b]\n"},
+		{"xx\n", "IFS='x ' read a b\n" + pair, "[][]\n"},
+		{"xxx\n", "IFS='x ' read a b\n" + pair, "[][xx]\n"},
+		{"xaxx  \n", "IFS='x ' read a b\n" + pair, "[][axx]\n"},
+		{"a x b\n", "IFS='x ' read -a a\n" + array, "[a][b] 2\n"},
+		{"a xx b\n", "IFS='x ' read -a a\n" + array, "[a][][b] 3\n"},
+		{"a b x x\n", "IFS='x ' read -a a\n" + array, "[a][b][] 3\n"},
+		{"a:b:\n", "IFS=: read -a a\n" + array, "[a][b] 2\n"},
+		{"\n", "read -a a\n" + array, "[] 0\n"},
+		{"\n", "IFS= read -a a\n" + array, "[] 0\n"},
+		{"a b\\\nc d\n", "read -d ,; printf '[%s]\\n' \"$REPLY\"\n", "[a bc d\n]\n"},
+		{"a b\\,c d\n", "read -d ,; printf '[%s]\\n' \"$REPLY\"\n", "[a b,c d\n]\n"},
+	} {
+		if status, stdout, stderr := runReadScript(t, test.stdin, test.script); stdout != test.want || status != 0 {
+			t.Errorf("%q over %q: got %q/%d %q, want %q/0", test.script, test.stdin, stdout, status, stderr, test.want)
+		}
+	}
+}
+
 func TestRead_handlesBackslashesAndTheRawOption(t *testing.T) {
 	tests := []struct {
 		name   string
