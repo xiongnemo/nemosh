@@ -19,7 +19,8 @@ func TestRuntime_refusesToTruncate_whenNoClobberIsOn(t *testing.T) {
 	if stdout != "[1]\nkept\n" {
 		t.Fatalf("stdout = %q, want the write refused and the file intact", stdout)
 	}
-	if !strings.Contains(stderr, "cannot overwrite") {
+	// busybox's words for the refusal, where they were bash's `cannot overwrite existing file`.
+	if !strings.Contains(stderr, "cannot create f.txt: File exists") {
 		t.Fatalf("stderr = %q, want a clobber diagnostic", stderr)
 	}
 	if content, err := os.ReadFile(filepath.Join(dir, "f.txt")); err != nil || string(content) != "kept\n" {

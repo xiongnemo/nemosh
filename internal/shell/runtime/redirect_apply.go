@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 
+	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
 )
 
@@ -38,14 +40,19 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 			if operation.target == operation.source {
 				break
 			}
-			err = table.dup(operation.target, operation.source)
-			if err == nil && operation.move {
+			if err = table.dup(operation.target, operation.source); err != nil {
+				return dupFailure{source: operation.source, target: operation.target, err: err}
+			}
+			if operation.move {
 				err = table.close(operation.source)
 			}
 		case redirectClose:
 			err = table.close(operation.target)
 		}
 		if err != nil {
+			if failure := (redirectFailure{}); errors.As(err, &failure) {
+				return err
+			}
 			return fmt.Errorf("redirect descriptor %d: %w", operation.target, err)
 		}
 	}
@@ -55,24 +62,29 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 func (r Runtime) bindInputRedirect(table *fdTable, operation redirectOperation) error {
 	resolved, err := r.ResolveNemoshPath(operation.path)
 	if err != nil {
-		return err
+		return redirectFailure{path: operation.path, err: err}
 	}
 	if !resolved.Device {
-		resource, openErr := os.Open(resolved.Native)
+		// A directory is refused as it is opened, as every reader here refuses one: Windows lets
+		// Go open it, and the first read failed with `Incorrect function`.
+		resource, openErr := applets.OpenHostInput(resolved.Native)
 		if openErr != nil {
-			return fmt.Errorf("open %s: %w", operation.path, openErr)
+			return redirectFailure{path: operation.path, err: openErr}
 		}
 		return table.bindOwnedReader(operation.target, resource)
 	}
 	path := string(resolved.Canonical)
 	if source, alias, err := deviceAlias(path); err != nil {
-		return err
+		return redirectFailure{path: operation.path, err: err}
 	} else if alias {
-		return table.alias(operation.target, source, readable)
+		if err := table.alias(operation.target, source, readable); err != nil {
+			return redirectFailure{path: operation.path, err: badDescriptor{err}}
+		}
+		return nil
 	}
 	resource, err := openInputDevice(path)
 	if err != nil {
-		return err
+		return redirectFailure{path: operation.path, err: err}
 	}
 	return table.bindOwnedReader(operation.target, resource)
 }
@@ -80,7 +92,7 @@ func (r Runtime) bindInputRedirect(table *fdTable, operation redirectOperation) 
 func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation) error {
 	resolved, err := r.ResolveNemoshPath(operation.path)
 	if err != nil {
-		return err
+		return redirectFailure{create: true, path: operation.path, err: err}
 	}
 	if !resolved.Device {
 		if err := r.refuseClobber(resolved, operation); err != nil {
@@ -88,7 +100,7 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 		}
 		resource, openErr := openHostOutput(resolved, operation.kind)
 		if openErr != nil {
-			return fmt.Errorf("open %s: %w", operation.path, openErr)
+			return redirectFailure{create: true, path: operation.path, err: openErr}
 		}
 		// `<>` is opened for both, and the descriptor reads as well as writes. It was bound
 		// as a writer, so `exec 3<> f; read <&3` answered "file descriptor is not readable".
@@ -99,13 +111,16 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 	}
 	path := string(resolved.Canonical)
 	if source, alias, err := deviceAlias(path); err != nil {
-		return err
+		return redirectFailure{create: true, path: operation.path, err: err}
 	} else if alias {
-		return table.alias(operation.target, source, writable)
+		if err := table.alias(operation.target, source, writable); err != nil {
+			return redirectFailure{create: true, path: operation.path, err: badDescriptor{err}}
+		}
+		return nil
 	}
 	resource, err := openOutputDevice(path, operation.kind == redirectAppend)
 	if err != nil {
-		return err
+		return redirectFailure{create: true, path: operation.path, err: err}
 	}
 	return table.bindOwnedWriter(operation.target, resource)
 }
@@ -130,6 +145,9 @@ func openHostOutput(resolved pathmodel.ResolvedPath, kind redirectKind) (*os.Fil
 // The check is a stat a moment before the open rather than part of it, which is
 // a race Go's portable API leaves no way to close. What it buys is the ordinary
 // case: a typo in a redirect target cannot destroy the file it names.
+//
+// The refusal is busybox's, `cannot create f: File exists`, where it was bash's `f: cannot
+// overwrite existing file`.
 func (r Runtime) refuseClobber(resolved pathmodel.ResolvedPath, operation redirectOperation) error {
 	if !r.options.noClobber || operation.kind != redirectOutput {
 		return nil
@@ -138,7 +156,7 @@ func (r Runtime) refuseClobber(resolved pathmodel.ResolvedPath, operation redire
 	if err != nil || !info.Mode().IsRegular() {
 		return nil
 	}
-	return fmt.Errorf("%s: cannot overwrite existing file", operation.path)
+	return redirectFailure{create: true, path: operation.path, err: fs.ErrExist}
 }
 
 func (t *fdTable) bindOwnedReader(fd int, resource io.ReadCloser) error {
