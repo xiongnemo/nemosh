@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -267,8 +268,7 @@ func splitArchiveNames(reader io.Reader, nulSeparated bool) []string {
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	if nulSeparated {
-		// xargs' splitter, not a second one: -0 means the same thing in both
-		// places, and `find -print0 | cpio -o0` is the same handshake as
+		// -0 means what it means to xargs: `find -print0 | cpio -o0` is the same handshake as
 		// `find -print0 | xargs -0`.
 		scanner.Split(scanNulSeparated)
 	}
@@ -281,4 +281,16 @@ func splitArchiveNames(reader io.Reader, nulSeparated bool) []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+// scanNulSeparated is bufio.ScanLines with NUL for the separator. A trailing name without one
+// is still a name, the way a final line without a newline is.
+func scanNulSeparated(data []byte, atEOF bool) (int, []byte, error) {
+	if index := bytes.IndexByte(data, 0); index >= 0 {
+		return index + 1, data[:index], nil
+	}
+	if atEOF && len(data) > 0 {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }

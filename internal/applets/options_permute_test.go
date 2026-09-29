@@ -128,7 +128,7 @@ func TestAppletOptions_nameAnUnknownLongOptionWhole(t *testing.T) {
 	}{
 		{[]string{"du", "--apparent-size"}, "unrecognized option '--apparent-size'"},
 		{[]string{"wc", "x", "--lines"}, "unrecognized option '--lines'"},
-		{[]string{"xargs", "--no-run-if-empty", "echo"}, "unrecognized option '--no-run-if-empty'"},
+		{[]string{"xargs", "--max-args=1", "echo"}, "unrecognized option '--max-args=1'"},
 		// sort says so itself, and ends 2, as for any other bad option.
 		{[]string{"sort", "--foo=bar"}, "sort: unrecognized option '--foo=bar'\n"},
 	} {

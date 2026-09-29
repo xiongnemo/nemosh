@@ -3,7 +3,6 @@ package applets_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -73,7 +72,9 @@ func TestDefaultRegistry_XargsRunsDefaultEchoOnce_whenInputIsEmpty(t *testing.T)
 	}
 }
 
-func TestDefaultRegistry_XargsReturnsFalse_whenChildAppletReturnsFalse(t *testing.T) {
+// A command that fails leaves xargs going on to the rest of the input, and ending 123, as
+// busybox's does; it stopped at the first, with the command's own status.
+func TestDefaultRegistry_XargsEnds123_whenChildAppletFails(t *testing.T) {
 	// Given
 	applet := lookupXargsApplet(t)
 
@@ -81,8 +82,8 @@ func TestDefaultRegistry_XargsReturnsFalse_whenChildAppletReturnsFalse(t *testin
 	err := applet.Run(context.Background(), []string{"false"}, strings.NewReader("one\n"), &bytes.Buffer{}, &bytes.Buffer{})
 
 	// Then
-	if !errors.Is(err, applets.ErrExitFalse) {
-		t.Fatalf("expected false sentinel, got %v", err)
+	if status, ok := applets.StatusCode(err); !ok || status != 123 {
+		t.Fatalf("expected status 123, got %v", err)
 	}
 }
 
@@ -116,8 +117,8 @@ func TestDefaultRegistry_XargsRejectsAnOptionItDoesNotHave(t *testing.T) {
 	applet := lookupXargsApplet(t)
 	var stdout, stderr bytes.Buffer
 
-	// When: -P is GNU's parallel option, which this has no way to honour
-	err := applet.Run(context.Background(), []string{"-P4", "echo"}, strings.NewReader("one\n"), &stdout, &stderr)
+	// When: -Q is no option of busybox's either
+	err := applet.Run(context.Background(), []string{"-Q", "echo"}, strings.NewReader("one\n"), &stdout, &stderr)
 
 	// Then
 	if err == nil {

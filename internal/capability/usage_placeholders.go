@@ -161,4 +161,8 @@ var valuePlaceholders = map[string]string{
 	"tailc":                  "BYTES",
 	"xargsn":                 "COUNT",
 	"xargsI":                 "REPLACE",
+	"xargss":                 "BYTES",
+	"xargsE":                 "WORD",
+	"xargsP":                 "COUNT",
+	"xargsa":                 "FILE",
 }

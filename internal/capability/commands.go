@@ -157,7 +157,7 @@ var commands = []Command{
 	{Name: "wc", Short: "clwmL", Operand: AnyPath},
 	{Name: "whoami", Operand: AnyPath},
 	{Name: "winpath", Operand: AnyPath},
-	{Name: "xargs", Short: "0rtnI", ValueShort: "nI", Operand: AnyPath},
+	{Name: "xargs", Short: "0rtpxnsEeIiPa", ValueShort: "nsEIPa", FileShort: "a", Long: []string{"no-run-if-empty"}, Operand: AnyPath},
 	{Name: "xxd", Short: "p", Operand: AnyPath},
 	{Name: "yes", Operand: AnyPath},
 

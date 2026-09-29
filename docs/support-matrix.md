@@ -740,7 +740,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `whois` | `-h -p`; `-i` accepted | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
-| `xargs` | `-0 -n -I -r -t` | refused by name |
+| `xargs` | `-0 -a -E -e -I -i -n -P -p -r -s -t -x` and `--no-run-if-empty`, busybox's quoting of words, `-I` reading lines, `-P` running applets side by side, and busybox's statuses: 123, 124, 127 | refused by name |
 | `xxd` | `-p` | refused by name |
 | `yes` | none | treated as the string to repeat |
 
@@ -929,8 +929,6 @@ All five are implemented, measured against GNU. What is still absent:
 - **`tail -f`.** Following a file needs a polling loop and a decision about what
   to do when it is truncated or replaced under you, and an implementation that
   silently stops following is worse than one that says it cannot.
-- **`xargs -P`.** Running batches in parallel needs a scheduler this does not
-  have, and pretending to accept it would serialise silently.
 - **Nothing of `sed`.** This bullet listed `-i`, `-f`, `a i c y` and the hold space
   as absent and was simply stale: all of them landed on 2026-08-22 along with `{}`
   blocks, the multiline commands and branching. Measured against the built binary

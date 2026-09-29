@@ -10,8 +10,8 @@ stdin = "a\n"
 [expect]
 status = 127
 stdout = ""
-stderr = "xargs: nosuchcommand: not found\n"
+stderr = "xargs: nosuchcommand: No such file or directory\n"
 
 [notes]
 standard = "BusyBox-w32 findutils/xargs.c"
-why = "BusyBox follows the POSIX table and exits 127 when the command is not found, 126 when it cannot be run (findutils/xargs.c:385-390). Nemosh matches 127. The 126 branch is unreachable because nemosh's xargs dispatches registered applets only; recorded in docs/design/v0-readiness.md."
+why = "BusyBox follows the POSIX table and exits 127 when the command is not found, 126 when it cannot be run (findutils/xargs.c:385-390). Nemosh matches 127, and busybox-w32's wording, which is its failed spawn's perror. The 126 branch is unreachable because nemosh's xargs dispatches registered applets only; recorded in docs/design/v0-readiness.md."

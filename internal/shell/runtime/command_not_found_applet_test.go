@@ -19,7 +19,7 @@ func TestRuntime_appletsThatLaunchACommandReturn127_whenItIsNotFound(t *testing.
 		stderr string
 	}{
 		{name: "env", script: "env nosuchcommand\n", stderr: "env: nosuchcommand: not found\n"},
-		{name: "xargs", script: "echo a | xargs nosuchcommand\n", stderr: "xargs: nosuchcommand: not found\n"},
+		{name: "xargs", script: "echo a | xargs nosuchcommand\n", stderr: "xargs: nosuchcommand: No such file or directory\n"},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
