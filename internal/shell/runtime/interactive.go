@@ -51,6 +51,7 @@ func (r *Runtime) RunInteractive(ctx context.Context, script Script) Interactive
 	status := r.interactive.status
 	control := flowNone
 	if len(script.program) > 0 {
+		r.countCommand()
 		status, control = r.executeProgram(ctx, script.program, status)
 		if status == 130 && isShellInterrupt(ctx) {
 			r.runInterruptTrap(context.WithoutCancel(ctx), status)

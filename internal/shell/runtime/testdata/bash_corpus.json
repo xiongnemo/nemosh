@@ -1883,5 +1883,29 @@
     "stdout": "<x><h><9>",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "x='\\'; y='h'; PS1='$x$y'; echo \"${PS1@P}\"",
+    "stdout": "\\h\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "PS1='\\1004$ [\\045] \\555 [\\x55]'; echo \"${PS1@P}\"",
+    "stdout": "@4$ [%] m [\\x55]\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "PS1='\\\\$ \\\\\\\\$ \\'; echo \"${PS1@P}\"",
+    "stdout": "$ \\$ \\\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "set -- a b; echo ${@@P} ${*@P}; a=(x y); echo ${a@P}; unset u; echo \"[${u@P}]\"",
+    "stdout": "a b a b\nx\n[]\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

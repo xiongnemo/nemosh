@@ -1303,7 +1303,6 @@
           "\\D{} for locale specific strftime",
           "\\T for 12h time (HH:MM:SS)",
           "\\W is basename of working dir",
-          "\\[\\] are non-printing",
           "\\d for date",
           "\\j for number of jobs",
           "\\l for TTY device basename",
@@ -1317,7 +1316,6 @@
           "hostname",
           "literal escapes",
           "sh -i",
-          "special case for $",
           "username"
         ],
         "redirect-command.test.sh": [

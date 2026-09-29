@@ -44,6 +44,12 @@ func strftime(when time.Time, format string, strict bool) (string, error) {
 	return out.String(), nil
 }
 
+// Strftime is strftime for the shell's prompt, whose \D{format} is one: an unknown conversion
+// is left as written, as ts leaves it.
+func Strftime(when time.Time, format string) string {
+	return strftimeLike(when, format)
+}
+
 func strftimeConversion(when time.Time, verb byte) (string, bool) {
 	if layout, ok := strftimeLayouts[verb]; ok {
 		return when.Format(layout), true

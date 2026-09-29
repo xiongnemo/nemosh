@@ -76,7 +76,6 @@
     "array-sparse.test.sh": {
       "${@:offset:length}": "fail",
       "${a[@]#...}": "fail",
-      "${a[@]@P}, ${a[@]@Q}, and ${a[@]@a}": "fail",
       "${sp[i]} with negative invalid index": "fail",
       "((sp[i])) and ((sp[i]++)) with invalid negative index": "fail",
       "(YSH) $[bool(a)]": "fail",
@@ -654,39 +653,15 @@
       "Command substitution in default": "fail"
     },
     "prompt.test.sh": {
-      "@P with array": "fail",
-      "Escaped backslash": "fail",
-      "PS1 evaluation order": "fail",
       "PS1 evaluation order 2": "fail",
-      "Single backslash": "fail",
       "\\! for history number": "fail",
-      "\\# for command number": "fail",
-      "\\0001 octal literals are not supported": "fail",
-      "\\001 octal literals are supported": "fail",
-      "\\1004": "fail",
-      "\\555 is beyond max octal byte of \\377 and wrapped to m": "fail",
-      "\\@ for 12h time (HH:MM AM/PM)": "fail",
-      "\\A for 24h time (HH:MM)": "fail",
-      "\\D{%H:%M} for strftime": "fail",
-      "\\D{} for locale specific strftime": "fail",
-      "\\T for 12h time (HH:MM:SS)": "fail",
       "\\W is basename of working dir": "fail",
-      "\\[\\] are non-printing": "fail",
-      "\\d for date": "fail",
       "\\j for number of jobs": "fail",
       "\\l for TTY device basename": "fail",
-      "\\s for shell, \\v for major.minor version, and \\V for full version": "fail",
-      "\\t for 24h time (HH:MM:SS)": "fail",
-      "\\u0001 unicode literals not supported": "fail",
-      "\\x55 hex literals not supported": "fail",
-      "constant string": "fail",
       "current working dir": "fail",
       "default PS1": "fail",
       "hostname": "fail",
-      "literal escapes": "fail",
-      "sh -i": "fail",
-      "special case for $": "fail",
-      "username": "fail"
+      "sh -i": "fail"
     },
     "quote.test.sh": {
       "$\"\" is a synonym for \"\"": "ash-only"
@@ -794,11 +769,7 @@
     },
     "var-op-bash.test.sh": {
       "-o nounset with var ops": "fail",
-      "Array expansion with nullary var op @P": "fail",
-      "Case folding - multi code point": "fail",
-      "argv array and @P @Q @a": "fail",
-      "assoc array and @P @Q @a": "fail",
-      "undef and @P @Q @a": "fail"
+      "Case folding - multi code point": "fail"
     },
     "var-op-len.test.sh": {
       "${#s} respects LC_ALL - length in bytes or code points": "fail",
@@ -826,14 +797,12 @@
       "${!a[@]-'default'} is legal but fails with more than one element": "fail",
       "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
       "${!undef:-}": "fail",
-      "Array indirect expansion with @? conversion": "fail",
       "Array indirect expansion with replacements": "fail",
       "Array indirect expansion with suffix operators": "fail",
       "Bad var ref": "fail",
       "Bad var ref 2": "fail",
       "Bizarre tilde expansion in array index": "fail",
       "Indirect expansion TO fancy expansion features bash disallows": "fail",
-      "Indirect expansion, THEN suffix operators": "fail",
       "Var ref, then error with ${ ? }": "fail"
     },
     "var-sub-quote.test.sh": {

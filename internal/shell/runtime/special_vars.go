@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -38,6 +39,10 @@ type specialState struct {
 	// A job process is given its shell's (job_state.go): `$$` in a job is the shell's pid
 	// in both references, and only `$BASHPID` is the job's own.
 	pid, ppid int
+	// commands is how many commands the shell has read and run at its top level, a script's
+	// lines or a session's, which a prompt's \# numbers; see promptFacts. Atomic, since a job
+	// may draw a prompt while the shell counts on.
+	commands atomic.Int64
 }
 
 func newSpecialState() *specialState {

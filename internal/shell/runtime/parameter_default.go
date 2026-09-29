@@ -45,7 +45,7 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 		if !set {
 			r.reportUnsetParameter(name)
 		}
-		return r.transformParameter(name, transform, value, set)
+		return r.transformParameter(ctx, name, transform, value, set, savedStatus)
 	}
 	name, operator, word, ok := splitParameterOperator(body)
 	if !ok {

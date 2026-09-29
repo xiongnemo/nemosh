@@ -28,7 +28,7 @@ import (
 // and only this one is right. A name that is not a list falls through untouched.
 func (r Runtime) expandListOperator(ctx context.Context, body string, savedStatus int) ([]string, bool) {
 	if name, transform, ok := splitTransform(body); ok {
-		fields, isList, err := r.transformList(ctx, name, transform)
+		fields, isList, err := r.transformList(ctx, name, transform, savedStatus)
 		if err != nil {
 			r.reportExpansionError(err)
 			return nil, true

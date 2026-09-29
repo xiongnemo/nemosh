@@ -9,19 +9,19 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1987 of the 2551 cases bash passes: 77.9%.**
+**nemosh passes 2016 of the 2549 cases bash passes: 79.1%.**
 
-Of the other 564, it does 106 the way the files record of ash, which may be busybox's
-way, and 458 neither way.
+Of the other 533, it does 106 the way the files record of ash, which may be busybox's
+way, and 427 neither way.
 
 | | cases |
 |---|---:|
 | in the vendored files | 2781 |
 | in files Oils itself does not run | 46 |
-| left out on Windows | 67 |
-| measured | 2668 |
-| that bash passes | 2551 |
-| that nemosh passes of those | 1987 |
+| left out on Windows | 69 |
+| measured | 2666 |
+| that bash passes | 2549 |
+| that nemosh passes of those | 2016 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -32,6 +32,7 @@ Left out on Windows, as cases no shell can be measured on there, for the reasons
 - executable bits: 34
 - resource limits: 17
 - symbolic links: 7
+- the prompt's symbol for an administrator: 2
 - writing at the root: 1
 
 ## File by file
@@ -53,7 +54,7 @@ of ash.
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 10 | 83.3% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 12 | 75.0% | 0 | 0 |
-| array-sparse.test.sh | 40 | 40 | 24 | 60.0% | 0 | 0 |
+| array-sparse.test.sh | 40 | 40 | 25 | 62.5% | 0 | 0 |
 | array.test.sh | 78 | 78 | 70 | 89.7% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 7 | 77.8% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
@@ -135,7 +136,7 @@ of ash.
 | posix.test.sh | 15 | 15 | 14 | 93.3% | 0 | 14 |
 | print-source-code.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | process-sub.test.sh | 9 | 9 | 9 | 100.0% | 0 | 5 |
-| prompt.test.sh | 33 | 26 | 0 | 0.0% | 0 | 0 |
+| prompt.test.sh | 31 | 24 | 22 | 91.7% | 0 | 0 |
 | quote.test.sh | 35 | 35 | 34 | 97.1% | 1 | 35 |
 | redirect-command.test.sh | 23 | 23 | 22 | 95.7% | 0 | 22 |
 | redirect-multi.test.sh | 13 | 13 | 5 | 38.5% | 2 | 7 |
@@ -156,13 +157,13 @@ of ash.
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 1 | 50.0% | 0 | 2 |
 | var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
-| var-op-bash.test.sh | 27 | 26 | 21 | 80.8% | 0 | 2 |
+| var-op-bash.test.sh | 27 | 26 | 25 | 96.2% | 0 | 2 |
 | var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 |
 | var-op-patsub.test.sh | 28 | 28 | 25 | 89.3% | 1 | 21 |
 | var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 6 |
 | var-op-strip.test.sh | 29 | 29 | 29 | 100.0% | 0 | 27 |
 | var-op-test.test.sh | 37 | 37 | 32 | 86.5% | 1 | 20 |
-| var-ref.test.sh | 31 | 31 | 19 | 61.3% | 0 | 0 |
+| var-ref.test.sh | 31 | 31 | 21 | 67.7% | 0 | 0 |
 | var-sub-quote.test.sh | 41 | 41 | 40 | 97.6% | 0 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
 | vars-bash.test.sh | 1 | 1 | 0 | 0.0% | 0 | 0 |
@@ -172,4 +173,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1987 | 77.9% | 106 | 1447 |
+| all | 2666 | 2549 | 2016 | 79.1% | 106 | 1447 |

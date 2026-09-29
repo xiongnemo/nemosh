@@ -95,6 +95,10 @@ func CurrentUserName() string {
 	return identityName(currentUserID(), accountName())
 }
 
+// CurrentUserID is the uid `id -u` answers: on Windows 0 only when elevated, as busybox-w32
+// has it. Exported because the prompt's \$ is # for it.
+func CurrentUserID() int { return currentUserID() }
+
 // identityName is the mapping on its own, so it can be checked without being
 // elevated -- which is the only part of this a test could not otherwise reach.
 func identityName(uid int, account string) string {

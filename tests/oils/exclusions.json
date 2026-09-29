@@ -45,6 +45,14 @@
       "cases": {
         "vars-special.test.sh": ["$HOME is NOT set"]
       }
+    },
+    {
+      "name": "the prompt's symbol for an administrator",
+      "why": "A prompt's \\$ is # for an account whose uid is 0, and on Windows that is an elevated one, as busybox-w32's geteuid has it -- CI's runner is one -- where MSYS bash's uid is never 0. So the answer is the account's.",
+      "platforms": ["windows"],
+      "cases": {
+        "prompt.test.sh": ["\\[\\] are non-printing", "special case for $"]
+      }
     }
   ]
 }

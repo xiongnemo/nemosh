@@ -37,8 +37,14 @@ func (r Runtime) executeTopLevel(ctx context.Context, program []programNode) (in
 
 func (r Runtime) executeStatements(ctx context.Context, program []programNode, savedStatus int, topLevel bool) (int, flowControl) {
 	status := savedStatus
-	discarded := 0
+	discarded, counted := 0, 0
 	for _, item := range program {
+		// A line of the script's is one command read, as bash counts them for \#; see
+		// promptFacts.
+		if topLevel && statementLine(item) != counted {
+			counted = statementLine(item)
+			r.countCommand()
+		}
 		// bash drops the rest of the line with the command it abandons: after `echo *.zz;
 		// echo same` under failglob, same is never said, and the next line runs. The
 		// commands after it on its line were run here, each a statement of its own.

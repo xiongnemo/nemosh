@@ -1,9 +1,6 @@
 package runtime_test
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // `${name@op}`, bash's parameter transformations. Each was `bad substitution`. Every answer
 // is bash's, measured; busybox has none.
@@ -36,11 +33,11 @@ func TestParameterTransform_answersAsBashDoes(t *testing.T) {
 	}
 }
 
-// `@P` needs the prompt's own escapes, which the line editor draws; it is refused by name
-// rather than done by half.
-func TestParameterTransform_refusesPromptExpansionByName(t *testing.T) {
-	stdout, status := runScriptCapturing("x=abc\necho \"${x@P}\"\n")
-	if status != 2 || strings.Contains(stdout, "abc") {
-		t.Fatalf("got %q/%d, want a refusal", stdout, status)
+// `@P` reads the value as a prompt, whose escapes the runtime decodes itself; see
+// prompt_transform_test.go. It was refused, as needing the line editor's.
+func TestParameterTransform_expandsAsAPrompt(t *testing.T) {
+	stdout, status := runScriptCapturing("x='abc\\n'\necho \"${x@P}\"\n")
+	if status != 0 || stdout != "abc\n\n" {
+		t.Fatalf("got %q/%d, want %q/0", stdout, status, "abc\n\n")
 	}
 }

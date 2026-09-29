@@ -143,7 +143,7 @@ func TestDefaultPrompt_isColouredAndBalanced(t *testing.T) {
 		t.Fatalf("default prompt does not end reset: %q", rendered)
 	}
 	// It still has to say the things the plain one said.
-	for _, want := range []string{promptUsername(rt), promptHostname()} {
+	for _, want := range []string{rt.Prompt(context.Background(), `\u`, 0), rt.Prompt(context.Background(), `\h`, 0)} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("default prompt lost %q", want)
 		}
@@ -165,6 +165,9 @@ func TestPrompt_rendersOctalAndEscapeSequences(t *testing.T) {
 		{name: "bell", ps1: `\a`, want: "\007"},
 		{name: "non-printing markers are dropped", ps1: `\[\033[0m\]x`, want: "\033[0mx"},
 		{name: "an unknown escape is left alone", ps1: `\q`, want: `\q`},
+		{name: "a backslash at the end", ps1: `x\`, want: `x\`},
+		// busybox's prompt expansion keeps \$ for the escape, which is # for root.
+		{name: "the symbol", ps1: `\$ `, want: promptSymbol() + " "},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// Given

@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -18,9 +17,7 @@ import (
 //
 // `@K` and `@k` write an array as its pairs, see parameter_kv_transform.go.
 //
-// `@P` is refused by name. It means the prompt's backslash escapes -- `\u`, `\w` -- and
-// those are drawn by the line editor, outside the shell's reach; half of @P would be a
-// prompt that is almost right.
+// `@P` reads the value as a prompt is read; see promptTransform.
 
 // splitTransform recognises the form: a parameter reference, `@`, and one letter. Whole,
 // rather than through splitParameterOperator, because `@` is a name as well as the
@@ -41,17 +38,16 @@ func splitTransform(body string) (string, byte, bool) {
 
 // transformParameter answers one value's transformation. An unset parameter transforms to
 // nothing at all rather than to an empty pair of quotes, which is bash's answer.
-func (r Runtime) transformParameter(name string, operator byte, value string, set bool) (string, error) {
-	switch operator {
-	case 'P':
-		return "", fmt.Errorf("bad substitution: ${%s@%c}: not implemented here", name, operator)
-	case 'a':
+func (r Runtime) transformParameter(ctx context.Context, name string, operator byte, value string, set bool, savedStatus int) (string, error) {
+	if operator == 'a' {
 		return r.attributeLetters(name), nil
 	}
 	if !set {
 		return "", nil
 	}
 	switch operator {
+	case 'P':
+		return r.promptTransform(ctx, value, savedStatus), nil
 	case 'Q', 'K', 'k':
 		// K and k over anything but a whole array quote as Q does.
 		return shellquote.Single(value), nil
@@ -105,7 +101,7 @@ func (r Runtime) hasIndexedArray(name string) bool {
 
 // transformList answers `${a[@]@Q}` and `${@@Q}`: each element transformed, except `@A`
 // over an array, which is the one declaration that recreates the whole of it.
-func (r Runtime) transformList(ctx context.Context, name string, operator byte) ([]string, bool, error) {
+func (r Runtime) transformList(ctx context.Context, name string, operator byte, savedStatus int) ([]string, bool, error) {
 	elements, isList := r.parameterList(ctx, name)
 	if !isList {
 		return nil, false, nil
@@ -125,7 +121,7 @@ func (r Runtime) transformList(ctx context.Context, name string, operator byte) 
 	}
 	transformed := make([]string, 0, len(elements))
 	for _, element := range elements {
-		value, err := r.transformParameter(name, operator, element, true)
+		value, err := r.transformParameter(ctx, name, operator, element, true, savedStatus)
 		if err != nil {
 			return nil, true, err
 		}
