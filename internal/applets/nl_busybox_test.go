@@ -65,7 +65,28 @@ func TestNl_carriesNumbersAcrossFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	stdout, stderr, err := runPermuted(t, view, "", "nl", "one", "missing", "two")
-	if stdout != "     1\ta\n     2\tb\n     3\tc\n" || !strings.Contains(stderr, "missing") || err == nil {
+	if stdout != "     1\ta\n     2\tb\n     3\tc\n" || stderr != "nl: missing: No such file or directory\n" || err == nil {
 		t.Errorf("nl one missing two: %q, %q, %v; want the numbers to carry on and missing named", stdout, stderr, err)
+	}
+}
+
+// The filters that read any number of files name one they cannot open as busybox's
+// fopen_or_warn names it, alone or among others, and read the rest. They said
+// `cannot open 'missing'`, which is how an applet that gives up at one words it.
+func TestTextFilters_nameAFileTheyCannotOpenAsBusyboxDoes(t *testing.T) {
+	dir := t.TempDir()
+	view := permuteTestView{cwd: dir}
+	// Long enough for strings, which prints runs of four or more.
+	if err := os.WriteFile(filepath.Join(dir, "one"), []byte("abcdef\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, applet := range []string{"tac", "rev", "nl", "od", "expand", "unexpand", "fold", "strings"} {
+		if _, _, err := runPermuted(t, view, "", applet, "missing"); err == nil || err.Error() != "missing: No such file or directory" {
+			t.Errorf("%s missing: %v, want busybox's missing: No such file or directory", applet, err)
+		}
+		stdout, stderr, err := runPermuted(t, view, "", applet, "missing", "one")
+		if stderr != applet+": missing: No such file or directory\n" || stdout == "" || err == nil {
+			t.Errorf("%s missing one: %q, %q, %v; want missing named and one read", applet, stdout, stderr, err)
+		}
 	}
 }

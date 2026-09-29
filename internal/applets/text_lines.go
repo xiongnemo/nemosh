@@ -200,17 +200,21 @@ func eachTextInput(ctx context.Context, paths []string, stdin io.Reader, body fu
 // be opened is named and the rest read; see operand_reporter.go. A single one is still the
 // error the applet returns. The applets that read one input, xxd and base64 among them, stop at
 // it as busybox's do.
+//
+// One is named as busybox's fopen_or_warn names it, `tac: FILE: No such file or directory`. It
+// said `cannot open 'FILE'`, which is how an applet that gives up at one words it.
 func eachTextFile(ctx context.Context, paths []string, stdin io.Reader, body func(io.Reader) error) error {
-	if len(paths) < 2 {
-		return eachTextInput(ctx, paths, stdin, body)
+	if len(paths) == 0 {
+		return body(stdin)
 	}
 	view := ProcessViewFromContext(ctx)
 	opened := true
 	for _, path := range paths {
 		file, err := OpenProcessOperand(ctx, view, path, stdin)
 		if err != nil {
-			if !reportOperand(ctx, cannotOpen(path, err)) {
-				return cannotOpen(path, err)
+			failure := operandFailure(path, err)
+			if len(paths) == 1 || !reportOperand(ctx, failure) {
+				return failure
 			}
 			opened = false
 			continue
