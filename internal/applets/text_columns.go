@@ -1,11 +1,16 @@
 package applets
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/textgrid"
 )
 
 // expand, unexpand and join.
@@ -14,12 +19,18 @@ import (
 // base32 and shuf are in text_random.go.
 // Measured against busybox-w32 v1.38.0 on 2026-08-22.
 
-// newExpandApplet turns tabs into spaces. -t sets the stop width, default 8;
-// -i stops converting after the first non-blank, which is what makes it safe on
-// source code where a tab inside a string literal must survive.
+// newExpandApplet is busybox's expand (coreutils/expand.c): each tab made the spaces to the next
+// stop, every -t columns, 8 unless it says, and with -i only the tabs before a line's first
+// character that is neither a space nor a tab, which leaves one inside a string literal. The
+// ending is kept, so a CRLF file stays CRLF and one with no last newline stays so.
+//
+// Columns are counted as busybox's unicode_strwidth counts them, in the cells a terminal draws:
+// a tab after 一二 is four spaces. busybox-w32 counts bytes, its unicode support being off,
+// and this counted runes, which put the tab two cells late.
 func newExpandApplet() Applet {
 	return simpleApplet{name: "expand", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "i", "t")
+		words := longOptionWords(args, map[string]string{"initial": "i", "tabs": "t"})
+		options, paths, err := parseAppletOptions(ctx, words, "i", "t")
 		if err != nil {
 			return err
 		}
@@ -28,54 +39,50 @@ func newExpandApplet() Applet {
 			return err
 		}
 		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
-			// The ending is written back rather than replaced by a newline:
-			// expand changes tabs to spaces and nothing else, so a CRLF file stays
-			// CRLF and a file with no final newline stays that way. Measured
-			// against busybox and GNU, which both preserve both.
+			// Each line is written as it is read, so a pipe from something still running
+			// answers as it goes.
+			out := bufio.NewWriter(stdout)
 			return eachLine(reader, func(line, ending string) error {
-				_, err := io.WriteString(stdout, expandTabs(line, stop, options.has('i'))+ending)
-				return err
+				return errors.Join(expandTabs(out, line+ending, stop, options.has('i')), out.Flush())
 			})
 		})
 	}}
 }
 
-// expandTabs replaces each tab with spaces up to the next stop.
-//
-// The column is counted in runes, so a tab after CJK text lands where it looks
-// like it should. Counting bytes would put it three columns early for every
-// three-byte character.
-func expandTabs(line string, stop int, initialOnly bool) string {
-	var out strings.Builder
-	column := 0
-	blanksOnly := true
-	for _, character := range line {
-		if character != '\t' {
-			if character != ' ' {
-				blanksOnly = false
-			}
-			out.WriteRune(character)
-			column++
-			continue
+// expandTabs is busybox's expand of a line: the text since the tab before, and the spaces from
+// its width to the next stop, which is where the tab before ended.
+func expandTabs(out *bufio.Writer, line string, stop int, initialOnly bool) error {
+	start := 0
+	for index := 0; index < len(line); index++ {
+		c := line[index]
+		if initialOnly && c != ' ' && c != '\t' {
+			break
 		}
-		if initialOnly && !blanksOnly {
-			out.WriteRune('\t')
-			column++
-			continue
+		if c == '\t' {
+			out.WriteString(line[start:index])
+			writeSpaces(out, stop-textgrid.Cells(line[start:index])%stop)
+			start = index + 1
 		}
-		width := stop - column%stop
-		out.WriteString(strings.Repeat(" ", width))
-		column += width
 	}
-	return out.String()
+	_, err := out.WriteString(line[start:])
+	return err
 }
 
-// newUnexpandApplet turns spaces back into tabs. Only leading blanks by default;
-// -a converts throughout, which is the form that damages aligned comments and is
-// therefore not the default in either reference.
+// writeSpaces writes n blanks as they go, so that a -t in the billions is a lot of output
+// rather than a line held whole.
+func writeSpaces(out *bufio.Writer, n int) {
+	for ; n > 0; n-- {
+		out.WriteByte(' ')
+	}
+}
+
+// newUnexpandApplet is busybox's unexpand: each run of blanks a tab for each stop it reaches and
+// spaces for the rest, the leading ones of a line, and with -a all of them. -t sets -a as well,
+// as busybox's getopt32 has it, and -f takes it back.
 func newUnexpandApplet() Applet {
 	return simpleApplet{name: "unexpand", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "a", "t")
+		words := longOptionWords(args, map[string]string{"first-only": "f", "tabs": "t", "all": "a"})
+		options, paths, err := parseAppletOptions(ctx, words, "fa", "t")
 		if err != nil {
 			return err
 		}
@@ -83,66 +90,67 @@ func newUnexpandApplet() Applet {
 		if err != nil {
 			return err
 		}
+		all := (options.has('a') || options.has('t')) && !options.has('f')
 		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
-			// The ending preserved, for the same reason as expand above.
+			out := bufio.NewWriter(stdout)
 			return eachLine(reader, func(line, ending string) error {
-				_, err := io.WriteString(stdout, unexpandTabs(line, stop, options.has('a'))+ending)
-				return err
+				return errors.Join(unexpandTabs(out, line+ending, stop, all), out.Flush())
 			})
 		})
 	}}
 }
 
-func unexpandTabs(line string, stop int, everywhere bool) string {
-	runes := []rune(line)
-	var out strings.Builder
-	column, run := 0, 0
-	flush := func() {
-		// A run of spaces becomes tabs only where it actually reaches a stop;
-		// the remainder stays as spaces, or the text after it would shift.
-		for run > 0 {
-			boundary := stop - (column-run)%stop
-			if run >= boundary && boundary > 1 {
-				out.WriteRune('\t')
-				run -= boundary
-				continue
-			}
-			out.WriteString(strings.Repeat(" ", run))
-			run = 0
+// unexpandTabs is busybox's unexpand of a line, its newline in it. Without all it is done after
+// the first run of blanks, or when the line begins with text, the run after that word, which
+// busybox changes too where GNU does not. A tab it passes is put back as the stops come, so
+// one at the end of a last line with no newline is lost, as busybox loses it.
+func unexpandTabs(out *bufio.Writer, line string, stop int, all bool) error {
+	at, column := 0, 0
+	for at < len(line) {
+		spaces := 0
+		for at < len(line) && line[at] == ' ' {
+			at, spaces = at+1, spaces+1
 		}
-	}
-	for index, character := range runes {
-		if character == ' ' && (everywhere || onlyBlanksBefore(runes[:index])) {
-			run++
-			column++
+		column += spaces
+		if at < len(line) && line[at] == '\t' {
+			column += stop - column%stop
+			at++
 			continue
 		}
-		flush()
-		out.WriteRune(character)
-		column++
-	}
-	flush()
-	return out.String()
-}
-
-func onlyBlanksBefore(runes []rune) bool {
-	for _, character := range runes {
-		if character != ' ' && character != '\t' {
-			return false
+		if tabs := column / stop; tabs > 0 {
+			for ; tabs > 0; tabs-- {
+				out.WriteByte('\t')
+			}
+			column %= stop
+			spaces = column
 		}
+		writeSpaces(out, spaces)
+		if !all && at != 0 {
+			_, err := out.WriteString(line[at:])
+			return err
+		}
+		word := strings.IndexAny(line[at:], "\t ")
+		if word < 0 {
+			word = len(line) - at
+		}
+		out.WriteString(line[at : at+word])
+		column = (column + textgrid.Cells(line[at:at+word])) % stop
+		at += word
 	}
-	return true
+	return nil
 }
 
+// tabStopWidth is -t, as xatou_range(opt_t, 1, UINT_MAX) reads it.
 func tabStopWidth(options appletOptions) (int, error) {
 	if !options.has('t') {
 		return 8, nil
 	}
-	parsed, err := strconv.Atoi(options.value('t'))
-	if err != nil || parsed <= 0 {
-		return 0, fmt.Errorf("invalid tab size '%s'", options.value('t'))
+	text := options.value('t')
+	value, err := busyboxNumberBase(text, 10, math.MaxUint32, math.MaxUint32, nil)
+	if err == nil && value == 0 {
+		err = fmt.Errorf("number %s is not in 1..%d range", text, uint64(math.MaxUint32))
 	}
-	return parsed, nil
+	return int(value), err
 }
 
 // newJoinApplet joins two sorted files on a common field.

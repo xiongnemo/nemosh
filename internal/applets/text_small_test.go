@@ -265,13 +265,13 @@ func TestExpandUnexpand_convertTabsAndSpaces(t *testing.T) {
 			t.Fatalf("%s %v = %q, want %q", test.applet, test.args, got, test.want)
 		}
 	}
-	// The column is counted in runes, so a tab after CJK lands where it looks
-	// like it should. Counting bytes puts it two columns early per character.
+	// The column is counted in the cells a terminal draws, as busybox's unicode_strwidth counts
+	// them: 一二 is four, so the tab after it is four spaces. Counting runes made it six.
 	got, _, err := runSmall(t, dir, "一二\tx\n", "expand")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "一二      x\n"; got != want {
+	if want := "一二    x\n"; got != want {
 		t.Fatalf("expand after CJK = %q, want %q", got, want)
 	}
 	// -i leaves a tab alone once text has started, which is what makes it safe
@@ -282,6 +282,44 @@ func TestExpandUnexpand_convertTabsAndSpaces(t *testing.T) {
 	}
 	if want := "ab\tc\n"; got != want {
 		t.Fatalf("expand -i = %q, want the tab kept", got)
+	}
+}
+
+// unexpand is busybox's, each case measured against busybox-w32: a line that begins with a word
+// has the run after it changed too; -t sets -a, and -f takes it back; a tab before the newline
+// is kept, and one ending a last line with no newline is lost; and the long forms.
+func TestExpandUnexpand_asBusybox(t *testing.T) {
+	dir := t.TempDir()
+	for _, test := range []struct {
+		applet string
+		args   []string
+		stdin  string
+		want   string
+	}{
+		{"unexpand", nil, "a        b\n", "a\t b\n"},
+		{"unexpand", nil, "  \t z\n", "\t z\n"},
+		{"unexpand", []string{"-a"}, "        lead  mid        x    y\n", "\tlead  mid\t x    y\n"},
+		{"unexpand", []string{"-t", "4"}, "    a    b\n", "\ta\t b\n"},
+		{"unexpand", []string{"-t", "4", "-f"}, "    a    b\n", "\ta    b\n"},
+		{"unexpand", []string{"--all"}, "x       y\n", "x\ty\n"},
+		{"unexpand", []string{"--first-only", "--tabs=4"}, "    a    b\n", "\ta    b\n"},
+		{"unexpand", nil, "a\t\n", "a\t\n"},
+		{"unexpand", nil, "a\t", "a"},
+		{"expand", []string{"--tabs=3"}, "a\tb\n", "a  b\n"},
+		{"expand", []string{"--initial"}, "\tx\ty\n", "        x\ty\n"},
+	} {
+		got, stderr, err := runSmall(t, dir, test.stdin, test.applet, test.args...)
+		if err != nil || got != test.want {
+			t.Errorf("%s %q < %q = %q, %v (%s); want %q", test.applet, test.args, test.stdin, got, err, stderr, test.want)
+		}
+	}
+	for _, test := range []struct{ tabs, want string }{
+		{"0", "number 0 is not in 1..4294967295 range"},
+		{"x", "invalid number 'x'"},
+	} {
+		if _, _, err := runSmall(t, dir, "a\n", "expand", "-t", test.tabs); err == nil || err.Error() != test.want {
+			t.Errorf("expand -t %s: %v, want %q", test.tabs, err, test.want)
+		}
 	}
 }
 

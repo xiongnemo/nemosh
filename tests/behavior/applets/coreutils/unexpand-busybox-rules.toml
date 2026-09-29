@@ -1,0 +1,22 @@
+id = "applet.busybox-w32.unexpand.busybox-rules"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+script = '''
+printf 'a        b\n' | unexpand
+printf '    a    b\n' | unexpand -t 4
+printf '    a    b\n' | unexpand -t 4 -f
+printf 'x       y\n' | unexpand --all
+printf 'a\tb\n' | expand --tabs=3
+'''
+
+[expect]
+status = 0
+stdout = "a\t b\n\ta\t b\n\ta    b\nx\ty\na  b\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/expand.c"
+why = "busybox's unexpand converts a line's first run of blanks, which for a line that begins with a word is the run after it; -t sets -a, as its getopt32 has \"ta\", and -f takes it back. Both take their long forms. Each line measured against busybox-w32. unexpand changed only leading blanks, and took neither -f nor the long forms."

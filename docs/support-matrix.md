@@ -653,7 +653,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `clear` | none | refused by name |
 | `cmp` | `-s -l -n`, `--bytes --quiet --silent --verbose`, FILE2 stdin when it is not given, and SKIP1 SKIP2 with K M G; `a b differ: byte 5, line 2` on stdout, and `cmp: EOF on FILE` on stderr, as busybox's editors/cmp.c has them; 0 the same, 1 different, 2 trouble | refused by name |
 | `comm` | `-1 -2 -3` | refused by name |
-| `expand` | `-t -i` | refused by name |
+| `expand` | `-t -i`, `--tabs --initial`, columns counted in the cells a terminal draws | refused by name |
 | `ftpget` | `-u -p -P -v`; `-c` accepted, resuming is not implemented | refused by name |
 | `ftpput` | `-u -p -P -v -c` | refused by name |
 | `factor` | none; numbers from operands or stdin | refused by name |
@@ -730,7 +730,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
 | `uniq` | `-c -d -u -i -z -f -s -w`, and an OUTPUT operand | refused by name |
-| `unexpand` | `-t -a` | refused by name |
+| `unexpand` | `-t -a -f`, `--tabs --all --first-only`; busybox's expand.c: -t converts throughout unless -f, and a line that begins with a word has the run after it converted too | refused by name |
 | `unix2dos` | `-d -u`; converts **in place** with a file operand | refused by name |
 | `unzip` | `-l -t -p -j -n -o -q -K -d -x` | refused by name |
 | `uudecode` | `-o`; `-o -` writes to stdout | refused by name |
@@ -1690,8 +1690,10 @@ Four things here are not guessable:
   table is read *down*: the first column is 0–15, not 0,1,2 across. Reading it
   across is the obvious implementation and gives a completely different table.
 
-`expand`, `unexpand` and `fold` all count **runes**, so a tab after CJK text lands
-where it looks like it should and a wrapped line is never cut through a character.
+`expand` and `unexpand` count the **cells a terminal draws**, as busybox's
+unicode_strwidth does, so a tab after CJK text lands where it looks like it should;
+busybox-w32 counts bytes, its unicode support being off. `fold` counts **runes**, so a
+wrapped line is never cut through a character.
 `shuf` is the one applet whose output is deliberately not reproducible, so its
 tests assert the multiset and the count rather than an order.
 
