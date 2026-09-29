@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"syscall"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 // A signal `kill` sends a background job, step three of docs/design/background-processes.md.
@@ -138,3 +141,8 @@ func (r Runtime) deliverSignals(ctx context.Context, result lineResult) lineResu
 type jobSignal int
 
 func (s jobSignal) Error() string { return fmt.Sprintf("signal %d", int(s)) }
+
+// Is makes SIGINT sent to a job applets.ErrInterrupt, as the shell's own ^C is.
+func (s jobSignal) Is(target error) bool {
+	return target == applets.ErrInterrupt && s == jobSignal(syscall.SIGINT)
+}

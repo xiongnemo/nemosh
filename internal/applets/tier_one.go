@@ -16,37 +16,6 @@ import (
 // runs cmd, silently, exit 0. Owning the name is the only way to stop a script
 // getting nothing instead of a failure.
 
-// tee copies its input to stdout and to each named file, which is what a
-// pipeline needs to keep a copy of something it is also passing on.
-func newTeeApplet() Applet {
-	return simpleApplet{name: "tee", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "a", "")
-		if err != nil {
-			return err
-		}
-		writers := []io.Writer{stdout}
-		view := ProcessViewFromContext(ctx)
-		for _, path := range paths {
-			native, err := resolveHostPath(view, path)
-			if err != nil {
-				return err
-			}
-			flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-			if options.has('a') {
-				flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
-			}
-			file, err := os.OpenFile(native, flags, 0o644)
-			if err != nil {
-				return cannotOpen(path, err)
-			}
-			defer file.Close()
-			writers = append(writers, file)
-		}
-		_, err = copyWithContext(ctx, io.MultiWriter(writers...), stdin)
-		return err
-	}}
-}
-
 // clear empties the screen. Ctrl-L already did this in the line editor; the
 // command is what a script -- or an alias, which is how most people reach it --
 // can call.

@@ -132,7 +132,7 @@ var usageText = map[string]Usage{
 	"su":         {Summary: "Run a shell with administrator rights.", Operands: "[root]", Options: map[string]string{"c": "run this command in the elevated shell instead of an interactive one", "s": "use this shell rather than nemosh", "t": "test whether elevation would work, and report it; implies -W", "W": "wait for the elevated shell to finish", "N": "use this nemosh, which is the default and cannot be combined with -s"}, Notes: []string{"The only user it will become is root, which on Windows means an elevated session.", "A pipe or redirection around su cannot reach the elevated shell: Windows cannot", "pass handles across the elevation boundary. Use -c and redirect inside it."}},
 	"tac":        {Summary: "Print the lines of each file in reverse order.", Operands: "[FILE]..."},
 	"tail":       {Summary: "Print the end of each file.", Operands: "[FILE]...", Options: map[string]string{"n": "print this many lines instead of 10", "c": "print this many bytes instead"}, Notes: []string{"-f is not implemented; `tail -f` is refused rather than quietly finishing."}},
-	"tee":        {Summary: "Copy standard input to each file and to standard output.", Operands: "[FILE]...", Options: map[string]string{"a": "append to the files rather than truncating them"}},
+	"tee":        {Summary: "Copy standard input to each file and to standard output.", Operands: "[FILE]...", Options: map[string]string{"a": "append to the files rather than truncating them", "i": "go on through an interrupt, ^C, as busybox's ignores SIGINT"}, Notes: []string{"A FILE of - is standard output again. One that cannot be opened is named, and the rest are written."}},
 	"top": {
 		Summary:  "Watch processes, CPU and memory as they change.",
 		Operands: "",

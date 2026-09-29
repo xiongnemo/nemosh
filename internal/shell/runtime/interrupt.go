@@ -3,9 +3,14 @@ package runtime
 import (
 	"context"
 	"errors"
+	"fmt"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
-var errShellInterrupt = errors.New("shell interrupt")
+// errShellInterrupt is the cause of the shell's interrupt, ^C. It is applets.ErrInterrupt, so
+// an applet told to ignore SIGINT, tee -i, can tell it from the rest.
+var errShellInterrupt = fmt.Errorf("shell interrupt: %w", applets.ErrInterrupt)
 
 func InterruptContext(parent context.Context) (context.Context, func()) {
 	ctx, interrupt, _ := InterruptContextWithRelease(parent)
