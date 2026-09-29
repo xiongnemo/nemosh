@@ -32,7 +32,14 @@ type processInputView interface {
 	OpenProcessInput(string) (io.ReadCloser, error)
 }
 
+// ResolveProcessPath resolves an operand as the shell would. An empty one names nothing: POSIX
+// resolves no null pathname, every system call refuses it with ENOENT, and the empty native path
+// answered for it keeps that for whatever the applet does next. The shell's model joined it to
+// the working directory, so `rm -rf ""` emptied that.
 func ResolveProcessPath(view ProcessView, path string) (pathmodel.ResolvedPath, error) {
+	if path == "" {
+		return pathmodel.ResolvedPath{}, nil
+	}
 	if resolver, ok := view.(pathProcessView); ok {
 		return resolver.ResolveNemoshPath(path)
 	}

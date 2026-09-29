@@ -105,6 +105,11 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 }
 
 func (r Runtime) externalCommandPath(name string) (string, error) {
+	// An empty name is no command anywhere. Joined to a PATH directory it named the directory,
+	// and `""` was refused as not executable, 126, where both references say not found.
+	if name == "" {
+		return "", errExternalNotFound
+	}
 	if hasPathSeparator(name) {
 		resolved, err := r.ResolveNemoshPath(name)
 		if err != nil {

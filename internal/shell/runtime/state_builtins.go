@@ -298,28 +298,6 @@ func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet, physi
 	return 0
 }
 
-// cdTarget answers where to go, whether to print it on arrival, and whether the
-// operands made sense at all.
-func (r Runtime) cdTarget(as string, args []string) (string, bool, bool) {
-	if len(args) == 0 {
-		home := r.vars["HOME"]
-		if home == "" {
-			fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: HOME not set", as))
-			return "", false, false
-		}
-		return home, false, true
-	}
-	if args[0] != "-" {
-		return args[0], false, true
-	}
-	previous := r.vars["OLDPWD"]
-	if previous == "" {
-		fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: OLDPWD not set", as))
-		return "", false, false
-	}
-	return previous, true, true
-}
-
 // PWD and OLDPWD are exported the way busybox sets them, because their whole
 // use is to be read by something else -- a prompt, a subshell, a child process.
 func (r Runtime) setDirectoryVariable(name, value string) {

@@ -64,8 +64,11 @@ func newDuApplet() Applet {
 			// `native` kept the forward slashes the shell resolves to while
 			// WalkDir handed back backslashes, so no path ever matched its own
 			// parent: every total was one block and the names came out as
-			// `dutest/C:/Users/...`.
-			native = filepath.Clean(native)
+			// `dutest/C:/Users/...`. An empty operand's empty path is left alone, which Clean
+			// would make `.`, so `du ""` measured the working directory.
+			if native != "" {
+				native = filepath.Clean(native)
+			}
 			if err := reportUsage(ctx, stdout, stderr, native, path, options.has('s'), options.has('h')); err != nil {
 				// Of several operands, one that is not there is named and the rest measured; see
 				// operand_reporter.go.

@@ -82,6 +82,11 @@ func (r lnRequest) link(target, last string) error {
 	if err != nil {
 		return err
 	}
+	// An empty NAME names nothing, ENOENT as link(2) has it; Windows asks for the privilege to
+	// make a symbolic link before it looks at the name.
+	if host == "" {
+		return operandFailure(name, fs.ErrNotExist)
+	}
 	targetHost, err := resolveHostPath(r.view, target)
 	if err != nil {
 		return err

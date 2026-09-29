@@ -18,7 +18,7 @@ func newRealpathApplet() Applet {
 		failed := false
 		view := ProcessViewFromContext(ctx)
 		for _, arg := range args {
-			resolved, err := ResolveProcessPath(view, arg)
+			resolved, err := ResolveProcessPath(view, currentIfEmpty(arg))
 			if err == nil && resolved.Device {
 				// A device is a real path with a canonical spelling, which is exactly
 				// what realpath is for: `/dev/../dev/zero` answers `/dev/zero`. There

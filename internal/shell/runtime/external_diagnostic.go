@@ -49,6 +49,10 @@ func (r Runtime) reportLookupFailure(name string, err error) int {
 // with a separator in it was meant as a path, so PATH is not the answer; a bare
 // name with no PATH to search is a different problem again.
 func (r Runtime) notFoundHint(name string) string {
+	// An empty name has no spelling to check and no PATH to blame.
+	if name == "" {
+		return ""
+	}
 	if hasPathSeparator(name) {
 		return fmt.Sprintf("%s was read as a path, not a PATH lookup; check the spelling and that the file exists", name)
 	}

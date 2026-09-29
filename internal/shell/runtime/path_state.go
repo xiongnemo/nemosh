@@ -24,6 +24,14 @@ func (r Runtime) ResolveNemoshPath(path string) (pathmodel.ResolvedPath, error) 
 	if r.initErr != nil {
 		return pathmodel.ResolvedPath{}, r.initErr
 	}
+	// An empty word names nothing: POSIX resolves no null pathname, and every system call
+	// refuses one with ENOENT, which the empty native path answered here keeps. The model joined
+	// it to the working directory, so `rm -rf ""` emptied that, `[ -d "" ]` was true and
+	// `exec 3< ""` opened it. A caller that means the working directory -- a glob's base, an
+	// empty PATH entry, cd's empty operand -- says "." itself.
+	if path == "" {
+		return pathmodel.ResolvedPath{}, nil
+	}
 	resolved, err := r.paths.resolve(path)
 	if err != nil {
 		return pathmodel.ResolvedPath{}, err

@@ -61,8 +61,11 @@ func readLink(view ProcessView, operand string) (string, error) {
 
 // canonicalPath is readlink -f's answer, the path realpath prints, except that the last
 // component need not exist, as busybox's xmalloc_realpath_coreutils has it.
+//
+// An empty operand is the working directory, as busybox-w32 answers for readlink -f and realpath
+// both, where GNU refuses it.
 func canonicalPath(view ProcessView, operand string) (string, error) {
-	resolved, err := ResolveProcessPath(view, operand)
+	resolved, err := ResolveProcessPath(view, currentIfEmpty(operand))
 	if err != nil {
 		return "", err
 	}
@@ -77,4 +80,12 @@ func canonicalPath(view ProcessView, operand string) (string, error) {
 		return "", err
 	}
 	return canonicalizeGeneratedPath(view, resolved.Canonical, native), nil
+}
+
+// currentIfEmpty is an empty operand read as the working directory.
+func currentIfEmpty(operand string) string {
+	if operand == "" {
+		return "."
+	}
+	return operand
 }

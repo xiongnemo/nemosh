@@ -71,3 +71,41 @@ func (r Runtime) pwdBuiltin(args []string) int {
 	}
 	return r.printDirectory(string(r.physicalPath(resolved).Canonical))
 }
+
+// cdTarget answers where to go, whether to print it on arrival, and whether the
+// operands made sense at all.
+//
+// An empty directory is the current one, as busybox's cdcmd has it (`if (!*dest) dest = "."`):
+// `cd ""`, and an empty HOME or OLDPWD, which bash takes the same way. pushd is bash's own, and
+// refuses an empty operand as a null directory, as bash does.
+func (r Runtime) cdTarget(as string, args []string) (string, bool, bool) {
+	if len(args) == 0 {
+		home, set := r.vars["HOME"]
+		if !set {
+			fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: HOME not set", as))
+			return "", false, false
+		}
+		return currentIfEmpty(home), false, true
+	}
+	if args[0] == "" && as != "cd" {
+		fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: null directory", as))
+		return "", false, false
+	}
+	if args[0] != "-" {
+		return currentIfEmpty(args[0]), false, true
+	}
+	previous, set := r.vars["OLDPWD"]
+	if !set {
+		fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: OLDPWD not set", as))
+		return "", false, false
+	}
+	return currentIfEmpty(previous), true, true
+}
+
+// currentIfEmpty is cd's reading of an empty directory as the current one.
+func currentIfEmpty(directory string) string {
+	if directory == "" {
+		return "."
+	}
+	return directory
+}
