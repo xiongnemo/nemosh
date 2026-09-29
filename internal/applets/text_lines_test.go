@@ -143,12 +143,13 @@ func TestNl(t *testing.T) {
 
 // A numbering style nl does not have is refused rather than treated as the
 // default, because a script asking for one is asking for something specific.
+// busybox numbers no line for it; the refusal is GNU's.
 func TestNl_refusesAnUnknownStyle(t *testing.T) {
 	// When
 	_, _, err := runFilter(t, "nl", []string{"-bz"}, "a\n")
 
 	// Then
-	if err == nil || !strings.Contains(err.Error(), "unsupported numbering style") {
+	if err == nil || !strings.Contains(err.Error(), "invalid body numbering style: 'z'") {
 		t.Fatalf("nl -bz = %v, want a refusal naming the style", err)
 	}
 }

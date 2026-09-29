@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"strings"
 )
@@ -74,58 +73,6 @@ func newRevApplet() Applet {
 				// rewriting bytes it cannot read is how this destroyed a GBK file.
 				// See text_encoding.go.
 				_, err := io.WriteString(stdout, reverseText(line)+ending)
-				return err
-			})
-		})
-	}}
-}
-
-// nl numbers lines.
-//
-// GNU's default is `-bt`: only non-empty lines are numbered, and an empty one
-// gets the same width in blanks. Measured:
-//
-//	$ printf 'a\n\nb\n' | nl
-//	     1  a
-//
-//	     2  b
-//
-// Six columns, right-aligned, then a tab. `-ba` numbers every line, which is the
-// form people reach for and the reason the default surprises them.
-func newNlApplet() Applet {
-	return simpleApplet{name: "nl", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "", "b")
-		if err != nil {
-			return err
-		}
-		// Three styles: `t` numbers non-empty lines and is the default, `a`
-		// numbers every line, `n` numbers none. Three is one more state than a
-		// boolean holds, which is how the first version of this numbered every
-		// non-empty line under -bn.
-		style := options.value('b')
-		switch style {
-		case "", "t", "a", "n":
-		default:
-			return fmt.Errorf("unsupported numbering style: %s", style)
-		}
-		number := 0
-		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
-			// A newline rather than the ending the input had, which is the one
-			// place here that deliberately does *not* preserve it. nl produces a
-			// new document -- every line gains a number and a tab -- rather than
-			// reproducing the input, so normalising its own output is reasonable,
-			// and it is what busybox does: measured, `nl` on a CRLF file answers LF
-			// and on a file with no final newline adds one.
-			return eachLine(reader, func(line, _ string) error {
-				if style == "n" || (style != "a" && strings.TrimSpace(line) == "") {
-					// A skipped line gets the number field's width in blanks plus
-					// its tab, so the text still starts in one column. Measured
-					// from GNU: `printf 'a\nb\n' | nl -bn` writes seven spaces.
-					_, err := io.WriteString(stdout, "       "+line+"\n")
-					return err
-				}
-				number++
-				_, err := fmt.Fprintf(stdout, "%6d\t%s\n", number, line)
 				return err
 			})
 		})

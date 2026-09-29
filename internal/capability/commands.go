@@ -47,7 +47,7 @@ var commands = []Command{
 	{Name: "mkdir", Short: "mpv", ValueShort: "m", Long: []string{"mode", "parents", "verbose"}, ValueLong: []string{"mode"}, Operand: Directory},
 	{Name: "mktemp", Short: "dqu", Operand: AnyPath},
 	{Name: "mv", Short: "finTtv", ValueShort: "t", Operand: AnyPath},
-	{Name: "nl", Short: "b", ValueShort: "b", Operand: AnyPath},
+	{Name: "nl", Short: "bivswp", ValueShort: "bivsw", Long: []string{"body-numbering", "line-increment", "number-separator", "starting-line-number", "number-width", "no-renumber"}, ValueLong: []string{"body-numbering", "line-increment", "number-separator", "starting-line-number", "number-width"}, Operand: AnyPath},
 	{Name: "paste", Short: "sd", ValueShort: "d", Operand: AnyPath},
 	{Name: "pgrep", Short: "lx", Operand: AnyPath},
 	{Name: "pkill", Short: "x", Operand: AnyPath},
