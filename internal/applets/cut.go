@@ -1,14 +1,25 @@
 package applets
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"strings"
+	"regexp"
+	"regexp/syntax"
 )
 
+// cut is busybox's (coreutils/cut.c): `cut {-b|-c LIST | -f|-F LIST [-d SEP] [-s]} [-D]
+// [-O SEP] [FILE]...`, with --output-delimiter for -O, and -n taken and ignored. -b and -c cut
+// bytes, as busybox's -c does. -f cuts fields at each -d, a tab unless given, and -F at each
+// match of -d taken as an extended regular expression, a run of blanks unless given. What is
+// printed is joined by -O: -d for -f and a blank for -F unless given, and for -b and -c nothing
+// unless given, put only between ranges that do not touch. -s drops a line with no delimiter in
+// it. The list is sorted unless -D, which keeps it as given and counts each range's fields from
+// the start of the line. A -d of a newline cuts lines rather than fields.
+//
+// It took -b -c -f -d -s. -d's first character is the delimiter, and the whole of it what goes
+// between the fields, as busybox has it.
 func newCutApplet() Applet {
 	return cutApplet{}
 }
@@ -20,198 +31,115 @@ func (cutApplet) Name() string {
 }
 
 func (cutApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-
-	options, err := parseCutArgs(args)
+	spec, operands, err := parseCutArgs(ctx, args)
 	if err != nil {
-		return writeCutDiagnostic(stderr, err.Error())
+		return writeCutDiagnostic(stderr, "cut: "+err.Error())
 	}
-	// runCutInputs reports each unreadable operand as it goes, so what comes
-	// back is already either a context error or the final exit status.
-	return runCutInputs(ctx, ProcessViewFromContext(ctx), options, stdin, stdout, stderr)
+	// runCutInputs reports each unreadable operand as it goes, so what comes back is already
+	// either a context error or the final exit status.
+	return runCutInputs(ctx, ProcessViewFromContext(ctx), spec, operands, stdin, stdout, stderr)
 }
 
-type cutMode int
-
-const (
-	cutModeNone cutMode = iota
-	cutModeBytes
-	cutModeChars
-	cutModeFields
-)
-
-type cutOptions struct {
-	mode     cutMode
-	ranges   []cutRange
-	delim    byte
-	hasDelim bool
-	suppress bool
-	operands []string
+// cutSpec is what cut's options asked for.
+type cutSpec struct {
+	// fields is -f or -F, rather than -b or -c; lines is -f with a -d of a newline.
+	fields, lines    bool
+	suppress, noSort bool
+	// delim is -f's delimiter and pattern -F's.
+	delim   byte
+	pattern *regexp.Regexp
+	odelim  string
+	ranges  []cutRange
 }
 
-func parseCutArgs(args []string) (cutOptions, error) {
-	options := cutOptions{delim: '\t'}
-	for index := 0; index < len(args); index++ {
-		arg := args[index]
-		if arg == "--" {
-			options.operands = append(options.operands, args[index+1:]...)
-			break
-		}
-		if !strings.HasPrefix(arg, "-") || arg == "-" {
-			options.operands = append(options.operands, arg)
-			continue
-		}
-		if strings.HasPrefix(arg, "--") {
-			return cutOptions{}, fmt.Errorf("cut: unrecognized option '%s'", arg)
-		}
-		var err error
-		index, err = parseCutOption(args, index, &options)
-		if err != nil {
-			return cutOptions{}, err
-		}
-	}
-	if options.mode == cutModeNone {
-		return cutOptions{}, errors.New("cut: expected a list of bytes, characters, or fields")
-	}
-	if options.hasDelim && options.mode != cutModeFields {
-		return cutOptions{}, errors.New("cut: -d DELIM requires -f")
-	}
-	if options.suppress && options.mode != cutModeFields {
-		return cutOptions{}, errors.New("cut: -s requires -f")
-	}
-	return options, nil
-}
-
-func parseCutOption(args []string, index int, options *cutOptions) (int, error) {
-	arg := args[index]
-	for offset := 1; offset < len(arg); offset++ {
-		flag := arg[offset]
-		switch flag {
-		case 'b', 'c', 'f':
-			value, nextIndex, err := cutOptionArgument(args, index, offset)
-			if err != nil {
-				return index, err
-			}
-			if err := setCutMode(options, flag, value); err != nil {
-				return index, err
-			}
-			return nextIndex, nil
-		case 'd':
-			value, nextIndex, err := cutOptionArgument(args, index, offset)
-			if err != nil {
-				return index, err
-			}
-			if value == "" {
-				return index, errors.New("cut: empty delimiter")
-			}
-			options.delim = value[0]
-			options.hasDelim = true
-			return nextIndex, nil
-		case 's':
-			options.suppress = true
-		case 'n':
-			continue
-		default:
-			return index, fmt.Errorf("cut: invalid option -- %c", flag)
-		}
-	}
-	return index, nil
-}
-
-func cutOptionArgument(args []string, index int, offset int) (string, int, error) {
-	arg := args[index]
-	if offset+1 < len(arg) {
-		return arg[offset+1:], index, nil
-	}
-	if index+1 >= len(args) || args[index+1] == "--" {
-		return "", index, fmt.Errorf("cut: option requires an argument -- %c", arg[offset])
-	}
-	return args[index+1], index + 1, nil
-}
-
-func setCutMode(options *cutOptions, flag byte, list string) error {
-	if options.mode != cutModeNone {
-		return errors.New("cut: options -b, -c, and -f are mutually exclusive")
-	}
-	ranges, err := parseCutRanges(list)
+func parseCutArgs(ctx context.Context, args []string) (cutSpec, []string, error) {
+	words := longOptionWords(args, map[string]string{"output-delimiter": "O"})
+	options, operands, err := parseAppletOptions(ctx, words, "sDn", "bcfFdO")
 	if err != nil {
-		return err
+		return cutSpec{}, nil, err
 	}
-	options.ranges = ranges
-	switch flag {
-	case 'b':
-		options.mode = cutModeBytes
-	case 'c':
-		options.mode = cutModeChars
-	case 'f':
-		options.mode = cutModeFields
-	}
-	return nil
-}
-
-func cutReader(input io.Reader, stdout io.Writer, options cutOptions) error {
-	reader := bufio.NewReader(input)
-	for {
-		line, err := reader.ReadString('\n')
-		if line != "" {
-			line = strings.TrimSuffix(line, "\n")
-			line = strings.TrimSuffix(line, "\r")
-			if err := writeCutLine(stdout, line, options); err != nil {
-				return err
-			}
-		}
-		if err == nil {
+	var list byte
+	for _, letter := range []byte("bcfF") {
+		if !options.has(letter) {
 			continue
 		}
-		if errors.Is(err, io.EOF) {
-			return nil
+		if list != 0 {
+			return cutSpec{}, nil, errors.New("options -b, -c, -f and -F are mutually exclusive")
 		}
-		return err
+		list = letter
 	}
+	if list == 0 {
+		return cutSpec{}, nil, errors.New("expected a list of bytes, characters, or fields")
+	}
+	spec := cutSpec{fields: list == 'f' || list == 'F', suppress: options.has('s'), noSort: options.has('D')}
+	delim, hasDelim := options.value('d'), options.has('d')
+	if !spec.fields {
+		if spec.suppress {
+			return cutSpec{}, nil, errors.New("-s requires -f or -F")
+		}
+		if hasDelim {
+			return cutSpec{}, nil, errors.New("-d DELIM requires -f or -F")
+		}
+	}
+	switch {
+	case options.has('O'):
+		spec.odelim = options.value('O')
+	case list == 'F':
+		spec.odelim = " "
+	case hasDelim:
+		spec.odelim = delim
+	case spec.fields:
+		spec.odelim = "\t"
+	}
+	switch {
+	case list == 'F':
+		if !hasDelim {
+			delim = "[[:space:]]+"
+		}
+		if spec.pattern, err = compileCutPattern(delim); err != nil {
+			return cutSpec{}, nil, err
+		}
+	case !hasDelim:
+		spec.delim = '\t'
+	case delim != "":
+		spec.delim = delim[0]
+		spec.lines = spec.delim == '\n'
+	}
+	if spec.ranges, err = parseCutList(options.value(list), spec.noSort); err != nil {
+		return cutSpec{}, nil, err
+	}
+	return spec, operands, nil
 }
 
-func writeCutLine(stdout io.Writer, line string, options cutOptions) error {
-	if options.mode == cutModeFields {
-		selected, ok := selectCutFields(line, options)
-		if !ok {
-			return nil
-		}
-		_, err := fmt.Fprintln(stdout, selected)
-		return err
+// compileCutPattern is -F's delimiter as busybox's regcomp takes it, extended, and as its
+// regexec searches with REG_NOTBOL and REG_NOTEOL: an anchor matches nowhere, each search
+// starting inside the line. Of the matches that begin first, the longest is taken, as POSIX's.
+func compileCutPattern(pattern string) (*regexp.Regexp, error) {
+	tree, err := syntax.Parse(pattern, syntax.Perl)
+	if err != nil {
+		return nil, fmt.Errorf("bad regex '%s': %v", pattern, err)
 	}
-	_, err := fmt.Fprintln(stdout, selectCutBytes(line, options.ranges))
-	return err
+	neverAnchored(tree)
+	compiled, err := regexp.Compile(tree.String())
+	if err != nil {
+		return nil, fmt.Errorf("bad regex '%s': %v", pattern, err)
+	}
+	compiled.Longest()
+	return compiled, nil
 }
 
-func selectCutBytes(line string, ranges []cutRange) string {
-	var builder strings.Builder
-	for index := range len(line) {
-		position := index + 1
-		if cutRangeContains(ranges, position) {
-			builder.WriteByte(line[index])
-		}
+func neverAnchored(tree *syntax.Regexp) {
+	switch tree.Op {
+	case syntax.OpBeginLine, syntax.OpEndLine, syntax.OpBeginText, syntax.OpEndText:
+		*tree = syntax.Regexp{Op: syntax.OpNoMatch}
+		return
 	}
-	return builder.String()
-}
-
-func selectCutFields(line string, options cutOptions) (string, bool) {
-	delim := string([]byte{options.delim})
-	if !strings.Contains(line, delim) {
-		return line, !options.suppress
+	for _, sub := range tree.Sub {
+		neverAnchored(sub)
 	}
-	fields := strings.Split(line, delim)
-	selected := make([]string, 0, len(fields))
-	for index, field := range fields {
-		position := index + 1
-		if cutRangeContains(options.ranges, position) {
-			selected = append(selected, field)
-		}
-	}
-	return strings.Join(selected, delim), true
 }
 
 // cut never raises xfunc_error_retval, so both its usage deaths and its

@@ -9,7 +9,7 @@ command = ["cut", "-x"]
 [expect]
 status = 1
 stdout = ""
-stderr = "cut: invalid option -- x\n"
+stderr = "cut: invalid option -- 'x'\n"
 
 [notes]
 standard = "BusyBox-w32 cut utility"

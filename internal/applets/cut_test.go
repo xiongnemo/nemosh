@@ -202,7 +202,7 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidOption(t *tes
 	result := runCutFailure(args)
 
 	// Then
-	assertCutFailure(t, result, "cut: invalid option -- x\n")
+	assertCutFailure(t, result, "cut: invalid option -- 'x'\n")
 }
 
 func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithUnsupportedOption(t *testing.T) {
@@ -211,10 +211,8 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithUnsupportedOption(t 
 		args       []string
 		wantStderr string
 	}{
-		{"unsupported -F", []string{"-F", "1"}, "cut: invalid option -- F\n"},
-		{"unsupported -D", []string{"-D", ":", "-f", "1"}, "cut: invalid option -- D\n"},
-		{"unsupported -O", []string{"-O:", "-f", "1"}, "cut: invalid option -- O\n"},
-		{"unsupported output delimiter", []string{"--output-delimiter=:", "-f", "1"}, "cut: unrecognized option '--output-delimiter=:'\n"},
+		{"unsupported -Z", []string{"-Z", "-f", "1"}, "cut: invalid option -- 'Z'\n"},
+		{"unsupported long option", []string{"--complement", "-f", "1"}, "cut: unrecognized option '--complement'\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -249,7 +247,7 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithMultipleModes(t *tes
 	result := runCutFailure(args)
 
 	// Then
-	assertCutFailure(t, result, "cut: options -b, -c, and -f are mutually exclusive\n")
+	assertCutFailure(t, result, "cut: options -b, -c, -f and -F are mutually exclusive\n")
 }
 
 func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidRanges(t *testing.T) {
@@ -260,12 +258,12 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidRanges(t *tes
 	}{
 		{"empty list", "", "cut: missing list of positions\n"},
 		{"dash only", "-", "cut: invalid range -\n"},
-		{"zero", "0", "cut: invalid range 0\n"},
-		{"leading plus", "+3", "cut: invalid range +3\n"},
-		{"leading plus endpoint", "1-+3", "cut: invalid range 1-+3\n"},
-		{"negative endpoint", "--3", "cut: invalid range --3\n"},
+		{"zero", "0", "cut: invalid range 0-0\n"},
+		{"leading plus", "+3", "cut: invalid number '+3'\n"},
+		{"leading plus endpoint", "1-+3", "cut: invalid number '+3'\n"},
+		{"negative endpoint", "--3", "cut: invalid number '-3'\n"},
 		{"reversed range", "4-2", "cut: invalid range 4-2\n"},
-		{"non-numeric", "a", "cut: invalid range a\n"},
+		{"non-numeric", "a", "cut: invalid number 'a'\n"},
 		{"empty segment", "1,,2", "cut: invalid range 1,,2\n"},
 	}
 	for _, tt := range tests {

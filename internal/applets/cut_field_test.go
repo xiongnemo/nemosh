@@ -139,7 +139,7 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithDelimiterWithoutFiel
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "cut: -d DELIM requires -f\n"; got != want {
+	if got, want := stderr.String(), "cut: -d DELIM requires -f or -F\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
@@ -158,26 +158,26 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithSuppressWithoutField
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "cut: -s requires -f\n"; got != want {
+	if got, want := stderr.String(), "cut: -s requires -f or -F\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
 
-func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithEmptyDelimiter(t *testing.T) {
+// An empty -d is a NUL, which busybox's cut takes: it was refused as an empty delimiter.
+func TestCutApplet_splitsAtNUL_whenRunWithEmptyDelimiter(t *testing.T) {
 	// Given
 	applet := newCutApplet()
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	// When
-	err := applet.Run(context.Background(), []string{"-f", "1", "-d", ""}, &bytes.Buffer{}, &stdout, &stderr)
+	err := applet.Run(context.Background(), []string{"-f", "2", "-d", ""}, bytes.NewBufferString("a\x00b\nplain\n"), &stdout, &stderr)
 
 	// Then
-	assertCutStatus(t, err, 1)
-	if got := stdout.String(); got != "" {
-		t.Fatalf("expected empty stdout, got %q", got)
+	if err != nil || stderr.String() != "" {
+		t.Fatalf("cut -f 2 -d '': %v, %q", err, stderr.String())
 	}
-	if got, want := stderr.String(), "cut: empty delimiter\n"; got != want {
-		t.Fatalf("expected stderr %q, got %q", want, got)
+	if got, want := stdout.String(), "b\nplain\n"; got != want {
+		t.Fatalf("expected stdout %q, got %q", want, got)
 	}
 }

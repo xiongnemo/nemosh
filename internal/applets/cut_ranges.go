@@ -1,119 +1,77 @@
 package applets
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"sort"
-	"strconv"
 	"strings"
 )
 
+// cutRange is one range of cut's LIST, counted from 0 as busybox's cut_range is; an end of
+// math.MaxInt is N-, to the end of the line.
 type cutRange struct {
-	start int
-	end   int
+	start, end int
 }
 
-func parseCutRanges(list string) ([]cutRange, error) {
+// parseCutList is busybox's: N, N-, N-M and -M between commas, each N busybox's
+// xatoi_positive, so `invalid number 'x'`, and a range that begins at 0 or ends before it
+// begins `invalid range 3-1`. The ranges are sorted by where they begin unless -D, which
+// keeps them as given, a range twice as well.
+func parseCutList(list string, keepOrder bool) ([]cutRange, error) {
 	if list == "" {
-		return nil, fmt.Errorf("cut: missing list of positions")
+		return nil, errors.New("missing list of positions")
 	}
-	if strings.Contains(list, ",,") || strings.HasPrefix(list, ",") || strings.HasSuffix(list, ",") {
-		return nil, fmt.Errorf("cut: invalid range %s", list)
-	}
-	parts := strings.Split(list, ",")
-	ranges := make([]cutRange, 0, len(parts))
-	for _, part := range parts {
-		rangePart, err := parseCutRangePart(part)
-		if err != nil {
-			return nil, fmt.Errorf("cut: invalid range %s", part)
+	var ranges []cutRange
+	for _, token := range strings.Split(list, ",") {
+		if token == "" {
+			return nil, fmt.Errorf("invalid range %s", list)
 		}
-		ranges = append(ranges, rangePart)
-	}
-	return mergeCutRanges(ranges), nil
-}
-
-func parseCutRangePart(part string) (cutRange, error) {
-	if part == "" || part == "-" {
-		return cutRange{}, errInvalidCutRange
-	}
-	if strings.HasPrefix(part, "-") {
-		end, err := parseCutPosition(part[1:])
-		if err != nil {
-			return cutRange{}, err
+		first, rest, dashed := strings.Cut(token, "-")
+		if first == "" && rest == "" {
+			return nil, fmt.Errorf("invalid range %s", token)
 		}
-		return cutRange{start: 1, end: end}, nil
-	}
-	if prefix, ok := strings.CutSuffix(part, "-"); ok {
-		start, err := parseCutPosition(prefix)
-		if err != nil {
-			return cutRange{}, err
+		start := 0
+		if first != "" {
+			value, err := positiveNumber(first)
+			if err != nil {
+				return nil, err
+			}
+			start = value - 1
 		}
-		return cutRange{start: start}, nil
-	}
-	if strings.Contains(part, "-") {
-		bounds := strings.Split(part, "-")
-		if len(bounds) != 2 {
-			return cutRange{}, errInvalidCutRange
+		end := start
+		shown := first
+		if dashed {
+			end, shown = math.MaxInt, rest
+			if rest != "" {
+				value, err := positiveNumber(rest)
+				if err != nil {
+					return nil, err
+				}
+				end = value - 1
+			}
 		}
-		start, startErr := parseCutPosition(bounds[0])
-		end, endErr := parseCutPosition(bounds[1])
-		if startErr != nil || endErr != nil || start > end {
-			return cutRange{}, errInvalidCutRange
+		if start < 0 || end < start {
+			return nil, fmt.Errorf("invalid range %s-%s", first, shown)
 		}
-		return cutRange{start: start, end: end}, nil
+		ranges = append(ranges, cutRange{start: start, end: end})
 	}
-	position, err := parseCutPosition(part)
-	if err != nil {
-		return cutRange{}, err
+	if keepOrder {
+		return ranges, nil
 	}
-	return cutRange{start: position, end: position}, nil
-}
-
-var errInvalidCutRange = fmt.Errorf("invalid cut range")
-
-func parseCutPosition(raw string) (int, error) {
-	if strings.HasPrefix(raw, "+") {
-		return 0, errInvalidCutRange
-	}
-	position, err := strconv.Atoi(raw)
-	if err != nil || position <= 0 {
-		return 0, errInvalidCutRange
-	}
-	return position, nil
-}
-
-func mergeCutRanges(ranges []cutRange) []cutRange {
-	sort.Slice(ranges, func(left int, right int) bool {
-		return ranges[left].start < ranges[right].start
-	})
-	merged := make([]cutRange, 0, len(ranges))
-	for _, item := range ranges {
-		if len(merged) == 0 {
-			merged = append(merged, item)
+	sort.SliceStable(ranges, func(i, j int) bool { return ranges[i].start < ranges[j].start })
+	// A range that begins inside the one before it is folded into it. busybox walks the two
+	// apart and prints what they share twice: -f 1,1 prints a line with no tab and then a tab,
+	// and a line that begins with two prints its empty second field as the first's. One that
+	// only touches the one before stays apart, as -F joins two ranges by -O and keeps the
+	// delimiters inside one.
+	merged := ranges[:1]
+	for _, r := range ranges[1:] {
+		if last := &merged[len(merged)-1]; r.start <= last.end {
+			last.end = max(last.end, r.end)
 			continue
 		}
-		last := &merged[len(merged)-1]
-		if last.end == 0 {
-			continue
-		}
-		if item.start > last.end+1 {
-			merged = append(merged, item)
-			continue
-		}
-		if item.end == 0 || item.end > last.end {
-			last.end = item.end
-		}
+		merged = append(merged, r)
 	}
-	return merged
-}
-
-func cutRangeContains(ranges []cutRange, position int) bool {
-	for _, item := range ranges {
-		if position < item.start {
-			return false
-		}
-		if item.end == 0 || position <= item.end {
-			return true
-		}
-	}
-	return false
+	return merged, nil
 }

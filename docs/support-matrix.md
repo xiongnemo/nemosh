@@ -661,7 +661,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `free` | `-b -k -m -g`; `-h` accepted | refused by name |
 | `cpio` | `-t -i -o -d -m -v -u -0 -F -H`; only `newc` is read or written | refused by name |
 | `cp` | `-a -d -P -L -H -p -f -i -n -l -s -T -t -u -v -r -R`, and busybox's long forms; a file is never copied onto itself, and a destination that is there is replaced, read-only or not, as busybox-w32 replaces it. `-r` follows symbolic links, where busybox copies them | refused by name |
-| `cut` | `-b -c -d -f -n -s` | refused by name |
+| `cut` | `-b -c -f -F -d -O -s -D -n` and `--output-delimiter`; `-c` counts bytes, as busybox's does, `-F` splits where an extended regular expression matches, and a `-d` of a newline cuts lines | refused by name |
 | `date` | `-d -D -I -r -R -u` and busybox's long forms; TIME in every form busybox's parse_datestr reads, and `%N` in FORMAT. Setting the clock, `-s` or a TIME operand, is refused | refused by name |
 | `diff` | `-u -U -q -s -i -w -B -N -L`; unified always | refused by name |
 | `dirname` | none needed; one NAME, a second refused | refused by name |

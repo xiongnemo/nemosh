@@ -9,7 +9,7 @@ command = ["cut", "-d", ":", "-c", "1"]
 [expect]
 status = 1
 stdout = ""
-stderr = "cut: -d DELIM requires -f\n"
+stderr = "cut: -d DELIM requires -f or -F\n"
 
 [notes]
 standard = "BusyBox-w32 cut utility"
