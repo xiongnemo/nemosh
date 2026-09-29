@@ -1,173 +1,274 @@
 package applets
 
 import (
-	"fmt"
-	"strconv"
+	"errors"
 	"strings"
-	"unicode"
 )
 
-// sort's key and comparison options, measured from GNU.
-//
-//	$ printf 'b 2\na 3\nc 1\n' | sort -k2       ->  c 1 / b 2 / a 3
-//	$ printf 'B\nb\na\n'       | sort -uf       ->  a / B
-//	$ printf '3:a\n1:b\n'      | sort -t: -k1 -n ->  1:b / 3:a
-//
-// -k is the one that was missed most, and the one whose absence is least visible:
-// without it `sort -k2` was refused outright, so at least nothing silently sorted
-// by the wrong column.
+// sortFlag is one of sort's letters, at the bit busybox's sort.c gives it: the orderings
+// -n -g -h -M -V, then -u -c -s -z, which only the whole command takes, then -b -r -d -f -i,
+// which a key takes too.
+type sortFlag uint32
 
-// sortFields adds the options that decide *what* is compared, on top of the
-// numeric and reverse flags sort already had.
-type sortFields struct {
-	unique       bool
-	foldCase     bool
-	ignoreBlanks bool
-	// separator is -t. Empty means the default: runs of blanks, with the field
-	// starting at the first non-blank -- which is not the same as splitting on a
-	// single space, and is why `sort -k2` works on aligned columns.
-	separator string
-	// keyFrom and keyTo are -k's one-based field range. Zero means the whole
-	// line.
-	keyFrom int
-	keyTo   int
+const (
+	sortNumeric sortFlag = 1 << iota
+	sortGeneral
+	sortHuman
+	sortMonth
+	sortVersion
+	sortUnique
+	sortCheck
+	sortStable
+	sortZero
+	sortBlanks
+	sortReverse
+	sortDictionary
+	sortFold
+	sortPrintable
+	// sortTrailingBlanks strips a key's trailing blanks: b after a key's comma, and -b outside one.
+	sortTrailingBlanks
+)
+
+// sortFlagLetters are the letters of the flags above, in their order.
+const sortFlagLetters = "nghMVucszbrdfi"
+
+const (
+	sortOrderings  = sortNumeric | sortGeneral | sortHuman | sortMonth | sortVersion
+	sortKeyLetters = sortNumeric | sortGeneral | sortHuman | sortMonth | sortBlanks | sortReverse | sortDictionary | sortFold | sortPrintable
+	sortTrimming   = sortBlanks | sortTrailingBlanks | sortDictionary | sortFold | sortPrintable
+)
+
+// sortOptionString is busybox's OPT_STR, which a key's letters are looked up in: one that is not
+// there is an unknown key option, and one that is there but does not order a key, -k2u, is an
+// unknown sort type.
+const sortOptionString = "nghMVucszbrdfimS:T:o:k:*t:"
+
+type sortSpec struct {
+	flags     sortFlag
+	keys      []sortKey
+	separator byte
+	output    string
 }
 
-// parseSortKey reads -k's argument, which GNU spells `F[.C][OPTS][,F[.C][OPTS]]`.
-// Only the field numbers are honoured here; a character offset or a per-key
-// modifier is refused rather than ignored, because a key that means something
-// slightly different from what was asked is worse than no key at all.
-func parseSortKey(value string, into *sortFields) error {
-	from, to, hasTo := strings.Cut(value, ",")
-	start, err := strconv.Atoi(from)
-	if err != nil || start < 1 {
-		return fmt.Errorf("sort: invalid key: %s", value)
-	}
-	into.keyFrom = start
-	into.keyTo = start
-	if !hasTo {
-		// A key with no end runs to the end of the line, which is GNU's rule and
-		// the reason `sort -k2` on three-field lines compares fields two and
-		// three together.
-		into.keyTo = 0
-		return nil
-	}
-	end, err := strconv.Atoi(to)
-	if err != nil || end < start {
-		return fmt.Errorf("sort: invalid key: %s", value)
-	}
-	into.keyTo = end
-	return nil
+// sortKey is -k's POS1[,POS2], each a field and a character, one-based. A POS1 field of 0 starts
+// at the line's end and a POS2 field of 0 ends there; a character of 0 is the field's first for
+// POS1 and its last for POS2.
+type sortKey struct {
+	field, char [2]int
+	flags       sortFlag
 }
 
-// sortKeyOf extracts the part of the line the comparison should see.
-func (f sortFields) sortKeyOf(line string) string {
-	if f.keyFrom == 0 {
-		return f.prepare(line)
-	}
-	fields := f.splitFields(line)
-	if f.keyFrom > len(fields) {
-		// A line with too few fields has an empty key, which sorts first. GNU
-		// does the same rather than treating the line as absent.
-		return ""
-	}
-	end := len(fields)
-	if f.keyTo > 0 && f.keyTo < end {
-		end = f.keyTo
-	}
-	return f.prepare(strings.Join(fields[f.keyFrom-1:end], " "))
-}
-
-// splitFields is where -t decides everything.
-//
-// Without -t, GNU's field separator is the *transition* from blank to non-blank,
-// so a run of spaces is one separator and leading blanks belong to the first
-// field. Splitting on a single space would make `a   b` four fields, and then
-// `-k2` would compare the empty string.
-func (f sortFields) splitFields(line string) []string {
-	if f.separator == "" {
-		return strings.FieldsFunc(line, unicode.IsSpace)
-	}
-	return strings.Split(line, f.separator)
-}
-
-// prepare applies the comparison-time options: -b drops leading blanks and -f
-// folds case.
-func (f sortFields) prepare(text string) string {
-	if f.ignoreBlanks {
-		text = strings.TrimLeft(text, " \t")
-	}
-	if f.foldCase {
-		text = strings.ToUpper(text)
-	}
-	return text
-}
-
-// uniqueSorted removes adjacent duplicates *by the comparison key*, which is what
-// makes `sort -uf` on `B b a` answer `a B` rather than all three: -u means unique
-// according to the sort, not unique as text.
-func uniqueSorted(lines []string, fields sortFields, numeric bool) []string {
-	if len(lines) == 0 {
-		return lines
-	}
-	kept := lines[:1]
-	for _, line := range lines[1:] {
-		previous := kept[len(kept)-1]
-		if compareSortKeys(previous, line, fields, numeric) == 0 {
-			continue
+// parseSortKey reads FIELD[.CHAR][LETTERS][,FIELD[.CHAR][LETTERS]], as busybox's sort_main does.
+// An empty -k is a key that is empty for every line, which busybox takes too.
+func parseSortKey(text string) (sortKey, error) {
+	var key sortKey
+	position := 0
+	for index := 0; index < len(text); {
+		field, next, err := sortKeyNumber(text, index)
+		if err != nil {
+			return key, err
 		}
-		kept = append(kept, line)
+		key.field[position], index = field, next
+		if index < len(text) && text[index] == '.' {
+			if key.char[position], index, err = sortKeyNumber(text, index+1); err != nil {
+				return key, err
+			}
+		}
+		for index < len(text) {
+			letter := text[index]
+			index++
+			if letter == ',' && position == 0 {
+				position = 1
+				break
+			}
+			if strings.IndexByte(sortOptionString, letter) < 0 {
+				return key, errors.New("unknown key option")
+			}
+			flag := sortFlag(0)
+			if bit := strings.IndexByte(sortFlagLetters, letter); bit >= 0 {
+				flag = 1 << bit
+			}
+			if flag&sortKeyLetters == 0 {
+				return key, errors.New("unknown sort type")
+			}
+			// b after the comma strips the key's trailing blanks.
+			if position == 1 && flag == sortBlanks {
+				flag = sortTrailingBlanks
+			}
+			key.flags |= flag
+		}
 	}
-	return kept
+	return key, nil
 }
 
-func compareSortKeys(left, right string, fields sortFields, numeric bool) int {
-	leftKey := fields.sortKeyOf(left)
-	rightKey := fields.sortKeyOf(right)
-	if numeric {
-		leftNumber := sortNumericPrefix(leftKey)
-		rightNumber := sortNumericPrefix(rightKey)
+// sortKeyNumber is busybox's str2u: digits, from 1.
+func sortKeyNumber(text string, index int) (int, int, error) {
+	start, value := index, 0
+	for index < len(text) && isASCIIDigit(text[index]) && value <= 1<<31-1 {
+		value = value*10 + int(text[index]-'0')
+		index++
+	}
+	if index == start || value == 0 || value > 1<<31-1 {
+		return 0, index, errors.New("bad field specification")
+	}
+	return value, index, nil
+}
+
+// keyOf is the part of line that key compares, as busybox's get_key cuts it: from the start of
+// POS1's field -- its leading blanks with it, unless b -- to the end of POS2's, then -d, -i and -f.
+func (spec sortSpec) keyOf(line string, key sortKey, flags sortFlag) string {
+	if key.field == [2]int{1, 0} && key.char == [2]int{} && flags&sortTrimming == 0 {
+		return line
+	}
+	start := spec.fieldStart(line, key.field[0])
+	end := spec.fieldEnd(line, key.field[1])
+	if flags&sortBlanks != 0 {
+		for start < len(line) && isCSpace(line[start]) {
+			start++
+		}
+	}
+	if flags&sortTrailingBlanks != 0 {
+		for end > start && isCSpace(line[end-1]) {
+			end--
+		}
+	}
+	// POS2's character is counted from the start of its field, past its blanks under b, as POSIX
+	// has it. busybox counts it from the start of the line, which is the same for the first field
+	// and no key at all for the rest: -k2.1,2.1 compared nothing.
+	if key.char[1] > 0 {
+		from := spec.fieldStart(line, key.field[1])
+		for flags&sortTrailingBlanks != 0 && from < len(line) && isCSpace(line[from]) {
+			from++
+		}
+		end = min(from+key.char[1], len(line))
+	}
+	if key.char[0] > 0 {
+		start = min(start+key.char[0]-1, len(line))
+	}
+	end = max(end, start)
+	text := line[start:end]
+	if flags&(sortDictionary|sortPrintable|sortFold) == 0 {
+		return text
+	}
+	kept := make([]byte, 0, len(text))
+	for index := range len(text) {
+		c := text[index]
 		switch {
-		case leftNumber < rightNumber:
+		case flags&sortDictionary != 0 && !isCSpace(c) && !isASCIIAlnum(c):
+		case flags&sortPrintable != 0 && (c < 0x20 || c > 0x7e):
+		case flags&sortFold != 0 && 'a' <= c && c <= 'z':
+			kept = append(kept, c-'a'+'A')
+		default:
+			kept = append(kept, c)
+		}
+	}
+	return string(kept)
+}
+
+// fieldStart is where field starts: after the fields before it and, with -t, the separator that
+// ends each. Without -t a field is its leading blanks and what follows up to the next blank.
+func (spec sortSpec) fieldStart(line string, field int) int {
+	if field == 0 {
+		return len(line)
+	}
+	position := 0
+	for range field - 1 {
+		position, _ = spec.skipField(line, position)
+	}
+	return position
+}
+
+// fieldEnd is where field ends, before the separator that follows it.
+func (spec sortSpec) fieldEnd(line string, field int) int {
+	if field == 0 {
+		return len(line)
+	}
+	position, separated := 0, false
+	for range field {
+		position, separated = spec.skipField(line, position)
+	}
+	if separated {
+		position--
+	}
+	return position
+}
+
+// skipField passes one field from position, and with -t the separator after it, saying whether
+// it passed one.
+func (spec sortSpec) skipField(line string, position int) (int, bool) {
+	if spec.separator != 0 {
+		if index := strings.IndexByte(line[position:], spec.separator); index >= 0 {
+			return position + index + 1, true
+		}
+		return len(line), false
+	}
+	for position < len(line) && isCSpace(line[position]) {
+		position++
+	}
+	for position < len(line) && !isCSpace(line[position]) {
+		position++
+	}
+	return position, false
+}
+
+// compare is busybox's compare_keys: each key in turn, as the key's letters or else the ones
+// outside a key say; then, unless -s or tieBreak is off, the lines whole, byte by byte, as the
+// options outside a key say. -r reverses whichever decided, except that -s keeps tied lines in
+// the order they came.
+func (spec sortSpec) compare(left, right string, tieBreak bool) int {
+	flags, result := spec.flags, 0
+	for _, key := range spec.keys {
+		if flags = key.flags; flags == 0 {
+			flags = spec.flags
+		}
+		if result = compareSortKey(spec.keyOf(left, key, flags), spec.keyOf(right, key, flags), flags); result != 0 {
+			break
+		}
+	}
+	if result == 0 && tieBreak {
+		if spec.flags&sortStable != 0 {
+			return 0
+		}
+		flags, result = spec.flags, strings.Compare(left, right)
+	}
+	if flags&sortReverse != 0 {
+		return -result
+	}
+	return result
+}
+
+func compareSortKey(left, right string, flags sortFlag) int {
+	switch flags & sortOrderings {
+	case sortNumeric:
+		leftValue, _ := cNumber(left, false)
+		rightValue, _ := cNumber(right, false)
+		return compareFloat(leftValue, rightValue)
+	case sortGeneral, sortHuman:
+		return compareGeneral(left, right, flags&sortHuman != 0)
+	case sortMonth:
+		leftMonth, leftOK := monthOf(left)
+		rightMonth, rightOK := monthOf(right)
+		switch {
+		case !leftOK && !rightOK:
+			return 0
+		case !leftOK:
 			return -1
-		case leftNumber > rightNumber:
+		case !rightOK:
 			return 1
 		}
-		// Equal numbers fall through to a text comparison, which is what keeps
-		// the order stable and total rather than leaving equal-looking lines in
-		// input order only by luck.
+		return leftMonth - rightMonth
+	case sortVersion:
+		return strverscmp(left, right)
 	}
-	return strings.Compare(leftKey, rightKey)
+	return strings.Compare(left, right)
 }
 
-// sortValueOption handles -k and -t, reporting how many arguments it consumed and
-// the letters that preceded it in the same word.
-func sortValueOption(args []string, index int, fields *sortFields) (string, int, error) {
-	arg := args[index]
-	position := strings.IndexAny(arg, "kt")
-	if position < 1 {
-		return "", 0, nil
-	}
-	letter := arg[position]
-	before := arg[1:position]
-	value := arg[position+1:]
-	consumed := 1
-	if value == "" {
-		if index+1 >= len(args) {
-			return "", 0, fmt.Errorf("sort: option requires an argument -- %c", letter)
-		}
-		value = args[index+1]
-		consumed = 2
-	}
-	if letter == 't' {
-		if value == "" {
-			return "", 0, fmt.Errorf("sort: empty tab")
-		}
-		fields.separator = value
-		return before, consumed, nil
-	}
-	if err := parseSortKey(value, fields); err != nil {
-		return "", 0, err
-	}
-	return before, consumed, nil
+func isCSpace(c byte) bool {
+	return c == ' ' || '\t' <= c && c <= '\r'
+}
+
+func isASCIIDigit(c byte) bool { return '0' <= c && c <= '9' }
+
+func isASCIIAlnum(c byte) bool {
+	return isASCIIDigit(c) || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
 }

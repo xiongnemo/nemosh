@@ -121,7 +121,7 @@ func TestRunner_returnsCommandNotFound_whenAppletMissing(t *testing.T) {
 
 func TestRunner_returnsAppletStatus_whenAppletReportsStatusCode(t *testing.T) {
 	// Given
-	caseData := behavior.Case{Command: []string{"sort", "-z"}}
+	caseData := behavior.Case{Command: []string{"sort", "-j"}}
 	runner := behavior.NewRunner(applets.DefaultRegistry)
 
 	// When
@@ -134,7 +134,7 @@ func TestRunner_returnsAppletStatus_whenAppletReportsStatusCode(t *testing.T) {
 	if result.Stdout != "" {
 		t.Fatalf("expected empty stdout, got %q", result.Stdout)
 	}
-	if result.Stderr != "sort: invalid option -- z\n" {
+	if result.Stderr != "sort: invalid option -- 'j'\n" {
 		t.Fatalf("expected invalid option stderr, got %q", result.Stderr)
 	}
 }

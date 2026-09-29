@@ -136,7 +136,7 @@ var commands = []Command{
 	{Name: "ftpput", Short: "cvupP", ValueShort: "upP", Operand: AnyPath},
 	{Name: "seq", Operand: AnyPath},
 	{Name: "sleep", Operand: AnyPath},
-	{Name: "sort", Short: "nrufbkt", ValueShort: "kt", Operand: AnyPath},
+	{Name: "sort", Short: "nghMVucszbrdfimSTokt", ValueShort: "STokt", Operand: AnyPath},
 	{Name: "stat", Short: "c", ValueShort: "c", Operand: AnyPath},
 	{Name: "split", Short: "l", ValueShort: "l", Operand: AnyPath},
 	// su's operand is a user name rather than a path, and the only name it takes

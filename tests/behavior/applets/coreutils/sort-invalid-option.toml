@@ -4,13 +4,13 @@ kind = "golden"
 semantics = "busybox-w32"
 platforms = ["windows", "linux", "darwin"]
 references = ["busybox-w32"]
-command = ["sort", "-z"]
+command = ["sort", "-j"]
 
 [expect]
 status = 2
 stdout = ""
-stderr = "sort: invalid option -- z\n"
+stderr = "sort: invalid option -- 'j'\n"
 
 [notes]
 standard = "BusyBox-w32 sort utility"
-why = "BusyBox-w32 sort accepts -z (NUL-terminated lines); Nemosh has not implemented it yet and rejects it. The status is right for the wrong reason: sort_main sets xfunc_error_retval = 2 (coreutils/sort.c:468), so every sort failure exits 2."
+why = "-j is none of busybox's sort letters, nghMVucszbrdfim and S: T: o: k: t:. This case asked -z, which busybox takes and Nemosh once refused; it takes it now. sort_main sets xfunc_error_retval = 2 (coreutils/sort.c:468), so every sort failure exits 2."

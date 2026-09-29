@@ -133,7 +133,7 @@ func TestUsageFor_rendersASynopsisAndTheOptions(t *testing.T) {
 	}
 	for _, want := range []string{
 		// The flags cluster, because that is how they are typed.
-		"Usage: sort [-bfnru]",
+		"Usage: sort [-MVbcdfghimnrsuz]",
 		// The ones that take a value are spelled out, with the value named.
 		"[-k KEYDEF]",
 		"[-t SEP]",

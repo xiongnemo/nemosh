@@ -715,7 +715,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `sleep` | duration operand | reported as an invalid duration |
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
-| `sort` | `-n -r -u -f -b -k -t` | refused by name |
+| `sort` | busybox's `-n -g -h -M -V -u -c -s -z -b -r -d -f -i -o -k -t`, keys with character offsets and their own letters; `-m -S -T` taken and ignored | refused by name |
 | `stat` | `-c FORMAT` with `%n %s %F %f %y %Y`; the default output is refused | refused by name |
 | `split` | `-l`; two-letter suffixes, `aa` upwards | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |

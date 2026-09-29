@@ -44,7 +44,7 @@ func TestDirectApplet_preservesProcessInputs_whenSelectedExplicitlyOrByInvocatio
 }
 
 func TestDirectApplet_preservesStatusAndStderr_whenSelectedExplicitlyOrByInvocationName(t *testing.T) {
-	for _, args := range [][]string{{"nemosh", "sort", "-z"}, {directAppletInvocationName("sort"), "-z"}} {
+	for _, args := range [][]string{{"nemosh", "sort", "-j"}, {directAppletInvocationName("sort"), "-j"}} {
 		// Given
 		var stdout, stderr bytes.Buffer
 		cmd := command{stdin: &bytes.Buffer{}, stdout: &stdout, stderr: &stderr}
@@ -54,7 +54,7 @@ func TestDirectApplet_preservesStatusAndStderr_whenSelectedExplicitlyOrByInvocat
 
 		// Then
 		status, ok := applets.StatusCode(err)
-		if !ok || status != 2 || stdout.Len() != 0 || stderr.String() != "sort: invalid option -- z\n" {
+		if !ok || status != 2 || stdout.Len() != 0 || stderr.String() != "sort: invalid option -- 'j'\n" {
 			t.Fatalf("run(%v): status=(%d,%t) stdout=%q stderr=%q error=%v", args, status, ok, stdout.String(), stderr.String(), err)
 		}
 	}

@@ -97,7 +97,7 @@ func TestRun_returnsAppletStatus_whenDirectSortDispatchRejectsOption(t *testing.
 	cmd := command{stdin: &bytes.Buffer{}, stdout: &stdout, stderr: &stderr}
 
 	// When
-	err := cmd.run(context.Background(), []string{"nemosh", "sort", "-z"})
+	err := cmd.run(context.Background(), []string{"nemosh", "sort", "-j"})
 
 	// Then
 	status, ok := applets.StatusCode(err)
@@ -110,7 +110,7 @@ func TestRun_returnsAppletStatus_whenDirectSortDispatchRejectsOption(t *testing.
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got := stderr.String(); got != "sort: invalid option -- z\n" {
+	if got := stderr.String(); got != "sort: invalid option -- 'j'\n" {
 		t.Fatalf("expected invalid option stderr, got %q", got)
 	}
 }
