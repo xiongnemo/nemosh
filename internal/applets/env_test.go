@@ -244,14 +244,15 @@ func TestDefaultRegistry_EnvRestoresEnvironment_whenChildAppletReturnsError(t *t
 	}
 }
 
-func TestDefaultRegistry_EnvRejectsUnsupportedOption_whenDashUProvided(t *testing.T) {
+// -u is busybox's and taken now (env_options_test.go); -x is none of its letters.
+func TestDefaultRegistry_EnvRejectsUnsupportedOption_whenDashXProvided(t *testing.T) {
 	// Given
 	applet := lookupEnvApplet(t)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	// When
-	err := applet.Run(context.Background(), []string{"-u", "NEMOSH_TEST_ENV_ASSIGNMENT"}, &bytes.Buffer{}, &stdout, &stderr)
+	err := applet.Run(context.Background(), []string{"-x", "NEMOSH_TEST_ENV_ASSIGNMENT"}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
 	if err == nil {

@@ -30,7 +30,7 @@ var commands = []Command{
 	{Name: "date", Short: "dDIrRsu", ValueShort: "dDrs", Long: []string{"date", "set", "reference", "utc", "rfc-2822", "rfc-822"}, ValueLong: []string{"date", "set", "reference"}, Operand: AnyPath},
 	{Name: "dirname", Operand: AnyPath},
 	{Name: "echo", Short: "ne", Operand: AnyPath},
-	{Name: "env", Short: "i", Operand: AnyPath},
+	{Name: "env", Short: "i0u", ValueShort: "u", Long: []string{"ignore-environment", "null", "unset"}, ValueLong: []string{"unset"}, Operand: AnyPath},
 	{Name: "du", Short: "sh", Operand: AnyPath},
 	{Name: "df", Short: "hk", Operand: AnyPath},
 	{Name: "dd", Operand: AnyPath},

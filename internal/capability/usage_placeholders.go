@@ -122,6 +122,8 @@ var valuePlaceholders = map[string]string{
 	"sortS":             "SIZE",
 	"sortT":             "DIR",
 	"seqs":              "SEP",
+	"envu":              "NAME",
+	"envunset":          "NAME",
 	"uniqf":             "N",
 	"uniqs":             "N",
 	"uniqw":             "N",
