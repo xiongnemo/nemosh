@@ -46,7 +46,10 @@ func runWithOption(t *testing.T, name, option string) string {
 	}
 	var stdout, stderr bytes.Buffer
 	// A temporary directory as the operand where one is wanted, so an applet
-	// that reads or writes has something harmless to work on.
+	// that reads or writes has something harmless to work on -- and as the working
+	// directory, so one that writes beside it does so there. `ln -s DIR` links DIR
+	// into the working directory, and that was this package's source tree.
+	t.Chdir(t.TempDir())
 	err := applet.Run(context.Background(), []string{option, t.TempDir()},
 		strings.NewReader(""), &stdout, &stderr)
 	reported := stderr.String()

@@ -223,7 +223,6 @@
     },
     "builtin-bracket.test.sh": {
       "-a as unary operator (alias of -e)": "fail",
-      "-ef": "fail",
       "-k for sticky bit": "fail",
       "-ot and -nt": "fail",
       "Looks like octal, but digit is too big": "fail",

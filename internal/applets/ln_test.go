@@ -3,7 +3,6 @@ package applets_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,60 +84,69 @@ func TestDefaultRegistry_createsSymlink_whenLnRunsWithSymbolicFlag(t *testing.T)
 	}
 }
 
-func TestDefaultRegistry_returnsErrExitFalse_whenLnRunsWithWrongArity(t *testing.T) {
-	// Given
-	applet := lookupLn(t)
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{name: "no operands", args: nil},
-		{name: "one operand", args: []string{"only-source"}},
-		{name: "three operands", args: []string{"source", "link", "extra"}},
-		{name: "symbolic flag only", args: []string{"-s"}},
-		{name: "symbolic one operand", args: []string{"-s", "target"}},
-		{name: "symbolic three operands", args: []string{"-s", "target", "link", "extra"}},
+// ln takes busybox-w32's forms and options (coreutils/ln.c), each measured against it. It took
+// -s alone and exactly two operands, so `ln -f a b`, `ln a b dir` and `ln dir/file` failed, and
+// `ln -sf target link`, the way a script replaces a link, failed on its option.
+func TestLn_takesBusyboxFormsAndOptions(t *testing.T) {
+	dir := t.TempDir()
+	for name, text := range map[string]string{"a": "A\n", "b": "B\n", "sub/s": "S\n"} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(dir, "d"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ctx := applets.WithProcessView(context.Background(), diagnosticTestView{cwd: dir})
+	run := func(args ...string) (string, string, error) {
+		var stdout, stderr bytes.Buffer
+		err := lookupLn(t).Run(ctx, args, &bytes.Buffer{}, &stdout, &stderr)
+		return stdout.String(), stderr.String(), err
+	}
+	same := func(left, right string) bool {
+		leftInfo, leftErr := os.Stat(filepath.Join(dir, left))
+		rightInfo, rightErr := os.Stat(filepath.Join(dir, right))
+		return leftErr == nil && rightErr == nil && os.SameFile(leftInfo, rightInfo)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// When
-			err := applet.Run(context.Background(), tt.args, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
-
-			// Then
-			if !errors.Is(err, applets.ErrExitFalse) {
-				t.Fatalf("expected ln wrong arity to return ErrExitFalse, got %v", err)
-			}
-		})
+	if _, _, err := run("a", "b"); err == nil || !strings.Contains(err.Error(), "b: File exists") {
+		t.Fatalf("ln a b over an existing b returned %v, want b: File exists", err)
 	}
-}
-
-func TestDefaultRegistry_returnsUnsupportedOptionError_whenLnRunsWithUnknownFlag(t *testing.T) {
-	// Given
-	applet := lookupLn(t)
-	tests := []struct {
-		name string
-		args []string
-		want string
-	}{
-		{name: "force", args: []string{"-f", "source", "dest"}, want: "unsupported ln option: -f"},
-		{name: "no dereference", args: []string{"-n", "source", "dest"}, want: "unsupported ln option: -n"},
-		{name: "target directory", args: []string{"-T", "source", "dest"}, want: "unsupported ln option: -T"},
-		{name: "verbose", args: []string{"-v", "source", "dest"}, want: "unsupported ln option: -v"},
-		{name: "long symbolic", args: []string{"--symbolic", "source", "dest"}, want: "unsupported ln option: --symbolic"},
-		{name: "unknown", args: []string{"-z", "source", "dest"}, want: "unsupported ln option: -z"},
+	if _, _, err := run("-f", "a", "b"); err != nil || !same("a", "b") {
+		t.Fatalf("ln -f a b returned %v, and b is a link to a: %v", err, same("a", "b"))
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// When
-			err := applet.Run(context.Background(), tt.args, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
-
-			// Then
-			if err == nil || err.Error() != tt.want {
-				t.Fatalf("expected unsupported option error %q, got %v", tt.want, err)
-			}
-		})
+	if stdout, _, err := run("-v", "a", "c"); err != nil || stdout != "'c' -> 'a'\n" || !same("a", "c") {
+		t.Fatalf("ln -v a c printed %q and returned %v", stdout, err)
+	}
+	if _, _, err := run("-b", "b", "c"); err != nil || !same("b", "c") || !same("a", "c~") {
+		t.Fatalf("ln -b b c returned %v; c is b: %v, c~ is the old c: %v", err, same("b", "c"), same("a", "c~"))
+	}
+	if _, _, err := run("a", "b", "d"); err != nil || !same("a", "d/a") || !same("b", "d/b") {
+		t.Fatalf("ln a b d returned %v, want d/a and d/b", err)
+	}
+	if _, _, err := run("sub/s"); err != nil || !same("sub/s", "s") {
+		t.Fatalf("ln sub/s returned %v, want s in the working directory", err)
+	}
+	if _, _, err := run("-T", "a", "d"); err == nil || err.Error() != "'d' is a directory" {
+		t.Fatalf("ln -T a d returned %v", err)
+	}
+	if _, _, err := run("-T", "a", "b", "c"); err == nil || err.Error() != "-T accepts 2 args max" {
+		t.Fatalf("ln -T a b c returned %v", err)
+	}
+	if _, _, err := run(); err == nil {
+		t.Fatal("ln with no operands succeeded")
+	}
+	if _, _, err := run("-z", "a", "b"); err == nil || !strings.Contains(err.Error(), "invalid option") {
+		t.Fatalf("ln -z returned %v", err)
+	}
+	// A target that cannot be linked is named, and the rest are still linked, status 1.
+	_, stderr, err := run("missing", "sub/s", "d")
+	if code, isStatus := applets.StatusCode(err); !isStatus || code != 1 || !same("sub/s", "d/s") ||
+		!strings.Contains(stderr, "missing: No such file or directory") {
+		t.Fatalf("ln missing sub/s d returned %v, stderr %q; d/s linked: %v", err, stderr, same("sub/s", "d/s"))
 	}
 }
 

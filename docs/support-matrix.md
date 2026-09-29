@@ -671,7 +671,7 @@ behaviour this shell deliberately does not have.
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
-| `ln` | `-s` | refused by name |
+| `ln` | `-s -f -n -b -S -v -T`; `TARGET... DIR`, and a lone `TARGET` linked into the working directory | refused by name |
 | `iconv` | `-f -t -l -c -o` | refused by name |
 | `join` | `-1 -2 -j -t` | refused by name |
 | `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |

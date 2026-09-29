@@ -57,6 +57,7 @@ var valuePlaceholders = map[string]string{
 	"hdt":               "TYPE",
 	"uudecodeo":         "FILE",
 	"diffU":             "LINES",
+	"lnS":               "SUFFIX",
 	"diffL":             "LABEL",
 	"patchp":            "COUNT",
 	"patchi":            "DIFF",
