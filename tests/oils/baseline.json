@@ -368,7 +368,6 @@
     "builtin-meta.test.sh": {
       "builtin": "fail",
       "builtin ls not found": "fail",
-      "builtin usage": "fail",
       "command -V": "fail",
       "command -v doesn't find executable dir": "fail",
       "command -v executable, builtin": "fail",

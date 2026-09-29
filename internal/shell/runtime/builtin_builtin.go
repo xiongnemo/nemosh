@@ -11,6 +11,11 @@ import (
 // shell and counts, as `type` calls it a builtin; a program on PATH does not. busybox has not
 // got it.
 func (r Runtime) builtinBuiltin(ctx context.Context, args []string) int {
+	// `--` ends its options, as bash reads it: `builtin -- echo hi` runs echo, and `builtin --`
+	// alone does nothing. It was taken for a builtin named --, and refused.
+	if len(args) > 0 && args[0] == "--" {
+		args = args[1:]
+	}
 	if len(args) == 0 {
 		return 0
 	}
