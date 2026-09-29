@@ -159,6 +159,7 @@ var valuePlaceholders = map[string]string{
 	"sus":                    "SHELL",
 	"tailn":                  "LINES",
 	"tailc":                  "BYTES",
+	"tails":                  "SECONDS",
 	"xargsn":                 "COUNT",
 	"xargsI":                 "REPLACE",
 	"xargss":                 "BYTES",

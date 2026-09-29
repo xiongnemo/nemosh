@@ -14,17 +14,12 @@ func newHeadApplet() Applet {
 	}}
 }
 
-// runHeadTail is the shape head and tail share once their counts are parsed:
-// stdin when there are no operands, and otherwise each file in turn under a
-// header when there is more than one to tell apart.
-//
-// Shared because the header rule is the part worth having in one place. Two
-// copies of "print a name above the lines, but only when it helps" is two
-// answers eventually, and the pair already disagreed once -- -c was head's alone
-// for a while.
+// runHeadTail is head's run once its count is parsed: stdin when there are no operands, and
+// otherwise each file in turn under a header when there is more than one to tell apart. tail
+// shares its options and its header rule, and opens its FILEs as busybox's tail_main does,
+// all of them first; see tail.go.
 func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Reader, stdout, stderr io.Writer, copy func(io.Writer, io.Reader, countSpec) error) error {
-	permute := applet == "tail" && optionsPermute(ProcessViewFromContext(ctx))
-	spec, headers, paths, err := headTailArgs(applet, args, 10, true, permute)
+	spec, headers, paths, err := headTailArgs(applet, args, 10, true, false, nil)
 	if err != nil {
 		return err
 	}
@@ -42,15 +37,7 @@ func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Rea
 			// and carries on to the next file, leaving status 1 behind -- so
 			// `head -n1 a.txt nosuch b.txt` still prints b.txt, where returning
 			// here silently dropped it.
-			//
-			// head names a missing operand one way and tail another, which is
-			// what each reference does; operandFailure and cannotOpen differ only
-			// in wording.
-			reason := operandFailure(path, err)
-			if applet == "tail" {
-				reason = cannotOpen(path, err)
-			}
-			fmt.Fprintf(stderr, "%s: %v\n", applet, reason)
+			fmt.Fprintf(stderr, "%s: %v\n", applet, operandFailure(path, err))
 			failed = true
 			continue
 		}
@@ -128,11 +115,12 @@ func copyHead(stdout io.Writer, input io.Reader, count int) error {
 
 func newTailApplet() Applet {
 	return simpleApplet{name: "tail", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		// -c counts bytes here too now. It was head-only, and the asymmetry was
-		// documented as deliberate -- claiming both without implementing both
-		// would have been the kind of thing a script discovers the hard way. This
-		// implements it instead.
-		return runHeadTail(ctx, "tail", args, stdin, stdout, stderr, copyTailOf)
+		follow := tailFollow{period: 1}
+		spec, headers, paths, err := headTailArgs("tail", args, 10, true, optionsPermute(ProcessViewFromContext(ctx)), &follow)
+		if err != nil {
+			return err
+		}
+		return runTail(ctx, spec, headers, follow, paths, stdin, stdout, stderr)
 	}}
 }
 

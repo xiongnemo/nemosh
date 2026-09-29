@@ -40,8 +40,9 @@ const (
 // as it took to implement the other half.
 //
 // With permute an option may follow the files, as tail's getopt lets it; head's options end at
-// its first file, as busybox's head reads its own.
-func headTailArgs(applet string, args []string, defaultCount int, allowBytes, permute bool) (countSpec, headerMode, []string, error) {
+// its first file, as busybox's head reads its own. follow is tail's -f -F and -s, and nil for
+// head, which has none of them.
+func headTailArgs(applet string, args []string, defaultCount int, allowBytes, permute bool, follow *tailFollow) (countSpec, headerMode, []string, error) {
 	spec := countSpec{count: defaultCount}
 	headers := headersWhenMany
 	var operands []string
@@ -72,7 +73,7 @@ func headTailArgs(applet string, args []string, defaultCount int, allowBytes, pe
 			spec = countSpec{count: digits}
 			continue
 		}
-		consumed, err := readHeadTailFlags(arg, args, index, allowBytes, &spec, &headers)
+		consumed, err := readHeadTailFlags(arg, args, index, allowBytes, &spec, &headers, follow)
 		if err != nil {
 			return countSpec{}, headers, nil, err
 		}
@@ -83,29 +84,57 @@ func headTailArgs(applet string, args []string, defaultCount int, allowBytes, pe
 	}
 
 	// Whatever is left has to be operands, and an option among them is still
-	// refused by name rather than opened as a file -- `tail -f x` reports -f and
+	// refused by name rather than opened as a file -- `head -f x` reports -f and
 	// not a missing file.
-	paths, err := streamOperands(applet, args[index:], headTailSupported(allowBytes)...)
+	paths, err := streamOperands(applet, args[index:], headTailSupported(allowBytes, follow != nil)...)
 	if err != nil {
 		return countSpec{}, headers, nil, err
 	}
 	return spec, headers, append(operands, paths...), nil
 }
 
-func headTailSupported(allowBytes bool) []string {
+func headTailSupported(allowBytes, follows bool) []string {
 	supported := []string{"-n", "-q", "-v"}
 	if allowBytes {
 		supported = append(supported, "-c")
 	}
+	if follows {
+		supported = append(supported, "-f", "-F", "-s")
+	}
 	return supported
+}
+
+// tailFollow is tail's -f, -F and -s: whether to follow the FILEs as they grow, by name as
+// well with -F, and the seconds to sleep between looks.
+type tailFollow struct {
+	follow, retry bool
+	period        int
 }
 
 // readHeadTailFlags reads one argument's worth of clustered letters, reporting
 // how many extra arguments it took. A negative return means the argument was not
 // an option at all.
-func readHeadTailFlags(arg string, args []string, index int, allowBytes bool, spec *countSpec, headers *headerMode) (int, error) {
+func readHeadTailFlags(arg string, args []string, index int, allowBytes bool, spec *countSpec, headers *headerMode, follow *tailFollow) (int, error) {
 	for position := 1; position < len(arg); position++ {
 		switch letter := arg[position]; letter {
+		case 'f', 'F':
+			if follow == nil {
+				return -1, nil
+			}
+			// -F is -f and more, as busybox's getopt string has it.
+			follow.follow, follow.retry = true, follow.retry || letter == 'F'
+		case 's':
+			if follow == nil {
+				return -1, nil
+			}
+			value, consumed, err := headTailCountValue(arg, args, index, position, letter)
+			if err != nil {
+				return 0, err
+			}
+			if follow.period, err = positiveNumber(value); err != nil {
+				return 0, err
+			}
+			return consumed, nil
 		case 'q':
 			*headers = headersNever
 		case 'v':

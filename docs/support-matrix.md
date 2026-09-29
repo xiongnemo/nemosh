@@ -722,7 +722,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `tac` | none | refused by name |
 | `tsort` | none; a cycle is reported rather than truncated | refused by name |
 | `tar` | `-c -t -x -v -z -j -a -O -f -C` | refused by name |
-| `tail` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`, `-n+2`) | refused by name |
+| `tail` | `-n -c -q -v -f -F -s`, the `-N` form, and an attached value (`-n2`, `-n+2`); every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
 | `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
 | `tee` | `-a -i`; `-` is stdout, and a file that cannot be opened is named while the rest are written | refused by name |
 | `touch` | `-a -c -d -f -h -m -r -t` and busybox's long forms; DATE is read as `date -d` reads it | refused by name |
@@ -926,9 +926,6 @@ All five are implemented, measured against GNU. What is still absent:
   numeric owner this build does not resolve, and `-u`/`-c` the access and change
   times, which NTFS records but which no sort here reads yet. `-t -S -r -R -d -F
   -A` landed on 2026-08-22, so `ls -ltr` works.
-- **`tail -f`.** Following a file needs a polling loop and a decision about what
-  to do when it is truncated or replaced under you, and an implementation that
-  silently stops following is worse than one that says it cannot.
 - **Nothing of `sed`.** This bullet listed `-i`, `-f`, `a i c y` and the hold space
   as absent and was simply stale: all of them landed on 2026-08-22 along with `{}`
   blocks, the multiline commands and branching. Measured against the built binary
@@ -2114,9 +2111,13 @@ Diagnostics match the reference to the character, single quotes included:
 reported, so `head -n-x` answers `'x'` and not `'-x'`. 24 of 24 measured forms
 now agree with busybox-w32 byte for byte.
 
-`tail -f` and `head -z` stay refused: following a file needs a polling loop and a
-decision about truncation, and `-z` is a GNU-only NUL-terminated-line mode that
-is a real choice rather than an oversight.
+`head -z` stays refused: `-z` is a GNU-only NUL-terminated-line mode that is a real
+choice rather than an oversight. `tail -f` came on 2026-09-30 with busybox's answers
+to what it waited for: a FILE that shrinks is read from its start again, and `-F`
+reopens one that its name has come to mean, reading the old one to its end first. On
+Windows the FILE is opened sharing delete, so the program writing a log can rotate it
+while tail follows; busybox-w32's open does not share delete, and `mv log log.1` under
+its `tail -F` is `Device or resource busy`.
 
 ### `ls`
 

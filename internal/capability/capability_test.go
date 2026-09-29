@@ -71,7 +71,7 @@ func TestDeclaredOptionsAreAccepted(t *testing.T) {
 		}
 		command, _ := capability.Lookup(name)
 		for _, flag := range command.Short {
-			if asksAtTheConsole[name+" -"+string(flag)] {
+			if runsUntilStopped[name+" -"+string(flag)] {
 				continue
 			}
 			t.Run(name+" -"+string(flag), func(t *testing.T) {
@@ -90,10 +90,12 @@ func TestDeclaredOptionsAreAccepted(t *testing.T) {
 	}
 }
 
-// Options this test must not run, because they ask at the console, which no test can answer:
-// `xargs -p` opened it and waited there. TestXargs_asksAtTheConsole in internal/applets holds
-// the claim instead, against a console of its own.
-var asksAtTheConsole = map[string]bool{"xargs -p": true}
+// Options this test must not run, because they do not return by themselves. `xargs -p` asks
+// at the console, which no test can answer, and opened it and waited there;
+// TestXargs_asksAtTheConsole in internal/applets holds the claim instead, against a console of
+// its own. `tail -F` follows a FILE until it is stopped, one it cannot open too, and a
+// directory is such a FILE; TestTail_followsAsBusyboxDoes holds it, and stops it.
+var runsUntilStopped = map[string]bool{"xargs -p": true, "tail -F": true}
 
 // Applets this test must not run, because running them starts a process.
 //

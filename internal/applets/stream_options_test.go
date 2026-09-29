@@ -25,9 +25,9 @@ import (
 // between. `-z` replaces it: GNU has it, busybox does not, and NUL-terminated
 // lines are a real decision rather than an oversight.
 //
-// `tail -f` stays: following a file needs a polling loop and a decision about
-// what to do when it is truncated or replaced, and an implementation that
-// silently stops following is worse than one that says it cannot.
+// `tail -f` left on 2026-09-30, with busybox's answers to what the row waited for: a FILE that
+// has shrunk is read from its start again, and -F follows one that is replaced. `tail -z`
+// replaces it, for the reason `head -z` is here.
 func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 	for _, test := range []struct {
 		applet string
@@ -36,7 +36,7 @@ func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 		{applet: "cat", args: []string{"-z"}},
 		{applet: "cat", args: []string{"-q", "f.txt"}},
 		{applet: "head", args: []string{"-z", "f.txt"}},
-		{applet: "tail", args: []string{"-f", "f.txt"}},
+		{applet: "tail", args: []string{"-z", "f.txt"}},
 	} {
 		t.Run(test.applet+" "+strings.Join(test.args, " "), func(t *testing.T) {
 			// Given
