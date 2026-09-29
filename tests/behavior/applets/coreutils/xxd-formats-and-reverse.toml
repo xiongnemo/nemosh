@@ -1,0 +1,25 @@
+id = "applet.busybox-w32.xxd.formats-and-reverse"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+files = { "h" = "hello\n", "q" = "The quick brown fox jumps over the lazy dog." }
+script = '''
+xxd h
+xxd -p q
+xxd -g 1 -c 4 h
+xxd -i h
+xxd q | xxd -r
+echo
+printf '68656c\n6c6f0a\n' | xxd -r -p
+'''
+
+[expect]
+status = 0
+stdout = "00000000: 6865 6c6c 6f0a                           hello.\n54686520717569636b2062726f776e20666f78206a756d7073206f766572\n20746865206c617a7920646f672e\n00000000: 68 65 6c 6c  hell\n00000004: 6f 0a        o.\nunsigned char h[] = {\n  0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x0a,\n};\nunsigned int h_len = 6;\nThe quick brown fox jumps over the lazy dog.\nhello\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 util-linux/hexdump_xxd.c"
+why = "busybox's xxd is formats over libbb's dump: the address, -g bytes to a group and -c to a line, and the text; -p's hex alone, 30 bytes to a line; -i's C array, its length where the dump ended. -r turns a dump back into bytes, and -r -p hex alone, a byte's digits joined across lines. Measured byte for byte against busybox-w32. xxd took only -p, and printed every byte on one line with it."

@@ -166,4 +166,9 @@ var valuePlaceholders = map[string]string{
 	"xargsE":                 "WORD",
 	"xargsP":                 "COUNT",
 	"xargsa":                 "FILE",
+	"xxdl":                   "LENGTH",
+	"xxds":                   "OFFSET",
+	"xxdg":                   "N",
+	"xxdc":                   "N",
+	"xxdo":                   "OFFSET",
 }

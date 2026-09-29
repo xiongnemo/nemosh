@@ -158,7 +158,7 @@ var commands = []Command{
 	{Name: "whoami", Operand: AnyPath},
 	{Name: "winpath", Operand: AnyPath},
 	{Name: "xargs", Short: "0rtpxnsEeIiPa", ValueShort: "nsEIPa", FileShort: "a", Long: []string{"no-run-if-empty"}, Operand: AnyPath},
-	{Name: "xxd", Short: "p", Operand: AnyPath},
+	{Name: "xxd", Short: "apirlsgco", ValueShort: "lsgco", Operand: AnyPath},
 	{Name: "yes", Operand: AnyPath},
 
 	// Builtins carry an operand kind and no option claims. Nothing here measures

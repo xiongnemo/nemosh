@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-// dumper is libbb's dumper for hexdump and hd: the -e formats, -v, -n's LENGTH and -s's
+// dumper is libbb's dumper for hexdump, hd and xxd: the -e formats, -v, -n's LENGTH and -s's
 // OFFSET, and the unit holding the %_A that is printed after the last block.
 type dumper struct {
 	formats []*dumpFormat
@@ -15,6 +15,12 @@ type dumper struct {
 	verbose bool
 	length  int64
 	skip    int64
+	// displayOffset is xxd's -o, added to each address printed, and eofString what xxd prints
+	// where a short last block ends, which then ends the dump, rather than padding it out.
+	displayOffset int64
+	eofString     string
+	// address is where the dump ended, which xxd -i names as the length.
+	address int64
 }
 
 // prepare is libbb's bb_dump_dump before the display: each format's conversions, the block as
@@ -130,38 +136,54 @@ func (d *dumper) run(stdout io.Writer, inputs *dumpInputs) error {
 			break
 		}
 		for _, format := range d.formats {
-			if err := d.display(out, format, data, blocks.address, blocks.end); err != nil {
+			ended, err := d.display(out, format, data, blocks.address, blocks.end)
+			if err != nil {
 				return err
 			}
+			if ended {
+				d.address = blocks.end
+				return out.Flush()
+			}
 		}
+	}
+	d.address = blocks.address
+	if blocks.end != 0 {
+		d.address = blocks.end
 	}
 	d.finish(out, blocks.end, blocks.address)
 	return out.Flush()
 }
 
 // display is one format over a block. A conversion past the end of the input prints blanks
-// as wide, and a unit holding %_A ends the format's line.
-func (d *dumper) display(out *bufio.Writer, format *dumpFormat, data []byte, address, end int64) error {
+// as wide, and a unit holding %_A ends the format's line; with an eofString, that is printed
+// there instead, and the dump has ended.
+func (d *dumper) display(out *bufio.Writer, format *dumpFormat, data []byte, address, end int64) (bool, error) {
 	at := 0
 	for _, unit := range format.units {
 		if unit.ending {
-			return nil
+			return false, nil
 		}
 		for count := unit.reps; count > 0; count-- {
 			for index := range unit.prints {
 				print := &unit.prints[index]
-				if end != 0 && address >= end && print.kind != dumpText && print.kind != dumpBlank {
-					print.kind = dumpBlank
+				if end != 0 && address >= end {
+					if d.eofString != "" {
+						_, err := out.WriteString(d.eofString)
+						return true, err
+					}
+					if print.kind != dumpText && print.kind != dumpBlank {
+						print.kind = dumpBlank
+					}
 				}
-				if _, err := out.WriteString(print.render(data, at, address, count == 1)); err != nil {
-					return err
+				if _, err := out.WriteString(print.render(data, at, address+d.displayOffset, count == 1)); err != nil {
+					return false, err
 				}
 				address += int64(print.bytes)
 				at += print.bytes
 			}
 		}
 	}
-	return nil
+	return false, nil
 }
 
 // finish prints the %_A unit's addresses as where the input ended, or nothing when there was
@@ -179,7 +201,7 @@ func (d *dumper) finish(out *bufio.Writer, end, address int64) {
 	for index := range d.ending.prints {
 		switch print := &d.ending.prints[index]; print.kind {
 		case dumpAddress, dumpText:
-			out.WriteString(print.render(nil, 0, end, false))
+			out.WriteString(print.render(nil, 0, end+d.displayOffset, false))
 		}
 	}
 }

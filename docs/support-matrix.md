@@ -741,7 +741,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
 | `xargs` | `-0 -a -E -e -I -i -n -P -p -r -s -t -x` and `--no-run-if-empty`, busybox's quoting of words, `-I` reading lines, `-P` running applets side by side, and busybox's statuses: 123, 124, 127 | refused by name |
-| `xxd` | `-p` | refused by name |
+| `xxd` | `-a -c -g -i -l -o -p -r -s`, busybox's formats over libbb's dump, `-i`'s C array, and `-r` with and without `-p`, seeking where stdout is a file and writing zeros up to an address elsewhere, as busybox does (busybox-w32's seek on a pipe succeeds without moving, and loses the gap) | refused by name |
 | `yes` | none | treated as the string to repeat |
 
 The six most recently added -- `tac`, `rev`, `nl`, `base64`, `sha256sum`,
