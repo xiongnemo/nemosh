@@ -174,6 +174,34 @@ func integerPower(left, right int64) (int64, error) {
 	return result, nil
 }
 
+// parseArithmeticInteger reads an integer constant as C and both references read one: 0x or
+// 0X and hex digits, a leading 0 and octal ones, or decimal. The value wraps at 64 bits, as
+// theirs do, so `9223372036854775808` is its own negative and `-9223372036854775808` is the
+// least there is; each was a syntax error. strconv's reading also took Go's own forms, so
+// `0b101`, `0o17` and `1_000` were numbers, and neither reference has any of them. A bare `0x`
+// is 0, as in both.
+func parseArithmeticInteger(token string) (int64, bool) {
+	if token == "" {
+		return 0, false
+	}
+	digits, base := token, uint64(10)
+	switch {
+	case len(token) >= 2 && token[0] == '0' && (token[1] == 'x' || token[1] == 'X'):
+		digits, base = token[2:], 16
+	case len(token) > 1 && token[0] == '0':
+		digits, base = token[1:], 8
+	}
+	var value uint64
+	for index := 0; index < len(digits); index++ {
+		digit, ok := arithmeticDigit(digits[index], int64(base))
+		if !ok {
+			return 0, false
+		}
+		value = value*base + uint64(digit)
+	}
+	return int64(value), true
+}
+
 // parseArithmeticBase reads bash's `base#digits`: `2#101` is 5 and `16#ff` is 255.
 //
 // The `#` reported `unexpected "#"`, because the lexer had no such operator and the

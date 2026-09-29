@@ -3,7 +3,6 @@ package runtime
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 )
 
@@ -250,7 +249,7 @@ func (p *arithmeticParser) primary() (int64, error) {
 		p.index++
 		return value, nil
 	}
-	if value, err := strconv.ParseInt(token, 0, 64); err == nil {
+	if value, ok := parseArithmeticInteger(token); ok {
 		return value, nil
 	}
 	// `base#digits`, bash's explicit radix form. See parseArithmeticBase.

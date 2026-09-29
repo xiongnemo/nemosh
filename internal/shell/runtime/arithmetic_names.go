@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -42,7 +41,7 @@ func (p *arithmeticParser) lookup(name string) (int64, error) {
 	if text == "" {
 		return 0, nil
 	}
-	if value, err := strconv.ParseInt(text, 0, 64); err == nil {
+	if value, ok := parseArithmeticInteger(text); ok {
 		return value, nil
 	}
 	if value, ok := parseArithmeticBase(text); ok {
