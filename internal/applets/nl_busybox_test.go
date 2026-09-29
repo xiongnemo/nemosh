@@ -80,7 +80,8 @@ func TestTextFilters_nameAFileTheyCannotOpenAsBusyboxDoes(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "one"), []byte("abcdef\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	for _, applet := range []string{"tac", "rev", "nl", "od", "expand", "unexpand", "fold", "strings"} {
+	// od is one stream of its FILEs, and says the same; see TestDump_isOneSqueezedStreamAsBusyboxHasIt.
+	for _, applet := range []string{"tac", "rev", "nl", "expand", "unexpand", "fold", "strings"} {
 		if _, _, err := runPermuted(t, view, "", applet, "missing"); err == nil || err.Error() != "missing: No such file or directory" {
 			t.Errorf("%s missing: %v, want busybox's missing: No such file or directory", applet, err)
 		}

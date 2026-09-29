@@ -196,7 +196,7 @@ func eachTextInput(ctx context.Context, paths []string, stdin io.Reader, body fu
 }
 
 // eachTextFile is eachTextInput for the filters that read any number of files, as busybox's
-// tac, rev, nl, fold, expand, unexpand, strings and od do. Of several operands, one that cannot
+// tac, rev, nl, fold, expand, unexpand and strings do. Of several operands, one that cannot
 // be opened is named and the rest read; see operand_reporter.go. A single one is still the
 // error the applet returns. The applets that read one input, xxd and base64 among them, stop at
 // it as busybox's do.

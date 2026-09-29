@@ -51,9 +51,18 @@ func newDumperApplet(name string) Applet {
 		if err := request.apply(name, options); err != nil {
 			return err
 		}
-		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
-			return request.write(stdout, reader)
-		})
+		request.libbbDump = name != "od"
+		inputs := &dumpInputs{ctx: ctx, view: ProcessViewFromContext(ctx), stdin: stdin, paths: paths}
+		if len(paths) == 0 {
+			inputs.paths = []string{"-"}
+		}
+		if err := request.write(stdout, inputs, options.has('v')); err != nil {
+			return err
+		}
+		if inputs.failed {
+			return ExitStatus(1)
+		}
+		return nil
 	}}
 }
 
@@ -74,6 +83,8 @@ type dumpRequest struct {
 	// radix is the address's: 'o', 'd' or 'x' as -A names them, 'n' for none, and 'X' for
 	// hexdump's own seven hex digits.
 	radix byte
+	// libbbDump is hexdump's and hd's way with repeated lines, rather than od's; see write.
+	libbbDump bool
 }
 
 func (r *dumpRequest) apply(name string, options appletOptions) error {
@@ -120,40 +131,6 @@ func (r *dumpRequest) apply(name string, options appletOptions) error {
 	return nil
 }
 
-// write dumps the whole input, sixteen bytes to a line.
-func (r dumpRequest) write(stdout io.Writer, reader io.Reader) error {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	for offset := 0; offset < len(data); offset += 16 {
-		end := min(offset+16, len(data))
-		// Not trimmed: hexdump's word form pads its line out to eight slots and
-		// od's does not, so the padding is part of the body rather than something
-		// to tidy away here. Measured against both.
-		address := r.address(offset)
-		for index, body := range r.bodies(data[offset:end]) {
-			if index > 0 {
-				address = strings.Repeat(" ", len(address))
-			}
-			if _, err := fmt.Fprintln(stdout, address+body); err != nil {
-				return err
-			}
-		}
-	}
-	// The final line is the length, which is how a reader knows where the dump
-	// stopped without counting the rows. With -A n there is no address to give, and so
-	// no line, as in busybox: it was an empty one, which every `... | od -A n -c` then
-	// carried into whatever read it.
-	if r.radix == 'n' {
-		return nil
-	}
-	if _, err := fmt.Fprintln(stdout, strings.TrimSpace(r.address(len(data)))); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r dumpRequest) address(offset int) string {
 	if r.format == dumpCanonical && r.radix != 'n' {
 		return fmt.Sprintf("%08x  ", offset)
@@ -196,7 +173,7 @@ func (r dumpRequest) bodies(chunk []byte) []string {
 	bodies := make([]string, 0, len(formats))
 	for _, format := range formats {
 		if width < 0 || len(formats) == 1 {
-			bodies = append(bodies, dumpBody(format, chunk))
+			bodies = append(bodies, dumpBody(format, chunk, r.libbbDump))
 			continue
 		}
 		var out strings.Builder
@@ -212,7 +189,7 @@ func (r dumpRequest) bodies(chunk []byte) []string {
 	return bodies
 }
 
-func dumpBody(format dumpFormat, chunk []byte) string {
+func dumpBody(format dumpFormat, chunk []byte, padWords bool) string {
 	switch format {
 	case dumpCanonical:
 		return canonicalDumpBody(chunk)
@@ -229,8 +206,12 @@ func dumpBody(format dumpFormat, chunk []byte) string {
 		}
 		return out.String()
 	case dumpHexWords:
-		// Padded to eight slots, which hexdump does and od does not.
-		return dumpWords(chunk, " %04x", 8)
+		// Padded to eight slots, which hexdump does and od does not: od -x padded its
+		// short last line with blanks.
+		if padWords {
+			return dumpWords(chunk, " %04x", 8)
+		}
+		return dumpWords(chunk, " %04x", 0)
 	}
 	return dumpWords(chunk, " %06o", 0)
 }
