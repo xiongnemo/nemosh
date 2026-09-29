@@ -113,7 +113,7 @@ func (e *testEvaluator) fileMode(operator, operand string, info os.FileInfo) boo
 	case "-w":
 		return mode.Perm()&0o222 != 0
 	case "-x":
-		return isExecutableFile(operand, info)
+		return isExecutableFile(e.hostPath(operand), info)
 	case "-p":
 		return mode&os.ModeNamedPipe != 0
 	case "-S":
@@ -142,6 +142,15 @@ func (e *testEvaluator) fileMode(operator, operand string, info os.FileInfo) boo
 // parameter was called followLink and meant the opposite.
 func (e *testEvaluator) stat(operand string, keepLink bool) (os.FileInfo, error) {
 	return statProcessPath(e.view, operand, keepLink)
+}
+
+// hostPath is where operand is on the host, for -x, which on Windows reads the file to know;
+// operand itself for one that is not there, a device of the shell's.
+func (e *testEvaluator) hostPath(operand string) string {
+	if native, err := resolveHostPath(e.view, operand); err == nil {
+		return native
+	}
+	return operand
 }
 
 // -t asks about a descriptor rather than a path, so it can only answer for the

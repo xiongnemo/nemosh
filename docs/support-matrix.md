@@ -723,7 +723,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `tsort` | none; a cycle is reported rather than truncated | refused by name |
 | `tar` | `-c -t -x -v -z -j -a -O -f -C` | refused by name |
 | `tail` | `-n -c -q -v -f -F -s`, the `-N` form, and an attached value (`-n2`, `-n+2`); every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
-| `test`, `[` | POSIX expressions | an operand, per the POSIX one-argument rule |
+| `test`, `[` | POSIX expressions; on Windows `-x` is busybox-w32's execute bit: a directory, a name ending `.com .exe .sh .bat .cmd`, or a file that begins `#!` or is a program image, and not a DLL whatever it is called | an operand, per the POSIX one-argument rule |
 | `tee` | `-a -i`; `-` is stdout, and a file that cannot be opened is named while the rest are written | refused by name |
 | `touch` | `-a -c -d -f -h -m -r -t` and busybox's long forms; DATE is read as `date -d` reads it | refused by name |
 | `tr` | `-d -s -c`, ranges, backslash escapes and the POSIX classes (`[:upper:]` and the rest, in code order) | `[=c=]` and `[c*n]` read as the characters written, as busybox reads them; a class name it does not know is refused by name |
