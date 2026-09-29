@@ -59,6 +59,7 @@ var valuePlaceholders = map[string]string{
 	"diffU":             "LINES",
 	"lnS":               "SUFFIX",
 	"cpt":               "DIR",
+	"basenames":         "SUFFIX",
 	"mvt":               "DIR",
 	"diffL":             "LABEL",
 	"patchp":            "COUNT",

@@ -646,7 +646,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `base32` | `-d -i -w`; wraps at 76 like `base64` | refused by name |
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
-| `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
+| `basename` | `-a -s`, and the `basename PATH [SUFFIX]` form, a third operand refused | refused by name |
 | `bunzip2`, `bzcat` | `-c -d -f -k -t`; **decompress only** | refused by name |
 | `cat` | `-n` | refused by name |
 | `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
@@ -664,7 +664,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -D -I -r -R -u` and busybox's long forms; TIME in every form busybox's parse_datestr reads, and `%N` in FORMAT. Setting the clock, `-s` or a TIME operand, is refused | refused by name |
 | `diff` | `-u -U -q -s -i -w -B -N -L`; unified always | refused by name |
-| `dirname` | none needed | refused by name |
+| `dirname` | none needed; one NAME, a second refused | refused by name |
 | `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
 | `du` | `-s -h`; **apparent** sizes in 1024-byte blocks, not allocation | refused by name |
 | `echo` | `-n -e` | treated as text, which is what `echo` does |

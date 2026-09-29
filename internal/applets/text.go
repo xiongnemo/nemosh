@@ -7,32 +7,41 @@ import (
 	"strings"
 )
 
-// `basename -z /a/b` printed `-z`: the flag was taken as the operand, so the
-// applet answered a question nobody asked and reported success.
+// basename is busybox's (coreutils/basename.c): `basename NAME [SUFFIX]`, `basename -a NAME...`
+// and `basename -s SUFFIX NAME...`. -a makes every operand a NAME, and -s strips SUFFIX from each
+// and implies -a. A SUFFIX is not stripped from a NAME that is nothing else. Without -a or -s a
+// third operand is refused, as busybox refuses it.
+//
+// -s was refused as an invalid option, and `basename a b c` printed a.
+//
+// `basename -z /a/b` printed `-z`: the flag was taken as the operand, so the applet answered a
+// question nobody asked and reported success.
 func newBasenameApplet() Applet {
 	return simpleApplet{name: "basename", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptionsInOrder(args, "a", "")
+		options, operands, err := parseAppletOptionsInOrder(args, "a", "s")
 		if err != nil {
 			return err
 		}
 		if len(operands) == 0 {
 			return missingOperand()
 		}
-		// -a makes every operand a path to strip, where without it the second
-		// operand is a suffix to remove from the first. The two readings are
-		// exclusive, which is why the option exists: `basename a b` means one
-		// thing and `basename -a a b` means another.
-		if options.has('a') {
-			for _, operand := range operands {
-				fmt.Fprintln(stdout, baseName(operand))
+		suffix, all := options.value('s'), options.has('a') || options.has('s')
+		if !all {
+			if len(operands) > 2 {
+				return fmt.Errorf("extra operand '%s'", operands[2])
 			}
-			return nil
+			if len(operands) == 2 {
+				suffix = operands[1]
+			}
+			operands = operands[:1]
 		}
-		name := baseName(operands[0])
-		if len(operands) > 1 {
-			name = strings.TrimSuffix(name, operands[1])
+		for _, operand := range operands {
+			name := baseName(operand)
+			if len(name) > len(suffix) {
+				name = strings.TrimSuffix(name, suffix)
+			}
+			fmt.Fprintln(stdout, name)
 		}
-		fmt.Fprintln(stdout, name)
 		return nil
 	}}
 }
@@ -41,6 +50,11 @@ func newBasenameApplet() Applet {
 // A path typed on Windows arrives with either, and answering `C:\a\b` with the
 // whole string would be answering about a filename nobody has.
 func baseName(operand string) string {
+	// An empty NAME has no last component to give, and busybox and GNU both print an empty line
+	// for it, where path.Base answers ".".
+	if operand == "" {
+		return ""
+	}
 	return path.Base(strings.ReplaceAll(operand, "\\", "/"))
 }
 
@@ -52,6 +66,10 @@ func newDirnameApplet() Applet {
 		}
 		if len(operands) == 0 {
 			return missingOperand()
+		}
+		// One NAME, as busybox's single_argv takes: a second is refused rather than ignored.
+		if len(operands) > 1 {
+			return fmt.Errorf("extra operand '%s'", operands[1])
 		}
 		fmt.Fprintln(stdout, dirnameOf(operands[0]))
 		return nil

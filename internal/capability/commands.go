@@ -19,7 +19,7 @@ package capability
 // meant to name.
 var commands = []Command{
 	{Name: "base64", Short: "diw", ValueShort: "w", Operand: AnyPath},
-	{Name: "basename", Short: "a", Operand: AnyPath},
+	{Name: "basename", Short: "as", ValueShort: "s", Operand: AnyPath},
 	{Name: "cat", Short: "n", Operand: AnyPath},
 	{Name: "chmod", Short: "Rcvf", Operand: AnyPath},
 	{Name: "clear", Operand: AnyPath},

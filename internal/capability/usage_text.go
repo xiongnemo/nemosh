@@ -19,7 +19,7 @@ var usageText = map[string]Usage{
 	"basename": {
 		Summary:  "Strip directory and suffix from a path.",
 		Operands: "NAME [SUFFIX]",
-		Options:  map[string]string{"a": "treat every operand as a name, so several can be stripped at once"},
+		Options:  map[string]string{"a": "treat every operand as a name, so several can be stripped at once", "s": "strip this suffix from every name; implies -a"},
 	},
 	"cat": {
 		Summary:  "Copy files to standard output.",
