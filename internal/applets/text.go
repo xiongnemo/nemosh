@@ -53,8 +53,33 @@ func newDirnameApplet() Applet {
 		if len(operands) == 0 {
 			return missingOperand()
 		}
-		dir := path.Dir(strings.ReplaceAll(operands[0], "\\", "/"))
-		fmt.Fprintln(stdout, dir)
+		fmt.Fprintln(stdout, dirnameOf(operands[0]))
 		return nil
 	}}
+}
+
+// dirnameOf is POSIX's dirname as busybox-w32 answers it. The trailing separators go first, so
+// `/a/b/` is `/a` and `a/` is `.`, where path.Dir answered `/a/b` and `a`. Either slash is a
+// separator and is kept as written, `C:\x\y\` giving `C:\x`, and a drive stays with its
+// root: `C:/x` is `C:/`, `C:x/y` is `C:x`, and `C:x` is `C:.`.
+func dirnameOf(operand string) string {
+	drive, rest := "", operand
+	if len(rest) >= 2 && rest[1] == ':' && (rest[0]|0x20 >= 'a' && rest[0]|0x20 <= 'z') {
+		drive, rest = rest[:2], rest[2:]
+	}
+	end := len(strings.TrimRight(rest, `/\`))
+	if end == 0 {
+		if rest == "" {
+			return drive + "."
+		}
+		return drive + rest[:1]
+	}
+	cut := strings.LastIndexAny(rest[:end], `/\`)
+	if cut < 0 {
+		return drive + "."
+	}
+	if parent := strings.TrimRight(rest[:cut], `/\`); parent != "" {
+		return drive + parent
+	}
+	return drive + rest[:1]
 }
