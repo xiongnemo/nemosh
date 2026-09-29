@@ -22,62 +22,15 @@ func newLsApplet() Applet {
 		if len(paths) == 0 {
 			paths = []string{"."}
 		}
-		view := ProcessViewFromContext(ctx)
-		listed := true
-		for _, target := range paths {
-			// A device is described from the table rather than resolved to a host
-			// path it has not got. `ls -l /dev/null` answered "is not a host path"
-			// before this, where busybox prints a character device.
-			if info, err := statDeviceOperand(view, target); err != nil {
-				return err
-			} else if info != nil {
-				if info.IsDir() {
-					// `/dev` itself, which is listed rather than printed as one
-					// name. See docs/design/device-filesystem.md for why this
-					// lists at all when the reference does not.
-					if err := listDeviceDirectory(stdout, view, target, options); err != nil {
-						return err
-					}
-					continue
-				}
-				if err := printLsEntry(stdout, lsEntry{name: target, info: info, path: target}, options); err != nil {
-					return err
-				}
-				continue
-			}
-			native, err := resolveHostPath(view, target)
-			if err != nil {
-				return err
-			}
-			if err := listPath(stdout, native, target, options); err != nil {
-				// Of several operands, one that is not there is named and the rest listed; see
-				// operand_reporter.go.
-				if len(paths) == 1 || !isOperandFailure(err) || !reportOperand(ctx, err) {
-					return err
-				}
-				listed = false
-			}
+		listed, err := listOperands(ctx, stdout, ProcessViewFromContext(ctx), paths, options)
+		if err != nil {
+			return err
 		}
 		if !listed {
 			return ExitStatus(1)
 		}
 		return nil
 	}}
-}
-
-func listPath(stdout io.Writer, target, display string, options lsOptions) error {
-	info, err := os.Stat(target)
-	if err != nil {
-		return operandFailure(display, err)
-	}
-	// -d says a directory operand names itself rather than its contents, which
-	// is what makes `ls -d */` a list of directories instead of their entries.
-	if !info.IsDir() || options.directoryItself {
-		return printLsEntry(stdout, lsEntry{name: display, info: info, path: target}, options)
-	}
-	// -R heads every directory it lists, the operand included, which is how the
-	// blocks are told apart once there is more than one.
-	return listDirectory(stdout, target, display, options, options.recursive)
 }
 
 // listDirectory reads one directory and lays it out, descending afterwards when
@@ -174,6 +127,8 @@ type lsEntry struct {
 	// path is where the file really is. The long form has to ask the filesystem two more
 	// questions -- the link count and the owner -- and neither can be asked of a name.
 	path string
+	// device is a directory the shell provides, /dev, whose entries come from the view.
+	device bool
 }
 
 func printLsEntry(stdout io.Writer, entry lsEntry, options lsOptions) error {
