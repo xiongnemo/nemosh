@@ -1,0 +1,30 @@
+id = "shell.posix.function.definition-as-pipeline-stage"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "bash-posix"]
+
+script = '''
+f() { echo hi; } | cat
+echo "rc=$?"
+type f >/dev/null 2>&1 || echo "f not defined"
+echo a | g() { cat; }
+echo "rc=$?"
+type g >/dev/null 2>&1 || echo "g not defined"
+! h() { :; }
+echo "rc=$?"
+h && echo "h defined"
+k() { echo k; } | cat && echo "and after"
+echo x | m() { cat; } | cat
+echo "rc=$?"
+'''
+
+[expect]
+status = 0
+stdout = "rc=0\nf not defined\nrc=0\ng not defined\nrc=1\nh defined\nand after\nrc=0\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 2.9.2 and 2.9.5: a function definition is a command, and a pipeline's commands may be any"
+why = "A definition as a pipeline stage defines the function in that stage's subshell, so nowhere after it, and writes nothing; after ! it is a pipeline of one in the shell, and its status is 1. Measured on busybox-w32 and bash 5.3, which agree on every line. Each form was a syntax error here: `function body must be a compound command` before a pipe, `unexpected )` after one and after !."

@@ -203,15 +203,17 @@ func compoundAsList(node programNode) list {
 	return list{items: []listItem{{value: andOr{pipelines: []pipeline{{commands: []commandNode{group}}}}}}}
 }
 
-// parseFunctionAfterOperator reads `cmd && name() { ...; }` and `cmd & name() ...`. A function
-// definition is a command too, so it defines the function exactly when that pipeline of the
-// list would have run -- and after `&` it runs in the foreground, as the next item. Not after
-// `|`: a definition as a pipeline stage would define it in that stage's subshell and nowhere.
+// parseFunctionAfterOperator reads `cmd && name() { ...; }`, `cmd & name() ...` and `cmd |
+// name() ...`. A function definition is a command too, so it defines the function exactly when
+// that pipeline of the list would have run -- and after `&` it runs in the foreground, as the
+// next item. As a pipeline stage it defines it in that stage's subshell, as both references do,
+// and so nowhere the rest of the script sees, but in lastpipe's last stage, which is the shell.
+// It was a syntax error, `unexpected )`.
 func parseFunctionAfterOperator(line string, budget *parseBudget, depth int) (programNode, bool, error) {
+	if node, recognized, err := parseNegatedDefinition(line, budget, depth); recognized {
+		return node, true, err
+	}
 	for _, operator := range topLevelOperators(line) {
-		if operator.text == "|" || operator.text == "|&" {
-			continue
-		}
 		prefix := strings.TrimSpace(line[:operator.offset])
 		definitionLine, background := trailingBackground(strings.TrimSpace(line[operator.offset+len(operator.text):]))
 		mayDefine := strings.Contains(definitionLine, "(") || strings.HasPrefix(definitionLine, "function")
@@ -237,19 +239,23 @@ func parseFunctionAfterOperator(line string, budget *parseBudget, depth int) (pr
 	return nil, false, nil
 }
 
-// parseDefinitionWithSuffix reads a definition that more of an and-or list follows: `f() {
-// ...; } && f`. The body ends where its closing brace does, so the first top-level `&&` or
-// `||` begins what comes after -- the ones inside the body are inside its braces. The whole
-// remainder used to be taken as the body, which then was not a compound command, so the line
-// was a syntax error in both positions: at the start of a line and after an operator.
+// parseDefinitionWithSuffix reads a definition that more of an and-or list or a pipeline
+// follows: `f() { ...; } && f`, `f() { ...; } | cat`. The body ends where its closing brace
+// does, so the first top-level `&&`, `||` or `|` begins what comes after -- the ones inside the
+// body are inside its braces. The whole remainder used to be taken as the body, which then was
+// not a compound command, so the line was a syntax error in both positions: at the start of a
+// line and after an operator.
 func parseDefinitionWithSuffix(line string, budget *parseBudget, depth int) (programNode, bool, error) {
 	text, operator, rest := line, "", ""
 	for _, found := range topLevelOperators(line) {
-		if found.text == "&&" || found.text == "||" {
+		switch found.text {
+		case "&&", "||", "|", "|&":
 			text = strings.TrimSpace(line[:found.offset])
 			operator, rest = found.text, strings.TrimSpace(line[found.offset+len(found.text):])
-			break
+		default:
+			continue
 		}
+		break
 	}
 	definition, recognized, err := parseFunctionDefinition(text, budget, depth)
 	if err != nil || !recognized {
@@ -258,6 +264,29 @@ func parseDefinitionWithSuffix(line string, budget *parseBudget, depth int) (pro
 	if operator == "" {
 		return definition, true, nil
 	}
+	if operator == "|&" {
+		// |& adds the stage's stderr to the pipe, and a definition writes to neither.
+		operator = "|"
+	}
 	node, err := wrapCompoundBeforeOperator(definition, operator, rest, budget, depth)
+	return node, true, err
+}
+
+// parseNegatedDefinition reads `! name() { ...; }`: a pipeline of one, in the shell, whose
+// command defines the function, and whose status is therefore 1, as both references have it.
+func parseNegatedDefinition(line string, budget *parseBudget, depth int) (programNode, bool, error) {
+	after, found := strings.CutPrefix(line, "!")
+	if !found || after == "" || (after[0] != ' ' && after[0] != '\t') {
+		return nil, false, nil
+	}
+	definitionLine, background := trailingBackground(strings.TrimSpace(after))
+	definition, recognized, err := parseDefinitionWithSuffix(definitionLine, budget, depth)
+	if err != nil || !recognized {
+		return nil, recognized, err
+	}
+	node, err := wrapCompoundAfterOperator(definition, "", "!", budget, depth)
+	if err == nil && background {
+		node = backgroundNode{value: node}
+	}
 	return node, true, err
 }
