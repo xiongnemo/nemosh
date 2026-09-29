@@ -46,7 +46,8 @@ func newOdApplet() Applet {
 		if run.limited && run.skip+run.limit < run.skip {
 			return errors.New("SKIP + SIZE is too large")
 		}
-		inputs := &dumpInputs{ctx: ctx, view: ProcessViewFromContext(ctx), stdin: stdin, paths: paths}
+		inputs := &dumpInputs{ctx: ctx, view: ProcessViewFromContext(ctx), stdin: stdin, paths: paths,
+			exact: run.limited && !run.stringsGiven}
 		if len(paths) == 0 {
 			inputs.paths = []string{"-"}
 		}
@@ -158,7 +159,7 @@ func newOdRun(options appletOptions) (*odRun, error) {
 		into   *int64
 	}{{'N', &run.limit}, {'j', &run.skip}} {
 		if options.has(number.letter) {
-			value, err := odNumber(options.value(number.letter), math.MaxUint64)
+			value, err := busyboxNumber(options.value(number.letter), math.MaxUint64, math.MaxUint64, bkmSuffixes)
 			if err != nil {
 				return nil, err
 			}
@@ -170,7 +171,7 @@ func newOdRun(options appletOptions) (*odRun, error) {
 		return nil, err
 	}
 	if run.stringsGiven = options.has('S'); run.stringsGiven {
-		value, err := odNumber(options.value('S'), math.MaxUint32)
+		value, err := busyboxNumber(options.value('S'), math.MaxUint32, math.MaxUint32, bkmSuffixes)
 		if err != nil {
 			return nil, err
 		}

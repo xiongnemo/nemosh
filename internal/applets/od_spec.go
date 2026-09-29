@@ -136,6 +136,22 @@ func (s odSpec) write(out *strings.Builder, chunk []byte, fields, pad int) {
 	}
 }
 
+// dumpCharName is -t c, busybox's print_ascii: C's escape for NUL and \a \b \t \n \v \f \r,
+// the character if it prints, and three octal digits otherwise.
+func dumpCharName(b byte) string {
+	names := map[byte]string{
+		0: `\0`, '\a': `\a`, '\b': `\b`, '\t': `\t`,
+		'\n': `\n`, '\v': `\v`, '\f': `\f`, '\r': `\r`,
+	}
+	if name, found := names[b]; found {
+		return name
+	}
+	if b >= 0x20 && b < 0x7f {
+		return string(rune(b))
+	}
+	return fmt.Sprintf("%03o", b)
+}
+
 // odNamedChar is -t a, busybox's print_named_ascii: the byte's low seven bits, by name when
 // they are not a graphic character.
 func odNamedChar(b byte) string {

@@ -12,8 +12,19 @@ import (
 
 // dump is od_bloaty.c's dump: blocks of width bytes after -j, no more than -N of them, the
 // last padded with zeros to a whole number of each spec's datums, and then the length. The
-// first FILE is opened and SKIP skipped before a bad -w is warned of, as busybox does.
+// first FILE is opened and SKIP skipped before a bad -w is warned of, as busybox does. The
+// lines are written out a buffer at a time, and before each FILE is opened.
 func (r *odRun) dump(stdout, stderr io.Writer, input *dumpInputs) error {
+	out := bufio.NewWriterSize(stdout, 32<<10)
+	input.flush = out.Flush
+	err := r.dumpTo(out, stderr, input)
+	if flushErr := out.Flush(); err == nil {
+		err = flushErr
+	}
+	return err
+}
+
+func (r *odRun) dumpTo(stdout, stderr io.Writer, input *dumpInputs) error {
 	if _, err := input.Read(nil); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
@@ -141,7 +152,14 @@ func (r *odRun) writeBlock(stdout io.Writer, offset int64, block []byte) error {
 // address is an offset as -A prints it, and with --traditional's LABEL the offset it names.
 func (r *odRun) address(offset int64) string {
 	number := func(offset int64) string {
-		return fmt.Sprintf(map[byte]string{'o': "%0*o", 'u': "%0*d", 'x': "%0*x"}[r.radix], r.pad, uint64(offset))
+		format := "%0*o"
+		switch r.radix {
+		case 'u':
+			format = "%0*d"
+		case 'x':
+			format = "%0*x"
+		}
+		return fmt.Sprintf(format, r.pad, uint64(offset))
 	}
 	switch r.addressing {
 	case odAddressNone:

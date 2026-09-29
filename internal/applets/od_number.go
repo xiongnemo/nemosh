@@ -8,22 +8,33 @@ import (
 	"strings"
 )
 
-// odNumber is busybox's xstrtou_range_sfx as -N -j and -S read it, a number of 0 to most: C's
-// strtoull with base 0, so 0x10 and 010 too, then nothing or one of b k m for 512, 1024 and
-// 1048576. A sign or a blank before it, a letter after it, and a number the type cannot hold
-// are invalid; one that the suffix takes past most is out of range.
-func odNumber(text string, most uint64) (uint64, error) {
+// The suffixes busybox's numbers take: od's -N -j -S, and hexdump's -n -s.
+var (
+	bkmSuffixes = map[string]uint64{"b": 512, "k": 1024, "m": 1024 * 1024}
+	kmgSuffixes = map[string]uint64{"KiB": 1024, "kiB": 1024, "K": 1024, "k": 1024, "MiB": 1 << 20,
+		"miB": 1 << 20, "M": 1 << 20, "m": 1 << 20, "GiB": 1 << 30, "giB": 1 << 30, "G": 1 << 30, "g": 1 << 30,
+		"KB": 1000, "MB": 1000000, "GB": 1000000000}
+)
+
+// busyboxNumber is busybox's xstrtou_range_sfx with base 0: C's strtoull, so 0x10 and 010 too,
+// then nothing or one of suffixes. A sign or a blank before it, a letter after it, and a number
+// its type, of most typeMax, cannot hold are invalid; one past upper, or that the suffix takes
+// past the type, is out of range.
+func busyboxNumber(text string, typeMax, upper uint64, suffixes map[string]uint64) (uint64, error) {
 	invalid := fmt.Errorf("invalid number '%s'", text)
 	if text == "" || strings.IndexByte("+- \t\n\v\f\r", text[0]) >= 0 {
 		return 0, invalid
 	}
 	value, rest, ok := cNumberPrefix(text, 0)
-	multiplier, known := map[string]uint64{"": 1, "b": 512, "k": 1024, "m": 1024 * 1024}[rest]
+	multiplier, known := suffixes[rest]
+	if rest == "" {
+		multiplier, known = 1, true
+	}
 	switch {
-	case !ok || !known || value > most:
+	case !ok || !known || value > typeMax:
 		return 0, invalid
-	case value > most/multiplier:
-		return 0, fmt.Errorf("number %s is not in 0..%d range", text, most)
+	case value > typeMax/multiplier || value*multiplier > upper:
+		return 0, fmt.Errorf("number %s is not in 0..%d range", text, upper)
 	}
 	return value * multiplier, nil
 }

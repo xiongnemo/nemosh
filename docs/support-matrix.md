@@ -673,7 +673,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
-| `hd`, `hexdump` | `-b -c -C -d -o -x -v -A -t` | refused by name |
+| `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
@@ -1110,6 +1110,24 @@ invocations it matches busybox-w32 byte for byte, apart from six places that are
 - **`-t fL` is refused.** A long double is ten bytes held in sixteen, and busybox-w32
   prints it through msvcrt as if it were a double.
 - **`-A ''` is refused**, where busybox reads past the end of its radix table.
+
+`hexdump` and `hd` became libbb's dump on 2026-09-30. Each of `-b -c -d -o -x -C` adds its
+format in the order given, `-e` adds units of busybox's own format language, and `-f` adds each
+line of a file as one. It matches busybox-w32 byte for byte on about 150 invocations, and on
+10 MB of random bytes under `-C` (it takes 1.6 s against busybox's 2.2), apart from four choices:
+
+- **`%s` stops at its byte count.** busybox passes the datum to printf without a precision, so
+  `2/3 "%s"` prints until it finds a NUL, somewhere past the block.
+- **Floats are spelled as C spells them**, as od's are.
+- **An `-s` OFFSET exactly the FILE's length skips the FILE**, as util-linux's hexdump now does.
+  busybox's old `>=` test dumps the whole FILE, at address OFFSET. On a pipe, busybox-w32 seeks,
+  does not move, and dumps from byte 0 under OFFSET's address; this reads OFFSET bytes past.
+- **`-f FILE` names one it cannot open** `cannot open 'FILE'`, where busybox writes `can't`.
+
+Both dumps read a FILE a buffer at a time, and stdin no further than `-N` or `-n` goes, as
+busybox's od turns its buffering off for: `{ od -N 4; cat; } < f` leaves `cat` the rest. They
+write a buffer at a time and write it out before each FILE is opened. A missing FILE is named
+after the lines that came before it, as busybox's are on a terminal.
 
 `uuencode` and `uudecode` carry the pre-base64 wire format. The lone backtick that
 ends the body is a zero-length line spelled with a backtick rather than a space,
