@@ -53,7 +53,6 @@
       "Invalid LValue that looks like array": "fail",
       "Invalid LValue: two sets of brackets": "fail",
       "Invalid constant": "fail",
-      "Logical Ops Short Circuit": "fail",
       "Negative exponent": "fail",
       "No floating point": "ash-only",
       "nounset with arithmetic": "fail",
@@ -164,7 +163,6 @@
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
       "is-array with ${var@a}": "fail",
       "recursive arith: recursion": "ash-only",
-      "recursive arith: short circuit \u0026\u0026, ||": "ash-only",
       "shift unshift reverse": "fail",
       "shopt -u expand_aliases and eval": "ash-only"
     },

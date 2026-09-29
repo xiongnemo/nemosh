@@ -181,11 +181,15 @@ func (p *arithmeticParser) binary(level int) (int64, error) {
 		}
 		p.index++
 		// && and || stop early, which matters because the right side may
-		// divide by zero.
+		// divide by zero. The right side is read for its shape and not evaluated, as the
+		// untaken arm of ?: is, so `0 && (x = 44)` leaves x alone as C has it and bash does;
+		// it was assigned. The answer is 0 or 1 all the same: `2 || 3` is 1 in both
+		// references, and it was the 2.
 		if operator == "&&" && left == 0 || operator == "||" && left != 0 {
-			if _, err := p.binary(level + 1); err != nil {
+			if _, err := p.branch(false, func() (int64, error) { return p.binary(level + 1) }); err != nil {
 				return 0, err
 			}
+			left = boolValue(operator == "||")
 			continue
 		}
 		right, err := p.binary(level + 1)

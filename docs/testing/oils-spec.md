@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1966 of the 2551 cases bash passes: 77.1%.**
+**nemosh passes 1968 of the 2551 cases bash passes: 77.1%.**
 
-Of the other 585, it does 106 the way the files record of ash, which may be busybox's
-way, and 479 neither way.
+Of the other 583, it does 105 the way the files record of ash, which may be busybox's
+way, and 478 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 479 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1966 |
+| that nemosh passes of those | 1968 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -47,7 +47,7 @@ of ash.
 | arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 3 |
 | arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 4 |
 | arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
-| arith.test.sh | 74 | 74 | 59 | 79.7% | 1 | 44 |
+| arith.test.sh | 74 | 74 | 60 | 81.1% | 1 | 44 |
 | array-assign.test.sh | 9 | 9 | 6 | 66.7% | 0 | 9 |
 | array-assoc.test.sh | 42 | 36 | 35 | 97.2% | 0 | 0 |
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
@@ -61,7 +61,7 @@ of ash.
 | assign.test.sh | 48 | 45 | 37 | 82.2% | 1 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 4 | 44.4% | 3 | 9 |
-| ble-idioms.test.sh | 26 | 26 | 20 | 76.9% | 3 | 23 |
+| ble-idioms.test.sh | 26 | 26 | 21 | 80.8% | 2 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 5 | 5 |
 | blog1.test.sh | 9 | 9 | 8 | 88.9% | 1 | 8 |
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1966 | 77.1% | 106 | 1447 |
+| all | 2668 | 2551 | 1968 | 77.1% | 105 | 1447 |
