@@ -20,7 +20,7 @@ package capability
 var commands = []Command{
 	{Name: "base64", Short: "diw", ValueShort: "w", Operand: AnyPath},
 	{Name: "basename", Short: "as", ValueShort: "s", Operand: AnyPath},
-	{Name: "cat", Short: "n", Operand: AnyPath},
+	{Name: "cat", Short: "Abentuv", Operand: AnyPath},
 	{Name: "chmod", Short: "Rcvf", Operand: AnyPath},
 	{Name: "clear", Operand: AnyPath},
 	{Name: "cmp", Short: "sl", Operand: AnyPath},

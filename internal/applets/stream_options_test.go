@@ -33,8 +33,8 @@ func TestStreamApplets_refuseAnUnknownOptionByName(t *testing.T) {
 		applet string
 		args   []string
 	}{
-		{applet: "cat", args: []string{"-b"}},
-		{applet: "cat", args: []string{"-A", "f.txt"}},
+		{applet: "cat", args: []string{"-z"}},
+		{applet: "cat", args: []string{"-q", "f.txt"}},
 		{applet: "head", args: []string{"-z", "f.txt"}},
 		{applet: "tail", args: []string{"-f", "f.txt"}},
 	} {

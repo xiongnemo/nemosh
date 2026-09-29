@@ -648,7 +648,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
 | `basename` | `-a -s`, and the `basename PATH [SUFFIX]` form, a third operand refused | refused by name |
 | `bunzip2`, `bzcat` | `-c -d -f -k -t`; **decompress only** | refused by name |
-| `cat` | `-n` | refused by name |
+| `cat` | `-n -b -v -e -t -A`, `-u` taken and ignored | refused by name |
 | `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
 | `clear` | none | refused by name |
 | `cmp` | `-s -l`; the message goes to stdout, as GNU's does | refused by name |

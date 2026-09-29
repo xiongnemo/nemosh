@@ -24,7 +24,7 @@ var usageText = map[string]Usage{
 	"cat": {
 		Summary:  "Copy files to standard output.",
 		Operands: "[FILE]...",
-		Options:  map[string]string{"n": "number the output lines"},
+		Options:  map[string]string{"n": "number the output lines", "b": "number the lines that are not empty", "v": "show nonprinting characters as ^X and M-X", "t": "show tabs as ^I, and nonprinting characters", "e": "end each line with $, and show nonprinting characters", "A": "the same as -vte", "u": "taken and ignored: the output is not buffered anyway"},
 		Notes:    []string{"A FILE of - is standard input."},
 	},
 	"chmod":     {Summary: "Change file mode bits.", Operands: "MODE[,MODE]... FILE...", Options: map[string]string{"R": "change directories and what they hold, all the way down", "c": "report each file whose mode changes", "v": "report each file", "f": "say nothing when a file's mode cannot be set"}, Notes: []string{"MODE is octal, or [ugoa]{+|-|=}[rwxXst] clauses separated by commas; a clause with no class letters is filtered through the umask.", "On Windows only the owner's write bit is kept, as the read-only attribute, and a directory is never made read-only."}},

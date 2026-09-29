@@ -71,18 +71,15 @@ func newCatApplet() Applet     { return catApplet{} }
 func (catApplet) Name() string { return "cat" }
 func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	ctx = withOperandReporter(ctx, "cat", stderr)
-	// An option cat does not implement is refused by name instead of being
-	// opened as a file and reported missing.
-	given, paths, err := streamOptionsAndOperands("cat", args, optionsPermute(ProcessViewFromContext(ctx)), "-n")
+	// busybox's letters, -u taken and ignored as it is there; see cat_print.go. One it does not
+	// have is refused by name instead of being opened as a file and reported missing.
+	options, paths, err := parseAppletOptions(ctx, args, "etvAnbu", "")
 	if err != nil {
 		return err
 	}
-	// -n numbers every line across all the operands, not per file, which is what
-	// makes `cat -n a b` read as one document.
-	number := &lineNumberer{on: containsString(given, "-n")}
+	printer := newCatPrinter(options)
 	if len(paths) == 0 {
-		_, err := number.copy(ctx, stdout, stdin)
-		return err
+		return printer.copy(ctx, stdout, stdin)
 	}
 	view := ProcessViewFromContext(ctx)
 	opened := true
@@ -99,7 +96,7 @@ func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 			opened = false
 			continue
 		}
-		_, copyErr := number.copy(ctx, stdout, file)
+		copyErr := printer.copy(ctx, stdout, file)
 		closeErr := file.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
 			return err
