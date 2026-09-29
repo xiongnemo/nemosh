@@ -60,6 +60,10 @@ func (sleepApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 	}
 }
 
+// ParseDuration reads a duration as sleep does, `N[.N][smhd]`, for callers outside this package:
+// the shell's timeout reads its SECS the way busybox's reads them, with the sleep applet's rules.
+func ParseDuration(input string) (time.Duration, error) { return parseSleepDuration(input) }
+
 func parseSleepDuration(input string) (time.Duration, error) {
 	if input == "" {
 		return 0, errInvalidSleepDuration

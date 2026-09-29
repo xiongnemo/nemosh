@@ -194,7 +194,6 @@
       "{ in expansion": "ash-only"
     },
     "bugs.test.sh": {
-      "#2640 Hanging when reading from character devices": "fail",
       "Crash after changing $[] to be alias of $(( ))": "ash-only",
       "assign readonly -- multiple lines": "ash-only",
       "assign readonly -- multiple lines -- set -o posix": "ash-only",

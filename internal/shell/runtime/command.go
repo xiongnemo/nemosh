@@ -86,7 +86,7 @@ var builtinNames = []string{
 	"exit", "export", "getopts", "hash", "help", "history", "jobs", "let", "local",
 	"pushd", "popd", "dirs", "mapfile", "readarray",
 	"pwd", "read",
-	"readonly", "return", "set", "shift", "shopt", "source", "time", "times", "trap", "type", "typeset",
+	"readonly", "return", "set", "shift", "shopt", "source", "time", "timeout", "times", "trap", "type", "typeset",
 	"kill", "umask", "unalias", "unset", "wait", "which",
 }
 
