@@ -141,11 +141,11 @@ func newMkdirApplet() Applet {
 		if len(operands) == 0 {
 			return missingOperand()
 		}
-		mode, err := mkdirMode(options)
+		view := ProcessViewFromContext(ctx)
+		mode, err := mkdirMode(options, processFileModeMask(view))
 		if err != nil {
 			return err
 		}
-		view := ProcessViewFromContext(ctx)
 		made := true
 		for _, path := range operands {
 			native, err := resolveHostPath(view, path)
@@ -168,15 +168,17 @@ func newMkdirApplet() Applet {
 	}}
 }
 
-func mkdirMode(options appletOptions) (os.FileMode, error) {
+// mkdirMode is -m's MODE, which is chmod's, octal or symbolic, read against 777 as busybox's
+// mkdir reads it (coreutils/mkdir.c:75).
+func mkdirMode(options appletOptions, umask uint32) (os.FileMode, error) {
 	if !options.has('m') {
 		return 0o777, nil
 	}
-	parsed, err := parseChmodMode(options.value('m'))
-	if err != nil {
+	parsed, ok := applyChmodMode(options.value('m'), 0o777, umask, false)
+	if !ok {
 		return 0, fmt.Errorf("invalid mode '%s'", options.value('m'))
 	}
-	return parsed, nil
+	return fileModeOfBits(parsed), nil
 }
 
 // -p makes every missing parent and accepts a target that is already a

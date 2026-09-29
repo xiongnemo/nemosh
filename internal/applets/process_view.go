@@ -169,6 +169,9 @@ func (v staticProcessView) ResolveNemoshPath(path string) (pathmodel.ResolvedPat
 func (v staticProcessView) OpenProcessInput(path string) (io.ReadCloser, error) {
 	return openProcessInput(v.parent, path)
 }
+func (v staticProcessView) FileModeMask() uint16 {
+	return uint16(processFileModeMask(v.parent))
+}
 func (v staticProcessView) CanonicalizeNativePath(origin pathmodel.Path, path string) (pathmodel.Path, error) {
 	if resolver, ok := v.parent.(interface {
 		CanonicalizeNativePath(pathmodel.Path, string) (pathmodel.Path, error)

@@ -13,6 +13,15 @@ func newFileModeMask() *fileModeMask {
 	return &fileModeMask{value: 0o022}
 }
 
+// FileModeMask is the umask, for the applets that read one: chmod filters a MODE with no class
+// letters through it.
+func (r Runtime) FileModeMask() uint16 {
+	if r.mask == nil {
+		return 0o022
+	}
+	return r.mask.value
+}
+
 // umask is the POSIX builtin: with no operand it prints the mask in octal; with one it sets
 // it, in octal or in the symbolic form, `u=rwx,g=rx,o=`. -S prints the mask symbolically, as
 // the permissions it leaves, and with an operand sets it quietly. All as busybox's, which

@@ -643,7 +643,7 @@ behaviour this shell deliberately does not have.
 | `basename` | `-a`, and the `basename PATH [SUFFIX]` form | refused by name |
 | `bunzip2`, `bzcat` | `-c -d -f -k -t`; **decompress only** | refused by name |
 | `cat` | `-n` | refused by name |
-| `chmod` | numeric mode | refused by name |
+| `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
 | `clear` | none | refused by name |
 | `cmp` | `-s -l`; the message goes to stdout, as GNU's does | refused by name |
 | `comm` | `-1 -2 -3` | refused by name |

@@ -21,7 +21,7 @@ var commands = []Command{
 	{Name: "base64", Short: "diw", ValueShort: "w", Operand: AnyPath},
 	{Name: "basename", Short: "a", Operand: AnyPath},
 	{Name: "cat", Short: "n", Operand: AnyPath},
-	{Name: "chmod", Operand: AnyPath},
+	{Name: "chmod", Short: "Rcvf", Operand: AnyPath},
 	{Name: "clear", Operand: AnyPath},
 	{Name: "cmp", Short: "sl", Operand: AnyPath},
 	{Name: "comm", Short: "123", Operand: AnyPath},

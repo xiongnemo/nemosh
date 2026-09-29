@@ -43,3 +43,26 @@ func TestRuntime_chmodChangesFileModeAndIsDiscoverable_whenOctalModeOmitsWriteBi
 		t.Fatalf("expected chmod to clear write bits, got %03o", info.Mode().Perm())
 	}
 }
+
+// chmod filters a MODE with no class letters through the shell's umask, as busybox's filters
+// it through the process's: under `umask 077`, `chmod +x f` lets only the owner run f.
+func TestRuntime_chmodFiltersAModeWithoutClassesThroughTheUmask(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f")
+	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+	script := "cd '" + filepath.ToSlash(dir) + "'\numask 077\nchmod -v +x f\numask 022\nchmod -v +x f\n"
+
+	status := rt.RunScript(context.Background(), script)
+
+	want := "mode of 'f' changed to 0744 (rwxr--r--)\nmode of 'f' changed to 0755 (rwxr-xr-x)\n"
+	if status != 0 || stdout.String() != want || stderr.String() != "" {
+		t.Fatalf("got %d, %q, %q; want 0, %q", status, stdout.String(), stderr.String(), want)
+	}
+}

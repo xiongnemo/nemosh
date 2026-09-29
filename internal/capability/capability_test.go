@@ -117,10 +117,11 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 	// this list exempts them from the contradiction test, not from the table.
 	//
 	// chmod, sed and pwd are here because measurement disagreed with that column
-	// and measurement wins. chmod and sed have no option parsing at all: the
-	// first operand is the mode and the script respectively, so `-Z` comes back
-	// as `invalid mode '-Z'` and `unsupported sed script: -Z`. `pwd -Z` simply
-	// succeeds, which the column does say.
+	// and measurement wins. chmod reads a word like `-Z` as its MODE, as busybox's
+	// does, because `-w` is one, so `-Z` comes back as `invalid mode '-Z'`. sed has
+	// no option parsing at all: the first operand is the script, so it is
+	// `unsupported sed script: -Z`. `pwd -Z` simply succeeds, which the column does
+	// say.
 	noOptionParsing := map[string]bool{
 		"echo": true, "printf": true, "yes": true, "true": true, "false": true,
 		"test": true, "[": true, "sleep": true, "env": true, "printenv": true,

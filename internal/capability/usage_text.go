@@ -27,7 +27,7 @@ var usageText = map[string]Usage{
 		Options:  map[string]string{"n": "number the output lines"},
 		Notes:    []string{"A FILE of - is standard input."},
 	},
-	"chmod":     {Summary: "Change file mode bits.", Operands: "MODE FILE..."},
+	"chmod":     {Summary: "Change file mode bits.", Operands: "MODE[,MODE]... FILE...", Options: map[string]string{"R": "change directories and what they hold, all the way down", "c": "report each file whose mode changes", "v": "report each file", "f": "say nothing when a file's mode cannot be set"}, Notes: []string{"MODE is octal, or [ugoa]{+|-|=}[rwxXst] clauses separated by commas; a clause with no class letters is filtered through the umask.", "On Windows only the owner's write bit is kept, as the read-only attribute, and a directory is never made read-only."}},
 	"clear":     {Summary: "Clear the terminal screen."},
 	"cmp":       {Summary: "Compare two files byte by byte.", Operands: "FILE1 [FILE2]", Options: map[string]string{"s": "say nothing; report only through the exit status", "l": "list the offset and the two bytes of every difference"}},
 	"comm":      {Summary: "Compare two sorted files line by line, in three columns.", Operands: "FILE1 FILE2", Options: map[string]string{"1": "suppress column 1, the lines only in FILE1", "2": "suppress column 2, the lines only in FILE2", "3": "suppress column 3, the lines in both"}},
