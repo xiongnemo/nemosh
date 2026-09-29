@@ -65,6 +65,9 @@ func parseCutArgs(args []string) (cutOptions, error) {
 			options.operands = append(options.operands, arg)
 			continue
 		}
+		if strings.HasPrefix(arg, "--") {
+			return cutOptions{}, fmt.Errorf("cut: unrecognized option '%s'", arg)
+		}
 		var err error
 		index, err = parseCutOption(args, index, &options)
 		if err != nil {

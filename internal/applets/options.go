@@ -3,6 +3,7 @@ package applets
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // appletOptions is what an applet's leading flags parsed to: present reports
@@ -84,6 +85,11 @@ func readAppletOptions(args []string, flags, valued string, permute bool) (apple
 			}
 			operands = append(operands, arg)
 			continue
+		}
+		// A long option the applet has not turned into its letter is one it does not have. It
+		// was read as letters, `du --apparent-size` as `-`, and refused as that.
+		if strings.HasPrefix(arg, "--") {
+			return parsed, nil, fmt.Errorf("unrecognized option '%s'", arg)
 		}
 		for position := 1; position < len(arg); position++ {
 			letter := arg[position]

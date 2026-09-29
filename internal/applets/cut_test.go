@@ -214,7 +214,7 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithUnsupportedOption(t 
 		{"unsupported -F", []string{"-F", "1"}, "cut: invalid option -- F\n"},
 		{"unsupported -D", []string{"-D", ":", "-f", "1"}, "cut: invalid option -- D\n"},
 		{"unsupported -O", []string{"-O:", "-f", "1"}, "cut: invalid option -- O\n"},
-		{"unsupported output delimiter", []string{"--output-delimiter=:", "-f", "1"}, "cut: invalid option -- -\n"},
+		{"unsupported output delimiter", []string{"--output-delimiter=:", "-f", "1"}, "cut: unrecognized option '--output-delimiter=:'\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

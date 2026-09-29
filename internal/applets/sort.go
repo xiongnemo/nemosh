@@ -66,16 +66,8 @@ func runSort(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 }
 
 // parseSortArgs reads busybox's options, `nghMVucszbrdfimS:T:o:k:*t:` with at most one -o and
-// one -t, and a long option is refused whole, as sort has none.
+// one -t. sort has no long option.
 func parseSortArgs(ctx context.Context, args []string) (sortSpec, []string, error) {
-	for _, arg := range args {
-		if arg == "--" {
-			break
-		}
-		if strings.HasPrefix(arg, "--") {
-			return sortSpec{}, nil, fmt.Errorf("unrecognized option %s", arg)
-		}
-	}
 	options, paths, err := parseAppletOptions(ctx, args, "nghMVucszbrdfim", "STokt")
 	if err != nil {
 		return sortSpec{}, nil, err

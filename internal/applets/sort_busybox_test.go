@@ -73,7 +73,7 @@ func TestSort_answersAsBusyboxDoes(t *testing.T) {
 		{[]string{"-k1V"}, "a\n", "sort: unknown sort type\n", 2},
 		{[]string{"-k1,2,3"}, "a\n", "sort: unknown key option\n", 2},
 		{[]string{"-ng"}, "a\nb\n", "sort: unknown sort type\n", 2},
-		{[]string{"--reverse"}, "a\n", "sort: unrecognized option --reverse\n", 2},
+		{[]string{"--reverse"}, "a\n", "sort: unrecognized option '--reverse'\n", 2},
 	} {
 		stdout, stderr, err := runPermuted(t, view, test.input, append([]string{"sort"}, test.args...)...)
 		status, _ := applets.StatusCode(err)

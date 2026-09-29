@@ -92,8 +92,9 @@ func TestApplets_nameTheLongOptionTheyRefuse(t *testing.T) {
 		applet string
 		want   string
 	}{
-		{applet: "sort", want: "sort: unrecognized option --nonsense"},
-		{applet: "uniq", want: "uniq: unrecognized option --nonsense"},
+		{applet: "sort", want: "sort: unrecognized option '--nonsense'"},
+		{applet: "uniq", want: "uniq: unrecognized option '--nonsense'"},
+		{applet: "cut", want: "cut: unrecognized option '--nonsense'"},
 	} {
 		t.Run(test.applet, func(t *testing.T) {
 			// When

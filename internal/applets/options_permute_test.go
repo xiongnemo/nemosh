@@ -117,3 +117,24 @@ func TestAppletOptions_endAtTheFirstOperandWhereBusyboxsDo(t *testing.T) {
 		}
 	}
 }
+
+// A long option an applet does not have is named whole, as GNU's getopt_long names it and cp
+// and mv here already did. It was read as a cluster of letters and refused as the first, `-`.
+func TestAppletOptions_nameAnUnknownLongOptionWhole(t *testing.T) {
+	view := permuteTestView{cwd: t.TempDir()}
+	for _, test := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"du", "--apparent-size"}, "unrecognized option '--apparent-size'"},
+		{[]string{"wc", "x", "--lines"}, "unrecognized option '--lines'"},
+		{[]string{"xargs", "--no-run-if-empty", "echo"}, "unrecognized option '--no-run-if-empty'"},
+		// sort says so itself, and ends 2, as for any other bad option.
+		{[]string{"sort", "--foo=bar"}, "sort: unrecognized option '--foo=bar'\n"},
+	} {
+		_, stderr, err := runPermuted(t, view, "", test.args...)
+		if reported := stderr; err == nil || reported != test.want && err.Error() != test.want {
+			t.Errorf("%q: %q, %v; want %s", test.args, stderr, err, test.want)
+		}
+	}
+}

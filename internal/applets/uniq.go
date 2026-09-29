@@ -103,16 +103,6 @@ type uniqInput struct {
 }
 
 func parseUniqArgs(ctx context.Context, args []string) (uniqInput, error) {
-	for _, arg := range args {
-		if arg == "--" {
-			break
-		}
-		// See sort: a long option read letter by letter names the `-` it begins with rather
-		// than the option that was actually typed.
-		if strings.HasPrefix(arg, "--") {
-			return uniqInput{}, fmt.Errorf("uniq: unrecognized option %s", arg)
-		}
-	}
 	options, operands, err := parseAppletOptions(ctx, args, "cduiz", "fsw")
 	if err != nil {
 		return uniqInput{}, errors.New("uniq: " + err.Error())
