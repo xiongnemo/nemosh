@@ -173,7 +173,7 @@ func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidOption(t *te
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: invalid option -- x\n"; got != want {
+	if got, want := stderr.String(), "uniq: invalid option -- 'x'\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
@@ -193,7 +193,7 @@ func TestUniqApplet_returnsInvalidOptionBeforeOperandCount_whenRunWithInvalidOpt
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: invalid option -- x\n"; got != want {
+	if got, want := stderr.String(), "uniq: invalid option -- 'x'\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }
@@ -260,20 +260,22 @@ func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithOptionTerminatedEmp
 func TestUniqApplet_returnsStatusOneAndDiagnostic_whenRunWithExtraOperand(t *testing.T) {
 	// Given
 	applet := newUniqApplet()
+	// A second operand is where the result goes, as busybox has it; a third is too many.
 	first := writeUniqFixture(t, "a\n")
 	second := writeUniqFixture(t, "b\n")
+	third := writeUniqFixture(t, "c\n")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	// When
-	err := applet.Run(context.Background(), []string{first, second}, &bytes.Buffer{}, &stdout, &stderr)
+	err := applet.Run(context.Background(), []string{first, second, third}, &bytes.Buffer{}, &stdout, &stderr)
 
 	// Then
 	assertUniqStatus(t, err, 1)
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: too many operands\n"; got != want {
+	if got, want := stderr.String(), "uniq: extra operand '"+third+"'\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }

@@ -729,7 +729,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `tr` | `-d -s -c`, ranges, backslash escapes and the POSIX classes (`[:upper:]` and the rest, in code order) | `[=c=]` and `[c*n]` read as the characters written, as busybox reads them; a class name it does not know is refused by name |
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
-| `uniq` | `-c -d -u -i` | refused by name |
+| `uniq` | `-c -d -u -i -z -f -s -w`, and an OUTPUT operand | refused by name |
 | `unexpand` | `-t -a` | refused by name |
 | `unix2dos` | `-d -u`; converts **in place** with a file operand | refused by name |
 | `unzip` | `-l -t -p -j -n -o -q -K -d -x` | refused by name |

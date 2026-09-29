@@ -37,7 +37,7 @@ func TestAppletExitStatus_matchTheReferenceFailureStatus(t *testing.T) {
 		// raises xfunc_error_retval, so both land on the default.
 		{name: "uniq on a missing file", applet: "uniq", args: []string{"nope.txt"}, want: 1},
 		{name: "uniq on an unknown option", applet: "uniq", args: []string{"-x"}, want: 1},
-		{name: "uniq with a second operand", applet: "uniq", args: []string{"a.txt", "b.txt"}, want: 1},
+		{name: "uniq with a third operand", applet: "uniq", args: []string{"a.txt", "b.txt", "c.txt"}, want: 1},
 
 		// sort keeps its 2; these rows are the reason the others are not 2.
 		{name: "sort on a missing file", applet: "sort", args: []string{"nope.txt"}, want: 2},

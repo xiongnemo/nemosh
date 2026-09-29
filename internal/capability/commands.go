@@ -153,7 +153,7 @@ var commands = []Command{
 	{Name: "true", Operand: AnyPath},
 	{Name: "false", Operand: AnyPath},
 	{Name: "uname", Short: "aimnoprsv", Operand: AnyPath},
-	{Name: "uniq", Short: "cdui", Operand: AnyPath},
+	{Name: "uniq", Short: "cduizfsw", ValueShort: "fsw", Operand: AnyPath},
 	{Name: "wc", Short: "clwmL", Operand: AnyPath},
 	{Name: "whoami", Operand: AnyPath},
 	{Name: "winpath", Operand: AnyPath},

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"strconv"
 	"strings"
 )
 
@@ -19,105 +21,141 @@ func (uniqApplet) Name() string {
 	return "uniq"
 }
 
+// uniq is busybox's (coreutils/uniq.c): `uniq [-cduiz] [-f N] [-s N] [-w N] [INPUT [OUTPUT]]`.
+// Adjacent lines are one run when what they compare is the same: past -f's first N fields and
+// then -s's N characters, at most -w's N characters of what is left, ASCII case folded under -i.
+// The first line of each run is written, after its size under -c, to OUTPUT when there is one;
+// -z ends each with NUL, which busybox has for the output alone.
+//
+// It took -c -d -u -i and refused a second operand, where busybox writes the result to it.
 func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-
-	input, err := parseUniqArgs(args)
+	input, err := parseUniqArgs(ctx, args)
 	if err != nil {
 		return writeUniqDiagnostic(stderr, err.Error())
 	}
-	lines, err := readUniqInput(ctx, ProcessViewFromContext(ctx), input, stdin)
+	view := ProcessViewFromContext(ctx)
+	var opened io.ReadCloser
+	reader := stdin
+	if input.hasPath {
+		file, err := OpenProcessInput(ctx, view, input.path)
+		if err != nil {
+			return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", quotedInputFailure(input.path, err)))
+		}
+		opened, reader = file, file
+	}
+	// A third operand is refused once INPUT is open, as busybox's order has it.
+	if input.extra != "" {
+		if opened != nil {
+			opened.Close()
+		}
+		return writeUniqDiagnostic(stderr, fmt.Sprintf("uniq: extra operand '%s'", input.extra))
+	}
+	// OUTPUT is opened before anything is read, as busybox opens it.
+	var output *os.File
+	if input.hasOutput {
+		file, err := openUniqOutput(view, input.output)
+		if err != nil {
+			if opened != nil {
+				opened.Close()
+			}
+			return writeUniqDiagnostic(stderr, "uniq: "+err.Error())
+		}
+		output = file
+	}
+	lines, err := readUniqLines(reader)
+	if opened != nil {
+		err = errors.Join(err, opened.Close())
+	}
 	if err != nil {
+		if output != nil {
+			output.Close()
+		}
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return err
 		}
-		return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", err))
+		return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", inputFailure(input.path, err)))
 	}
-	return writeUniqLines(stdout, collapseAdjacentLines(lines, input))
+	if output == nil {
+		return input.write(stdout, lines)
+	}
+	return errors.Join(input.write(output, lines), output.Close())
 }
 
 type uniqInput struct {
-	path    string
-	hasPath bool
-	// count prefixes each run with how many lines it collapsed, which is what
-	// makes `sort | uniq -c | sort -rn` -- the tally everyone writes -- work.
+	// path and output are the operands; without one, or given `-`, it is standard input and
+	// output. An empty operand is a file, which is not there.
+	path, output       string
+	hasPath, hasOutput bool
+	// extra is a third operand, which is refused.
+	extra string
+	// count prefixes each run with how many lines it collapsed, which is what makes `sort |
+	// uniq -c | sort -rn` -- the tally everyone writes -- work.
 	count bool
-	// GNU's two filters, measured on `a a b`:
-	//
-	//	uniq -d  ->  a      only the lines that repeated
-	//	uniq -u  ->  b      only the lines that did not
-	//
-	// They are opposites, and asking for both is asking for nothing -- GNU
-	// prints nothing rather than everything, which is what falls out of applying
-	// both conditions.
-	onlyRepeated bool
-	onlyUnique   bool
-	// foldCase is -i. `A` and `a` become one run.
-	foldCase bool
+	// onlyRepeated is -d and onlyUnique -u, opposites, so both at once select nothing.
+	onlyRepeated, onlyUnique bool
+	foldCase, zero           bool
+	skipFields, skipChars    int
+	// maxChars is -w, or -1 for the whole of what is compared.
+	maxChars int
 }
 
-func parseUniqArgs(args []string) (uniqInput, error) {
-	var operands []string
-	var parsed uniqInput
-	for index := range len(args) {
-		arg := args[index]
+func parseUniqArgs(ctx context.Context, args []string) (uniqInput, error) {
+	for _, arg := range args {
 		if arg == "--" {
-			operands = append(operands, args[index+1:]...)
 			break
 		}
-		if !strings.HasPrefix(arg, "-") || arg == "-" {
-			operands = append(operands, arg)
-			continue
-		}
-		// See sort: a long option read letter by letter names the `-` it begins
-		// with rather than the option that was actually typed.
+		// See sort: a long option read letter by letter names the `-` it begins with rather
+		// than the option that was actually typed.
 		if strings.HasPrefix(arg, "--") {
 			return uniqInput{}, fmt.Errorf("uniq: unrecognized option %s", arg)
 		}
-		for _, flag := range arg[1:] {
-			switch flag {
-			case 'c':
-				parsed.count = true
-			case 'd':
-				parsed.onlyRepeated = true
-			case 'u':
-				parsed.onlyUnique = true
-			case 'i':
-				parsed.foldCase = true
-			default:
-				return uniqInput{}, fmt.Errorf("uniq: invalid option -- %c", flag)
-			}
+	}
+	options, operands, err := parseAppletOptions(ctx, args, "cduiz", "fsw")
+	if err != nil {
+		return uniqInput{}, errors.New("uniq: " + err.Error())
+	}
+	parsed := uniqInput{
+		count: options.has('c'), onlyRepeated: options.has('d'), onlyUnique: options.has('u'),
+		foldCase: options.has('i'), zero: options.has('z'), maxChars: -1,
+	}
+	for _, number := range []struct {
+		letter byte
+		into   *int
+	}{{'f', &parsed.skipFields}, {'s', &parsed.skipChars}, {'w', &parsed.maxChars}} {
+		if !options.has(number.letter) {
+			continue
 		}
+		value, err := strconv.ParseUint(options.value(number.letter), 10, 31)
+		if err != nil {
+			return uniqInput{}, fmt.Errorf("uniq: invalid number '%s'", options.value(number.letter))
+		}
+		*number.into = int(value)
 	}
-
-	if len(operands) > 1 {
-		return uniqInput{}, errors.New("uniq: too many operands")
+	if len(operands) > 2 {
+		parsed.extra = operands[2]
 	}
-	if len(operands) == 0 || operands[0] == "-" {
-		return parsed, nil
+	if len(operands) > 0 && operands[0] != "-" {
+		parsed.path, parsed.hasPath = operands[0], true
 	}
-	parsed.path, parsed.hasPath = operands[0], true
+	if len(operands) > 1 && operands[1] != "-" {
+		parsed.output, parsed.hasOutput = operands[1], true
+	}
 	return parsed, nil
 }
 
-func readUniqInput(ctx context.Context, view ProcessView, input uniqInput, stdin io.Reader) ([]string, error) {
-	if !input.hasPath {
-		return readUniqLines(stdin)
-	}
-	reader, err := OpenProcessInput(ctx, view, input.path)
+func openUniqOutput(view ProcessView, path string) (*os.File, error) {
+	native, err := resolveHostPath(view, path)
 	if err != nil {
-		return nil, quotedInputFailure(input.path, err)
+		return nil, err
 	}
-	lines, readErr := readUniqLines(reader)
-	closeErr := reader.Close()
-	if err := errors.Join(readErr, closeErr); err != nil {
-		return nil, inputFailure(input.path, err)
+	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	if err != nil {
+		return nil, cannotOpen(path, err)
 	}
-	return lines, nil
+	return file, nil
 }
 
 func readUniqLines(input io.Reader) ([]string, error) {
@@ -140,62 +178,82 @@ func readUniqLines(input io.Reader) ([]string, error) {
 	}
 }
 
-// collapseAdjacentLines keeps one of each run of equal lines, and under -c
-// prefixes it with the size of the run.
-//
-// The layout is busybox's, which is GNU's: the count right-aligned in seven
-// columns and then a blank, so a column of tallies lines up.
-func collapseAdjacentLines(lines []string, input uniqInput) []string {
-	if len(lines) == 0 {
-		return nil
+// write writes the first line of each run, as busybox's does: under -d only the runs that
+// repeated, under -u only the ones that did not, and under -c after the run's size in seven
+// columns and a blank, so a column of tallies lines up.
+func (input uniqInput) write(out io.Writer, lines []string) error {
+	end := byte('\n')
+	if input.zero {
+		end = 0
 	}
-	collapsed := make([]string, 0, len(lines))
-	previous := ""
-	run := 0
-	flush := func() {
-		if run == 0 {
-			return
+	writer := bufio.NewWriter(out)
+	for start := 0; start < len(lines); {
+		next := start + 1
+		for next < len(lines) && input.same(lines[start], lines[next]) {
+			next++
 		}
-		// -d wants only runs longer than one, -u only runs of exactly one. Both
-		// together select nothing, which is what GNU prints and what falls out of
-		// applying both conditions rather than a special case.
-		if input.onlyRepeated && run < 2 {
-			return
+		repeated := next-start > 1
+		if !(input.onlyRepeated && !repeated) && !(input.onlyUnique && repeated) {
+			if input.count {
+				fmt.Fprintf(writer, "%7d ", next-start)
+			}
+			writer.WriteString(lines[start])
+			if err := writer.WriteByte(end); err != nil {
+				return err
+			}
 		}
-		if input.onlyUnique && run > 1 {
-			return
-		}
-		if input.count {
-			collapsed = append(collapsed, fmt.Sprintf("%7d %s", run, previous))
-			return
-		}
-		collapsed = append(collapsed, previous)
+		start = next
 	}
-	same := func(left, right string) bool {
-		if input.foldCase {
-			return strings.EqualFold(left, right)
-		}
-		return left == right
-	}
-	for index, line := range lines {
-		if index > 0 && same(line, previous) {
-			run++
-			continue
-		}
-		flush()
-		previous, run = line, 1
-	}
-	flush()
-	return collapsed
+	return writer.Flush()
 }
 
-func writeUniqLines(stdout io.Writer, lines []string) error {
-	for _, line := range lines {
-		if _, err := fmt.Fprintln(stdout, line); err != nil {
-			return err
+// same is whether two lines are one run: what they compare, past -f's fields and -s's
+// characters, up to -w's.
+func (input uniqInput) same(left, right string) bool {
+	left, right = input.compared(left), input.compared(right)
+	if input.foldCase {
+		return asciiEqualFold(left, right)
+	}
+	return left == right
+}
+
+// compared is busybox's cur_compare: past each skipped field's blanks and then what follows them
+// up to the next blank, past the skipped characters, and at most -w's of what is left.
+func (input uniqInput) compared(line string) string {
+	index := 0
+	for range input.skipFields {
+		for index < len(line) && isCSpace(line[index]) {
+			index++
+		}
+		for index < len(line) && !isCSpace(line[index]) {
+			index++
 		}
 	}
-	return nil
+	line = line[min(index+input.skipChars, len(line)):]
+	if input.maxChars >= 0 && input.maxChars < len(line) {
+		line = line[:input.maxChars]
+	}
+	return line
+}
+
+// asciiEqualFold is strncasecmp's equality: ASCII letters folded, every other byte as it is.
+func asciiEqualFold(left, right string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range len(left) {
+		a, b := left[index], right[index]
+		if 'A' <= a && a <= 'Z' {
+			a += 'a' - 'A'
+		}
+		if 'A' <= b && b <= 'Z' {
+			b += 'a' - 'A'
+		}
+		if a != b {
+			return false
+		}
+	}
+	return true
 }
 
 // Like cut, uniq leaves xfunc_error_retval alone, so its xopen death and its
