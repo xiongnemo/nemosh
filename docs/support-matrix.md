@@ -660,7 +660,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `fold` | `-w -s -b` | refused by name |
 | `free` | `-b -k -m -g`; `-h` accepted | refused by name |
 | `cpio` | `-t -i -o -d -m -v -u -0 -F -H`; only `newc` is read or written | refused by name |
-| `cp` | `-r`, `-R` | refused by name |
+| `cp` | `-a -d -P -L -H -p -f -i -n -l -s -T -t -u -v -r -R`, and busybox's long forms; a file is never copied onto itself, and a destination that is there is replaced, read-only or not, as busybox-w32 replaces it. `-r` follows symbolic links, where busybox copies them | refused by name |
 | `cut` | `-b -c -d -f -n -s` | refused by name |
 | `date` | `-d -u` | refused by name |
 | `diff` | `-u -U -q -s -i -w -B -N -L`; unified always | refused by name |

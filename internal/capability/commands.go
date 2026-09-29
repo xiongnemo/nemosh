@@ -25,7 +25,7 @@ var commands = []Command{
 	{Name: "clear", Operand: AnyPath},
 	{Name: "cmp", Short: "sl", Operand: AnyPath},
 	{Name: "comm", Short: "123", Operand: AnyPath},
-	{Name: "cp", Short: "rR", Operand: AnyPath},
+	{Name: "cp", Short: "adfHiLlnPprRsTtuv", ValueShort: "t", Operand: AnyPath},
 	{Name: "cut", Short: "bcdfns", ValueShort: "bcdf", Operand: AnyPath},
 	{Name: "date", Short: "du", ValueShort: "d", Operand: AnyPath},
 	{Name: "dirname", Operand: AnyPath},

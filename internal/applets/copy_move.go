@@ -14,42 +14,6 @@ type pathOperand struct {
 	operand string
 }
 
-func newCpApplet() Applet {
-	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
-		options, operands, err := twoOperandsWithOptions(ctx, args, "rR")
-		if err != nil {
-			return err
-		}
-		if len(operands) > 2 {
-			last := len(operands) - 1
-			return copyManyOperands(ctx, "cp", operands[:last], operands[last], stderr,
-				func(source, dest pathOperand) error {
-					return copyOneInto(source, dest, options, stderr)
-				})
-		}
-		source, dest, err := copyOperands(ctx, operands)
-		if err != nil {
-			return err
-		}
-		return copyOneInto(source, dest, options, stderr)
-	}}
-}
-
-// copyOneInto copies one already-resolved source, which is the body both the two-operand form
-// and the `source... directory` form need.
-//
-// A directory needs -r, and saying so is the whole of the difference: without it busybox
-// answers `omitting directory` and exits 1 rather than copying something else.
-func copyOneInto(source, dest pathOperand, options appletOptions, stderr io.Writer) error {
-	if info, statErr := os.Lstat(source.host); statErr == nil && info.IsDir() {
-		if !options.has('r') && !options.has('R') {
-			return omittingDirectory(source.operand)
-		}
-		return copyTree(source, dest, stderr)
-	}
-	return copyFile(source, dest)
-}
-
 func newMvApplet() Applet {
 	return simpleApplet{name: "mv", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
 		// -f is accepted and changes nothing, because nothing here prompts:

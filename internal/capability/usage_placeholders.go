@@ -58,6 +58,7 @@ var valuePlaceholders = map[string]string{
 	"uudecodeo":         "FILE",
 	"diffU":             "LINES",
 	"lnS":               "SUFFIX",
+	"cpt":               "DIR",
 	"diffL":             "LABEL",
 	"patchp":            "COUNT",
 	"patchi":            "DIFF",

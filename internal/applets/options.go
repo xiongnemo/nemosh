@@ -13,6 +13,8 @@ type appletOptions struct {
 	values map[byte]string
 	// every is each value a letter was given, in order, for an option that may be repeated.
 	every map[byte][]string
+	// order is the letters as they were given, for the options where the last one wins.
+	order []byte
 }
 
 func (o appletOptions) has(letter byte) bool { return o.given[letter] }
@@ -20,6 +22,17 @@ func (o appletOptions) has(letter byte) bool { return o.given[letter] }
 func (o appletOptions) value(letter byte) string { return o.values[letter] }
 
 func (o appletOptions) all(letter byte) []string { return o.every[letter] }
+
+// last is whichever of letters was given last, or 0 when none was: of cp's -i and -n, the
+// later one wins.
+func (o appletOptions) last(letters string) byte {
+	for index := len(o.order) - 1; index >= 0; index-- {
+		if containsByte(letters, o.order[index]) {
+			return o.order[index]
+		}
+	}
+	return 0
+}
 
 // parseAppletOptions splits an applet's options from its operands. `flags` lists the letters
 // that stand alone, `valued` the ones that take the rest of their word or the next argument.
@@ -74,6 +87,7 @@ func readAppletOptions(args []string, flags, valued string, permute bool) (apple
 		}
 		for position := 1; position < len(arg); position++ {
 			letter := arg[position]
+			parsed.order = append(parsed.order, letter)
 			switch {
 			case containsByte(flags, letter):
 				parsed.given[letter] = true

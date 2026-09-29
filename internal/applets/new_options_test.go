@@ -36,11 +36,11 @@ func TestCp_copiesATree(t *testing.T) {
 	t.Run("a directory needs -r", func(t *testing.T) {
 		// Given / When
 		root, source := seed(t)
-		_, _, err := runAppletWithInput(t, "", "cp", source, filepath.Join(root, "dst"))
+		_, stderr, err := runAppletWithInput(t, "", "cp", source, filepath.Join(root, "dst"))
 
 		// Then
-		if err == nil || !strings.Contains(err.Error(), "omitting directory") {
-			t.Fatalf("err = %v, want it to refuse the directory by name", err)
+		if err == nil || !strings.Contains(stderr, "omitting directory") {
+			t.Fatalf("err = %v, stderr %q; want it to refuse the directory by name", err, stderr)
 		}
 		if _, statErr := os.Stat(filepath.Join(root, "dst")); statErr == nil {
 			t.Fatal("it copied something anyway")
