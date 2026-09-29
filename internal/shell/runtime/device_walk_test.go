@@ -97,6 +97,10 @@ func TestDeviceWalk_grepRecursiveSkipsDevices(t *testing.T) {
 // A device named directly is still read, which is GNU's rule too: the skip is about recursing, not
 // about devices being unreadable.
 func TestDeviceWalk_grepReadsADeviceNamedDirectly(t *testing.T) {
+	// The clipboard is borrowed and handed back, as the clipboard's own tests do, and the test
+	// skips while another program holds it. It wrote over whatever the user had copied, and
+	// failed, `open clipboard: Access is denied`, whenever something else had it open.
+	borrowClipboard(t)
 	stdout, stderr, status := runScriptForDevices(t,
 		"echo findme > /dev/clipboard && grep findme /dev/clipboard\n")
 	if status != 0 {
