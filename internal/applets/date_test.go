@@ -109,40 +109,6 @@ func TestDateApplet_printsInjectedNow_whenRunWithoutOperands(t *testing.T) {
 	}
 }
 
-func TestDateApplet_returnsErrExitFalseAndDiagnostic_whenRunWithUnsupportedFeature(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{name: "set time", args: []string{"-s", "@0"}},
-		{name: "reference file", args: []string{"-r", "file.txt"}},
-		{name: "rfc 2822", args: []string{"-R"}},
-		{name: "iso 8601", args: []string{"-I"}},
-		{name: "long option", args: []string{"--utc"}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Given
-			applet := newDateApplet()
-			var stdout bytes.Buffer
-			var stderr bytes.Buffer
-
-			// When
-			err := applet.Run(context.Background(), tt.args, &bytes.Buffer{}, &stdout, &stderr)
-
-			// Then
-			if !errors.Is(err, ErrExitFalse) {
-				t.Fatalf("expected unsupported date feature to return ErrExitFalse, got %v", err)
-			}
-			if got := stdout.String(); got != "" {
-				t.Fatalf("expected empty stdout, got %q", got)
-			}
-			assertDateDiagnostic(t, stderr.String(), "unsupported")
-		})
-	}
-}
-
 func TestDateApplet_returnsErrExitFalseAndDiagnostic_whenRunWithUnsupportedInput(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -150,7 +116,9 @@ func TestDateApplet_returnsErrExitFalseAndDiagnostic_whenRunWithUnsupportedInput
 		diagnostic   string
 		exactMessage bool
 	}{
-		{name: "non epoch date", args: []string{"-u", "-d", "1970-01-01", "+%Y"}, diagnostic: "date:"},
+		{name: "not a date", args: []string{"-u", "-d", "yesterday", "+%Y"}, diagnostic: "date: invalid date 'yesterday'"},
+		{name: "setting the clock", args: []string{"-s", "@0"}, diagnostic: "date: cannot set date: Operation not permitted"},
+		{name: "a missing reference", args: []string{"-r", "nosuch.txt"}, diagnostic: "date: cannot stat 'nosuch.txt'"},
 		{name: "bad epoch", args: []string{"-u", "-d", "@bad", "+%s"}, diagnostic: "date:"},
 		{name: "unsupported format token", args: []string{"-u", "-d", "@0", "+%Q"}, diagnostic: "date:"},
 		{name: "dangling percent", args: []string{"-u", "-d", "@0", "+%"}, diagnostic: "date: unsupported format: %\n", exactMessage: true},

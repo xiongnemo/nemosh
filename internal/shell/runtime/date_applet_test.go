@@ -85,7 +85,8 @@ func TestRuntime_dateRejectsSetTime_whenRunWithSetOption(t *testing.T) {
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got := stderr.String(); !strings.Contains(got, "unsupported") {
-		t.Fatalf("expected unsupported diagnostic, got %q", got)
+	// Refused as busybox refuses it without the privilege to set the clock.
+	if got := stderr.String(); got != "date: cannot set date: Operation not permitted\n" {
+		t.Fatalf("expected the clock-setting refusal, got %q", got)
 	}
 }

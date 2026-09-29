@@ -9,8 +9,8 @@ command = ["date", "-s", "@0"]
 [expect]
 status = 1
 stdout = ""
-stderr = "date: unsupported option: -s\n"
+stderr = "date: cannot set date: Operation not permitted\n"
 
 [notes]
 standard = "BusyBox-w32 date utility"
-why = "Setting the system clock is intentionally unsupported in the safe first Nemosh date slice."
+why = "Setting the system clock is refused. busybox-w32 without the privilege answers `date: can't set date: Operation not permitted`, and this says the same, in its own `cannot`, whatever the privilege: -s is read, and its TIME checked, before the refusal. It said `unsupported option: -s` while the first date slice read no -s at all."

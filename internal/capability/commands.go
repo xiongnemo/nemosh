@@ -27,7 +27,7 @@ var commands = []Command{
 	{Name: "comm", Short: "123", Operand: AnyPath},
 	{Name: "cp", Short: "adfHiLlnPprRsTtuv", ValueShort: "t", Operand: AnyPath},
 	{Name: "cut", Short: "bcdfns", ValueShort: "bcdf", Operand: AnyPath},
-	{Name: "date", Short: "du", ValueShort: "d", Operand: AnyPath},
+	{Name: "date", Short: "dDIrRsu", ValueShort: "dDrs", Long: []string{"date", "set", "reference", "utc", "rfc-2822", "rfc-822"}, ValueLong: []string{"date", "set", "reference"}, Operand: AnyPath},
 	{Name: "dirname", Operand: AnyPath},
 	{Name: "echo", Short: "ne", Operand: AnyPath},
 	{Name: "env", Short: "i", Operand: AnyPath},
