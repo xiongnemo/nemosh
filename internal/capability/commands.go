@@ -148,7 +148,7 @@ var commands = []Command{
 	{Name: "test", Operand: AnyPath},
 	{Name: "[", Operand: AnyPath},
 	{Name: "tee", Short: "a", Operand: AnyPath},
-	{Name: "touch", Short: "c", Operand: AnyPath},
+	{Name: "touch", Short: "acdfhmrt", ValueShort: "drt", Long: []string{"no-create", "no-dereference", "reference", "date"}, ValueLong: []string{"reference", "date"}, Operand: AnyPath},
 	{Name: "tr", Short: "dsc", Operand: AnyPath},
 	{Name: "true", Operand: AnyPath},
 	{Name: "false", Operand: AnyPath},

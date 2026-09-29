@@ -168,7 +168,7 @@ var usageText = map[string]Usage{
 			"figures need ETW and an administrator. See docs/design/process-view.md.",
 		},
 	},
-	"touch":   {Summary: "Set a file's timestamps, creating it if it is absent.", Operands: "FILE...", Options: map[string]string{"c": "do not create anything that is not already there"}},
+	"touch":   {Summary: "Set a file's timestamps, creating it if it is absent.", Operands: "FILE...", Options: map[string]string{"c": "do not create anything that is not already there", "a": "set only the access time", "m": "set only the modification time", "d": "set this time rather than now", "t": "set this [[[[[YY]YY]MM]DD]hh]mm[.ss] time", "r": "set the times this file has", "h": "set a symbolic link's own times", "f": "accepted and ignored", "no-create": "the same as -c", "no-dereference": "the same as -h", "reference": "the same as -r", "date": "the same as -d"}, Notes: []string{"DATE is read as date -d reads it. -r and -t cannot both be given."}},
 	"tr":      {Summary: "Translate, squeeze or delete characters.", Operands: "SET1 [SET2]", Options: map[string]string{"d": "delete the characters in SET1", "s": "squeeze each repeated run down to one character", "c": "act on the complement of SET1"}},
 	"true":    {Summary: "Do nothing and succeed."},
 	"uname":   {Summary: "Print information about the system.", Options: map[string]string{"a": "print everything below", "i": "the hardware platform", "m": "the machine's hardware name", "n": "the network node name", "o": "the operating system", "p": "the processor type", "r": "the release", "s": "the kernel name, which is what it prints with no options", "v": "the version"}},

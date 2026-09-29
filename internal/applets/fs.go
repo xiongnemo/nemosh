@@ -2,72 +2,11 @@ package applets
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"time"
 )
-
-type touchApplet struct{}
-
-func newTouchApplet() Applet {
-	return touchApplet{}
-}
-
-func (touchApplet) Name() string { return "touch" }
-
-// Run sets each file's times to now, creating it unless -c says not to, as busybox's touch does.
-// It goes on past an operand it cannot touch, names it on stderr, and exits 1 at the end. It
-// only ever created files: an existing one kept its old time, -c was read and ignored, and the
-// first failure abandoned the operands after it.
-func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
-	// `touch -z` used to create a file called -z.
-	options, operands, err := parseAppletOptions(ctx, args, "c", "")
-	if err != nil {
-		return err
-	}
-	if len(operands) == 0 {
-		return missingOperand()
-	}
-	view := ProcessViewFromContext(ctx)
-	now, touched := time.Now(), true
-	for _, path := range operands {
-		// A path the shell's view refuses, a disabled /cygdrive, is returned as it is.
-		native, err := resolveHostPath(view, path)
-		if err != nil {
-			return err
-		}
-		if err := touchFile(native, now, options.has('c')); err != nil {
-			fmt.Fprintf(stderr, "touch: %v\n", operandFailure(path, err))
-			touched = false
-		}
-	}
-	if !touched {
-		return ExitStatus(1)
-	}
-	return nil
-}
-
-// touchFile sets an existing file's times to now, or creates a missing one unless noCreate.
-func touchFile(native string, now time.Time, noCreate bool) error {
-	err := os.Chtimes(native, now, now)
-	switch {
-	case err == nil:
-		return nil
-	case !errors.Is(err, fs.ErrNotExist):
-		return err
-	case noCreate:
-		return nil
-	}
-	file, err := os.OpenFile(native, os.O_CREATE|os.O_WRONLY, 0o666)
-	if err != nil {
-		return err
-	}
-	return file.Close()
-}
 
 // mkdir takes -p and -m, the two options busybox's getopt32long string carries
 // besides -v (coreutils/mkdir.c:63). Without option parsing the flags were
