@@ -23,6 +23,9 @@ const grepValuedLetters = "mABCef"
 
 func grepArgs(ctx context.Context, args []string) (grepFlags, []string, error) {
 	flags := grepFlags{}
+	// Options may follow the pattern and the files, `grep TODO *.go -n`, as getopt lets them.
+	permute := optionsPermute(ProcessViewFromContext(ctx))
+	var operands []string
 	index := 0
 	for index < len(args) {
 		arg := args[index]
@@ -31,7 +34,12 @@ func grepArgs(ctx context.Context, args []string) (grepFlags, []string, error) {
 			break
 		}
 		if len(arg) <= 1 || arg[0] != '-' {
-			break
+			if !permute {
+				break
+			}
+			operands = append(operands, arg)
+			index++
+			continue
 		}
 		// A long option is one word, matched whole rather than letter by letter.
 		// Without this `--color=auto` was read as the flags `-`, `-c`, `-o`, ...
@@ -53,15 +61,16 @@ func grepArgs(ctx context.Context, args []string) (grepFlags, []string, error) {
 
 	// -e and -f already supplied the patterns; without them the first operand is
 	// the pattern, which is the POSIX form.
+	operands = append(operands, args[index:]...)
 	if len(flags.patterns) == 0 && !flags.patternsGiven {
-		if index >= len(args) {
+		if len(operands) == 0 {
 			// The shell prefixes the applet name; grep must not add its own.
 			return grepFlags{}, nil, errors.New("missing pattern")
 		}
-		flags.patterns = []string{args[index]}
-		index++
+		flags.patterns = []string{operands[0]}
+		operands = operands[1:]
 	}
-	return flags, args[index:], nil
+	return flags, operands, nil
 }
 
 // parseGrepLongOption accepts --color and refuses the rest.

@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"io"
@@ -120,8 +121,8 @@ func newLognameApplet() Applet {
 // other than this one cannot be looked up, so naming one is refused rather than answered
 // with this session's groups, which would be a wrong answer that looked right.
 func newGroupsApplet() Applet {
-	return simpleApplet{name: "groups", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		_, operands, err := parseAppletOptions(args, "", "")
+	return simpleApplet{name: "groups", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+		_, operands, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
@@ -172,7 +173,7 @@ func randomUUID() (string, error) {
 
 // refuseArguments is the check the commands that take none all need.
 func refuseArguments(args []string) error {
-	_, operands, err := parseAppletOptions(args, "", "")
+	_, operands, err := parseAppletOptionsInOrder(args, "", "")
 	if err != nil {
 		return err
 	}

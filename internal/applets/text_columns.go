@@ -19,7 +19,7 @@ import (
 // source code where a tab inside a string literal must survive.
 func newExpandApplet() Applet {
 	return simpleApplet{name: "expand", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "i", "t")
+		options, paths, err := parseAppletOptions(ctx, args, "i", "t")
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func expandTabs(line string, stop int, initialOnly bool) string {
 // therefore not the default in either reference.
 func newUnexpandApplet() Applet {
 	return simpleApplet{name: "unexpand", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "a", "t")
+		options, paths, err := parseAppletOptions(ctx, args, "a", "t")
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func tabStopWidth(options appletOptions) (int, error) {
 // POSIX's default and busybox's.
 func newJoinApplet() Applet {
 	return simpleApplet{name: "join", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "", "j1 2t")
+		options, operands, err := parseAppletOptions(ctx, args, "", "j1 2t")
 		if err != nil {
 			return err
 		}

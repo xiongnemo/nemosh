@@ -32,7 +32,7 @@ import (
 // approximation. `top` shows it, where a monitor's reader expects one.
 func newPsApplet() Applet {
 	return simpleApplet{name: "ps", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if _, _, err := parseAppletOptions(args, "", ""); err != nil {
+		if _, _, err := parseAppletOptions(ctx, args, "", ""); err != nil {
 			return err
 		}
 		processes, err := proc.List()

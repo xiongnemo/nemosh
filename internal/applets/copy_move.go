@@ -16,7 +16,7 @@ type pathOperand struct {
 
 func newCpApplet() Applet {
 	return simpleApplet{name: "cp", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
-		options, operands, err := twoOperandsWithOptions(args, "rR")
+		options, operands, err := twoOperandsWithOptions(ctx, args, "rR")
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ func newMvApplet() Applet {
 		// this mv overwrites its destination either way, so -f asks for the
 		// behaviour already in force. Scripts carry it constantly, and refusing
 		// it made them fail at a request that was already granted.
-		_, operands, err := twoOperandsWithOptions(args, "f")
+		_, operands, err := twoOperandsWithOptions(ctx, args, "f")
 		if err != nil {
 			return err
 		}

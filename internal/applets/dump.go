@@ -26,7 +26,7 @@ import (
 // all.
 func newXxdApplet() Applet {
 	return simpleApplet{name: "xxd", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "p", "")
+		options, paths, err := parseAppletOptions(ctx, args, "p", "")
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func writePlainHex(stdout io.Writer, data []byte) error {
 // data.
 func newSplitApplet() Applet {
 	return simpleApplet{name: "split", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "", "l")
+		options, paths, err := parseAppletOptions(ctx, args, "", "l")
 		if err != nil {
 			return err
 		}

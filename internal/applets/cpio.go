@@ -24,7 +24,7 @@ import (
 
 func newCpioApplet() Applet {
 	return simpleApplet{name: "cpio", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "tiodmvu0", "FH")
+		options, operands, err := parseAppletOptions(ctx, args, "tiodmvu0", "FH")
 		if err != nil {
 			return err
 		}

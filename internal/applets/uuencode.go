@@ -26,7 +26,7 @@ import (
 
 func newUuencodeApplet() Applet {
 	return simpleApplet{name: "uuencode", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "m", "")
+		options, operands, err := parseAppletOptions(ctx, args, "m", "")
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func uuencodeByte(value byte) byte {
 
 func newUudecodeApplet() Applet {
 	return simpleApplet{name: "uudecode", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "", "o")
+		options, paths, err := parseAppletOptions(ctx, args, "", "o")
 		if err != nil {
 			return err
 		}

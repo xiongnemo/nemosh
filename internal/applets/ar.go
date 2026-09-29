@@ -28,7 +28,7 @@ func newArApplet() Applet {
 		if err != nil {
 			return err
 		}
-		options, operands, err := parseAppletOptions(rest, "xptrov", "")
+		options, operands, err := parseAppletOptions(ctx, rest, "xptrov", "")
 		if err != nil {
 			return err
 		}

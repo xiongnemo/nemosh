@@ -27,7 +27,7 @@ import (
 // nap first.
 func newUsleepApplet() Applet {
 	return simpleApplet{name: "usleep", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		_, operands, err := parseAppletOptions(args, "", "")
+		_, operands, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,7 @@ func newUsleepApplet() Applet {
 // they are formatted as such, starting at `00:00:00`.
 func newTsApplet() Applet {
 	return simpleApplet{name: "ts", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "is", "")
+		options, operands, err := parseAppletOptions(ctx, args, "is", "")
 		if err != nil {
 			return err
 		}
@@ -132,8 +132,8 @@ func strftimeLike(when time.Time, format string) string {
 // The name is matched **whole**, with or without an executable suffix, which is what
 // separates it from `pgrep`: `pidof sh` must not find `bash`, and a pattern would.
 func newPidofApplet() Applet {
-	return simpleApplet{name: "pidof", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, names, err := parseAppletOptions(args, "s", "o")
+	return simpleApplet{name: "pidof", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+		options, names, err := parseAppletOptions(ctx, args, "s", "o")
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func newKillallApplet() Applet {
 		if err != nil {
 			return err
 		}
-		options, names, err := parseAppletOptions(rest, "lq", "")
+		options, names, err := parseAppletOptionsInOrder(rest, "lq", "")
 		if err != nil {
 			return err
 		}

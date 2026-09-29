@@ -22,7 +22,7 @@ var asciiNumberEdge = [8]int{3, 14, 25, 34, 43, 52, 62, 72}
 
 func newAsciiApplet() Applet {
 	return simpleApplet{name: "ascii", runContext: func(_ context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if _, operands, err := parseAppletOptions(args, "", ""); err != nil {
+		if _, operands, err := parseAppletOptionsInOrder(args, "", ""); err != nil {
 			return err
 		} else if len(operands) > 0 {
 			return fmt.Errorf("extra operand '%s'", operands[0])

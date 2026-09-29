@@ -32,7 +32,7 @@ func newXargsApplet() Applet { return xargsApplet{} }
 func (xargsApplet) Name() string { return "xargs" }
 
 func (xargsApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	options, command, err := parseAppletOptions(args, "0rt", "nI")
+	options, command, err := parseAppletOptionsInOrder(args, "0rt", "nI")
 	if err != nil {
 		return err
 	}

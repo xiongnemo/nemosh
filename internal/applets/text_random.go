@@ -17,7 +17,7 @@ import (
 // newBase32Applet is base64's sibling, wrapping at 76 columns the same way.
 func newBase32Applet() Applet {
 	return simpleApplet{name: "base32", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "di", "w")
+		options, paths, err := parseAppletOptions(ctx, args, "di", "w")
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func isBase32Rune(character rune) bool {
 // would prove the shuffle does not shuffle.
 func newShufApplet() Applet {
 	return simpleApplet{name: "shuf", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "ez", "ni")
+		options, operands, err := parseAppletOptions(ctx, args, "ez", "ni")
 		if err != nil {
 			return err
 		}

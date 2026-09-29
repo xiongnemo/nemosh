@@ -31,7 +31,7 @@ import (
 // nearly every real use of stty in a script comes down to.
 func newSttyApplet() Applet {
 	return simpleApplet{name: "stty", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		_, operands, err := parseAppletOptions(args, "a", "")
+		_, operands, err := parseAppletOptionsInOrder(args, "a", "")
 		if err != nil {
 			// -a is the one dashed word getopt should take; the rest are settings and
 			// are read below, so a parse failure here is a real one.

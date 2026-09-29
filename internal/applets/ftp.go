@@ -30,7 +30,7 @@ func newFtpputApplet() Applet {
 
 func newFtpApplet(name string) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "cv", "upP")
+		options, operands, err := parseAppletOptions(ctx, args, "cv", "upP")
 		if err != nil {
 			return err
 		}

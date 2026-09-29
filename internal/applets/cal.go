@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
@@ -51,8 +52,8 @@ var (
 )
 
 func newCalApplet() Applet {
-	return simpleApplet{name: "cal", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "my", "")
+	return simpleApplet{name: "cal", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+		options, operands, err := parseAppletOptions(ctx, args, "my", "")
 		if err != nil {
 			return err
 		}

@@ -26,7 +26,7 @@ const base64Wrap = 76
 
 func newBase64Applet() Applet {
 	return simpleApplet{name: "base64", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "di", "w")
+		options, paths, err := parseAppletOptions(ctx, args, "di", "w")
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func newChecksumApplet(name string, newHash func() hash.Hash) Applet {
 // argument, and resolve turns the parsed options into a hash.
 func newChecksumAppletWith(name, valued string, resolve func(appletOptions) (func() hash.Hash, error)) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "bctw", valued)
+		options, paths, err := parseAppletOptions(ctx, args, "bctw", valued)
 		if err != nil {
 			return err
 		}

@@ -27,8 +27,8 @@ type freeScale struct {
 }
 
 func newFreeApplet() Applet {
-	return simpleApplet{name: "free", runContext: func(_ context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "bkmgh", "")
+	return simpleApplet{name: "free", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+		options, operands, err := parseAppletOptions(ctx, args, "bkmgh", "")
 		if err != nil {
 			return err
 		}

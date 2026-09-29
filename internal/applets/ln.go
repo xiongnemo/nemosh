@@ -26,7 +26,7 @@ import (
 //   - a target that cannot be linked is named and the rest are still linked, status 1.
 func newLnApplet() Applet {
 	return simpleApplet{name: "ln", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "sfnbvT", "S")
+		options, operands, err := parseAppletOptions(ctx, args, "sfnbvT", "S")
 		if err != nil {
 			return err
 		}

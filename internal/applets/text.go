@@ -11,7 +11,7 @@ import (
 // applet answered a question nobody asked and reported success.
 func newBasenameApplet() Applet {
 	return simpleApplet{name: "basename", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "a", "")
+		options, operands, err := parseAppletOptionsInOrder(args, "a", "")
 		if err != nil {
 			return err
 		}
@@ -46,7 +46,7 @@ func baseName(operand string) string {
 
 func newDirnameApplet() Applet {
 	return simpleApplet{name: "dirname", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		_, operands, err := parseAppletOptions(args, "", "")
+		_, operands, err := parseAppletOptionsInOrder(args, "", "")
 		if err != nil {
 			return err
 		}

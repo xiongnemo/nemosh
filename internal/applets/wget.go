@@ -35,7 +35,7 @@ func newWgetApplet() Applet {
 		if err != nil {
 			return err
 		}
-		options, operands, err := parseAppletOptions(rest, "cqS", wgetValued)
+		options, operands, err := parseAppletOptions(ctx, rest, "cqS", wgetValued)
 		if err != nil {
 			return err
 		}

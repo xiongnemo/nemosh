@@ -40,7 +40,7 @@ const (
 
 func newDumperApplet(name string) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "bcCdoxv", "At")
+		options, paths, err := parseAppletOptions(ctx, args, "bcCdoxv", "At")
 		if err != nil {
 			return err
 		}

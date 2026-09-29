@@ -17,20 +17,25 @@ import (
 // A `--` ends option parsing and a lone `-` is an operand, which is what getopt
 // does and what busybox inherits from it.
 func streamOperands(applet string, args []string, supported ...string) ([]string, error) {
-	_, paths, err := streamOptionsAndOperands(applet, args, supported...)
+	_, paths, err := streamOptionsAndOperands(applet, args, false, supported...)
 	return paths, err
 }
 
 // streamOptionsAndOperands is the same walk, but reports which of the supported
 // spellings were actually given. A caller that merely tolerates its options can
-// use streamOperands and ignore them; one that acts on them needs to know.
-func streamOptionsAndOperands(applet string, args []string, supported ...string) (given []string, paths []string, err error) {
+// use streamOperands and ignore them; one that acts on them needs to know. With
+// permute an option may follow the operands, as getopt lets it: `cat f -n`.
+func streamOptionsAndOperands(applet string, args []string, permute bool, supported ...string) (given []string, paths []string, err error) {
 	for index, arg := range args {
 		if arg == "--" {
-			return given, args[index+1:], nil
+			return given, append(paths, args[index+1:]...), nil
 		}
 		if len(arg) < 2 || arg[0] != '-' {
-			return given, args[index:], nil
+			if !permute {
+				return given, append(paths, args[index:]...), nil
+			}
+			paths = append(paths, arg)
+			continue
 		}
 		if containsString(supported, arg) {
 			given = append(given, arg)
@@ -38,7 +43,7 @@ func streamOptionsAndOperands(applet string, args []string, supported ...string)
 		}
 		return nil, nil, unsupportedStreamOption(applet, arg, supported)
 	}
-	return given, nil, nil
+	return given, paths, nil
 }
 
 func unsupportedStreamOption(applet, arg string, supported []string) error {

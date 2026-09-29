@@ -33,7 +33,7 @@ import (
 
 func newHttpdApplet() Applet {
 	return simpleApplet{name: "httpd", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "fv", "pha")
+		options, operands, err := parseAppletOptions(ctx, args, "fv", "pha")
 		if err != nil {
 			return err
 		}

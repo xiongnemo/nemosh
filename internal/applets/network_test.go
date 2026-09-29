@@ -214,7 +214,7 @@ func TestHttpd_refusesEveryEscapingRequestPath(t *testing.T) {
 // The default bind address is loopback, and a test asserts it: busybox binds every
 // interface, and reaching the network is a decision rather than a default.
 func TestHttpd_bindsLoopbackByDefault(t *testing.T) {
-	options, _, err := parseAppletOptions(nil, "fv", "pha")
+	options, _, err := parseAppletOptionsInOrder(nil, "fv", "pha")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +231,7 @@ func TestHttpd_bindsLoopbackByDefault(t *testing.T) {
 		t.Fatalf("the default port is %q", address)
 	}
 	// -a is how somebody widens it on purpose.
-	widened, _, err := parseAppletOptions([]string{"-a", "0.0.0.0"}, "fv", "pha")
+	widened, _, err := parseAppletOptionsInOrder([]string{"-a", "0.0.0.0"}, "fv", "pha")
 	if err != nil {
 		t.Fatal(err)
 	}

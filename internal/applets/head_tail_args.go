@@ -38,19 +38,26 @@ const (
 // allowBytes is whether -c is offered; both have it now, and the asymmetry that
 // existed while only head did was documented as deliberate for exactly as long
 // as it took to implement the other half.
-func headTailArgs(applet string, args []string, defaultCount int, allowBytes bool) (countSpec, headerMode, []string, error) {
+//
+// With permute an option may follow the files, as tail's getopt lets it; head's options end at
+// its first file, as busybox's head reads its own.
+func headTailArgs(applet string, args []string, defaultCount int, allowBytes, permute bool) (countSpec, headerMode, []string, error) {
 	spec := countSpec{count: defaultCount}
 	headers := headersWhenMany
+	var operands []string
 	index := 0
 	for ; index < len(args); index++ {
 		arg := args[index]
 		if arg == "--" {
-			index++
-			break
+			return spec, headers, append(operands, args[index+1:]...), nil
 		}
 		// A lone `-` is stdin, which is an operand and not an option.
 		if len(arg) < 2 || arg[0] != '-' {
-			break
+			if !permute {
+				break
+			}
+			operands = append(operands, arg)
+			continue
 		}
 		// `-3` is the obsolete form POSIX still lists, and it is what everybody
 		// types. busybox takes it; refusing it made `head -3` an error in a shell
@@ -82,7 +89,7 @@ func headTailArgs(applet string, args []string, defaultCount int, allowBytes boo
 	if err != nil {
 		return countSpec{}, headers, nil, err
 	}
-	return spec, headers, paths, nil
+	return spec, headers, append(operands, paths...), nil
 }
 
 func headTailSupported(allowBytes bool) []string {

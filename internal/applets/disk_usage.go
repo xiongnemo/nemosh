@@ -37,7 +37,7 @@ func usageBlocks(path string, size int64, isDir bool) int64 {
 
 func newDuApplet() Applet {
 	return simpleApplet{name: "du", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "sh", "")
+		options, paths, err := parseAppletOptions(ctx, args, "sh", "")
 		if err != nil {
 			return err
 		}
@@ -198,7 +198,7 @@ func humanBlocks(blocks int64) string {
 //	%y  modification time  %Y  the same as a Unix timestamp
 func newStatApplet() Applet {
 	return simpleApplet{name: "stat", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "", "c")
+		options, paths, err := parseAppletOptions(ctx, args, "", "c")
 		if err != nil {
 			return err
 		}

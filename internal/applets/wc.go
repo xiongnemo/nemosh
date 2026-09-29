@@ -13,7 +13,7 @@ import (
 
 func newWcApplet() Applet {
 	return simpleApplet{name: "wc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		flags, paths, err := wcArgs(args)
+		flags, paths, err := wcArgs(ctx, args)
 		if err != nil {
 			return err
 		}
@@ -113,8 +113,8 @@ func (c wcCounts) add(other wcCounts) wcCounts {
 // An unknown letter used to be dropped on the floor after clearing the
 // defaults, so `wc -z FILE` selected no counts at all and still exited 0 --
 // printing a line with nothing on it but the filename.
-func wcArgs(args []string) (wcFlags, []string, error) {
-	options, paths, err := parseAppletOptions(args, "lwcmL", "")
+func wcArgs(ctx context.Context, args []string) (wcFlags, []string, error) {
+	options, paths, err := parseAppletOptions(ctx, args, "lwcmL", "")
 	if err != nil {
 		return wcFlags{}, nil, err
 	}

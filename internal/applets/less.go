@@ -38,7 +38,7 @@ func newLessApplet() Applet {
 		// The options busybox takes. `-M`, `-m`, `-R` and `-~` are accepted and change
 		// nothing: the first two pick between two prompt styles this has one of, and the
 		// others describe drawing this does not do differently.
-		options, operands, err := parseAppletOptions(args, "EFIMmNSRh~", "")
+		options, operands, err := parseAppletOptions(ctx, args, "EFIMmNSRh~", "")
 		if err != nil {
 			return err
 		}

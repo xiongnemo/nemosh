@@ -610,6 +610,12 @@ an external program goes through unconverted, which is the argv rule
 `/dev/clipboard` is its own business, and converting it would be the MSYS2
 behaviour this shell deliberately does not have.
 
+An applet's options may follow its operands, as busybox's getopt lets them: `ls dir -l` is
+`ls -l dir`, and `grep TODO *.go -n` numbers its matches. A `--` ends them, and so does the
+first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order still do:
+`xargs`, `tr` and `basename`, whose getopt strings begin with `+`, and `dirname`, `head`,
+`stty` and `killall`, which read their own.
+
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |

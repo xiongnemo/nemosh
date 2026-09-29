@@ -11,7 +11,7 @@ import (
 
 func newLsApplet() Applet {
 	return simpleApplet{name: "ls", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := lsArgs(args)
+		options, paths, err := lsArgs(args, optionsPermute(ProcessViewFromContext(ctx)))
 		if err != nil {
 			return err
 		}

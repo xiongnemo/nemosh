@@ -24,7 +24,7 @@ import (
 
 func newTarApplet() Applet {
 	return simpleApplet{name: "tar", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "ctxvzjaO", "fC")
+		options, operands, err := parseAppletOptions(ctx, args, "ctxvzjaO", "fC")
 		if err != nil {
 			return err
 		}

@@ -22,7 +22,7 @@ import (
 
 func newPatchApplet() Applet {
 	return simpleApplet{name: "patch", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "RNEfl", "pi")
+		options, operands, err := parseAppletOptions(ctx, args, "RNEfl", "pi")
 		if err != nil {
 			return err
 		}

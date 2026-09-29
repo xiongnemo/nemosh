@@ -29,7 +29,7 @@ import (
 // error, which is what lets `truncate -c -s 0 maybe.log` be safe to run either way.
 func newTruncateApplet() Applet {
 	return simpleApplet{name: "truncate", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "c", "s")
+		options, operands, err := parseAppletOptions(ctx, args, "c", "s")
 		if err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func parseSizeWithSuffix(spec string) (int64, error) {
 // its target would destroy the thing it was asked to point at.
 func newLinkApplet() Applet {
 	return simpleApplet{name: "link", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		_, operands, err := parseAppletOptions(args, "", "")
+		_, operands, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
@@ -188,7 +188,7 @@ func newLinkApplet() Applet {
 // directory is the mistake this command exists to make impossible.
 func newUnlinkApplet() Applet {
 	return simpleApplet{name: "unlink", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		_, operands, err := parseAppletOptions(args, "", "")
+		_, operands, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}

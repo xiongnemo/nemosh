@@ -185,6 +185,9 @@ type sedOptions struct {
 // file, not about a script.
 func sedArgs(ctx context.Context, args []string) (sedOptions, error) {
 	var options sedOptions
+	// Options may follow the script and the files, `sed s/a/b/ f -n`, as getopt lets them.
+	permute := optionsPermute(ProcessViewFromContext(ctx))
+	var operands []string
 	index := 0
 	for ; index < len(args); index++ {
 		arg := args[index]
@@ -193,7 +196,11 @@ func sedArgs(ctx context.Context, args []string) (sedOptions, error) {
 			break
 		}
 		if len(arg) < 2 || arg[0] != '-' {
-			break
+			if !permute {
+				break
+			}
+			operands = append(operands, arg)
+			continue
 		}
 		if strings.HasPrefix(arg, "--") {
 			switch arg {
@@ -215,14 +222,15 @@ func sedArgs(ctx context.Context, args []string) (sedOptions, error) {
 		}
 		index += consumed - 1
 	}
+	operands = append(operands, args[index:]...)
 	if len(options.scripts) == 0 {
-		if index >= len(args) {
+		if len(operands) == 0 {
 			return sedOptions{}, missingOperand()
 		}
-		options.scripts = append(options.scripts, args[index])
-		index++
+		options.scripts = append(options.scripts, operands[0])
+		operands = operands[1:]
 	}
-	options.operands = args[index:]
+	options.operands = operands
 	return options, nil
 }
 

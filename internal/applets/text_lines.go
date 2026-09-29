@@ -31,7 +31,7 @@ import (
 // byte count of a round trip through tac twice.
 func newTacApplet() Applet {
 	return simpleApplet{name: "tac", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		_, paths, err := parseAppletOptions(args, "", "")
+		_, paths, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func newTacApplet() Applet {
 // and what leaves the output valid UTF-8.
 func newRevApplet() Applet {
 	return simpleApplet{name: "rev", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		_, paths, err := parseAppletOptions(args, "", "")
+		_, paths, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func newRevApplet() Applet {
 // form people reach for and the reason the default surprises them.
 func newNlApplet() Applet {
 	return simpleApplet{name: "nl", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "", "b")
+		options, paths, err := parseAppletOptions(ctx, args, "", "b")
 		if err != nil {
 			return err
 		}

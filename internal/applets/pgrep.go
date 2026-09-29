@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,8 +22,8 @@ import (
 // `-f` is refused rather than silently matching the name instead.
 
 func newPgrepApplet() Applet {
-	return simpleApplet{name: "pgrep", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		matcher, err := parseProcessPattern("pgrep", args, "lx")
+	return simpleApplet{name: "pgrep", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+		matcher, err := parseProcessPattern(ctx, "pgrep", args, "lx")
 		if err != nil {
 			return err
 		}
@@ -47,12 +48,12 @@ func newPgrepApplet() Applet {
 }
 
 func newPkillApplet() Applet {
-	return simpleApplet{name: "pkill", run: func(args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
+	return simpleApplet{name: "pkill", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
 		signal, rest, err := splitLeadingSignal(args)
 		if err != nil {
 			return err
 		}
-		matcher, err := parseProcessPattern("pkill", rest, "x")
+		matcher, err := parseProcessPattern(ctx, "pkill", rest, "x")
 		if err != nil {
 			return err
 		}
@@ -86,8 +87,8 @@ type processMatcher struct {
 //
 // An empty pattern is refused. `pkill ""` would match every process on the
 // machine, and a command that can do that by omission is a command that will.
-func parseProcessPattern(applet string, args []string, short string) (processMatcher, error) {
-	options, operands, err := parseAppletOptions(args, short, "")
+func parseProcessPattern(ctx context.Context, applet string, args []string, short string) (processMatcher, error) {
+	options, operands, err := parseAppletOptions(ctx, args, short, "")
 	if err != nil {
 		return processMatcher{}, err
 	}

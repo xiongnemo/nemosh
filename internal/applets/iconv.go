@@ -37,7 +37,7 @@ import (
 
 func newIconvApplet() Applet {
 	return simpleApplet{name: "iconv", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "lc", "fto")
+		options, paths, err := parseAppletOptions(ctx, args, "lc", "fto")
 		if err != nil {
 			return err
 		}

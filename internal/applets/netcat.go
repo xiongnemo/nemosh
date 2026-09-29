@@ -21,7 +21,7 @@ const netcatDialTimeout = 30 * time.Second
 
 func newNcApplet() Applet {
 	return simpleApplet{name: "nc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "l", "pw")
+		options, operands, err := parseAppletOptions(ctx, args, "l", "pw")
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func pipeConnection(ctx context.Context, connection net.Conn, stdin io.Reader, s
 
 func newWhoisApplet() Applet {
 	return simpleApplet{name: "whois", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "i", "hp")
+		options, operands, err := parseAppletOptions(ctx, args, "i", "hp")
 		if err != nil {
 			return err
 		}
@@ -210,7 +210,7 @@ func whoisServerFor(name string) string {
 // and the underscore an identifier cannot hold is the whole difference.
 func newSslClientApplet(name string) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "e", "nsh")
+		options, operands, err := parseAppletOptions(ctx, args, "e", "nsh")
 		if err != nil {
 			return err
 		}

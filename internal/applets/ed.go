@@ -50,7 +50,7 @@ type edBuffer struct {
 
 func newEdApplet() Applet {
 	return simpleApplet{name: "ed", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "s", "p")
+		options, operands, err := parseAppletOptions(ctx, args, "s", "p")
 		if err != nil {
 			return err
 		}

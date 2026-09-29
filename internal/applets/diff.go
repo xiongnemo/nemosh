@@ -16,7 +16,7 @@ import (
 
 func newDiffApplet() Applet {
 	return simpleApplet{name: "diff", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "uqiwBNsrabdTt", "UL")
+		options, operands, err := parseAppletOptions(ctx, args, "uqiwBNsrabdTt", "UL")
 		if err != nil {
 			return err
 		}

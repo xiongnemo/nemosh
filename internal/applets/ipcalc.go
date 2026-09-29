@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -19,8 +20,8 @@ import (
 // case would refuse a calculation that is perfectly well defined. That is what busybox does
 // too. What *is* refused is a prefix outside 0..32 and an address that is not one.
 func newIpcalcApplet() Applet {
-	return simpleApplet{name: "ipcalc", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "bnmphs", "")
+	return simpleApplet{name: "ipcalc", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+		options, operands, err := parseAppletOptions(ctx, args, "bnmphs", "")
 		if err != nil {
 			return err
 		}

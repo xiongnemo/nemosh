@@ -55,8 +55,11 @@ func (o lsOptions) lsShowsDotEntries() bool { return o.all }
 // lsShowsHidden reports whether a name beginning with a dot is listed at all.
 func (o lsOptions) lsShowsHidden() bool { return o.all || o.almostAll }
 
-func lsArgs(args []string) (lsOptions, []string, error) {
+// lsArgs splits the options from the operands, which with permute they may follow, as getopt
+// lets them: `ls dir -l`.
+func lsArgs(args []string, permute bool) (lsOptions, []string, error) {
 	var options lsOptions
+	var operands []string
 	index := 0
 	for index < len(args) {
 		arg := args[index]
@@ -65,7 +68,12 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 			break
 		}
 		if len(arg) <= 1 || arg[0] != '-' {
-			break
+			if !permute {
+				break
+			}
+			operands = append(operands, arg)
+			index++
+			continue
 		}
 		// A long option is one word, so it is matched whole rather than letter
 		// by letter -- `--color` used to be read as `-`, `-c`, `-o` and refused
@@ -140,5 +148,5 @@ func lsArgs(args []string) (lsOptions, []string, error) {
 		}
 		index++
 	}
-	return options, args[index:], nil
+	return options, append(operands, args[index:]...), nil
 }

@@ -19,7 +19,7 @@ import (
 
 func newUnzipApplet() Applet {
 	return simpleApplet{name: "unzip", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "lnojptqK", "dx")
+		options, operands, err := parseAppletOptions(ctx, args, "lnojptqK", "dx")
 		if err != nil {
 			return err
 		}

@@ -25,7 +25,7 @@ func (touchApplet) Name() string { return "touch" }
 // first failure abandoned the operands after it.
 func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
 	// `touch -z` used to create a file called -z.
-	options, operands, err := parseAppletOptions(args, "c", "")
+	options, operands, err := parseAppletOptions(ctx, args, "c", "")
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func touchFile(native string, now time.Time, noCreate bool) error {
 
 func newRmApplet() Applet {
 	return simpleApplet{name: "rm", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "fr", "")
+		options, operands, err := parseAppletOptions(ctx, args, "fr", "")
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func removeOperand(native, display string, recursive, force bool, stderr io.Writ
 // -p and then failed to create a/b/c because its parents were missing.
 func newMkdirApplet() Applet {
 	return simpleApplet{name: "mkdir", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "pv", "m")
+		options, operands, err := parseAppletOptions(ctx, args, "pv", "m")
 		if err != nil {
 			return err
 		}
@@ -202,7 +202,7 @@ func makeDirectory(native string, mode os.FileMode, parents bool) error {
 // buys is that the ordinary case of naming a file by mistake cannot destroy it.
 func newRmdirApplet() Applet {
 	return simpleApplet{name: "rmdir", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "pv", "")
+		options, operands, err := parseAppletOptions(ctx, args, "pv", "")
 		if err != nil {
 			return err
 		}

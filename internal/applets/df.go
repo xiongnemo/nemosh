@@ -45,7 +45,7 @@ func (f filesystemUsage) percentUsed() int {
 
 func newDfApplet() Applet {
 	return simpleApplet{name: "df", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "hk", "")
+		options, operands, err := parseAppletOptions(ctx, args, "hk", "")
 		if err != nil {
 			return err
 		}

@@ -31,7 +31,7 @@ func newEditorApplet(name string) Applet {
 		// `l` is nano's line-number flag. It is accepted and does nothing, because the
 		// numbers are already on -- refusing a flag whose effect is the current state
 		// would be pedantry at the user's expense.
-		options, operands, err := parseAppletOptions(args, "HRl", "")
+		options, operands, err := parseAppletOptions(ctx, args, "HRl", "")
 		if err != nil {
 			return err
 		}

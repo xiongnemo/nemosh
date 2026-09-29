@@ -60,7 +60,7 @@ func newBzcatApplet() Applet {
 
 func newCompressApplet(name string, mode compressMode) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "cdfkt123456789", "")
+		options, paths, err := parseAppletOptions(ctx, args, "cdfkt123456789", "")
 		if err != nil {
 			return err
 		}

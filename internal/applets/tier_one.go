@@ -21,7 +21,7 @@ import (
 // pipeline needs to keep a copy of something it is also passing on.
 func newTeeApplet() Applet {
 	return simpleApplet{name: "tee", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "a", "")
+		options, paths, err := parseAppletOptions(ctx, args, "a", "")
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func newSeqApplet() Applet {
 // The sequence is the one the editor emits: home, then erase the display.
 func newClearApplet() Applet {
 	return simpleApplet{name: "clear", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if _, operands, err := parseAppletOptions(args, "", ""); err != nil {
+		if _, operands, err := parseAppletOptionsInOrder(args, "", ""); err != nil {
 			return err
 		} else if len(operands) > 0 {
 			return fmt.Errorf("extra operand '%s'", operands[0])
@@ -111,7 +111,7 @@ func newClearApplet() Applet {
 // is what it gets.
 func newWhoamiApplet() Applet {
 	return simpleApplet{name: "whoami", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		if _, operands, err := parseAppletOptions(args, "", ""); err != nil {
+		if _, operands, err := parseAppletOptionsInOrder(args, "", ""); err != nil {
 			return err
 		} else if len(operands) > 0 {
 			return fmt.Errorf("extra operand '%s'", operands[0])
@@ -131,7 +131,7 @@ func newWhoamiApplet() Applet {
 // they were before.
 func newMktempApplet() Applet {
 	return simpleApplet{name: "mktemp", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "dqut", "p")
+		options, operands, err := parseAppletOptions(ctx, args, "dqut", "p")
 		if err != nil {
 			return err
 		}

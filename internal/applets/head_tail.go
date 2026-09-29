@@ -23,7 +23,8 @@ func newHeadApplet() Applet {
 // answers eventually, and the pair already disagreed once -- -c was head's alone
 // for a while.
 func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Reader, stdout, stderr io.Writer, copy func(io.Writer, io.Reader, countSpec) error) error {
-	spec, headers, paths, err := headTailArgs(applet, args, 10, true)
+	permute := applet == "tail" && optionsPermute(ProcessViewFromContext(ctx))
+	spec, headers, paths, err := headTailArgs(applet, args, 10, true, permute)
 	if err != nil {
 		return err
 	}

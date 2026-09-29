@@ -44,7 +44,7 @@ func newCrc32Applet() Applet {
 // on the same file, which is the whole reason the option exists.
 func newSumApplet() Applet {
 	return simpleApplet{name: "sum", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "rs", "")
+		options, paths, err := parseAppletOptions(ctx, args, "rs", "")
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func blocksOf(size, block int64) int64 { return (size + block - 1) / block }
 // per operand, and the name omitted when the input was stdin.
 func newSizedChecksumApplet(name string, format sizedChecksumFormat) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		_, paths, err := parseAppletOptions(args, "", "")
+		_, paths, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}

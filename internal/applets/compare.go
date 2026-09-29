@@ -27,7 +27,7 @@ import (
 // leaves only the status, which is how a script uses it.
 func newCmpApplet() Applet {
 	return simpleApplet{name: "cmp", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "sl", "")
+		options, paths, err := parseAppletOptions(ctx, args, "sl", "")
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func firstDifference(left, right []byte) (int, int, bool) {
 // -1, -2 or -3 also removes one level from the ones after it.
 func newCommApplet() Applet {
 	return simpleApplet{name: "comm", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "123", "")
+		options, paths, err := parseAppletOptions(ctx, args, "123", "")
 		if err != nil {
 			return err
 		}
@@ -183,7 +183,7 @@ func writeCommColumns(stdout io.Writer, left, right []string, show [3]bool) erro
 // each file's lines on one line of its own.
 func newPasteApplet() Applet {
 	return simpleApplet{name: "paste", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "s", "d")
+		options, paths, err := parseAppletOptions(ctx, args, "s", "d")
 		if err != nil {
 			return err
 		}

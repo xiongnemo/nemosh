@@ -25,7 +25,7 @@ type lineEndingDirection func([]byte) []byte
 
 func newLineEndingApplet(name string, direction lineEndingDirection) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "ud", "")
+		options, paths, err := parseAppletOptions(ctx, args, "ud", "")
 		if err != nil {
 			return err
 		}

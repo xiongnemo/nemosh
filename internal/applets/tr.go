@@ -25,7 +25,7 @@ import (
 // at face value.
 func newTrApplet() Applet {
 	return simpleApplet{name: "tr", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(args, "dsc", "")
+		options, operands, err := parseAppletOptionsInOrder(args, "dsc", "")
 		if err != nil {
 			return err
 		}

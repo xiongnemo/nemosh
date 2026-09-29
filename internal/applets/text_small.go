@@ -22,7 +22,7 @@ import (
 // and the case a naive loop gets wrong.
 func newFactorApplet() Applet {
 	return simpleApplet{name: "factor", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		_, operands, err := parseAppletOptions(args, "", "")
+		_, operands, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func writeFactors(stdout io.Writer, text string) error {
 // break at a space.
 func newFoldApplet() Applet {
 	return simpleApplet{name: "fold", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "bs", "w")
+		options, paths, err := parseAppletOptions(ctx, args, "bs", "w")
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func foldLine(line string, width int, atSpaces bool) []string {
 // newTsortApplet topologically sorts `before after` pairs.
 func newTsortApplet() Applet {
 	return simpleApplet{name: "tsort", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		_, paths, err := parseAppletOptions(args, "", "")
+		_, paths, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
@@ -233,7 +233,7 @@ func (g *tsortGraph) write(stdout io.Writer) error {
 // read without a hex dump. -n sets the shortest run, default 4.
 func newStringsApplet() Applet {
 	return simpleApplet{name: "strings", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(args, "afo", "nt")
+		options, paths, err := parseAppletOptions(ctx, args, "afo", "nt")
 		if err != nil {
 			return err
 		}

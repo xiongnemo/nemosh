@@ -73,7 +73,7 @@ func (catApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 	ctx = withOperandReporter(ctx, "cat", stderr)
 	// An option cat does not implement is refused by name instead of being
 	// opened as a file and reported missing.
-	given, paths, err := streamOptionsAndOperands("cat", args, "-n")
+	given, paths, err := streamOptionsAndOperands("cat", args, optionsPermute(ProcessViewFromContext(ctx)), "-n")
 	if err != nil {
 		return err
 	}
