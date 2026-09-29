@@ -134,7 +134,7 @@ var commands = []Command{
 	{Name: "httpd", Short: "fvpha", ValueShort: "pha", Operand: Directory},
 	{Name: "ftpget", Short: "cvupP", ValueShort: "upP", Operand: AnyPath},
 	{Name: "ftpput", Short: "cvupP", ValueShort: "upP", Operand: AnyPath},
-	{Name: "seq", Operand: AnyPath},
+	{Name: "seq", Short: "ws", ValueShort: "s", Operand: AnyPath},
 	{Name: "sleep", Operand: AnyPath},
 	{Name: "sort", Short: "nghMVucszbrdfimSTokt", ValueShort: "STokt", Operand: AnyPath},
 	{Name: "stat", Short: "c", ValueShort: "c", Operand: AnyPath},

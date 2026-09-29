@@ -77,7 +77,7 @@ var usageText = map[string]Usage{
 		"REPLACEMENT takes & for the whole match and \\1 to \\9 for a group.",
 		"A backreference in the PATTERN is refused: this build matches with RE2, which has none.",
 	}},
-	"seq":        {Summary: "Print a sequence of numbers.", Operands: "[FIRST [INCREMENT]] LAST"},
+	"seq":        {Summary: "Print a sequence of numbers.", Operands: "[FIRST [INCREMENT]] LAST", Options: map[string]string{"w": "pad with leading zeros to an equal width", "s": "put this string between the numbers rather than a newline"}},
 	"sha256sum":  {Summary: "Print or check SHA-256 digests.", Operands: "[FILE]...", Options: map[string]string{"b": "read in binary mode, and mark it with a * in the output", "c": "read the operands as lists of digests and check them", "t": "read in text mode, which is the default", "w": "with -c, warn about lines that are not a digest"}},
 	"sha1sum":    {Summary: "Print or check SHA-1 digests.", Operands: "[FILE]...", Options: map[string]string{"b": "read in binary mode, and mark it with a * in the output", "c": "read the operands as lists of digests and check them", "t": "read in text mode, which is the default", "w": "with -c, warn about lines that are not a digest"}, Notes: []string{"SHA-1 is broken for anything security-related; this is for comparing files."}},
 	"sha384sum":  {Summary: "Print or check SHA-384 digests.", Operands: "[FILE]...", Options: map[string]string{"b": "read in binary mode, and mark it with a * in the output", "c": "read the operands as lists of digests and check them", "t": "read in text mode, which is the default", "w": "with -c, warn about lines that are not a digest"}},

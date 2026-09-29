@@ -711,7 +711,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `strings` | `-n -t -o -a -f` | refused by name |
 | `awk` | the POSIX language; `-F -v -f --`, operands mixing files and `VAR=VALUE` | refused by name |
 | `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {}`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
-| `seq` | `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` | read as a number, so a bad one is refused |
+| `seq` | `-w -s`, and `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` as strtod reads them, fractions included; a zero increment refused | refused by name |
 | `sleep` | duration operand | reported as an invalid duration |
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |

@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 // The rest of the everyday commands a clean Windows machine does not have.
@@ -45,43 +44,6 @@ func newTeeApplet() Applet {
 		}
 		_, err = copyWithContext(ctx, io.MultiWriter(writers...), stdin)
 		return err
-	}}
-}
-
-// seq counts, which is what a loop over a range needs and what `for i in 1 2 3`
-// stops being able to express at about ten.
-//
-// The three forms are busybox's: LAST, FIRST LAST, and FIRST INCREMENT LAST.
-func newSeqApplet() Applet {
-	return simpleApplet{name: "seq", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		numbers := make([]int, 0, 3)
-		for _, arg := range args {
-			value, err := strconv.Atoi(arg)
-			if err != nil {
-				return fmt.Errorf("invalid number: %s", arg)
-			}
-			numbers = append(numbers, value)
-		}
-		first, increment, last := 1, 1, 0
-		switch len(numbers) {
-		case 1:
-			last = numbers[0]
-		case 2:
-			first, last = numbers[0], numbers[1]
-		case 3:
-			first, increment, last = numbers[0], numbers[1], numbers[2]
-		default:
-			return missingOperand()
-		}
-		if increment == 0 {
-			return fmt.Errorf("invalid increment: 0")
-		}
-		for value := first; (increment > 0 && value <= last) || (increment < 0 && value >= last); value += increment {
-			if _, err := fmt.Fprintln(stdout, value); err != nil {
-				return err
-			}
-		}
-		return nil
 	}}
 }
 

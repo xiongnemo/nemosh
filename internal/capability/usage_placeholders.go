@@ -121,6 +121,7 @@ var valuePlaceholders = map[string]string{
 	"sorto":             "FILE",
 	"sortS":             "SIZE",
 	"sortT":             "DIR",
+	"seqs":              "SEP",
 	"statc":             "FORMAT",
 	"splitl":            "LINES",
 	"suc":               "COMMAND",
