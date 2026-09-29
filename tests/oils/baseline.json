@@ -544,7 +544,6 @@
     "errexit-osh.test.sh": {
       "Regression": "fail",
       "command_sub_errexit stops at first error": "fail",
-      "if pipeline doesn't fail fatally": "fail",
       "strict_errexit and errexit disabled": "fail"
     },
     "errexit.test.sh": {

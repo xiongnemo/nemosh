@@ -237,6 +237,13 @@ func isNotEmpty(err error) bool {
 	return errors.Is(err, syscall.ENOTEMPTY) || causeText(err) == "Directory not empty"
 }
 
+// isNotThere is whether err says a file is not there, as busybox-w32's stat has it. Asking
+// Windows about a name it cannot hold, a glob that matched nothing such as `*.tmp`, fails as an
+// invalid name, which get_file_attr counts as not there with most other failures.
+func isNotThere(err error) bool {
+	return errors.Is(err, fs.ErrNotExist) || causeText(err) == "No such file or directory"
+}
+
 // longOptionWords turns each long option in names into the letter it stands for, `--name` and
 // `--name=VALUE` alike, before `--`.
 func longOptionWords(args []string, names map[string]string) []string {

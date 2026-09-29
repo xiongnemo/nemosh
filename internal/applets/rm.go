@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -83,7 +82,7 @@ func (r *rmRun) remove(native, display string) bool {
 	// link.
 	info, err := os.Lstat(native)
 	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
+		if !isNotThere(err) {
 			return r.fail(cannotStat(display, err))
 		}
 		if !r.force {
