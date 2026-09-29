@@ -142,6 +142,8 @@ var valuePlaceholders = map[string]string{
 	"uniqw":                  "N",
 	"statc":                  "FORMAT",
 	"splitl":                 "LINES",
+	"splitb":                 "BYTES",
+	"splita":                 "N",
 	"suc":                    "COMMAND",
 	"sus":                    "SHELL",
 	"tailn":                  "LINES",
