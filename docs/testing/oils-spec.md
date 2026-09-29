@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1971 of the 2551 cases bash passes: 77.3%.**
+**nemosh passes 1973 of the 2551 cases bash passes: 77.3%.**
 
-Of the other 580, it does 105 the way the files record of ash, which may be busybox's
-way, and 475 neither way.
+Of the other 578, it does 105 the way the files record of ash, which may be busybox's
+way, and 473 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 475 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1971 |
+| that nemosh passes of those | 1973 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -82,7 +82,7 @@ of ash.
 | builtin-kill.test.sh | 20 | 17 | 15 | 88.2% | 0 | 11 |
 | builtin-meta-assign.test.sh | 11 | 11 | 11 | 100.0% | 0 | 11 |
 | builtin-meta.test.sh | 15 | 15 | 9 | 60.0% | 1 | 13 |
-| builtin-misc.test.sh | 7 | 5 | 2 | 40.0% | 0 | 4 |
+| builtin-misc.test.sh | 7 | 5 | 3 | 60.0% | 0 | 4 |
 | builtin-printf.test.sh | 63 | 55 | 48 | 87.3% | 7 | 57 |
 | builtin-process.test.sh | 10 | 9 | 7 | 77.8% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 56 | 88.9% | 4 | 60 |
@@ -106,7 +106,7 @@ of ash.
 | dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 0 |
 | empty-bodies.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 |
 | errexit-osh.test.sh | 35 | 35 | 31 | 88.6% | 0 | 35 |
-| errexit.test.sh | 35 | 34 | 30 | 88.2% | 2 | 35 |
+| errexit.test.sh | 35 | 34 | 31 | 91.2% | 2 | 35 |
 | exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
 | extglob-files.test.sh | 23 | 23 | 18 | 78.3% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1971 | 77.3% | 105 | 1447 |
+| all | 2668 | 2551 | 1973 | 77.3% | 105 | 1447 |

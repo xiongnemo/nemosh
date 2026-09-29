@@ -193,6 +193,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.let(args[1:])
 	case "times":
 		return r.times()
+	case "time":
+		return r.timeBuiltin(ctx, args[1:])
 	case "help":
 		return r.help(args[1:])
 	case "history":

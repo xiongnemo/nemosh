@@ -202,6 +202,7 @@ var commands = []Command{
 	{Name: "shift", Operand: AnyPath, Builtin: true},
 	{Name: "shopt", Operand: AnyPath, Builtin: true},
 	{Name: "source", Operand: AnyPath, Builtin: true},
+	{Name: "time", Operand: AnyPath, Builtin: true},
 	{Name: "times", Operand: AnyPath, Builtin: true},
 	{Name: "trap", Operand: AnyPath, Builtin: true},
 	{Name: "type", Operand: AnyPath, Builtin: true},

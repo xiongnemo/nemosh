@@ -377,8 +377,7 @@
       "Invalid shift argument": "ash-only",
       "Print shell strings with normal chars: set and printf %q and ${x@Q}": "fail",
       "Print shell strings with weird chars: set and printf %q and ${x@Q}": "fail",
-      "history builtin usage": "fail",
-      "time pipeline": "fail"
+      "history builtin usage": "fail"
     },
     "builtin-printf.test.sh": {
       "%(strftime format)T": "fail",
@@ -550,7 +549,6 @@
     "errexit.test.sh": {
       "More \u0026\u0026 ||": "fail",
       "brace group - redir failure checked": "ash-only",
-      "errexit and time { }": "fail",
       "set -e in function #2": "ash-only",
       "while loop - redirect failure checked": "ash-only"
     },
