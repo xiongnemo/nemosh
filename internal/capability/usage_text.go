@@ -69,7 +69,7 @@ var usageText = map[string]Usage{
 	"readlink": {Summary: "Print what a symbolic link points at.", Operands: "FILE", Options: map[string]string{"n": "no trailing newline", "f": "print the canonical path, every link followed; FILE need not exist if its directory does", "v": "say why a link cannot be read", "s": "say nothing on failure, which is the default", "q": "the same as -s"}},
 	"realpath": {Summary: "Resolve a path to an absolute one with no symlinks.", Operands: "FILE..."},
 	"rev":      {Summary: "Reverse the characters of every line.", Operands: "[FILE]..."},
-	"rm":       {Summary: "Remove files and directories.", Operands: "FILE...", Options: map[string]string{"f": "do not complain about what is not there", "r": "remove directories and their contents"}},
+	"rm":       {Summary: "Remove files and directories.", Operands: "FILE...", Options: map[string]string{"f": "do not complain about what is not there, nor ask", "i": "ask before removing each", "r": "remove directories and their contents", "R": "the same as -r", "v": "say what is removed"}, Notes: []string{"A FILE whose last component is . or .. is refused. Of -f and -i the later wins."}},
 	"rmdir":    {Summary: "Remove empty directories.", Operands: "DIRECTORY...", Options: map[string]string{"p": "remove each parent that becomes empty too", "v": "print a line per directory removed"}},
 	"sed": {Summary: "Edit a stream of text by script.", Operands: "SCRIPT [FILE]...", Notes: []string{
 		"Only the s command: s/PATTERN/REPLACEMENT/[g][N].",

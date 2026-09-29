@@ -702,7 +702,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `readlink` | `-n -f -v`, and `-s -q`, the quiet that is the default; `-f` prints what `realpath` does, and FILE need not exist if its directory does | refused by name |
 | `rev` | none; reverses runes, not bytes | refused by name |
 | `realpath` | none | treated as a path operand |
-| `rm` | `-f -r` | refused by name |
+| `rm` | `-f -i -r -R -v`; of `-f` and `-i` the later wins, `.` and `..` are refused, and a read-only file is removed as busybox-w32 removes one | refused by name |
 | `rmdir` | `-p -v` | refused by name |
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
 | `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |

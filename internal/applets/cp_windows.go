@@ -24,6 +24,22 @@ func removeForOverwrite(native string) error {
 	return os.Remove(native)
 }
 
+// removeDirectory removes an empty directory. A read-only one is made writable first, as
+// busybox-w32's rmdir does (win32/mingw.c:2152).
+func removeDirectory(native string) error {
+	err := os.Remove(native)
+	if err == nil || !errors.Is(err, fs.ErrPermission) {
+		return err
+	}
+	if chmodErr := os.Chmod(native, 0o777); chmodErr != nil {
+		return err
+	}
+	return os.Remove(native)
+}
+
+// canWrite is whether a file may be written, which on Windows is whether it is not read-only.
+func canWrite(_ string, info os.FileInfo) bool { return info.Mode().Perm()&0o200 != 0 }
+
 // copyOwner has nothing to do: a Windows file's owner is its creator, and busybox-w32's chown
 // changes nothing either.
 func copyOwner(string, os.FileInfo) error { return nil }

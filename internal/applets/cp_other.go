@@ -16,6 +16,12 @@ func removeForOverwrite(native string) error {
 	return os.Remove(native)
 }
 
+// removeDirectory removes an empty directory.
+func removeDirectory(native string) error { return os.Remove(native) }
+
+// canWrite is whether this process may write the file, as access(2) answers.
+func canWrite(native string, _ os.FileInfo) bool { return syscall.Access(native, 2) == nil }
+
 // copyOwner gives the copy at native the owner and group info records.
 func copyOwner(native string, info os.FileInfo) error {
 	stat, ok := info.Sys().(*syscall.Stat_t)

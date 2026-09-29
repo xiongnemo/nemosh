@@ -69,65 +69,6 @@ func touchFile(native string, now time.Time, noCreate bool) error {
 	return file.Close()
 }
 
-func newRmApplet() Applet {
-	return simpleApplet{name: "rm", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "fr", "")
-		if err != nil {
-			return err
-		}
-		if len(operands) == 0 {
-			// -f makes a missing operand acceptable, which is the whole point
-			// of `rm -f` in a cleanup script.
-			if options.has('f') {
-				return nil
-			}
-			return missingOperand()
-		}
-		view := ProcessViewFromContext(ctx)
-		removed := true
-		for _, path := range operands {
-			native, err := resolveHostPath(view, path)
-			if err != nil {
-				fmt.Fprintf(stderr, "rm: %v\n", err)
-				removed = false
-				continue
-			}
-			if !removeOperand(native, path, options.has('r'), options.has('f'), stderr) {
-				removed = false
-			}
-		}
-		if !removed {
-			// Every failure has been reported already, so this carries the
-			// status and nothing else. Stopping at the first one instead left a
-			// cleanup half done and named none of what survived.
-			return ExitStatus(1)
-		}
-		return nil
-	}}
-}
-
-func removeOperand(native, display string, recursive, force bool, stderr io.Writer) bool {
-	if recursive {
-		return removeTree(native, display, force, stderr)
-	}
-	info, err := os.Lstat(native)
-	if err != nil {
-		// -f is silent about what was not there to begin with, which is what
-		// makes `rm -f build.out` usable in a cleanup script.
-		if force && errors.Is(err, fs.ErrNotExist) {
-			return true
-		}
-		reportRemoveFailure(stderr, display, err)
-		return false
-	}
-	// Lstat rather than Stat, so a symlink to a directory is unlinked instead
-	// of being refused -- the link is not a directory, whatever it points at.
-	if info.IsDir() {
-		return reportIsADirectory(stderr, display)
-	}
-	return removeOne(native, display, stderr)
-}
-
 // mkdir takes -p and -m, the two options busybox's getopt32long string carries
 // besides -v (coreutils/mkdir.c:63). Without option parsing the flags were
 // taken as operands, so `mkdir -p a/b/c` created a directory literally named

@@ -45,7 +45,7 @@ func newLessApplet() Applet {
 		if options.has('h') {
 			return writeLessHelp(stdout)
 		}
-		if len(operands) == 0 && lessInputIsTerminal(ctx, stdin) {
+		if len(operands) == 0 && inputIsTerminal(ctx, stdin) {
 			// `less` with nothing to read would otherwise take the user's typing for the
 			// file's contents and never show anything -- a hang, in the shape bc and dc
 			// had. Every less refuses here instead.
@@ -75,8 +75,9 @@ func newLessApplet() Applet {
 	}}
 }
 
-// lessInputIsTerminal reports whether standard input is a terminal rather than a file or a
-// pipe -- which is to say, whether reading it would wait on a person.
+// inputIsTerminal reports whether standard input is a terminal rather than a file or a
+// pipe -- which is to say, whether reading it would wait on a person. less asks it before
+// paging nothing, and rm before asking about a file it cannot write.
 //
 // Asked of the stream rather than of the value: the shell hands an applet a reader that
 // forwards to the console, never the console itself, so `stdin.(*os.File)` answers no
@@ -84,7 +85,7 @@ func newLessApplet() Applet {
 // instead of refusing. `top` has asked this way since the same mistake stopped it drawing.
 //
 // The lease is taken and given straight back, because this is a question rather than a use.
-func lessInputIsTerminal(ctx context.Context, stdin io.Reader) bool {
+func inputIsTerminal(ctx context.Context, stdin io.Reader) bool {
 	file, release, ok := leaseTopStdin(ctx, stdin)
 	if !ok || file == nil {
 		return false

@@ -19,7 +19,7 @@ import (
 // answer rather than questioning it. So `less` concluded there was no terminal every time
 // it was run from the prompt, and fell back to printing plainly.
 //
-// Same shape on the input side: lessInputIsTerminal decides whether `less` with no operands
+// Same shape on the input side: inputIsTerminal decides whether `less` with no operands
 // refuses instead of reading the keyboard as if it were a file, and it was answering false
 // for the same reason -- which turns that refusal into a hang, the shape bc and dc had.
 // `top` gets this right through LeaseStdinFile, and `less` now asks the same way.
@@ -70,9 +70,9 @@ func (r *spyLeasingReader) LeaseStdinFile(context.Context) (*os.File, func(), bo
 
 func TestLessInputIsTerminal_asksTheStreamForItsFile(t *testing.T) {
 	spy := &spyLeasingReader{}
-	lessInputIsTerminal(context.Background(), spy)
+	inputIsTerminal(context.Background(), spy)
 	if !spy.asked {
-		t.Error("lessInputIsTerminal did not ask the stream for its file, so `less` with no " +
+		t.Error("inputIsTerminal did not ask the stream for its file, so `less` with no " +
 			"operands reads the keyboard as though it were a file instead of refusing")
 	}
 }
