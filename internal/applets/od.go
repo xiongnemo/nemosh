@@ -7,21 +7,17 @@ import (
 	"strings"
 )
 
-// od, hexdump and hd: three names over one dumper.
+// hexdump and hd: two names over one dumper. od is busybox's od_bloaty, od_dump.go's.
 //
 // `xxd` already exists here, so the shapes are pinned by differential rather than
-// invented. The two families differ in their defaults, which is the whole reason
-// both exist:
+// invented. The two differ in their defaults:
 //
-//	od       octal offsets, 16-bit words in octal
 //	hexdump  hex offsets, 16-bit words in hex
 //	hd       hexdump -C: hex bytes with an ASCII gutter
 //
 // The word forms read each pair of bytes **little-endian**, which is what makes
 // `he` print as 6568 rather than 6865 and is the single most surprising thing
 // about either tool.
-
-func newOdApplet() Applet { return newDumperApplet("od") }
 
 func newHexdumpApplet() Applet { return newDumperApplet("hexdump") }
 
@@ -45,17 +41,14 @@ func newDumperApplet(name string) Applet {
 			return err
 		}
 		request := dumpRequest{format: defaultDumpFormat(name), radix: 'X'}
-		if name == "od" {
-			request.radix = 'o'
-		}
 		if err := request.apply(name, options); err != nil {
 			return err
 		}
-		request.libbbDump = name != "od"
 		inputs := &dumpInputs{ctx: ctx, view: ProcessViewFromContext(ctx), stdin: stdin, paths: paths}
 		if len(paths) == 0 {
 			inputs.paths = []string{"-"}
 		}
+		defer inputs.Close()
 		if err := request.write(stdout, inputs, options.has('v')); err != nil {
 			return err
 		}
@@ -67,13 +60,10 @@ func newDumperApplet(name string) Applet {
 }
 
 func defaultDumpFormat(name string) dumpFormat {
-	switch name {
-	case "hd":
+	if name == "hd" {
 		return dumpCanonical
-	case "hexdump":
-		return dumpHexWords
 	}
-	return dumpOctalWords
+	return dumpHexWords
 }
 
 type dumpRequest struct {
@@ -83,8 +73,6 @@ type dumpRequest struct {
 	// radix is the address's: 'o', 'd' or 'x' as -A names them, 'n' for none, and 'X' for
 	// hexdump's own seven hex digits.
 	radix byte
-	// libbbDump is hexdump's and hd's way with repeated lines, rather than od's; see write.
-	libbbDump bool
 }
 
 func (r *dumpRequest) apply(name string, options appletOptions) error {
@@ -173,7 +161,7 @@ func (r dumpRequest) bodies(chunk []byte) []string {
 	bodies := make([]string, 0, len(formats))
 	for _, format := range formats {
 		if width < 0 || len(formats) == 1 {
-			bodies = append(bodies, dumpBody(format, chunk, r.libbbDump))
+			bodies = append(bodies, dumpBody(format, chunk))
 			continue
 		}
 		var out strings.Builder
@@ -189,7 +177,7 @@ func (r dumpRequest) bodies(chunk []byte) []string {
 	return bodies
 }
 
-func dumpBody(format dumpFormat, chunk []byte, padWords bool) string {
+func dumpBody(format dumpFormat, chunk []byte) string {
 	switch format {
 	case dumpCanonical:
 		return canonicalDumpBody(chunk)
@@ -206,12 +194,8 @@ func dumpBody(format dumpFormat, chunk []byte, padWords bool) string {
 		}
 		return out.String()
 	case dumpHexWords:
-		// Padded to eight slots, which hexdump does and od does not: od -x padded its
-		// short last line with blanks.
-		if padWords {
-			return dumpWords(chunk, " %04x", 8)
-		}
-		return dumpWords(chunk, " %04x", 0)
+		// Padded to eight slots, which hexdump does and od does not.
+		return dumpWords(chunk, " %04x", 8)
 	}
 	return dumpWords(chunk, " %06o", 0)
 }

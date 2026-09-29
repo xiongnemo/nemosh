@@ -53,11 +53,21 @@ func (d *dumpInputs) Read(p []byte) (int, error) {
 	}
 }
 
+// Close closes the FILE being read, which od's -N and -S can stop in, and an error can leave.
+func (d *dumpInputs) Close() error {
+	if d.current == nil {
+		return nil
+	}
+	err := d.current.Close()
+	d.current = nil
+	return err
+}
+
 // write dumps input sixteen bytes to a line, and ends with the length. Unless verbose, a line
 // the same as the one before it is not printed, and the first of a run of them is a `*`, as
-// busybox's od has it (od_bloaty.c's write_block): every line was printed. hexdump and hd do
-// as libbb's dump does, which puts the `*` before a short last line too when it begins as the
-// line before it, and gives no length for no input.
+// libbb's dump has it for hexdump and hd: every line was printed. It puts the `*` before a
+// short last line too when it begins as the line before it, where od's write_block does not,
+// and gives no length for no input.
 func (r dumpRequest) write(stdout io.Writer, input *dumpInputs, verbose bool) error {
 	current, previous := make([]byte, 16), make([]byte, 16)
 	offset, printed, starred := 0, false, false
@@ -78,7 +88,7 @@ func (r dumpRequest) write(stdout io.Writer, input *dumpInputs, verbose bool) er
 			}
 			starred = true
 		} else {
-			if repeated && r.libbbDump && !starred {
+			if repeated && !starred {
 				if _, err := fmt.Fprintln(stdout, "*"); err != nil {
 					return err
 				}
@@ -100,9 +110,9 @@ func (r dumpRequest) write(stdout io.Writer, input *dumpInputs, verbose bool) er
 	// The final line is the length, which is how a reader knows where the dump
 	// stopped without counting the rows. With -A n there is no address to give, and so
 	// no line, as in busybox: it was an empty one, which every `... | od -A n -c` then
-	// carried into whatever read it. Nor is there one when no FILE could be opened, or for
-	// hexdump when there was nothing to dump.
-	if r.radix == 'n' || !input.opened || r.libbbDump && offset == 0 {
+	// carried into whatever read it. Nor is there one when no FILE could be opened, or when
+	// there was nothing to dump.
+	if r.radix == 'n' || !input.opened || offset == 0 {
 		return nil
 	}
 	_, err := fmt.Fprintln(stdout, strings.TrimSpace(r.address(offset)))

@@ -119,7 +119,7 @@ var commands = []Command{
 	{Name: "micro", Short: "HRl", Operand: AnyPath},
 	{Name: "ed", Short: "sp", ValueShort: "p", Operand: AnyPath},
 	{Name: "less", Short: "EFIMmNSRh~", Operand: AnyPath},
-	{Name: "od", Short: "bcCdoxvAt", ValueShort: "At", Operand: AnyPath},
+	{Name: "od", Short: "abcdDfhHiIlLoOBvxXsANjtSw", ValueShort: "ANjtS", Long: []string{"skip-bytes", "address-radix", "read-bytes", "format", "output-duplicates", "strings", "width", "traditional"}, ValueLong: []string{"skip-bytes", "address-radix", "read-bytes", "format"}, Operand: AnyPath},
 	{Name: "hexdump", Short: "bcCdoxvAt", ValueShort: "At", Operand: AnyPath},
 	{Name: "hd", Short: "bcCdoxvAt", ValueShort: "At", Operand: AnyPath},
 	{Name: "uuencode", Short: "m", Operand: AnyPath},

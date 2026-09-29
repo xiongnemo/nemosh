@@ -688,7 +688,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `nano` | `-H -R`; one file at a time | refused by name |
 | `nc` | `-l -p -w`; `-e` **refused by name** | refused by name |
 | `nl` | `-b a\|t\|n\|pBRE -i -s -v -w -p` and their long forms; numbers carry on from one file to the next, and `pBRE` is GNU's | refused by name |
-| `od` | `-b -c -C -d -o -x -v -A -t`; `-t` again for another format, each a line of its own, in columns when each shows a byte to a field, as GNU od lays them out | refused by name |
+| `od` | `-a -b -c -d -D -f -h -H -i -I -l -L -o -O -B -s -x -X -v`, `-t` of every kind and size busybox's has (`d o u x` of 1 2 4 8 bytes or `C S I L`, `f` of 4 or 8 or `F D`, `a`, `c`, and `z` after), `-A -N -j -S -w`, their long forms, and `--traditional`'s OFFSET and LABEL; each type a line of its own, several in columns as GNU od lays them out | refused by name |
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
@@ -1091,6 +1091,25 @@ Two details are worth stating:
 - **`hexdump` pads a short line to eight slots and `od` does not.** Trimming
   trailing whitespace is the obvious tidy-up and it silently broke `hexdump` while
   leaving `od` correct.
+
+`od` became busybox's od_bloaty on 2026-09-30: every `-t` kind and size, the letters in
+busybox's fixed order, `-N -j -S -w`, the long forms and `--traditional`. Across about 200
+invocations it matches busybox-w32 byte for byte, apart from six places that are chosen:
+
+- **Several types stand in columns, as GNU od lays them out.** `od -A n -t c -t x1` puts
+  each byte's number under its character. Oils records that layout, and scripts written
+  on Linux expect it. busybox leaves each line as narrow as its own fields.
+- **Floats are spelled as C spells them**: `1.0000000e+00` and `inf`. busybox-w32's msvcrt
+  gives `1.0000000e+000` and `1.#INF000e+000`.
+- **A size may be followed by another type, or by `z`**: `-t x1z`, `-t x1c`. busybox
+  reads the size with bb_strtou, which refuses a letter after the digits and reports a
+  4294967295-byte type, although its own comment gives `d4afL` as a string it reads.
+- **A `-S` run that `-N` cuts off is printed at the address where it begins.** busybox
+  and GNU both print the address one byte earlier, which for a run starting at offset 0
+  is `1777777777777777777777`.
+- **`-t fL` is refused.** A long double is ten bytes held in sixteen, and busybox-w32
+  prints it through msvcrt as if it were a double.
+- **`-A ''` is refused**, where busybox reads past the end of its radix table.
 
 `uuencode` and `uudecode` carry the pre-base64 wire format. The lone backtick that
 ends the body is a zero-length line spelled with a backtick rather than a space,
