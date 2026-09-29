@@ -224,6 +224,19 @@ Two of my own inefficiencies were found the same way and fixed: `du` was calling
 `filepath.Abs` per file, which is a `Getwd` syscall, to find the volume of a path
 that already named one (150 ms → 132 ms).
 
+Measured again 2026-09-29, when `du` became busybox's walk: the whole of System32, every
+directory under it, `du -s .`:
+
+| | time | blocks |
+| --- | --- | --- |
+| busybox-w32 | 2.0 s | 9543872 |
+| nemosh | 0.83 s | 9543872 |
+| nemosh before | 0.2 s | 10469192 |
+
+It was faster because it never asked a file how many links it has, and so counted every
+file linked twice inside System32 twice. Asking is a handle open per file, which busybox-w32's
+stat makes too, and one open answers the links, the volume and the file's index together.
+
 ## What tview and tcell cost, measured 2026-08-21
 
 `top` is built on tview, and the question asked before writing any of it was what

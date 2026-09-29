@@ -94,10 +94,10 @@ func TestDu(t *testing.T) {
 		}
 	})
 
-	// The expectation here was `6K`, which neither reference prints: busybox-w32 and GNU
-	// both keep the decimal on a whole number below ten. Above ten it goes again -- GNU says
-	// `97K` and busybox `96.7K`, and this follows GNU.
-	t.Run("-h keeps one decimal below ten", func(t *testing.T) {
+	// The expectation here was `6K`, which neither reference prints. busybox keeps one decimal
+	// on every scaled size, `4.0K` and `96.7K`, where GNU drops it at ten and above; this
+	// followed GNU there and follows busybox now.
+	t.Run("-h keeps one decimal", func(t *testing.T) {
 		// When
 		got, err := runInDirectory(t, "du", directory, "-sh")
 
@@ -107,21 +107,17 @@ func TestDu(t *testing.T) {
 		}
 		// The rule rather than a number, because the number is the volume's: this tree
 		// costs 4 blocks on NTFS, where a directory is free, and 16 on ext4, where each
-		// of the two directories has a block of its own. Below ten the decimal is kept
-		// and above it goes, and only the first half is what this used to get wrong.
+		// of the two directories has a block of its own.
 		field := strings.Fields(got)[0]
 		if !strings.HasSuffix(field, "K") {
 			t.Fatalf("du -sh = %q, want a size in kilobytes", got)
 		}
-		blocks, err := strconv.ParseFloat(strings.TrimSuffix(field, "K"), 64)
-		if err != nil {
+		number := strings.TrimSuffix(field, "K")
+		if _, err := strconv.ParseFloat(number, 64); err != nil {
 			t.Fatalf("du -sh = %q, want a number before the K", got)
 		}
-		if blocks < 10 && !strings.Contains(field, ".") {
-			t.Fatalf("du -sh = %q, want the decimal kept below ten -- both references print 4.0K", got)
-		}
-		if blocks >= 10 && strings.Contains(field, ".") {
-			t.Fatalf("du -sh = %q, want no decimal at ten or above -- GNU prints 97K", got)
+		if whole, decimal, found := strings.Cut(number, "."); !found || whole == "" || len(decimal) != 1 {
+			t.Fatalf("du -sh = %q, want one decimal, as busybox prints 4.0K and 16.0K", got)
 		}
 	})
 }

@@ -666,7 +666,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `diff` | `-u -U -q -s -i -w -B -N -L`; unified always | refused by name |
 | `dirname` | none needed; one NAME, a second refused | refused by name |
 | `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
-| `du` | `-s -h`; **apparent** sizes in 1024-byte blocks, not allocation | refused by name |
+| `du` | `-a -s -d -c -h -k -m -b -l -x -H -L`; what the filesystem allocated, in kilobytes, each directory printed after what it holds and in the order it lists them. A directory and a file with several links are counted once unless `-l`, and a junction is a link as a symbolic link is. Of `-h -k -m`, `-H -L` and `-s -d` the last wins | refused by name |
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command` (an applet) | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |

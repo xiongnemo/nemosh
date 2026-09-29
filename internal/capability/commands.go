@@ -31,7 +31,7 @@ var commands = []Command{
 	{Name: "dirname", Operand: AnyPath},
 	{Name: "echo", Short: "ne", Operand: AnyPath},
 	{Name: "env", Short: "i0u", ValueShort: "u", Long: []string{"ignore-environment", "null", "unset"}, ValueLong: []string{"unset"}, Operand: AnyPath},
-	{Name: "du", Short: "sh", Operand: AnyPath},
+	{Name: "du", Short: "asdchkmblxHL", ValueShort: "d", Operand: AnyPath},
 	{Name: "df", Short: "hk", Operand: AnyPath},
 	{Name: "dd", Operand: AnyPath},
 	{Name: "stty", Short: "a", Operand: AnyPath},

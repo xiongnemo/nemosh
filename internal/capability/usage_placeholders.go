@@ -124,6 +124,7 @@ var valuePlaceholders = map[string]string{
 	"seqs":              "SEP",
 	"envu":              "NAME",
 	"envunset":          "NAME",
+	"dud":               "N",
 	"uniqf":             "N",
 	"uniqs":             "N",
 	"uniqw":             "N",

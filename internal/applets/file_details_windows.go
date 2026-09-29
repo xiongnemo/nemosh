@@ -17,7 +17,7 @@ import (
 // No new dependency: `golang.org/x/sys/windows` is already linked, for `id` and for the
 // console work in cmd/nemosh. What it costs is calls -- see each function.
 
-// allocatedSize is how much room a file occupies on disk, in bytes.
+// allocatedBytes is how much room an entry du has stat'd occupies on disk, in bytes.
 //
 // Not FILE_STANDARD_INFO's AllocationSize, which was the obvious answer and the wrong one:
 // NTFS keeps a small file *inside* its MFT record and reports an allocation of zero for it, so
@@ -26,23 +26,51 @@ import (
 // primary reference prints. Measured: a 1-byte, a 5-byte and a 1500-byte file all cost 4K
 // there, and this now agrees on all three.
 //
-// A directory costs nothing, which is also measured -- busybox says 0 for an empty one. Its
-// entries live in the MFT record too.
+// A directory is rounded the same way. Its entries live in its MFT record until there are too
+// many for it, when Windows reports a size for it -- 4096 for one of eight entries, measured --
+// and busybox counts that as it counts a file's. It said 0 for every directory, which is right
+// only for a small one. A link's size is the length of its text, entrySize.
 //
-// The cost is one GetDiskFreeSpace per volume, cached, and no per-file call at all. A sparse
-// or compressed file is over-reported, which busybox does too.
-func allocatedSize(path string, size int64, isDir bool) (int64, bool) {
-	if isDir {
-		return 0, true
-	}
+// The cost is one GetDiskFreeSpace per volume, cached, and no per-file call, except for a
+// file that is compressed or sparse: that one is what GetCompressedFileSize says it holds, as
+// busybox-w32 asks for it too.
+func allocatedBytes(path string, info os.FileInfo) (int64, bool) {
 	cluster, ok := volumeClusterSize(path)
 	if !ok {
 		return 0, false
 	}
+	size, ok := compressedSize(path, info)
+	if !ok {
+		size = entrySize(path, info)
+	}
 	return (size + cluster - 1) / cluster * cluster, true
 }
 
-var procGetDiskFreeSpace = windows.NewLazySystemDLL("kernel32.dll").NewProc("GetDiskFreeSpaceW")
+var (
+	kernel32                  = windows.NewLazySystemDLL("kernel32.dll")
+	procGetDiskFreeSpace      = kernel32.NewProc("GetDiskFreeSpaceW")
+	procGetCompressedFileSize = kernel32.NewProc("GetCompressedFileSizeW")
+)
+
+// compressedSize is what a compressed or sparse file holds on disk. Only such a file costs the
+// call; the attributes that say so came with its stat.
+func compressedSize(path string, info os.FileInfo) (int64, bool) {
+	data, ok := info.Sys().(*syscall.Win32FileAttributeData)
+	if !ok || !info.Mode().IsRegular() ||
+		data.FileAttributes&(windows.FILE_ATTRIBUTE_COMPRESSED|windows.FILE_ATTRIBUTE_SPARSE_FILE) == 0 {
+		return 0, false
+	}
+	name, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return 0, false
+	}
+	var high uint32
+	low, _, callErr := procGetCompressedFileSize.Call(uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(&high)))
+	if uint32(low) == 0xFFFFFFFF && callErr != windows.ERROR_SUCCESS {
+		return 0, false
+	}
+	return int64(high)<<32 | int64(uint32(low)), true
+}
 
 // clusterSizes caches the answer per volume root, because `du` on a tree asks once per file
 // and the answer cannot change under it.
@@ -105,7 +133,7 @@ type fileStandardInfo struct {
 // This one does cost a handle open and a call per file, which is why it is only reached from
 // `ls -l` and only for the long form.
 func fileLinkCount(path string) (int, bool) {
-	handle, ok := openForMetadata(path)
+	handle, ok := openForMetadata(path, 0)
 	if !ok {
 		return 0, false
 	}
@@ -121,15 +149,16 @@ func fileLinkCount(path string) (int, bool) {
 // openForMetadata opens a path for asking questions about it and nothing else.
 //
 // No access rights beyond metadata, so a file another process holds open for writing can
-// still be asked; FILE_FLAG_BACKUP_SEMANTICS so a directory can be opened too.
-func openForMetadata(path string) (windows.Handle, bool) {
+// still be asked; FILE_FLAG_BACKUP_SEMANTICS so a directory can be opened too. flags adds to
+// that: FILE_FLAG_OPEN_REPARSE_POINT opens a link as itself rather than what it points at.
+func openForMetadata(path string, flags uint32) (windows.Handle, bool) {
 	name, err := windows.UTF16PtrFromString(path)
 	if err != nil {
 		return 0, false
 	}
 	handle, err := windows.CreateFile(name, 0,
 		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
-		nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS, 0)
+		nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS|flags, 0)
 	if err != nil {
 		return 0, false
 	}
@@ -176,4 +205,38 @@ func isSymbolicLink(info os.FileInfo) bool {
 	}
 	data, ok := info.Sys().(*syscall.Win32FileAttributeData)
 	return ok && data.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0
+}
+
+// fileIdentity is what du asks of an entry, as busybox-w32's stat fills st_dev, st_ino and
+// st_nlink: the volume's serial number, the file's index on it and its count of links. It
+// costs a handle open and a call, one for all three. A link info has not followed is opened as
+// itself.
+func fileIdentity(path string, info os.FileInfo) (fileID, int, bool) {
+	flags := uint32(0)
+	if isLink(info) {
+		flags = windows.FILE_FLAG_OPEN_REPARSE_POINT
+	}
+	handle, ok := openForMetadata(path, flags)
+	if !ok {
+		return fileID{}, 0, false
+	}
+	defer windows.CloseHandle(handle)
+	var data windows.ByHandleFileInformation
+	if err := windows.GetFileInformationByHandle(handle, &data); err != nil {
+		return fileID{}, 0, false
+	}
+	index := uint64(data.FileIndexHigh)<<32 | uint64(data.FileIndexLow)
+	return fileID{device: uint64(data.VolumeSerialNumber), index: index}, int(data.NumberOfLinks), true
+}
+
+// entrySize is an entry's length as busybox-w32's lstat gives it. A link's is the length of
+// what it holds, which Windows keeps in the reparse point rather than in the file, so Lstat
+// says 0.
+func entrySize(path string, info os.FileInfo) int64 {
+	if isLink(info) {
+		if target, err := os.Readlink(path); err == nil {
+			return int64(len(target))
+		}
+	}
+	return info.Size()
 }
