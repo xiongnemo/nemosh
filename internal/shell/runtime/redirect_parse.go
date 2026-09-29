@@ -58,6 +58,9 @@ type redirectOperation struct {
 	duplicate bool
 	// move is `n>&m-`: a duplication that closes its source after, moving the descriptor.
 	move bool
+	// words is how many of its command's words were written before it, which is where an
+	// alias's text puts it again; see aliasText.
+	words int
 }
 
 func parseRedirects(tokens []shellToken) ([]shellToken, []redirectOperation, error) {
@@ -135,6 +138,7 @@ func parseRedirectsWithBudget(tokens []shellToken, budget *parseBudget) ([]shell
 				operation.name = name
 			}
 		}
+		operation.words = len(command)
 		operations = append(operations, operation)
 	}
 	return command, operations, nil

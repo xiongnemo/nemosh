@@ -53,9 +53,11 @@ func (r Runtime) debugTrapHead(ctx context.Context, line int, head func() string
 // command's before the pipeline, since the stages ran in snapshots of their own. busybox-w32's
 // $LINENO there is that line before too, which is a line left stale rather than a choice, so
 // bash's answer is the one taken.
+//
+// An aliased stage has its trap in the stage instead, for each command its alias's text runs.
 func (r Runtime) enterStages(ctx context.Context, value pipeline, savedStatus int) (lineResult, bool) {
 	for _, command := range value.commands {
-		if simple, ok := command.(simpleCommand); ok {
+		if simple, ok := command.(simpleCommand); ok && !r.isAliasCommand(simple) {
 			r.enterSimpleCommand(simple)
 			if result, ended := r.debugTrap(ctx, savedStatus); ended {
 				return result, true

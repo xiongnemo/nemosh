@@ -12,18 +12,34 @@ import (
 // ceiling is here so a cycle through several names cannot spin either.
 const maxAliasSubstitutions = 16
 
-var errAliasValueNotWords = fmt.Errorf("an alias value must be a list of words")
-
 // alias implements the POSIX `alias` builtin: no operands lists every alias, a
 // bare name reports that one, and `name=value` defines one.
 //
 // The listing is `name='value'` with no `alias ` in front, which is the format
 // POSIX XCU specifies for it and what dash, bash --posix and busybox ash all
 // print. The differential runner caught the prefix on its first run.
+//
+// -p is bash's: every alias listed as the command that defines it, `alias name='value'`, and
+// nothing else done, since bash 5.3 reads no operand after it. It and `--` are the only
+// options, and busybox has neither: it reads every operand as a name, and any other word
+// beginning with - is one here too.
+//
+// Any value is taken, as both references take it. It is read as shell text where the alias is
+// used (alias_expand.go), so one that does not parse is a syntax error there. It was refused
+// here unless it was a list of words, `alias x='echo one; echo two'` among them.
 func (r Runtime) alias(args []string) int {
-	if len(args) == 0 {
+	reusable := false
+	for len(args) > 0 && isAliasOption(args[0]) {
+		option := args[0]
+		args = args[1:]
+		if option == "--" {
+			break
+		}
+		reusable = true
+	}
+	if len(args) == 0 || reusable {
 		for _, name := range slices.Sorted(maps.Keys(r.aliases)) {
-			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, singleQuoteForReuse(r.aliases[name]))
+			r.printAlias(name, reusable)
 		}
 		return 0
 	}
@@ -31,22 +47,17 @@ func (r Runtime) alias(args []string) int {
 	for _, arg := range args {
 		name, value, defines := strings.Cut(arg, "=")
 		if !defines {
-			existing, ok := r.aliases[name]
-			if !ok {
-				fmt.Fprintf(r.streams.Stderr, "alias: %s: not found\n", name)
+			if _, ok := r.aliases[name]; !ok {
+				// busybox's wording, with no colon after the name.
+				fmt.Fprintf(r.streams.Stderr, "alias: %s not found\n", name)
 				status = 1
 				continue
 			}
-			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, singleQuoteForReuse(existing))
+			r.printAlias(name, false)
 			continue
 		}
 		if !isAliasName(name) {
 			fmt.Fprintf(r.streams.Stderr, "alias: %s: invalid alias name\n", name)
-			status = 1
-			continue
-		}
-		if _, err := aliasWords(value); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "alias: %s: %v\n", name, err)
 			status = 1
 			continue
 		}
@@ -55,8 +66,42 @@ func (r Runtime) alias(args []string) int {
 	return status
 }
 
+// isAliasOption is -p, any number of times over, or the `--` that ends the options.
+func isAliasOption(arg string) bool {
+	return arg == "--" || len(arg) > 1 && arg[0] == '-' && strings.Trim(arg[1:], "p") == ""
+}
+
+// printAlias lists one alias; reusable is bash's -p form, with `--` before a name that would
+// read as an option.
+func (r Runtime) printAlias(name string, reusable bool) {
+	prefix := ""
+	switch {
+	case reusable && strings.HasPrefix(name, "-"):
+		prefix = "alias -- "
+	case reusable:
+		prefix = "alias "
+	}
+	fmt.Fprintf(r.streams.Stdout, "%s%s=%s\n", prefix, name, singleQuoteForReuse(r.aliases[name]))
+}
+
+// unalias removes the aliases it names, as busybox's reads its operands: options up to the
+// first word that is not one, or `--`, and -a removes every alias and ends the command there,
+// whatever follows it. Any other option is refused with 2, and a name that is no alias is not
+// found, with 1, while the rest are still removed. It took -a only alone, and anything else as
+// a name: `unalias -a b` and `unalias -- a` said -a and -- were not found.
+//
+// Nothing to remove is bash's usage error, where busybox answers 0 and says nothing.
 func (r Runtime) unalias(args []string) int {
-	if len(args) == 1 && args[0] == "-a" {
+	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
+		option := args[0]
+		args = args[1:]
+		if option == "--" {
+			break
+		}
+		if option[1] != 'a' {
+			fmt.Fprintf(r.streams.Stderr, "unalias: illegal option -%c\n", option[1])
+			return 2
+		}
 		clear(r.aliases)
 		return 0
 	}
@@ -67,7 +112,7 @@ func (r Runtime) unalias(args []string) int {
 	status := 0
 	for _, name := range args {
 		if _, ok := r.aliases[name]; !ok {
-			fmt.Fprintf(r.streams.Stderr, "unalias: %s: not found\n", name)
+			fmt.Fprintf(r.streams.Stderr, "unalias: %s not found\n", name)
 			status = 1
 			continue
 		}
@@ -76,82 +121,8 @@ func (r Runtime) unalias(args []string) int {
 	return status
 }
 
-// substituteAliases replaces a command name that is an alias with the words its
-// value stands for.
-//
-// POSIX has this happen during tokenization, which Nemosh cannot do: parsing
-// completes before any command runs (P0.3), so no alias defined by the script
-// exists yet when its own lines are parsed. Substituting here instead means an
-// alias takes effect on the command that names it, including one defined
-// earlier in the same script -- more useful than the POSIX timing, and the one
-// place the difference shows is that an alias cannot introduce syntax.
-//
-// A name is not substituted into its own expansion, which is the rule that lets
-// `alias ls='ls --color'` mean what it looks like. A value ending in a blank
-// makes the word after it eligible too, which is what `alias sudo='sudo '` is
-// for.
-//
-// `shopt -u expand_aliases` turns it off, as it does in bash.
-func (r Runtime) substituteAliases(args []string) []string {
-	if !r.options.expandAliases || len(r.aliases) == 0 || len(args) == 0 {
-		return args
-	}
-	seen := make(map[string]bool, maxAliasSubstitutions)
-	index := 0
-	nextEligible := -1
-	for len(seen) < maxAliasSubstitutions {
-		value, defined := r.aliases[args[index]]
-		if defined && !seen[args[index]] {
-			words, err := aliasWords(value)
-			if err != nil || len(words) == 0 {
-				return args
-			}
-			seen[args[index]] = true
-			if endsWithBlank(value) {
-				nextEligible = index + len(words)
-			}
-			expanded := make([]string, 0, len(args)+len(words)-1)
-			expanded = append(expanded, args[:index]...)
-			expanded = append(expanded, words...)
-			args = append(expanded, args[index+1:]...)
-			// The replacement is re-examined at the same position, which is how
-			// `alias a=b; alias b=ls` reaches ls. `seen` is what stops
-			// `alias ls='ls --color'` from looping on itself.
-			continue
-		}
-		if nextEligible < 0 || nextEligible >= len(args) {
-			return args
-		}
-		index, nextEligible = nextEligible, -1
-	}
-	return args
-}
-
 func endsWithBlank(value string) bool {
 	return strings.HasSuffix(value, " ") || strings.HasSuffix(value, "\t")
-}
-
-// aliasWords tokenizes an alias value into the words it stands for, and refuses
-// one that carries an operator.
-//
-// Refusing is the honest answer rather than a silent limitation: substituting
-// here rather than during tokenization means an alias contributes words to a
-// command that has already been parsed, so `alias c='a | b'` could not build the
-// pipeline it promises. Saying so at definition time is better than accepting it
-// and running something else.
-func aliasWords(value string) ([]string, error) {
-	tokens, err := scanShellTokens(value)
-	if err != nil {
-		return nil, err
-	}
-	words := make([]string, 0, len(tokens))
-	for _, token := range tokens {
-		if token.kind != tokenWord {
-			return nil, errAliasValueNotWords
-		}
-		words = append(words, token.value)
-	}
-	return words, nil
 }
 
 // isAliasName accepts any name that could actually be typed as a command word.

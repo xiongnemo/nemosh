@@ -510,8 +510,12 @@ loops record the whole command now, as the edited one always did.
   runs. bash and dash execute up to the error. `{echo bad;}` produces no output
   here; both references print nothing either but reach the command first.
 - `~user` is left as written. `~` and `~/path` work.
-- An alias whose value is not a list of words is refused at definition time,
-  because substitution happens after parsing.
+- An alias is substituted as its command runs, not as its line is read: its value is
+  read as shell text there, with the rest of the command after it, as both references
+  read it. So one defined earlier on the same line, or after a function that uses it
+  was defined, is in force here and not yet in theirs, and a value holding `;` keeps
+  to its own command's place: in `x | wc -l` all of x's commands are piped, where
+  theirs pipe only the last.
 - `${#@}` is not pinned; POSIX leaves it unspecified and the references disagree.
 
 ## Applets

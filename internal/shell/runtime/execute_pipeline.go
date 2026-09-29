@@ -12,7 +12,10 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 	if value.negated {
 		stages = r.suppressingErrExit()
 	}
-	result := stages.executeTypedPipelineStages(ctx, value, savedStatus)
+	result, aliased := stages.runLoneAlias(ctx, value, savedStatus)
+	if !aliased {
+		result = stages.executeTypedPipelineStages(ctx, value, savedStatus)
+	}
 	// POSIX 2.9.2: `!` gives the logical NOT of the pipeline's exit status. A
 	// control transfer is not a status, so `! exit 3` still exits with 3.
 	if value.negated && result.control == flowNone {
@@ -28,8 +31,9 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 	// A lone brace group is not a second turn: its status is its last command's,
 	// which had its own, so `set -e; { false && true; }` goes on as both
 	// references go on, and `{ false; }` fires the trap once. A subshell still
-	// fails in the shell that ran it.
-	if !value.negated && !isLoneBraceGroup(value) {
+	// fails in the shell that ran it. An alias's commands have had theirs too, as
+	// the commands the references read in its place have.
+	if !value.negated && !isLoneBraceGroup(value) && !aliased {
 		if r.errTrapTriggers(result) {
 			r.runTrap(ctx, trapERR, result.status)
 		}
@@ -43,6 +47,19 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 		result = r.deliverSignals(ctx, result)
 	}
 	return result
+}
+
+// runLoneAlias runs a pipeline that is one aliased command as its alias's text, which sets
+// $PIPESTATUS for its own pipelines; see alias_expand.go.
+func (r Runtime) runLoneAlias(ctx context.Context, value pipeline, savedStatus int) (lineResult, bool) {
+	if len(value.commands) != 1 || r.readsWithoutExecuting() {
+		return lineResult{}, false
+	}
+	simple, ok := value.commands[0].(simpleCommand)
+	if !ok {
+		return lineResult{}, false
+	}
+	return r.runAlias(ctx, simple, savedStatus)
 }
 
 func isLoneBraceGroup(value pipeline) bool {
@@ -97,6 +114,9 @@ func (r Runtime) executeTypedPipelineStages(ctx context.Context, value pipeline,
 		stages[index] = func(ctx context.Context, stage Runtime, status int) lineResult {
 			// A simple command's DEBUG trap has run, in the shell; see enterStages.
 			if simple, ok := command.(simpleCommand); ok && !stage.readsWithoutExecuting() {
+				if result, aliased := stage.runAlias(ctx, simple, status); aliased {
+					return result
+				}
 				stage.enterSimpleCommand(simple)
 				return stage.runSimpleCommand(ctx, simple, status)
 			}

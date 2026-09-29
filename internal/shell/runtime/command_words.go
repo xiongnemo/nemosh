@@ -32,7 +32,7 @@ func (r Runtime) expandCommandWords(ctx context.Context, command []word, savedSt
 			values = r.expandAssignmentWord(ctx, item, true, savedStatus)
 			literal = assignsArrayLiteral(item)
 		} else {
-			declaration = declaration || index == 0 && (isDeclarationUtility(item) || r.aliasDeclares(item))
+			declaration = declaration || index == 0 && isDeclarationUtility(item)
 			values = r.expandCommandWord(ctx, item, savedStatus)
 		}
 		start := len(rest)
@@ -82,22 +82,6 @@ func (r Runtime) expandLeadingAssignments(ctx context.Context, assignments []wor
 		}
 	}
 	return tokens
-}
-
-// aliasDeclares reports whether a command word is an alias whose first word is a declaration
-// utility, whose operands are then assignments all the same: with `alias e=export`, `e
-// x=$words` exports the value whole in busybox-w32, where it was split and only its first
-// word exported. bash expands no alias in a script.
-func (r Runtime) aliasDeclares(item word) bool {
-	if !r.options.expandAliases || !isUnquotedLiteralWord(item) {
-		return false
-	}
-	value, defined := r.aliases[soleLiteralText(item)]
-	if !defined {
-		return false
-	}
-	words, err := aliasWords(value)
-	return err == nil && len(words) > 0 && isDeclarationName(words[0])
 }
 
 // appendWordTokens adds expanded words to a token list.

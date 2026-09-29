@@ -21,10 +21,10 @@ func TestParseRedirects_supportsNumberedFormsAndSeparatedTargets(t *testing.T) {
 		t.Fatalf("command: got %v want %v", got, want)
 	}
 	want := []redirectOperation{
-		{kind: redirectDup, target: 3, source: 1},
-		{kind: redirectClose, target: 4},
-		{kind: redirectOutput, target: 5, path: "out", operand: word{parts: []wordPart{{kind: wordPartLiteral, text: "out"}}}},
-		{kind: redirectInput, target: 6, path: "input", operand: word{parts: []wordPart{{kind: wordPartLiteral, text: "input"}}}},
+		{kind: redirectDup, target: 3, source: 1, words: 1},
+		{kind: redirectClose, target: 4, words: 1},
+		{kind: redirectOutput, target: 5, path: "out", operand: word{parts: []wordPart{{kind: wordPartLiteral, text: "out"}}}, words: 1},
+		{kind: redirectInput, target: 6, path: "input", operand: word{parts: []wordPart{{kind: wordPartLiteral, text: "input"}}}, words: 1},
 	}
 	if !reflect.DeepEqual(redirects, want) {
 		t.Fatalf("redirects:\n got %#v\nwant %#v", redirects, want)
@@ -45,7 +45,7 @@ func TestFinalSecurity_parseRedirects_supportsAppend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse append redirect: %v", err)
 	}
-	want := []redirectOperation{{kind: redirectAppend, target: 3, path: "output", operand: word{parts: []wordPart{{kind: wordPartLiteral, text: "output"}}}}}
+	want := []redirectOperation{{kind: redirectAppend, target: 3, path: "output", operand: word{parts: []wordPart{{kind: wordPartLiteral, text: "output"}}}, words: 2}}
 	if !reflect.DeepEqual(redirects, want) {
 		t.Fatalf("append redirects: got %#v want %#v", redirects, want)
 	}

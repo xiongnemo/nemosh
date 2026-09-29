@@ -68,16 +68,16 @@ func TestRuntime_listsAndRemovesAliases(t *testing.T) {
 	}
 }
 
-func TestRuntime_refusesAnAliasValueThatIsNotWords(t *testing.T) {
-	// Substitution happens after parsing, so an alias contributes words to a
-	// command that already exists. It cannot introduce a pipeline, and saying
-	// so beats accepting it and running something else.
+func TestRuntime_takesAnAliasValueThatIsNotWords(t *testing.T) {
+	// A value is shell text, read where the alias is used, so any value is taken as both
+	// references take it: an operator, or a quote left open. It was refused unless it was a
+	// list of words.
 	// When
-	status, _, stderr := runSetScript(t, "alias c='a | b'\n")
+	status, stdout, stderr := runSetScript(t, "alias c='a | b' q=\"echo it's\"\nalias c q\n")
 
 	// Then
-	if status != 1 || !strings.Contains(stderr, "list of words") {
-		t.Fatalf("status = %d, stderr = %q, want 1 and a words-only diagnostic", status, stderr)
+	if want := "c='a | b'\nq='echo it'\\''s'\n"; status != 0 || stdout != want {
+		t.Fatalf("got %q/%d, want %q/0; stderr = %q", stdout, status, want, stderr)
 	}
 }
 

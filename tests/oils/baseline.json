@@ -3,29 +3,16 @@
   "cases": {
     "alias.test.sh": {
       "Alias can be defined and used on a single line": "fail",
-      "Alias that is \u0026\u0026 || ;": "fail",
-      "Alias that is pipeline": "fail",
-      "Alias trailing newline": "fail",
-      "Alias with a quote in the middle is a syntax error": "fail",
-      "Alias with internal newlines": "fail",
-      "Expansion of alias with variable": "fail",
       "List aliases by providing names": "fail",
-      "Loop split across alias and arg works": "fail",
       "Loop split across alias in another way": "fail",
       "Loop split across both iterative and recursive aliases": "fail",
-      "Syntax error after expansion": "fail",
-      "Usage of builtins": "fail",
       "alias for left brace": "fail",
       "alias for left paren": "fail",
-      "alias with environment bindings works": "fail",
       "alias with keywords": "fail",
-      "alias with line continuation in the middle": "fail",
       "alias with word of multiple lines": "fail",
       "alias without args lists all aliases": "fail",
       "define and use alias on a single line": "fail",
-      "defining multiple aliases, then unalias": "fail",
-      "first and second word are the same alias, but no trailing space": "fail",
-      "first and second word are the same alias, with trailing space": "fail"
+      "here doc inside alias": "ash-only"
     },
     "arg-parse.test.sh": {
       "continue 1 extra, break, etc.": "ash-only",
@@ -550,6 +537,7 @@
       "More \u0026\u0026 ||": "fail",
       "brace group - redir failure checked": "ash-only",
       "set -e in function #2": "ash-only",
+      "simple command that's an alias - redir failure checked": "ash-only",
       "while loop - redirect failure checked": "ash-only"
     },
     "exit-status.test.sh": {

@@ -83,6 +83,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		options:     r.options.clone(),
 		expansion:   newExpansionState(),
 		aliases:     cloneMap(r.aliases),
+		aliasChain:  r.aliasChain,
 		childCPU:    r.childCPU,
 		history:     r.history,
 		// A subshell starts with no pending break: `(break)` inside a loop does

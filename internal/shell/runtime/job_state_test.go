@@ -29,6 +29,7 @@ var jobStateCoverage = map[string]string{
 	"options":           "encoded: Options, Invocation",
 	"expansion":         "not inherited: per command; the line travels as Line",
 	"aliases":           "encoded: Aliases",
+	"aliasChain":        "encoded: AliasChain",
 	"childCPU":          "not inherited: a process counts its own children",
 	"history":           "not inherited: a job does not read a prompt",
 	"dirStack":          "encoded: DirStack",
@@ -99,6 +100,33 @@ func TestJobState_everyOptionIsCarried(t *testing.T) {
 // A runtime with every kind of state set, captured, sent through JSON and restored into a
 // fresh one, answers a probe of all of it exactly as the original does, and hands back the
 // job's program.
+// A job started inside an alias's text is still inside it, and does not substitute that alias
+// again: so `alias x='x &'` starts one job, where each job would otherwise start the next.
+func TestJobState_carriesTheAliasChain(t *testing.T) {
+	ctx := context.Background()
+	original := New(applets.DefaultRegistry, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
+	original.aliasChain = []string{"x", "y"}
+	job, err := ParseScript("x\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(original.captureJobState(job.program[0]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded jobState
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	restored := New(applets.DefaultRegistry, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
+	if _, err := restored.restoreJobState(ctx, decoded); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if !reflect.DeepEqual(restored.aliasChain, original.aliasChain) {
+		t.Fatalf("the job's alias chain is %q, want %q", restored.aliasChain, original.aliasChain)
+	}
+}
+
 func TestJobState_roundTripsEveryKindOfState(t *testing.T) {
 	setup := `x=plain; export E=exported; readonly R=fixed
 declare -i n=5; declare -l low=ABC; declare -x pending

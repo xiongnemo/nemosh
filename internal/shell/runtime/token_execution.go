@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -165,20 +164,6 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		r.vars["_"] = ""
 		return r.abortOnShellError(lineResult{status: status})
 	}
-	// Alias substitution goes here rather than during tokenization, because
-	// parsing completes before anything runs; see substituteAliases. A quoted
-	// command name is not an alias, so the word as it was written decides --
-	// and with a leading assignment in front, command[0] is that assignment
-	// rather than the command, so there is no word here to judge.
-	if len(commandArgs) > 0 && len(assignments) == 0 && len(command) > 0 && isUnquotedLiteralWord(command[0]) {
-		substituted := r.substituteAliases(commandArgs)
-		if !slices.Equal(substituted, commandArgs) {
-			// The leading assignments keep their place in front; only the
-			// command and its arguments are replaced.
-			expanded = replaceCommandTokens(expanded, len(args)-len(commandArgs), substituted)
-			commandArgs = substituted
-		}
-	}
 	r.traceCommand(ctx, args, savedStatus)
 	result := r.dispatchCommand(ctx, commandArgs, assignments, expanded, operations, savedStatus)
 	// `$_` is the last argument of the command that just finished, or its name when
@@ -254,17 +239,6 @@ func (r Runtime) assignmentStatus(assignments []assignment, mark int) int {
 		return status
 	}
 	return 0
-}
-
-// replaceCommandTokens swaps the command and its arguments for a new word list,
-// keeping the leading assignment tokens that sit before commandStart.
-func replaceCommandTokens(tokens []shellToken, commandStart int, words []string) []shellToken {
-	rebuilt := make([]shellToken, 0, commandStart+len(words))
-	rebuilt = append(rebuilt, tokens[:commandStart]...)
-	for _, word := range words {
-		rebuilt = append(rebuilt, shellToken{kind: tokenWord, value: word})
-	}
-	return rebuilt
 }
 
 func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redirectOperation, savedStatus int) ([]redirectOperation, bool) {

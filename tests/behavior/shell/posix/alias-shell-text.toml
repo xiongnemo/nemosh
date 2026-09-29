@@ -1,0 +1,46 @@
+id = "shell.posix.builtins.alias-shell-text"
+area = "shell"
+kind = "golden"
+semantics = "posix"
+platforms = ["windows", "linux", "darwin"]
+references = ["posix", "busybox-ash", "bash-posix"]
+
+script = '''
+alias x='echo one; echo two'
+x
+v=late
+alias h='echo $v'
+h
+alias s='echo a && echo b'
+s
+alias e_='for i in 1 2 3; do echo $i;'
+e_ done
+alias y='echo a;'
+y y
+alias z='echo b; z'
+z 2>/dev/null
+echo "rc=$?"
+alias tb='echo tb '
+tb tb tb
+alias e=''
+false
+e
+echo "rc=$?"
+alias -p e h
+unalias -- e
+alias e 2>&1
+echo "rc=$?"
+'''
+
+[expect]
+status = 0
+stdout = "one\ntwo\nlate\na\nb\n1\n2\n3\na\na\nb\nrc=127\ntb echo tb echo tb\nrc=1\nalias e=''\nalias e_='for i in 1 2 3; do echo $i;'\nalias h='echo $v'\nalias s='echo a && echo b'\nalias tb='echo tb '\nalias x='echo one; echo two'\nalias y='echo a;'\nalias z='echo b; z'\nalias: e not found\nrc=1\n"
+stderr = ""
+
+[notes]
+standard = "POSIX.1 2.3.1: an alias's value replaces the command name in the input, and is read as the shell reads any input"
+why = "An alias is shell text, read with the rest of its command after it: a value may hold `;`, `&&` or an unfinished loop, and `$v` is expanded where it is used. A value that ends where a command begins, or in a blank, makes the next word an alias again, so `y y` is y twice, where `z` inside z's own value is only a command name. An empty value leaves $? as it was. Measured on busybox-w32 and bash 5.3, which agree on every line; `alias -p` and `unalias --` are bash's, and busybox reads both as names. The value was words put in the command name's place once the command had been expanded, and one that was not a list of words was refused when it was defined."
+
+[differential]
+diverges = ["busybox-ash", "posix", "bash-posix"]
+why = "`alias -p` lists aliases as the commands that define them, which is bash's and not busybox's, whose alias has no options and says `-p not found`; bash --posix prints `alias: e: not found` with a colon, where busybox's wording, with none, is the one kept."

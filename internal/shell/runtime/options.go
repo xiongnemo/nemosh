@@ -58,7 +58,7 @@ type shellOptions struct {
 	// lastpipe.go.
 	lastPipe bool
 	// expandAliases is `shopt -s expand_aliases`, on in a new shell: an alias is substituted
-	// for the command name it matches; see substituteAliases.
+	// for the command name it matches; see alias_expand.go.
 	expandAliases bool
 	// shiftVerbose is `shopt -s shift_verbose`: a shift past the last parameter says so.
 	shiftVerbose bool

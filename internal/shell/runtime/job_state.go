@@ -37,6 +37,9 @@ type jobState struct {
 	Traps         map[string]string              `json:"traps"`
 	Umask         uint16                         `json:"umask"`
 	DirStack      []string                       `json:"dirStack"`
+	// AliasChain is the aliases whose text the job is part of, which it does not substitute
+	// again: `alias x='x &'` starts one job, not one after another; see alias_expand.go.
+	AliasChain []string `json:"aliasChain"`
 	// Getopts is where getopts is in Positional: the next word and the letter in the one
 	// before it; see getoptsState.
 	Getopts [2]int `json:"getopts"`
@@ -87,7 +90,7 @@ func (r Runtime) captureJobState(program programNode) jobState {
 	printer.statement(program)
 	state := jobState{
 		Program: printer.out.String(), Line: r.currentLine(),
-		FunctionFiles: map[string]string{}, Vars: cloneMap(r.vars), Aliases: cloneMap(r.aliases),
+		FunctionFiles: map[string]string{}, Vars: cloneMap(r.vars), Aliases: cloneMap(r.aliases), AliasChain: r.aliasChain,
 		Indexed: map[string]jobIndexedArray{}, Associative: map[string]jobAssociativeArray{},
 		Attributes: map[string]jobAttributes{}, Options: map[string]bool{}, Traps: map[string]string{},
 		Invocation: r.options.invocation, Name: r.params.name, Positional: append([]string(nil), r.params.values...),
@@ -176,6 +179,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		r.readonly[name] = struct{}{}
 	}
 	r.aliases = cloneMap(state.Aliases)
+	r.aliasChain = state.AliasChain
 	for name, flag := range shellOptionFields(r.options) {
 		*flag = state.Options[name]
 	}
