@@ -87,31 +87,59 @@ func TestDefaultRegistry_returnsErrExitFalse_whenReadlinkRunsWithWrongArity(t *t
 	}
 }
 
-func TestDefaultRegistry_returnsUnsupportedOptionError_whenReadlinkRunsWithUnknownFlag(t *testing.T) {
-	// Given
-	applet := lookupReadlink(t)
-	tests := []struct {
-		name string
+func TestDefaultRegistry_refusesAnUnknownOption_whenReadlinkRunsWithOne(t *testing.T) {
+	// When
+	err := lookupReadlink(t).Run(context.Background(), []string{"-z", "link"}, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
+
+	// Then
+	if err == nil || err.Error() != "invalid option -- 'z'" {
+		t.Fatalf("expected readlink -z to be refused, got %v", err)
+	}
+}
+
+// readlink -f prints the canonical path realpath prints, and the last component need not be
+// there so long as its directory is, as busybox's has it. It was refused, which ended a script
+// finding its own directory with `readlink -f "$0"`. -v says why a link could not be read,
+// -s and -q are the quiet that is already the default, and the options may follow FILE.
+func TestReadlink_canonicalizesAPathWithDashF(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "file.txt")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	realpath, ok := applets.DefaultRegistry.Lookup("realpath")
+	if !ok {
+		t.Fatal("expected realpath applet to be registered")
+	}
+	var wantFile bytes.Buffer
+	if err := realpath.Run(context.Background(), []string{file}, &bytes.Buffer{}, &wantFile, &bytes.Buffer{}); err != nil {
+		t.Fatalf("realpath %s: %v", file, err)
+	}
+	missing := filepath.Join(dir, "missing.txt")
+	wantMissing := strings.TrimSuffix(wantFile.String(), "file.txt\n") + "missing.txt\n"
+	for _, test := range []struct {
 		args []string
 		want string
 	}{
-		{name: "canonicalize", args: []string{"-f", "link"}, want: "unsupported readlink option: -f"},
-		{name: "verbose", args: []string{"-v", "link"}, want: "unsupported readlink option: -v"},
-		{name: "quiet", args: []string{"-q", "link"}, want: "unsupported readlink option: -q"},
-		{name: "silent", args: []string{"-s", "link"}, want: "unsupported readlink option: -s"},
-		{name: "unknown", args: []string{"-z", "link"}, want: "unsupported readlink option: -z"},
+		{[]string{"-f", file}, wantFile.String()},
+		{[]string{file, "-f"}, wantFile.String()},
+		{[]string{"-fn", file}, strings.TrimSuffix(wantFile.String(), "\n")},
+		{[]string{"-fsq", missing}, wantMissing},
+	} {
+		var stdout bytes.Buffer
+		err := lookupReadlink(t).Run(context.Background(), test.args, &bytes.Buffer{}, &stdout, &bytes.Buffer{})
+		if err != nil || stdout.String() != test.want {
+			t.Errorf("readlink %q: got %q, %v; want %q", test.args, stdout.String(), err, test.want)
+		}
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// When
-			err := applet.Run(context.Background(), tt.args, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
-
-			// Then
-			if err == nil || err.Error() != tt.want {
-				t.Fatalf("expected unsupported option error %q, got %v", tt.want, err)
-			}
-		})
+	var stdout, stderr bytes.Buffer
+	err := lookupReadlink(t).Run(context.Background(), []string{"-f", filepath.Join(dir, "no", "such")}, &bytes.Buffer{}, &stdout, &stderr)
+	if !errors.Is(err, applets.ErrExitFalse) || stdout.String() != "" || stderr.String() != "" {
+		t.Errorf("readlink -f below a missing directory: got %q, %q, %v; want a quiet status 1", stdout.String(), stderr.String(), err)
+	}
+	err = lookupReadlink(t).Run(context.Background(), []string{"-v", file}, &bytes.Buffer{}, &stdout, &stderr)
+	if want := "readlink: " + file + ": cannot read link: not a symlink\n"; !errors.Is(err, applets.ErrExitFalse) || stderr.String() != want {
+		t.Errorf("readlink -v on a file: got %q, %v; want %q", stderr.String(), err, want)
 	}
 }
 

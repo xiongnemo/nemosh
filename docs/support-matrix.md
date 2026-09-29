@@ -699,7 +699,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `top` | `-b -n N -d SEC -s COL -f TEXT -o COLS -H -t` | refused by name |
 | `printf` | format string | treated as the format, which is correct |
 | `pwd` | `-L -P` both accepted | accepted |
-| `readlink` | `-n` | refused by name |
+| `readlink` | `-n -f -v`, and `-s -q`, the quiet that is the default; `-f` prints what `realpath` does, and FILE need not exist if its directory does | refused by name |
 | `rev` | none; reverses runes, not bytes | refused by name |
 | `realpath` | none | treated as a path operand |
 | `rm` | `-f -r` | refused by name |

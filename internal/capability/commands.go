@@ -57,7 +57,7 @@ var commands = []Command{
 	{Name: "ps", Operand: AnyPath},
 	{Name: "top", Short: "bndsfoHt", ValueShort: "ndsfo", Operand: AnyPath},
 	{Name: "pwd", Short: "LP", Operand: AnyPath},
-	{Name: "readlink", Short: "n", Operand: AnyPath},
+	{Name: "readlink", Short: "nfvsq", Operand: AnyPath},
 	{Name: "rev", Operand: AnyPath},
 	{Name: "realpath", Operand: AnyPath},
 	{Name: "rm", Short: "fr", Operand: AnyPath},

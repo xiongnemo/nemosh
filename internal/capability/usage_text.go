@@ -66,7 +66,7 @@ var usageText = map[string]Usage{
 		"for anything this session does not own.",
 	}},
 	"pwd":      {Summary: "Print the working directory.", Options: map[string]string{"L": "print it as the shell remembers it, symlinks and all", "P": "resolve every symlink first"}},
-	"readlink": {Summary: "Print what a symbolic link points at.", Operands: "FILE...", Options: map[string]string{"n": "no trailing newline"}},
+	"readlink": {Summary: "Print what a symbolic link points at.", Operands: "FILE", Options: map[string]string{"n": "no trailing newline", "f": "print the canonical path, every link followed; FILE need not exist if its directory does", "v": "say why a link cannot be read", "s": "say nothing on failure, which is the default", "q": "the same as -s"}},
 	"realpath": {Summary: "Resolve a path to an absolute one with no symlinks.", Operands: "FILE..."},
 	"rev":      {Summary: "Reverse the characters of every line.", Operands: "[FILE]..."},
 	"rm":       {Summary: "Remove files and directories.", Operands: "FILE...", Options: map[string]string{"f": "do not complain about what is not there", "r": "remove directories and their contents"}},
