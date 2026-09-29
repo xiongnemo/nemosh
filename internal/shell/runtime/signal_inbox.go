@@ -61,6 +61,20 @@ func (b *signalInbox) offer(signal int) bool {
 	return true
 }
 
+// raise holds signal for the next boundary whether or not anything catches it: the shell has
+// sent it to itself, and the default action is its own to take there. It reports whether
+// there was an inbox to hold it.
+func (b *signalInbox) raise(signal int) bool {
+	if b == nil {
+		return false
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.pending = append(b.pending, signal)
+	b.waiting.Store(true)
+	return true
+}
+
 // catch records whether name's signal is caught, as `trap` arms or resets it.
 func (b *signalInbox) catch(name trapName, caught bool) {
 	signal := signalNumber(name)

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -63,7 +64,30 @@ func (r Runtime) killOne(operand string, signal int) error {
 	if id, found := r.jobScope.lookupPID(pid); found {
 		return r.killJob("%"+strconv.FormatUint(uint64(id), 10), signal)
 	}
+	if pid == os.Getpid() && signal != 0 && r.killSelf(signal) {
+		return nil
+	}
 	return proc.Terminate(pid, signal)
+}
+
+// killSelf takes `kill -TERM $$`, the shell's signal to itself, as bash takes one: its trap
+// runs once the kill has finished, and one nothing catches ends the script with 128+n, the
+// EXIT trap still running. It went to proc.Terminate, which ended the process on the spot
+// with every trap unrun and an exit code a parent read as 0. busybox-w32 ignores it. A
+// prompt ignores TERM, INT and QUIT it has no trap for, as bash's does, so `kill $$` typed
+// there does not close the terminal. It reports whether it took the signal, which a
+// subshell, having no inbox, cannot.
+func (r Runtime) killSelf(signal int) bool {
+	if r.interactive.session && r.subshellDepth == 0 {
+		if r.signals.offer(signal) {
+			return true
+		}
+		switch signal {
+		case 2, 3, 15:
+			return true
+		}
+	}
+	return r.signals.raise(signal)
 }
 
 // killJob sends one background job a signal.
