@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 1968 of the 2551 cases bash passes: 77.1%.**
+**nemosh passes 1970 of the 2551 cases bash passes: 77.2%.**
 
-Of the other 583, it does 105 the way the files record of ash, which may be busybox's
-way, and 478 neither way.
+Of the other 581, it does 105 the way the files record of ash, which may be busybox's
+way, and 476 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 478 neither way.
 | left out on Windows | 67 |
 | measured | 2668 |
 | that bash passes | 2551 |
-| that nemosh passes of those | 1968 |
+| that nemosh passes of those | 1970 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -101,12 +101,12 @@ of ash.
 | command-sub.test.sh | 30 | 28 | 27 | 96.4% | 1 | 28 |
 | command_.test.sh | 8 | 6 | 3 | 50.0% | 0 | 4 |
 | comments.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
-| dbracket.test.sh | 49 | 49 | 30 | 61.2% | 0 | 19 |
+| dbracket.test.sh | 49 | 49 | 31 | 63.3% | 0 | 19 |
 | divergence.test.sh | 3 | 3 | 2 | 66.7% | 0 | 3 |
 | dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 0 |
 | empty-bodies.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 |
 | errexit-osh.test.sh | 35 | 35 | 31 | 88.6% | 0 | 35 |
-| errexit.test.sh | 35 | 34 | 29 | 85.3% | 2 | 35 |
+| errexit.test.sh | 35 | 34 | 30 | 88.2% | 2 | 35 |
 | exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
 | extglob-files.test.sh | 23 | 23 | 18 | 78.3% | 0 | 0 |
@@ -172,4 +172,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 10 | 58.8% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2668 | 2551 | 1968 | 77.1% | 105 | 1447 |
+| all | 2668 | 2551 | 1970 | 77.2% | 105 | 1447 |

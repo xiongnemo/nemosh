@@ -525,7 +525,6 @@
       "[[ -z '\u003e' a ]] is syntax error": "fail",
       "[[ -z ]] is syntax error": "fail",
       "[[ ]] is syntax error": "fail",
-      "[[ ]] with redirect": "fail",
       "[[ a 3\u003c b ]] doesn't work (bug regression)": "fail",
       "[[ compound expressions": "fail",
       "[[ over multiple lines is OK": "fail",
@@ -551,7 +550,6 @@
     },
     "errexit.test.sh": {
       "More \u0026\u0026 ||": "fail",
-      "bash atoms [[ (( - redir failure checked": "fail",
       "brace group - redir failure checked": "ash-only",
       "errexit and time { }": "fail",
       "set -e in function #2": "ash-only",
