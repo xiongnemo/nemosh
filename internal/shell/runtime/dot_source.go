@@ -4,6 +4,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 // `. name` without a slash looks for name on PATH first, as both references do, and a file
@@ -33,8 +35,15 @@ func (r Runtime) dotSource(name string) (string, string, error) {
 // references read it: `. /dev/null` is an empty script, and `. /dev/stdin <<EOF` and `... |
 // . /dev/stdin` run what arrives on the shell's input. Each was "not a regular file".
 func (r Runtime) readDotSource(native, device string) ([]byte, error) {
+	// A directory is refused as it is opened, as every reader here refuses one; Windows lets Go
+	// open it, and the read failed with `Incorrect function`.
 	if device == "" {
-		return os.ReadFile(native)
+		file, err := applets.OpenHostInput(native)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		return io.ReadAll(file)
 	}
 	fd, alias, err := deviceAlias(device)
 	if err != nil {

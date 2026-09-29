@@ -208,7 +208,7 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		// and without this it was a failed lookup for a program named `:`.
 		return 0
 	case ".", "source":
-		return r.dot(ctx, args[1:])
+		return r.dot(ctx, args)
 	case "cd":
 		return r.cd(args[1:])
 	case "command":

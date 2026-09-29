@@ -313,10 +313,12 @@
       "Eval in bash does tilde expansion in array": "fail",
       "Eval in does tilde expansion": "fail",
       "Eval with syntax error": "ash-only",
+      "Source nonexistent": "fail",
       "Source with syntax error": "ash-only",
       "eval YSH block with 'break continue return error'": "fail",
       "eval accepts/ignores --": "fail",
-      "eval usage": "fail"
+      "eval usage": "fail",
+      "source doesn't crash when targeting a directory": "fail"
     },
     "builtin-fc.test.sh": {
       "fc -l [first] [last] where first and last are indexes": "fail",

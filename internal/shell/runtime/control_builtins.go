@@ -10,7 +10,9 @@ import (
 // leading assignments persist after it completes (2.9.1) and are applied here
 // before the transfer leaves.
 func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation, savedStatus int) (lineResult, bool) {
-	args = throughCommandPrefix(args)
+	named := throughCommandPrefix(args)
+	prefixed := len(named) != len(args)
+	args = named
 	switch args[0] {
 	case "exit", "exec", "return", "break", "continue", "eval", ".", "source":
 	default:
@@ -26,7 +28,7 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 		}), true
 	case ".", "source":
 		return r.withAppliedRedirectsFor(true, operations, func(redirected Runtime) lineResult {
-			return redirected.dotResult(ctx, args[1:], savedStatus)
+			return redirected.dotResult(ctx, args, savedStatus, !prefixed)
 		}), true
 	case "exit", "return", "break", "continue":
 		// Their redirections are made as any command's are, though nothing is written through
