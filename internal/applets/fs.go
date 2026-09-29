@@ -2,19 +2,27 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
+	"syscall"
 )
 
-// mkdir takes -p and -m, the two options busybox's getopt32long string carries
-// besides -v (coreutils/mkdir.c:63). Without option parsing the flags were
-// taken as operands, so `mkdir -p a/b/c` created a directory literally named
-// -p and then failed to create a/b/c because its parents were missing.
+// mkdir is busybox's (coreutils/mkdir.c and libbb/make_directory.c): `mkdir [-pv] [-m MODE]
+// DIRECTORY...`. -p makes every missing parent and takes a directory that is already there;
+// -m sets the mode of the last one to MODE exactly, as chmod reads MODE; -v says `created
+// directory: 'x'` for each one made, a parent's name with the slash it ends at. --parents,
+// --mode and --verbose stand for their letters.
+//
+// -v was read and said nothing. Without option parsing the flags were once taken as operands,
+// so `mkdir -p a/b/c` created a directory literally named -p.
 func newMkdirApplet() Applet {
-	return simpleApplet{name: "mkdir", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "pv", "m")
+	return simpleApplet{name: "mkdir", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout io.Writer, _ io.Writer) error {
+		options, operands, err := parseAppletOptions(ctx, longOptionWords(args, map[string]string{"parents": "p", "verbose": "v", "mode": "m"}), "pv", "m")
 		if err != nil {
 			return err
 		}
@@ -28,15 +36,11 @@ func newMkdirApplet() Applet {
 		}
 		made := true
 		for _, path := range operands {
-			native, err := resolveHostPath(view, path)
-			if err != nil {
-				return err
-			}
-			if err := makeDirectory(native, mode, options.has('p')); err != nil {
+			if err := makeDirectory(view, path, options, mode, stdout); err != nil {
 				// Of several operands, one that cannot be made is named and the rest made; see
 				// operand_reporter.go.
-				if len(operands) == 1 || !reportOperand(ctx, cannotCreateDirectory(path, err)) {
-					return cannotCreateDirectory(path, err)
+				if len(operands) == 1 || !reportOperand(ctx, err) {
+					return err
 				}
 				made = false
 			}
@@ -61,28 +65,117 @@ func mkdirMode(options appletOptions, umask uint32) (os.FileMode, error) {
 	return fileModeOfBits(parsed), nil
 }
 
-// -p makes every missing parent and accepts a target that is already a
-// directory; without it only the last component is created and an existing one
-// is an error.
-func makeDirectory(native string, mode os.FileMode, parents bool) error {
-	if !parents {
-		return os.Mkdir(native, mode)
-	}
-	if info, err := os.Stat(native); err == nil && info.IsDir() {
+// makeDirectory is bb_make_directory: with -p each missing parent is made in turn, a name ending
+// at the slash after it, and one that is already a directory is passed over. A failure names the
+// step it came at, `f/` of `f/x`, as busybox's does. `/` and `.` have nothing to make.
+func makeDirectory(view ProcessView, path string, options appletOptions, mode os.FileMode, stdout io.Writer) error {
+	if path == "/" || path == "." {
 		return nil
 	}
-	return os.MkdirAll(native, mode)
+	display := filepath.ToSlash(path)
+	steps := []string{display}
+	if options.has('p') {
+		steps = directoryPrefixes(display)
+	}
+	for index, step := range steps {
+		native, err := resolveHostPath(view, step)
+		if err != nil {
+			return err
+		}
+		last := index == len(steps)-1
+		if err := makeOneDirectory(native); err != nil {
+			if !options.has('p') || !errors.Is(err, fs.ErrExist) {
+				return cannotCreateDirectory(step, err)
+			}
+			switch info, statErr := os.Stat(native); {
+			case statErr == nil && info.IsDir():
+				if last {
+					return nil
+				}
+				continue
+			// stat(2) says `f/` of a file is no directory, where Windows calls the name invalid.
+			case strings.HasSuffix(step, "/") && !errors.Is(statErr, fs.ErrNotExist):
+				return cannotCreateDirectory(step, errNotADirectory)
+			case statErr != nil:
+				return cannotCreateDirectory(step, statErr)
+			}
+			return cannotCreateDirectory(step, err)
+		}
+		if options.has('v') {
+			fmt.Fprintf(stdout, "created directory: '%s'\n", step)
+		}
+		if last && options.has('m') {
+			if err := applyPermissions(native, bitsOfFileMode(mode), true); err != nil {
+				return fmt.Errorf("cannot set permissions of directory '%s': %s", step, causeText(err))
+			}
+		}
+	}
+	return nil
 }
 
-// rmdir removes directories and nothing else. It used to call os.Remove, which
-// also removes files, so `rmdir notes.txt` deleted the file and reported
-// success -- silent data loss against rmdir(3), which fails with ENOTDIR
-// (coreutils/rmdir.c:73). The stat is a moment before the removal rather than
-// part of it, which is a race Go's portable API leaves no way to close; what it
-// buys is that the ordinary case of naming a file by mistake cannot destroy it.
+// makeOneDirectory is mkdir(2) as busybox-w32's mingw_mkdir has it: Windows refuses a drive's
+// root, `/c/`, with ERROR_ACCESS_DENIED, and a refusal of something already there is EEXIST.
+func makeOneDirectory(native string) error {
+	err := os.Mkdir(native, 0o777)
+	if errors.Is(err, fs.ErrPermission) {
+		if _, statErr := os.Stat(native); statErr == nil {
+			return &fs.PathError{Op: "mkdir", Path: native, Err: fs.ErrExist}
+		}
+	}
+	return err
+}
+
+// directoryPrefixes are the names -p makes in turn: `b/c/d` is `b/`, `b/c/` and `b/c/d`. A root,
+// `/` or `C:/`, is no step of its own.
+func directoryPrefixes(path string) []string {
+	var prefixes []string
+	start := len(filepath.VolumeName(path))
+	for start < len(path) && path[start] == '/' {
+		start++
+	}
+	for index := start; index < len(path); index++ {
+		if path[index] != '/' {
+			continue
+		}
+		end := index
+		for end < len(path) && path[end] == '/' {
+			end++
+		}
+		if end < len(path) {
+			prefixes = append(prefixes, path[:end])
+		}
+		index = end - 1
+	}
+	return append(prefixes, path)
+}
+
+// rmdir is busybox's (coreutils/rmdir.c): `rmdir [-pv] DIRECTORY...` removes each empty
+// DIRECTORY, and with -p each parent after it that is left empty. -v says `rmdir: removing
+// directory, 'x'` before each; --ignore-fail-on-non-empty passes over a DIRECTORY that is not
+// empty without a word; --parents and --verbose stand for their letters.
+//
+// -v was read and said nothing, and --ignore-fail-on-non-empty, which Debian's packages lean on,
+// was refused.
+//
+// rmdir removes directories and nothing else. It used to call os.Remove, which also removes
+// files, so `rmdir notes.txt` deleted the file and reported success -- silent data loss against
+// rmdir(3), which fails with ENOTDIR (coreutils/rmdir.c:73).
 func newRmdirApplet() Applet {
-	return simpleApplet{name: "rmdir", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "pv", "")
+	return simpleApplet{name: "rmdir", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout io.Writer, _ io.Writer) error {
+		ignoreNonEmpty := false
+		var words []string
+		for index, arg := range args {
+			if arg == "--" {
+				words = append(words, args[index:]...)
+				break
+			}
+			if arg == "--ignore-fail-on-non-empty" {
+				ignoreNonEmpty = true
+				continue
+			}
+			words = append(words, arg)
+		}
+		options, operands, err := parseAppletOptions(ctx, longOptionWords(words, map[string]string{"parents": "p", "verbose": "v"}), "pv", "")
 		if err != nil {
 			return err
 		}
@@ -92,13 +185,30 @@ func newRmdirApplet() Applet {
 		view := ProcessViewFromContext(ctx)
 		removed := true
 		for _, path := range operands {
-			if err := removeDirectoryTree(view, path, options.has('p')); err != nil {
-				// Of several operands, one that cannot be removed is named and the rest removed; see
-				// operand_reporter.go.
-				if len(operands) == 1 || !reportOperand(ctx, err) {
+			for {
+				if options.has('v') {
+					fmt.Fprintf(stdout, "rmdir: removing directory, '%s'\n", path)
+				}
+				// A path the shell's view refuses, a disabled /cygdrive, is returned as it is.
+				native, err := resolveHostPath(view, path)
+				if err != nil {
 					return err
 				}
-				removed = false
+				err = removeEmptyDirectory(native)
+				if err != nil && !(ignoreNonEmpty && isNotEmpty(err)) {
+					// Of several operands, one that cannot be removed is named and the rest removed;
+					// see operand_reporter.go.
+					if len(operands) == 1 || !reportOperand(ctx, quotedFailure(path, err)) {
+						return quotedFailure(path, err)
+					}
+					removed = false
+				}
+				// The parent as dirname spells it, with the separators path was written with.
+				parent := dirnameOf(path)
+				if err != nil || !options.has('p') || parent == path || parent == "." || parent == "/" {
+					break
+				}
+				path = parent
 			}
 		}
 		if !removed {
@@ -108,25 +218,9 @@ func newRmdirApplet() Applet {
 	}}
 }
 
-// -p walks up removing each parent in turn, stopping at the first one that will
-// not go, exactly as busybox does with dirname in its loop.
-func removeDirectoryTree(view ProcessView, path string, parents bool) error {
-	for {
-		native, err := resolveHostPath(view, path)
-		if err != nil {
-			return err
-		}
-		if err := removeEmptyDirectory(native); err != nil {
-			return quotedFailure(path, err)
-		}
-		parent := filepath.Dir(path)
-		if !parents || parent == path || parent == "." || parent == string(filepath.Separator) {
-			return nil
-		}
-		path = parent
-	}
-}
-
+// removeEmptyDirectory removes path if it is a directory, which the stat a moment before makes
+// sure of: it is a race Go's portable API leaves no way to close, but the ordinary case of
+// naming a file by mistake cannot destroy it.
 func removeEmptyDirectory(native string) error {
 	info, err := os.Lstat(native)
 	if err != nil {
@@ -136,4 +230,29 @@ func removeEmptyDirectory(native string) error {
 		return errNotADirectory
 	}
 	return os.Remove(native)
+}
+
+// isNotEmpty is whether err says a directory still holds something.
+func isNotEmpty(err error) bool {
+	return errors.Is(err, syscall.ENOTEMPTY) || causeText(err) == "Directory not empty"
+}
+
+// longOptionWords turns each long option in names into the letter it stands for, `--name` and
+// `--name=VALUE` alike, before `--`.
+func longOptionWords(args []string, names map[string]string) []string {
+	words := make([]string, 0, len(args))
+	for index, arg := range args {
+		if arg == "--" {
+			return append(words, args[index:]...)
+		}
+		name, value, valued := strings.Cut(strings.TrimPrefix(arg, "--"), "=")
+		if letter, known := names[name]; known && strings.HasPrefix(arg, "--") {
+			if words = append(words, "-"+letter); valued {
+				words = append(words, value)
+			}
+			continue
+		}
+		words = append(words, arg)
+	}
+	return words
 }

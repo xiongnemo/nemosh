@@ -682,7 +682,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `join` | `-1 -2 -j -t` | refused by name |
 | `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |
 | `micro` | `-H -R`; one file at a time | refused by name |
-| `mkdir` | `-m -p -v` | refused by name |
+| `mkdir` | `-m -p -v` and their long forms; `-v` names each directory made, a parent with its slash | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f -i -n -T -t -v` and busybox's long forms; of `-f -i -n` the last wins, and a read-only destination is replaced as busybox-w32 replaces one | refused by name |
 | `nano` | `-H -R`; one file at a time | refused by name |
@@ -703,7 +703,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `rev` | none; reverses runes, not bytes | refused by name |
 | `realpath` | none | treated as a path operand |
 | `rm` | `-f -i -r -R -v`; of `-f` and `-i` the later wins, `.` and `..` are refused, and a read-only file is removed as busybox-w32 removes one | refused by name |
-| `rmdir` | `-p -v` | refused by name |
+| `rmdir` | `-p -v`, `--ignore-fail-on-non-empty` and the other long forms; `-v` names each directory before it is removed | refused by name |
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
 | `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |

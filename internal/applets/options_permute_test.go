@@ -22,7 +22,12 @@ func (v permuteTestView) LookupEnv(name string) (string, bool) {
 	value, ok := v.env[name]
 	return value, ok
 }
-func (v permuteTestView) ResolvePath(path string) string { return filepath.Join(v.cwd, path) }
+func (v permuteTestView) ResolvePath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(v.cwd, path)
+}
 
 func runPermuted(t *testing.T, view permuteTestView, stdin string, args ...string) (string, string, error) {
 	t.Helper()

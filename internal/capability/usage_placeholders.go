@@ -113,6 +113,7 @@ var valuePlaceholders = map[string]string{
 	"headn":             "LINES",
 	"headc":             "BYTES",
 	"mkdirm":            "MODE",
+	"mkdirmode":         "MODE",
 	"nlb":               "STYLE",
 	"pasted":            "DELIMS",
 	"sortk":             "KEYDEF",
