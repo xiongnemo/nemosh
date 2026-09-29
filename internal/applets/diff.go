@@ -106,12 +106,14 @@ func (r diffRequest) compare(left, right string) bool {
 
 func readDiffLines(ctx context.Context, path string, stdin io.Reader, absentIsEmpty bool) ([]string, error) {
 	var lines []string
-	err := eachTextInput(ctx, []string{path}, stdin, func(reader io.Reader) error {
+	// busybox's diff stats each FILE first, and names one that is not there as it cannot stat
+	// it: `diff: can't stat 'FILE'`.
+	err := eachTextInputNaming(ctx, []string{path}, stdin, func(reader io.Reader) error {
 		return eachLine(reader, func(line, _ string) error {
 			lines = append(lines, line)
 			return nil
 		})
-	})
+	}, cannotStat)
 	if err != nil {
 		if absentIsEmpty {
 			// -N: a missing file is an empty one, which is how a diff shows a

@@ -159,7 +159,7 @@ func newTsortApplet() Applet {
 				return nil
 			})
 		}
-		if err := eachTextInput(ctx, paths, stdin, collect); err != nil {
+		if err := eachTextInputQuoted(ctx, paths, stdin, collect); err != nil {
 			return err
 		}
 		return graph.write(stdout)

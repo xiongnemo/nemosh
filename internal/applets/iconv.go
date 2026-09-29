@@ -61,7 +61,7 @@ func newIconvApplet() Applet {
 			defer file.Close()
 			out = file
 		}
-		return eachTextInput(ctx, paths, stdin, func(reader io.Reader) error {
+		return eachTextInputQuoted(ctx, paths, stdin, func(reader io.Reader) error {
 			return convertEncoding(out, reader, from, to, options.has('c'))
 		})
 	}}

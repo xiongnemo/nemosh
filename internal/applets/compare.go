@@ -254,7 +254,9 @@ func readOperand(ctx context.Context, view ProcessView, path string, stdin io.Re
 	}
 	file, err := OpenProcessInput(ctx, view, path)
 	if err != nil {
-		return nil, cannotOpen(path, err)
+		// cmp, comm, join and paste open theirs as fopen_or_warn does, which names one it
+		// cannot `FILE: No such file or directory`.
+		return nil, operandFailure(path, err)
 	}
 	defer file.Close()
 	return io.ReadAll(file)

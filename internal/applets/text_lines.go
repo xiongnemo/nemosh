@@ -176,7 +176,20 @@ const maxTextLine = 4 * 1024 * 1024
 // The operand is opened through the process view rather than with os.Open,
 // because the shell's path spelling is not the host's; that seam is crossed in
 // exactly one place per applet and this is it.
+//
+// One that cannot be opened ends it, named as busybox's fopen_or_warn names it, `xxd: FILE: No
+// such file or directory`; it said `cannot open 'FILE'`, which is eachTextInputQuoted's.
 func eachTextInput(ctx context.Context, paths []string, stdin io.Reader, body func(io.Reader) error) error {
+	return eachTextInputNaming(ctx, paths, stdin, body, operandFailure)
+}
+
+// eachTextInputQuoted is eachTextInput for the applets whose FILE busybox opens with xfopen,
+// which names one it cannot `cannot open 'FILE'`: iconv, tsort and uuencode.
+func eachTextInputQuoted(ctx context.Context, paths []string, stdin io.Reader, body func(io.Reader) error) error {
+	return eachTextInputNaming(ctx, paths, stdin, body, cannotOpen)
+}
+
+func eachTextInputNaming(ctx context.Context, paths []string, stdin io.Reader, body func(io.Reader) error, name func(string, error) error) error {
 	if len(paths) == 0 {
 		return body(stdin)
 	}
@@ -184,7 +197,7 @@ func eachTextInput(ctx context.Context, paths []string, stdin io.Reader, body fu
 	for _, path := range paths {
 		file, err := OpenProcessOperand(ctx, view, path, stdin)
 		if err != nil {
-			return cannotOpen(path, err)
+			return name(path, err)
 		}
 		bodyErr := body(file)
 		closeErr := file.Close()

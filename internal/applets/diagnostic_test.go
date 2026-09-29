@@ -48,6 +48,22 @@ func TestAppletDiagnostics_nameTheOperandAsWritten_whenTheFileIsMissing(t *testi
 		{applet: "wc", want: "nope.txt: No such file or directory"},
 		// findutils/grep.c:671
 		{applet: "grep", args: []string{"pattern"}, want: "nope.txt: No such file or directory"},
+		// fopen_or_warn_stdin, and then xfunc_die for the ones that read one FILE whole
+		{applet: "cmp", args: []string{"nope.txt"}, want: "nope.txt: No such file or directory"},
+		{applet: "comm", args: []string{"nope.txt"}, want: "nope.txt: No such file or directory"},
+		{applet: "join", args: []string{"nope.txt"}, want: "nope.txt: No such file or directory"},
+		{applet: "paste", want: "nope.txt: No such file or directory"},
+		{applet: "xxd", want: "nope.txt: No such file or directory"},
+		{applet: "base64", want: "nope.txt: No such file or directory"},
+		{applet: "base32", want: "nope.txt: No such file or directory"},
+		{applet: "shuf", want: "nope.txt: No such file or directory"},
+		{applet: "uudecode", want: "nope.txt: No such file or directory"},
+		{applet: "md5sum", args: []string{"-c"}, want: "nope.txt: No such file or directory"},
+		// xfopen, libbb/xfuncs_printf.c:151
+		{applet: "tsort", want: "cannot open 'nope.txt': No such file or directory"},
+		{applet: "iconv", args: []string{"-f", "UTF-8", "-t", "UTF-8"}, want: "cannot open 'nope.txt': No such file or directory"},
+		// diff stats first, editors/diff.c
+		{applet: "diff", args: []string{"nope.txt"}, want: "cannot stat 'nope.txt': No such file or directory"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.applet, func(t *testing.T) {

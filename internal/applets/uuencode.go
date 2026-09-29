@@ -41,7 +41,7 @@ func newUuencodeApplet() Applet {
 		if options.has('m') {
 			return fmt.Errorf("base64 output is not implemented; use `base64` instead")
 		}
-		return eachTextInput(ctx, source, stdin, func(reader io.Reader) error {
+		return eachTextInputQuoted(ctx, source, stdin, func(reader io.Reader) error {
 			return writeUuencoded(stdout, reader, recorded)
 		})
 	}}
