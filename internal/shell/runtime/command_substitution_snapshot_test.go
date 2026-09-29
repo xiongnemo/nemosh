@@ -3,6 +3,7 @@ package runtime_test
 import (
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -102,13 +103,14 @@ func TestCommandSubstitution_doesNotMutateParentUmask(t *testing.T) {
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout})
 
 	// When
-	status := rt.RunScript(context.Background(), "echo $(umask 077)\numask\n")
+	status := rt.RunScript(context.Background(), "umask\necho $(umask 077)\numask\n")
 
-	// Then
+	// Then: the mask after is the one before, whatever the shell started with.
 	if status != 0 {
 		t.Fatalf("expected status 0, got %d", status)
 	}
-	if got := stdout.String(); got != "\n0022\n" {
-		t.Fatalf("expected parent umask output %q, got %q", "\n0022\n", got)
+	lines := strings.Split(stdout.String(), "\n")
+	if len(lines) != 4 || lines[0] != lines[2] || lines[1] != "" {
+		t.Fatalf("expected the parent's umask unchanged around the substitution, got %q", stdout.String())
 	}
 }

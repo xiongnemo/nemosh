@@ -9,15 +9,18 @@ type fileModeMask struct {
 	value uint16
 }
 
+// newFileModeMask is a new shell's umask: on Linux and macOS the process's own, which it was
+// given, as every shell starts from; on Windows, which gives none, 0022. It was 0022
+// everywhere, so on Linux `umask` said 0022 whatever the process had.
 func newFileModeMask() *fileModeMask {
-	return &fileModeMask{value: 0o022}
+	return &fileModeMask{value: initialFileModeMask}
 }
 
 // FileModeMask is the umask, for the applets that read one: chmod filters a MODE with no class
 // letters through it.
 func (r Runtime) FileModeMask() uint16 {
 	if r.mask == nil {
-		return 0o022
+		return initialFileModeMask
 	}
 	return r.mask.value
 }
