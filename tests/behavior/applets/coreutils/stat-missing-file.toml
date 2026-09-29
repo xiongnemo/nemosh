@@ -1,0 +1,17 @@
+id = "applet.busybox-w32.stat.missing-file"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+files = { "five" = "hello" }
+script = "stat -c %n nosuch five\nstat -f nosuch\n"
+
+[expect]
+status = 1
+stdout = "five\n"
+stderr = "stat: cannot stat 'nosuch': No such file or directory\nstat: cannot read file system information for 'nosuch': No such file or directory\n"
+
+[notes]
+standard = "BusyBox-w32 coreutils/stat.c"
+why = "do_stat and do_statfs name a FILE they cannot ask about with bb_perror_msg, `can't stat '%s'` and `can't read file system information for '%s'` (coreutils/stat.c:493, 608), and stat_main goes on to the next and exits 1. `can't` is spelled `cannot` here, as every applet's open failure is."

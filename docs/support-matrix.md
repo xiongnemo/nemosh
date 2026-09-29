@@ -716,7 +716,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
 | `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
 | `sort` | busybox's `-n -g -h -M -V -u -c -s -z -b -r -d -f -i -o -k -t`, keys with character offsets and their own letters; `-m -S -T` taken and ignored | refused by name |
-| `stat` | `-c FORMAT` with `%n %s %F %f %y %Y`; the default output is refused | refused by name |
+| `stat` | `-c -t -L -f`: busybox's layout, its terse line, and every letter of its `-c` and `-f` formats, each with printf's flags, width and precision. On Windows the values are busybox-w32's: the volume's serial number for the device, the file's index for the inode, 4095 for the account's own files and 0 for a system account's, the mode made up as `chmod` makes it up, and the creation time for the change time | refused by name |
 | `split` | `-l -b -a`, `-b` with `b k m g`; the bytes as they come, and as many letters as `-a` asks, `aa` upwards by default | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
@@ -759,10 +759,6 @@ Three of these diverge from GNU on purpose, and say so where it matters:
   says 6. Go cannot read allocation size portably, and a `du` that silently means
   something slightly different from the one in a script is worse than one that is
   documented to mean apparent size. GNU spells this `--apparent-size`.
-- **`stat` implements only `-c FORMAT`.** The default output is inode numbers,
-  device ids, permission bits in two notations and three timestamps -- mostly
-  fields Windows has not got or reports through a different API, and a block of
-  zeroes would be indistinguishable from a real answer.
 - **`ps` prints `PID` and `COMMAND` and nothing else.** No TTY, no STAT, no TIME,
   not the command line: Windows has no controlling terminal in the POSIX sense,
   and reading another process's command line means walking its PEB, which an

@@ -137,7 +137,7 @@ var commands = []Command{
 	{Name: "seq", Short: "ws", ValueShort: "s", Operand: AnyPath},
 	{Name: "sleep", Operand: AnyPath},
 	{Name: "sort", Short: "nghMVucszbrdfimSTokt", ValueShort: "STokt", Operand: AnyPath},
-	{Name: "stat", Short: "c", ValueShort: "c", Operand: AnyPath},
+	{Name: "stat", Short: "tLfc", ValueShort: "c", Operand: AnyPath},
 	{Name: "split", Short: "lba", ValueShort: "lba", Operand: AnyPath},
 	// su's operand is a user name rather than a path, and the only name it takes
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,

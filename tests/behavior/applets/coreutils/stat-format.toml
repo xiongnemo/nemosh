@@ -1,0 +1,23 @@
+id = "applet.busybox-w32.stat.format"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+files = { "five" = "hello", "empty" = "" }
+script = '''
+mkdir d
+stat -c '%n|%s|%F' five empty
+stat -c '%n|%F' d
+stat -c '[%5q][%-6n][%06n][%.2n][%5%][%B]' five
+stat -c 'no newline after a lone %' five
+'''
+
+[expect]
+status = 0
+stdout = "five|5|regular file\nempty|0|regular empty file\nd|directory\n[    q][five  ][00five][fi][%][512]\nno newline after a lone %"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 coreutils/stat.c"
+why = "print_it (coreutils/stat.c:410-464) hands each % and the flags, width and precision after it to printf with the letter's own conversion. A letter stat does not know is printed as a character, %% is a % whatever stands between, and a % that ends the format is printed with no newline after it. busybox-w32's printf pads a string with zeros for the 0 flag. Each line was measured against busybox-w32. stat took -c with six letters and refused the rest."

@@ -155,32 +155,6 @@ func TestStat(t *testing.T) {
 			t.Fatalf("stat = %q, want directory", got)
 		}
 	})
-
-	t.Run("a specifier this does not implement is refused", func(t *testing.T) {
-		// Leaving `%i` on the line as literal text is the failure worth avoiding:
-		// a script would put it in a filename and never find out why.
-		// When
-		_, err := runInDirectory(t, "stat", file, "-c", "%i")
-
-		// Then
-		if err == nil || !strings.Contains(err.Error(), "unsupported format specifier") {
-			t.Fatalf("stat -c %%i = %v, want a refusal naming the specifier", err)
-		}
-	})
-
-	t.Run("the default output is refused with a reason", func(t *testing.T) {
-		// GNU's default block is mostly inode numbers, device ids and permission
-		// bits in two notations -- fields Windows either has not got or reports
-		// through a different API. A block of zeroes would be indistinguishable
-		// from a real answer.
-		// When
-		_, err := runInDirectory(t, "stat", file)
-
-		// Then
-		if err == nil || !strings.Contains(err.Error(), "-c FORMAT") {
-			t.Fatalf("stat with no -c = %v, want a refusal naming the form that works", err)
-		}
-	})
 }
 
 // ps is a formatter over the process list internal/proc already keeps for pgrep, pkill and the

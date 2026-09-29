@@ -1,0 +1,16 @@
+id = "applet.busybox-w32.stat.dev-null"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows"]
+references = ["busybox-w32"]
+script = "stat -c '%F|%s|%a|%A|%h|%D|%i|%t,%T|%Y' /dev/null\nstat -t /dev/null\n"
+
+[expect]
+status = 0
+stdout = "character special file|0|666|crw-rw-rw-|1|0|0|0,0|0\n/dev/null 0 0 21b6 4095 4095 0 0 1 0 0 0 0 0 4096\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 win32/mingw.c"
+why = "busybox-w32 makes up a stat for its own devices (win32/mingw.c:413-421): a character device, rw for everyone, of no size, on no volume and dated the epoch, owned by its own uid, 4095. The shell's /dev/null is described so, as busybox-w32 prints it under its own shell. Windows-only because elsewhere /dev/null is the system's."

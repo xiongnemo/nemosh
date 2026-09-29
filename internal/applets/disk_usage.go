@@ -1,15 +1,11 @@
 package applets
 
 import (
-	"context"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
-	"strings"
 )
 
-// du reports how much disk a tree uses, and stat reports what one file is.
+// du reports how much disk a tree uses.
 
 // duBlock is the unit du counts in. GNU's default is 1024-byte blocks, which is
 // why `du -s .` on a 17KB tree says 17 rather than 17408.
@@ -66,107 +62,4 @@ func humanReadable(value, blockSize, unit uint64) string {
 		return strconv.FormatUint(value, 10)
 	}
 	return fmt.Sprintf("%d.%d%s", value, fraction, suffixes[index])
-}
-
-// stat reports what a file is, through `-c` and a format string.
-//
-// Only `-c` is implemented, and only the specifiers below. The default output --
-// GNU's multi-line block with inode numbers, device ids, permission bits in two
-// notations and three timestamps -- is mostly fields Windows either does not have
-// or reports through an entirely different API. Printing a block of zeroes and
-// question marks would be the kind of answer a script cannot tell from a real
-// one.
-//
-//	%n  name as given      %s  size in bytes
-//	%F  file type          %f  raw mode, in hex
-//	%y  modification time  %Y  the same as a Unix timestamp
-func newStatApplet() Applet {
-	return simpleApplet{name: "stat", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "", "c")
-		if err != nil {
-			return err
-		}
-		if !options.has('c') {
-			return fmt.Errorf("only the -c FORMAT form is implemented; the default output is mostly fields Windows does not have")
-		}
-		if len(paths) == 0 {
-			return missingOperand()
-		}
-		view := ProcessViewFromContext(ctx)
-		stated := true
-		for _, path := range paths {
-			native, err := resolveHostPath(view, path)
-			if err != nil {
-				return err
-			}
-			info, err := os.Stat(native)
-			if err != nil {
-				// Of several operands, one that is not there is named and the rest described; see
-				// operand_reporter.go.
-				if len(paths) == 1 || !reportOperand(ctx, cannotOpen(path, err)) {
-					return cannotOpen(path, err)
-				}
-				stated = false
-				continue
-			}
-			line, err := formatStat(options.value('c'), path, info)
-			if err != nil {
-				return err
-			}
-			if _, err := fmt.Fprintln(stdout, line); err != nil {
-				return err
-			}
-		}
-		if !stated {
-			return ExitStatus(1)
-		}
-		return nil
-	}}
-}
-
-// formatStat expands the format, refusing a specifier it does not implement
-// rather than leaving it on the line.
-//
-// Leaving `%i` as the literal text `%i` is the failure mode worth avoiding: a
-// script would put it in a filename and never find out why.
-func formatStat(format, name string, info os.FileInfo) (string, error) {
-	var out strings.Builder
-	for index := 0; index < len(format); index++ {
-		if format[index] != '%' || index+1 >= len(format) {
-			out.WriteByte(format[index])
-			continue
-		}
-		index++
-		switch format[index] {
-		case 'n':
-			out.WriteString(name)
-		case 's':
-			fmt.Fprintf(&out, "%d", info.Size())
-		case 'F':
-			out.WriteString(statFileType(info))
-		case 'f':
-			fmt.Fprintf(&out, "%x", uint32(info.Mode().Perm()))
-		case 'y':
-			out.WriteString(info.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
-		case 'Y':
-			fmt.Fprintf(&out, "%d", info.ModTime().Unix())
-		case '%':
-			out.WriteByte('%')
-		default:
-			return "", fmt.Errorf("unsupported format specifier: %%%c", format[index])
-		}
-	}
-	return out.String(), nil
-}
-
-func statFileType(info os.FileInfo) string {
-	switch {
-	case info.IsDir():
-		return "directory"
-	case info.Mode()&os.ModeSymlink != 0:
-		return "symbolic link"
-	case !info.Mode().IsRegular():
-		return "special file"
-	}
-	return "regular file"
 }
