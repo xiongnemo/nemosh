@@ -38,66 +38,6 @@ func runWithFiles(t *testing.T, name string, files map[string]string, args ...st
 	return stdout.String(), err
 }
 
-// cmp's message is GNU's, and it goes to stdout rather than stderr -- surprising,
-// and measured:
-//
-//	$ cmp c1 c2
-//	c1 c2 differ: char 3, line 1
-//	$ echo $?
-//	1
-func TestCmp(t *testing.T) {
-	files := map[string]string{"c1": "abc\n", "c2": "abd\n", "c3": "abc\n", "long": "abc\nmore\n"}
-
-	t.Run("identical files say nothing and succeed", func(t *testing.T) {
-		// When
-		got, err := runWithFiles(t, "cmp", files, "c1", "c3")
-
-		// Then
-		if err != nil || got != "" {
-			t.Fatalf("cmp = (%q, %v), want silence and success", got, err)
-		}
-	})
-
-	t.Run("a difference names the byte and the line", func(t *testing.T) {
-		// When
-		got, err := runWithFiles(t, "cmp", files, "c1", "c2")
-
-		// Then
-		if err == nil {
-			t.Fatal("cmp reported success for differing files")
-		}
-		if !strings.Contains(got, "differ: char 3, line 1") {
-			t.Fatalf("cmp said %q, want GNU's wording", got)
-		}
-	})
-
-	t.Run("-s says nothing and leaves only the status", func(t *testing.T) {
-		// When
-		got, err := runWithFiles(t, "cmp", files, "-s", "c1", "c2")
-
-		// Then
-		if err == nil {
-			t.Fatal("cmp -s reported success for differing files")
-		}
-		if got != "" {
-			t.Fatalf("cmp -s wrote %q, want nothing", got)
-		}
-	})
-
-	t.Run("a prefix is reported as EOF rather than a byte that is not there", func(t *testing.T) {
-		// When
-		got, err := runWithFiles(t, "cmp", files, "c1", "long")
-
-		// Then
-		if err == nil {
-			t.Fatal("cmp reported success for files of different length")
-		}
-		if !strings.Contains(got, "EOF on") {
-			t.Fatalf("cmp said %q, want it to name the shorter file", got)
-		}
-	})
-}
-
 // comm's three columns are identified by how far they are indented, which is why
 // suppressing one shifts the others left.
 //

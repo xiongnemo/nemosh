@@ -651,7 +651,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `cat` | `-n -b -v -e -t -A`, `-u` taken and ignored | refused by name |
 | `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
 | `clear` | none | refused by name |
-| `cmp` | `-s -l`; the message goes to stdout, as GNU's does | refused by name |
+| `cmp` | `-s -l -n`, `--bytes --quiet --silent --verbose`, FILE2 stdin when it is not given, and SKIP1 SKIP2 with K M G; `a b differ: byte 5, line 2` on stdout, and `cmp: EOF on FILE` on stderr, as busybox's editors/cmp.c has them; 0 the same, 1 different, 2 trouble | refused by name |
 | `comm` | `-1 -2 -3` | refused by name |
 | `expand` | `-t -i` | refused by name |
 | `ftpget` | `-u -p -P -v`; `-c` accepted, resuming is not implemented | refused by name |

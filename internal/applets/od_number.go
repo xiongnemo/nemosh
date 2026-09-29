@@ -21,11 +21,16 @@ var (
 // its type, of most typeMax, cannot hold are invalid; one past upper, or that the suffix takes
 // past the type, is out of range.
 func busyboxNumber(text string, typeMax, upper uint64, suffixes map[string]uint64) (uint64, error) {
+	return busyboxNumberBase(text, 0, typeMax, upper, suffixes)
+}
+
+// busyboxNumberBase is busyboxNumber in base, as xatoull_sfx reads a decimal one.
+func busyboxNumberBase(text string, base int, typeMax, upper uint64, suffixes map[string]uint64) (uint64, error) {
 	invalid := fmt.Errorf("invalid number '%s'", text)
 	if text == "" || strings.IndexByte("+- \t\n\v\f\r", text[0]) >= 0 {
 		return 0, invalid
 	}
-	value, rest, ok := cNumberPrefix(text, 0)
+	value, rest, ok := cNumberPrefix(text, base)
 	multiplier, known := suffixes[rest]
 	if rest == "" {
 		multiplier, known = 1, true

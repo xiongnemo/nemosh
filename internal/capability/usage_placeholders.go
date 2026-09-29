@@ -107,6 +107,8 @@ var valuePlaceholders = map[string]string{
 	"cutd":                   "DELIM",
 	"cutf":                   "LIST",
 	"cutF":                   "LIST",
+	"cmpn":                   "NUM",
+	"cmpbytes":               "NUM",
 	"cutO":                   "SEP",
 	"cutoutput-delimiter":    "SEP",
 	"dated":                  "DATESTRING",

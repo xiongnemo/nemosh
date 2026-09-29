@@ -23,7 +23,7 @@ var commands = []Command{
 	{Name: "cat", Short: "Abentuv", Operand: AnyPath},
 	{Name: "chmod", Short: "Rcvf", Operand: AnyPath},
 	{Name: "clear", Operand: AnyPath},
-	{Name: "cmp", Short: "sl", Operand: AnyPath},
+	{Name: "cmp", Short: "sln", ValueShort: "n", Long: []string{"bytes", "quiet", "silent", "verbose"}, ValueLong: []string{"bytes"}, Operand: AnyPath},
 	{Name: "comm", Short: "123", Operand: AnyPath},
 	{Name: "cp", Short: "adfHiLlnPprRsTtuv", ValueShort: "t", Operand: AnyPath},
 	{Name: "cut", Short: "bcfFdOsDn", ValueShort: "bcfFdO", Long: []string{"output-delimiter"}, ValueLong: []string{"output-delimiter"}, Operand: AnyPath},

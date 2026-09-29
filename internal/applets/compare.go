@@ -8,82 +8,10 @@ import (
 	"strings"
 )
 
-// cmp, comm and paste: the three that take two inputs at once.
+// comm and paste, which take two inputs at once; cmp is in cmp.go.
 //
 // Measured against GNU coreutils, which is what these names mean to anyone who
 // types them.
-
-// cmp reports the first byte where two files differ.
-//
-// GNU's wording, measured:
-//
-//	$ cmp c1 c2
-//	c1 c2 differ: char 3, line 1
-//	$ echo $?
-//	1
-//
-// One-based, both counts, and the message goes to stdout rather than stderr --
-// which is surprising, and is GNU's behaviour. `-s` says nothing at all and
-// leaves only the status, which is how a script uses it.
-func newCmpApplet() Applet {
-	return simpleApplet{name: "cmp", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "sl", "")
-		if err != nil {
-			return err
-		}
-		if len(paths) != 2 {
-			return fmt.Errorf("expected two operands, got %d", len(paths))
-		}
-		view := ProcessViewFromContext(ctx)
-		contents := make([][]byte, 2)
-		for index, path := range paths {
-			data, err := readOperand(ctx, view, path, stdin)
-			if err != nil {
-				// Trouble is 2, as busybox's cmp has it, apart from 1 for files that differ. A
-				// missing operand answered 1, and a script could not tell it from a difference.
-				return ExitStatusMessage(2, err)
-			}
-			contents[index] = data
-		}
-		offset, line, differ := firstDifference(contents[0], contents[1])
-		if !differ {
-			return nil
-		}
-		if options.has('s') {
-			return ExitStatus(1)
-		}
-		if len(contents[0]) != len(contents[1]) && offset == min(len(contents[0]), len(contents[1])) {
-			// One is a prefix of the other. GNU says so rather than naming a
-			// byte that does not exist in the shorter file.
-			shorter := paths[0]
-			if len(contents[1]) < len(contents[0]) {
-				shorter = paths[1]
-			}
-			fmt.Fprintf(stdout, "cmp: EOF on %s\n", shorter)
-			return ExitStatus(1)
-		}
-		fmt.Fprintf(stdout, "%s %s differ: char %d, line %d\n", paths[0], paths[1], offset+1, line)
-		return ExitStatus(1)
-	}}
-}
-
-// firstDifference returns the byte offset, the one-based line it falls on, and
-// whether there was one at all.
-func firstDifference(left, right []byte) (int, int, bool) {
-	line := 1
-	for index := 0; index < len(left) && index < len(right); index++ {
-		if left[index] != right[index] {
-			return index, line, true
-		}
-		if left[index] == '\n' {
-			line++
-		}
-	}
-	if len(left) == len(right) {
-		return 0, 0, false
-	}
-	return min(len(left), len(right)), line, true
-}
 
 // comm reads two sorted files and prints three columns: lines only in the first,
 // lines only in the second, lines in both.

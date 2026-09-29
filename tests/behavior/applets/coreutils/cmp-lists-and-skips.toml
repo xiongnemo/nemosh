@@ -1,0 +1,24 @@
+id = "applet.busybox-w32.cmp.lists-and-skips"
+area = "applet"
+kind = "golden"
+semantics = "busybox-w32"
+platforms = ["windows", "linux", "darwin"]
+references = ["busybox-w32"]
+files = { "a" = "abc\ndef\n", "b" = "abc\nxyz\n", "p" = "abc\n" }
+script = '''
+cmp a b
+echo "status $?"
+cmp -l a b
+cmp a p 2>&1
+cmp a b 4 4
+cmp -n 4 a b && echo "same in 4"
+'''
+
+[expect]
+status = 0
+stdout = "a b differ: byte 5, line 2\nstatus 1\n5 144 170\n6 145 171\n7 146 172\ncmp: EOF on p\na b differ: byte 1, line 1\nsame in 4\n"
+stderr = ""
+
+[notes]
+standard = "BusyBox-w32 editors/cmp.c"
+why = "busybox's cmp says `byte`, lists every difference with -l, the position and the two bytes in octal, passes over SKIP1 and SKIP2 bytes and counts from there, compares no more than -n's NUM, and writes `cmp: EOF on FILE` to stderr. Measured byte for byte against busybox-w32. cmp said `char`, read -l and printed only the first difference, and took neither SKIP nor -n."
