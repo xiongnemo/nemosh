@@ -23,7 +23,7 @@ const (
 // destination could not be made, which is what a failure names rather than the removal's error.
 func (r *cpRun) askAndUnlink(dest pathOperand, cause error) unlinkAnswer {
 	if r.flags.interactive {
-		fmt.Fprintf(r.stderr, "cp: overwrite '%s'? ", dest.operand)
+		fmt.Fprintf(r.stderr, "%s: overwrite '%s'? ", r.name(), dest.operand)
 		if !askYes(r.stdin) {
 			return unlinkDeclined
 		}
@@ -70,11 +70,11 @@ func askYes(stdin io.Reader) bool {
 func (r *cpRun) finish(source, dest pathOperand, info os.FileInfo) {
 	if r.flags.preserve {
 		if err := os.Chtimes(dest.host, info.ModTime(), info.ModTime()); err != nil {
-			fmt.Fprintf(r.stderr, "cp: cannot preserve times of '%s': %s\n", dest.operand, causeText(err))
+			fmt.Fprintf(r.stderr, "%s: cannot preserve times of '%s': %s\n", r.name(), dest.operand, causeText(err))
 		}
 		r.preserveOwner(dest, info)
 		if err := applyPermissions(dest.host, bitsOfFileMode(info.Mode()), info.IsDir()); err != nil {
-			fmt.Fprintf(r.stderr, "cp: cannot preserve permissions of '%s': %s\n", dest.operand, causeText(err))
+			fmt.Fprintf(r.stderr, "%s: cannot preserve permissions of '%s': %s\n", r.name(), dest.operand, causeText(err))
 		}
 	}
 	r.report(source, dest)
@@ -83,7 +83,7 @@ func (r *cpRun) finish(source, dest pathOperand, info os.FileInfo) {
 // preserveOwner gives the copy its source's owner and group, where the platform has them.
 func (r *cpRun) preserveOwner(dest pathOperand, info os.FileInfo) {
 	if err := copyOwner(dest.host, info); err != nil {
-		fmt.Fprintf(r.stderr, "cp: cannot preserve ownership of '%s': %s\n", dest.operand, causeText(err))
+		fmt.Fprintf(r.stderr, "%s: cannot preserve ownership of '%s': %s\n", r.name(), dest.operand, causeText(err))
 	}
 }
 
@@ -97,8 +97,16 @@ func (r *cpRun) report(source, dest pathOperand) {
 // fail names a failure and makes cp's status 1. It answers false, for a copy not made.
 func (r *cpRun) fail(err error) bool {
 	r.failed = true
-	fmt.Fprintf(r.stderr, "cp: %v\n", err)
+	fmt.Fprintf(r.stderr, "%s: %v\n", r.name(), err)
 	return false
+}
+
+// name is the applet the messages are from.
+func (r *cpRun) name() string {
+	if r.applet == "" {
+		return "cp"
+	}
+	return r.applet
 }
 
 // status is cp's answer: err if the command itself could not go on, and otherwise 1 if any

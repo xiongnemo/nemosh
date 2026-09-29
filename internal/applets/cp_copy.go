@@ -18,8 +18,10 @@ type cpFlags struct {
 	targetDir                                string
 }
 
-// cpRun is one cp: its flags, where it asks and reports, and what it has made so far.
+// cpRun is one cp: its flags, where it asks and reports, and what it has made so far. applet
+// names it in messages, cp unless mv is copying across volumes.
 type cpRun struct {
+	applet         string
 	flags          cpFlags
 	stdin          io.Reader
 	stdout, stderr io.Writer

@@ -137,6 +137,18 @@ func (r *cpRun) copyInto(source, dest pathOperand) {
 	r.copy(source, pathOperand{host: filepath.Join(dest.host, filepath.FromSlash(name)), operand: joinOperand(dest.operand, name)}, true)
 }
 
+// pathOperand pairs a resolved host path with the operand the user typed, so the call can use
+// the first while a message names the second.
+type pathOperand struct {
+	host    string
+	operand string
+}
+
+// joinHost is a directory's host path and the name of something in it.
+func joinHost(directory, name string) string {
+	return filepath.Join(directory, filepath.FromSlash(name))
+}
+
 // joinOperand is libbb's concat_path_file: a directory's name and a name in it, with one slash
 // between them however many the directory's name ends in.
 func joinOperand(directory, name string) string {

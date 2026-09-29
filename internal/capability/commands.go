@@ -46,7 +46,7 @@ var commands = []Command{
 	{Name: "ls", Short: "ahl1", Long: []string{"color"}, Operand: AnyPath},
 	{Name: "mkdir", Short: "mpv", ValueShort: "m", Operand: Directory},
 	{Name: "mktemp", Short: "dqu", Operand: AnyPath},
-	{Name: "mv", Short: "f", Operand: AnyPath},
+	{Name: "mv", Short: "finTtv", ValueShort: "t", Operand: AnyPath},
 	{Name: "nl", Short: "b", ValueShort: "b", Operand: AnyPath},
 	{Name: "paste", Short: "sd", ValueShort: "d", Operand: AnyPath},
 	{Name: "pgrep", Short: "lx", Operand: AnyPath},

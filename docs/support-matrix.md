@@ -684,7 +684,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `micro` | `-H -R`; one file at a time | refused by name |
 | `mkdir` | `-m -p -v` | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
-| `mv` | `-f`, accepted and already in force | refused by name |
+| `mv` | `-f -i -n -T -t -v` and busybox's long forms; of `-f -i -n` the last wins, and a read-only destination is replaced as busybox-w32 replaces one | refused by name |
 | `nano` | `-H -R`; one file at a time | refused by name |
 | `nc` | `-l -p -w`; `-e` **refused by name** | refused by name |
 | `nl` | `-b t\|a\|n` | refused by name |

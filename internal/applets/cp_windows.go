@@ -40,6 +40,31 @@ func removeDirectory(native string) error {
 // canWrite is whether a file may be written, which on Windows is whether it is not read-only.
 func canWrite(_ string, info os.FileInfo) bool { return info.Mode().Perm()&0o200 != 0 }
 
+// renameForMove renames source to dest as busybox-w32's rename does (win32/mingw.c:1168): a
+// read-only destination is made writable and replaced, and a directory in the way is `Is a
+// directory` rather than access denied.
+func renameForMove(source, dest string) error {
+	err := os.Rename(source, dest)
+	if err == nil || !errors.Is(err, fs.ErrPermission) {
+		return err
+	}
+	info, statErr := os.Stat(dest)
+	if statErr != nil {
+		return err
+	}
+	if info.IsDir() {
+		return &os.LinkError{Op: "rename", Old: source, New: dest, Err: syscall.EISDIR}
+	}
+	if info.Mode().Perm()&0o200 != 0 || os.Chmod(dest, 0o666) != nil {
+		return err
+	}
+	if retry := os.Rename(source, dest); retry != nil {
+		_ = os.Chmod(dest, info.Mode().Perm())
+		return retry
+	}
+	return nil
+}
+
 // copyOwner has nothing to do: a Windows file's owner is its creator, and busybox-w32's chown
 // changes nothing either.
 func copyOwner(string, os.FileInfo) error { return nil }

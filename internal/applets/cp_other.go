@@ -22,6 +22,9 @@ func removeDirectory(native string) error { return os.Remove(native) }
 // canWrite is whether this process may write the file, as access(2) answers.
 func canWrite(native string, _ os.FileInfo) bool { return syscall.Access(native, 2) == nil }
 
+// renameForMove renames source to dest.
+func renameForMove(source, dest string) error { return os.Rename(source, dest) }
+
 // copyOwner gives the copy at native the owner and group info records.
 func copyOwner(native string, info os.FileInfo) error {
 	stat, ok := info.Sys().(*syscall.Stat_t)

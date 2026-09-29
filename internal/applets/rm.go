@@ -26,6 +26,8 @@ import (
 // if every one of them was, so one file in use yields one line and not a line per directory
 // above it.
 type rmRun struct {
+	// applet names it in messages, rm unless mv is removing what it copied across volumes.
+	applet                                 string
 	force, interactive, recursive, verbose bool
 	// terminal is whether stdin is one, the condition for asking about what cannot be written.
 	terminal       bool
@@ -139,13 +141,21 @@ func (r *rmRun) remove(native, display string) bool {
 
 // ask puts a question on stderr and reads the answer from stdin.
 func (r *rmRun) ask(question, display string) bool {
-	fmt.Fprintf(r.stderr, "rm: "+question, display)
+	fmt.Fprintf(r.stderr, r.name()+": "+question, display)
 	return askYes(r.stdin)
 }
 
 // fail names a failure and makes rm's status 1. It answers false, for a file not removed.
 func (r *rmRun) fail(err error) bool {
 	r.failed = true
-	fmt.Fprintf(r.stderr, "rm: %v\n", err)
+	fmt.Fprintf(r.stderr, "%s: %v\n", r.name(), err)
 	return false
+}
+
+// name is the applet the messages are from.
+func (r *rmRun) name() string {
+	if r.applet == "" {
+		return "rm"
+	}
+	return r.applet
 }
