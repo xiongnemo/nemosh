@@ -146,6 +146,7 @@ func portableApplets() []Applet {
 		newUnlinkApplet(),
 		newMktempApplet(),
 		newCpApplet(),
+		newInstallApplet(),
 		newMvApplet(),
 		newChmodApplet(),
 		newGrepApplet(),

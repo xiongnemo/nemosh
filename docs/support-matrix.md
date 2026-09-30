@@ -711,6 +711,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
 | `id` | `-u -g -G -n`, and their clusters | refused by name |
+| `install` | `-c -d -D -p -s -v -b -o -g -m -t` and busybox's long forms; the mode is 0755 or `-m`'s, whatever the umask. `-o` and `-g` take a number or a name, on Windows this session's account or root, and change nothing there, as busybox-w32's chown does not. `-s` runs strip, which is a program and no applet, so it is not found and the status is 1 | refused by name |
 | `ln` | `-s -f -n -b -S -v -T`; `TARGET... DIR`, and a lone `TARGET` linked into the working directory | refused by name |
 | `iconv` | `-f -t -l -c -o` | refused by name |
 | `join` | `-1 -2 -j -t` | refused by name |

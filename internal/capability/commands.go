@@ -42,6 +42,7 @@ var commands = []Command{
 	{Name: "fgrep", Short: "invrRlcqwxFoshHEm", ValueShort: "m", Long: []string{"color"}, Operand: AnyPath},
 	{Name: "head", Short: "ncqv", ValueShort: "nc", Operand: AnyPath},
 	{Name: "id", Short: "ugGn", Operand: AnyPath},
+	{Name: "install", Short: "cvbDdpsgmot", ValueShort: "gmot", Long: []string{"verbose", "directory", "preserve-timestamps", "strip", "group", "mode", "owner", "target-directory"}, ValueLong: []string{"group", "mode", "owner", "target-directory"}, Operand: AnyPath},
 	{Name: "ln", Short: "sfnbSvT", ValueShort: "S", Operand: AnyPath},
 	{Name: "ls", Short: "ahl1", Long: []string{"color"}, Operand: AnyPath},
 	{Name: "mkdir", Short: "mpv", ValueShort: "m", Long: []string{"mode", "parents", "verbose"}, ValueLong: []string{"mode"}, Operand: Directory},
