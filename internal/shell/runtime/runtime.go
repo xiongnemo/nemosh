@@ -76,6 +76,9 @@ type Runtime struct {
 	// traceTurn orders a pipeline's `set -x` lines, a stage's after the stage's before it; see
 	// trace_turn.go. Shared with what the stage clones, a subshell or a nested pipeline in it.
 	traceTurn *traceTurn
+	// pipeStage is the pipeline stage whose pipe this runtime's output goes into, which a
+	// write that finds its reader gone ends; see pipe_stage.go. Shared as traceTurn is.
+	pipeStage *pipeStage
 	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options
@@ -290,6 +293,11 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 		return status
 	}
 	r.startingProgram(args[0])
+	// A program's write into a pipe no one reads ends the program, and the shell goes on; a
+	// builtin's ends the shell's stage. See pipe_stage.go.
+	if !ashBuiltinApplets[args[0]] {
+		defer r.pipeStage.running()()
+	}
 	applet, ok := r.lookupApplet(args[0])
 	if !ok {
 		return r.runExternal(ctx, args)
@@ -316,11 +324,12 @@ func AppletFailure(name string, err error) (int, string) {
 	if err == nil {
 		return 0, ""
 	}
-	// A reader that went away ends the output; it does not fail the command. Here rather than
+	// A reader that went away ends the output, quietly and with SIGPIPE's status, as busybox's
+	// applets end: 141, which is what `busybox seq 1 1000000 | head -1` leaves. Here rather than
 	// at the two call sites, because the whole point of this function is that a direct
 	// invocation and the same command inside the shell answer identically.
 	if isClosedPipeError(err) {
-		return 0, ""
+		return brokenPipeStatus, ""
 	}
 	if status, ok := applets.StatusCode(err); ok {
 		if message, ok := applets.StatusMessage(err); ok {

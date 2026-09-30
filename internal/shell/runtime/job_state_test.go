@@ -43,6 +43,7 @@ var jobStateCoverage = map[string]string{
 	"scriptFile":        "encoded: ScriptFile",
 	"substitutions":     "rebuilt: the child waits for its own",
 	"traceTurn":         "not inherited: a job process writes its trace lines itself, in no pipeline's turn",
+	"pipeStage":         "not inherited: a job process is a process, and a write into a pipe no one reads ends it alone",
 	"noFieldSplit":      "not inherited: per word",
 	"errExitSuppressed": "encoded: ErrExitSuppressed",
 	"plainAssignment":   "not inherited: per assignment statement",

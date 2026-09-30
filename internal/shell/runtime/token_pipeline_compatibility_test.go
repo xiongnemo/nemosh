@@ -59,6 +59,8 @@ func TestRuntime_nativeProducerTreatsEarlyDownstreamClosureAsSuccessByDefault(t 
 	}
 }
 
+// Under pipefail the producer's failure is the pipeline's, and it is SIGPIPE's, 141, as both
+// references answer `set -o pipefail; yes | head -c1`. Quiet all the same.
 func TestRuntime_nativeProducerEarlyDownstreamClosureHonorsPipefail(t *testing.T) {
 	// Given
 	executable := pipelineHelperExecutable(t)
@@ -71,7 +73,7 @@ func TestRuntime_nativeProducerEarlyDownstreamClosureHonorsPipefail(t *testing.T
 	status := rt.RunScript(context.Background(), "set -o pipefail\n"+executable+" -test.run=TestRuntimeHelperProcess -- write-large | read-one\n")
 
 	// Then
-	if status != 0 || stdout.String() != "x" || stderr.Len() != 0 {
+	if status != 141 || stdout.String() != "x" || stderr.Len() != 0 {
 		t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
 	}
 }

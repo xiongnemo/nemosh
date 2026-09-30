@@ -460,9 +460,6 @@
       "[[ with op variable (compare with test-builtin.test.sh)": "fail",
       "negative numbers - zero, decimal, octal, hex, base N": "fail"
     },
-    "divergence.test.sh": {
-      "builtin cat crashes a subshell (#2530)": "fail"
-    },
     "dparen.test.sh": {
       "(( )) with redirect": "fail",
       "literal strings inside (( ))": "fail"
@@ -582,7 +579,6 @@
       "} on the second line": "fail"
     },
     "pipeline.test.sh": {
-      "SIGPIPE causes pipeline to die (regression for issue #295)": "fail",
       "|\u0026": "flaky"
     },
     "posix.test.sh": {

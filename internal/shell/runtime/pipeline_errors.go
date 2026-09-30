@@ -30,6 +30,13 @@ func isClosedPipeError(err error) bool {
 	return errno == 109 || errno == 232
 }
 
+// readerGone is a write that found no one left to read its pipe: EPIPE, or Windows'
+// ERROR_BROKEN_PIPE and ERROR_NO_DATA. Not os.ErrClosed, which is the writer's own end closed
+// under it, and says nothing about the reader.
+func readerGone(err error) bool {
+	return err != nil && isClosedPipeError(err) && !errors.Is(err, os.ErrClosed)
+}
+
 // IsClosedPipe reports whether an error is a write to a pipe whose reader has gone away.
 //
 // Exported because the direct-dispatch path in cmd/nemosh has to reach the same conclusion, and it

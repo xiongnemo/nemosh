@@ -93,8 +93,9 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return r.programStatus(exitErr.ProcessState)
 		}
+		// The copy into a pipe no one reads failed, and the program with it: SIGPIPE's 141.
 		if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
-			return 0
+			return brokenPipeStatus
 		}
 		// A program that demands administrator is present and runnable and still
 		// cannot be started from here. That is its own answer, not a generic

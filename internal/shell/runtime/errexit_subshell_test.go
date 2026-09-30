@@ -20,11 +20,13 @@ func TestErrexit_isIgnoredInASubshellWhereTheSubshellIsTested(t *testing.T) {
 	}
 }
 
-// pwd into a pipe whose reader has gone ends quietly, as every other writer does and as
-// busybox's does; it reported `pwd: pipeline downstream closed`.
+// pwd into a pipe whose reader has gone ends quietly, as every other writer does; it reported
+// `pwd: pipeline downstream closed`. It is the shell's own write, so it ends the stage there, as
+// SIGPIPE ends it in bash and in busybox on Linux, and after is never said. busybox-w32 goes on
+// after its pwd, and stops after its echo; see pipe_stage.go.
 func TestPwd_isQuietWhenTheReaderHasGone(t *testing.T) {
 	_, stdout, stderr := runSetScript(t, "{ echo 1; sleep 0.2; pwd; echo after >&2; } | head -1\n")
-	if stdout != "1\n" || stderr != "after\n" {
-		t.Fatalf("stdout %q stderr %q, want the line head took and nothing from pwd", stdout, stderr)
+	if stdout != "1\n" || stderr != "" {
+		t.Fatalf("stdout %q stderr %q, want the line head took and nothing after it", stdout, stderr)
 	}
 }
