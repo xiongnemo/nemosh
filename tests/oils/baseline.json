@@ -513,7 +513,8 @@
     },
     "func-parsing.test.sh": {
       "Function name with $": "ash-only",
-      "Function name with command sub": "ash-only"
+      "Function name with command sub": "ash-only",
+      "Unbraced function body.": "ash-only"
     },
     "glob.test.sh": {
       "Glob ordering respects LC_COLLATE (zsh respects this too)": "ash-only",

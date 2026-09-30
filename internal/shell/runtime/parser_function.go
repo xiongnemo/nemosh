@@ -56,7 +56,7 @@ func parseFunctionDefinition(line string, budget *parseBudget, depth int) (funct
 	if remainder == "" {
 		return functionDefinition{}, true, fmt.Errorf("%w: missing function body", ErrIncompleteScript)
 	}
-	body, err := parseFunctionBody(remainder, budget, depth)
+	body, err := parseFunctionBody(remainder, true, budget, depth)
 	if err != nil {
 		return functionDefinition{}, true, err
 	}
@@ -147,7 +147,10 @@ func endsInPatternCharacter(name string) bool {
 	return name != "" && strings.IndexByte("?*+@!", name[len(name)-1]) >= 0
 }
 
-func parseFunctionBody(source string, budget *parseBudget, depth int) (commandNode, error) {
+// parseFunctionBody reads a function's body. simple is whether a simple command may be one,
+// which it may after `name()`, as in busybox and dash, and not after `function name` alone,
+// which busybox refuses too.
+func parseFunctionBody(source string, simple bool, budget *parseBudget, depth int) (commandNode, error) {
 	// `f() [[ ... ]]` and `f() (( ... ))`: bash's conditional and arithmetic commands are
 	// compound commands too, and are parsed as the brace group around them. The keyword
 	// compounds never arrive here; see functionHeaderBeforeCompound.
@@ -169,14 +172,16 @@ func parseFunctionBody(source string, budget *parseBudget, depth int) (commandNo
 	if err != nil {
 		return nil, classifyCommandError(err)
 	}
-	if len(command) != 1 {
+	if len(command) != 1 || command[0].group == nil {
+		// A simple command is a body too, as busybox and dash take it: `f() echo hi` defines
+		// f, and each call says hi. bash refuses it, and so did this. It is read as the brace
+		// group around it, its redirections its own.
+		if trimmed := strings.TrimSpace(source); simple && !strings.HasPrefix(trimmed, "{") && !strings.HasPrefix(trimmed, "(") {
+			return parseFunctionBody("{ "+source+"\n}", false, budget, depth)
+		}
 		return nil, fmt.Errorf("syntax error: function body must be a compound command")
 	}
-	group := command[0].group
-	if group == nil {
-		return nil, fmt.Errorf("syntax error: function body must be a compound command")
-	}
-	return group.withRedirects(redirects), nil
+	return command[0].group.withRedirects(redirects), nil
 }
 
 // cutFunctionKeyword strips a leading `function` keyword, reporting whether there was
@@ -206,7 +211,7 @@ func parseKeywordFunction(line string, budget *parseBudget, depth int) (function
 	if remainder == "" {
 		return functionDefinition{}, true, fmt.Errorf("%w: missing function body", ErrIncompleteScript)
 	}
-	body, err := parseFunctionBody(remainder, budget, depth)
+	body, err := parseFunctionBody(remainder, false, budget, depth)
 	if err != nil {
 		return functionDefinition{}, true, err
 	}

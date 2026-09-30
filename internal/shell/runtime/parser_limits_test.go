@@ -11,8 +11,10 @@ import (
 )
 
 func TestParseScript_rejectsDeferredSyntax(t *testing.T) {
+	// `name() echo value` is no longer one: a simple command is a body after `name()`, as in
+	// busybox and dash. After `function name` alone it is not, as busybox refuses it.
 	tests := []string{
-		"name() echo value\n",
+		"name() )\n",
 		"function name echo value\n",
 	}
 	for _, source := range tests {
