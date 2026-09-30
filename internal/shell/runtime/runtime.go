@@ -26,6 +26,9 @@ type Runtime struct {
 	vars        map[string]string
 	traps       map[trapName]string
 	trapRunning map[trapName]bool
+	// trapStatus is the status the running trap's action was entered with, which an `exit`
+	// given none ends with; see runTrap. Nil outside one.
+	trapStatus *int
 	// signals holds what `kill` sent this shell until a command boundary runs the trap;
 	// see signal_inbox.go. Nil in a subshell, which a signal is never addressed to.
 	signals   *signalInbox

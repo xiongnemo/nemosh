@@ -120,6 +120,11 @@ func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) li
 		fmt.Fprintf(r.streams.Stderr, "trap %s: %v\n", name, err)
 		return lineResult{status: savedStatus}
 	}
+	// An `exit` in the action with no status ends with the one the trap was entered with, as
+	// POSIX has it and both references do: `trap 'echo bye; exit' EXIT; false` ends with 1, not
+	// with the echo's 0.
+	entered := savedStatus
+	r.trapStatus = &entered
 	status, control := r.executeRead(ctx, prepared.program, savedStatus)
 	return lineResult{status: status, control: control}
 }

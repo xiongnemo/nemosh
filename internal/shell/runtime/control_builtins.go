@@ -64,6 +64,9 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
 	switch args[0] {
 	case "exit":
+		if len(args) == 1 && r.trapStatus != nil {
+			savedStatus = *r.trapStatus
+		}
 		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}
 	case "return":
 		status := exitStatus(args[1:], savedStatus)

@@ -31,6 +31,7 @@ var jobStateCoverage = map[string]string{
 	"aliases":           "encoded: Aliases",
 	"aliasChain":        "encoded: AliasChain",
 	"aliasView":         "encoded: AliasView",
+	"trapStatus":        "not inherited: a job begins in no trap's action",
 	"childCPU":          "not inherited: a process counts its own children",
 	"history":           "not inherited: a job does not read a prompt",
 	"dirStack":          "encoded: DirStack",
