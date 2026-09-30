@@ -136,6 +136,8 @@ var usageTextMore = map[string]Usage{
 	"shred": {Summary: "Overwrite files so that what they held cannot be read back.", Operands: "FILE...",
 		Options: map[string]string{"f": "make a FILE writable first", "u": "remove each FILE after", "z": "overwrite with zeros last", "n": "overwrite this many times, 3 without it", "s": "overwrite this many bytes rather than the file's size", "v": "taken and ignored, as busybox takes it", "x": "taken and ignored, as busybox takes it"},
 		Notes:   []string{"A FILE that cannot be opened ends shred there, as busybox's does. On a filesystem that keeps copies, which NTFS and a solid-state disk both may, the old bytes can survive elsewhere."}},
+	"ttysize": {Summary: "Print the terminal's width and height.", Operands: "[w] [h]",
+		Notes: []string{"`80 24` when no standard stream is a terminal. With operands, the width for each w and the height for each h, in that order, as busybox's does."}},
 	"link": {Summary: "Make another name for a file.", Operands: "FILE LINK",
 		Notes: []string{"A hard link, and an existing LINK is refused rather than replaced."}},
 	"unlink": {Summary: "Remove one name.", Operands: "FILE",

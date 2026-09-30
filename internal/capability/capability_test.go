@@ -152,6 +152,8 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		// sync reads no arguments at all, as busybox's plain one reads none: every one,
 		// `-Z` too, is ignored, and that is said.
 		"sync": true,
+		// ttysize reads no options either: each operand is w, h or nothing, `-Z` among them.
+		"ttysize": true,
 	}
 	for _, name := range appletNames(t) {
 		if noOptionParsing[name] || launchesSomething[name] {

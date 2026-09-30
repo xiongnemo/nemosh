@@ -677,6 +677,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `shred` | `-f -u -z -n N -s SIZE`, `-v -x` taken; random passes then zeros, each flushed, and `-s` past the end too. A FILE that cannot be opened ends it, as busybox's xopen does | refused by name |
 | `fsync` | `-d`, which is the same here; on Windows a file that cannot be written passes unflushed, as busybox-w32's does | refused by name |
 | `ts` | `-i -s`, and a strftime FORMAT operand | refused by name |
+| `ttysize` | none; `[w] [h]` operands, and `80 24` without a terminal, as busybox's | an operand like any other, which prints nothing |
 | `unlink` | none; a directory is refused | refused by name |
 | `usleep` | none; a microsecond count | read as a number, so a bad one is refused |
 | `uuidgen` | none; a version 4 identifier from a cryptographic source | refused by name |

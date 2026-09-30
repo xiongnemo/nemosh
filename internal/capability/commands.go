@@ -97,6 +97,7 @@ var commands = []Command{
 	{Name: "sync", Operand: AnyPath},
 	{Name: "fsync", Short: "d", Operand: AnyPath},
 	{Name: "shred", Short: "fuzvxns", ValueShort: "ns", Operand: AnyPath},
+	{Name: "ttysize", Operand: AnyPath},
 	{Name: "ts", Short: "is", Operand: AnyPath},
 	{Name: "unlink", Operand: AnyPath},
 	{Name: "usleep", Operand: AnyPath},
