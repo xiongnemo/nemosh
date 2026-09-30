@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/proc"
 )
 
 var windowsExecutableSuffixes = [...]string{".com", ".exe", ".sh", ".bat", ".cmd"}
@@ -89,7 +91,7 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	r.recordChildCPU(cmd)
 	if err := runErr; err != nil {
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-			return exitErr.ExitCode()
+			return r.programStatus(exitErr.ProcessState)
 		}
 		if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
 			return 0
@@ -105,6 +107,19 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		return 126
 	}
 	return 0
+}
+
+// programStatus is a program's status as a shell reads it: 128+n when signal n ended it, which
+// on Windows is in the exit code (see exitCodeSignal). The code was taken whole: `kill $$` from
+// a job ended a nemosh with 0x0F000000, and the nemosh waiting for it had that for $?; and on
+// Linux and macOS the status of one a signal ended was -1. The signal is said on stderr, as
+// busybox says it of the command it waited for, but for INT and PIPE: `Terminated`.
+func (r Runtime) programStatus(state *os.ProcessState) int {
+	status, signal := processOutcome(state)
+	if signal != 0 && signal != 2 && signal != 13 {
+		fmt.Fprintln(r.streams.Stderr, proc.SignalWord(signal))
+	}
+	return status
 }
 
 func (r Runtime) externalCommandPath(name string) (string, error) {

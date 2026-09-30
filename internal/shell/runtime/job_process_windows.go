@@ -100,15 +100,12 @@ func (t *jobTree) close() {
 	t.closed = true
 }
 
-// processOutcome is a job process's status and the signal that ended it: an exit code with
-// the signal in its top byte, busybox's and jobTree's.
+// processOutcome is a process's status and the signal that ended it, or 0: an exit code with
+// the signal in its top byte, busybox's and jobTree's, or one of the codes busybox reads as a
+// signal's; see exitCodeSignal.
 func processOutcome(state *os.ProcessState) (int, int) {
 	code := uint32(state.ExitCode())
-	status := jobExitStatus(code)
-	if code >= 1<<24 && code&0xffffff == 0 {
-		return status, int(code >> 24)
-	}
-	return status, 0
+	return jobExitStatus(code), exitCodeSignal(code)
 }
 
 // endBySignal is a job ending by a signal it did not catch, in the form processOutcome reads.

@@ -166,15 +166,38 @@ func (r Runtime) jobLaunchFailure(err error) lineResult {
 	return lineResult{status: 1}
 }
 
-// jobExitStatus reads a job process's exit code as a shell status. A code with the signal
-// in its top byte is how busybox's kill and proc.Terminate end a process, `n << 24`, and it
-// is 128+n as a status, as a wait there reports it.
+// jobExitStatus reads a Windows exit code as a shell status, as busybox-w32's
+// exit_code_to_wait_status reads one (win32/process.c): 128+n for a code that says signal n
+// ended the process, and the low byte otherwise -- but 255 where that byte is 0 and the code
+// is not, which the low byte alone took for success.
 func jobExitStatus(code uint32) int {
-	if code >= 1<<24 && code&0xffffff == 0 {
-		return 128 + int(code>>24)
+	if signal := exitCodeSignal(code); signal != 0 {
+		return 128 + signal
+	}
+	if code != 0 && code&0xff == 0 {
+		return 255
 	}
 	return int(code & 0xff)
 }
+
+// exitCodeSignal is the signal a Windows exit code says ended its process, or 0. The signal in
+// the top byte and nothing below it, `n << 24`, is how busybox's kill and proc.Terminate end a
+// process, for a signal busybox-w32 has a name for; an access violation is SEGV's and a
+// console's Ctrl-C exit INT's, as busybox reads them.
+func exitCodeSignal(code uint32) int {
+	switch {
+	case code == 0xc0000005:
+		return 11
+	case code == 0xc000013a:
+		return 2
+	case code&0xffffff == 0 && windowsSignals[code>>24]:
+		return int(code >> 24)
+	}
+	return 0
+}
+
+// windowsSignals are the signals busybox-w32 names, HUP to TERM and Windows' ABRT, 22.
+var windowsSignals = map[uint32]bool{1: true, 2: true, 3: true, 4: true, 8: true, 9: true, 11: true, 13: true, 15: true, 22: true}
 
 // JobStateFile is the child's end of the state pipe, from the argument after --job.
 func JobStateFile(argument string) (*os.File, error) {

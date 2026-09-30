@@ -98,8 +98,14 @@ func TestProcessJobs_behaveAsTheReferencesDo(t *testing.T) {
 	})
 }
 
+// As busybox-w32's exit_code_to_wait_status reads a code: the signal in the top byte, if
+// busybox names it; an access violation as SEGV and a console's Ctrl-C exit as INT; and a
+// code with nothing in its low byte as 255, not 0.
 func TestJobExitStatus_readsASignalInTheTopByte(t *testing.T) {
-	for code, want := range map[uint32]int{0: 0, 7: 7, 15 << 24: 143, 9 << 24: 137, 256 + 3: 3} {
+	for code, want := range map[uint32]int{
+		0: 0, 7: 7, 15 << 24: 143, 9 << 24: 137, 256 + 3: 3,
+		0xc0000005: 139, 0xc000013a: 130, 256: 255, 5 << 24: 255, 15<<24 + 1: 1,
+	} {
 		if got := jobExitStatus(code); got != want {
 			t.Errorf("jobExitStatus(%#x) = %d, want %d", code, got, want)
 		}
