@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"strings"
 )
 
 // The interpreter's state.
@@ -108,6 +109,15 @@ func newAwkInterp(ctx context.Context, program *awkProgram, input io.Reader, out
 	interp.streaming = !writerIsRegularFile(output)
 	for name, value := range awkSpecialDefaults {
 		interp.vars[name] = awkStr(value)
+	}
+	// ENVIRON is the environment the program was given: the shell's exports and a command's
+	// own assignments, `FOO=bar awk ...`, each a string that is also a number when it looks
+	// like one. It was not there at all, so every ENVIRON["X"] was empty.
+	environ := interp.getArray("ENVIRON")
+	for _, entry := range ProcessViewFromContext(ctx).Environ() {
+		if name, value, ok := strings.Cut(entry, "="); ok {
+			environ.set(name, awkStrnumOf(value))
+		}
 	}
 	for _, name := range []string{"NR", "NF", "FNR", "RSTART", "RLENGTH"} {
 		interp.vars[name] = awkNum(0)
