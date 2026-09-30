@@ -36,6 +36,9 @@ func endsWithCompound(body string) bool {
 		return true
 	case strings.HasPrefix(last, "(") && strings.HasSuffix(last, ")"):
 		return true
+	// A function whose body is a subshell: `{ f()(echo x)}`.
+	case strings.HasSuffix(last, ")") && closesSubshellAt(last, len(last)-1):
+		return true
 	}
 	return strings.HasSuffix(last, "}") && braceDelimiterAt(last, len(last)-1, '}')
 }

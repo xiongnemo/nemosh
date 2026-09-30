@@ -12,7 +12,8 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	if line[index] != delimiter {
 		return false
 	}
-	if index+1 != len(line) && !isCommandBoundary(line[index+1]) {
+	// A `}` may close its group right before a subshell's `)`: `({ :; })`.
+	if index+1 != len(line) && !isCommandBoundary(line[index+1]) && (delimiter != '}' || line[index+1] != ')') {
 		return false
 	}
 	previous, found := previousNonBlank(line, index)
@@ -26,6 +27,10 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 		return true
 	}
 	if delimiter == '}' && afterCompoundCloser(line, index) {
+		return true
+	}
+	// And right after one, which ends a command as a separator does: `{(true)}`, `{ f()(echo x)}`.
+	if delimiter == '}' && previous == ')' && closesSubshellAt(line, previousNonBlankIndex(line, index)) {
 		return true
 	}
 	if delimiter == '{' && (previous == ')' || previous == '(' || previous == '{') {
@@ -138,6 +143,11 @@ func afterCommandIntroducer(line string, index int) bool {
 		}
 	}
 	fields := strings.Fields(prefix)
+	// A group's close ends a command too, so a reserved word after one begins the next: the
+	// `then` in `if { a; } then { b; }` introduced nothing, and its brace was data.
+	for len(fields) > 0 && (fields[0] == "}" || fields[0] == ")") {
+		fields = fields[1:]
+	}
 	if len(fields) == 0 {
 		return false
 	}
@@ -167,4 +177,17 @@ func afterFunctionKeyword(line string, index int) bool {
 	}
 	_, valid := newFunctionName(strings.TrimSpace(rest))
 	return valid
+}
+
+// closesSubshellAt reports whether the `)` at index closes a subshell -- a `(` where a command
+// begins, a function's body among them -- rather than a substitution's, an array's or a
+// pattern's, whose `)` a word goes on past: `{ echo $(date)}` is still an open group.
+func closesSubshellAt(line string, index int) bool {
+	for open := strings.LastIndexByte(line[:index], '('); open >= 0; open = strings.LastIndexByte(line[:open], '(') {
+		if end, closed := matchingParenthesis(line, open); closed && end == index {
+			previous, found := previousNonBlank(line, open)
+			return !found || isCommandSeparator(previous) || strings.IndexByte("({)", previous) >= 0 || afterCommandIntroducer(line, open)
+		}
+	}
+	return false
 }
