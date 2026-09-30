@@ -60,3 +60,27 @@ func TestRuntime_appletDeviceFailures(t *testing.T) {
 		})
 	}
 }
+
+// cp and install copy a device as SOURCE or DEST: what it reads into a new file, as busybox copies
+// a character device without -R, and what a file holds to it. `cp /dev/null log` is how a log is
+// emptied, and `install -m 600 /dev/null f` how an empty file gets a mode. Each was "not a host
+// path", and the log kept its lines. Each answer is busybox-w32's, measured; -v names a copy of a
+// file and not one of a device, as there.
+func TestRuntime_cpAndInstallCopyDevices(t *testing.T) {
+	for _, test := range []struct{ script, want string }{
+		{"echo data > log; cp /dev/null log; wc -c < log\n", "0\n"},
+		{"echo hi | cp /dev/stdin out; cat out\n", "hi\n"},
+		{"echo abc > f; cp f /dev/null; cp f /dev/stdout\n", "abc\n"},
+		{"install -m 600 /dev/null empty; wc -c < empty\n", "0\n"},
+		{"mkdir d; cp /dev/null d; ls d\n", "null\n"},
+		{"echo q > f; cp -v f /dev/null; cp -v /dev/null e\n", "'f' -> '/dev/null'\n"},
+		{"echo abc > f; cp -n /dev/null f; cat f\n", "abc\n"},
+	} {
+		t.Run(test.script, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			if stdout, status := runScriptCapturing(test.script); stdout != test.want || status != 0 {
+				t.Errorf("got %q, status %d; want %q", stdout, status, test.want)
+			}
+		})
+	}
+}

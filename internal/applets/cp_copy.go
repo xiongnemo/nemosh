@@ -23,6 +23,7 @@ type cpFlags struct {
 type cpRun struct {
 	applet         string
 	flags          cpFlags
+	view           ProcessView
 	stdin          io.Reader
 	stdout, stderr io.Writer
 	umask          uint32
@@ -42,12 +43,15 @@ func (r *cpRun) copy(source, dest pathOperand, top bool) bool {
 	if deref {
 		stat = os.Stat
 	}
-	sourceInfo, err := stat(source.host)
+	sourceInfo, err := r.statSource(source, stat)
 	if err != nil {
 		if r.flags.hardLink || r.flags.softLink {
 			return r.makeLink(source, dest)
 		}
 		return r.fail(cannotStat(source.operand, err))
+	}
+	if dest.device {
+		return r.copyToDevice(source, dest, sourceInfo)
 	}
 	destInfo, err := os.Lstat(dest.host)
 	destExists := err == nil
@@ -131,7 +135,7 @@ func (r *cpRun) copyDirectory(source, dest pathOperand, sourceInfo, destInfo os.
 // and unlinks what is in the way, read-only or not, so the copy is a new file and never the
 // target of a link that stood at dest.
 func (r *cpRun) copyRegular(source, dest pathOperand, info os.FileInfo) bool {
-	reader, err := os.Open(source.host)
+	reader, err := r.openSource(source)
 	if err != nil {
 		return r.fail(cannotOpen(source.operand, err))
 	}

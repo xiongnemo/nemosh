@@ -37,7 +37,7 @@ func newCpApplet() Applet {
 			return err
 		}
 		view := ProcessViewFromContext(ctx)
-		run := &cpRun{flags: flags, stdin: stdin, stdout: stdout, stderr: stderr, umask: processFileModeMask(view)}
+		run := &cpRun{flags: flags, view: view, stdin: stdin, stdout: stdout, stderr: stderr, umask: processFileModeMask(view)}
 		last := flags.targetDir
 		sources := operands
 		if last == "" {
@@ -51,16 +51,15 @@ func newCpApplet() Applet {
 		} else if len(sources) == 0 {
 			return missingOperand()
 		}
-		lastHost, err := resolveHostPath(view, last)
+		into, err := copyOperand(view, last)
 		if err != nil {
 			return err
 		}
-		into := pathOperand{host: lastHost, operand: last}
 		if flags.targetDir == "" && len(sources) == 1 {
 			if single, err := run.singleCopy(view, sources[0], into); err != nil || single {
 				return run.status(err)
 			}
-		} else if info, err := os.Stat(lastHost); err != nil || !info.IsDir() {
+		} else if info, err := os.Stat(into.host); into.device || err != nil || !info.IsDir() {
 			// Named as the failure it is: what is wrong is that the last operand is not a directory
 			// the sources can go into, as GNU says. busybox tries each and fails on each.
 			return fmt.Errorf("target '%s' is not a directory", last)
@@ -69,12 +68,12 @@ func newCpApplet() Applet {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			sourceHost, err := resolveHostPath(view, source)
+			operand, err := copyOperand(view, source)
 			if err != nil {
 				run.fail(err)
 				continue
 			}
-			run.copyInto(pathOperand{host: sourceHost, operand: source}, into)
+			run.copyInto(operand, into)
 		}
 		return run.status(nil)
 	}}
@@ -84,7 +83,7 @@ func newCpApplet() Applet {
 // when neither is a directory, when -R copies a directory to a name not yet taken, and with -T.
 // It answers whether it made the copy, or tried to.
 func (r *cpRun) singleCopy(view ProcessView, source string, dest pathOperand) (bool, error) {
-	sourceHost, err := resolveHostPath(view, source)
+	from, err := copyOperand(view, source)
 	if err != nil {
 		return false, err
 	}
@@ -92,7 +91,7 @@ func (r *cpRun) singleCopy(view ProcessView, source string, dest pathOperand) (b
 	if r.flags.dereference || r.flags.derefTop {
 		stat = os.Stat
 	}
-	sourceInfo, err := stat(sourceHost)
+	sourceInfo, err := r.statSource(from, stat)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return false, cannotStat(source, err)
 	}
@@ -100,7 +99,7 @@ func (r *cpRun) singleCopy(view ProcessView, source string, dest pathOperand) (b
 	if r.flags.noTargetDir {
 		stat = os.Lstat
 	}
-	destInfo, destErr := stat(dest.host)
+	destInfo, destErr := r.statSource(dest, stat)
 	if destErr != nil && !errors.Is(destErr, fs.ErrNotExist) {
 		return false, cannotStat(dest.operand, destErr)
 	}
@@ -116,7 +115,7 @@ func (r *cpRun) singleCopy(view ProcessView, source string, dest pathOperand) (b
 		return false, nil
 	}
 	if !sourceIsDir && !destIsDir || r.flags.recurse && sourceIsDir && destErr != nil || r.flags.noTargetDir {
-		r.copy(pathOperand{host: sourceHost, operand: source}, dest, true)
+		r.copy(from, dest, true)
 		return true, nil
 	}
 	return false, nil
@@ -142,6 +141,9 @@ func (r *cpRun) copyInto(source, dest pathOperand) {
 type pathOperand struct {
 	host    string
 	operand string
+	// device is a device of the shell's, /dev/null or /dev/stdin, which has no host path; see
+	// cp_device.go.
+	device bool
 }
 
 // joinHost is a directory's host path and the name of something in it.

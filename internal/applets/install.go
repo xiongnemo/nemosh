@@ -47,7 +47,7 @@ func newInstallApplet() Applet {
 			return err
 		}
 		run := &cpRun{applet: "install", flags: cpFlags{dereference: true, preserve: options.has('p'), verbose: options.has('v')},
-			stdin: stdin, stdout: stdout, stderr: stderr, umask: processFileModeMask(view)}
+			view: view, stdin: stdin, stdout: stdout, stderr: stderr, umask: processFileModeMask(view)}
 		install := installRun{cpRun: run, view: view, options: options, mode: mode, owner: owner}
 		if options.has('d') {
 			if len(operands) == 0 {
@@ -122,17 +122,17 @@ func (r installRun) file(source, dest string, into bool) {
 	if into {
 		dest = joinOperand(dest, lastPathComponent(source))
 	}
-	sourceHost, err := resolveHostPath(r.view, source)
+	from, err := copyOperand(r.view, source)
 	if err != nil {
 		r.fail(err)
 		return
 	}
-	destHost, err := resolveHostPath(r.view, dest)
+	to, err := copyOperand(r.view, dest)
 	if err != nil {
 		r.fail(err)
 		return
 	}
-	if !r.copy(pathOperand{host: sourceHost, operand: source}, pathOperand{host: destHost, operand: dest}, true) {
+	if !r.copy(from, to, true) || to.device {
 		return
 	}
 	if r.options.has('s') {
