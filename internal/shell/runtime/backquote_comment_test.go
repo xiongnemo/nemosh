@@ -18,3 +18,22 @@ func TestBackquote_aCommentIsNoQuoting(t *testing.T) {
 		t.Fatalf("got %q/%d, want %q/0, as both references answer", stdout, status, want)
 	}
 }
+
+// A comment in a backquoted command runs to the end of that command, as busybox and bash read
+// it: "`echo Ok1 #comment`" is Ok1. Rewritten as $( ... ), the comment took the `)` too, and
+// the substitution never closed. busybox's ash_test comment2.
+func TestBackquote_aCommentEndsWithItsBackquotes(t *testing.T) {
+	for _, test := range []struct{ script, want string }{
+		{"echo \"`echo Ok1 #comment is ignored`\"\n", "Ok1\n"},
+		{"echo `echo Ok2 #comment is ignored`\n", "Ok2\n"},
+		{"echo `echo a # c` after\n", "a after\n"},
+		{"x=`echo \"#not\"`; echo $x\n", "#not\n"},
+		{"echo end # no newline", "end\n"},
+	} {
+		t.Run(test.script, func(t *testing.T) {
+			if stdout, status := runScriptCapturing(test.script); stdout != test.want || status != 0 {
+				t.Errorf("got %q/%d, want %q/0, as busybox and bash answer", stdout, status, test.want)
+			}
+		})
+	}
+}

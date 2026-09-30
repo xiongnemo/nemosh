@@ -40,7 +40,10 @@ func rewriteBackquotes(source string) (string, error) {
 		if char == '#' && quote == 0 && commentStarts(source, index) {
 			end := strings.IndexByte(source[index:], '\n')
 			if end < 0 {
-				end = len(source) - index
+				// One that runs to the end of the text is dropped: it says nothing, and in a
+				// backquote's body it would take the `)` the body is closed with, so "`echo a
+				// #note`" was an unterminated substitution where both references say a.
+				break
 			}
 			out.WriteString(source[index : index+end])
 			index += end - 1
