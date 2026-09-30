@@ -94,6 +94,8 @@ var commands = []Command{
 	{Name: "nproc", Long: []string{"all", "ignore"}},
 	{Name: "pidof", Short: "so", ValueShort: "o", Operand: AnyPath},
 	{Name: "truncate", Short: "cs", ValueShort: "s", Operand: AnyPath},
+	{Name: "sync", Operand: AnyPath},
+	{Name: "fsync", Short: "d", Operand: AnyPath},
 	{Name: "ts", Short: "is", Operand: AnyPath},
 	{Name: "unlink", Operand: AnyPath},
 	{Name: "usleep", Operand: AnyPath},

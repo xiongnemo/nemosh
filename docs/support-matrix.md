@@ -673,6 +673,8 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `nproc` | `--all --ignore=N`; the answer never drops below 1 | refused by name |
 | `pidof` | `-s -o PID[,PID]`; the name is matched whole, not as a pattern | refused by name |
 | `truncate` | `-s SIZE` with `K M G` and `KB MB GB`, a leading `+` or `-`, and `-c` | refused by name |
+| `sync` | none; on Windows each volume is flushed, which takes an elevated session, as busybox-w32's does | ignored with every other argument, and that is said, as busybox's plain `sync` says it |
+| `fsync` | `-d`, which is the same here; on Windows a file that cannot be written passes unflushed, as busybox-w32's does | refused by name |
 | `ts` | `-i -s`, and a strftime FORMAT operand | refused by name |
 | `unlink` | none; a directory is refused | refused by name |
 | `usleep` | none; a microsecond count | read as a number, so a bad one is refused |

@@ -149,6 +149,9 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		// refused as an unrecognised operand rather than as an option. Which is the
 		// right refusal, just not the one this test looks for.
 		"dd": true,
+		// sync reads no arguments at all, as busybox's plain one reads none: every one,
+		// `-Z` too, is ignored, and that is said.
+		"sync": true,
 	}
 	for _, name := range appletNames(t) {
 		if noOptionParsing[name] || launchesSomething[name] {
