@@ -39,7 +39,7 @@ func (r Runtime) traceLine(ctx context.Context, text string, savedStatus int) {
 	if custom, ok := r.vars["PS4"]; ok {
 		prefix = r.tracePrefix(ctx, custom, savedStatus)
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s%s\n", prefix, text)
+	r.traceTurn.write(func() { fmt.Fprintf(r.streams.Stderr, "%s%s\n", prefix, text) })
 }
 
 // tracePrefix expands PS4, as POSIX asks and both references do: `PS4='+$LINENO: '` is

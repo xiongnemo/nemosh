@@ -73,6 +73,9 @@ type Runtime struct {
 	// before it exits. One for the whole shell, shared by every snapshot: a pipeline stage
 	// or a subshell can start one too. See output_substitution.go.
 	substitutions *sync.WaitGroup
+	// traceTurn orders a pipeline's `set -x` lines, a stage's after the stage's before it; see
+	// trace_turn.go. Shared with what the stage clones, a subshell or a nested pipeline in it.
+	traceTurn *traceTurn
 	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options
@@ -286,6 +289,7 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 	if status, refused := r.reportUnimplementedBuiltin(args[0]); refused {
 		return status
 	}
+	r.startingProgram(args[0])
 	applet, ok := r.lookupApplet(args[0])
 	if !ok {
 		return r.runExternal(ctx, args)

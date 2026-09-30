@@ -12,10 +12,17 @@ func (r Runtime) snapshot(ctx context.Context) (Runtime, error) {
 
 // subshellSnapshot is a snapshot for a subshell: a `( )`, a command or process
 // substitution, a background job. Each is one deeper in $BASH_SUBSHELL, as bash counts
-// them; a pipeline's stages are snapshots too, and bash does not count those.
+// them; a pipeline's stages are snapshots too, and bash does not count those. Each is a
+// fork to `set -x` in a pipeline's stage; see trace_turn.go.
 func (r Runtime) subshellSnapshot(ctx context.Context) (Runtime, error) {
+	return r.subshellSnapshotTracing(ctx, r.traceTurn.fork())
+}
+
+// subshellSnapshotTracing is a subshellSnapshot whose trace lines take the turn given.
+func (r Runtime) subshellSnapshotTracing(ctx context.Context, turn *traceTurn) (Runtime, error) {
 	child, err := r.snapshot(ctx)
 	child.subshellDepth++
+	child.traceTurn = turn
 	return child, err
 }
 
@@ -114,6 +121,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		// subshell stopped at false.
 		errExitSuppressed: r.errExitSuppressed,
 		substitutions:     r.substitutions,
+		traceTurn:         r.traceTurn,
 		scriptFile:        r.scriptFile,
 		readonly:          cloneMap(r.readonly),
 		attributes:        cloneMap(r.attributes),

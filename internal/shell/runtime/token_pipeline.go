@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"sync/atomic"
 	"syscall"
 )
 
@@ -28,14 +29,26 @@ type pipelineEndpoint struct {
 	file *os.File
 	once sync.Once
 	err  error
+	// turn is the `set -x` turn of the stage at this end, passed on before a read that would
+	// wait and a write the pipe might not hold; see trace_turn.go.
+	turn    *traceTurn
+	written atomic.Int64
 }
 
-func (e *pipelineEndpoint) Read(buffer []byte) (int, error) { return e.file.Read(buffer) }
+func (e *pipelineEndpoint) Read(buffer []byte) (int, error) {
+	if e.turn != nil && e.turn.holding() && !inputReady(e.file) {
+		e.turn.passOn()
+	}
+	return e.file.Read(buffer)
+}
 
 // SyscallConn reaches the pipe's descriptor, which `read -t 0` asks whether anything is
 // waiting; see read_ready.go.
 func (e *pipelineEndpoint) SyscallConn() (syscall.RawConn, error) { return e.file.SyscallConn() }
 func (e *pipelineEndpoint) Write(buffer []byte) (int, error) {
+	if e.turn != nil && e.written.Add(int64(len(buffer))) > traceTurnPipeBytes {
+		e.turn.passOn()
+	}
 	written, err := e.file.Write(buffer)
 	return written, normalizePipelineWriteError(err)
 }
@@ -64,14 +77,19 @@ func (r Runtime) preparePipeline(ctx context.Context, runs []pipelineStageRun) (
 		}
 		stages[index] = tokenPipelineStage{runtime: stage, run: run, inShell: inShell}
 	}
+	if r.options.xtrace || r.traceTurn != nil {
+		for index, turn := range newTraceTurns(len(stages), r.traceTurn) {
+			stages[index].runtime.traceTurn = turn
+		}
+	}
 	pipeline := tokenPipeline{stages: stages, endpoints: make([]*pipelineEndpoint, 0, 2*(len(stages)-1))}
 	for index := 0; index < len(stages)-1; index++ {
 		reader, writer, err := os.Pipe()
 		if err != nil {
 			return tokenPipeline{}, errors.Join(err, pipeline.closeEndpoints(), closeTokenPipelineStages(stages))
 		}
-		readEndpoint := &pipelineEndpoint{file: reader}
-		writeEndpoint := &pipelineEndpoint{file: writer}
+		readEndpoint := &pipelineEndpoint{file: reader, turn: stages[index+1].runtime.traceTurn}
+		writeEndpoint := &pipelineEndpoint{file: writer, turn: stages[index].runtime.traceTurn}
 		pipeline.endpoints = append(pipeline.endpoints, readEndpoint, writeEndpoint)
 		if err := stages[index].runtime.fds.bindOwnedWriter(1, writeEndpoint); err != nil {
 			return tokenPipeline{}, errors.Join(err, pipeline.closeEndpoints(), closeTokenPipelineStages(stages))
@@ -119,6 +137,7 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 			result := stage.runtime.guardedRun("running a pipeline stage", func() lineResult {
 				return stage.run(ctx, stage.runtime, savedStatus)
 			})
+			stage.runtime.traceTurn.passOn()
 			if !stage.inShell {
 				stage.runtime.jobScope.cancelAndDrain()
 			}

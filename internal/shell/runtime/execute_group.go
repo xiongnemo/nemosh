@@ -28,7 +28,7 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 	commandRuntime := r
 	if isolated {
 		var err error
-		commandRuntime, err = r.subshellSnapshot(ctx)
+		commandRuntime, err = r.subshellSnapshotTracing(ctx, r.traceTurn.subshell())
 		if err != nil {
 			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 			return lineResult{status: 1}
