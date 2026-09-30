@@ -67,7 +67,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			}
 			continue
 		}
-		if char == '$' && index+1 < len(line) && line[index+1] == '\'' && scanner.quote() == 0 {
+		if char == '$' && index+1 < len(line) && line[index+1] == '\'' && scanner.bare() {
 			scanner.quotes = append(scanner.quotes, ansiQuoteMarker)
 			scanner.logical.WriteByte(char)
 			scanner.logical.WriteByte('\'')
@@ -83,7 +83,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.escaped = true
 			continue
 		}
-		if char == '\'' && scanner.quote() == 0 {
+		if char == '\'' && scanner.bare() {
 			scanner.quotes = append(scanner.quotes, char)
 			scanner.logical.WriteByte(char)
 			continue
@@ -93,13 +93,22 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteByte(char)
 			continue
 		}
+		if char == '}' && scanner.quote() == braceParameterMarker {
+			scanner.popQuote()
+			scanner.logical.WriteByte(char)
+			continue
+		}
 		// A `${...}` holds quotes of its own, and what they quote is no operator or comment:
 		// `"${u:-"a ( b"}"`. Its `}` is no group's either, after a `;` as in `s=${s%;}`. Stepped
 		// over whole when it closes on this line.
-		if char == '$' && (scanner.quote() == '"' || scanner.quote() == 0) && index+1 < len(line) && line[index+1] == '{' {
+		if char == '$' && (scanner.quote() == '"' || scanner.bare()) && index+1 < len(line) && line[index+1] == '{' {
 			if end, ok := bracedParameterEnd(line, index+1); ok {
 				scanner.logical.WriteString(line[index:end])
 				index = end - 1
+				continue
+			}
+			if next, opened := scanner.openBraceParameter(line, index); opened {
+				index = next
 				continue
 			}
 		}
@@ -268,6 +277,9 @@ func (scanner *syntaxScanner) incompleteError() error {
 	if scanner.continued {
 		return fmt.Errorf("%w: trailing line continuation", ErrIncompleteScript)
 	}
+	if scanner.quote() == braceParameterMarker {
+		return fmt.Errorf("%w: missing '}'", ErrIncompleteScript)
+	}
 	if scanner.quote() != 0 {
 		return fmt.Errorf("%w: unterminated quote", ErrIncompleteScript)
 	}
@@ -301,25 +313,7 @@ func (scanner *syntaxScanner) toggleDoubleQuote() {
 	switch scanner.quote() {
 	case '"':
 		scanner.popQuote()
-	case 0:
+	case 0, braceParameterMarker:
 		scanner.quotes = append(scanner.quotes, '"')
 	}
-}
-
-// commentStarts is whether the `#` at index begins a word, and so a comment: at a line's start,
-// after a blank, and after `;`, `&`, `|` or `(`, as in `echo a;# c`, which both references read
-// as a comment and nemosh ran as a command called `#`. A newline before it counts for the passes
-// that read a whole script at once. After the `(` of an extended pattern it is the pattern's,
-// as in bash's `[[ "#a" == @(#*) ]]`.
-func commentStarts(line string, index int) bool {
-	if index == 0 {
-		return true
-	}
-	switch line[index-1] {
-	case ' ', '\t', '\n', ';', '&', '|':
-		return true
-	case '(':
-		return index < 2 || strings.IndexByte("@!?*+", line[index-2]) < 0
-	}
-	return false
 }
