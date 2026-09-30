@@ -47,7 +47,7 @@ func numberedLogicalLines(source string, waits bool) ([]string, []int, error) {
 }
 
 func (scanner *syntaxScanner) beginPhysicalLine(index int) {
-	scanner.continued = false
+	scanner.joined, scanner.continued = scanner.continued, false
 	if scanner.logical.Len() == 0 {
 		scanner.logicalStart, scanner.breaks = index, scanner.breaks[:0]
 		return

@@ -20,6 +20,7 @@ type syntaxScanner struct {
 	syntaxErr     error
 	escaped       bool
 	continued     bool
+	joined        bool
 }
 
 // Line endings are normalized exactly once, on the way into parsing. ReplaceAll
@@ -196,7 +197,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteByte(char)
 			continue
 		}
-		if char == '#' && scanner.quote() == 0 && commentStarts(line, index) {
+		if char == '#' && scanner.quote() == 0 && scanner.commentStartsAt(line, index) {
 			comment = true
 			continue
 		}
