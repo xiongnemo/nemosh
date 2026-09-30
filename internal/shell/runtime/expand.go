@@ -85,7 +85,10 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 				r.reportExpansionError(err)
 				return nil, nil
 			}
-			build.text(strconv.FormatInt(value, 10), false)
+			// Split and globbed when unquoted, as a parameter's value is (POSIX 2.6.5, 2.6.6),
+			// in both references: with IFS=0, $((1001)) is 1, "" and 1, and the - of
+			// $((-9)) in [0$((-9))] makes the range 0-9. It went in as quoted text.
+			build.expansion(strconv.FormatInt(value, 10), part.quote)
 		case wordPartProcessSubstitution, wordPartOutputSubstitution:
 			if part.kind == wordPartOutputSubstitution {
 				build.text(r.expandOutputSubstitution(ctx, part.script, savedStatus), false)
