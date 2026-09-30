@@ -7,8 +7,8 @@ import (
 // `shopt` -- the option builtin bash keeps apart from `set -o`, with bash's names and bash's
 // answers, since busybox has no shopt. The names and what each does are in shopt_table.go.
 
-// shoptLine is how shopt prints a name and its state: bash's, padded to twenty. The whole
-// `set -o` listing has its own; see shellOptionLine.
+// shoptLine is how shopt prints a name and its state: bash's, padded to twenty. `shopt -o` has
+// its own, shellOptionLine, and the `set -o` listing busybox's, setOptionLine.
 const shoptLine = "%-20s\t%s\n"
 
 // shoptRequest is what shopt's options asked for.

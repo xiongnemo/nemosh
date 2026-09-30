@@ -8,9 +8,13 @@ import (
 	"strings"
 )
 
-// shellOptionLine is how the `set -o` listing prints a row. bash pads to fifteen and adds a
-// tab; twelve fits every name here, and the tab is what bash and busybox both put there.
-// shopt, which has bash's names, has bash's width too; see shoptLine.
+// setOptionLine is how the `set -o` listing prints a row: busybox's, padded to sixteen with
+// no tab (ash.c's plus_minus_o). It was bash's shape, a tab after the name, which busybox does
+// not write.
+const setOptionLine = "%-16s%s\n"
+
+// shellOptionLine is how `shopt -o` prints a row, bash's shape since busybox has no shopt: the
+// name padded, then a tab. shopt, which has bash's names, has bash's width too; see shoptLine.
 const shellOptionLine = "%-12s\t%s\n"
 
 // set implements the POSIX `set` builtin. With no arguments it lists the shell
@@ -212,7 +216,7 @@ func (r Runtime) listShellOptions(long bool) {
 			if enabled {
 				state = "on"
 			}
-			fmt.Fprintf(r.streams.Stdout, shellOptionLine, spec.name, state)
+			fmt.Fprintf(r.streams.Stdout, setOptionLine, spec.name, state)
 			continue
 		}
 		sign := "+o"

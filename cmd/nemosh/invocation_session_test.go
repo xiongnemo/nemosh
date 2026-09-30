@@ -79,7 +79,7 @@ func TestSession_runsPromptCommand(t *testing.T) {
 			if result.stdout != test.stdout {
 				t.Fatalf("stdout %q, want %q; stderr %q", result.stdout, test.stdout, result.stderr)
 			}
-			if test.name == "errors end only it" && !strings.Contains(result.stderr, "division by zero") {
+			if test.name == "errors end only it" && !strings.Contains(result.stderr, "divide by zero") {
 				t.Fatalf("stderr %q, want the error reported", result.stderr)
 			}
 		})

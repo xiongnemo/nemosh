@@ -85,7 +85,8 @@ func applyArithmetic(left int64, operator string, right int64) (int64, error) {
 		return left * right, nil
 	case "/", "%":
 		if right == 0 {
-			return 0, fmt.Errorf("division by zero")
+			// busybox's words (shell/math.c); this said "division by zero".
+			return 0, fmt.Errorf("divide by zero")
 		}
 		if operator == "/" {
 			return left / right, nil

@@ -44,12 +44,12 @@ func TestSet_bashOptionNames(t *testing.T) {
 			// three off.
 			name:   "the listing",
 			script: "set -o | grep -E '^(braceexpand|hashall|histexpand|history|emacs|posix|igncr|keyword) '\n",
-			stdout: "braceexpand \ton\nhashall     \ton\nhistexpand  \toff\nemacs       \toff\nhistory     \toff\nigncr       \ton\nkeyword     \toff\nposix       \toff\n",
+			stdout: "braceexpand     on\nhashall         on\nhistexpand      off\nemacs           off\nhistory         off\nigncr           on\nkeyword         off\nposix           off\n",
 		},
 		{
 			name:   "+o reads back",
 			script: "set -o posix\nset +B\nsaved=$(set +o)\nset +o posix\nset -B\neval \"$saved\"\nset -o | grep -E '^(posix|braceexpand) '\n",
-			stdout: "braceexpand \toff\nposix       \ton\n",
+			stdout: "braceexpand     off\nposix           on\n",
 		},
 	}
 	for _, test := range tests {

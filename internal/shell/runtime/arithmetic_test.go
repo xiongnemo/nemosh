@@ -58,7 +58,7 @@ func TestRuntime_reportsDivisionByZero(t *testing.T) {
 	if status != 2 || stdout != "" {
 		t.Fatalf("status = %d, stdout = %q, want 2 and no output", status, stdout)
 	}
-	if !strings.Contains(stderr, "division by zero") {
+	if !strings.Contains(stderr, "divide by zero") {
 		t.Fatalf("stderr = %q, want a division-by-zero diagnostic", stderr)
 	}
 }

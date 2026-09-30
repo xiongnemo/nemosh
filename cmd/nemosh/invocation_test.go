@@ -234,12 +234,12 @@ func TestInvocation_sessionHistoryOptions(t *testing.T) {
 	t.Setenv("HISTFILE", "")
 
 	result := runInvocation(t, "set -o | grep -E '^(histexpand|history) '\necho one\nset +H\necho !!\nset +o history\necho two\nhistory | grep -c two\n", "-i")
-	want := "histexpand  \ton\nhistory     \ton\none\n!!\ntwo\n0\n"
+	want := "histexpand      on\nhistory         on\none\n!!\ntwo\n0\n"
 	if result.stdout != want {
 		t.Fatalf("stdout %q, want %q (stderr %q)", result.stdout, want, result.stderr)
 	}
 	script := runInvocation(t, "", "-c", "set -o | grep -E '^(histexpand|history) '")
-	if want := "histexpand  \toff\nhistory     \toff\n"; script.stdout != want {
+	if want := "histexpand      off\nhistory         off\n"; script.stdout != want {
 		t.Fatalf("a script's stdout %q, want %q", script.stdout, want)
 	}
 }
