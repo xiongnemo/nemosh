@@ -32,7 +32,7 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 		fmt.Fprintf(r.streams.Stderr, "read: %v\n", err)
 		return 1
 	}
-	r.writeReadPrompt(options)
+	r.writeReadPrompt(options, input)
 	// `-t 0` reads nothing; see read_ready.go.
 	if options.hasTimeout && options.timeout == 0 {
 		if inputReady(input) {
@@ -70,12 +70,17 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 	return 0
 }
 
-// writeReadPrompt puts -p on the terminal.
+// writeReadPrompt puts -p on the terminal, when the input is one: a prompt is for a person
+// typing, and both references write it only then -- `echo hi | read -p 'P'` says nothing. It
+// was written whatever the input was.
 //
 // To stderr, so that `read -p 'name: ' v` inside `$(...)` does not put the prompt
 // into the value being captured -- bash writes it to stderr for the same reason.
-func (r Runtime) writeReadPrompt(options readOptions) {
+func (r Runtime) writeReadPrompt(options readOptions, input io.Reader) {
 	if options.prompt == "" {
+		return
+	}
+	if _, terminal := terminalDescriptor(input); !terminal {
 		return
 	}
 	fmt.Fprint(r.streams.Stderr, options.prompt)

@@ -277,7 +277,7 @@ func TestRead_honoursItsOptions(t *testing.T) {
 			script: "read -rn 4 x\necho \"[$x]\"\n", want: "[a\\b]\n",
 		},
 		{
-			name: "-p writes the prompt to stderr", stdin: "v\n",
+			name: "-p takes its prompt and reads", stdin: "v\n",
 			script: "read -p 'name: ' x\necho \"[$x]\"\n", want: "[v]\n",
 		},
 		{
@@ -301,18 +301,17 @@ func TestRead_honoursItsOptions(t *testing.T) {
 	}
 }
 
-// A prompt belongs on stderr, so that `x=$(read -p 'q: ' v; echo $v)` captures the
-// answer and not the question.
-func TestRead_writesThePromptToStderrNotStdout(t *testing.T) {
+// A prompt is for a person at a terminal: with the input a pipe or a file both references
+// write none, and read the answer all the same -- `echo hi | { read -p 'P'; echo $REPLY; }`
+// is hi and nothing on stderr. At a terminal the prompt goes to stderr, so that
+// `x=$(read -p 'q: ' v; echo $v)` captures the answer and not the question.
+func TestRead_promptsOnlyAtATerminal(t *testing.T) {
 	// When
 	_, stdout, stderr := runReadScript(t, "value\n", "read -p 'question: ' x\necho \"$x\"\n")
 
 	// Then
-	if stdout != "value\n" {
-		t.Fatalf("stdout = %q, want the answer alone", stdout)
-	}
-	if !strings.Contains(stderr, "question: ") {
-		t.Fatalf("stderr = %q, want the prompt", stderr)
+	if stdout != "value\n" || stderr != "" {
+		t.Fatalf("stdout = %q, stderr = %q, want the answer and no prompt", stdout, stderr)
 	}
 }
 
