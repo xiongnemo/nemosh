@@ -42,9 +42,13 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", parseErr)
 		status = 2
 		if runExitTrap {
-			status = r.runExitTrap(context.WithoutCancel(ctx), status)
+			return r.runExitTrap(context.WithoutCancel(ctx), status), flowNone
 		}
-		return status, flowNone
+		// Text eval or . reads that does not parse is a syntax error, which ends a script, `||
+		// echo handled` or not, as busybox ends it and POSIX 2.8.1 has it, and only the line at
+		// a prompt; see flowAbort. It went on with 2, as bash goes on outside its POSIX mode.
+		// Under command it ends only the eval; see plainResult.
+		return status, flowAbort
 	}
 	if runExitTrap && control != flowExec {
 		if status == 130 && isShellInterrupt(ctx) {
