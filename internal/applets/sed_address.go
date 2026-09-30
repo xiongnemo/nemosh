@@ -181,7 +181,7 @@ func parseSedEndpoint(script string, extended bool) (sedEndpoint, string, bool, 
 		endpoint.line = value
 		return endpoint, script[end:], true, nil
 	case script[0] == '/':
-		pattern, rest, err := readSedDelimited(script[1:], '/')
+		pattern, rest, err := readSedRegex(script[1:], '/')
 		if err != nil {
 			return endpoint, "", false, err
 		}
@@ -213,6 +213,42 @@ func readSedDelimited(script string, delimiter byte) (string, string, error) {
 		}
 	}
 	// busybox's wording, measured: `sed -n '/a'` answers `sed: unmatched '/'`.
+	return "", "", fmt.Errorf("unmatched '%c'", delimiter)
+}
+
+// readSedRegex is readSedDelimited for a regular expression, scanned as busybox's
+// index_of_next_unescaped_regexp_delim scans one: a bracket expression is opaque, so the
+// delimiter inside one is a member of it, and `s/[/]/_/` replaces a slash where it ended the
+// pattern at the bracket's slash. A `]` just after the `[` or `[^` is a member, not the end, and
+// the delimiter escaped is the delimiter, in a bracket or out, as busybox's copy_parsing_escapes
+// has it.
+func readSedRegex(script string, delimiter byte) (string, string, error) {
+	var text strings.Builder
+	bracket := -1
+	for index := 0; index < len(script); index++ {
+		char := script[index]
+		if char == '\\' && index+1 < len(script) && script[index+1] == delimiter {
+			text.WriteByte(delimiter)
+			index++
+			continue
+		}
+		switch {
+		case bracket >= 0:
+			if char == ']' && index != bracket+1 && !(index == bracket+2 && script[index-1] == '^') {
+				bracket = -1
+			}
+		case char == '\\' && index+1 < len(script):
+			// An escape outside a bracket is two characters of the pattern, whatever the second.
+			text.WriteByte(char)
+			index++
+			char = script[index]
+		case char == '[':
+			bracket = index
+		case char == delimiter:
+			return text.String(), script[index+1:], nil
+		}
+		text.WriteByte(char)
+	}
 	return "", "", fmt.Errorf("unmatched '%c'", delimiter)
 }
 

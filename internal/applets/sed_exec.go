@@ -187,11 +187,11 @@ func parseSedTranslateCommand(script string) (sedTranslate, string, error) {
 	delimiter := script[1]
 	from, rest, err := readSedDelimited(script[2:], delimiter)
 	if err != nil {
-		return sedTranslate{}, "", fmt.Errorf("unterminated `y' command")
+		return sedTranslate{}, "", err
 	}
 	to, rest, err := readSedDelimited(rest, delimiter)
 	if err != nil {
-		return sedTranslate{}, "", fmt.Errorf("unterminated `y' command")
+		return sedTranslate{}, "", err
 	}
 	sources, targets := []rune(from), []rune(to)
 	if len(sources) != len(targets) {

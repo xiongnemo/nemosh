@@ -202,13 +202,14 @@ func parseSedSubstituteCommand(script string, extended bool) (sedSubstitute, str
 		return sedSubstitute{}, "", fmt.Errorf("unsupported sed script: %s", script)
 	}
 	delimiter := script[1]
-	pattern, rest, err := readSedDelimited(script[2:], delimiter)
+	// An s with a delimiter missing is `unmatched '/'`, busybox's words for it.
+	pattern, rest, err := readSedRegex(script[2:], delimiter)
 	if err != nil {
-		return sedSubstitute{}, "", fmt.Errorf("unterminated `s' command")
+		return sedSubstitute{}, "", err
 	}
 	replacement, rest, err := readSedDelimited(rest, delimiter)
 	if err != nil {
-		return sedSubstitute{}, "", fmt.Errorf("unterminated `s' command")
+		return sedSubstitute{}, "", err
 	}
 	if pattern == "" {
 		return sedSubstitute{}, "", fmt.Errorf("malformed sed substitute: s%c%s", delimiter, script[2:])
