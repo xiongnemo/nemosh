@@ -3,7 +3,6 @@ package applets
 import (
 	"bufio"
 	"io"
-	"os"
 )
 
 // Walking the operands: which files are read, in what order, and what that does to the
@@ -97,11 +96,11 @@ func (in *awkInterp) runOneFile(name string) error {
 }
 
 // openRecordSource opens a named input, with `-` meaning standard input.
-func (in *awkInterp) openRecordSource(name string) (*bufio.Reader, *os.File, error) {
+func (in *awkInterp) openRecordSource(name string) (*bufio.Reader, io.Closer, error) {
 	if name == "-" || name == "/dev/stdin" {
 		return bufio.NewReader(in.input), nil, nil
 	}
-	file, err := os.Open(name)
+	file, err := openProcessInput(ProcessViewFromContext(in.ctx), name)
 	if err != nil {
 		return nil, nil, cannotOpen(name, err)
 	}

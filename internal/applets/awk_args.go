@@ -2,7 +2,6 @@ package applets
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -38,7 +37,7 @@ type awkInvocation struct {
 	hasSeparator   bool
 }
 
-func parseAwkArguments(args []string) (*awkInvocation, error) {
+func parseAwkArguments(view ProcessView, args []string) (*awkInvocation, error) {
 	invocation := &awkInvocation{}
 	var sources []string
 	index := 0
@@ -64,7 +63,7 @@ func parseAwkArguments(args []string) (*awkInvocation, error) {
 			}
 			value = args[index]
 		}
-		if err := invocation.applyOption(letter, value, &sources); err != nil {
+		if err := invocation.applyOption(view, letter, value, &sources); err != nil {
 			return nil, err
 		}
 	}
@@ -83,7 +82,7 @@ func parseAwkArguments(args []string) (*awkInvocation, error) {
 	return invocation, nil
 }
 
-func (v *awkInvocation) applyOption(letter byte, value string, sources *[]string) error {
+func (v *awkInvocation) applyOption(view ProcessView, letter byte, value string, sources *[]string) error {
 	switch letter {
 	case 'F':
 		v.fieldSeparator, v.hasSeparator = awkExpandAssignmentValue(value), true
@@ -93,7 +92,7 @@ func (v *awkInvocation) applyOption(letter byte, value string, sources *[]string
 		}
 		v.assignments = append(v.assignments, value)
 	case 'f':
-		text, err := readAwkSource(value)
+		text, err := readAwkSource(view, value)
 		if err != nil {
 			return err
 		}
@@ -103,9 +102,14 @@ func (v *awkInvocation) applyOption(letter byte, value string, sources *[]string
 }
 
 // readAwkSource reads a program file, through the same UTF-16 decoding every text applet
-// uses so that a program saved by a Windows editor is text rather than interleaved NULs.
-func readAwkSource(name string) (string, error) {
-	file, err := os.Open(name)
+// uses so that a program saved by a Windows editor is text rather than interleaved NULs. bc's
+// and dc's FILEs are read with it too.
+//
+// The name is the shell's, found from its working directory. It was the process's, where the
+// shell was started, since the shell never changes that: after `cd sub`, `awk -f p.awk` could
+// not open sub's p.awk, and would have read one where the shell began.
+func readAwkSource(view ProcessView, name string) (string, error) {
+	file, err := openProcessInput(view, name)
 	if err != nil {
 		return "", cannotOpen(name, err)
 	}

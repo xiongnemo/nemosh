@@ -2,7 +2,7 @@ package applets
 
 import (
 	"bufio"
-	"os"
+	"io"
 )
 
 // `getline`, in all six of its forms.
@@ -29,7 +29,7 @@ import (
 // awkInput is one source a program is reading from.
 type awkInput struct {
 	reader *bufio.Reader
-	file   *os.File
+	file   io.Closer
 }
 
 func (s *awkInput) close() {
@@ -150,7 +150,7 @@ func (in *awkInterp) openInput(name string, isCommand bool) (*awkInput, error) {
 	if name == "-" || name == "/dev/stdin" {
 		return &awkInput{reader: bufio.NewReader(in.input)}, nil
 	}
-	file, err := os.Open(name)
+	file, err := openProcessInput(ProcessViewFromContext(in.ctx), name)
 	if err != nil {
 		return nil, err
 	}

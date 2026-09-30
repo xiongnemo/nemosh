@@ -38,7 +38,7 @@ func (awkApplet) Name() string { return "awk" }
 // A failure exits **2**, which is gawk's status and what lets a script tell a broken
 // program from one that chose to `exit 1`.
 func (awkApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	invocation, err := parseAwkArguments(args)
+	invocation, err := parseAwkArguments(ProcessViewFromContext(ctx), args)
 	if err != nil {
 		return ExitStatusMessage(2, err)
 	}

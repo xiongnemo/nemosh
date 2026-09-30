@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -27,13 +28,13 @@ import (
 // A program may come from files, and standard input is read after them -- so
 // `bc prelude.bc` still takes a session at the keyboard, which is how bc is used.
 func newBcApplet() Applet {
-	return simpleApplet{name: "bc", run: func(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	return simpleApplet{name: "bc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		files, err := parseBcArguments(args)
 		if err != nil {
 			return err
 		}
 		interp := newBcInterp(stdout, stderr)
-		return interp.run(files, stdin)
+		return interp.run(ProcessViewFromContext(ctx), files, stdin)
 	}}
 }
 
@@ -66,11 +67,11 @@ func parseBcArguments(args []string) ([]string, error) {
 }
 
 // run works through the files and then standard input.
-func (in *bcInterp) run(files []string, stdin io.Reader) error {
+func (in *bcInterp) run(view ProcessView, files []string, stdin io.Reader) error {
 	defer in.out.Flush()
 	failed := false
 	for _, name := range files {
-		text, err := readAwkSource(name)
+		text, err := readAwkSource(view, name)
 		if err != nil {
 			return err
 		}

@@ -25,7 +25,7 @@ import (
 // awkOutput is one destination the program is writing to.
 type awkOutput struct {
 	writer io.Writer
-	file   *os.File
+	file   io.WriteCloser
 	// buffer and command are set for a pipe: what has been written, and the applet that
 	// will be given it.
 	buffer  *bytes.Buffer
@@ -70,7 +70,8 @@ func (in *awkInterp) openOutput(name, operator string) (*awkOutput, error) {
 		flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
 	}
 	// 0666 through the umask, as busybox's fopen makes the file.
-	file, err := os.OpenFile(name, flags, createMode(ProcessViewFromContext(in.ctx), 0o666))
+	view := ProcessViewFromContext(in.ctx)
+	file, err := openProcessOutput(view, name, flags, createMode(view, 0o666))
 	if err != nil {
 		return nil, cannotCreate(name, err)
 	}
@@ -142,8 +143,8 @@ func (in *awkInterp) flushOutputs(name string) int {
 	}
 	_ = in.buffered.Flush()
 	for _, stream := range in.outputs {
-		if stream.file != nil {
-			_ = stream.file.Sync()
+		if syncer, ok := stream.file.(interface{ Sync() error }); ok {
+			_ = syncer.Sync()
 		}
 	}
 	return 0

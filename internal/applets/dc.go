@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -43,12 +44,12 @@ type dcMachine struct {
 }
 
 func newDcApplet() Applet {
-	return simpleApplet{name: "dc", run: func(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	return simpleApplet{name: "dc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		scripts, files, err := parseDcArguments(args)
 		if err != nil {
 			return err
 		}
-		return newDcMachine(stdout, stderr).run(scripts, files, stdin)
+		return newDcMachine(stdout, stderr).run(ProcessViewFromContext(ctx), scripts, files, stdin)
 	}}
 }
 
@@ -102,8 +103,8 @@ func parseDcArguments(args []string) ([]string, []string, error) {
 
 // run works through the scripts and the files, flushing whatever was printed before it
 // reports a failure so that the output and the diagnostic arrive in the order they happened.
-func (m *dcMachine) run(scripts, files []string, stdin io.Reader) error {
-	err := m.runAll(scripts, files, stdin)
+func (m *dcMachine) run(view ProcessView, scripts, files []string, stdin io.Reader) error {
+	err := m.runAll(view, scripts, files, stdin)
 	if flushErr := m.out.Flush(); flushErr != nil && err == nil {
 		err = flushErr
 	}
@@ -114,7 +115,7 @@ func (m *dcMachine) run(scripts, files []string, stdin io.Reader) error {
 	return nil
 }
 
-func (m *dcMachine) runAll(scripts, files []string, stdin io.Reader) error {
+func (m *dcMachine) runAll(view ProcessView, scripts, files []string, stdin io.Reader) error {
 	for _, script := range scripts {
 		if err := m.execute(script); err != nil {
 			return err
@@ -130,7 +131,7 @@ func (m *dcMachine) runAll(scripts, files []string, stdin io.Reader) error {
 		return m.session(stdin)
 	}
 	for _, name := range files {
-		text, err := readAwkSource(name)
+		text, err := readAwkSource(view, name)
 		if err != nil {
 			return err
 		}
