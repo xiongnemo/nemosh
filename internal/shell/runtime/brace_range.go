@@ -31,8 +31,12 @@ func braceRange(inner []braceAtom) ([][]braceAtom, bool) {
 	step := 1
 	if len(pieces) == 3 {
 		parsed, err := strconv.Atoi(pieces[2])
-		if err != nil || parsed == 0 {
+		if err != nil {
 			return nil, false
+		}
+		// A step of 0 is 1, as bash 5.3 takes it: `{1..4..0}` is 1 2 3 4. It was no range.
+		if parsed == 0 {
+			parsed = 1
 		}
 		// bash ignores the sign of the step and takes the direction from the
 		// endpoints, so `{5..1..1}` and `{5..1..-1}` are the same.

@@ -169,12 +169,9 @@
     },
     "brace-expansion.test.sh": {
       "Mixed case char expansion is invalid": "fail",
-      "Singleton char ranges with steps": "fail",
-      "Singleton ranges": "fail",
       "Two kinds of tilde expansion": "fail",
       "double expansion with literal and simple var": "ash-only",
       "double expansion with simple var -- bash bug": "ash-only",
-      "regression: 0 step disallowed": "fail",
       "{ in expansion": "ash-only"
     },
     "bugs.test.sh": {

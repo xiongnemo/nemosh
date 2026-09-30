@@ -26,6 +26,9 @@ func TestRuntime_expandsBraces(t *testing.T) {
 			name: "a zero-padded range", script: "echo {01..03}\n", want: "01 02 03\n",
 		},
 		{name: "a range with a step", script: "echo {1..10..3}\n", want: "1 4 7 10\n"},
+		// A range of one is its one value, and a step of 0 is 1. Both were left as written.
+		{name: "a range of one", script: "echo {1..1}- {-9..-9}- {a..a}- {a..a..2}- a{1..1}b\n", want: "1- -9- a- a- a1b\n"},
+		{name: "a step of 0", script: "echo {1..4..0}\n", want: "1 2 3 4\n"},
 		{
 			// Two groups multiply rather than concatenate.
 			name: "two groups are a product", script: "echo {a,b}{1,2}\n", want: "a1 a2 b1 b2\n",

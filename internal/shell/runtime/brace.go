@@ -46,10 +46,11 @@ func (a braceAtom) is(r rune) bool { return a.opaque == nil && a.literal == r }
 func expandBraceWord(item word) []word {
 	atoms := braceAtomsOf(item)
 	expanded := expandBraceAtoms(atoms)
-	if len(expanded) == 1 {
+	if len(expanded) == 1 && sameBraceAtoms(expanded[0], atoms) {
 		// Nothing was expanded, so the original word is returned untouched --
 		// including its quotedEmpty and expandTilde flags, which a rebuild would
-		// have to reconstruct.
+		// have to reconstruct. One result that differs is a range of one, `{1..1}`,
+		// which is 1 as in bash; it was taken for no expansion and left as written.
 		return []word{item}
 	}
 	words := make([]word, 0, len(expanded))
@@ -57,6 +58,18 @@ func expandBraceWord(item word) []word {
 		words = append(words, wordFromBraceAtoms(sequence, item))
 	}
 	return words
+}
+
+func sameBraceAtoms(left, right []braceAtom) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func braceAtomsOf(item word) []braceAtom {
