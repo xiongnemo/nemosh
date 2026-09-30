@@ -66,6 +66,12 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	case ":":
 		return r.parameterSubstring(ctx, value, word, savedStatus)
 	case "/", "//", "/#", "/%":
+		// An unset parameter has nothing to replace in, as both references read it: `${v/#/:}`
+		// is a colon before v only when v is set. The empty string it was matched `*` and the
+		// anchored empty patterns, and gave the replacement.
+		if !set {
+			return "", nil
+		}
 		return parameterReplace(value, operator, r.expandReplaceSpec(ctx, word, operator, savedStatus), r.noCaseMatch()), nil
 	case "^", "^^", ",", ",,", "~", "~~":
 		return parameterCase(value, operator, r.expandOperand(ctx, word, operandPattern, savedStatus)), nil
