@@ -20,13 +20,22 @@ import "strings"
 // line three times per scan, and the consequence of being wrong is only which of two
 // diagnostics an already-malformed line gets. A `case` that is data and a `)` that is a
 // bracket have to appear together before it matters.
+//
+// The word after `case` is its subject and no keyword, whatever it says, as in both references:
+// `{ case esac in "esac") x;; esac; }` closed its case at the subject, and the pattern's `)`
+// was a bracket that closed nothing.
 func insideCase(text string) bool {
 	depth := 0
+	subject := false
 	for _, field := range strings.Fields(text) {
-		switch strings.Trim(field, ";&|(){}") {
-		case "case":
+		word := strings.Trim(field, ";&|(){}")
+		switch {
+		case subject:
+			subject = false
+		case word == "case":
 			depth++
-		case "esac":
+			subject = true
+		case word == "esac":
 			if depth > 0 {
 				depth--
 			}

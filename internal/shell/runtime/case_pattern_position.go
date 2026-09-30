@@ -43,25 +43,36 @@ func CasePatternPosition(prefix string) bool {
 func casePatternPosition(prefix string) bool {
 	depth := 0
 	pattern := false
+	// subject is the word after `case`, which is the case's subject whatever it says: in `(
+	// case esac in "esac") x;; esac )` the first esac closed the case, and the pattern's `)`
+	// closed the subshell. Quoted and escaped characters are the word's too, so a quoted
+	// subject is a word and a quoted keyword is none.
+	subject := false
 	var word strings.Builder
 	// A word ends at a blank, a bracket, or a separator; what it was decides whether a
 	// pattern begins or a case ends.
 	endWord := func() {
-		switch word.String() {
-		case "case":
+		text := word.String()
+		word.Reset()
+		switch {
+		case text == "":
+		case subject:
+			subject = false
+		// Where a pattern goes, `case` is a pattern: `case case in case)`.
+		case text == "case" && !pattern:
 			depth++
 			pattern = false
-		case "in":
+			subject = true
+		case text == "in":
 			if depth > 0 {
 				pattern = true
 			}
-		case "esac":
+		case text == "esac":
 			if depth > 0 {
 				depth--
 			}
 			pattern = false
 		}
-		word.Reset()
 	}
 
 	quote := byte(0)
@@ -76,17 +87,21 @@ func casePatternPosition(prefix string) bool {
 		switch {
 		case escaped:
 			escaped = false
+			word.WriteByte(char)
 		case char == '\\' && quote != '\'':
 			escaped = true
+			word.WriteByte(char)
 		case char == '\'' && quote != '"', char == '"' && quote != '\'':
 			if quote == char {
 				quote = 0
 			} else if quote == 0 {
 				quote = char
 			}
+			word.WriteByte(char)
 		case quote != 0:
 			// Inside quotes nothing is a keyword, so a `"case"` in a string counts for
 			// nothing -- the same trade insideCase makes, for the same reason.
+			word.WriteByte(char)
 		case char == '$' && index+1 < len(prefix) && (prefix[index+1] == '(' || prefix[index+1] == '{'):
 			// An expansion is the word's, its parentheses too: `$((i+2)))` is one pattern and
 			// its `)`. Its first `)` ended the pattern, so the last was read as a subshell's.
