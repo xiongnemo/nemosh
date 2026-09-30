@@ -69,8 +69,16 @@ func parseFunctionDefinition(line string, budget *parseBudget, depth int) (funct
 // to parse the compound as it parses any, with the definition around it; see
 // wrapCompoundAfterOperator.
 func functionHeaderBeforeCompound(line string) (string, string, bool) {
-	text, _ := cutFunctionKeyword(line)
+	text, keyword := cutFunctionKeyword(line)
 	open := strings.IndexByte(text, '(')
+	// With the keyword, the parentheses may go: `function f for i in 1 2; do ...; done`, as
+	// busybox and bash both take it. It was "unexpected do".
+	if cut := strings.IndexAny(text, " \t"); keyword && cut > 0 && (open < 0 || cut < open) {
+		name, rest := text[:cut], strings.TrimLeft(text[cut:], " \t")
+		if _, ok := newFunctionName(name); ok && beginsWithCompoundKeyword(rest) {
+			return name, rest, true
+		}
+	}
 	if open <= 0 {
 		return "", "", false
 	}
