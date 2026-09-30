@@ -137,7 +137,7 @@ func (r Runtime) expandDoubleQuotedText(ctx context.Context, text string, savedS
 			index += 2
 		case char == '$':
 			end := expansionEndAt(text, index)
-			out.WriteString(r.expandEmbeddedParameters(ctx, text[index:end], savedStatus))
+			out.WriteString(r.expandEmbeddedParametersIn(ctx, text[index:end], savedStatus, quoteDouble))
 			index = end
 		default:
 			out.WriteByte(char)

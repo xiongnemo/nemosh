@@ -41,6 +41,16 @@ func (r Runtime) expandArithmeticText(ctx context.Context, text string, savedSta
 // and the operand path used to look the whole word up as a variable name -- so
 // `${x:-${y}}` asked for a variable called `{y}` and found nothing.
 func (r Runtime) expandEmbeddedParameters(ctx context.Context, text string, savedStatus int) string {
+	return r.expandEmbeddedParametersIn(ctx, text, savedStatus, quoteUnquoted)
+}
+
+// expandEmbeddedParametersIn is expandEmbeddedParameters in the quoting given. In double
+// quotes a reference's word takes a single quote as an ordinary character, as it does where
+// the reference is itself written in double quotes: with x set, the pattern of
+// `"${y#"${x+'q'}"}"` and the replacement of `"${x/a/"${x+'q'}"}"` are the three characters
+// 'q', quotes and all, in both references. The embedded one was read as unquoted and its
+// quotes removed.
+func (r Runtime) expandEmbeddedParametersIn(ctx context.Context, text string, savedStatus int, quote quoteContext) string {
 	if !strings.ContainsRune(text, '$') {
 		return text
 	}
@@ -83,7 +93,7 @@ func (r Runtime) expandEmbeddedParameters(ctx context.Context, text string, save
 			continue
 		}
 		reference := text[index:end]
-		values := r.expandParameterPart(ctx, wordPart{kind: wordPartParameter, text: reference}, savedStatus)
+		values := r.expandParameterPart(ctx, wordPart{kind: wordPartParameter, text: reference, quote: quote}, savedStatus)
 		// Joined with a blank, which is what an unquoted `${a[@]}` would produce
 		// anyway. An expression using it as a number wants `${#a[@]}`, and one that
 		// really does hold several numbers was never going to evaluate.
