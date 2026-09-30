@@ -82,7 +82,7 @@ func (r Runtime) isKnownCommand(name string) bool {
 // `type`, and leaving it out had them report a builtin that plainly works as
 // absent.
 var builtinNames = []string{
-	":", ".", "alias", "break", "builtin", "caller", "cd", "command", "continue", "declare", "eval", "exec",
+	":", ".", "alias", "break", "builtin", "caller", "cd", "command", "compgen", "continue", "declare", "eval", "exec",
 	"exit", "export", "getopts", "hash", "help", "history", "jobs", "let", "local",
 	"pushd", "popd", "dirs", "mapfile", "readarray",
 	"pwd", "read",

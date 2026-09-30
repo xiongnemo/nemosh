@@ -188,6 +188,8 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 		return r.alias(args[1:])
 	case "unalias":
 		return r.unalias(args[1:])
+	case "compgen":
+		return r.compgen(ctx, args[1:], 0)
 	case "local":
 		return r.local(ctx, args[1:])
 	case "type":

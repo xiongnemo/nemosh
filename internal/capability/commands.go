@@ -176,6 +176,7 @@ var commands = []Command{
 	{Name: "cd", Operand: Directory, Builtin: true},
 	{Name: "coproc", Operand: AnyPath, Builtin: true},
 	{Name: "command", Operand: AnyPath, Builtin: true},
+	{Name: "compgen", Operand: AnyPath, Builtin: true},
 	{Name: "declare", Operand: AnyPath, Builtin: true},
 	{Name: "continue", Operand: AnyPath, Builtin: true},
 	{Name: "eval", Operand: AnyPath, Builtin: true},
