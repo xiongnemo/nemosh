@@ -84,6 +84,11 @@ func (r Runtime) describeFor(mode byte, name string) bool {
 	return true
 }
 
+// ashBuiltinApplets are the applets busybox's shell has as builtins of its own, and so calls
+// shell builtins, as bash does: `type echo` is "echo is a shell builtin" there. Here they are
+// applets, and were "a builtin applet".
+var ashBuiltinApplets = map[string]bool{"echo": true, "printf": true, "test": true, "[": true, "true": true, "false": true}
+
 // commandKind is one way the shell could read a name: the word `type -t` answers, the
 // sentence `type` does, and the path when it is a file.
 type commandKind struct {
@@ -105,8 +110,10 @@ func (r Runtime) commandKinds(name string) []commandKind {
 	if ReservedWord(name) {
 		kinds = append(kinds, commandKind{word: "keyword", description: name + " is a shell keyword"})
 	}
+	// A special builtin is called one, as busybox calls POSIX's and its own local and times:
+	// "eval is a special shell builtin". It was "a shell builtin", bash's words for both.
 	if isRuntimeBuiltin(name) && isSpecialBuiltin(name) {
-		kinds = append(kinds, commandKind{word: "builtin", description: name + " is a shell builtin"})
+		kinds = append(kinds, commandKind{word: "builtin", description: name + " is a special shell builtin"})
 	}
 	if parsed, ok := newFunctionName(name); ok {
 		if _, found := r.functions[parsed]; found {
@@ -114,7 +121,11 @@ func (r Runtime) commandKinds(name string) []commandKind {
 		}
 	}
 	if isRuntimeBuiltin(name) && !isSpecialBuiltin(name) {
-		kinds = append(kinds, commandKind{word: "builtin", description: name + " is a shell builtin"})
+		description := name + " is a shell builtin"
+		if errorEndsShell(name) {
+			description = name + " is a special shell builtin"
+		}
+		kinds = append(kinds, commandKind{word: "builtin", description: description})
 	}
 	if builtin, ok := unimplementedBuiltins[name]; ok {
 		// "and will not" separates a gap from a decision, which is the thing
@@ -129,7 +140,11 @@ func (r Runtime) commandKinds(name string) []commandKind {
 		// busybox's own words for the same thing, and it is the primary reference
 		// (AGENTS.md). An applet runs inside the shell, so to `-t` it is a builtin:
 		// a script asking for "file" is asking whether it would start a program.
-		kinds = append(kinds, commandKind{word: "builtin", description: name + " is a builtin applet"})
+		description := name + " is a builtin applet"
+		if ashBuiltinApplets[name] {
+			description = name + " is a shell builtin"
+		}
+		kinds = append(kinds, commandKind{word: "builtin", description: description})
 	}
 	if resolved, err := r.externalCommandPath(name); err == nil {
 		path := filepath.ToSlash(resolved)

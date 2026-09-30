@@ -399,7 +399,7 @@
       "type prints function source code": "fail"
     },
     "builtin-type.test.sh": {
-      "special builtins are called out": "fail"
+      "special builtins are called out": "ash-only"
     },
     "builtin-umask.test.sh": {
       "'umask 0002' sets the umask": "fail",
