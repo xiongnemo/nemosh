@@ -196,20 +196,34 @@ func parseSedEndpoint(script string, extended bool) (sedEndpoint, string, bool, 
 	return endpoint, script, false, nil
 }
 
-// readSedDelimited reads up to the closing delimiter, honouring a backslash
-// escape of it, and requires that the delimiter is actually there -- an
-// unterminated `/a` is an error rather than a pattern running to end of script.
+// readSedDelimited reads an s replacement or a y string up to its closing delimiter, and
+// requires that the delimiter is actually there -- an unterminated `/a` is an error rather
+// than text running to the end of the script.
+//
+// The end is found as busybox's index_of_next_unescaped_regexp_delim finds it: a backslash
+// escapes the character after it, whatever it is, so `\\` is a pair and the `/` after it ends
+// `s/$/\\/`. That was read as a backslash and an escaped delimiter, and refused as unmatched.
+// What is kept is copy_parsing_escapes': `\n`, `\t` and `\r` are the characters, and the
+// delimiter escaped is the delimiter, but for `&`, where `\&` stays escaped and so a literal
+// ampersand in a replacement, busybox's and GNU's `s&8&\&&`. Any other escape is kept whole.
 func readSedDelimited(script string, delimiter byte) (string, string, error) {
 	var text strings.Builder
 	for index := 0; index < len(script); index++ {
+		char := script[index]
 		switch {
-		case script[index] == '\\' && index+1 < len(script) && script[index+1] == delimiter:
-			text.WriteByte(delimiter)
-			index++
-		case script[index] == delimiter:
+		case char == delimiter:
 			return text.String(), script[index+1:], nil
+		case char == '\\' && index+1 < len(script):
+			index++
+			if control, ok := sedControlEscapes[script[index]]; ok {
+				text.WriteString(control)
+			} else if script[index] == delimiter && delimiter != '&' {
+				text.WriteByte(delimiter)
+			} else {
+				text.WriteString(script[index-1 : index+1])
+			}
 		default:
-			text.WriteByte(script[index])
+			text.WriteByte(char)
 		}
 	}
 	// busybox's wording, measured: `sed -n '/a'` answers `sed: unmatched '/'`.

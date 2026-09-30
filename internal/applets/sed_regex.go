@@ -225,6 +225,7 @@ func checkBasicInterval(rest string) error {
 //
 //	&      the whole match          -> ${0}
 //	\1     the first group          -> ${1}
+//	\0     the whole match too, as busybox's do_subst_w_backrefs reads every \digit
 //	\&     a literal ampersand
 //	$      a literal dollar         -> $$, because Expand would read it as a reference
 func translateReplacement(text string) string {
@@ -234,7 +235,7 @@ func translateReplacement(text string) string {
 		case char == '\\' && index+1 < len(text):
 			index++
 			switch next := text[index]; next {
-			case '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 				out.WriteString("${" + string(next) + "}")
 			case 'n':
 				out.WriteByte('\n')

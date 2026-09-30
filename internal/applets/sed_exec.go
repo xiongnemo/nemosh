@@ -193,6 +193,10 @@ func parseSedTranslateCommand(script string) (sedTranslate, string, error) {
 	if err != nil {
 		return sedTranslate{}, "", err
 	}
+	// A `\\` is one backslash, as GNU reads it, so `y/\\/\//` makes every backslash a slash.
+	// busybox keeps the pair, which its y gets away with only by ignoring what one string has
+	// past the end of the other, and the lengths here have to agree.
+	from, to = strings.ReplaceAll(from, `\\`, `\`), strings.ReplaceAll(to, `\\`, `\`)
 	sources, targets := []rune(from), []rune(to)
 	if len(sources) != len(targets) {
 		return sedTranslate{}, "", fmt.Errorf("strings for `y' command are different lengths")
