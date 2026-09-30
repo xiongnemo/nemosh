@@ -37,6 +37,15 @@ func (l *descriptionWriteLease) Seek(offset int64, whence int) (int64, error) {
 	return 0, syscall.ESPIPE
 }
 
+// Truncate cuts the descriptor's file where it has one, as ftruncate on the shell's own
+// descriptor would: `dd of=/dev/stdout seek=1 > f`.
+func (l *descriptionWriteLease) Truncate(size int64) error {
+	if truncater, ok := l.description.writer.(interface{ Truncate(int64) error }); ok && !l.closed.Load() {
+		return truncater.Truncate(size)
+	}
+	return syscall.EINVAL
+}
+
 func (l *descriptionWriteLease) Close() error {
 	l.closed.Store(true)
 	l.once.Do(func() {

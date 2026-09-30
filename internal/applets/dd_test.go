@@ -91,6 +91,33 @@ func TestDdWritesFiles(t *testing.T) {
 			t.Fatalf("the file holds %q", got)
 		}
 	})
+
+	// Without notrunc, seek= cuts the file where the copy begins and keeps the blocks it
+	// passes over, as POSIX and busybox's ftruncate have it; past the end it is filled with
+	// NULs. The whole file was cut, so the blocks seek= passed over came back as NULs.
+	for _, test := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"bs=1", "seek=1"}, "0XY"},
+		{[]string{"bs=2", "seek=2"}, "0123XY"},
+		{[]string{"bs=1", "seek=12"}, "0123456789\x00\x00XY"},
+	} {
+		t.Run("seek keeps "+strings.Join(test.args, " "), func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), "f.bin")
+			if err := os.WriteFile(path, []byte("0123456789"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			args := append([]string{"of=" + path, "status=none"}, test.args...)
+			if _, _, status := runApplet(t, "dd", args, "XY"); status != 0 {
+				t.Fatalf("status %d", status)
+			}
+			if got := readFileText(t, path); got != test.want {
+				t.Fatalf("the file holds %q, want %q", got, test.want)
+			}
+		})
+	}
 }
 
 func TestDdRefusals(t *testing.T) {

@@ -31,6 +31,9 @@ func TestRuntime_appletsOpenDevicesByName(t *testing.T) {
 		{"echo hi | sed 'r /dev/stdin'\n", "hi\n"},
 		// The descriptor is the shell's, written where it stands, as busybox-w32's is.
 		{"{ echo 12345; printf 'b\\na\\n' | sort -o /dev/stdout; } > f; cat f\n", "12345\na\nb\n"},
+		// seek= moves it from there, the standard output too; of= is cut at the seek point.
+		{"{ echo 12345; echo ab | dd seek=1 bs=1 2>/dev/null; } > f; od -An -tx1 f\n", " 31 32 33 34 35 0a 00 61 62 0a\n"},
+		{"{ echo 12345; echo ab | dd of=/dev/stdout seek=1 bs=1 2>/dev/null; } > f; od -An -tx1 f\n", " 31 00 00 00 00 00 00 61 62 0a\n"},
 	} {
 		t.Run(test.script, func(t *testing.T) {
 			t.Chdir(t.TempDir())
@@ -46,6 +49,7 @@ func TestRuntime_appletsOpenDevicesByName(t *testing.T) {
 func TestRuntime_appletDeviceFailures(t *testing.T) {
 	for _, test := range []struct{ script, prefix string }{
 		{"echo abc | dd of=/dev/stdout seek=1 2>&1\n", "dd: /dev/stdout: "},
+		{"echo abc | dd seek=1 2>&1\n", "dd: standard output: "},
 		{"echo hi | tee /dev/fd/9 2>&1 >/dev/null\n", "tee: /dev/fd/9: "},
 	} {
 		t.Run(test.script, func(t *testing.T) {

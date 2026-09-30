@@ -58,31 +58,81 @@ func (r ddRequest) openInput(view ProcessView, stdin io.Reader) (io.Reader, func
 
 func (r ddRequest) openOutput(view ProcessView, stdout io.Writer) (io.Writer, func(), error) {
 	if r.output == "" {
+		// seek= moves the standard output too, the shell's descriptor 1: `dd seek=1 > f`.
+		if err := r.seekStandardOutput(view, stdout); err != nil {
+			return nil, nil, operandFailure("standard output", err)
+		}
 		return stdout, func() {}, nil
 	}
-	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-	if r.notrunc {
-		// The point of notrunc: write into the file without shortening what follows.
-		flags = os.O_WRONLY | os.O_CREATE
+	// Truncated where the copy begins: at the start, or with seek= at the point it names, so
+	// the blocks it passes over are kept, as POSIX and busybox's ftruncate have it. notrunc
+	// shortens nothing.
+	flags := os.O_WRONLY | os.O_CREATE
+	if !r.notrunc && r.seek == 0 {
+		flags |= os.O_TRUNC
 	}
 	// 0666 through the umask, as busybox's xopen makes of=. A device too: of=/dev/null.
 	file, err := openProcessOutput(view, r.output, flags, createMode(view, 0o666))
 	if err != nil {
 		return nil, nil, cannotCreate(r.output, err)
 	}
-	if r.seek > 0 {
-		// From where the descriptor is, as busybox's lseek(SEEK_CUR): of=/dev/stdout is the
-		// shell's, and may be part-written. What cannot seek, a pipe, fails as it does there.
-		var err error = syscall.ESPIPE
-		if seeker, ok := file.(io.Seeker); ok {
-			_, err = seeker.Seek(r.seek*r.outputSize, io.SeekCurrent)
-		}
-		if err != nil {
-			file.Close()
-			return nil, nil, operandFailure(r.output, err)
-		}
+	if !r.notrunc && r.seek > 0 {
+		err = truncateAt(file, r.seek*r.outputSize)
+	}
+	if err == nil {
+		err = r.seekOutput(file)
+	}
+	if err != nil {
+		file.Close()
+		return nil, nil, operandFailure(r.output, err)
 	}
 	return file, func() { file.Close() }, nil
+}
+
+// seekOutput moves past seek= blocks from where the descriptor stands, as busybox's
+// lseek(SEEK_CUR) does: of=/dev/stdout is the shell's, and may be part-written. What cannot
+// seek, a pipe, fails as it does there.
+func (r ddRequest) seekOutput(output any) error {
+	if r.seek <= 0 {
+		return nil
+	}
+	seeker, ok := output.(io.Seeker)
+	if !ok {
+		return syscall.ESPIPE
+	}
+	_, err := seeker.Seek(r.seek*r.outputSize, io.SeekCurrent)
+	return err
+}
+
+// seekStandardOutput is seekOutput on the shell's descriptor 1, which the applet's own
+// writer seldom seeks.
+func (r ddRequest) seekStandardOutput(view ProcessView, stdout io.Writer) error {
+	if _, ok := stdout.(io.Seeker); !ok && r.seek > 0 {
+		if shared, err := openProcessOutput(view, "/dev/stdout", os.O_WRONLY, 0); err == nil {
+			defer shared.Close()
+			return r.seekOutput(shared)
+		}
+	}
+	return r.seekOutput(stdout)
+}
+
+// truncateAt cuts the output at size, as busybox's ftruncate does. An output that cannot be
+// cut, a pipe or a device, is no failure unless it is a file.
+func truncateAt(output io.Writer, size int64) error {
+	truncater, ok := output.(interface{ Truncate(int64) error })
+	if !ok {
+		return nil
+	}
+	err := truncater.Truncate(size)
+	if err == nil {
+		return nil
+	}
+	if file, ok := output.(interface{ Stat() (os.FileInfo, error) }); ok {
+		if info, statErr := file.Stat(); statErr == nil && (info.Mode().IsRegular() || info.IsDir()) {
+			return err
+		}
+	}
+	return nil
 }
 
 // copyRecords is the loop, and it answers what to report even when it fails.
