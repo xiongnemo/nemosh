@@ -2,6 +2,9 @@ package runtime
 
 import "strings"
 
+// globEscaped is every character a quoted one is escaped from in a pattern; see escapeGlob.
+const globEscaped = `*?[]\-()|!^`
+
 // Field splitting (POSIX 2.6.5) across a whole word.
 //
 // An IFS character that an unquoted expansion produced delimits fields wherever it sits,
@@ -171,14 +174,16 @@ func (b *fieldBuilder) finish() ([]string, []string) {
 
 // escapeGlob is text as a pattern that matches it and nothing else: each pattern character
 // escaped, the hyphen too, which inside a bracket expression would make a range, and the
-// parentheses and bar, so a quoted `@(a|b)` is those six characters and not a group.
+// parentheses and bar, so a quoted `@(a|b)` is those six characters and not a group. And ! and
+// ^, which after a bracket's `[` would negate it: `case '!' in [\!])` matches, in busybox and
+// bash, where the set was taken for "not ]" and never closed.
 func escapeGlob(text string) string {
-	if !strings.ContainsAny(text, `*?[]\-()|`) {
+	if !strings.ContainsAny(text, globEscaped) {
 		return text
 	}
 	var out strings.Builder
 	for index := 0; index < len(text); index++ {
-		if strings.IndexByte(`*?[]\-()|`, text[index]) >= 0 {
+		if strings.IndexByte(globEscaped, text[index]) >= 0 {
 			out.WriteByte('\\')
 		}
 		out.WriteByte(text[index])

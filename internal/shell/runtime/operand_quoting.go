@@ -157,8 +157,9 @@ func literalIn(role operandRole, text string) string {
 	for index := 0; index < len(text); index++ {
 		// The parentheses and bar too, since extended patterns are always on here: a
 		// quoted `@(cc)` is five characters, not a pattern that matches cc. And the hyphen,
-		// which inside a bracket expression would make a range: `[a"-"z]` holds three.
-		if strings.IndexByte(`*?[]\()|-`, text[index]) >= 0 {
+		// which inside a bracket expression would make a range: `[a"-"z]` holds three. And
+		// ! and ^, which would negate one: `${x#["!"]}` takes a leading !.
+		if strings.IndexByte(globEscaped, text[index]) >= 0 {
 			out.WriteByte('\\')
 		}
 		out.WriteByte(text[index])
