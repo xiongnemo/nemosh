@@ -53,6 +53,8 @@ type sedCycle struct {
 	substituted bool
 	// stream is where `n` and `N` get another line from.
 	stream *sedStream
+	// view resolves r's FILE.
+	view ProcessView
 }
 
 // readNext takes another input line, for `n` and `N`.
@@ -101,9 +103,14 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 		if made {
 			cycle.substituted = true
 			if command.substitute.print {
-				return sedNext, cycle.write(cycle.line)
+				if err := cycle.write(cycle.line); err != nil {
+					return sedNext, err
+				}
 			}
+			return sedNext, cycle.writeFile(command.writeTo)
 		}
+	case 'r', 'w', 'l':
+		return sedNext, runSedFileCommand(command, cycle)
 	case 'y':
 		cycle.line = command.translate.apply(cycle.line)
 	case 'p':

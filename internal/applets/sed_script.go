@@ -26,6 +26,8 @@ type sedProgram struct {
 	// quiet is -n: the pattern space is not printed at the end of the script, so
 	// only an explicit p writes anything.
 	quiet bool
+	// view is the process the run is in, which resolves a file command's FILE.
+	view ProcessView
 }
 
 type sedCommand struct {
@@ -44,13 +46,15 @@ type sedCommand struct {
 	// block is the command list of a `{...}` group, run under this command's
 	// address.
 	block []*sedCommand
+	// file is the FILE of r and w, and writeTo is w's, opened when the run starts; see
+	// sed_files.go.
+	file    string
+	writeTo *sedWriteFile
 }
 
-// sedSupportedCommands are the actions this build implements. What is left out is
-// `l` and `w`/`r`, plus GNU's `first~step` addresses and `e`: `l` needs an
-// unambiguous-print escaping table, and the file commands need a second decision
-// about where output goes.
-const sedSupportedCommands = "pdqsy={aichHgGxnNPDbtT:"
+// sedSupportedCommands are the actions this build implements. What is left out is GNU's
+// `first~step` addresses and its R, W, e and z.
+const sedSupportedCommands = "pdqsy={aichHgGxnNPDbtT:rwl"
 
 // parseSedProgram reads every -e script, and the first operand when there was
 // no -e.
@@ -160,6 +164,15 @@ func parseSedCommand(script string, extended bool) (*sedCommand, string, error) 
 		// be written on one line.
 		label, remainder := parseSedLabel(rest[1:])
 		return &sedCommand{address: address, action: action, label: label}, remainder, nil
+	case 'r', 'w':
+		if action == 'r' && address.ranged {
+			return nil, "", fmt.Errorf("command 'r' uses only one address")
+		}
+		name, remainder, err := parseSedFileName(rest[1:])
+		if err != nil {
+			return nil, "", err
+		}
+		return &sedCommand{address: address, action: action, file: name}, remainder, nil
 	}
 	// p, d, q and = take no argument, so whatever follows is the next command.
 	return &sedCommand{address: address, action: action}, rest[1:], nil

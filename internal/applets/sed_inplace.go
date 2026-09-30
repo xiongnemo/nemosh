@@ -37,6 +37,11 @@ func runSedInPlace(ctx context.Context, program *sedProgram, operands []string, 
 		return fmt.Errorf("no input files")
 	}
 	view := ProcessViewFromContext(ctx)
+	program.view = view
+	closeFiles, err := program.openWriteFiles(ctx)
+	if err != nil {
+		return err
+	}
 	failed := false
 	for _, operand := range operands {
 		native, err := resolveHostPath(view, operand)
@@ -53,6 +58,9 @@ func runSedInPlace(ctx context.Context, program *sedProgram, operands []string, 
 			failed = true
 			continue
 		}
+	}
+	if err := closeFiles(); err != nil {
+		return err
 	}
 	if failed {
 		return ExitStatus(1)

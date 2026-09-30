@@ -73,7 +73,7 @@ var usageText = map[string]Usage{
 	"rm":       {Summary: "Remove files and directories.", Operands: "FILE...", Options: map[string]string{"f": "do not complain about what is not there, nor ask", "i": "ask before removing each", "r": "remove directories and their contents", "R": "the same as -r", "v": "say what is removed"}, Notes: []string{"A FILE whose last component is . or .. is refused. Of -f and -i the later wins."}},
 	"rmdir":    {Summary: "Remove empty directories.", Operands: "DIRECTORY...", Options: map[string]string{"p": "remove each parent that becomes empty too", "v": "print a line per directory removed", "parents": "the same as -p", "verbose": "the same as -v", "ignore-fail-on-non-empty": "pass over a directory that is not empty without a word"}},
 	"sed": {Summary: "Edit a stream of text by script.", Operands: "SCRIPT [FILE]...", Notes: []string{
-		"Only the s command: s/PATTERN/REPLACEMENT/[g][N].",
+		"The commands are s y p d q = a i c h H g G x n N P D b t T : { } r w l, and s/PATTERN/REPLACEMENT/ takes the flags g, p, N, i and w FILE. The FILE of r, w and s///w runs to the end of the line.",
 		"PATTERN is a POSIX basic regular expression, with the GNU \\+ \\? \\| extensions.",
 		"REPLACEMENT takes & for the whole match and \\1 to \\9 for a group.",
 		"A backreference in the PATTERN is refused: this build matches with RE2, which has none.",

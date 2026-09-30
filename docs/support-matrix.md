@@ -750,7 +750,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `shuf` | `-n -e -i -z` | refused by name |
 | `strings` | `-n -t -o -a -f` | refused by name |
 | `awk` | the POSIX language; `-F -v -f --`, operands mixing files and `VAR=VALUE` | refused by name |
-| `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {}`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
+| `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {} r w l`, s's flags `g p N i w`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `-w -s`, and `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` as strtod reads them, fractions included; a zero increment refused | refused by name |
 | `sleep` | duration operand | reported as an invalid duration |
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
@@ -2065,9 +2065,16 @@ Two details that are easy to get wrong, both pinned:
 - **`N` advances the line counter**, so `$` still names the real last line. A
   consumed line that was not counted would make `$` name the wrong one.
 
-Still refused: `l`, the `w`/`r` file commands, `e`, and GNU's `first~step`
-addresses. `l` needs an unambiguous-print escaping table and the file commands
-need a second decision about where output goes.
+**The file commands and `l`.** `r FILE` queues FILE's lines to be written at the end of the
+cycle, as `a` queues its text, and a FILE that cannot be read queues nothing; with two
+addresses it is refused, as busybox refuses it. `w FILE` and s///'s `w` flag write the pattern
+space to FILE, which is made empty when the run starts whether or not a line reaches it, and is
+one file for every command that names it. FILE runs to the end of the line, as busybox reads
+it. `l` writes the pattern space unambiguously, POSIX's form: `\\`, `\a \b \f \n \r \t \v`,
+octal for a byte that is no printable character, a split with a backslash past 69 characters,
+and `$` at the end. busybox accepts `l` and prints nothing; this prints what POSIX asks.
+
+Still refused: `e`, and GNU's `first~step` addresses and `R`, `W` and `z`.
 
 ### `grep`
 

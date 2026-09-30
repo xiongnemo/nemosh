@@ -148,11 +148,11 @@ func TestSed_refusesWhatItCannotDo(t *testing.T) {
 		wantWord string
 	}{
 		{args: []string{"-n", "1~2p", "s.txt"}, wantWord: "~"},
-		// `l` is still absent, so a word beginning with it is refused by that
-		// letter. `nosuchcommand` no longer serves: `n` is implemented now, so
-		// the first unimplemented letter in it is `o`, which is what busybox
-		// answers too.
-		{args: []string{"1,2l", "s.txt"}, wantWord: "l"},
+		// GNU's `z` is absent, so a word beginning with it is refused by that
+		// letter; `l` served until it was implemented. `nosuchcommand` no longer
+		// serves: `n` is implemented now, so the first unimplemented letter in it is
+		// `o`, which is what busybox answers too.
+		{args: []string{"1,2z", "s.txt"}, wantWord: "z"},
 		{args: []string{"nosuchcommand", "s.txt"}, wantWord: "o"},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {

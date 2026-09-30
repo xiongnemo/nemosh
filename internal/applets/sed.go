@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -41,6 +42,11 @@ func newSedApplet() Applet {
 
 // run applies the program to the operands as one stream.
 func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	p.view = ProcessViewFromContext(ctx)
+	closeFiles, err := p.openWriteFiles(ctx)
+	if err != nil {
+		return err
+	}
 	failed := false
 	stream := &sedStream{onOpenError: func(err error) {
 		fmt.Fprintf(stderr, "sed: %v\n", err)
@@ -69,7 +75,7 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 		}
 	}
 	runErr := p.execute(stream, stdout)
-	closeErr := stream.Close()
+	closeErr := errors.Join(stream.Close(), closeFiles())
 	if runErr != nil {
 		return runErr
 	}
@@ -123,6 +129,7 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 			quiet:  p.quiet,
 			hold:   hold,
 			stream: stream,
+			view:   p.view,
 		}
 		control, err := runSedProgram(p, cycle)
 		if err != nil {
@@ -161,6 +168,9 @@ type sedSubstitute struct {
 	occurrence  int
 	// print is the p flag: the pattern space is written when a replacement was made.
 	print bool
+	// writeName is the w flag's FILE, where the pattern space goes too; the command's
+	// writeTo is the file, opened when the run starts.
+	writeName string
 }
 
 // replace does what the s/// flags say: the Nth match when a number is given, every match
@@ -216,6 +226,12 @@ func parseSedSubstituteCommand(script string, extended bool) (sedSubstitute, str
 	}
 	flags, rest := splitSedSubstituteFlags(rest)
 	substitute := sedSubstitute{replacement: translateReplacement(replacement)}
+	// w FILE ends the flags, and the command: FILE runs to the end of the line.
+	if strings.HasPrefix(rest, "w") {
+		if substitute.writeName, rest, err = parseSedFileName(rest[1:]); err != nil {
+			return sedSubstitute{}, "", err
+		}
+	}
 	ignoreCase, err := parseSedSubstituteFlags(flags, &substitute)
 	if err != nil {
 		return sedSubstitute{}, "", err
