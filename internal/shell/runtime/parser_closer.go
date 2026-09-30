@@ -32,15 +32,11 @@ func splitCompoundCloser(line string) (string, string, bool) {
 		if digits > 0 && digits < len(suffix) && strings.ContainsAny(suffix[digits:digits+1], "<>") {
 			return closer, suffix, true
 		}
-		// A redirection, a pipe, or an and-or operator. A bare `&` is not here: that is
-		// a background compound, which trailingBackground already handles.
-		switch {
-		case strings.ContainsAny(suffix[:1], "<>|"):
-		case strings.HasPrefix(suffix, "&&"):
-		default:
-			continue
-		}
-		if suffix == "&" {
+		// A redirection, a pipe, an and-or operator, or an `&` with a command after it, as in
+		// `done & echo x` and `done &> log`, which both references run. They were "missing
+		// done". A bare `&` is not here: that is a background compound, which
+		// trailingBackground already handles.
+		if !strings.ContainsAny(suffix[:1], "<>|&") || suffix == "&" {
 			continue
 		}
 		return closer, suffix, true

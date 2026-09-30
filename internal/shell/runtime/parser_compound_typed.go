@@ -259,7 +259,7 @@ func wrapCompoundWithSuffix(node programNode, suffix string, budget *parseBudget
 	// `done < input | sort`: redirections, then an operator. The redirections go on the
 	// compound and the operator joins what follows. It reported `unexpected word after a
 	// redirection`, so a loop could read a file or feed a pipe but not both.
-	if operators := topLevelOperators(suffix); len(operators) > 0 && operators[0].offset > 0 && operators[0].text != "&" {
+	if operators := topLevelOperators(suffix); len(operators) > 0 && operators[0].offset > 0 {
 		redirected, err := wrapCompoundWithSuffix(node, strings.TrimSpace(suffix[:operators[0].offset]), budget, depth)
 		if err != nil {
 			return nil, err

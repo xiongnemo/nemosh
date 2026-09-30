@@ -82,9 +82,10 @@ func wrapCompoundIntoPipeline(node programNode, prefix string, budget *parseBudg
 // splitCloserOperator reads a suffix that begins with a pipe or an and-or operator,
 // returning the operator and the words after it.
 func splitCloserOperator(suffix string) (string, string, bool) {
-	for _, operator := range [...]string{"&&", "||", "|&", "|"} {
+	for _, operator := range [...]string{"&&", "||", "|&", "|", "&"} {
 		rest, ok := strings.CutPrefix(suffix, operator)
-		if !ok {
+		// `&>` is a redirection, bash's, of both outputs.
+		if !ok || operator == "&" && strings.HasPrefix(rest, ">") {
 			continue
 		}
 		rest = strings.TrimSpace(rest)
@@ -114,6 +115,12 @@ func wrapCompoundBeforeOperator(node programNode, operator, rest string, budget 
 		return nil, errMissingPipelineStage
 	}
 	group := braceGroup{body: Script{program: []programNode{node}}}
+	if operator == "&" {
+		// A list item of its own, in the background, before the rest.
+		item := listItem{value: andOr{pipelines: []pipeline{{commands: []commandNode{group}}}}, background: true}
+		following.items = append([]listItem{item}, following.items...)
+		return listNode{value: following}, nil
+	}
 	andor := following.items[0].value
 	if operator == "|" {
 		// One pipeline, with the compound as its first stage.
