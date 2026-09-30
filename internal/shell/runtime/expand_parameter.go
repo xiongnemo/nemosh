@@ -110,10 +110,12 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 		return ""
 	}
 	child = child.withFDTable(table)
+	// One that runs nothing, `` or $( ), exits 0, as in both references: `false; a=$()` leaves
+	// 0. It left the status before it, which the empty script began with.
 	var status int
 	if redirect, isFileRead := fileReadSubstitution(script); isFileRead {
 		status = child.readRedirectedFile(ctx, redirect, savedStatus)
-	} else {
+	} else if len(script.program) > 0 {
 		status, _ = child.executeTypedScriptFrom(ctx, script, savedStatus)
 	}
 	status = child.runOwnExitTrap(ctx, r.traps[trapExit], status)
