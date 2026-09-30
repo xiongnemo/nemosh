@@ -82,14 +82,16 @@ func (r Runtime) aliasText(command simpleCommand) (string, []string, bool) {
 	// name. Either way it is looked up with this value behind it, as the references look it up
 	// once the value is used: with `alias x='echo a;'`, `x x` is x twice, where an x inside x's
 	// own value is only a command name.
-	for index++; opensNextWord(value); index++ {
+	index++
+	for opens := opensNextWord(value); opens; index++ {
 		next, nextName, found := r.aliasAt(words, index)
 		if !found {
 			break
 		}
-		text.WriteString(" " + next)
-		names = append(names, nextName)
-		value = next
+		read, taken, after := r.rereadAlias(next, []string{nextName})
+		text.WriteString(" " + read)
+		names = append(append(names, nextName), taken...)
+		opens = after
 	}
 	rest := printer.command(simpleCommand{words: words[index:], redirects: trailing})
 	printer.line(text.String() + " " + rest)
@@ -132,4 +134,48 @@ func opensNextWord(value string) bool {
 	}
 	escaped := len(value) > 1 && value[len(value)-2] == '\\'
 	return strings.IndexByte(";&|(\n", value[len(value)-1]) >= 0 && !escaped
+}
+
+// rereadAlias is the value of an alias that follows a value ending in a blank, read as the
+// references read it: its first word is looked up again, and so is the word after any alias in
+// it that ends in a blank, while each names an alias not already being read. With `alias
+// foo='echo ' bar=baz baz=quux`, `foo bar` is echo quux; the value went in as it was, since only
+// a command's name is looked up once the text is parsed again, and it was echo baz. It answers
+// the text, the aliases it took, and whether the word after the value is looked up too.
+func (r Runtime) rereadAlias(value string, inUse []string) (string, []string, bool) {
+	var out strings.Builder
+	var taken []string
+	opens, rest := opensNextWord(value), value
+	for check := true; check; {
+		start, end, plain := plainLeadingWord(rest)
+		name := rest[start:end]
+		next, defined := r.aliasesInForce()[name]
+		if !plain || !defined || slices.Contains(inUse, name) || slices.Contains(r.aliasChain, name) ||
+			len(inUse)+len(r.aliasChain) >= maxAliasSubstitutions {
+			break
+		}
+		read, more, after := r.rereadAlias(next, append(slices.Clip(inUse), name))
+		out.WriteString(rest[:start] + read)
+		taken = append(append(taken, name), more...)
+		rest, check = rest[end:], after
+		if rest == "" {
+			opens = after
+		}
+	}
+	out.WriteString(rest)
+	return out.String(), taken, opens
+}
+
+// plainLeadingWord is where the first word of text begins and ends, past its blanks, and
+// whether it is one an alias can name: no quote, backslash or expansion in it. A quoted word
+// ends the looking up, as it does in busybox's: with `alias x='"y" w'`, `echo x` after a value
+// ending in a blank is y w.
+func plainLeadingWord(text string) (int, int, bool) {
+	start := len(text) - len(strings.TrimLeft(text, " \t"))
+	end := strings.IndexAny(text[start:], " \t\n;&|()<>")
+	if end < 0 {
+		end = len(text) - start
+	}
+	word := text[start : start+end]
+	return start, start + end, word != "" && !strings.ContainsAny(word, "'\"\\$`")
 }
