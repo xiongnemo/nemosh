@@ -50,14 +50,11 @@ func (r tarRequest) createArchiveOutput(ctx context.Context, stdout io.Writer) (
 	if r.file == "" || r.file == "-" {
 		return stdout, func() {}, nil
 	}
+	// A device too: `tar cf /dev/null dir` reads every file and keeps nothing.
 	view := ProcessViewFromContext(ctx)
-	native, err := resolveHostPath(view, r.file)
+	file, err := openProcessOutput(view, r.file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
 	if err != nil {
-		return nil, nil, operandFailure(r.file, err)
-	}
-	file, err := createFile(view, native)
-	if err != nil {
-		return nil, nil, operandFailure(r.file, err)
+		return nil, nil, cannotOpen(r.file, err)
 	}
 	return file, func() { file.Close() }, nil
 }

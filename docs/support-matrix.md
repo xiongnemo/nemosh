@@ -767,7 +767,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
 | `tac` | none | refused by name |
 | `tsort` | none; a cycle is reported rather than truncated | refused by name |
-| `tar` | `-c -t -x -v -z -j -a -O -f -C` | refused by name |
+| `tar` | `-c -t -x -v -z -j -a -O -f -C`, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too | refused by name |
 | `tail` | `-n -c -q -v -f -F -s`, the `-N` form, and an attached value (`-n2`, `-n+2`); every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
 | `test`, `[` | POSIX expressions; on Windows `-x` is busybox-w32's execute bit: a directory, a name ending `.com .exe .sh .bat .cmd`, or a file that begins `#!` or is a program image, and not a DLL whatever it is called | an operand, per the POSIX one-argument rule |
 | `tee` | `-a -i`; `-` is stdout, and a file that cannot be opened is named while the rest are written | refused by name |

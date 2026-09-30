@@ -24,7 +24,7 @@ import (
 
 func newTarApplet() Applet {
 	return simpleApplet{name: "tar", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "ctxvzjaO", "fC")
+		options, operands, err := parseAppletOptions(ctx, tarOldStyle(args), "ctxvzjaO", "fC")
 		if err != nil {
 			return err
 		}
@@ -63,6 +63,22 @@ func newTarApplet() Applet {
 	}}
 }
 
+// tarOldStyle is busybox's reading of a first argument with no dash, the form every tar takes:
+// `tar cf a.tar dir`, `tar xzf a.tgz`. Its letters are options, and f's value is the next
+// argument even when letters follow it, so f moves to the end before the dash goes in: `tar fx
+// a.tar` is -xf a.tar, as busybox moves it (archival/tar.c). It was an operand, and `tar cf`
+// said that one of -c, -t or -x was required.
+func tarOldStyle(args []string) []string {
+	if len(args) == 0 || args[0] == "" || args[0][0] == '-' {
+		return args
+	}
+	letters := args[0]
+	if at := strings.IndexByte(letters, 'f'); at >= 0 {
+		letters = letters[:at] + letters[at+1:] + "f"
+	}
+	return append([]string{"-" + letters}, args[1:]...)
+}
+
 type tarRequest struct {
 	verbose    bool
 	toStdout   bool
@@ -82,13 +98,10 @@ func (r tarRequest) openArchiveInput(ctx context.Context, stdin io.Reader) (io.R
 	if r.file == "" || r.file == "-" {
 		return stdin, func() {}, nil
 	}
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), r.file)
+	// A device too, as busybox's xopen takes one: `tar tf /dev/stdin`.
+	file, err := openProcessInput(ProcessViewFromContext(ctx), r.file)
 	if err != nil {
-		return nil, nil, operandFailure(r.file, err)
-	}
-	file, err := os.Open(native)
-	if err != nil {
-		return nil, nil, operandFailure(r.file, err)
+		return nil, nil, cannotOpen(r.file, err)
 	}
 	return file, func() { file.Close() }, nil
 }
