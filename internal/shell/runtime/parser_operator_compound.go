@@ -103,14 +103,15 @@ func operatorText(line string, index int) (string, int) {
 // not a separator in front of it. For a pipe that is the same answer the pipeline form gave
 // -- in `a | b | while ...` only the last pipe opens a compound.
 func splitCompoundAfterOperator(line string) (string, string, string, bool) {
-	if after, found := strings.CutPrefix(line, "!"); found {
-		candidate := strings.TrimLeft(after, " \t")
-		if len(candidate) < len(after) && beginsWithCompoundKeyword(candidate) {
-			return "", "!", candidate, true
-		}
+	if candidate, ok := negatedCompound(line); ok {
+		return "", "!", candidate, true
 	}
 	for _, operator := range topLevelOperators(line) {
 		candidate := strings.TrimLeft(line[operator.offset+len(operator.text):], " \t")
+		text := operator.text
+		if negated, ok := negatedCompound(candidate); ok && operator.text != "|" && operator.text != "|&" {
+			candidate, text = negated, text+negatedSuffix
+		}
 		if !beginsWithCompoundKeyword(candidate) {
 			continue
 		}
@@ -120,9 +121,31 @@ func splitCompoundAfterOperator(line string) (string, string, string, bool) {
 			// treating it as a stage or a term here would hide that.
 			continue
 		}
-		return before, operator.text, candidate, true
+		return before, text, candidate, true
 	}
 	return "", "", "", false
+}
+
+// negatedSuffix marks an operator whose compound is negated, as in `x && ! if ...`, `x || !
+// while ...` and `x & ! case ...`: a pipeline after an and-or's operator or a list's may begin
+// with `!`, as both references read it. It was "unexpected then". After a pipe it may not, as
+// busybox has it.
+const negatedSuffix = " !"
+
+// negatedCompound is the compound after a leading `!` and the blank that must follow it.
+func negatedCompound(text string) (string, bool) {
+	rest, ok := strings.CutPrefix(text, "!")
+	if trimmed := strings.TrimLeft(rest, " \t"); ok && len(trimmed) < len(rest) && beginsWithCompoundKeyword(trimmed) {
+		return trimmed, true
+	}
+	return "", false
+}
+
+// negateCompound is the compound as a list whose first pipeline is negated.
+func negateCompound(node programNode) programNode {
+	following := compoundAsList(node)
+	following.items[0].value.pipelines[0].negated = true
+	return listNode{value: following}
 }
 
 // joinCompoundPrefix puts a prefix back in front of text taken from the compound's header,
@@ -140,6 +163,9 @@ func joinCompoundPrefix(prefix, operator, text string) string {
 // wrapCompoundAfterOperator joins the compound to the words before it, the way the operator
 // between them says.
 func wrapCompoundAfterOperator(node programNode, prefix, operator string, budget *parseBudget, depth int) (programNode, error) {
+	if base, negated := strings.CutSuffix(operator, negatedSuffix); negated {
+		node, operator = negateCompound(node), base
+	}
 	switch operator {
 	case "()":
 		// The prefix is a function's name, and the compound its body; see
@@ -158,9 +184,7 @@ func wrapCompoundAfterOperator(node programNode, prefix, operator string, budget
 		// line, so the redirection lands on its last command.
 		return wrapCompoundIntoPipeline(node, prefix+" 2>&1", budget, depth)
 	case "!":
-		following := compoundAsList(node)
-		following.items[0].value.pipelines[0].negated = true
-		return listNode{value: following}, nil
+		return negateCompound(node), nil
 	}
 	prior, err := parseTypedLineWithBudget(prefix, budget, depth)
 	if err != nil {

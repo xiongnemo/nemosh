@@ -16,6 +16,7 @@ import "strings"
 // chainedCloser is the closer that the words before the operator opening another compound are,
 // and the redirection or more of a list after it, as in `done < in | cat | while ...`.
 func chainedCloser(prefix, operator string) (string, string, bool) {
+	operator = strings.TrimSuffix(operator, negatedSuffix)
 	if operator != "|" && operator != "|&" && operator != "&&" && operator != "||" && operator != "&" {
 		return "", "", false
 	}
@@ -100,6 +101,9 @@ func compoundWithAffixes(lines []string, spans []compoundSpan, byStart map[int]i
 // joinCompounds joins two compounds the way the operator between them says. Either may be a
 // list already, when its line made it one: `done | cat | while ...` pipes on from the cat.
 func joinCompounds(left programNode, operator string, right programNode, budget *parseBudget, depth int) (programNode, error) {
+	if base, negated := strings.CutSuffix(operator, negatedSuffix); negated {
+		right, operator = negateCompound(right), base
+	}
 	if operator == "|&" {
 		// `done |& while` is `done 2>&1 | while`, as for any command after it.
 		redirected, err := wrapCompoundWithSuffix(left, "2>&1", budget, depth)
