@@ -48,21 +48,23 @@ func newSumApplet() Applet {
 		if err != nil {
 			return err
 		}
-		systemV := options.has('s')
+		// -r wins over -s whichever comes first: busybox gives BSD the priority.
+		systemV := options.has('s') && !options.has('r')
 		return eachSizedChecksum(ctx, paths, stdin, stdout, func(digest sizedDigest, name string, operands int) string {
 			if systemV {
-				// System V prints the name even for one operand.
+				// System V prints the name even for one operand, and stdin's as `-`.
+				if name == "" {
+					name = "-"
+				}
 				return fmt.Sprintf("%d %d %s", digest.systemVSum(), blocksOf(digest.size, 512), name)
 			}
-			// BSD omits the name unless there is more than one operand, which is
-			// what GNU does. busybox prints the format's trailing space with an
-			// empty name instead -- `36979     1 ` -- a stray byte rather than a
-			// behaviour, so this follows GNU here.
-			line := fmt.Sprintf("%05d %5d", digest.bsdSum(), blocksOf(digest.size, 1024))
-			if operands > 1 && name != "" {
-				line += " " + name
+			// BSD prints the name only for more than one operand, and the blank before it
+			// always, `36979     1 `, as busybox's one printf has it. That blank was left out,
+			// as GNU leaves it out.
+			if operands < 2 {
+				name = ""
 			}
-			return line
+			return fmt.Sprintf("%05d %5d %s", digest.bsdSum(), blocksOf(digest.size, 1024), name)
 		})
 	}}
 }
@@ -121,12 +123,9 @@ func eachSizedChecksum(ctx context.Context, paths []string, stdin io.Reader, std
 		if closeErr != nil {
 			return closeErr
 		}
-		// A lone `-` names stdin, which has no filename to print.
-		name := path
-		if path == "-" {
-			name = ""
-		}
-		if _, err := fmt.Fprintln(stdout, format(digest, name, len(paths))); err != nil {
+		// A `-` named is printed as the name it is, `cksum -` as `1219131554 3 -`, as busybox
+		// prints it; only stdin with no operand at all goes without one. It was left out.
+		if _, err := fmt.Fprintln(stdout, format(digest, path, len(paths))); err != nil {
 			return err
 		}
 	}

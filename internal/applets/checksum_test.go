@@ -177,11 +177,12 @@ func TestChecksum_sum(t *testing.T) {
 		args []string
 		want string
 	}{
-		// The name is omitted for a single operand, which is what GNU does.
-		{name: "bsd by default", args: []string{"h.txt"}, want: "36979     1\n"},
-		{name: "-r is the default spelled out", args: []string{"-r", "h.txt"}, want: "36979     1\n"},
+		// The name is omitted for a single operand, but not the blank before it, as busybox's
+		// printf has it.
+		{name: "bsd by default", args: []string{"h.txt"}, want: "36979     1 \n"},
+		{name: "-r is the default spelled out", args: []string{"-r", "h.txt"}, want: "36979     1 \n"},
 		{name: "system v", args: []string{"-s", "h.txt"}, want: "542 1 h.txt\n"},
-		{name: "an empty file", args: []string{"e.txt"}, want: "00000     0\n"},
+		{name: "an empty file", args: []string{"e.txt"}, want: "00000     0 \n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			stdout, stderr, err := runChecksum(t, dir, "sum", "", test.args...)

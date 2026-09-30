@@ -1791,10 +1791,12 @@ Three of them are easy to get plausibly wrong, so each is stated:
   blocks. The fold is done twice because the first can itself carry out of sixteen
   bits, which is a real difference above about a megabyte.
 
-One deliberate divergence: **`sum` omits the file name for a single operand and
-prints no trailing space**, which is GNU's output. busybox prints its format's
-trailing space with an empty name — `36979     1 ` — a stray byte rather than a
-behaviour. With more than one operand all three agree.
+**`sum` omits the file name for a single operand but keeps the blank before
+it**, `36979     1 `, as busybox's one format prints it with an empty name; GNU
+leaves the blank out, and so did this. System V's `-s` always names what it read,
+standard input as `-`, and `-r` wins over `-s` whichever comes first. A `-` named
+is printed as `-` by `sum`, `cksum` and `crc32` alike; only standard input read
+for want of an operand goes without a name.
 
 ### A lone `-` is standard input
 
