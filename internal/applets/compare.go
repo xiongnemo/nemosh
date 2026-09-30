@@ -126,7 +126,29 @@ func newPasteApplet() Applet {
 		if len(paths) == 0 {
 			paths = []string{"-"}
 		}
+		// Every `-` is the one standard input, read a line to a column in turn, as busybox and
+		// POSIX read it: `seq 5 | paste - -` is 1 2, 3 4 and 5. The first `-` took the whole
+		// input, so each line came out alone. -s reads each operand to its end, and so a second
+		// `-` finds nothing left there too.
+		dashes := 0
 		for _, path := range paths {
+			if path == "-" {
+				dashes++
+			}
+		}
+		var shared []string
+		dash := 0
+		for _, path := range paths {
+			if path == "-" && dashes > 1 && !options.has('s') {
+				if dash == 0 {
+					if shared, err = readOperandLines(ctx, view, path, stdin); err != nil {
+						return err
+					}
+				}
+				columns = append(columns, everyNthLine(shared, dash, dashes))
+				dash++
+				continue
+			}
 			lines, err := readOperandLines(ctx, view, path, stdin)
 			if err != nil {
 				return err
@@ -135,6 +157,11 @@ func newPasteApplet() Applet {
 		}
 		if options.has('s') {
 			for _, lines := range columns {
+				// An operand with no lines writes none, as busybox's paste_files_separate
+				// writes none, where this wrote an empty one.
+				if len(lines) == 0 {
+					continue
+				}
 				if _, err := io.WriteString(stdout, joinWithDelimiters(lines, delimiters)+"\n"); err != nil {
 					return err
 				}
@@ -158,6 +185,15 @@ func newPasteApplet() Applet {
 		}
 		return nil
 	}}
+}
+
+// everyNthLine is the lines one of several `-` columns gets: its own first, then every step-th.
+func everyNthLine(lines []string, start, step int) []string {
+	var picked []string
+	for index := start; index < len(lines); index += step {
+		picked = append(picked, lines[index])
+	}
+	return picked
 }
 
 // joinWithDelimiters cycles through the delimiter list, which is what -d takes:
