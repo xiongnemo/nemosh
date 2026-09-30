@@ -75,9 +75,14 @@ func nextCaseLine(stack *[]bool, line string) (string, string) {
 // through `in` is the header; anything after it is the first arm the one-line
 // form crammed onto the same segment. A header with no `in` is returned whole,
 // so parseTypedCase reports it rather than this pass guessing at it.
+//
+// The first word is the subject, whatever it says, so the `in` is a later one: `case in in
+// in) echo in;; esac` is a case on the word in, as busybox and bash read it, and it was cut
+// at the subject, "case: expected: case word in".
 func splitAfterCaseIn(header string) (string, string) {
 	unquoted := unquotedMask(header)
 	start := -1
+	subject := true
 	for index := 0; index <= len(header); index++ {
 		if index < len(header) && !(unquoted[index] && isShellBlank(header[index])) {
 			if start < 0 {
@@ -85,8 +90,11 @@ func splitAfterCaseIn(header string) (string, string) {
 			}
 			continue
 		}
-		if start >= 0 && header[start:index] == "in" {
+		if start >= 0 && !subject && header[start:index] == "in" {
 			return header[:index], strings.TrimLeft(header[index:], " \t")
+		}
+		if start >= 0 {
+			subject = false
 		}
 		start = -1
 	}

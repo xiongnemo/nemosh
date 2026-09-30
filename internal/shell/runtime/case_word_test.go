@@ -25,3 +25,22 @@ func TestCase_wordAndPatternsAsBothReferencesExpandThem(t *testing.T) {
 		})
 	}
 }
+
+// The word after `case` is its subject, whatever it says, and that includes the word in:
+// busybox and bash run a case on in. nemosh cut the header at the subject and refused the
+// script, "case: expected: case word in".
+func TestCase_theSubjectMayBeTheWordIn(t *testing.T) {
+	for _, test := range []struct{ name, script, want string }{
+		{name: "on one line", script: "case in in in) echo in;; esac\n", want: "in\n"},
+		{name: "in a subshell", script: "(case in in in) echo sub;; esac)\n", want: "sub\n"},
+		{name: "its in on the next line", script: "case in\nin\nin) echo next;; esac\n", want: "next\n"},
+		{name: "a pattern that says in", script: "case x in in) echo no;; x) echo x;; esac\n", want: "x\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			status, stdout, stderr := runSetScript(t, test.script)
+			if status != 0 || stdout != test.want {
+				t.Fatalf("status %d stdout %q stderr %q, want %q", status, stdout, stderr, test.want)
+			}
+		})
+	}
+}
