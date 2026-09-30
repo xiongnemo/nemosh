@@ -3,13 +3,30 @@ package runtime
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
+	"syscall"
 )
 
-var (
-	errMalformedDeviceFD = errors.New("malformed /dev/fd descriptor")
-	errUnsupportedDevice = errors.New("unsupported device")
-)
+var errMalformedDeviceFD = errors.New("malformed /dev/fd descriptor")
+
+// noSuchDevice is a name under /dev that is none of this shell's devices. It is not there, as
+// busybox-w32 answers, so it is fs.ErrNotExist to whatever asks: `cat: cannot open
+// '/dev/nosuch': No such file or directory`, and for a redirection `nonexistent directory`. It
+// was "unsupported device", with the name twice: `/dev/nosuch: /dev/nosuch: unsupported device`.
+type noSuchDevice struct{ path string }
+
+func (e noSuchDevice) Error() string        { return e.path + ": No such file or directory" }
+func (e noSuchDevice) Is(target error) bool { return target == fs.ErrNotExist }
+
+// missingDevice is what opening path answers when no device of this shell's is called that:
+// /dev itself is a directory, and any other name under it is not there.
+func missingDevice(path string) error {
+	if path == "/dev" {
+		return &fs.PathError{Op: "open", Path: path, Err: syscall.EISDIR}
+	}
+	return noSuchDevice{path: path}
+}
 
 func deviceAlias(path string) (int, bool, error) {
 	switch path {

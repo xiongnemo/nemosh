@@ -65,7 +65,7 @@ func TestP05WaveA_directCat_rejectsExactDev_inBothEntryForms(t *testing.T) {
 		err := cmd.run(context.Background(), args)
 
 		// Then
-		if err == nil || !strings.Contains(err.Error(), "/dev: unsupported device") {
+		if err == nil || !strings.Contains(err.Error(), "'/dev': Is a directory") {
 			t.Fatalf("run(%v): error=%v", args, err)
 		}
 		if stdout.Len() != 0 {
@@ -74,7 +74,7 @@ func TestP05WaveA_directCat_rejectsExactDev_inBothEntryForms(t *testing.T) {
 		// Reported under the applet's name, the same way the shell reports it.
 		// This used to be silent, which is what made a direct invocation fail
 		// differently from the same command inside the shell.
-		if !strings.Contains(stderr.String(), "cat: ") || !strings.Contains(stderr.String(), "unsupported device") {
+		if !strings.Contains(stderr.String(), "cat: ") || !strings.Contains(stderr.String(), "Is a directory") {
 			t.Fatalf("run(%v): stderr=%q, want a cat-prefixed device diagnostic", args, stderr.String())
 		}
 	}

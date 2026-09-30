@@ -7,6 +7,7 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -15,9 +16,10 @@ import (
 
 // Reading the bare `/dev` fails either way, and which failure depends on whose /dev it is.
 //
-// On Windows the shell provides the directory, so the refusal is its own typed one. Elsewhere the
-// system provides it and the refusal comes from the platform -- opening a directory -- which is the
-// right answer there and not one this shell should be inventing a message for.
+// On Windows the shell provides the directory, so the refusal is its own: a directory, EISDIR, as
+// reading any other one is. Elsewhere the system provides it and the refusal comes from the
+// platform -- opening a directory -- which is the right answer there and not one this shell
+// should be inventing a message for.
 func TestP05WaveA_OpenProcessInput_rejectsExactDev(t *testing.T) {
 	// Given
 	runtime := New(applets.DefaultRegistry, Streams{})
@@ -32,8 +34,8 @@ func TestP05WaveA_OpenProcessInput_rejectsExactDev(t *testing.T) {
 		}
 		t.Fatal("reading the bare /dev succeeded; it is a directory on every platform")
 	}
-	if runtimeProvidesDev && !errors.Is(err, errUnsupportedDevice) {
-		t.Fatalf("exact /dev error: got %v want %v", err, errUnsupportedDevice)
+	if runtimeProvidesDev && !errors.Is(err, syscall.EISDIR) {
+		t.Fatalf("exact /dev error: got %v want %v", err, syscall.EISDIR)
 	}
 }
 

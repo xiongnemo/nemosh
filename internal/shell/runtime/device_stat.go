@@ -50,10 +50,9 @@ func (r Runtime) StatProcessPath(path string) (fs.FileInfo, bool, error) {
 		_ = source
 		return deviceInfo{name: name}, true, nil
 	}
-	// Under /dev and not a device this shell has: `/dev/nosuchthing`. Not a device, and not a
-	// host path either, so the caller's fall-through will refuse it -- which is the same answer
-	// a name that does not exist gets anywhere else.
-	return nil, false, nil
+	// Under /dev and not a device this shell has: `/dev/nosuchthing`. It is not there, as a name
+	// that does not exist anywhere else is not: `ls /dev/nosuch` said "is not a host path".
+	return nil, false, noSuchDevice{path: name}
 }
 
 // ReadDirProcessPath lists a directory when the path names one this shell provides.

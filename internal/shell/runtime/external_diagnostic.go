@@ -137,8 +137,8 @@ func redirectHint(err error) string {
 		return "`set -C` is on; write with `>|` to truncate anyway, or `>>` to append"
 	case errors.Is(err, errAmbiguousRedirect):
 		return "the operand expanded to more or fewer than one word; quote it to keep it whole"
-	case strings.Contains(text, "unsupported device"):
-		return "this device is readable or writable but not both; see docs/design/windows-path-model.md for the v0 set"
+	case errors.As(err, new(noSuchDevice)):
+		return "the shell's /dev holds null, zero, random, urandom, clipboard, stdin, stdout, stderr and fd/N"
 	case strings.Contains(text, "The system cannot find the path"),
 		strings.Contains(text, "no such file or directory"),
 		strings.Contains(text, "No such file or directory"):

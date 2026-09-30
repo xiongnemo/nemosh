@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"io"
 	"os"
 )
@@ -68,7 +67,7 @@ func openInputRedirect(path string, streams Streams) (io.ReadCloser, error) {
 func openInputDevice(path string) (io.ReadCloser, error) {
 	device, found := lookupDevice(path)
 	if !found || device.openRead == nil {
-		return nil, fmt.Errorf("%s: %w", path, errUnsupportedDevice)
+		return nil, missingDevice(path)
 	}
 	return device.openRead()
 }
@@ -78,7 +77,7 @@ func openInputDevice(path string) (io.ReadCloser, error) {
 func openOutputDevice(path string, appendMode bool) (io.WriteCloser, error) {
 	device, found := lookupDevice(path)
 	if !found || device.openWrite == nil {
-		return nil, fmt.Errorf("%s: %w", path, errUnsupportedDevice)
+		return nil, missingDevice(path)
 	}
 	return device.openWrite(appendMode)
 }

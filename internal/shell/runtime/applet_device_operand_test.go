@@ -62,8 +62,8 @@ func TestP05WaveA_deviceOperandErrors_precedeHostFilesystemAccess(t *testing.T) 
 	tests := []struct {
 		name, path, want string
 	}{
-		{name: "exact root", path: "/dev", want: "unsupported device"},
-		{name: "unknown", path: "/dev/not-a-device", want: "unsupported device"},
+		{name: "exact root", path: "/dev", want: "Is a directory"},
+		{name: "unknown", path: "/dev/not-a-device", want: "No such file or directory"},
 		{name: "malformed fd", path: "/dev/fd/x", want: "malformed /dev/fd descriptor"},
 		{name: "write only", path: "/dev/stdout", want: "file descriptor is not readable"},
 	}
@@ -203,4 +203,30 @@ type closeTrackingReader struct {
 func (r *closeTrackingReader) Close() error {
 	r.closed = true
 	return nil
+}
+
+// A name under /dev that is none of the shell's devices is not there, as busybox-w32 answers,
+// to an applet, a redirection, ls and test alike; /dev itself is a directory. Zero and random
+// take writes and drop them, as busybox-w32's `> /dev/zero` and Linux's do. Each said
+// "unsupported device", an applet with the name twice, and ls "is not a host path".
+func TestDeviceMissing_isNotThere(t *testing.T) {
+	for _, test := range []struct{ script, want string }{
+		{"cat /dev/nosuch 2>&1; echo st=$?", "cat: cannot open '/dev/nosuch': No such file or directory\nst=1\n"},
+		{"wc -c /dev/nosuch 2>&1; echo st=$?", "wc: /dev/nosuch: No such file or directory\nst=1\n"},
+		{"ls /dev/nosuch 2>&1; echo st=$?", "ls: /dev/nosuch: No such file or directory\nst=1\n"},
+		{"test -e /dev/nosuch || echo absent", "absent\n"},
+		{"{ echo x > /dev/nosuch; } 2>&1; echo st=$?", "nemosh: cannot create /dev/nosuch: nonexistent directory\nst=1\n"},
+		{"{ cat < /dev/nosuch; } 2>&1; echo st=$?", "nemosh: cannot open /dev/nosuch: no such file\nst=1\n"},
+		{"cat /dev 2>&1; echo st=$?", "cat: cannot open '/dev': Is a directory\nst=1\n"},
+		{"echo x > /dev/zero; echo x > /dev/urandom; echo x | tee /dev/random; echo st=$?", "x\nst=0\n"},
+	} {
+		t.Run(test.script, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+			status := rt.RunScript(context.Background(), test.script+"\n")
+			if stdout.String() != test.want || status != 0 {
+				t.Fatalf("stdout=%q stderr=%q status=%d, want %q", stdout.String(), stderr.String(), status, test.want)
+			}
+		})
+	}
 }

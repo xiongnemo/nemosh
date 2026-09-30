@@ -17,9 +17,11 @@ package runtime
 import (
 	"bytes"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -44,8 +46,8 @@ func TestFinalSecurity_enabledExactDevRedirectsFailBeforeHostEffects(t *testing.
 			err := runtime.applyRedirectOperations(table, []redirectOperation{test.operation})
 
 			// Then
-			if !errors.Is(err, errUnsupportedDevice) {
-				t.Fatalf("exact /dev %s redirect error: got %v want %v", test.name, err, errUnsupportedDevice)
+			if !errors.Is(err, syscall.EISDIR) {
+				t.Fatalf("exact /dev %s redirect error: got %v want %v", test.name, err, syscall.EISDIR)
 			}
 		})
 	}
@@ -57,8 +59,8 @@ func TestFinalSecurity_enabledDeviceRedirectsPreserveTypedDiagnostics(t *testing
 		operation redirectOperation
 		want      error
 	}{
-		{name: "unknown input", operation: redirectOperation{kind: redirectInput, target: 0, path: "/dev/not-a-device"}, want: errUnsupportedDevice},
-		{name: "unknown output", operation: redirectOperation{kind: redirectOutput, target: 1, path: "/dev/not-a-device"}, want: errUnsupportedDevice},
+		{name: "unknown input", operation: redirectOperation{kind: redirectInput, target: 0, path: "/dev/not-a-device"}, want: fs.ErrNotExist},
+		{name: "unknown output", operation: redirectOperation{kind: redirectOutput, target: 1, path: "/dev/not-a-device"}, want: fs.ErrNotExist},
 		{name: "malformed input fd", operation: redirectOperation{kind: redirectInput, target: 0, path: "/dev/fd/x"}, want: errMalformedDeviceFD},
 		{name: "malformed output fd", operation: redirectOperation{kind: redirectOutput, target: 1, path: "/dev/fd/x"}, want: errMalformedDeviceFD},
 		{name: "unreadable stdout", operation: redirectOperation{kind: redirectInput, target: 0, path: "/dev/stdout"}, want: errDescriptorNotReadable},

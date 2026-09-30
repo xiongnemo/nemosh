@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
@@ -73,5 +72,5 @@ func (r Runtime) OpenProcessInput(path string) (io.ReadCloser, error) {
 	if isVirtualDevice(device) {
 		return openInputRedirect(device, Streams{})
 	}
-	return nil, fmt.Errorf("%s: %w", device, errUnsupportedDevice)
+	return nil, missingDevice(device)
 }

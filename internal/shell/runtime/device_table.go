@@ -52,18 +52,26 @@ var virtualDevices = []virtualDevice{
 		openWrite: func(bool) (io.WriteCloser, error) { return nullDevice{}, nil },
 	},
 	{
-		name:     "/dev/random",
-		openRead: openRandomReader,
+		name:      "/dev/random",
+		openRead:  openRandomReader,
+		openWrite: discardWrites,
 	},
 	{
-		name:     "/dev/urandom",
-		openRead: openRandomReader,
+		name:      "/dev/urandom",
+		openRead:  openRandomReader,
+		openWrite: discardWrites,
 	},
 	{
-		name:     "/dev/zero",
-		openRead: func() (io.ReadCloser, error) { return io.NopCloser(zeroReader{}), nil },
+		name:      "/dev/zero",
+		openRead:  func() (io.ReadCloser, error) { return io.NopCloser(zeroReader{}), nil },
+		openWrite: discardWrites,
 	},
 }
+
+// discardWrites is what writing to zero or random does: the bytes are taken and dropped, as
+// Linux's take them (random mixes them into its pool) and busybox-w32's `> /dev/zero` does.
+// `echo x > /dev/zero` was "unsupported device".
+func discardWrites(bool) (io.WriteCloser, error) { return nullDevice{}, nil }
 
 // openRandomReader is crypto/rand for both spellings.
 //

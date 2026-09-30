@@ -584,8 +584,8 @@ and `ls -l` answer for it.
 | path | read | write | `ls -l` |
 | --- | --- | --- | --- |
 | `/dev/null` | end of file | discards | `crw-rw-rw- 0,   0` |
-| `/dev/zero` | endless zero bytes | refused | as above |
-| `/dev/random`, `/dev/urandom` | random bytes | refused | as above |
+| `/dev/zero` | endless zero bytes | discards | as above |
+| `/dev/random`, `/dev/urandom` | random bytes | discards | as above |
 | `/dev/clipboard` | the Windows clipboard as text | sets it; `>>` appends | as above |
 | `/dev/stdin`, `/dev/stdout`, `/dev/stderr`, `/dev/fd/N` | this process's own descriptor | same | reported as a device |
 
@@ -595,7 +595,13 @@ by the shell rather than by a driver.
 
 `/dev/random` and `/dev/urandom` are the same source. They differ on Linux because
 one can block waiting for entropy; Windows has one source that does not block, so
-the distinction has nothing to represent.
+the distinction has nothing to represent. Writing to zero or random is taken and
+dropped, as Linux takes it and busybox-w32's `> /dev/zero` does; it was refused.
+
+A name under `/dev` that is none of these is not there, to an applet, a redirection,
+`ls` and `test` alike -- `cat: cannot open '/dev/nosuch': No such file or directory`,
+`cannot create /dev/nosuch: nonexistent directory` -- as busybox-w32 answers; it was
+"unsupported device". `/dev` itself is a directory, so reading it is `Is a directory`.
 
 **`ls /dev` lists, and busybox answers `No such file or directory`.** This is the
 one deliberate divergence in the device model, and the reason is discoverability:
