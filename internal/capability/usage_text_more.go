@@ -138,6 +138,8 @@ var usageTextMore = map[string]Usage{
 		Notes:   []string{"A FILE that cannot be opened ends shred there, as busybox's does. On a filesystem that keeps copies, which NTFS and a solid-state disk both may, the old bytes can survive elsewhere."}},
 	"ttysize": {Summary: "Print the terminal's width and height.", Operands: "[w] [h]",
 		Notes: []string{"`80 24` when no standard stream is a terminal. With operands, the width for each w and the height for each h, in that order, as busybox's does."}},
+	"reset": {Summary: "Put the terminal back as it was at the start.",
+		Notes: []string{"It resets the display, clears the screen and does what `stty sane` does, on a terminal only; with its output elsewhere it does nothing. Arguments are not read, as busybox's reads none."}},
 	"link": {Summary: "Make another name for a file.", Operands: "FILE LINK",
 		Notes: []string{"A hard link, and an existing LINK is refused rather than replaced."}},
 	"unlink": {Summary: "Remove one name.", Operands: "FILE",
