@@ -75,7 +75,7 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 		// Of several operands, one that cannot be opened is named and the rest searched; see
 		// operand_reporter.go. The status is 2 at the end, as busybox's is, whatever matched.
 		var unreadable unreadableOperand
-		if errors.As(err, &unreadable) && len(targets) > 1 && reportOperand(ctx, unreadable.error) {
+		if errors.As(err, &unreadable) && (unreadable.silent || len(targets) > 1 && reportOperand(ctx, unreadable.error)) {
 			unread = true
 			continue
 		}
@@ -97,8 +97,12 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 }
 
 // unreadableOperand is an operand grep could not open, which it goes on past when there are
-// others to search.
-type unreadableOperand struct{ error }
+// others to search. silent is -s's: nothing is said of it, and the status is still 2, as
+// busybox's is. -s answered 0, as though the operand had been searched.
+type unreadableOperand struct {
+	error
+	silent bool
+}
 
 // grepMatchStatus turns what happened into an exit status.
 //
@@ -129,10 +133,7 @@ func readerTarget(stdin io.Reader) func() (io.ReadCloser, error) {
 func grepOne(target grepTarget, expr *regexp.Regexp, flags grepFlags, withNames bool, printer *grepPrinter) (bool, error) {
 	input, err := target.opener()
 	if err != nil {
-		if flags.noMessages {
-			return false, nil
-		}
-		return false, unreadableOperand{operandFailure(target.name, err)}
+		return false, unreadableOperand{error: operandFailure(target.name, err), silent: flags.noMessages}
 	}
 	// Closed explicitly and joined rather than deferred: a close error is a real
 	// failure -- a truncated read on a device -- and swallowing it would report a
