@@ -36,6 +36,10 @@ func platformCauseText(err error) (string, bool) {
 		}
 		return enoent, true
 	}
+	// Go's own errno for a seek on a pipe (internal/poll), where busybox-w32's lseek sets ESPIPE.
+	if errno == syscall.ESPIPE {
+		return espipe, true
+	}
 	text, ok := windowsErrnoText[errno]
 	return text, ok
 }

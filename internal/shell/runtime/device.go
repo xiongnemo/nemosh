@@ -30,6 +30,11 @@ func (nullDevice) Close() error {
 	return nil
 }
 
+// Seek goes nowhere, and succeeds: lseek on /dev/null does, so `dd of=/dev/null seek=2` copies.
+func (nullDevice) Seek(int64, int) (int64, error) {
+	return 0, nil
+}
+
 func (readNoopCloser) Close() error {
 	return nil
 }

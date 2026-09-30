@@ -78,11 +78,9 @@ func newTeeApplet() Applet {
 	}}
 }
 
-func openTeeFile(view ProcessView, path string, flags int) (*os.File, error) {
-	native, err := resolveHostPath(view, path)
-	if err != nil {
-		return nil, err
-	}
+// openTeeFile opens a FILE, a device among them: `tee /dev/stderr` is how a pipeline shows
+// what passes through it.
+func openTeeFile(view ProcessView, path string, flags int) (io.WriteCloser, error) {
 	// 0666 through the umask, as busybox's fopen makes the file.
-	return os.OpenFile(native, flags, createMode(view, 0o666))
+	return openProcessOutput(view, path, flags, createMode(view, 0o666))
 }

@@ -3,6 +3,7 @@ package applets
 import (
 	"context"
 	"io"
+	"os"
 )
 
 // Opening a file operand, where a lone `-` is standard input.
@@ -57,4 +58,24 @@ func openProcessInput(view ProcessView, path string) (io.ReadCloser, error) {
 		return nil, err
 	}
 	return OpenHostInput(native)
+}
+
+// processOutputView is what a view implements when it can open a device an applet writes to,
+// the mirror of processInputView. The runtime's is runtime.Runtime.OpenProcessOutput.
+type processOutputView interface {
+	OpenProcessOutput(path string, flag int, perm os.FileMode) (io.WriteCloser, error)
+}
+
+// openProcessOutput opens path for an applet to write: a file, or through the view a device,
+// /dev/null, /dev/stdout, /dev/stderr, /dev/fd/N and /dev/clipboard, which a redirection takes.
+// Each was "not a host path" to `tee`, `dd of=`, `sort -o`, uniq's OUTPUT and sed's w.
+func openProcessOutput(view ProcessView, path string, flag int, perm os.FileMode) (io.WriteCloser, error) {
+	if opener, ok := view.(processOutputView); ok {
+		return opener.OpenProcessOutput(path, flag, perm)
+	}
+	native, err := resolveHostPath(view, path)
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(native, flag, perm)
 }

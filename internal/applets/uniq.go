@@ -54,7 +54,7 @@ func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 		return writeUniqDiagnostic(stderr, fmt.Sprintf("uniq: extra operand '%s'", input.extra))
 	}
 	// OUTPUT is opened before anything is read, as busybox opens it.
-	var output *os.File
+	var output io.WriteCloser
 	if input.hasOutput {
 		file, err := openUniqOutput(view, input.output)
 		if err != nil {
@@ -136,12 +136,8 @@ func parseUniqArgs(ctx context.Context, args []string) (uniqInput, error) {
 	return parsed, nil
 }
 
-func openUniqOutput(view ProcessView, path string) (*os.File, error) {
-	native, err := resolveHostPath(view, path)
-	if err != nil {
-		return nil, err
-	}
-	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
+func openUniqOutput(view ProcessView, path string) (io.WriteCloser, error) {
+	file, err := openProcessOutput(view, path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
 	if err != nil {
 		return nil, cannotOpen(path, err)
 	}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"unicode"
@@ -36,15 +37,15 @@ func parseSedFileName(script string) (string, string, error) {
 	return name, rest, nil
 }
 
-// sedWriteFile is one `w` FILE: the output it is written through, so its last newline is
-// settled as the standard output's is, and the file under it.
+// sedWriteFile is one `w` FILE: the output it is written through, which ends its lines as the
+// standard output's does, and the file under it, which may be a device: `w /dev/stderr`.
 type sedWriteFile struct {
 	output *sedOutput
-	file   *os.File
+	file   io.WriteCloser
 }
 
 // openWriteFiles makes every FILE a `w` or an s///w names empty, once for each name, and gives
-// each command its writer. The closer settles and closes them all.
+// each command its writer. The closer closes them all.
 func (p *sedProgram) openWriteFiles(ctx context.Context) (func() error, error) {
 	view := ProcessViewFromContext(ctx)
 	opened := map[string]*sedWriteFile{}
@@ -65,11 +66,7 @@ func (p *sedProgram) openWriteFiles(ctx context.Context) (func() error, error) {
 		}
 		target, ok := opened[name]
 		if !ok {
-			native, err := resolveHostPath(view, name)
-			if err != nil {
-				return nil, errors.Join(err, closeAll())
-			}
-			file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
+			file, err := openProcessOutput(view, name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
 			if err != nil {
 				return nil, errors.Join(cannotOpen(name, err), closeAll())
 			}
@@ -85,11 +82,7 @@ func (p *sedProgram) openWriteFiles(ctx context.Context) (func() error, error) {
 func runSedFileCommand(command *sedCommand, cycle *sedCycle) error {
 	switch command.action {
 	case 'r':
-		native, err := resolveHostPath(cycle.view, command.file)
-		if err != nil {
-			return nil
-		}
-		file, err := os.Open(native)
+		file, err := openProcessInput(cycle.view, command.file)
 		if err != nil {
 			return nil
 		}

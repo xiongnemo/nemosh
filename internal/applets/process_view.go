@@ -176,6 +176,9 @@ func (v staticProcessView) ResolveNemoshPath(path string) (pathmodel.ResolvedPat
 func (v staticProcessView) OpenProcessInput(path string) (io.ReadCloser, error) {
 	return openProcessInput(v.parent, path)
 }
+func (v staticProcessView) OpenProcessOutput(path string, flag int, perm os.FileMode) (io.WriteCloser, error) {
+	return openProcessOutput(v.parent, path, flag, perm)
+}
 func (v staticProcessView) FileModeMask() uint16 {
 	return uint16(processFileModeMask(v.parent))
 }

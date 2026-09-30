@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 )
 
 // dd's copy loop.
@@ -47,11 +48,8 @@ func (r ddRequest) openInput(view ProcessView, stdin io.Reader) (io.Reader, func
 	if r.input == "" {
 		return stdin, func() {}, nil
 	}
-	native, err := resolveHostPath(view, r.input)
-	if err != nil {
-		return nil, nil, err
-	}
-	file, err := os.Open(native)
+	// A device too: `dd if=/dev/zero of=img bs=1k count=64` is how an empty image is made.
+	file, err := openProcessInput(view, r.input)
 	if err != nil {
 		return nil, nil, cannotOpen(r.input, err)
 	}
@@ -62,22 +60,24 @@ func (r ddRequest) openOutput(view ProcessView, stdout io.Writer) (io.Writer, fu
 	if r.output == "" {
 		return stdout, func() {}, nil
 	}
-	native, err := resolveHostPath(view, r.output)
-	if err != nil {
-		return nil, nil, err
-	}
 	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 	if r.notrunc {
 		// The point of notrunc: write into the file without shortening what follows.
 		flags = os.O_WRONLY | os.O_CREATE
 	}
-	// 0666 through the umask, as busybox's xopen makes of=.
-	file, err := os.OpenFile(native, flags, createMode(view, 0o666))
+	// 0666 through the umask, as busybox's xopen makes of=. A device too: of=/dev/null.
+	file, err := openProcessOutput(view, r.output, flags, createMode(view, 0o666))
 	if err != nil {
 		return nil, nil, cannotCreate(r.output, err)
 	}
 	if r.seek > 0 {
-		if _, err := file.Seek(r.seek*r.outputSize, io.SeekStart); err != nil {
+		// From where the descriptor is, as busybox's lseek(SEEK_CUR): of=/dev/stdout is the
+		// shell's, and may be part-written. What cannot seek, a pipe, fails as it does there.
+		var err error = syscall.ESPIPE
+		if seeker, ok := file.(io.Seeker); ok {
+			_, err = seeker.Seek(r.seek*r.outputSize, io.SeekCurrent)
+		}
+		if err != nil {
 			file.Close()
 			return nil, nil, operandFailure(r.output, err)
 		}

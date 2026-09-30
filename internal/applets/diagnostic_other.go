@@ -22,8 +22,12 @@ func platformCauseText(err error) (string, bool) {
 	if !errors.As(err, &errno) {
 		return "", false
 	}
-	if errno == syscall.ENOTEMPTY {
+	switch errno {
+	case syscall.ENOTEMPTY:
 		return "Directory not empty", true
+	case syscall.ESPIPE:
+		// Go spells it "illegal seek", which `dd seek=1 of=/dev/stdout | cat` says.
+		return "Illegal seek", true
 	}
 	return "", false
 }
