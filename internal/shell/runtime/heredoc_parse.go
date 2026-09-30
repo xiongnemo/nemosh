@@ -37,12 +37,12 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 	var origins []int
 	var scan heredocScan
 	for index := 0; index < len(lines); index++ {
-		line := lines[index]
-		declarations, next, err := heredocDeclarations(line, index+1, len(records)+len(pending), scan)
+		start := index
+		line, declarations, next, err := continuedHeredocDeclarations(lines, &index, len(records)+len(pending), scan)
 		if err != nil {
 			return "", nil, nil, err
 		}
-		origins = append(origins, index)
+		origins = append(origins, start)
 		output.WriteString(markHeredocOperands(line, declarations))
 		if index+1 < len(lines) {
 			output.WriteByte('\n')
@@ -58,30 +58,11 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 				waiting = append(waiting, *declaration)
 				continue
 			}
-			var body strings.Builder
-			terminated := false
-			for index++; index < len(lines); index++ {
-				bodyLine := lines[index]
-				matched := bodyLine
-				if declaration.stripTabs {
-					matched = strings.TrimLeft(matched, "\t")
-				}
-				if matched == declaration.delimiter {
-					terminated = true
-					break
-				}
-				if declaration.stripTabs {
-					bodyLine = strings.TrimLeft(bodyLine, "\t")
-				}
-				body.WriteString(bodyLine)
-				if index+1 < len(lines) {
-					body.WriteByte('\n')
-				}
-			}
+			body, terminated := heredocBody(lines, &index, *declaration)
 			if !terminated {
 				return "", nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, declaration.delimiter)
 			}
-			declaration.body = body.String()
+			declaration.body = body
 			records = append(records, *declaration)
 		}
 		pending = waiting
@@ -174,6 +155,11 @@ func heredocDeclarations(line string, lineNumber, startOrder int, scan heredocSc
 			continue
 		}
 		if !unquoted || char != '<' || index+1 >= len(line) || line[index+1] != '<' {
+			// A `<` the line's backslash goes on from may be a `<<`'s first half; see
+			// heredoc_continue.go.
+			if unquoted && char == '<' && index+2 == len(line) && line[index+1] == '\\' {
+				return nil, scan, errHeredocContinued
+			}
 			if char == '#' && unquoted && commentStarts(line, index) {
 				break
 			}
@@ -195,7 +181,10 @@ func heredocDeclarations(line string, lineNumber, startOrder int, scan heredocSc
 		for operandStart < len(line) && (line[operandStart] == ' ' || line[operandStart] == '\t') {
 			operandStart++
 		}
-		operandEnd := heredocOperandEnd(line, operandStart)
+		operandEnd, continued := heredocOperandEnd(line, operandStart)
+		if continued {
+			return nil, scan, errHeredocContinued
+		}
 		if operandEnd == operandStart {
 			return nil, scan, fmt.Errorf("syntax error: %w", errMissingRedirectTarget)
 		}
@@ -238,7 +227,9 @@ func markHeredocOperands(line string, records []pendingHeredoc) string {
 	return marked.String()
 }
 
-func heredocOperandEnd(line string, start int) int {
+// heredocOperandEnd is where a heredoc's word ends, and whether it ends the line in a backslash
+// that the next line continues it past.
+func heredocOperandEnd(line string, start int) (int, bool) {
 	quote := byte(0)
 	escaped := false
 	for index := start; index < len(line); index++ {
@@ -267,10 +258,10 @@ func heredocOperandEnd(line string, start int) int {
 		// them, so `cat <<EOF;` is delimited by EOF; the `;` was taken into the delimiter,
 		// no line matched, and the script was refused as incomplete.
 		if quote == 0 && strings.IndexByte(" \t|&<>;()", char) >= 0 {
-			return index
+			return index, false
 		}
 	}
-	return len(line)
+	return len(line), escaped
 }
 
 func quoteRemovedDelimiter(delimiter word) (string, bool) {
