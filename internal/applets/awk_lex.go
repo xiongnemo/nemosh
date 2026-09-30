@@ -162,6 +162,10 @@ func (l *awkLexer) scanNumber() (awkToken, error) {
 		}
 		return l.emit(awkToken{kind: awkTokenNumber, text: l.source[start:l.offset], number: float64(value), line: l.line}), nil
 	}
+	if value, width, ok := awkOctalLiteral(l.source[l.offset:]); ok {
+		l.offset += width
+		return l.emit(awkToken{kind: awkTokenNumber, text: l.source[start:l.offset], number: value, line: l.line}), nil
+	}
 	end := awkNumberEnd(l.source[l.offset:])
 	if end == 0 {
 		return awkToken{}, fmt.Errorf("line %d: bad number", l.line)
@@ -172,6 +176,28 @@ func (l *awkLexer) scanNumber() (awkToken, error) {
 		return awkToken{}, fmt.Errorf("line %d: bad number %q", l.line, l.source[start:l.offset])
 	}
 	return l.emit(awkToken{kind: awkTokenNumber, text: l.source[start:l.offset], number: value, line: l.line}), nil
+}
+
+// awkOctalLiteral is a program's `010`, a 0 and octal digits, as busybox's my_strtod reads one:
+// strtoull in base 0, kept unless a digit or a point follows, when it is strtod's decimal. So
+// `010` is 8, and `08` and `010.5` are decimal. gawk reads it as 8 too; it was 10 here. Only the
+// program's text: a string or a field that holds 010 is 10, in both references.
+func awkOctalLiteral(text string) (float64, int, bool) {
+	if len(text) < 2 || text[0] != '0' || text[1] < '0' || text[1] > '9' {
+		return 0, 0, false
+	}
+	end := 1
+	for end < len(text) && text[end] >= '0' && text[end] <= '7' {
+		end++
+	}
+	if end < len(text) && (text[end] >= '0' && text[end] <= '9' || text[end] == '.') {
+		return 0, 0, false
+	}
+	value, err := strconv.ParseUint(text[1:end], 8, 64)
+	if err != nil {
+		return 0, 0, false
+	}
+	return float64(value), end, true
 }
 
 // scanString reads a quoted string, decoding its escapes.
