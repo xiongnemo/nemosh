@@ -725,7 +725,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `install` | `-c -d -D -p -s -v -b -o -g -m -t` and busybox's long forms; the mode is 0755 or `-m`'s, whatever the umask. `-o` and `-g` take a number or a name, on Windows this session's account or root, and change nothing there, as busybox-w32's chown does not. `-s` runs strip, which is a program and no applet, so it is not found and the status is 1 | refused by name |
 | `ln` | `-s -f -n -b -S -v -T`; `TARGET... DIR`, and a lone `TARGET` linked into the working directory | refused by name |
 | `iconv` | `-f -t -l -c -o` | refused by name |
-| `join` | `-1 -2 -j -t` | refused by name |
+| `join` | `-a -v -e -o -t -1 -2 -j`; two files sorted on their join fields, merged a key at a time as busybox's are, so lines out of order are not paired | refused by name |
 | `ls` | `-a -A -h -l -1 -C -w N -t -S -r -R -d -F`, `--color[=always\|never\|auto]` | refused by name |
 | `micro` | `-H -R`; one file at a time | refused by name |
 | `mkdir` | `-m -p -v` and their long forms; `-v` names each directory made, a parent with its slash | refused by name |
@@ -1739,11 +1739,15 @@ Four things here are not guessable:
   constraints. The input-stable order is chosen because it is the only
   reproducible one: two runs over one file agree, so a diff between them means
   something.
-- **`join -1` and `-2` are per-file fields.** `join -1 2 -2 1` joins the second
-  field of the first file to the first of the second. Collapsing them into one
-  number silently answers nothing for every asymmetric join, which is what the
-  first draft here did. `-j` sets both; it is GNU's and busybox does not have it,
-  offered because refusing a standard option is the worse divergence.
+- **`join` is busybox's merge join.** Each file is read a set at a time, the
+  lines in a row that share a key, so the files must be sorted on their join
+  fields and lines out of order are not paired, as in busybox and POSIX; a loop
+  over every pair of lines paired them. `-1` and `-2` are per-file fields: `join
+  -1 2 -2 1` joins the second field of the first file to the first of the
+  second. `-j` sets both; it is GNU's and busybox does not have it, offered
+  because refusing a standard option is the worse divergence. An `-o` list of
+  nothing but `0`s prints the key once for each, where busybox reads past the
+  list and prints it more.
 - **`ascii`'s column spacing is busybox's hand-tuned layout** — the gaps are 11,
   11, 9, 9, 9, 10, 10 characters, so it cannot come from one format string. The
   table is read *down*: the first column is 0–15, not 0,1,2 across. Reading it
