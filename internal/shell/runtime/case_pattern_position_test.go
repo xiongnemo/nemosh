@@ -25,6 +25,9 @@ func TestCasePatternPosition(t *testing.T) {
 		{name: "a quoted case is not a case", prefix: `( echo "case a in a" `, want: false},
 		{name: "a quoted esac does not close one", prefix: `case a in a) echo "esac";; b`, want: true},
 		{name: "the word before in is not a pattern", prefix: "case a", want: false},
+		{name: "a loop's in in an arm begins no pattern", prefix: "case a in a) for c in 1; do case $c in esac; done;; b", want: true},
+		{name: "nor does a select's", prefix: "case a in a) select c in 1; do x", want: false},
+		{name: "nor an argument's", prefix: "case a in a) echo in; case b in b) x;; esac;; c", want: true},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			if got := casePatternPosition(testcase.prefix); got != testcase.want {

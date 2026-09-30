@@ -48,23 +48,33 @@ func casePatternPosition(prefix string) bool {
 	// closed the subshell. Quoted and escaped characters are the word's too, so a quoted
 	// subject is a word and a quoted keyword is none.
 	subject := false
+	// ownIn is whether the next word is the case's own `in`, the one after its subject. Only
+	// that one begins the patterns. A `for c in` or `select c in` in an arm's body has an `in`
+	// too, and taking it for the case's put the next `case` where a pattern goes, where it
+	// counted for nothing, and its esac closed the case it was in.
+	ownIn := false
 	var word strings.Builder
 	// A word ends at a blank, a bracket, or a separator; what it was decides whether a
 	// pattern begins or a case ends.
 	endWord := func() {
 		text := word.String()
 		word.Reset()
+		afterSubject := ownIn
+		if text != "" {
+			ownIn = false
+		}
 		switch {
 		case text == "":
 		case subject:
 			subject = false
+			ownIn = true
 		// Where a pattern goes, `case` is a pattern: `case case in case)`.
 		case text == "case" && !pattern:
 			depth++
 			pattern = false
 			subject = true
 		case text == "in":
-			if depth > 0 {
+			if afterSubject {
 				pattern = true
 			}
 		case text == "esac":

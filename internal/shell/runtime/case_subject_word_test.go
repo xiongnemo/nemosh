@@ -17,6 +17,13 @@ func TestRuntime_aCaseSubjectIsAWord(t *testing.T) {
 		{"(case x in x) case y in y) echo inner;; esac;; esac)\n", "inner\n"},
 		{"(case \"x\" in x) echo quoted;; esac)\n", "quoted\n"},
 		{"(case \\x in x) echo escaped;; esac)\n", "escaped\n"},
+		// Only the case's own `in` begins its patterns. A loop's in an arm, or an argument's,
+		// put the `case` after it where a pattern goes, so that case counted for nothing and its
+		// esac closed the outer one; git-completion.bash has a function written so, and was
+		// "missing }".
+		{"(case y in a) for c in 1; do case $c in esac; done;; *) echo loop;; esac)\n", "loop\n"},
+		{"f() {\ncase y in\na)\n\tfor c in 1; do\n\t\tcase $c in\n\t\tesac\n\tdone\n\t;;\n*)\n\tfor c in a; do\n\t\tcase $c in\n\t\ta|b) echo function;;\n\t\tesac\n\tdone\nesac\n}\nf\n", "function\n"},
+		{"f() { case y in a) echo in; case b in b) ;; esac;; *) echo argument | cat;; esac; }; f\n", "argument\n"},
 	} {
 		t.Run(test.script, func(t *testing.T) {
 			if stdout, status := runScriptCapturing(test.script); stdout != test.want || status != 0 {
