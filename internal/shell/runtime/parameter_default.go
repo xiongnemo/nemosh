@@ -64,6 +64,11 @@ func (r Runtime) expandBracedParameter(ctx context.Context, body string, savedSt
 	}
 	switch operator {
 	case ":":
+		// No offset at all is no substring, and both references refuse it: `${v:}` was the whole
+		// value. One written empty is 0, `${v::2}` and `${v:$e}`.
+		if word == "" {
+			return "", fmt.Errorf("bad substitution: ${%s}", body)
+		}
 		return r.parameterSubstring(ctx, value, word, savedStatus)
 	case "/", "//", "/#", "/%":
 		// An unset parameter has nothing to replace in, as both references read it: `${v/#/:}`
