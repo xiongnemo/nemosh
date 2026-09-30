@@ -20,8 +20,9 @@ import (
 // on screen stays readable, and it is why POSIX specifies the two separately. `-C` asks for
 // columns anyway, which is the only way to see the layout in a pipe; `-1` and `-l` defeat them.
 //
-// Width comes from the terminal where there is one and is 80 otherwise -- measured against
-// busybox, whose `-C` into a pipe lays twenty names into seven columns of nine cells.
+// Width is busybox's: the terminal's, one less, where there is one, and 79 otherwise -- measured,
+// sixteen eight-letter names into a pipe take seven columns there, where eighty would fit eight.
+// `-w 0` is no limit at all.
 
 // lsDefaultWidth is the width assumed when columns were asked for but the destination is not a
 // terminal to ask.
@@ -36,20 +37,33 @@ const lsDefaultWidth = 80
 func writeLsNames(stdout io.Writer, entries []lsEntry, options lsOptions, columns bool) error {
 	if !columns {
 		for _, entry := range entries {
-			if _, err := fmt.Fprintln(stdout, lsDisplayName(entry, options)); err != nil {
+			if _, err := fmt.Fprintln(stdout, lsEntryPrefix(entry, options)+lsDisplayName(entry, options)); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
+	// busybox's column width: the widest name, without its indicator, and two, and twenty
+	// more for -i's column and five for -s's -- which is seven wide, so under -s the widest
+	// name meets the next column, as it does in busybox's.
+	field := 0
 	items := make([]textgrid.Item, len(entries))
 	for index, entry := range entries {
+		prefix := lsEntryPrefix(entry, options)
+		field = max(field, textgrid.Cells(lsNameText(entry.name, options)))
 		items[index] = textgrid.Item{
-			Text:  lsDisplayName(entry, options),
-			Cells: textgrid.Cells(lsMeasuredName(entry, options)),
+			Text:  prefix + lsDisplayName(entry, options),
+			Cells: len(prefix) + textgrid.Cells(lsMeasuredName(entry, options)),
 		}
 	}
-	lines, _ := textgrid.GridOf(items, lsTerminalWidth(stdout, options))
+	field += 2
+	if options.inode {
+		field += 20
+	}
+	if options.blocks {
+		field += 5
+	}
+	lines, _ := textgrid.GridWith(items, lsTerminalWidth(stdout, options), field, options.across)
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(stdout, line); err != nil {
 			return err
@@ -64,11 +78,11 @@ func lsTerminalWidth(stdout io.Writer, options lsOptions) int {
 		return options.width
 	}
 	if file := stdoutFile(stdout); file != nil {
-		if width, _, err := term.GetSize(int(file.Fd())); err == nil && width > 0 {
-			return width
+		if width, _, err := term.GetSize(int(file.Fd())); err == nil && width > 1 {
+			return width - 1
 		}
 	}
-	return lsDefaultWidth
+	return lsDefaultWidth - 1
 }
 
 // lsWantsColumns decides the short form's layout.
@@ -76,7 +90,9 @@ func lsWantsColumns(options lsOptions, stdout io.Writer) bool {
 	if options.long || options.onePerLine {
 		return false
 	}
-	if options.forceColumns || options.width > 0 {
+	// -w says how wide columns are, not that there are any: busybox's `ls -w 40` into a pipe
+	// is one name a line.
+	if options.forceColumns || options.across {
 		return true
 	}
 	return stdoutIsTerminal(stdout)

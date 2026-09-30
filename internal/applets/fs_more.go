@@ -19,6 +19,8 @@ func newLsApplet() Applet {
 		// at parse time: that is what makes `alias ls='ls --color=auto'` safe to
 		// pipe, colouring a terminal and staying plain into grep.
 		options.colored = colorEnabled(options.color, stdout)
+		// A terminal shows a `?` for what it cannot, as busybox's ls turns -q on for one.
+		options.printable = options.printable || stdoutIsTerminal(stdout)
 		if len(paths) == 0 {
 			paths = []string{"."}
 		}
@@ -56,7 +58,12 @@ func listDirectory(stdout io.Writer, target, display string, options lsOptions, 
 		if err != nil {
 			return err
 		}
-		items = append(items, lsEntry{name: name, info: info, path: filepath.Join(target, name)})
+		item := lsEntry{name: name, info: info, path: filepath.Join(target, name)}
+		// -L follows every link, and asks about what each points at.
+		if followed, err := os.Stat(item.path); err == nil && options.follow == lsFollowAll && isSymbolicLink(info) {
+			item.info, item.followed = followed, true
+		}
+		items = append(items, item)
 	}
 	if headed {
 		if _, err := fmt.Fprintf(stdout, "%s:\n", display); err != nil {
@@ -78,24 +85,17 @@ func listDirectory(stdout io.Writer, target, display string, options lsOptions, 
 // code. Two copies of a layout is two layouts eventually, and `ls /dev` looking unlike `ls .` would
 // suggest the entries were a different kind of thing than they are.
 func writeLsEntries(stdout io.Writer, items []lsEntry, options lsOptions) error {
+	recordLsFacts(items, options)
 	sortLsEntries(items, options)
+	// `total N` heads a directory listing and not a list of file operands, which is what
+	// both references do, and it heads -s's as it heads -l's; see ls_facts.go.
+	if options.long || options.blocks {
+		if _, err := fmt.Fprintln(stdout, lsTotal(items, options)); err != nil {
+			return err
+		}
+	}
 	if !options.long {
 		return writeLsNames(stdout, items, options, lsWantsColumns(options, stdout))
-	}
-	// `total N` heads a directory listing and not a list of file operands, which is what
-	// both references do.
-	//
-	// The blocks are the *apparent* size rounded up, not du's allocated size, and that is
-	// measured rather than chosen: busybox says `total 4` for a directory holding only `.`
-	// and `..`, which is the 4096 it reports for `..` divided by the block size -- while
-	// busybox's own `du` says 0 for the same directory. The two answers come from different
-	// rules in the reference itself, and this follows each where it is used.
-	total := int64(0)
-	for _, item := range items {
-		total += (item.info.Size() + duBlock - 1) / duBlock
-	}
-	if _, err := fmt.Fprintf(stdout, "total %d\n", total); err != nil {
-		return err
 	}
 	for _, item := range items {
 		if err := printLsEntry(stdout, item, options); err != nil {
@@ -129,47 +129,21 @@ type lsEntry struct {
 	path string
 	// device is a directory the shell provides, /dev, whose entries come from the view.
 	device bool
+	// followed says info is what a link points at; record is the stat ls_facts.go makes, when
+	// recorded says it was.
+	followed bool
+	record   statRecord
+	recorded bool
 }
 
 func printLsEntry(stdout io.Writer, entry lsEntry, options lsOptions) error {
-	name := lsDisplayName(entry, options)
+	line := lsDisplayName(entry, options)
 	if options.long {
 		// The whole line is busybox-w32's layout; see ls_long.go.
-		return writeLongEntry(stdout, entry.path, name, entry.info,
-			lsSize(entry.info.Size(), options), lsSizeField(options))
+		line = formatLongEntry(entry, options)
 	}
-	_, err := fmt.Fprintln(stdout, name)
+	_, err := fmt.Fprintln(stdout, lsEntryPrefix(entry, options)+line)
 	return err
-}
-
-// lsSizeField is how wide the size column is. Ten for a number and eight for a human size,
-// both measured from busybox -- `1.5K` sits two columns further left there than a count of
-// bytes would.
-func lsSizeField(options lsOptions) int {
-	if options.human {
-		return 8
-	}
-	return 10
-}
-
-func lsSize(size int64, options lsOptions) string {
-	if !options.human || size < 1024 {
-		return fmt.Sprintf("%d", size)
-	}
-	units := []string{"K", "M", "G", "T"}
-	value := float64(size)
-	unit := ""
-	for _, candidate := range units {
-		value /= 1024
-		unit = candidate
-		if value < 1024 {
-			break
-		}
-	}
-	if value >= 10 || value == float64(int64(value)) {
-		return fmt.Sprintf("%.0f%s", value, unit)
-	}
-	return fmt.Sprintf("%.1f%s", value, unit)
 }
 
 // listDeviceDirectory prints the contents of a directory the shell provides rather than the disk.

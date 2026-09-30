@@ -91,27 +91,39 @@ func Grid(items []string, width int) ([]string, int) {
 // plus two, in cells, and the last column on a row is not padded so a row that fills the terminal
 // does not wrap into an empty one.
 func GridOf(items []Item, width int) ([]string, int) {
-	if len(items) == 0 {
-		return nil, 0
-	}
 	field := 0
 	for _, item := range items {
 		field = max(field, item.Cells)
 	}
-	field += 2
-	columns := max(width/field, 1)
+	return GridWith(items, width, field+2, false)
+}
+
+// GridWith lays out items in fields of the width given, which may be narrower than an item, and
+// then that item meets the next with no gap, as busybox's ls lets one under -s. across fills the
+// grid a row at a time, as ls -x does, rather than a column at a time.
+func GridWith(items []Item, width, field int, across bool) ([]string, int) {
+	if len(items) == 0 {
+		return nil, 0
+	}
+	columns := max(width/max(field, 1), 1)
 	rows := (len(items) + columns - 1) / columns
 	lines := make([]string, 0, rows)
 	for row := range rows {
 		var line strings.Builder
 		for column := range columns {
-			index := column*rows + row
+			index, next := column*rows+row, (column+1)*rows+row
+			if across {
+				index, next = row*columns+column, row*columns+column+1
+				if column+1 == columns {
+					next = len(items)
+				}
+			}
 			if index >= len(items) {
 				break
 			}
 			line.WriteString(items[index].Text)
-			if index+rows < len(items) {
-				line.WriteString(strings.Repeat(" ", field-items[index].Cells))
+			if next < len(items) {
+				line.WriteString(strings.Repeat(" ", max(field-items[index].Cells, 0)))
 			}
 		}
 		lines = append(lines, line.String())

@@ -2,7 +2,7 @@ package applets
 
 import (
 	"fmt"
-	"strconv"
+	"math"
 	"strings"
 )
 
@@ -18,6 +18,27 @@ const (
 	lsSortBySize
 )
 
+// lsTimeKey is which of a file's times -l shows and -t orders by: -c the change time, which on
+// Windows is when the file was made, as busybox-w32's st_ctime is, and -u when it was last
+// read. Of the two the last given wins, and without -l either orders by itself.
+type lsTimeKey byte
+
+const (
+	lsModifyTime lsTimeKey = iota
+	lsChangeTime
+	lsAccessTime
+)
+
+// lsFollow is which symbolic links are followed: those named on the command line, unless the
+// listing asks about entries themselves; only those, -H; or every one, -L.
+type lsFollow byte
+
+const (
+	lsFollowOperands lsFollow = iota
+	lsFollowNamed
+	lsFollowAll
+)
+
 type lsOptions struct {
 	all bool
 	// almostAll is -A: hidden entries, but not `.` and `..`. -a beats it in
@@ -28,14 +49,17 @@ type lsOptions struct {
 	human     bool
 	color     colorWhen
 	colored   bool
-	// onePerLine is -1 and forceColumns is -C. Neither decides the layout on its own:
-	// the destination does, and these override it. See ls_columns.go.
-	onePerLine   bool
-	forceColumns bool
-	// width is -w, which implies columns because asking how wide they should be is
-	// asking for them.
-	width   int
-	sortKey lsSortKey
+	// onePerLine is -1, forceColumns -C and across -x, columns filled a row at a time. None
+	// decides the layout on its own: the destination does, and these override it. Of -C, -x
+	// and -l the last given wins, and of -1 and -C or -x; see ls_columns.go.
+	onePerLine, forceColumns, across bool
+	width                            int
+	sortKey                          lsSortKey
+	// version and extension are -v and -X: they order what the sort key leaves tied, and the
+	// name what they leave tied, as busybox's sortcmp does.
+	version, extension bool
+	// dirsFirst is --group-directories-first.
+	dirsFirst bool
 	// reverse is -r, which reverses whatever order the sort key produced,
 	// including the name tie-break.
 	reverse bool
@@ -43,8 +67,19 @@ type lsOptions struct {
 	// "what does a directory operand mean".
 	recursive       bool
 	directoryItself bool
-	// classify is -F, appending one character that says what an entry is.
-	classify bool
+	// classify is -F, appending one character that says what an entry is, and slash -p,
+	// which appends a directory's `/` and nothing else.
+	classify, slash bool
+	// groupOnly is -g, the long form without the owner, and numeric -n, ids for names.
+	groupOnly, numeric bool
+	// inode and blocks are -i and -s, each a column before the name.
+	inode, blocks bool
+	// quote is -Q, a name in double quotes with C escapes, and printable -q, a `?` for what
+	// cannot be shown; see ls_names.go.
+	quote, printable bool
+	timeKey          lsTimeKey
+	fullTime         bool
+	follow           lsFollow
 }
 
 // lsShowsDotEntries reports whether `.` and `..` belong in the listing. -A asks
@@ -75,78 +110,146 @@ func lsArgs(args []string, permute bool) (lsOptions, []string, error) {
 			index++
 			continue
 		}
-		// A long option is one word, so it is matched whole rather than letter
-		// by letter -- `--color` used to be read as `-`, `-c`, `-o` and refused
-		// as the bare `-` it started with.
-		if strings.HasPrefix(arg, "--") {
-			name, value, present := strings.Cut(arg[2:], "=")
-			if name != "color" {
-				return lsOptions{}, nil, fmt.Errorf("unsupported ls option: %s", arg)
-			}
-			when, err := parseColorWhen(value, present)
-			if err != nil {
-				return lsOptions{}, nil, err
-			}
-			options.color = when
-			index++
-			continue
+		used, err := options.word(args, index)
+		if err != nil {
+			return lsOptions{}, nil, err
 		}
-		// -w takes a number, so it cannot be read letter by letter with the rest.
-		if strings.HasPrefix(arg, "-w") {
-			value := arg[2:]
-			if value == "" {
-				if index+1 >= len(args) {
-					return lsOptions{}, nil, fmt.Errorf("ls: -w requires a width")
-				}
-				index++
-				value = args[index]
-			}
-			parsed, err := strconv.Atoi(value)
-			if err != nil || parsed <= 0 {
-				return lsOptions{}, nil, fmt.Errorf("ls: invalid width: %s", value)
-			}
-			options.width = parsed
-			index++
-			continue
-		}
-		for _, flag := range arg[1:] {
-			switch flag {
-			case 'a':
-				options.all = true
-			case 'A':
-				options.almostAll = true
-			case 'l':
-				options.long = true
-			case 'h':
-				options.human = true
-			case '1':
-				// -l wins over -1 whichever order the two are given, which is
-				// what busybox does.
-				options.onePerLine = true
-			case 'C':
-				options.forceColumns = true
-			case 't':
-				options.sortKey = lsSortByTime
-			case 'S':
-				options.sortKey = lsSortBySize
-			case 'r':
-				options.reverse = true
-			case 'R':
-				options.recursive = true
-			case 'd':
-				options.directoryItself = true
-			case 'F':
-				options.classify = true
-			default:
-				// Still refused by name: -i wants an inode number Windows does
-				// not keep, -n a numeric owner this build does not resolve, and
-				// -u/-c the access and change times, which NTFS records but
-				// which no sort here reads yet. A script asking for one fails
-				// rather than quietly getting something else.
-				return lsOptions{}, nil, fmt.Errorf("unsupported ls option: -%c", flag)
-			}
-		}
-		index++
+		index += used
+	}
+	// Without -l, -c and -u order by the time they choose, as busybox's do.
+	if !options.long && options.timeKey != lsModifyTime && options.sortKey == lsSortByName {
+		options.sortKey = lsSortByTime
 	}
 	return options, append(operands, args[index:]...), nil
+}
+
+// word reads one word of options, answering how many words it took: two when -w or -T takes
+// the next.
+//
+// A long option is one word, so it is matched whole rather than letter by letter -- `--color`
+// used to be read as `-`, `-c`, `-o` and refused as the bare `-` it started with.
+func (o *lsOptions) word(args []string, index int) (int, error) {
+	arg := args[index]
+	if strings.HasPrefix(arg, "--") {
+		name, value, present := strings.Cut(arg[2:], "=")
+		switch {
+		case name == "color":
+			when, err := parseColorWhen(value, present)
+			o.color = when
+			return 1, err
+		case name == "full-time" && !present:
+			o.fullTime = true
+			o.setLayout('l')
+			return 1, nil
+		case name == "group-directories-first" && !present:
+			o.dirsFirst = true
+			return 1, nil
+		}
+		return 0, fmt.Errorf("unsupported ls option: %s", arg)
+	}
+	for position := 1; position < len(arg); position++ {
+		letter := arg[position]
+		if letter != 'w' && letter != 'T' {
+			if err := o.letter(letter); err != nil {
+				return 0, err
+			}
+			continue
+		}
+		// -w and -T take the rest of the word or the next one. -T is a tab size, taken and
+		// ignored as busybox takes it.
+		value, used := arg[position+1:], 1
+		if value == "" {
+			if index+1 >= len(args) {
+				return 0, fmt.Errorf("option requires an argument -- '%c'", letter)
+			}
+			value, used = args[index+1], 2
+		}
+		width, err := positiveNumber(value)
+		if err != nil {
+			return 0, err
+		}
+		if letter == 'w' {
+			// -w 0 is no limit, as busybox's is.
+			o.width = width
+			if width == 0 {
+				o.width = math.MaxInt32
+			}
+		}
+		return used, nil
+	}
+	return 1, nil
+}
+
+func (o *lsOptions) letter(letter byte) error {
+	switch letter {
+	case 'a':
+		o.all = true
+	case 'A':
+		o.almostAll = true
+	case 'l', 'C', 'x', '1':
+		o.setLayout(letter)
+	case 'g', 'n':
+		// Each is the long form, as busybox's getopt makes them imply -l.
+		o.groupOnly, o.numeric = o.groupOnly || letter == 'g', o.numeric || letter == 'n'
+		o.setLayout('l')
+	case 'h':
+		o.human = true
+	case 't':
+		o.sortKey = lsSortByTime
+	case 'S':
+		o.sortKey = lsSortBySize
+	case 'v':
+		o.version = true
+	case 'X':
+		o.extension = true
+	case 'c':
+		o.timeKey = lsChangeTime
+	case 'u':
+		o.timeKey = lsAccessTime
+	case 'r':
+		o.reverse = true
+	case 'R':
+		o.recursive = true
+	case 'd':
+		o.directoryItself = true
+	case 'F':
+		o.classify = true
+	case 'p':
+		o.slash = true
+	case 'i':
+		o.inode = true
+	case 's':
+		o.blocks = true
+	case 'Q':
+		o.quote = true
+	case 'q':
+		o.printable = true
+	case 'L':
+		o.follow = lsFollowAll
+	case 'H':
+		o.follow = lsFollowNamed
+	case 'k':
+		// -k is the size in kilobytes, which -s already is; busybox takes it and ignores it.
+	default:
+		// Still refused by name: -Z is an SELinux context no Windows file has, and -m and
+		// -o are options busybox does not have either.
+		return fmt.Errorf("unsupported ls option: -%c", letter)
+	}
+	return nil
+}
+
+// setLayout is busybox's getopt pairs for the layout: -C, -x and -l each undo the other two,
+// and -1 undoes -C and -x as they undo it, so of each pair the last given wins -- `ls -l -C`
+// is columns. -l beats -1 in either order, which is what busybox does too.
+func (o *lsOptions) setLayout(letter byte) {
+	switch letter {
+	case 'l':
+		o.long, o.forceColumns, o.across = true, false, false
+	case 'C':
+		o.forceColumns, o.across, o.long, o.onePerLine = true, false, false, false
+	case 'x':
+		o.across, o.forceColumns, o.long, o.onePerLine = true, false, false, false
+	case '1':
+		o.onePerLine, o.forceColumns, o.across = true, false, false
+	}
 }

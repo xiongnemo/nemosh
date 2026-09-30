@@ -20,7 +20,7 @@ func listOperands(ctx context.Context, stdout io.Writer, view ProcessView, targe
 	var files, directories []lsEntry
 	listed := true
 	for _, target := range targets {
-		entry, err := statLsOperand(view, target)
+		entry, err := statLsOperand(view, target, options)
 		if err != nil {
 			if len(targets) == 1 || !isOperandFailure(err) || !reportOperand(ctx, err) {
 				return false, err
@@ -74,7 +74,11 @@ func listOperands(ctx context.Context, stdout io.Writer, view ProcessView, targe
 // statLsOperand is what one operand names. A device is described from the table rather than
 // resolved to a host path it has not got: `ls -l /dev/null` answered "is not a host path"
 // before that, where busybox prints a character device.
-func statLsOperand(view ProcessView, target string) (lsEntry, error) {
+//
+// A link named is followed, as busybox's ls_main follows one, unless the listing asks about
+// entries themselves -- -l, -i, -s or -F -- when it is the link that is shown; -H and -L follow it
+// whatever else is asked. `ls -l link` listed the directory a link points at.
+func statLsOperand(view ProcessView, target string, options lsOptions) (lsEntry, error) {
 	if info, err := statDeviceOperand(view, target); err != nil {
 		return lsEntry{}, err
 	} else if info != nil {
@@ -84,16 +88,22 @@ func statLsOperand(view ProcessView, target string) (lsEntry, error) {
 	if err != nil {
 		return lsEntry{}, err
 	}
-	info, err := os.Stat(native)
+	follow := !(options.long || options.inode || options.blocks || options.classify) || options.follow != lsFollowOperands
+	stat := os.Lstat
+	if follow {
+		stat = os.Stat
+	}
+	info, err := stat(native)
 	if err != nil {
 		return lsEntry{}, operandFailure(target, err)
 	}
-	return lsEntry{name: target, info: info, path: native}, nil
+	return lsEntry{name: target, info: info, path: native, followed: follow}, nil
 }
 
 // writeLsOperands lays out the operands that are not directories: sorted, and in columns as a
 // directory's entries are, but with no `total` line, which heads a directory's listing only.
 func writeLsOperands(stdout io.Writer, items []lsEntry, options lsOptions) error {
+	recordLsFacts(items, options)
 	sortLsEntries(items, options)
 	if !options.long {
 		return writeLsNames(stdout, items, options, lsWantsColumns(options, stdout))

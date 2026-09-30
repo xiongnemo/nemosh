@@ -2,10 +2,9 @@ package applets
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"strconv"
+	"strings"
 	"time"
 )
 
@@ -20,7 +19,8 @@ import (
 //	-rwxrwxr-x    2 root     root       6090176 Jun 12 16:29 explorer.exe
 //
 // mode, then the link count right-aligned in five, the owner and group left-aligned in eight,
-// the size right-aligned in ten, `MMM DD HH:MM`, and the name.
+// the size right-aligned in ten, `MMM DD HH:MM`, and the name. -g leaves the owner out, -n
+// prints ids for both, -h a size of seven, and --full-time the date and time in full.
 //
 // The group repeats the owner, which is what busybox does and is worth stating because it is
 // not what Windows would say: the real primary group of a file owned by a local account is
@@ -48,36 +48,62 @@ const (
 	lsFutureAllowance    = time.Hour
 )
 
-// formatLongEntry builds one `ls -l` line. path is where the file really is, which is what the
-// link count and owner have to be asked about; name is what gets printed.
-func formatLongEntry(path, name string, info os.FileInfo, size string, sizeField int) string {
-	links := 1
-	if count, ok := fileLinkCount(path); ok {
-		links = count
-	}
-	owner := longEntryOwner(path, info)
-	mode := lsModeString(info)
+// formatLongEntry builds one `ls -l` line, as busybox's display_single lays it out: the mode, the
+// link count in four, the owner and the group each in eight -- only the group under -g, and
+// ids under -n -- the size in nine, or seven for -h, the time, and the name. The inode and
+// blocks columns -i and -s put before it are lsEntryPrefix's.
+func formatLongEntry(entry lsEntry, options lsOptions) string {
+	name := lsDisplayName(entry, options)
+	mode := lsModeString(entry.info)
+	size := lsSizeText(entry.info.Size(), options)
 	// A link says so in the first column and names its target, which is what busybox does
 	// and what this did not: the ten junctions in a home directory came out as
 	// `?rw-rw-rw-` with a size of 0 and no target at all. A link's size is the length of
-	// that target, which is POSIX and which busybox also prints.
-	if info.Mode()&os.ModeDevice != 0 {
+	// that target, which is POSIX and which busybox also prints, and its indicator is the
+	// target's, after it.
+	if target, ok := linkTarget(entry.path, entry.info); ok {
+		// `lrwxrwxrwx`, not the target's own bits: a link's permissions are not
+		// consulted for anything, and every ls prints them wide open.
+		mode = "lrwxrwxrwx"
+		size = lsSizeText(int64(len(target)), options)
+		name = paintLsName(lsNameText(entry.name, options), entry.info, options.colored) + " -> " + target
+		if followed, err := os.Stat(entry.path); err == nil {
+			name += classifyLsSuffix(followed, options)
+		}
+	}
+	var line strings.Builder
+	fmt.Fprintf(&line, "%-10s %4d ", mode, entry.links())
+	owner := longEntryOwner(entry.path, entry.info)
+	switch uid, gid := entry.ids(); {
+	case options.numeric && options.groupOnly:
+		fmt.Fprintf(&line, "%-8d ", gid)
+	case options.numeric:
+		fmt.Fprintf(&line, "%-8d %-8d ", uid, gid)
+	case options.groupOnly:
+		fmt.Fprintf(&line, "%-8s ", owner)
+	default:
+		fmt.Fprintf(&line, "%-8s %-8s ", owner, owner)
+	}
+	switch {
+	case entry.info.Mode()&os.ModeDevice != 0:
 		// A device has no size, and busybox and GNU ls both put its major and minor
 		// numbers in that column instead. Ours are zero and honestly so: these devices
 		// are provided by the shell rather than by a driver, so there is no pair of
 		// numbers to report. `0,   0` is exactly what busybox prints for /dev/null.
-		size = "0,   0"
+		line.WriteString("   0,   0 ")
+	case options.human:
+		fmt.Fprintf(&line, "%7s ", size)
+	default:
+		fmt.Fprintf(&line, "%9s ", size)
 	}
-	if target, ok := linkTarget(path, info); ok {
-		// `lrwxrwxrwx`, not the target's own bits: a link's permissions are not
-		// consulted for anything, and every ls prints them wide open.
-		mode = "lrwxrwxrwx"
-		size = strconv.Itoa(len(target))
-		name += " -> " + target
+	when := entry.when(options)
+	if options.fullTime {
+		line.WriteString(when.Format("2006-01-02 15:04:05 -0700"))
+	} else {
+		line.WriteString(lsTimeColumn(when, time.Now()))
 	}
-	return fmt.Sprintf("%s%5d %-8s %-8s%*s %s %s",
-		mode, links, owner, owner, sizeField, size,
-		lsTimeColumn(info.ModTime(), time.Now()), name)
+	line.WriteString(" " + name)
+	return line.String()
 }
 
 // linkTarget is where a link points, spelled the way this shell spells paths.
@@ -93,11 +119,6 @@ func linkTarget(path string, info os.FileInfo) (string, bool) {
 		return "", false
 	}
 	return filepath.ToSlash(target), true
-}
-
-func writeLongEntry(stdout io.Writer, path, name string, info os.FileInfo, size string, sizeField int) error {
-	_, err := fmt.Fprintln(stdout, formatLongEntry(path, name, info, size, sizeField))
-	return err
 }
 
 // ownerNames caches the account a SID or uid belongs to.

@@ -87,7 +87,7 @@ func TestFormatLongEntry_namesALinkTarget(t *testing.T) {
 	}
 
 	// When
-	line := formatLongEntry(link, "link.txt", info, "0", 10)
+	line := formatLongEntry(lsEntry{name: "link.txt", info: info, path: link}, lsOptions{long: true})
 
 	// Then
 	if line[0] != 'l' {

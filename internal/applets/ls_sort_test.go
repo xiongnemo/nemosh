@@ -315,10 +315,10 @@ func TestLs_recursiveSkipsHiddenEntriesUnlessAsked(t *testing.T) {
 	}
 }
 
-// The options this build still does not have stay refused by name, so a script
+// The options busybox-w32's ls does not have stay refused by name, so a script
 // asking for one fails rather than quietly getting something else.
 func TestLs_stillRefusesWhatItCannotDo(t *testing.T) {
-	for _, option := range []string{"-i", "-n", "-u", "-c", "-X", "-v"} {
+	for _, option := range []string{"-Z", "-m", "-o", "--sort=size"} {
 		if _, _, err := runAppletWithInput(t, "", "ls", option, "."); err == nil {
 			t.Fatalf("ls %s was accepted, want a refusal", option)
 		}

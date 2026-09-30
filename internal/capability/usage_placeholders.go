@@ -91,6 +91,8 @@ var valuePlaceholders = map[string]string{
 	"diffL":                   "LABEL",
 	"patchp":                  "COUNT",
 	"patchi":                  "DIFF",
+	"lsw":                     "COLS",
+	"lsT":                     "N",
 	"patchstrip":              "COUNT",
 	"patchinput":              "DIFF",
 	"patchget":                "NUM",

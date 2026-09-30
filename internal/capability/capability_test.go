@@ -198,7 +198,9 @@ func TestOptionsAreOfferedWithTheirDashes(t *testing.T) {
 	got := capability.Options("ls")
 
 	// Then
-	want := []string{"-a", "-h", "-l", "-1", "--color"}
+	want := []string{"-a", "-A", "-l", "-h", "-C", "-1", "-x", "-t", "-S", "-r", "-R", "-d", "-F", "-p", "-g",
+		"-n", "-i", "-s", "-Q", "-q", "-c", "-u", "-X", "-v", "-L", "-H", "-k", "-w", "-T",
+		"--color", "--full-time", "--group-directories-first"}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("Options(ls) = %v, want %v", got, want)
 	}
