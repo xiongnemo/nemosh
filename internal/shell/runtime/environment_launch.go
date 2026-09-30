@@ -32,7 +32,7 @@ var launchPathVariables = map[string]bool{
 
 // childEnvironment is what a launched program receives.
 func (r Runtime) childEnvironment() []string {
-	items := r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform()))
+	items := r.withoutArrays(r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform())))
 	if hostEnvironmentPlatform() != windowsEnvironment {
 		return items
 	}
@@ -63,4 +63,17 @@ func (r Runtime) nativeSpellingOf(value string) (string, bool) {
 		return "", false
 	}
 	return resolved.Native, true
+}
+
+// withoutArrays is an environment without the arrays in it: an array is exported to no child,
+// as in bash, one inherited from the environment and made an array since among them.
+// `a=(x); export a` gave a child a=x, its element 0.
+func (r Runtime) withoutArrays(items []string) []string {
+	kept := make([]string, 0, len(items))
+	for _, item := range items {
+		if name, _, _ := strings.Cut(item, "="); !r.isArrayName(name) {
+			kept = append(kept, item)
+		}
+	}
+	return kept
 }

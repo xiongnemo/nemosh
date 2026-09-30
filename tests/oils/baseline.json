@@ -61,12 +61,9 @@
       "setting key to itself (from bash-bug mailing list)": "ash-only"
     },
     "array-compat.test.sh": {
-      "Array Decay with IFS": "fail",
-      "value.BashArray internal representation - Indexed": "fail"
+      "Array Decay with IFS": "fail"
     },
     "array-literal.test.sh": {
-      "(strict_array) declare -A s+=()": "fail",
-      "BashArray cannot be changed to BashAssoc and vice versa": "fail",
       "Tilde expansions in RHS of [k]=v (BashAssoc)": "ash-only",
       "[k1]=v1 looking like brace expansions (BashArray)": "ash-only",
       "append to element (BashArray)": "fail",
@@ -89,7 +86,6 @@
       "unset -v a[i] with out-of-bound negative index": "fail"
     },
     "array.test.sh": {
-      "Exporting array doesn't do anything, not even first element": "fail",
       "Length op, index op, then transform op is not allowed": "ash-only",
       "Multiple subscripts not allowed": "ash-only",
       "Negative slice length": "fail",
@@ -436,7 +432,6 @@
       "Unset wrong type": "fail",
       "assign to readonly variable": "fail",
       "assign to readonly variable - errexit": "fail",
-      "can't export array (strict_array)": "fail",
       "local after readonly": "fail"
     },
     "command-sub.test.sh": {

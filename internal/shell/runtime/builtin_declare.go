@@ -155,13 +155,8 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		fmt.Fprintf(r.streams.Stderr, "declare: %s: not a valid name\n", name)
 		return 1
 	}
-	switch {
-	case options.associative:
-		r.arrays.declareAssociative(name)
-	case options.indexed:
-		if !r.arrays.has(name) {
-			r.arrays.set(name, nil)
-		}
+	if !r.declareArrayKind(name, options) {
+		return 1
 	}
 	// Before the value, so `declare -i n=2+3` stores 5.
 	r.applyDeclaredAttributes(name, options)

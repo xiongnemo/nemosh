@@ -10,7 +10,9 @@ import "sort"
 // markExported is `export NAME` with no value: into the environment now if NAME has one,
 // and otherwise when it is assigned.
 func (r Runtime) markExported(name string) {
-	if value, set := r.vars[name]; set {
+	// An array is marked, and goes into no environment, as in bash: `a=(x); export a` gave
+	// a child a=x, its element 0.
+	if value, set := r.vars[name]; set && !r.isArrayName(name) {
 		r.env.Set(name, value)
 		return
 	}

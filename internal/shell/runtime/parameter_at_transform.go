@@ -89,7 +89,7 @@ func (r Runtime) attributeLetters(name string) string {
 	if r.isReadonly(name) {
 		letters.WriteByte('r')
 	}
-	if _, exported := r.env.LookupEnv(name); exported {
+	if r.isExported(name) {
 		letters.WriteByte('x')
 	}
 	return letters.String()

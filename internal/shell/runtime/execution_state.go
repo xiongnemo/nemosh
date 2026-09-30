@@ -211,8 +211,13 @@ func (r Runtime) WorkingDirectory() string {
 	}
 	return r.paths.workingDirectory()
 }
-func (r Runtime) Environ() []string                    { return r.withOptionLists(r.env.Environ()) }
-func (r Runtime) LookupEnv(name string) (string, bool) { return r.env.LookupEnv(name) }
+func (r Runtime) Environ() []string { return r.withoutArrays(r.withOptionLists(r.env.Environ())) }
+func (r Runtime) LookupEnv(name string) (string, bool) {
+	if r.isArrayName(name) {
+		return "", false
+	}
+	return r.env.LookupEnv(name)
+}
 func (r Runtime) LookupVariable(name string) (string, bool) {
 	value, present := r.vars[name]
 	return value, present
