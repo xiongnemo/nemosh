@@ -84,6 +84,14 @@ func FuzzParseScript(f *testing.F) {
 		if strings.HasSuffix(source, "\r") {
 			return
 		}
+		// Nor when it ends in a backslash. With nothing after it a `\` is a character, and with
+		// a newline after it, it joins that newline to a line that never comes: `!\` runs a
+		// command called `!\`, and `!\` NL is a `!` with no command, a syntax error. busybox
+		// reads both so, measured; the fuzzer found the pair once a script's last `\` stopped
+		// being refused.
+		if strings.HasSuffix(source, `\`) {
+			return
+		}
 		if _, err := ParseScript(source + "\n"); err != nil {
 			t.Fatalf("ParseScript(%q) succeeded but ParseScript(%q) failed: %v", source, source+"\n", err)
 		}
