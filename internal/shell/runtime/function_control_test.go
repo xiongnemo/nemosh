@@ -40,7 +40,9 @@ func TestFunction_carriesItsControlOut(t *testing.T) {
 }
 
 // An assignment to a readonly variable is a shell error, which ends a script with status 2
-// wherever busybox-w32 ends it -- and a subshell ends only itself, and `read` only refuses.
+// wherever busybox-w32 ends it -- and a subshell ends only itself, and `read` only refuses. So
+// does a builtin that is not special, as in both references: `let R++` in busybox, and
+// `((R++))`, which busybox has not got and bash goes on after (builtin_error_contained.go).
 // These used to answer 1 and carry on, and several of them wrote the variable anyway: the
 // for loop, `${R:=x}` and arithmetic each wrote the map themselves.
 func TestReadonly_assignmentIsAShellError(t *testing.T) {
@@ -57,7 +59,8 @@ func TestReadonly_assignmentIsAShellError(t *testing.T) {
 		{name: "local", script: "readonly R=1\nf() { local R; }\nf\necho reached\n", status: 2},
 		{name: "a for loop", script: "readonly R=1\nfor R in 9; do echo loop; done\necho reached\n", status: 2},
 		{name: "arithmetic", script: "readonly R=1\n: $((R=5))\necho reached\n", status: 2},
-		{name: "increment", script: "readonly R=1\n((R++))\necho reached\n", status: 2},
+		{name: "increment refuses and goes on", script: "readonly R=1\n((R++))\necho reached\n", stdout: "reached\n"},
+		{name: "let refuses and goes on", script: "readonly R=1\nlet R++\necho \"reached $?\"\n", stdout: "reached 2\n"},
 		{name: "an arithmetic for", script: "readonly R=1\nfor ((R=0; R<2; R++)); do :; done\necho reached\n", status: 2},
 		{name: "assign-default", script: "readonly R\n: ${R:=7}\necho reached\n", status: 2},
 		{name: "not caught by ||", script: "readonly R=1\nR=2 || echo handled\necho reached\n", status: 2},

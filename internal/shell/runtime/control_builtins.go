@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 )
 
@@ -13,6 +14,9 @@ import (
 func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation, savedStatus int) (lineResult, bool) {
 	named := throughCommandPrefix(args)
 	prefixed := len(named) != len(args)
+	// Under command, eval and . are plain builtins, whose errors end only themselves; see
+	// builtin_error_contained.go.
+	plain := slices.Contains(args[:len(args)-len(named)], "command")
 	args = named
 	switch args[0] {
 	case "exit", "exec", "return", "break", "continue", "eval", ".", "source":
@@ -24,13 +28,13 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	}
 	switch args[0] {
 	case "eval":
-		return r.withAppliedRedirectsFor(true, operations, func(redirected Runtime) lineResult {
+		return r.plainResult(plain, r.withAppliedRedirectsFor(!plain, operations, func(redirected Runtime) lineResult {
 			return redirected.evalResult(ctx, args[1:], savedStatus)
-		}), true
+		})), true
 	case ".", "source":
-		return r.withAppliedRedirectsFor(true, operations, func(redirected Runtime) lineResult {
+		return r.plainResult(plain, r.withAppliedRedirectsFor(!plain, operations, func(redirected Runtime) lineResult {
 			return redirected.dotResult(ctx, args, savedStatus, !prefixed)
-		}), true
+		})), true
 	case "exit", "return", "break", "continue":
 		// Their redirections are made as any command's are, though nothing is written through
 		// them but a diagnostic: `break > log` creates log in both references. They were not

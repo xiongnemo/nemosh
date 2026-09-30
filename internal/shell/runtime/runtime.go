@@ -188,6 +188,10 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 			return r.callFunction(ctx, definition, args[1:])
 		}
 	}
+	return r.containedError(args[0], r.runBuiltinOrProgram(ctx, args))
+}
+
+func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 	switch args[0] {
 	case "alias":
 		return r.alias(args[1:])
