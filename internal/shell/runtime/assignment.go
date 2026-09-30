@@ -88,7 +88,8 @@ func (r Runtime) assigningPlainly() Runtime {
 // the next, unless `set -e` ends it there; see flowDiscard. Each was said and the rest of the
 // command went on as if nothing had happened. The same write from declare, read or printf -v
 // is status 1 and the next command there, and so is a nameref's circle anywhere; a read-only
-// name has raised its own, busybox's status 2 and the end of the script.
+// name has raised its own, busybox's status 2 and the end of the script. An element of a
+// compound assignment abandons the command wherever it was written; see refuseElement.
 func (r Runtime) failAssignment() {
 	if r.plainAssignment && !r.expansion.shellError {
 		r.expansion.shellError, r.expansion.discard = true, true

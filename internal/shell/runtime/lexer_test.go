@@ -152,7 +152,7 @@ func TestScanShellTokens_keepsCommandSubstitutionAtomic(t *testing.T) {
 func lexicalTokens(tokens []shellToken) []shellToken {
 	result := append([]shellToken(nil), tokens...)
 	for index := range result {
-		result[index].parsed = nil
+		result[index].parsed, result[index].raw = nil, ""
 	}
 	return result
 }

@@ -19,11 +19,17 @@ import (
 // bash is the reference; busybox has no arrays.
 
 // arrayElement is one element of a compound assignment: its value, and the subscript it was
-// written with, if it had one.
+// written with, if it had one. appending is `[k]+=v`, which adds the value to the element's as
+// `+=` adds to a variable's; it was the text `[k]+=v`, an element of its own. text is the word
+// as read, for an error to name, and pair marks a key and a value read from two words; see
+// keyValueElements.
 type arrayElement struct {
-	key   string
-	keyed bool
-	value string
+	key       string
+	keyed     bool
+	appending bool
+	pair      bool
+	value     string
+	text      string
 }
 
 // assignCompound replaces name with the elements of a compound assignment, or adds them to
@@ -44,10 +50,10 @@ func (r Runtime) assignCompound(ctx context.Context, name, raw string, extend bo
 	if r.isReadonly(name) {
 		return r.refuseReadonly("", name)
 	}
-	elements := r.compoundElements(ctx, raw, savedStatus)
-	if r.arrays.isAssociative(name) {
-		r.assignAssociativeCompound(name, elements, extend)
-		return 0
+	associative := r.arrays.isAssociative(name)
+	elements := r.compoundElements(ctx, raw, associative, savedStatus)
+	if associative {
+		return r.assignAssociativeCompound(name, elements, extend)
 	}
 	return r.assignIndexedCompound(name, elements, extend)
 }
@@ -67,48 +73,92 @@ func (r Runtime) assignIndexedCompound(name string, elements []arrayElement, ext
 	} else {
 		r.arrays.set(name, nil)
 	}
+	status := r.writeIndexedElements(name, elements, next)
+	r.syncArrayScalar(name)
+	return status
+}
+
+// writeIndexedElements writes the elements in order, the first unsubscripted one at next. A
+// negative subscript counts back from the end of the array as it stands by then, as in bash:
+// `a=([5]=x [-1]=y)` is y at 5, and `a+=([-1]=z)` replaces the last element. It was refused.
+// `[i]+=v` appends to what is at i by then, so `a=([1]=x [1]+=y)` is xy.
+func (r Runtime) writeIndexedElements(name string, elements []arrayElement, next int) int {
 	for _, element := range elements {
-		value, err := r.applyAttributes(name, element.value)
+		index := next
+		if element.keyed {
+			number, err := r.evaluateArithmetic(element.key)
+			position, within := countFromEnd(int(number), r.arrays.span(name))
+			if err != nil || !within {
+				return r.refuseElement(element.text + ": bad array subscript")
+			}
+			index = position
+		}
+		value := element.value
+		if element.appending {
+			current, _ := r.arrays.valueAt(name, index)
+			value = r.appendedTo(name, current, value)
+		}
+		value, err := r.applyAttributes(name, value)
 		if err != nil {
 			fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
 			return 1
 		}
-		element.value = value
-		index := next
-		if element.keyed {
-			value, err := r.evaluateArithmetic(element.key)
-			if err != nil || value < 0 {
-				fmt.Fprintf(r.streams.Stderr, "%s: [%s]: bad array subscript\n", name, element.key)
-				return 1
-			}
-			index = int(value)
-		}
-		r.arrays.setElement(name, index, element.value)
+		r.arrays.setElement(name, index, value)
 		next = index + 1
 	}
-	r.syncArrayScalar(name)
 	return 0
 }
 
-// assignAssociativeCompound writes an associative array. Words without subscripts are taken
-// in pairs, key then value, which is what bash 5.1 made of `declare -A m=(k1 v1 k2 v2)`.
-func (r Runtime) assignAssociativeCompound(name string, elements []arrayElement, extend bool) {
+// assignAssociativeCompound writes an associative array. Every element needs its key, as in
+// bash: a word without one is refused and the command abandoned, `m: 2: must use subscript`,
+// and so is an empty key; they were paired up with the words beside them. `[k]+=v` appends to
+// what k held before the assignment, as bash's does -- it writes the new array apart from the
+// old one and puts it in place at the end -- so `m=([k]=1 [k]+=2)` is 2, and `m+=([k]+=2)`
+// appends to the array as it is.
+func (r Runtime) assignAssociativeCompound(name string, elements []arrayElement, extend bool) int {
+	// clearAssociative puts a new array in the old one's place, so this is the old one still.
+	before := r.arrays.associative[name]
 	if !extend {
 		r.arrays.clearAssociative(name)
 	}
-	for index := 0; index < len(elements); index++ {
-		element := elements[index]
-		if element.keyed {
-			r.arrays.setKey(name, element.key, r.attributedOrAsWritten(name, element.value))
+	for _, element := range elements {
+		switch {
+		case !element.keyed:
+			return r.refuseElement(fmt.Sprintf("%s: %s: must use subscript when assigning associative array", name, element.text))
+		case element.key == "" && element.pair:
+			// Said and passed over, as bash does with a pair.
+			fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", element.text)
 			continue
+		case element.key == "":
+			return r.refuseElement(element.text + ": bad array subscript")
 		}
-		value := ""
-		if index+1 < len(elements) && !elements[index+1].keyed {
-			index++
-			value = elements[index].value
+		value := element.value
+		if element.appending {
+			from := r.arrays.associative[name]
+			if !extend {
+				from = before
+			}
+			current := ""
+			if from != nil {
+				current = from.entries[element.key]
+			}
+			value = r.appendedTo(name, current, value)
 		}
-		r.arrays.setKey(name, element.value, r.attributedOrAsWritten(name, value))
+		r.arrays.setKey(name, element.key, r.attributedOrAsWritten(name, value))
 	}
+	return 0
+}
+
+// refuseElement says why an element of a compound assignment cannot be written and abandons
+// the command, status 1, the elements before it written. bash does so wherever the list was:
+// `declare -a m=([-1]=x); echo $?` never gets to the echo, as `m=([-1]=x)` does not. A plain
+// assignment's other failures are failAssignment's.
+func (r Runtime) refuseElement(message string) int {
+	fmt.Fprintln(r.streams.Stderr, message)
+	if !r.expansion.shellError {
+		r.expansion.shellError, r.expansion.discard = true, true
+	}
+	return 1
 }
 
 // attributedOrAsWritten is a map value with the name's attributes applied, or as written if
@@ -126,26 +176,42 @@ func (r Runtime) attributedOrAsWritten(name, value string) string {
 // already knows how. A keyed element's value is expanded as an assignment is -- unsplit, with
 // a tilde at its start or after a `:` expanded, as bash 5.3 has `[2]=~:~`, and neither
 // brace-expanded nor globbed: `[3]=*.py` is the star and `[5]=-{a,b}-` those characters, where
-// they were the matches and `-a- -b-`, joined -- and its subscript is expanded the same way.
-func (r Runtime) compoundElements(ctx context.Context, raw string, savedStatus int) []arrayElement {
+// they were the matches and `-a- -b-`, joined -- and its subscript is expanded the same way,
+// with a tilde at its start. For an associative array, a word without a subscript is the last
+// one expanded, as in bash, where the list stops at it.
+func (r Runtime) compoundElements(ctx context.Context, raw string, associative bool, savedStatus int) []arrayElement {
 	tokens, err := scanShellTokens(strings.TrimSpace(raw))
 	if err != nil {
 		return nil
 	}
-	var elements []arrayElement
+	var words []shellToken
 	for _, token := range tokens {
-		if token.kind != tokenWord || token.parsed == nil {
-			continue
+		if token.kind == tokenWord && token.parsed != nil {
+			words = append(words, token)
 		}
-		if key, value, keyed := splitKeyedElement(*token.parsed); keyed {
+	}
+	if associative && len(words) > 0 && !opensWithBracket(*words[0].parsed) {
+		return r.keyValueElements(ctx, words, savedStatus)
+	}
+	var elements []arrayElement
+	for _, token := range words {
+		key, value, appending, keyed := splitKeyedElement(*token.parsed)
+		switch {
+		case keyed:
+			key.expandTilde = startsWithTilde(key)
+			element := arrayElement{key: r.expandUnsplit(ctx, key, savedStatus), keyed: true, appending: appending, text: token.raw}
+			if associative && element.key == "" {
+				return append(elements, element)
+			}
 			value.valueTilde = true
-			elements = append(elements, arrayElement{
-				key: r.expandUnsplit(ctx, key, savedStatus), keyed: true, value: r.expandUnsplit(ctx, value, savedStatus),
-			})
-			continue
-		}
-		for _, field := range r.expandCommandWord(ctx, *token.parsed, savedStatus) {
-			elements = append(elements, arrayElement{value: field})
+			element.value = r.expandUnsplit(ctx, value, savedStatus)
+			elements = append(elements, element)
+		case associative:
+			return append(elements, arrayElement{text: token.raw})
+		default:
+			for _, field := range r.expandCommandWord(ctx, *token.parsed, savedStatus) {
+				elements = append(elements, arrayElement{value: field})
+			}
 		}
 	}
 	return elements
@@ -155,17 +221,23 @@ func (r Runtime) expandUnsplit(ctx context.Context, item word, savedStatus int) 
 	return strings.Join(r.expandingAssignment().expandWord(ctx, item, savedStatus), " ")
 }
 
-// splitKeyedElement cuts `[subscript]=value` at the `]=` that closes the subscript. The
-// bracket has to open the word unquoted, and the `]=` has to be unquoted too: `"[a]=1"` is an
-// element whose text happens to look like one. A `]` that is not followed by `=` means the
-// word is not keyed at all -- `[abc]` is a pattern.
-func splitKeyedElement(item word) (word, word, bool) {
+// opensWithBracket reports a word that begins with an unquoted `[`, which is how bash tells a
+// list of keyed elements from one of keys and values; see keyValueElements.
+func opensWithBracket(item word) bool {
 	if len(item.parts) == 0 {
-		return word{}, word{}, false
+		return false
 	}
 	first := item.parts[0]
-	if first.kind != wordPartLiteral || first.quote != quoteUnquoted || !strings.HasPrefix(first.text, "[") {
-		return word{}, word{}, false
+	return first.kind == wordPartLiteral && first.quote == quoteUnquoted && strings.HasPrefix(first.text, "[")
+}
+
+// splitKeyedElement cuts `[subscript]=value` at the `]=` that closes the subscript, or the
+// `]+=`, which it reports. The bracket has to open the word unquoted, and the `]=` has to be
+// unquoted too: `"[a]=1"` is an element whose text happens to look like one. A `]` that is not
+// followed by `=` or `+=` means the word is not keyed at all -- `[abc]` is a pattern.
+func splitKeyedElement(item word) (word, word, bool, bool) {
+	if !opensWithBracket(item) {
+		return word{}, word{}, false, false
 	}
 	depth := 0
 	var key []wordPart
@@ -187,23 +259,36 @@ func splitKeyedElement(item word) (word, word, bool) {
 					depth--
 					continue
 				}
-				if offset+1 >= len(part.text) || part.text[offset+1] != '=' {
-					return word{}, word{}, false
+				rest, appending, ok := afterSubscript(part.text[offset+1:])
+				if !ok {
+					return word{}, word{}, false, false
 				}
 				if offset > start {
 					key = append(key, wordPart{kind: wordPartLiteral, text: part.text[start:offset]})
 				}
 				var value []wordPart
-				if rest := part.text[offset+2:]; rest != "" {
+				if rest != "" {
 					value = append(value, wordPart{kind: wordPartLiteral, text: rest})
 				}
 				value = append(value, item.parts[index+1:]...)
-				return word{parts: key}, word{parts: value}, true
+				return word{parts: key}, word{parts: value}, appending, true
 			}
 		}
 		if start < len(part.text) {
 			key = append(key, wordPart{kind: wordPartLiteral, text: part.text[start:]})
 		}
 	}
-	return word{}, word{}, false
+	return word{}, word{}, false, false
+}
+
+// afterSubscript is what follows a subscript's `]` once its `=` or `+=` is taken off, and
+// whether it was `+=`.
+func afterSubscript(text string) (string, bool, bool) {
+	switch {
+	case strings.HasPrefix(text, "="):
+		return text[1:], false, true
+	case strings.HasPrefix(text, "+="):
+		return text[2:], true, true
+	}
+	return "", false, false
 }

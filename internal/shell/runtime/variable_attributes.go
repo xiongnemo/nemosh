@@ -171,6 +171,11 @@ func (r Runtime) appendedValue(name, value string) string {
 		elements, _ := r.elementsFor(ctx, reference)
 		current = strings.Join(elements, " ")
 	}
+	return r.appendedTo(name, current, value)
+}
+
+// appendedTo is value appended to current as `+=` appends to name, the sum for an integer.
+func (r Runtime) appendedTo(name, current, value string) string {
 	if r.attributesOf(name).integer {
 		if strings.TrimSpace(current) == "" {
 			current = "0"

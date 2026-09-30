@@ -23,7 +23,9 @@ type shellToken struct {
 	value           string
 	literalDollarAt map[int]struct{}
 	parsed          *word
-	group           *parsedGroup
+	// raw is a word as it was written, quotes and all, for an error that names it.
+	raw   string
+	group *parsedGroup
 	// arrayLiteral marks a declaration utility's operand written as an array literal,
 	// `x=(a b)`, and not one that only expanded to text like it; see arrayOperands.
 	arrayLiteral bool
@@ -76,7 +78,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			quotedEmpty: value == "",
 			expandTilde: wordExpandsTilde(raw),
 		}
-		if err := appendToken(shellToken{kind: tokenWord, value: value, literalDollarAt: literalDollarAt, parsed: typed}); err != nil {
+		if err := appendToken(shellToken{kind: tokenWord, value: value, literalDollarAt: literalDollarAt, parsed: typed, raw: raw}); err != nil {
 			return err
 		}
 		buffer.Reset()

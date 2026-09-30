@@ -66,8 +66,6 @@
     "array-literal.test.sh": {
       "Tilde expansions in RHS of [k]=v (BashAssoc)": "ash-only",
       "[k1]=v1 looking like brace expansions (BashArray)": "ash-only",
-      "append to element (BashArray)": "fail",
-      "append to element (BashAssoc)": "fail",
       "non-index forms of element (BashAssoc)": "fail"
     },
     "array-sparse.test.sh": {
