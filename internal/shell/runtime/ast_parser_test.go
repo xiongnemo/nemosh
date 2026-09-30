@@ -54,7 +54,8 @@ func TestParseScript_classifiesMalformedAndIncomplete(t *testing.T) {
 	}{
 		{name: "open quote", source: `echo "`, incomplete: true},
 		{name: "pipeline rhs", source: "echo x |", incomplete: true},
-		{name: "redirect operand", source: "echo x >", incomplete: true},
+		// Its target is on its line or nowhere, as both references read it.
+		{name: "redirect operand", source: "echo x >", incomplete: false},
 		{name: "leading pipeline", source: "| echo x", incomplete: false},
 		{name: "interior empty pipeline", source: "a | | b", incomplete: false},
 		{name: "triple pipeline", source: "a ||| b", incomplete: false},

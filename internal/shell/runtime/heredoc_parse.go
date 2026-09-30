@@ -197,7 +197,7 @@ func heredocDeclarations(line string, lineNumber, startOrder int, scan heredocSc
 		}
 		operandEnd := heredocOperandEnd(line, operandStart)
 		if operandEnd == operandStart {
-			return nil, scan, fmt.Errorf("%w: %w", ErrIncompleteScript, errMissingRedirectTarget)
+			return nil, scan, fmt.Errorf("syntax error: %w", errMissingRedirectTarget)
 		}
 		tokens, err := scanShellTokens(line[operandStart:operandEnd])
 		if err != nil || len(tokens) != 1 || tokens[0].kind != tokenWord {

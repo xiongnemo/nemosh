@@ -198,9 +198,13 @@ func refuseEmbeddedGroup(command []shellToken) error {
 	return nil
 }
 
+// classifyCommandError is a command's parse error as the script is told it. A redirection with
+// nothing after it on its line is a syntax error, "unexpected newline" in busybox's words, and
+// no line to wait for more of: its target is on its line or nowhere. It was an incomplete
+// script, so the scan went on to the next line and took its first word for the file.
 func classifyCommandError(err error) error {
 	if err == errMissingRedirectTarget || containsError(err, errMissingRedirectTarget) {
-		return fmt.Errorf("%w: %v", ErrIncompleteScript, err)
+		return fmt.Errorf("syntax error: %w", err)
 	}
 	return err
 }

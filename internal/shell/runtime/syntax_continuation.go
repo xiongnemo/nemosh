@@ -80,7 +80,10 @@ func hasTrailingSyntaxOperator(line string) bool {
 				trailing = false
 				continue
 			}
-			trailing = true
+			// A redirection's target is on its own line or nowhere: `echo hi >` then `out`
+			// is a syntax error in both references, "unexpected newline". The line went on,
+			// and the next line's first word was taken for the file.
+			trailing = false
 			index += redirectTokenWidth(line[index:]) - 1
 			continue
 		}

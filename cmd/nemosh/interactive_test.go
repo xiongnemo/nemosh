@@ -194,16 +194,19 @@ func TestRunInteractive_continuesTrailingPipelineAcrossPhysicalLines(t *testing.
 	}
 }
 
-func TestRunInteractive_continuesTrailingRedirectAcrossPhysicalLines(t *testing.T) {
+// A redirection with nothing after it on its line is a syntax error at a prompt, as in both
+// references: the line is refused, and the next one is a line of its own. It waited for the
+// target on the next line, and took that line's first word for the file.
+func TestRunInteractive_refusesARedirectionWithNoTargetOnItsLine(t *testing.T) {
 	// Given / When
-	got := runInteractiveTest(strings.NewReader("echo redirected >\n/dev/null\n"))
+	got := runInteractiveTest(strings.NewReader("echo redirected >\necho recovered\n"))
 
 	// Then
-	if got.stdout != "" || interactiveStatus(t, got.err) != 0 {
-		t.Fatalf("outcome = %+v, want redirected output and status 0", got)
+	if got.stdout != "recovered\n" {
+		t.Fatalf("outcome = %+v, want the next line run on its own", got)
 	}
-	if strings.Count(withoutANSI(got.stderr), "> ") != 1 {
-		t.Fatalf("stderr = %q, want one continuation prompt", got.stderr)
+	if stderr := withoutANSI(got.stderr); !strings.Contains(stderr, "syntax error") || strings.Contains(stderr, "\n> ") {
+		t.Fatalf("stderr = %q, want a syntax error and no continuation prompt", got.stderr)
 	}
 }
 
