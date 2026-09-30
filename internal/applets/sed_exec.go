@@ -103,7 +103,7 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 		if made {
 			cycle.substituted = true
 			if command.substitute.print {
-				if err := cycle.write(cycle.line); err != nil {
+				if err := cycle.writePattern(); err != nil {
 					return sedNext, err
 				}
 			}
@@ -133,13 +133,21 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 		if cycle.quiet {
 			return sedQuit, nil
 		}
-		return sedQuit, cycle.write(cycle.line)
+		return sedQuit, cycle.writePattern()
 	}
 	return sedNext, nil
 }
 
-func (c *sedCycle) write(text string) error {
-	if err := c.output.writeLine(text, c.ended); err != nil {
+// write writes text as a line of its own, ended whatever the input line was: p, P, =, i, c, a
+// and r's lines, and l's.
+func (c *sedCycle) write(text string) error { return c.emit(text, true) }
+
+// writePattern writes the pattern space with its input line's ending, as n, q and s///p do
+// and the print at the end of the cycle.
+func (c *sedCycle) writePattern() error { return c.emit(c.line, c.ended) }
+
+func (c *sedCycle) emit(text string, ended bool) error {
+	if err := c.output.writeLine(text, ended); err != nil {
 		return err
 	}
 	c.printed = true

@@ -2,72 +2,49 @@ package applets
 
 import "io"
 
-// sedOutput writes sed's lines, holding each newline back until it knows whether
-// anything follows.
+// sedOutput writes sed's lines as busybox's puts_maybe_newline does (editors/sed.c): a line
+// and its newline together, unless the line is written with the ending of an input line that
+// had none. That newline is owed, and paid before the next thing written to the same output;
+// if nothing is, the output ends without it, as the input did.
 //
-// The rule both references implement is not "each line keeps the ending it had".
-// It is narrower: **the newline is omitted only on the very last thing written,
-// and only when the input's final line had none.** Measured, on a three-byte file
-// holding `a\nb`:
+// Which ending a write carries is the command's. The pattern space printed at the end of the
+// cycle, and by n, q, s///p, s///w and w, carries its input line's; p, P, =, i, c, a and r's
+// lines always end theirs, and G and x make the pattern space an ended line (sed_hold.go).
+// Measured on busybox, on a three-byte file holding `a\nb`:
 //
-//	sed s/x/y/  ->  a\nb          three bytes, the b bare
-//	sed p       ->  a\na\nb\nb    the duplicated b *does* get a newline
+//	sed s/x/y/  ->  a\nb          the b bare, as it came
+//	sed p       ->  a\na\nb\nb    p's b ended, the printed one bare
+//	sed -n p    ->  a\nb\n        p ends it
+//	sed s/b//   ->  a\n           an empty line owes nothing
 //
-// So `p` writes `b` twice and the first of them is terminated. A per-line rule
-// cannot express that, because the same line is written twice with two different
-// endings; what distinguishes them is only that one is last.
+// Every newline was held back until the next write, and the last forgiven when the input's
+// last line had none. The pattern space came out the same, but p, =, a, c, r, G and x lost
+// the newline busybox ends them with, `s/b//p` wrote one too many, and two outputs sharing a
+// destination, as `w /dev/stdout` shares the standard output's, would put two lines on one.
 //
-// Hence the deferral. Every write owes a newline, paid before the *next* write,
-// and the final debt is forgiven if the input ended without one. sed previously
-// used Fprintln throughout, which added a newline the input did not have -- and
-// with `-i` wrote that byte to the file, so `sed -i` on a file with no final
-// newline grew it even when the script matched nothing.
+// One place busybox is not followed: its = prints with fprintf past the owed newline, so
+// after a FILE whose last line had none, `sed = f1 f2` runs that line into the next number.
 type sedOutput struct {
 	out io.Writer
-	// owes records that something has been written and its newline is not out yet.
+	// owes is that the last thing written was text with no newline after it.
 	owes bool
-	// sourceEnded is whether the input line that produced the most recent write was
-	// terminated. It decides the final newline, and it belongs to the *write*
-	// rather than to the stream -- see close.
-	sourceEnded bool
 }
 
 func newSedOutput(out io.Writer) *sedOutput { return &sedOutput{out: out} }
 
-// writeLine writes one line, paying for the previous one first.
-//
-// sourceEnded travels with the write because the last thing written is not always
-// produced by the last line read. `sed 2d` on a two-line file whose second line has
-// no terminator deletes that second line, so the last output came from the *first* --
-// which was terminated -- and both references answer with the newline. Asking the
-// stream at the end would have asked about the wrong line.
-func (o *sedOutput) writeLine(text string, sourceEnded bool) error {
+// writeLine writes the newline owed, text, and a newline if ended, as one write.
+func (o *sedOutput) writeLine(text string, ended bool) error {
+	line := text
 	if o.owes {
-		if _, err := io.WriteString(o.out, "\n"); err != nil {
-			return err
-		}
+		line = "\n" + line
 	}
-	if _, err := io.WriteString(o.out, text); err != nil {
-		return err
+	if ended {
+		line += "\n"
 	}
-	o.owes, o.sourceEnded = true, sourceEnded
-	return nil
-}
-
-// close settles the last newline, or does not.
-//
-// Nothing was written at all when owes is false, and then there is no newline to
-// argue about.
-//
-// One case where the two references disagree, and busybox is followed because it is
-// the primary reference here and because its answer is the more principled one: on
-// a two-line file with no final terminator, `sed 2q` gives the file back unchanged
-// from busybox and adds a byte under GNU. Adding a byte to a file that did not have
-// one is the behaviour this whole change exists to remove.
-func (o *sedOutput) close() error {
-	if !o.owes || !o.sourceEnded {
+	o.owes = !ended && text != ""
+	if line == "" {
 		return nil
 	}
-	_, err := io.WriteString(o.out, "\n")
+	_, err := io.WriteString(o.out, line)
 	return err
 }

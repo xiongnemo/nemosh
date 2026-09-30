@@ -843,22 +843,32 @@ shapes. Its fixtures are written as bytes from Go rather than by a shell, and th
 is not fussiness: Git Bash turns `printf 'a\nb' > f` into `a\r\nb`, and measuring
 against that fixture produced two wrong conclusions before it was noticed.
 
-**`sed`'s rule is not per line**, which is why it has its own writer. The newline is
-omitted only on the very last thing written:
+**`sed`'s rule is per command, not per line**, which is why it has its own writer,
+busybox's puts_maybe_newline. The pattern space printed at the end of a cycle, and by
+`n`, `q`, `s///p` and `w`, ends as its input line did; `p`, `P`, `=`, `i`, `c`, `a` and
+`r`'s lines always end theirs; `G` and `x` make the pattern space an ended line. A
+newline an unterminated line did not get is paid before anything else is written:
 
 ```console
 $ printf 'a\nb' | sed p
 a
 a
 b
-b      <- no newline here, but the duplicate b above has one
+b      <- no newline here: the printed b ends as it came, p's b above ends
+$ printf 'a\nb' | sed -n p
+a
+b
+       <- p ends its line
 ```
 
-The same line is written twice with two different endings, so what distinguishes
-them is only that one is last. The terminator therefore belongs to the *write* and
-carries which input line produced it -- `sed 2d` on `a\nb` deletes the second line,
-so the last output came from the first, which *was* terminated, and both references
-answer `a\n`.
+`sed 2d` on `a\nb` deletes the second line, so the last output came from the first,
+which *was* terminated, and both references answer `a\n`. The writer held every
+newline back until the next write and forgave the last when the input's last line
+had none: the printed pattern space came out the same, but `sed -n p` lost the
+newline busybox ends the `b` with, and two outputs sharing a destination, as
+`w /dev/stdout` shares the standard output's, would put two lines on one. busybox's `=` is not followed where it prints past an owed newline:
+after a FILE whose last line had none, `sed = f1 f2` runs that line into the next
+number there.
 
 One case where the references disagree: on `a\nb`, `sed 2q` gives `a\nb` from busybox
 and `a\nb\n` from GNU. **busybox is followed** -- it is the primary reference, and

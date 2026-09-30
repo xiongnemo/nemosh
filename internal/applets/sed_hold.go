@@ -18,6 +18,9 @@ import "strings"
 // rather than concatenate them -- and why `H;${x;s/\n/,/g;p}` starts its answer
 // with a comma: the hold space begins empty, so the first append leaves a leading
 // newline. That is the reference behaviour, not an off-by-one.
+//
+// G and x leave the pattern space an ended line, as busybox's set its last_gets_char
+// to a newline: `sed x` on `a\nb` ends with one, though the b had none.
 func runSedHoldCommand(command *sedCommand, cycle *sedCycle) sedControl {
 	switch command.action {
 	case 'h':
@@ -28,8 +31,10 @@ func runSedHoldCommand(command *sedCommand, cycle *sedCycle) sedControl {
 		cycle.line = cycle.hold
 	case 'G':
 		cycle.line = cycle.line + "\n" + cycle.hold
+		cycle.ended = true
 	case 'x':
 		cycle.line, cycle.hold = cycle.hold, cycle.line
+		cycle.ended = true
 	}
 	return sedNext
 }
@@ -45,7 +50,7 @@ func runSedNextCommand(command *sedCommand, cycle *sedCycle) (sedControl, error)
 		// forward, so -n suppresses it exactly as it would at the end of the
 		// script.
 		if !cycle.quiet {
-			if err := cycle.write(cycle.line); err != nil {
+			if err := cycle.writePattern(); err != nil {
 				return sedQuit, err
 			}
 		}
@@ -72,7 +77,7 @@ func runSedNextCommand(command *sedCommand, cycle *sedCycle) (sedControl, error)
 		// end-of-cycle print, because ending the run has to skip that print for
 		// `q`'s sake and the two cannot share one signal.
 		if !cycle.quiet {
-			if err := cycle.write(cycle.line); err != nil {
+			if err := cycle.writePattern(); err != nil {
 				return sedQuit, err
 			}
 		}

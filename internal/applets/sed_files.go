@@ -51,7 +51,7 @@ func (p *sedProgram) openWriteFiles(ctx context.Context) (func() error, error) {
 	closeAll := func() error {
 		var err error
 		for _, target := range opened {
-			err = errors.Join(err, target.output.close(), target.file.Close())
+			err = errors.Join(err, target.file.Close())
 		}
 		return err
 	}

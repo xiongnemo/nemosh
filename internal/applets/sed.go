@@ -96,19 +96,8 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 // The pattern space is one line: there is no N, D or hold space here, so each
 // line is read, transformed, and either printed or not.
 func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
-	// The writer holds each newline back until it knows something follows, so the
-	// last one can be withheld if the input's last line had none. See sed_output.go
-	// for why the rule cannot be per line.
+	// The writer ends each line as the command writing it says; see sed_output.go.
 	output := newSedOutput(stdout)
-	// Settled once, on every way out of the loop -- including `q`, which returns
-	// from the middle. An error path leaves it unsettled on purpose: half a line
-	// plus a newline is no better than half a line.
-	finish := func(err error) error {
-		if err != nil {
-			return err
-		}
-		return output.close()
-	}
 	number := 0
 	hold := ""
 	for {
@@ -117,7 +106,7 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 			return err
 		}
 		if !ok {
-			return finish(nil)
+			return nil
 		}
 		number++
 		cycle := &sedCycle{
@@ -154,7 +143,7 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 			return err
 		}
 		if control == sedQuit {
-			return finish(nil)
+			return nil
 		}
 	}
 }
