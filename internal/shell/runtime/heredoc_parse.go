@@ -194,6 +194,10 @@ func heredocDeclarations(line string, lineNumber, startOrder int, scan heredocSc
 		}
 		delimiterWord := parseTypedWord(*tokens[0].parsed)
 		delimiter, quoted := quoteRemovedDelimiter(delimiterWord)
+		// A backquote in the word is as a quote there, and the body is not expanded, as
+		// busybox reads a delimiter (readtoken1 under CHKEOFMARK): `cat <<EO`true`F` leaves a
+		// $x and a backquoted command in its body as written. bash expands them.
+		quoted = quoted || strings.Contains(line[operandStart:operandEnd], "`")
 		records = append(records, pendingHeredoc{
 			delimiterWord: delimiterWord,
 			delimiter:     delimiter,

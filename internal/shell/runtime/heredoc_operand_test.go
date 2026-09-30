@@ -30,6 +30,15 @@ func TestRuntime_heredocDelimiterEndsWhereAWordDoes(t *testing.T) {
 	}
 }
 
+// A backquote in a heredoc's word is literal, and quotes the body as a quote in the word
+// would: busybox-w32 prints the body as written. bash expands it.
+func TestRuntime_aBackquoteInTheDelimiterLeavesTheBodyUnexpanded(t *testing.T) {
+	script := "x=val\ncat <<EO`true`F\nb $x `echo in`\nEO`false`F\nEO`true`F\necho \"s $?\""
+	if stdout, status := runScriptCapturing(script); stdout != "b $x `echo in`\nEO`false`F\ns 0\n" || status != 0 {
+		t.Errorf("got %q/%d, want the body as written, as busybox-w32 prints it", stdout, status)
+	}
+}
+
 // `((expr))` is `let "expr"`, as bash documents it: the expression is expanded, as in
 // double quotes, before it is evaluated. It went to let single-quoted, and a `$` in it was
 // a syntax error -- `(( $1 > 2 ))`, the way a function tests its argument, among them. A
