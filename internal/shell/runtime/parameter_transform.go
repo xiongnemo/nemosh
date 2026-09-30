@@ -39,8 +39,9 @@ func (r Runtime) parameterSubstring(ctx context.Context, value, spec string, sav
 	if offset < 0 {
 		offset += len(runes)
 	}
-	offset = max(offset, 0)
-	if offset > len(runes) {
+	// Before the start is nothing, as both references read it: `${1: -8}` of seven characters
+	// is empty. It was the whole value.
+	if offset < 0 || offset > len(runes) {
 		return "", nil
 	}
 	end := len(runes)
