@@ -2,9 +2,27 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 )
+
+// expandHeredocOperation is a heredoc's body expanded, and whether an expansion in it failed.
+// That fails the redirection and not the script, as in both references: busybox expands the
+// body as it makes the redirection, where an error is the redirection's, so `cat <<EOF` with
+// `${D?}` in its body says so, is not run, and leaves 1, and the script goes on -- but for a
+// special builtin's, which ends the script as any failed redirection of one does. The error
+// ended every script, with 2.
+func (r Runtime) expandHeredocOperation(ctx context.Context, body string, savedStatus int) (string, bool) {
+	if r.expansion.shellError {
+		return r.expandHeredocBody(ctx, body, savedStatus), false
+	}
+	expanded := r.expandHeredocBody(ctx, body, savedStatus)
+	return expanded, r.shellErrorRaised()
+}
+
+// errHeredocBody is the redirection of a heredoc whose body did not expand, which has said why.
+var errHeredocBody = errors.New("heredoc body did not expand")
 
 func (r Runtime) expandHeredocBody(ctx context.Context, body string, savedStatus int) string {
 	var expanded strings.Builder

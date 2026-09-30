@@ -258,7 +258,7 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 		}
 		if !operation.kind.takesPath() {
 			if operation.kind == redirectHeredoc && operation.expand {
-				operations[index].body = r.expandHeredocBody(ctx, operation.body, savedStatus)
+				operations[index].body, operations[index].bodyFailed = r.expandHeredocOperation(ctx, operation.body, savedStatus)
 			}
 			if operation.kind == redirectHereString {
 				// One word, unsplit: `cat <<< $x` with x set to `a b` feeds `a b`,

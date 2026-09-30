@@ -1,9 +1,6 @@
 package runtime
 
-import (
-	"context"
-	"fmt"
-)
+import "context"
 
 func (r Runtime) execBuiltin(ctx context.Context, args []string) int {
 	if len(args) == 0 {
@@ -27,7 +24,7 @@ func (r Runtime) execRedirect(operations []redirectOperation) int {
 	// A special builtin's failed redirection ends the script, as busybox has it: `exec >log`
 	// with no such directory went on writing where it had been. See withAppliedRedirectsFor.
 	if err := r.applyRedirectOperations(r.fds, operations); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		r.reportFailedRedirection(err)
 		r.raiseShellErrorWith(1)
 		return 1
 	}

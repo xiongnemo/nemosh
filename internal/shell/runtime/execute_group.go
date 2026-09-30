@@ -66,7 +66,7 @@ func (r Runtime) executeWithRedirects(ctx context.Context, operations []redirect
 		return lineResult{status: 1}
 	}
 	if err := r.applyRedirectOperations(table, operations); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, table.closeAll()))
+		r.reportFailedRedirection(errors.Join(err, table.closeAll()))
 		return lineResult{status: 1}
 	}
 	result := run(r.withFDTable(table))

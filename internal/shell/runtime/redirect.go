@@ -54,6 +54,14 @@ func arrayLiteralOperands(command []shellToken) map[string]bool {
 	return operands
 }
 
+// reportFailedRedirection says why a redirection failed, but for a heredoc whose body did not
+// expand, which said so as it failed.
+func (r Runtime) reportFailedRedirection(err error) {
+	if !errors.Is(err, errHeredocBody) {
+		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+	}
+}
+
 // withAppliedRedirects runs a command with its redirections, already expanded, in force for
 // its duration and no longer. The control a command answers with -- `. ./lib.sh 2>/dev/null`
 // that exits -- passes through untouched.
@@ -72,7 +80,7 @@ func (r Runtime) withAppliedRedirectsFor(special bool, operations []redirectOper
 	}
 	if err := r.applyRedirectOperations(table, operations); err != nil {
 		cleanupErr := table.closeAll()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, cleanupErr))
+		r.reportFailedRedirection(errors.Join(err, cleanupErr))
 		if special {
 			r.raiseShellErrorWith(1)
 		}

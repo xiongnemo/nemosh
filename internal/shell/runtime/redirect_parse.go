@@ -50,8 +50,11 @@ type redirectOperation struct {
 	// ordering, which is the bug `>file 2>&1` written backwards already is.
 	bothStreams bool
 	body        string
-	line        int
-	order       int
+	// bodyFailed is a heredoc whose body did not expand, which fails the redirection when it
+	// is made; see expandHeredocOperation.
+	bodyFailed bool
+	line       int
+	order      int
 	// name is the `{name}` in front of the operator, and duplicate a duplication whose
 	// source is a word to expand; see redirect_named.go.
 	name      string

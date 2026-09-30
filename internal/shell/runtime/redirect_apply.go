@@ -31,6 +31,9 @@ func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOp
 				err = table.dup(2, 1)
 			}
 		case redirectHeredoc, redirectHereString:
+			if operation.bodyFailed {
+				return errHeredocBody
+			}
 			err = table.bindOwnedReader(operation.target, newMemoryInput([]byte(operation.body)))
 		case redirectDup:
 			// A descriptor made a copy of itself is left as it is, open or not, as both
