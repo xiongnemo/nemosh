@@ -76,7 +76,7 @@ func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, e
 	}
 	control := flowNone
 	status := r.guardedStatus("running a startup file", func() int {
-		status, flow := r.executePrepared(ctx, prepared)
+		status, flow := r.executeRead(ctx, prepared.program, 0)
 		control = flow
 		return status
 	})

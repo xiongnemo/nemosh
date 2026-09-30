@@ -18,11 +18,10 @@ import (
 // written, and `alias x='echo one; echo two'` could not be had at all.
 //
 // The references substitute as they read a line; this substitutes as the command runs, since
-// a script is parsed in full before any of it runs. So an alias defined earlier on the same
-// line, or after a function that uses it was defined, is in force here where it is not yet in
-// theirs. A value holding an operator keeps to its own command's place, so in `x | wc -l` all
-// of x's commands are piped where only its last is in theirs, and a redirection written before
-// the name is read after the rest, since the parse keeps no order between the two.
+// a script is parsed in full before any of it runs, from the aliases its line was read with
+// (alias_view.go). A value holding an operator keeps to its own command's place, so in `x | wc
+// -l` all of x's commands are piped where only its last is in theirs, and a redirection written
+// before the name is read after the rest, since the parse keeps no order between the two.
 //
 // A name is not substituted again inside its own value, nor inside what that value runs, which
 // is what lets `alias ls='ls -F'` mean what it says and stops `alias a=b b=a`.
@@ -100,14 +99,15 @@ func (r Runtime) aliasText(command simpleCommand) (string, []string, bool) {
 // aliasAt is the value of the alias the index'th word names, if it is an unquoted word naming
 // one that this command is not already inside.
 func (r Runtime) aliasAt(words []word, index int) (string, string, bool) {
-	if !r.options.expandAliases || len(r.aliases) == 0 || index >= len(words) || !isUnquotedLiteralWord(words[index]) {
+	aliases := r.aliasesInForce()
+	if !r.options.expandAliases || len(aliases) == 0 || index >= len(words) || !isUnquotedLiteralWord(words[index]) {
 		return "", "", false
 	}
 	name := words[index].parts[0].text
 	for _, part := range words[index].parts[1:] {
 		name += part.text
 	}
-	value, defined := r.aliases[name]
+	value, defined := aliases[name]
 	if !defined || slices.Contains(r.aliasChain, name) || len(r.aliasChain) >= maxAliasSubstitutions {
 		return "", "", false
 	}

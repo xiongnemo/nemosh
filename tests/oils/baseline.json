@@ -2,7 +2,6 @@
   "platform": "windows",
   "cases": {
     "alias.test.sh": {
-      "Alias can be defined and used on a single line": "fail",
       "List aliases by providing names": "fail",
       "Loop split across alias in another way": "fail",
       "Loop split across both iterative and recursive aliases": "fail",
@@ -11,7 +10,6 @@
       "alias with keywords": "fail",
       "alias with word of multiple lines": "fail",
       "alias without args lists all aliases": "fail",
-      "define and use alias on a single line": "fail",
       "here doc inside alias": "ash-only"
     },
     "arg-parse.test.sh": {

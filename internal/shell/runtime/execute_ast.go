@@ -25,20 +25,30 @@ func (r Runtime) executeTypedScriptFrom(ctx context.Context, script Script, save
 }
 
 func (r Runtime) executeProgram(ctx context.Context, program []programNode, savedStatus int) (int, flowControl) {
-	return r.executeStatements(ctx, program, savedStatus, false)
+	return r.executeStatements(ctx, program, savedStatus, false, false)
 }
 
-// executeTopLevel is executeProgram for a script's own commands. A pattern that matched
+// executeRead is executeProgram for text read as it runs -- eval's, a sourced file's, a trap's,
+// a line at a prompt -- each of whose lines takes the aliases as they are when it begins; see
+// alias_view.go.
+func (r Runtime) executeRead(ctx context.Context, program []programNode, savedStatus int) (int, flowControl) {
+	return r.executeStatements(ctx, program, savedStatus, false, true)
+}
+
+// executeTopLevel is executeRead for a script's own commands. A pattern that matched
 // nothing under failglob abandons the one it was in, and the script goes on with the next,
 // unless `set -e`; see failglob.go.
 func (r Runtime) executeTopLevel(ctx context.Context, program []programNode) (int, flowControl) {
-	return r.executeStatements(ctx, program, 0, true)
+	return r.executeStatements(ctx, program, 0, true, true)
 }
 
-func (r Runtime) executeStatements(ctx context.Context, program []programNode, savedStatus int, topLevel bool) (int, flowControl) {
+func (r Runtime) executeStatements(ctx context.Context, program []programNode, savedStatus int, topLevel, read bool) (int, flowControl) {
 	status := savedStatus
-	discarded, counted := 0, 0
+	discarded, counted, readLine := 0, 0, -1
 	for _, item := range program {
+		if line := statementLine(item); read && (readLine < 0 || line != 0 && line != readLine) {
+			r.aliasView, readLine = r.aliasSnapshot(), line
+		}
 		// A line of the script's is one command read, as bash counts them for \#; see
 		// promptFacts.
 		if topLevel && statementLine(item) != counted {
@@ -98,7 +108,7 @@ func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus 
 	case listNode:
 		return r.executeTypedList(ctx, value.value, savedStatus)
 	case functionDefinition:
-		value.file = r.currentFile()
+		value.file, value.aliases = r.currentFile(), r.aliasView
 		r.functions[value.name] = value
 		return lineResult{status: 0}
 	case ifNode:

@@ -34,8 +34,10 @@ type Runtime struct {
 	expansion *expansionState
 	aliases   map[string]string
 	// aliasChain is the aliases whose text is running, which are not substituted again inside
-	// it; see alias_expand.go.
+	// it; see alias_expand.go. aliasView is the aliases the running line was read with, and
+	// nil for the ones defined now; see alias_view.go.
 	aliasChain []string
+	aliasView  map[string]string
 	// childCPU is shared by pointer across snapshots: a pipeline stage's
 	// children are the shell's children too, and `times` in the parent has to
 	// see what they used.

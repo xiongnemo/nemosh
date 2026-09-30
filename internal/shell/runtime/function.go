@@ -91,6 +91,9 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 	restoring := r
 	restoring.params = caller
 	defer scope.restore(restoring)
+	// The body is substituted from the aliases its definition's line was read with; see
+	// alias_view.go.
+	r.aliasView = definition.aliases
 	hidden, wasSet := r.hideReturnTrap()
 	debug, debugSet := r.hideDebugTrap()
 	result := r.executeCommandNode(ctx, definition.body, savedStatus)

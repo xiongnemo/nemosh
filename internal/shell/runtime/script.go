@@ -36,7 +36,7 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	case parseErr == nil && runExitTrap:
 		status, control = r.executeTopLevel(ctx, prepared.program)
 	case parseErr == nil && len(prepared.program) > 0:
-		status, control = r.executeProgram(ctx, prepared.program, savedStatus)
+		status, control = r.executeRead(ctx, prepared.program, savedStatus)
 	}
 	if parseErr != nil && control == flowNone {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", parseErr)
@@ -120,6 +120,6 @@ func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) li
 		fmt.Fprintf(r.streams.Stderr, "trap %s: %v\n", name, err)
 		return lineResult{status: savedStatus}
 	}
-	status, control := r.executeProgram(ctx, prepared.program, savedStatus)
+	status, control := r.executeRead(ctx, prepared.program, savedStatus)
 	return lineResult{status: status, control: control}
 }

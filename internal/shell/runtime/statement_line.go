@@ -15,6 +15,9 @@ func statementLine(node programNode) int {
 		return value.line
 	case caseNode:
 		return value.line
+	case functionDefinition:
+		// Its body's first line, which is its own for one written on a line.
+		return commandLine(value.body)
 	}
 	return 0
 }
@@ -27,7 +30,11 @@ func listLine(items list) int {
 	if len(commands) == 0 {
 		return 0
 	}
-	switch command := commands[0].(type) {
+	return commandLine(commands[0])
+}
+
+func commandLine(command commandNode) int {
+	switch command := command.(type) {
 	case simpleCommand:
 		return command.line
 	case braceGroup:

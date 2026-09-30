@@ -30,6 +30,7 @@ var jobStateCoverage = map[string]string{
 	"expansion":         "not inherited: per command; the line travels as Line",
 	"aliases":           "encoded: Aliases",
 	"aliasChain":        "encoded: AliasChain",
+	"aliasView":         "encoded: AliasView",
 	"childCPU":          "not inherited: a process counts its own children",
 	"history":           "not inherited: a job does not read a prompt",
 	"dirStack":          "encoded: DirStack",
