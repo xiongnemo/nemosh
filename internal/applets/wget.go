@@ -213,14 +213,15 @@ func (r wgetRequest) save(ctx context.Context, response *http.Response, stdout, 
 	if err != nil {
 		return err
 	}
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), safe)
+	view := ProcessViewFromContext(ctx)
+	native, err := resolveHostPath(view, safe)
 	if err != nil {
 		return operandFailure(safe, err)
 	}
-	if err := os.MkdirAll(pathDirOf(native), 0o755); err != nil {
+	if err := os.MkdirAll(pathDirOf(native), createMode(view, 0o755)); err != nil {
 		return err
 	}
-	file, err := os.Create(native)
+	file, err := createFile(view, native)
 	if err != nil {
 		return operandFailure(safe, err)
 	}

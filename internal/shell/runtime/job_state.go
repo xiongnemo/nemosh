@@ -193,7 +193,9 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		frame := state.Frames[index]
 		r.frames = &callFrame{name: frame.Name, file: frame.File, line: frame.Line, outer: r.frames}
 	}
-	r.scriptFile, r.mask.value = state.ScriptFile, state.Umask
+	// Through set, so a job that is a process of its own has the shell's umask for its process.
+	r.scriptFile = state.ScriptFile
+	r.mask.set(state.Umask)
 	r.dirStack.below = append([]string(nil), state.DirStack...)
 	r.special.started = time.Now().Add(-time.Duration(state.Seconds) * time.Second)
 	if state.ShellPID != 0 {

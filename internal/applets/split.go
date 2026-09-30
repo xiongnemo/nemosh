@@ -165,7 +165,7 @@ func openSplitPiece(ctx context.Context, view ProcessView, before *os.File, name
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.Create(native)
+	file, err := createFile(view, native)
 	if err != nil {
 		return nil, cannotOpen(string(name), err)
 	}

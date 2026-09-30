@@ -69,7 +69,8 @@ func (in *awkInterp) openOutput(name, operator string) (*awkOutput, error) {
 	if operator == ">>" {
 		flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
 	}
-	file, err := os.OpenFile(name, flags, 0o644)
+	// 0666 through the umask, as busybox's fopen makes the file.
+	file, err := os.OpenFile(name, flags, createMode(ProcessViewFromContext(in.ctx), 0o666))
 	if err != nil {
 		return nil, cannotCreate(name, err)
 	}

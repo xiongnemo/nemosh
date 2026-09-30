@@ -3,21 +3,48 @@ package runtime
 import (
 	"fmt"
 	"strconv"
+	"sync/atomic"
 )
 
 type fileModeMask struct {
 	value uint16
+	// process is a shell's own mask in a binary that has given it the process's (see
+	// OwnProcessUmask): setting it sets the process's umask too, on Linux and macOS, which
+	// every file the shell and its applets make, and every child it starts, is created
+	// through. A subshell's copy never is; see startChild and createMode for what reaches
+	// its files.
+	process bool
+}
+
+// processUmaskOwned is set by a binary whose shell's umask is the process's: cmd/nemosh, which
+// runs one shell. A test's many shells share its process, and none of them may set its mask.
+var processUmaskOwned atomic.Bool
+
+// OwnProcessUmask says the shells this binary starts own the process's umask, as a shell's
+// is its process's: `umask 077` makes it 077. cmd/nemosh calls it before anything else.
+func OwnProcessUmask() {
+	processUmaskOwned.Store(true)
 }
 
 // newFileModeMask is a new shell's umask: on Linux and macOS the process's own, which it was
 // given, as every shell starts from; on Windows, which gives none, 0022. It was 0022
 // everywhere, so on Linux `umask` said 0022 whatever the process had.
 func newFileModeMask() *fileModeMask {
-	return &fileModeMask{value: initialFileModeMask}
+	return &fileModeMask{value: initialFileModeMask, process: processUmaskOwned.Load()}
+}
+
+// set makes mask the shell's umask, and the process's where the shell owns it. `umask 077`
+// changed only the value `umask` printed, and on Linux the files the shell made went on
+// being made through the mask the process started with.
+func (m *fileModeMask) set(mask uint16) {
+	m.value = mask
+	if m.process {
+		setProcessFileModeMask(mask)
+	}
 }
 
 // FileModeMask is the umask, for the applets that read one: chmod filters a MODE with no class
-// letters through it.
+// letters through it, and a file or directory they make is created through it.
 func (r Runtime) FileModeMask() uint16 {
 	if r.mask == nil {
 		return initialFileModeMask
@@ -64,7 +91,7 @@ func (r Runtime) umask(args []string) int {
 		fmt.Fprintf(r.streams.Stderr, "umask: illegal mode: %s\n", args[0])
 		return 2
 	}
-	r.mask.value = mask
+	r.mask.set(mask)
 	return 0
 }
 

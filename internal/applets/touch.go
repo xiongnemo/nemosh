@@ -91,7 +91,7 @@ func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 		if err != nil {
 			return err
 		}
-		if err := stamp.apply(native, options.has('c'), options.has('h')); err != nil {
+		if err := stamp.apply(native, createMode(view, 0o666), options.has('c'), options.has('h')); err != nil {
 			fmt.Fprintf(stderr, "touch: %v\n", operandFailure(path, err))
 			touched = false
 		}
@@ -120,9 +120,9 @@ type touchStamp struct {
 	explicit         bool
 }
 
-// apply sets native's times, creating it if it is not there unless noCreate. With noDereference
-// a symbolic link's own times are set.
-func (s touchStamp) apply(native string, noCreate, noDereference bool) error {
+// apply sets native's times, creating it with perm if it is not there unless noCreate. With
+// noDereference a symbolic link's own times are set.
+func (s touchStamp) apply(native string, perm os.FileMode, noCreate, noDereference bool) error {
 	var err error
 	if info, statErr := os.Lstat(native); noDereference && statErr == nil && info.Mode()&os.ModeSymlink != 0 {
 		err = setLinkTimes(native, s.access, s.modified)
@@ -135,7 +135,7 @@ func (s touchStamp) apply(native string, noCreate, noDereference bool) error {
 	if noCreate {
 		return nil
 	}
-	file, err := os.OpenFile(native, os.O_CREATE|os.O_RDWR, 0o666)
+	file, err := os.OpenFile(native, os.O_CREATE|os.O_RDWR, perm)
 	if err != nil {
 		return err
 	}

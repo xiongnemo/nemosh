@@ -39,7 +39,7 @@ func (r cpioRequest) extract(reader io.Reader, entry cpioEntry, collisions *arch
 		return operandFailure(safe, err)
 	}
 	if entry.isDir() {
-		if err := os.MkdirAll(native, 0o755); err != nil {
+		if err := os.MkdirAll(native, createMode(r.view, 0o755)); err != nil {
 			return err
 		}
 		return r.finish(reader, entry, native, safe, stderr)
@@ -115,11 +115,11 @@ func (r cpioRequest) readSymlinkTarget(reader io.Reader, entry cpioEntry) (strin
 // unusual enough that silently inventing the tree hides a real problem.
 func (r cpioRequest) writeFile(native, safe string, body io.Reader, size int64) error {
 	if r.directories {
-		if err := os.MkdirAll(filepath.Dir(native), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(native), createMode(r.view, 0o755)); err != nil {
 			return err
 		}
 	}
-	file, err := os.Create(native)
+	file, err := createFile(r.view, native)
 	if err != nil {
 		return operandFailure(safe, err)
 	}
@@ -164,7 +164,7 @@ func (r cpioRequest) createArchive(stdin io.Reader, stdout, stderr io.Writer) er
 		if err != nil {
 			return operandFailure(r.file, err)
 		}
-		if file, err = os.Create(native); err != nil {
+		if file, err = createFile(r.view, native); err != nil {
 			return operandFailure(r.file, err)
 		}
 		defer file.Close()

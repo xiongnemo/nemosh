@@ -98,7 +98,7 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 		if err := r.refuseClobber(resolved, operation); err != nil {
 			return err
 		}
-		resource, openErr := openHostOutput(resolved, operation.kind)
+		resource, openErr := openHostOutput(resolved, operation.kind, r.createMode(0o666))
 		if openErr != nil {
 			return redirectFailure{create: true, path: operation.path, err: openErr}
 		}
@@ -125,7 +125,7 @@ func (r Runtime) bindOutputRedirect(table *fdTable, operation redirectOperation)
 	return table.bindOwnedWriter(operation.target, resource)
 }
 
-func openHostOutput(resolved pathmodel.ResolvedPath, kind redirectKind) (*os.File, error) {
+func openHostOutput(resolved pathmodel.ResolvedPath, kind redirectKind, perm os.FileMode) (*os.File, error) {
 	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 	switch kind {
 	case redirectAppend:
@@ -135,7 +135,7 @@ func openHostOutput(resolved pathmodel.ResolvedPath, kind redirectKind) (*os.Fil
 		// usable on a file you mean to overwrite in place.
 		flags = os.O_RDWR | os.O_CREATE
 	}
-	return os.OpenFile(resolved.Native, flags, 0o666)
+	return os.OpenFile(resolved.Native, flags, perm)
 }
 
 // refuseClobber is `set -C`: a plain `>` must not truncate a file that is

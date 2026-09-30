@@ -83,5 +83,6 @@ func openTeeFile(view ProcessView, path string, flags int) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return os.OpenFile(native, flags, 0o644)
+	// 0666 through the umask, as busybox's fopen makes the file.
+	return os.OpenFile(native, flags, createMode(view, 0o666))
 }

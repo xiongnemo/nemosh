@@ -83,7 +83,7 @@ func makeDirectory(view ProcessView, path string, options appletOptions, mode os
 			return err
 		}
 		last := index == len(steps)-1
-		if err := makeOneDirectory(native); err != nil {
+		if err := makeOneDirectory(native, createMode(view, 0o777)); err != nil {
 			if !options.has('p') || !errors.Is(err, fs.ErrExist) {
 				return cannotCreateDirectory(step, err)
 			}
@@ -115,8 +115,9 @@ func makeDirectory(view ProcessView, path string, options appletOptions, mode os
 
 // makeOneDirectory is mkdir(2) as busybox-w32's mingw_mkdir has it: Windows refuses a drive's
 // root, `/c/`, with ERROR_ACCESS_DENIED, and a refusal of something already there is EEXIST.
-func makeOneDirectory(native string) error {
-	err := os.Mkdir(native, 0o777)
+// perm is 0777 through the umask, as busybox's mkdir makes one.
+func makeOneDirectory(native string, perm os.FileMode) error {
+	err := os.Mkdir(native, perm)
 	if errors.Is(err, fs.ErrPermission) {
 		if _, statErr := os.Stat(native); statErr == nil {
 			return &fs.PathError{Op: "mkdir", Path: native, Err: fs.ErrExist}

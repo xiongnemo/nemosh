@@ -96,11 +96,12 @@ func (b *edBuffer) writeCommand(ctx context.Context, addresses edAddresses, name
 		return fmt.Errorf("no current filename")
 	}
 	b.name = target
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), target)
+	view := ProcessViewFromContext(ctx)
+	native, err := resolveHostPath(view, target)
 	if err != nil {
 		return err
 	}
-	size, err := writeEdLines(native, b.lines[first-1:last], appending)
+	size, err := writeEdLines(native, b.lines[first-1:last], appending, createMode(view, 0o666))
 	if err != nil {
 		return err
 	}
@@ -114,12 +115,14 @@ func (b *edBuffer) writeCommand(ctx context.Context, addresses edAddresses, name
 	return nil
 }
 
-func writeEdLines(native string, lines []string, appending bool) (int, error) {
+// writeEdLines writes lines to native, a new file made with perm: 0666 through the umask, as
+// busybox's ed creates it.
+func writeEdLines(native string, lines []string, appending bool, perm os.FileMode) (int, error) {
 	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 	if appending {
 		flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
 	}
-	file, err := os.OpenFile(native, flags, 0o644)
+	file, err := os.OpenFile(native, flags, perm)
 	if err != nil {
 		return 0, err
 	}

@@ -33,7 +33,7 @@ func (r arRequest) extract(reader io.Reader, member arMember, name string,
 	if err != nil {
 		return operandFailure(safe, err)
 	}
-	file, err := os.Create(native)
+	file, err := createFile(r.view, native)
 	if err != nil {
 		return operandFailure(safe, err)
 	}
@@ -76,7 +76,7 @@ func (r arRequest) create(native string, stderr io.Writer) error {
 	if _, err := os.Stat(native); err == nil {
 		return fmt.Errorf("%s exists; this build creates an archive and does not add to one", r.archive)
 	}
-	file, err := os.Create(native)
+	file, err := createFile(r.view, native)
 	if err != nil {
 		return operandFailure(r.archive, err)
 	}

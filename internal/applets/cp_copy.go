@@ -140,6 +140,7 @@ func (r *cpRun) copyRegular(source, dest pathOperand, info os.FileInfo) bool {
 	if !info.Mode().IsRegular() {
 		mode = 0o666
 	}
+	mode = maskedMode(mode, r.umask)
 	writer, err := os.OpenFile(dest.host, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
 	if err != nil {
 		if answer := r.askAndUnlink(dest, err); answer != unlinked {

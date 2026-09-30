@@ -129,7 +129,7 @@ func (r *cpRun) copyInto(source, dest pathOperand) {
 	if r.flags.parents {
 		name = strings.TrimLeft(filepath.ToSlash(source.operand), "/")
 		parent := filepath.Dir(filepath.Join(dest.host, filepath.FromSlash(name)))
-		if err := os.MkdirAll(parent, 0o777); err != nil {
+		if err := os.MkdirAll(parent, maskedMode(0o777, r.umask)); err != nil {
 			r.fail(cannotCreateDirectory(filepath.ToSlash(filepath.Dir(joinOperand(dest.operand, name))), err))
 			return
 		}

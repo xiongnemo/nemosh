@@ -72,6 +72,8 @@ type tarRequest struct {
 	file       string
 	directory  string
 	operands   []string
+	// view is the shell tar runs in, whose umask what it extracts is made through.
+	view ProcessView
 }
 
 // openArchiveInput resolves -f, defaulting to stdin so `tar -tzf -` and a pipe
@@ -162,6 +164,7 @@ func (r tarRequest) extract(ctx context.Context, stdin io.Reader, stdout, stderr
 	if err != nil {
 		return err
 	}
+	r.view = ProcessViewFromContext(ctx)
 	collisions := newArchiveCollisions()
 	reader := tar.NewReader(stream)
 	for {
@@ -237,12 +240,12 @@ func (r tarRequest) extractEntry(reader *tar.Reader, header *tar.Header, root st
 	destination := filepath.Join(root, filepath.FromSlash(safe))
 	switch header.Typeflag {
 	case tar.TypeDir:
-		return os.MkdirAll(destination, 0o755)
+		return os.MkdirAll(destination, createMode(r.view, 0o755))
 	case tar.TypeReg:
-		if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destination), createMode(r.view, 0o755)); err != nil {
 			return err
 		}
-		file, err := os.Create(destination)
+		file, err := createFile(r.view, destination)
 		if err != nil {
 			return err
 		}

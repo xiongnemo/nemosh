@@ -165,11 +165,12 @@ func readSortLines(input io.Reader, zero bool) ([]string, error) {
 }
 
 func openSortOutput(ctx context.Context, path string) (*os.File, error) {
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), path)
+	view := ProcessViewFromContext(ctx)
+	native, err := resolveHostPath(view, path)
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
 	if err != nil {
 		return nil, cannotOpen(path, err)
 	}

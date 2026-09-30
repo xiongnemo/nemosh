@@ -80,7 +80,10 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	// Hand over the real handle where there is one, so the child inherits the
 	// console instead of a pipe this process copies. See externalStreams.
 	cmd.Stdout, cmd.Stderr = r.externalStreams()
-	runErr := cmd.Run()
+	runErr := r.startChild(cmd)
+	if runErr == nil {
+		runErr = cmd.Wait()
+	}
 	// Recorded whether the child succeeded or failed: the CPU it used is spent
 	// either way, and this is the one moment Go reports it.
 	r.recordChildCPU(cmd)

@@ -61,10 +61,12 @@ type editorSession struct {
 	// isNew records that the file did not exist, so the status line can say so
 	// rather than showing an empty buffer with no explanation.
 	isNew bool
+	// view is the shell the editor runs in, whose umask a new file is made through.
+	view ProcessView
 }
 
 func openEditorSession(ctx context.Context, applet string, operands []string, readOnly bool) (*editorSession, error) {
-	session := &editorSession{name: applet, readOnly: readOnly}
+	session := &editorSession{name: applet, readOnly: readOnly, view: ProcessViewFromContext(ctx)}
 	if len(operands) == 0 {
 		return session, nil
 	}
@@ -101,7 +103,8 @@ func (s *editorSession) save(text string) error {
 	if s.native == "" {
 		return fmt.Errorf("no file name; start it with a name to write to")
 	}
-	mode := os.FileMode(0o644)
+	// A new file is 0666 through the umask, as busybox's vi opens one.
+	mode := createMode(s.view, 0o666)
 	if info, err := os.Stat(s.native); err == nil {
 		mode = info.Mode().Perm()
 	}

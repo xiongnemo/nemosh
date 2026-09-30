@@ -141,7 +141,7 @@ func openUniqOutput(view ProcessView, path string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
 	if err != nil {
 		return nil, cannotOpen(path, err)
 	}

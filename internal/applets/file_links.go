@@ -75,15 +75,17 @@ func truncateOne(view ProcessView, operand, size string, keepMissing bool) error
 	if err := os.Truncate(native, target); err != nil {
 		if os.IsNotExist(err) && !keepMissing {
 			// Truncate does not create, so a missing file is made first and then sized.
-			return createThenTruncate(native, operand, target)
+			return createThenTruncate(native, operand, target, createMode(view, 0o666))
 		}
 		return operandFailure(operand, err)
 	}
 	return nil
 }
 
-func createThenTruncate(native, operand string, target int64) error {
-	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE, 0o644)
+// createThenTruncate makes native with perm, 0666 through the umask as busybox's truncate
+// opens it, and sizes it.
+func createThenTruncate(native, operand string, target int64, perm os.FileMode) error {
+	file, err := os.OpenFile(native, os.O_WRONLY|os.O_CREATE, perm)
 	if err != nil {
 		return cannotCreate(operand, err)
 	}

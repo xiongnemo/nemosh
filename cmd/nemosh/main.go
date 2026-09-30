@@ -23,6 +23,8 @@ func main() {
 	defer guardMain()
 	// This binary answers `--job` (job.go), so a background job can be a copy of it.
 	runtime.AllowJobProcesses()
+	// And it runs one shell, whose umask is the process's.
+	runtime.OwnProcessUmask()
 	signals, stopSignals := notifyInterrupts()
 	defer stopSignals()
 	// Joining a console has to happen before the streams are read, because it is

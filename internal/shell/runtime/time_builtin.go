@@ -68,7 +68,7 @@ func (r Runtime) timeBuiltin(ctx context.Context, args []string) int {
 		if appending {
 			flags = os.O_CREATE | os.O_WRONLY | os.O_APPEND
 		}
-		file, err := os.OpenFile(r.resolvePath(output), flags, 0o666)
+		file, err := os.OpenFile(r.resolvePath(output), flags, r.createMode(0o666))
 		if err != nil {
 			fmt.Fprintf(r.streams.Stderr, "time: can't open '%s': %s\n", output, applets.CauseText(err))
 			return 1

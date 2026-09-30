@@ -48,6 +48,7 @@ func newUnzipApplet() Applet {
 			quiet:     options.has('q'),
 			exclude:   options.value('x'),
 			wanted:    operands[1:],
+			view:      view,
 		}
 		root, err := unzipRoot(ctx, options)
 		if err != nil {
@@ -79,6 +80,8 @@ type unzipRequest struct {
 	quiet     bool
 	exclude   string
 	wanted    []string
+	// view is the shell unzip runs in, whose umask what it extracts is made through.
+	view ProcessView
 }
 
 func (r unzipRequest) run(archive *zip.Reader, root string, stdout, stderr io.Writer) error {
@@ -177,7 +180,7 @@ func (r unzipRequest) oneEntry(entry *zip.File, root string, collisions *archive
 		if r.test || r.toStdout {
 			return nil
 		}
-		return os.MkdirAll(filepath.Join(root, filepath.FromSlash(safe)), 0o755)
+		return os.MkdirAll(filepath.Join(root, filepath.FromSlash(safe)), createMode(r.view, 0o755))
 	}
 	source, err := entry.Open()
 	if err != nil {
@@ -209,10 +212,10 @@ func (r unzipRequest) oneEntry(entry *zip.File, root string, collisions *archive
 			return nil
 		}
 	}
-	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(destination), createMode(r.view, 0o755)); err != nil {
 		return err
 	}
-	file, err := os.Create(destination)
+	file, err := createFile(r.view, destination)
 	if err != nil {
 		return err
 	}

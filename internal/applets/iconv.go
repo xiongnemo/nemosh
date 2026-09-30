@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 
@@ -115,11 +114,12 @@ func convertEncoding(stdout io.Writer, reader io.Reader, from, to encoding.Encod
 }
 
 func createIconvOutput(ctx context.Context, path string) (io.WriteCloser, error) {
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), path)
+	view := ProcessViewFromContext(ctx)
+	native, err := resolveHostPath(view, path)
 	if err != nil {
 		return nil, operandFailure(path, err)
 	}
-	file, err := os.Create(native)
+	file, err := createFile(view, native)
 	if err != nil {
 		return nil, operandFailure(path, err)
 	}

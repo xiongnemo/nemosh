@@ -50,11 +50,12 @@ func (r tarRequest) createArchiveOutput(ctx context.Context, stdout io.Writer) (
 	if r.file == "" || r.file == "-" {
 		return stdout, func() {}, nil
 	}
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), r.file)
+	view := ProcessViewFromContext(ctx)
+	native, err := resolveHostPath(view, r.file)
 	if err != nil {
 		return nil, nil, operandFailure(r.file, err)
 	}
-	file, err := os.Create(native)
+	file, err := createFile(view, native)
 	if err != nil {
 		return nil, nil, operandFailure(r.file, err)
 	}

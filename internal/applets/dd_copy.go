@@ -71,7 +71,8 @@ func (r ddRequest) openOutput(view ProcessView, stdout io.Writer) (io.Writer, fu
 		// The point of notrunc: write into the file without shortening what follows.
 		flags = os.O_WRONLY | os.O_CREATE
 	}
-	file, err := os.OpenFile(native, flags, 0o644)
+	// 0666 through the umask, as busybox's xopen makes of=.
+	file, err := os.OpenFile(native, flags, createMode(view, 0o666))
 	if err != nil {
 		return nil, nil, cannotCreate(r.output, err)
 	}

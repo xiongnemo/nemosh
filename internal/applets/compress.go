@@ -189,7 +189,7 @@ func (r compressRequest) oneFile(view ProcessView, path string, stdout io.Writer
 		// removing it. Holding it open across the remove failed with "The process
 		// cannot access the file because it is being used by another process" --
 		// measured, and invisible on Unix where the unlink would have succeeded.
-		return r.rewriteFile(native, path)
+		return r.rewriteFile(view, native, path)
 	}
 	source, err := os.Open(native)
 	if err != nil {
@@ -227,7 +227,7 @@ func (r compressRequest) oneFile(view ProcessView, path string, stdout io.Writer
 // The original is removed only after the new file is complete *and both handles
 // are closed*, so an interrupted run leaves the input intact rather than losing
 // both -- and so Windows will actually let the remove happen.
-func (r compressRequest) rewriteFile(native, path string) error {
+func (r compressRequest) rewriteFile(view ProcessView, native, path string) error {
 	target, err := r.targetName(native)
 	if err != nil {
 		return operandFailure(path, err)
@@ -241,7 +241,7 @@ func (r compressRequest) rewriteFile(native, path string) error {
 	if err != nil {
 		return operandFailure(path, err)
 	}
-	destination, err := os.Create(target)
+	destination, err := createFile(view, target)
 	if err != nil {
 		source.Close()
 		return operandFailure(path, err)

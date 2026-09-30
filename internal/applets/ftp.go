@@ -217,11 +217,12 @@ func (s *ftpSession) retrieve(ctx context.Context, remote, local string) error {
 	if err != nil {
 		return err
 	}
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), safe)
+	view := ProcessViewFromContext(ctx)
+	native, err := resolveHostPath(view, safe)
 	if err != nil {
 		return operandFailure(safe, err)
 	}
-	file, err := os.Create(native)
+	file, err := createFile(view, native)
 	if err != nil {
 		return operandFailure(safe, err)
 	}
