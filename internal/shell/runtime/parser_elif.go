@@ -1,5 +1,7 @@
 package runtime
 
+import "strings"
+
 // expandElifLines rewrites `elif C` into `else` followed by a nested `if C`,
 // which is what the construct means -- POSIX 2.9.4.1 defines the elif chain as
 // exactly that nesting. Each rewrite owes one extra `fi`, paid when the real
@@ -30,12 +32,16 @@ func expandElifLines(lines []string, at []int) ([]string, []int) {
 			}
 			header = rest
 		}
+		// A keyword alone on its line opens its compound too, its condition on the lines after
+		// it: `if`, `elif` and the loops. Neither bare `if` nor bare `elif` counted, so `if` with
+		// its condition below, or `...; elif` with its below, was `duplicate then`.
+		bare, alone := bareConditionOpener(header)
 		switch {
-		case hasCompoundHeader(header, "if"):
+		case hasCompoundHeader(header, "if"), alone && bare == compoundIf:
 			owed = append(owed, 0)
 		case hasCompoundHeader(header, "for"), hasCompoundHeader(header, "while"),
 			hasCompoundHeader(header, "until"), hasCompoundHeader(header, "case"),
-			hasCompoundHeader(header, "select"):
+			hasCompoundHeader(header, "select"), alone:
 			// Not an if, so it can never owe an extra closer; the -1 marks it.
 			owed = append(owed, -1)
 		default:
@@ -46,12 +52,15 @@ func expandElifLines(lines []string, at []int) ([]string, []int) {
 				break
 			}
 			condition, ok := compoundHeader(line, "elif")
+			if line == "elif" {
+				condition, ok = "", true
+			}
 			if !ok || len(owed) == 0 || owed[len(owed)-1] < 0 {
 				break
 			}
 			owed[len(owed)-1]++
 			expanded, expandedAt = appendNumbered(expanded, expandedAt, "else", start)
-			expanded, expandedAt = appendNumbered(expanded, expandedAt, "if "+condition, start)
+			expanded, expandedAt = appendNumbered(expanded, expandedAt, strings.TrimSpace("if "+condition), start)
 			continue
 		}
 		expanded, expandedAt = appendNumbered(expanded, expandedAt, line, start)
