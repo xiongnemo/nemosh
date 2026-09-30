@@ -156,6 +156,10 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				index = end
 				continue
 			}
+			if end, ok := scanner.processSubstitution(line, index); ok {
+				index = end
+				continue
+			}
 			if wordGroupOpensAt(line, index) {
 				end := skipBalancedParens(line, index)
 				scanner.logical.WriteString(line[index:end])

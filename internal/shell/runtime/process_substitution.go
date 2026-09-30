@@ -60,6 +60,27 @@ func wordGroupOpensAt(line string, index int) bool {
 	return extendedGroupOpensAt(line, index) || processSubstitutionOpensAt(line, index)
 }
 
+// processSubstitution follows the `<(` or `>(` whose `(` is at index, answering where the scan
+// goes on from, and false for any other `(`. One that closes on its line is stepped over whole,
+// its quotes known, so the `)` in `<(echo "a )")` is the echo's. One whose command goes on past
+// its line is followed as a `$(` is, to the `)` that closes it. It was stepped over to the end
+// of its line, so `done < <(` with the command on the lines after it was `<: missing
+// redirection target`, and a `\` ending one of its lines was kept, not joined: both references
+// read either.
+func (scanner *syntaxScanner) processSubstitution(line string, index int) (int, bool) {
+	if !processSubstitutionOpensAt(line, index) {
+		return index, false
+	}
+	if end, closed := matchingParenthesis(line, index); closed {
+		scanner.logical.WriteString(line[index : end+1])
+		return end, true
+	}
+	scanner.quotes = append(scanner.quotes, 0)
+	scanner.logical.WriteByte('(')
+	scanner.substitutions = append(scanner.substitutions, openSubstitution{body: scanner.logical.Len()})
+	return index, true
+}
+
 // processSubstitutionPart reads the `<(command)` at index into a word part, answering an end
 // of zero when there is none there.
 //

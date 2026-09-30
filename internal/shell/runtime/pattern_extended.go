@@ -235,21 +235,12 @@ func extendedGroupOpensAt(line string, index int) bool {
 	return strings.IndexByte(extendedOpeners, line[index-1]) >= 0
 }
 
-// skipBalancedParens returns the index just past the `)` that closes the `(` at index.
+// skipBalancedParens returns the index just past the `)` that closes the `(` at index, and the
+// line's end when none does. A parenthesis quoted inside is the group's text, as in `<(echo "a
+// )")` and `@("a)"|b)`: every scan that stepped over a group with this took it for the close.
 func skipBalancedParens(line string, index int) int {
-	depth := 0
-	for scan := index; scan < len(line); scan++ {
-		switch line[scan] {
-		case '\\':
-			scan++
-		case '(':
-			depth++
-		case ')':
-			depth--
-			if depth == 0 {
-				return scan + 1
-			}
-		}
+	if end, closed := matchingParenthesis(line, index); closed {
+		return end + 1
 	}
 	return len(line)
 }
