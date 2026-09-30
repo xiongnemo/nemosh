@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The child. It runs only when the parent asked for it, writes where it was
@@ -100,7 +101,10 @@ func TestRunElevated_returnsImmediatelyWithoutWait(t *testing.T) {
 	plan := elevationPlan{
 		program:   executable,
 		arguments: joinWindowsArguments([]string{"-test.run=TestSuHelperProcess", "--", report}),
-		directory: t.TempDir(),
+		// Not a directory the test removes: the child is not waited for, so it may still
+		// be standing in it as the test ends, and Windows will not remove a directory a
+		// process is in. CI's cleanup failed that way, `being used by another process`.
+		directory: os.TempDir(),
 		test:      true,
 	}
 
@@ -111,6 +115,14 @@ func TestRunElevated_returnsImmediatelyWithoutWait(t *testing.T) {
 	if err != nil {
 		t.Fatalf("runElevated = %v, want nil: without -W there is nothing to report", err)
 	}
+	// The child's report is waited for, so it is not still writing into a directory
+	// the test is about to remove.
+	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+		if _, err := os.Stat(report); err == nil {
+			return
+		}
+	}
+	t.Fatal("the child wrote no report")
 }
 
 func sameDirectory(left, right string) bool {
