@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -183,6 +182,7 @@ func (r Runtime) runCommand(ctx context.Context, args []string) int {
 }
 
 func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFunctions bool) int {
+	args, allowFunctions = r.unixPathCommand(args, allowFunctions)
 	if allowFunctions && !isSpecialBuiltin(args[0]) {
 		if definition, found := r.calledFunction(args[0]); found {
 			return r.callFunction(ctx, definition, args[1:])
@@ -324,15 +324,4 @@ func AppletFailure(name string, err error) (int, string) {
 		return 1, ""
 	}
 	return 1, fmt.Sprintf("%s: %v", name, err)
-}
-
-func exitStatus(args []string, savedStatus int) int {
-	if len(args) == 0 {
-		return savedStatus
-	}
-	status, err := strconv.Atoi(args[0])
-	if err != nil {
-		return 2
-	}
-	return status & 0xff
 }

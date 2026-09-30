@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"strconv"
 )
 
 // controlFlowBuiltin runs the builtins that answer with a control transfer
@@ -101,4 +102,15 @@ func throughCommandPrefix(args []string) []string {
 		return rest
 	}
 	return args
+}
+
+func exitStatus(args []string, savedStatus int) int {
+	if len(args) == 0 {
+		return savedStatus
+	}
+	status, err := strconv.Atoi(args[0])
+	if err != nil {
+		return 2
+	}
+	return status & 0xff
 }

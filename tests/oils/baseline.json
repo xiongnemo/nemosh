@@ -479,7 +479,6 @@
       "strict_errexit and errexit disabled": "fail"
     },
     "errexit.test.sh": {
-      "More \u0026\u0026 ||": "fail",
       "brace group - redir failure checked": "ash-only",
       "set -e in function #2": "ash-only",
       "simple command that's an alias - redir failure checked": "ash-only",
