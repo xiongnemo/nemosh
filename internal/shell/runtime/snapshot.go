@@ -84,6 +84,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		expansion:   newExpansionState(),
 		aliases:     cloneMap(r.aliases),
 		aliasChain:  r.aliasChain,
+		aliasView:   r.aliasView, // the line's, as its other commands have; see alias_view.go
 		childCPU:    r.childCPU,
 		history:     r.history,
 		// A subshell starts with no pending break: `(break)` inside a loop does

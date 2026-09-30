@@ -21,6 +21,10 @@ func TestRuntime_aliasIsInForceFromTheNextLine(t *testing.T) {
 		{"h() { alias z=echo; }\nh; z same\nz next\n", "next\n"},
 		{"alias ll='echo ll:'\nk() { ll inside; }\nk\n", "ll: inside\n"},
 		{"alias e=echo; e same & wait\ne next & wait\n", "next\n"},
+		{"alias e=echo; (e same)\n(e next)\n", "next\n"},
+		{"alias e=echo; x=$(e same); echo \"[$x]\"\n", "[]\n"},
+		{"alias e=echo; { e same; } | cat\ne next | cat\n", "next\n"},
+		{"(\nalias fz=echo\nfz same\n)\necho after\n", "after\n"},
 		{"alias e=echo; type e\n", "e is an alias for echo\n"},
 	} {
 		t.Run(test.script, func(t *testing.T) {
