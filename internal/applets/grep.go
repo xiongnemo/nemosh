@@ -52,7 +52,8 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 	}
 	expr, err := flags.compile()
 	if err != nil {
-		return err
+		// A pattern regcomp refuses is status 2, as busybox's grep dies with it.
+		return ExitStatusMessage(2, err)
 	}
 	// One printer for the whole run, because the group separator spans files: a
 	// `--` belongs between the last group of one file and the first of the next.

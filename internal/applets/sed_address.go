@@ -259,19 +259,10 @@ func readSedRegex(script string, delimiter byte) (string, string, error) {
 // case-folding wraps the finished expression rather than a BRE that has not been
 // rewritten yet.
 func compileSedPattern(pattern string, extended, ignoreCase bool) (*regexp.Regexp, error) {
-	if !extended {
-		translated, err := translateBasicRegex(pattern)
-		if err != nil {
-			return nil, err
+	return compileRegex(pattern, extended, func(translated string) string {
+		if ignoreCase {
+			return "(?i)" + translated
 		}
-		pattern = translated
-	}
-	if ignoreCase {
-		pattern = "(?i)" + pattern
-	}
-	compiled, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil, fmt.Errorf("bad pattern '%s': %v", pattern, err)
-	}
-	return compiled, nil
+		return translated
+	})
 }

@@ -3,6 +3,7 @@ package applets
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -38,7 +39,18 @@ func translateBasicRegex(pattern string) (string, error) {
 		case '\\':
 			index++
 			if index >= len(pattern) {
-				return "", fmt.Errorf("trailing backslash in pattern")
+				return "", badRegex{reason: regexBackslash}
+			}
+			if pattern[index] == '{' {
+				if err := checkBasicInterval(pattern[index+1:]); err != nil {
+					return "", err
+				}
+				if strings.HasPrefix(pattern[index+1:], ",") {
+					// GNU's \{,m\}, at most m, which busybox takes too; Go reads {,m} as text.
+					out.WriteString("{0")
+					atStart = false
+					continue
+				}
 			}
 			text, opens, err := translateEscape(pattern[index])
 			if err != nil {
@@ -177,7 +189,7 @@ func translateBracket(pattern string, start int) (string, int, error) {
 			closer := string([]byte{pattern[index+1], ']'})
 			end := strings.Index(pattern[index:], closer)
 			if end < 0 {
-				return "", 0, fmt.Errorf("unterminated character class in pattern")
+				return "", 0, badRegex{reason: regexBracket}
 			}
 			out.WriteString(pattern[index : index+end+2])
 			index += end + 1
@@ -185,8 +197,28 @@ func translateBracket(pattern string, start int) (string, int, error) {
 			out.WriteByte(pattern[index])
 		}
 	}
-	// POSIX says an unmatched `[` is a literal, and both references agree.
-	return `\[`, start, nil
+	// A `[` never closed is refused, as regcomp refuses it in busybox and GNU alike: `grep
+	// '['` is `bad regex '[': Invalid regular expression`. It was taken for a literal.
+	return "", 0, badRegex{reason: unmatchedBracketReason(pattern)}
+}
+
+// checkBasicInterval is regcomp's check of what follows a `\{`: a count, `n,` or `n,m` with n
+// no more than m, then `\}`. Go reads a brace it cannot use as a brace, so `a\{` matched the
+// text a{ where busybox refuses the pattern.
+func checkBasicInterval(rest string) error {
+	end := strings.Index(rest, `\}`)
+	if end < 0 {
+		return badRegex{reason: regexBrace}
+	}
+	low, high, ranged := strings.Cut(rest[:end], ",")
+	if low == "" && !ranged || strings.Trim(low, "0123456789") != "" || strings.Trim(high, "0123456789") != "" {
+		return badRegex{reason: regexBraceContent}
+	}
+	lowCount, _ := strconv.Atoi(low)
+	if highCount, err := strconv.Atoi(high); ranged && err == nil && lowCount > highCount {
+		return badRegex{reason: regexBraceContent}
+	}
+	return nil
 }
 
 // translateReplacement rewrites a sed replacement into the form Regexp.Expand wants.

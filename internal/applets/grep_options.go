@@ -93,10 +93,18 @@ func (f grepFlags) compile() (*regexp.Regexp, error) {
 			// needed a+ where every grep matches the three characters, `x|y` was an
 			// alternation, `(` a syntax error, and `\(a\)` matched nothing.
 			translated, err := translateBasicRegex(pattern)
+			if err == nil {
+				_, err = regexp.Compile(translated)
+			}
 			if err != nil {
-				return nil, err
+				return nil, asBadRegex(pattern, err)
 			}
 			pattern = translated
+		default:
+			// Each is compiled alone first, so the one refused is the one named.
+			if _, err := regexp.Compile(pattern); err != nil {
+				return nil, asBadRegex(pattern, err)
+			}
 		}
 		switch {
 		case f.lineMatch:

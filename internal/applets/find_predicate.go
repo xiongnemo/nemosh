@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -68,14 +67,11 @@ func (p *findParser) regexPredicate(operand string) (findNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	translated, err := translateBasicRegex(pattern)
-	if err == nil {
-		var matcher *regexp.Regexp
-		if matcher, err = regexp.Compile(`^(?:` + translated + `)$`); err == nil {
-			return findRegex{matcher: matcher}, nil
-		}
+	matcher, err := compileRegex(pattern, false, func(translated string) string { return `^(?:` + translated + `)$` })
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("%s: bad regex %q: %w", operand, pattern, err)
+	return findRegex{matcher: matcher}, nil
 }
 
 func (p *findParser) namePredicate(operand string) (findNode, error) {
