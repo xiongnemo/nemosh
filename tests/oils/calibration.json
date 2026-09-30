@@ -1567,7 +1567,6 @@
           "Bad var ref 2",
           "Bizarre tilde expansion in array index",
           "Indirect expansion TO fancy expansion features bash disallows",
-          "Indirect expansion, THEN suffix operators",
           "Var Ref Code Injection $(tee PWNED)",
           "Var ref, then assignment with ${ := }",
           "Var ref, then error with ${ ? }",
