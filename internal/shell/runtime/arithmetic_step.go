@@ -24,7 +24,11 @@ func (p *arithmeticParser) store(name string, value int64) error {
 	if err := checkArithmeticSubscript(name, p.depth); err != nil {
 		return err
 	}
-	if p.runtime.assignVar(name, strconv.FormatInt(value, 10)) != 0 {
+	// A readonly name has raised the shell error that ends the expression. A write refused
+	// otherwise -- an element before the front of its array -- has been said, and the
+	// expression goes on with its value, as bash's does: `$((a[-9] = 5))` is 5. It ended
+	// the script as a readonly variable, which it was not.
+	if p.runtime.assignVar(name, strconv.FormatInt(value, 10)) != 0 && p.runtime.expansion.shellError {
 		return errReadonlyTarget
 	}
 	return nil
@@ -42,6 +46,10 @@ func (p *arithmeticParser) step(operator string, _ bool) (int64, error) {
 		return 0, fmt.Errorf("arithmetic syntax error: %s needs a variable, found %q", operator, name)
 	}
 	p.index++
+	name, err := p.once(name)
+	if err != nil {
+		return 0, err
+	}
 	current, err := p.lookup(name)
 	if err != nil {
 		return 0, err

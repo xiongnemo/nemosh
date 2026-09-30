@@ -62,15 +62,25 @@ func (p *arithmeticParser) assignment() (int64, error) {
 	if !ok {
 		return p.ternary()
 	}
+	// A compound operator reads its target before the right side is evaluated and writes back
+	// the element it read, as bash's does: `((a[i++] += i))` adds the new i to a[0]. The right
+	// side came first and the write evaluated the subscript again, so the sum went to a[1].
+	// `=` evaluates the subscript at the write, after the right side, as there.
+	var current int64
+	if operator != "=" {
+		var err error
+		if name, err = p.once(name); err != nil {
+			return 0, err
+		}
+		if current, err = p.lookup(name); err != nil {
+			return 0, err
+		}
+	}
 	value, err := p.assignment()
 	if err != nil {
 		return 0, err
 	}
 	if operator != "=" {
-		current, err := p.lookup(name)
-		if err != nil {
-			return 0, err
-		}
 		if value, err = p.apply(current, strings.TrimSuffix(operator, "="), value); err != nil {
 			return 0, err
 		}
@@ -258,6 +268,10 @@ func (p *arithmeticParser) primary() (int64, error) {
 	}
 	if !isArithmeticName(token) {
 		return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", token)
+	}
+	token, err := p.once(token)
+	if err != nil {
+		return 0, err
 	}
 	value, err := p.lookup(token)
 	if err != nil {

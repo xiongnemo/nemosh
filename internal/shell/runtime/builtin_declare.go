@@ -147,7 +147,9 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 			return 0
 		}
 		if appended {
-			value = r.appendedValue(name, value)
+			if reference, value, assigned = r.appendedElement(ctx, reference, value); !assigned {
+				return 1
+			}
 		}
 		return r.assignElementByKind(ctx, reference, value)
 	}

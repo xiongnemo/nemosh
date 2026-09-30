@@ -53,6 +53,24 @@ func (p *arithmeticParser) lookup(name string) (int64, error) {
 	return p.runtime.evaluateArithmeticAt(text, p.depth+1)
 }
 
+// once is a name whose indexed subscript has been evaluated to the number it names, so that an
+// operator reading the element and writing it back -- `b[i++]++`, `++b[i++]`, `b[i++] += 1`
+// -- evaluates the subscript once; see subscriptOnce.
+func (p *arithmeticParser) once(name string) (string, error) {
+	reference, ok := parseArrayReference(name)
+	if !ok || p.skipping > 0 {
+		return name, nil
+	}
+	if err := checkArithmeticSubscript(name, p.depth); err != nil {
+		return "", err
+	}
+	reference, err := p.runtime.subscriptOnce(context.Background(), reference)
+	if err != nil {
+		return "", err
+	}
+	return reference.name + "[" + reference.subscript + "]", nil
+}
+
 // valueText is the text a name holds: an element for `a[i]`, the name's own value -- a
 // computed one included -- otherwise.
 func (p *arithmeticParser) valueText(name string) string {

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -153,6 +154,9 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 	}
 	isArray := r.arrays.has(reference.name)
 	var elements []string
+	// span is what a negative subscript counts back from: nothing, for a scalar, which is its
+	// element 0 alone -- `${s[-1]}` is a bad subscript in bash, and was s.
+	span := 0
 	if !isArray {
 		value, exists := r.vars[reference.name]
 		switch stack, isStack := r.callStackArray(reference.name); {
@@ -160,7 +164,7 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 			elements = []string{value}
 		case isStack:
 			// FUNCNAME, BASH_SOURCE, BASH_LINENO: computed, behind anything the script set.
-			elements = stack
+			elements, span = stack, len(stack)
 		default:
 			return nil, false
 		}
@@ -174,15 +178,21 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 	}
 	// A subscript is an expression, not a literal: `${a[$i]}` and `${a[1+1]}` both
 	// have to resolve. See array_subscript.go for what this used to do instead.
-	span := len(elements)
 	if isArray {
 		span = r.arrays.span(reference.name)
 	}
-	index, ok := r.subscriptIndex(ctx, reference.subscript, span)
+	index, err := r.resolveSubscript(ctx, reference.subscript)
+	if err != nil {
+		return nil, true
+	}
 	// Out of range is the empty string, not an error: a script testing `${a[9]}` for
-	// emptiness is asking a reasonable question. So is an index that was unset.
+	// emptiness is asking a reasonable question. So is an index that was unset. One before
+	// the front is said as well, as bash says it -- `${a[-9]}` of three elements is empty
+	// and `a: bad array subscript` -- where it was quiet.
+	index, within := countFromEnd(index, span)
 	switch {
-	case !ok:
+	case !within:
+		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", reference.name)
 		return nil, true
 	case isArray:
 		if value, set := r.arrays.valueAt(reference.name, index); set {

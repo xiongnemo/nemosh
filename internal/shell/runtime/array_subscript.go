@@ -110,20 +110,6 @@ func unwrapSubscriptParameter(text string) (string, bool) {
 	return "", false
 }
 
-// subscriptIndex is resolveSubscript for the callers that have nowhere to report to.
-//
-// An expansion runs on a word being built and there is no status to fail; the empty
-// string is what a bad subscript produces, which is what bash does for one that is
-// merely out of range. The distinction the error above draws still holds where a
-// caller can use it -- the assignment paths report.
-func (r Runtime) subscriptIndex(ctx context.Context, subscript string, length int) (int, bool) {
-	index, err := r.resolveSubscript(ctx, subscript)
-	if err != nil {
-		return 0, false
-	}
-	return countFromEnd(index, length)
-}
-
 // countFromEnd turns a negative subscript into a real one. `${a[-1]}` is the last
 // element; one that reaches past the start is not an element at all.
 func countFromEnd(index, length int) (int, bool) {

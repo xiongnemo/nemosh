@@ -190,7 +190,11 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 	value := strings.Join(r.expandWord(ctx, assignment.value, savedStatus), " ")
 	r.traceArrayAssignment(ctx, assignment, value, savedStatus)
 	if assignment.append {
-		value = r.appendedValue(target, value)
+		reference, appended, ok := r.appendedElement(ctx, arrayReference{name: assignment.name, subscript: assignment.subscript}, value)
+		if !ok {
+			return
+		}
+		target, value = reference.name+"["+reference.subscript+"]", appended
 	}
 	r.assignVar(target, value)
 }
