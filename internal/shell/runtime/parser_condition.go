@@ -24,12 +24,18 @@ import (
 // A group's status is its last command's, which is exactly a compound_list's.
 
 // conditionKeywords open a compound whose header is a condition rather than a name or a word.
-var conditionKeywords = [...]string{"if", "while", "until"}
+// An elif is one too, for the elif rewrite; see expandElifLines.
+var conditionKeywords = [...]string{"if", "elif", "while", "until"}
 
 // splitCompoundConditions puts a compound that begins a condition on a line of its own:
 // `if case a in` becomes `if` and `case a in`, so that the case-arm pass and the span
 // builder, which find a compound at the start of a line, find this one too. Repeated, so
 // `if if true` becomes `if` and `if true`.
+//
+// A condition whose line opens a compound after other words is split the same way, as in
+// `if ! if ...`, `if x && case ...` and `while a | while ...`, and so is an elif's, as in
+// `elif if ...`, as both references read them. Each was "unexpected then", the compound's
+// then taken for the condition's.
 func splitCompoundConditions(lines []string, at []int) ([]string, []int) {
 	var split []string
 	var splitAt []int
@@ -55,7 +61,7 @@ func compoundConditionHeader(line string) (string, string, bool) {
 			continue
 		}
 		header = strings.TrimLeft(header, " \t")
-		if beginsWithCompoundKeyword(header) {
+		if _, _, _, after := splitCompoundAfterPrefix(header); after || beginsWithCompoundKeyword(header) {
 			return keyword, header, true
 		}
 	}
