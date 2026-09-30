@@ -172,17 +172,15 @@ func TestArithmetic_leavesTheSignOperatorsAlone(t *testing.T) {
 	}
 }
 
-// A prefix increment needs somewhere to put the result, so a literal has to be
-// refused rather than silently discarded.
+// A `++` before a literal is two signs, as both references read it, so `$((++5))` is 5. One
+// after a literal has no operand to add, and is refused, as there. This refused `++5` as an
+// increment with nowhere to put its result.
 func TestArithmetic_refusesToIncrementSomethingThatIsNotAVariable(t *testing.T) {
-	// When
-	status, _, stderr := runSetScript(t, "echo $((++5))\n")
-
-	// Then
-	if status == 0 {
-		t.Fatalf("status = 0, want a failure; stderr = %q", stderr)
+	if status, stdout, stderr := runSetScript(t, "echo $((++5))\n"); status != 0 || stdout != "5\n" {
+		t.Fatalf("$((++5)): %d %q %q, want 5 as busybox and bash answer", status, stdout, stderr)
 	}
-	if !strings.Contains(stderr, "needs a variable") {
-		t.Fatalf("stderr = %q, want it to say what is wrong", stderr)
+	status, _, stderr := runSetScript(t, "echo $((5++))\n")
+	if status == 0 || stderr == "" {
+		t.Fatalf("$((5++)): status %d, stderr %q, want the syntax error both references give", status, stderr)
 	}
 }

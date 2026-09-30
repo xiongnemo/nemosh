@@ -64,6 +64,9 @@ func tokenizeArithmetic(expression string) []string {
 			continue
 		}
 		if operator := matchArithmeticOperator(expression[index:]); operator != "" {
+			if (operator == "++" || operator == "--") && !steps(tokens, expression[index+2:]) {
+				operator = operator[:1]
+			}
 			tokens = append(tokens, operator)
 			index += len(operator)
 			continue
@@ -72,6 +75,18 @@ func tokenizeArithmetic(expression string) []string {
 		index++
 	}
 	return tokens
+}
+
+// steps reports whether a `++` or `--` with rest after it steps a variable: the one just before
+// it, or one it comes before, blanks allowed between. Otherwise it is two signs, as both
+// references read it: `0++1` is 0 + +1, and `(a)+++3` is (a) + + + 3. It was an increment of
+// nothing, `unexpected "++"`.
+func steps(before []string, rest string) bool {
+	if len(before) > 0 && isArithmeticName(before[len(before)-1]) {
+		return true
+	}
+	rest = strings.TrimLeft(rest, " \t\n")
+	return rest != "" && (rest[0] == '_' || rest[0] >= 'a' && rest[0] <= 'z' || rest[0] >= 'A' && rest[0] <= 'Z')
 }
 
 // A word is a name or a number; 0x and 0 prefixes are left for ParseInt to
