@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"syscall"
@@ -14,6 +15,16 @@ func normalizePipelineWriteError(err error) error {
 		return err
 	}
 	return errPipelineDownstreamClosed
+}
+
+// pipelineWriteError is a pipe's write error as the shell reads it: one into a pipe that is
+// closed is errPipelineDownstreamClosed, with the error beneath it kept, so that the file it
+// went through can still tell a reader gone from its own end closed; see readerGone.
+func pipelineWriteError(err error) error {
+	if err == nil || !isClosedPipeError(err) {
+		return err
+	}
+	return fmt.Errorf("%w: %w", errPipelineDownstreamClosed, err)
 }
 
 func isClosedPipeError(err error) bool {

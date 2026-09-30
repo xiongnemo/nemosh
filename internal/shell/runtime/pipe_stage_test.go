@@ -1,8 +1,15 @@
 package runtime_test
 
 import (
+	"bufio"
+	"bytes"
+	"context"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // A write into a pipe whose reader has gone ends the writer, as SIGPIPE ends it in both
@@ -25,6 +32,11 @@ func TestPipeStage_aWriteWithNoReaderEndsTheWriter(t *testing.T) {
 			name:   "a program ends alone",
 			script: "{ echo 1; seq 1 100000; echo \"after $?\" >&2; } | head -1; echo \"${PIPESTATUS[*]}\"\n",
 			stdout: "1\n0 0\n", stderr: "after 141\n",
+		},
+		{
+			name:   "a subshell ends alone",
+			script: "{ (while :; do echo x; done); echo \"after $?\" >&2; } | head -1; echo \"${PIPESTATUS[*]}\"\n",
+			stdout: "x\n0 0\n", stderr: "after 141\n",
 		},
 		{
 			name:   "a function's loop",
@@ -71,5 +83,42 @@ func TestPipeStage_aReaderThatReadsNothingLetsTheFirstWriteIn(t *testing.T) {
 		if _, stdout, _ := runSetScript(t, script); stdout != "55 1\n0 0\n" {
 			t.Fatalf("stdout %q, want 55 1 and 0 0, as both references answer", stdout)
 		}
+	}
+}
+
+// The shell's own standard output can be a pipe to another process, `nemosh -c ... | head -1`:
+// its own write into it once the reader has gone ends the script with 141, as both references
+// end, and a subshell's ends the subshell. The loop wrote on for ever.
+func TestPipeStage_theShellsOwnOutputWithNoReaderEndsIt(t *testing.T) {
+	for _, test := range []struct {
+		name, script, stderr string
+		status               int
+	}{
+		{name: "the shell", script: "while :; do echo x; done\necho after >&2\n", status: 141},
+		{name: "a subshell", script: "(while :; do echo x; done); echo \"after $?\" >&2\n", stderr: "after 141\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reader, writer, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer writer.Close()
+			go func() {
+				_, _ = bufio.NewReader(reader).ReadString('\n')
+				reader.Close()
+			}()
+			var stderr bytes.Buffer
+			rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: writer, Stderr: &stderr})
+			done := make(chan int, 1)
+			go func() { done <- rt.RunScript(context.Background(), test.script) }()
+			select {
+			case status := <-done:
+				if status != test.status || stderr.String() != test.stderr {
+					t.Errorf("status %d stderr %q, want %d and %q", status, stderr.String(), test.status, test.stderr)
+				}
+			case <-time.After(20 * time.Second):
+				t.Fatal("the shell went on writing into a pipe no one reads")
+			}
+		})
 	}
 }

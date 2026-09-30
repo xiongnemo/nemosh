@@ -33,9 +33,6 @@ type pipelineEndpoint struct {
 	// wait and a write the pipe might not hold; see trace_turn.go.
 	turn    *traceTurn
 	written atomic.Int64
-	// stage is the stage writing at this end, which a write that finds its reader gone may
-	// end; see pipe_stage.go.
-	stage *pipeStage
 	// peer is the write end, for a read end; consumed is whether anything was read at it.
 	// Together they decide when a read end closes; see lingers.
 	peer     *pipelineEndpoint
@@ -62,10 +59,7 @@ func (e *pipelineEndpoint) Write(buffer []byte) (int, error) {
 		e.turn.passOn()
 	}
 	written, err := e.file.Write(buffer)
-	if readerGone(err) {
-		e.stage.readerGone()
-	}
-	return written, normalizePipelineWriteError(err)
+	return written, pipelineWriteError(err)
 }
 func (e *pipelineEndpoint) Close() error {
 	if e.lingers() {
@@ -162,25 +156,20 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 	var wait sync.WaitGroup
 	wait.Add(len(pipeline.stages))
 	for index := range pipeline.stages {
-		// A stage the shell writes into a pipe from ends when the pipe's reader has, as SIGPIPE
-		// ends it; see pipe_stage.go. The last stage writes where the pipeline does, into an
-		// outer stage's pipe if any, and keeps that one.
-		stageCtx, abandon := context.WithCancelCause(ctx)
-		if index < len(pipeline.stages)-1 {
-			stage := &pipeStage{abandon: abandon}
-			pipeline.stages[index].runtime.pipeStage = stage
-			pipeline.endpoints[2*index+1].stage = stage
-		}
 		go func() {
 			defer wait.Done()
-			defer abandon(nil)
 			stage := pipeline.stages[index]
+			// A stage is a shell of its own, which a write into a pipe no one reads ends; one
+			// run in the shell under lastpipe is the shell's. See pipe_stage.go.
+			stageCtx, release := ctx, func() {}
+			if !stage.inShell {
+				stageCtx, stage.runtime, release = stage.runtime.ownStage(ctx, false)
+			}
 			result := stage.runtime.guardedRun("running a pipeline stage", func() lineResult {
 				return stage.run(stageCtx, stage.runtime, savedStatus)
 			})
-			if ctx.Err() == nil && stageCtx.Err() != nil {
-				result = lineResult{status: contextStatus(stageCtx)}
-			}
+			result.status = abandonedStatus(ctx, stageCtx, result.status)
+			release()
 			stage.runtime.traceTurn.passOn()
 			if !stage.inShell {
 				stage.runtime.jobScope.cancelAndDrain()

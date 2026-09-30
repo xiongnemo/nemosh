@@ -42,7 +42,14 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 		}()
 	}
 	return commandRuntime.executeWithRedirects(ctx, redirects, savedStatus, func(redirected Runtime) lineResult {
-		status, control := redirected.executeProgram(ctx, body.program, savedStatus)
+		// A subshell is a shell of its own, which a write into a pipe no one reads ends, and
+		// the shell goes on; see pipe_stage.go.
+		bodyCtx, release := ctx, func() {}
+		if isolated {
+			bodyCtx, redirected, release = redirected.ownStage(ctx, false)
+		}
+		defer release()
+		status, control := redirected.executeProgram(bodyCtx, body.program, savedStatus)
 		if isolated {
 			// Not after an `exec`, which replaced the subshell: nothing is left to
 			// run its trap, in either reference.

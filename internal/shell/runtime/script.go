@@ -10,6 +10,9 @@ func (r Runtime) RunScript(ctx context.Context, script string) int {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", r.initErr)
 		return 1
 	}
+	// The shell ends when a write of its own finds no reader; see pipe_stage.go.
+	ctx, r, release := r.ownStage(ctx, true)
+	defer release()
 	// The synchronous guard. In an interactive session this is per command, which
 	// is what lets the session outlive a defect instead of dying with it.
 	return r.guardedStatus("running a command", func() int {

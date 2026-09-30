@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 )
 
 var errDescriptionReleased = errors.New("open description already released")
@@ -24,6 +25,9 @@ type openDescription struct {
 	writer  io.Writer
 	closer  io.Closer
 	refs    int
+	// stage is the shell a write through this file ends when it finds no reader: the
+	// shell's own standard output and error, a pipe to another process; see pipe_stage.go.
+	stage atomic.Pointer[pipeStage]
 }
 
 func newBorrowedDescription(reader io.Reader, writer io.Writer) *openDescription {
@@ -37,7 +41,11 @@ func newOwnedDescription(resource io.ReadWriteCloser) *openDescription {
 func (d *openDescription) Write(buffer []byte) (int, error) {
 	d.writeMu.Lock()
 	defer d.writeMu.Unlock()
-	return d.writer.Write(buffer)
+	written, err := d.writer.Write(buffer)
+	if readerGone(err) {
+		d.stage.Load().readerGone()
+	}
+	return written, err
 }
 
 func (d *openDescription) retain() error {
