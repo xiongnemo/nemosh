@@ -85,11 +85,20 @@ func bareConditionOpener(line string) (compoundKind, bool) {
 // `then` or `do`. The ordinary one-line condition is parsed exactly as it always was.
 func parseCondition(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, keyword string, end int, budget *parseBudget, depth int) (list, error) {
 	header, _ := compoundHeader(spanHeaderLine(lines, span), keyword)
-	if span.start+1 >= end {
+	// A function definition is a command, and may be the condition, as both references read
+	// it: `if f() { echo in; } then f; fi` defines f, succeeds, and calls it. The header went to
+	// the line parser, which has no definitions, and was "unexpected )".
+	definition, isDefinition, err := parseDefinitionWithSuffix(strings.TrimSpace(header), budget, depth)
+	if err != nil {
+		return list{}, err
+	}
+	if span.start+1 >= end && !isDefinition {
 		return parseTypedLineWithBudget(header, budget, depth)
 	}
 	var program []programNode
-	if strings.TrimSpace(header) != "" {
+	if isDefinition {
+		program = append(program, definition)
+	} else if strings.TrimSpace(header) != "" {
 		first, err := parseTypedLineWithBudget(header, budget, depth)
 		if err != nil {
 			return list{}, err
