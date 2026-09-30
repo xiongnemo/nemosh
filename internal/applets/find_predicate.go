@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -50,10 +51,31 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return p.newerPredicate(operand)
 	case "-empty":
 		return findEmpty{}, nil
+	case "-prune":
+		return findPrune{}, nil
+	case "-regex":
+		return p.regexPredicate(operand)
 	case "-maxdepth", "-mindepth":
 		return p.depthOption(operand)
 	}
 	return nil, fmt.Errorf("unsupported expression: %s", operand)
+}
+
+// regexPredicate is busybox's -regex: a basic regular expression, as regcomp without
+// REG_EXTENDED reads one, that must match the whole path as find prints it.
+func (p *findParser) regexPredicate(operand string) (findNode, error) {
+	pattern, err := p.argument(operand)
+	if err != nil {
+		return nil, err
+	}
+	translated, err := translateBasicRegex(pattern)
+	if err == nil {
+		var matcher *regexp.Regexp
+		if matcher, err = regexp.Compile(`^(?:` + translated + `)$`); err == nil {
+			return findRegex{matcher: matcher}, nil
+		}
+	}
+	return nil, fmt.Errorf("%s: bad regex %q: %w", operand, pattern, err)
 }
 
 func (p *findParser) namePredicate(operand string) (findNode, error) {

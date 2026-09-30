@@ -715,7 +715,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command` (an applet) | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
-| `find` | `-name -iname -path -ipath -type f\|d\|l\|c -size -mtime -newer -empty -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
+| `find` | `-name -iname -path -ipath -regex -type f\|d\|l\|c -size -mtime -newer -empty -prune -print -print0 -maxdepth -mindepth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
@@ -1041,8 +1041,11 @@ never match.
 than filter it: `-maxdepth 1` stops the walk from *reading* a subdirectory
 instead of reading it and discarding the entries.
 
+`-prune` is true and keeps the walk out of a directory it is true of, and `-regex`
+matches the whole path against a basic regular expression, both as busybox's.
+
 Still **refused before the first directory is read**: `-exec`, `-delete`,
-`-perm`, `-prune`, `-regex`, `-depth`, `-user`, `-group`, and the rest.
+`-perm`, `-depth`, `-user`, `-group`, and the rest.
 
 ```console
 $ find . -perm 644

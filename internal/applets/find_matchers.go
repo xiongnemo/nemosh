@@ -37,6 +37,22 @@ func (n findName) eval(c findCandidate, _ *findRun) bool {
 	return err == nil && matched
 }
 
+// findPrune is -prune: true, and a directory it is true of is not gone into, as busybox's SKIP
+// has it -- `find . -name .git -prune -o -type f -print`.
+type findPrune struct{}
+
+func (findPrune) eval(_ findCandidate, run *findRun) bool {
+	run.pruned = true
+	return true
+}
+
+// findRegex is -regex, matched against the path as find prints it; see regexPredicate.
+type findRegex struct{ matcher *regexp.Regexp }
+
+func (n findRegex) eval(c findCandidate, _ *findRun) bool {
+	return n.matcher.MatchString(filepath.ToSlash(c.display))
+}
+
 type findPath struct {
 	matcher *regexp.Regexp
 	fold    bool

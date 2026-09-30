@@ -56,6 +56,8 @@ func (c findCandidate) info() (fs.FileInfo, error) {
 type findRun struct {
 	stdout io.Writer
 	err    error
+	// pruned is that -prune was true of the entry just evaluated.
+	pruned bool
 }
 
 // evaluate applies the expression to one entry, and reports whether the walk

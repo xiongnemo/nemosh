@@ -62,12 +62,14 @@ func walkFindPath(run *findRun, displayRoot, hostRoot string, expression findExp
 			return operandFailure(display, walkErr)
 		}
 		candidate := findCandidate{display: display, host: path, entry: entry, depth: depth}
+		run.pruned = false
 		if err := expression.evaluate(candidate, run); err != nil {
 			return err
 		}
 		// Pruning rather than filtering: -maxdepth 1 must stop the walk from
-		// reading a subdirectory, not read it and discard the entries.
-		if entry != nil && entry.IsDir() && expression.prunes(candidate) {
+		// reading a subdirectory, not read it and discard the entries. -prune
+		// true of a directory stops it there too.
+		if entry != nil && entry.IsDir() && (run.pruned || expression.prunes(candidate)) {
 			return fs.SkipDir
 		}
 		return nil
