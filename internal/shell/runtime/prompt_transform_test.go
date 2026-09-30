@@ -20,6 +20,9 @@ func TestParameter_promptTransform(t *testing.T) {
 		{name: "decoded before it is expanded", script: "x='\\'; y=h; PS1='$x$y'\necho \"${PS1@P}\"\n", stdout: "\\h\n"},
 		{name: "a parameter expanded after", script: "v=set; PS1='[$v]'\necho \"${PS1@P}\"\n", stdout: "[set]\n"},
 		{name: "the symbol", script: "PS1='\\$'\necho \"${PS1@P}\"\n", stdout: symbol + "\n"},
+		// A prompt's text is the inside of double quotes, so a # in it begins no comment, whoever
+		// runs the test: root's `#` prompt came out empty, and a backquote after one with it.
+		{name: "a hash", script: "PS1='# `echo hi` #'\necho \"${PS1@P}\"\n", stdout: "# hi #\n"},
 		{name: "a backslash before a dollar", script: "PS1='\\\\$ \\\\\\\\$'\necho \"${PS1@P}\"\n", stdout: "$ \\$\n"},
 		{name: "octal", script: "PS1='\\1004 [\\045] \\555'\necho \"${PS1@P}\"\n", stdout: "@4 [%] m\n"},
 		{name: "a lone backslash", script: "PS1='\\'\necho \"${PS1@P}\"\n", stdout: "\\\n"},

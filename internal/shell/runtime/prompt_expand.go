@@ -60,7 +60,7 @@ func (r Runtime) expandPromptText(ctx context.Context, text string, lastStatus i
 	// Backquotes are rewritten to $(...) first, which is what parseScript does
 	// for a script. A prompt does not go through parseScript, so without this a
 	// PS1 of "`git branch`" showed its own backquotes instead of running.
-	rewritten, err := rewriteBackquotes(text)
+	rewritten, err := rewriteBackquoteText(text, backquotesInDoubleQuotes)
 	if err != nil {
 		return text
 	}
