@@ -96,11 +96,14 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 		// whole point: `/x/{p;q}` applies both to the matching line only.
 		return runSedCommands(command.block, cycle)
 	case 's':
-		replaced := command.substitute.replace(cycle.line)
-		if replaced != cycle.line {
-			cycle.substituted = true
-		}
+		replaced, made := command.substitute.replace(cycle.line)
 		cycle.line = replaced
+		if made {
+			cycle.substituted = true
+			if command.substitute.print {
+				return sedNext, cycle.write(cycle.line)
+			}
+		}
 	case 'y':
 		cycle.line = command.translate.apply(cycle.line)
 	case 'p':

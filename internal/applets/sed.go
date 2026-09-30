@@ -159,6 +159,8 @@ type sedSubstitute struct {
 	replacement string
 	global      bool
 	occurrence  int
+	// print is the p flag: the pattern space is written when a replacement was made.
+	print bool
 }
 
 // replace does what the s/// flags say: the Nth match when a number is given, every match
@@ -168,27 +170,30 @@ type sedSubstitute struct {
 // onwards" is not something ReplaceAll can express. An empty match counts as a match, which
 // is what makes `s/[0-9]*//` replace the empty string at the start of the line and leave the
 // digits alone -- measured against busybox, which does the same.
-func (s sedSubstitute) replace(line string) string {
+//
+// It answers whether a replacement was made, which is what p and t ask: `s/a/a/` makes one,
+// though the line is as it was, as busybox's do_subst_command answers.
+func (s sedSubstitute) replace(line string) (string, bool) {
 	matches := s.pattern.FindAllStringSubmatchIndex(line, -1)
 	if matches == nil {
-		return line
+		return line, false
 	}
 	first := max(s.occurrence, 1)
 	var out strings.Builder
-	written := 0
+	written, made := 0, false
 	for number, match := range matches {
 		if number+1 < first {
 			continue
 		}
 		out.WriteString(line[written:match[0]])
 		out.Write(s.pattern.ExpandString(nil, s.replacement, line, match))
-		written = match[1]
+		written, made = match[1], true
 		if !s.global {
 			break
 		}
 	}
 	out.WriteString(line[written:])
-	return out.String()
+	return out.String(), made
 }
 
 // parseSedSubstituteCommand reads one `s///` starting at the `s`, and returns
@@ -210,20 +215,15 @@ func parseSedSubstituteCommand(script string, extended bool) (sedSubstitute, str
 		return sedSubstitute{}, "", fmt.Errorf("malformed sed substitute: s%c%s", delimiter, script[2:])
 	}
 	flags, rest := splitSedSubstituteFlags(rest)
-	global, occurrence, ignoreCase, err := parseSedSubstituteFlags(flags)
+	substitute := sedSubstitute{replacement: translateReplacement(replacement)}
+	ignoreCase, err := parseSedSubstituteFlags(flags, &substitute)
 	if err != nil {
 		return sedSubstitute{}, "", err
 	}
-	expression, err := compileSedPattern(pattern, extended, ignoreCase)
-	if err != nil {
+	if substitute.pattern, err = compileSedPattern(pattern, extended, ignoreCase); err != nil {
 		return sedSubstitute{}, "", err
 	}
-	return sedSubstitute{
-		pattern:     expression,
-		replacement: translateReplacement(replacement),
-		global:      global,
-		occurrence:  occurrence,
-	}, rest, nil
+	return substitute, rest, nil
 }
 
 // splitSedSubstituteFlags takes the flag letters that follow the closing
@@ -232,9 +232,12 @@ func parseSedSubstituteCommand(script string, extended bool) (sedSubstitute, str
 // This is why the substitution parser had to be rewritten to report a remainder:
 // with `;` separating commands, the tail after `s/a/b/` may be another command
 // rather than the end of the script, and the old splitter consumed everything.
+//
+// p is one of them. It was not, so the splitter stopped at it and the p was read as the next
+// command, a print of every line: `sed -n 's/a/X/p'` printed the lines it changed nothing on.
 func splitSedSubstituteFlags(rest string) (string, string) {
 	end := 0
-	for end < len(rest) && (rest[end] == 'g' || rest[end] == 'i' || rest[end] == 'I' || (rest[end] >= '0' && rest[end] <= '9')) {
+	for end < len(rest) && strings.IndexByte("gpiI0123456789", rest[end]) >= 0 {
 		end++
 	}
 	return rest[:end], rest[end:]
@@ -246,21 +249,23 @@ func splitSedSubstituteFlags(rest string) (string, string) {
 // -- and refused incoherently: splitSedSubstituteFlags *consumed* the letter and
 // then this rejected it, so the two halves of one parser disagreed about which
 // flags exist. Either the splitter should have stopped at `i` or this should have
-// accepted it; busybox accepts it, so this does.
-func parseSedSubstituteFlags(flags string) (bool, int, bool, error) {
-	global := false
-	occurrence := 0
+// accepted it; busybox accepts it, so this does. The rest go into the substitution;
+// ignoreCase is answered, since the pattern is compiled with it.
+func parseSedSubstituteFlags(flags string, into *sedSubstitute) (bool, error) {
 	ignoreCase := false
 	for index := 0; index < len(flags); index++ {
 		switch {
 		case flags[index] == 'g':
-			global = true
+			into.global = true
+			continue
+		case flags[index] == 'p':
+			into.print = true
 			continue
 		case flags[index] == 'i' || flags[index] == 'I':
 			ignoreCase = true
 			continue
 		case flags[index] < '0' || flags[index] > '9':
-			return false, 0, false, fmt.Errorf("unknown option to `s': %c", flags[index])
+			return false, fmt.Errorf("unknown option to `s': %c", flags[index])
 		}
 		end := index
 		for end < len(flags) && flags[end] >= '0' && flags[end] <= '9' {
@@ -268,10 +273,10 @@ func parseSedSubstituteFlags(flags string) (bool, int, bool, error) {
 		}
 		value, err := strconv.Atoi(flags[index:end])
 		if err != nil || value == 0 {
-			return false, 0, false, fmt.Errorf("number option to `s' command may not be zero")
+			return false, fmt.Errorf("number option to `s' command may not be zero")
 		}
-		occurrence = value
+		into.occurrence = value
 		index = end - 1
 	}
-	return global, occurrence, ignoreCase, nil
+	return ignoreCase, nil
 }
