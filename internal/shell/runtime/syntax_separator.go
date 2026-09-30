@@ -150,6 +150,16 @@ func splitLeadingReservedWord(segment string) []string {
 	if parts := splitForWithoutIn(segment); parts != nil {
 		return parts
 	}
+	// The fi, done or esac that ends a compound is a complete command, and a reserved word may
+	// follow it with no separator, as POSIX's grammar has it and both references read it:
+	// `while if x; then y; fi do z; done`, `fi fi`, `fi done` and `done then`. The word after
+	// it was the closer's argument, and the compound around it never closed.
+	for _, closer := range [...]string{"fi", "done", "esac"} {
+		rest, ok := strings.CutPrefix(segment, closer)
+		if ok && rest != "" && (rest[0] == ' ' || rest[0] == '\t') && reservedWordAfterGroup(segment, len(closer)-1) {
+			return append([]string{closer}, splitLeadingReservedWord(strings.TrimLeft(rest, " \t"))...)
+		}
+	}
 	for _, keyword := range [...]string{"then", "else", "do"} {
 		rest, ok := compoundHeader(segment, keyword)
 		if !ok {
