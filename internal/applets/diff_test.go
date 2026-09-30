@@ -205,9 +205,13 @@ func TestPatch_refusesAnEscapingName(t *testing.T) {
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	hostile := "--- ../escape.txt\n+++ ../escape.txt\n@@ -1 +1 @@\n-a\n+b\n"
-	if _, _, err := runSmall(t, root, hostile, "patch"); err == nil {
+	// Without -p a name is its last component, as POSIX has it, so only -p0 keeps the `..`.
+	hostile := "--- ../escape.txt\n+++ ../escape.txt\n@@ -0,0 +1 @@\n+b\n"
+	if _, _, err := runSmall(t, root, hostile, "patch", "-p0"); err == nil {
 		t.Fatal("patch accepted a name that escapes the directory")
+	}
+	if stdout, _, err := runSmall(t, root, hostile, "patch"); err != nil || stdout != "creating escape.txt\n" {
+		t.Fatalf("patch without -p = %q, %v; want the file made in the working directory", stdout, err)
 	}
 	entries, err := os.ReadDir(outer)
 	if err != nil {

@@ -131,7 +131,7 @@ var commands = []Command{
 	{Name: "uuencode", Short: "m", Operand: AnyPath},
 	{Name: "uudecode", Short: "o", ValueShort: "o", Operand: AnyPath},
 	{Name: "diff", Short: "uqiwBNsrabdTtUL", ValueShort: "UL", Operand: AnyPath},
-	{Name: "patch", Short: "RNEflpi", ValueShort: "pi", Operand: AnyPath},
+	{Name: "patch", Short: "RuNEfgpi", ValueShort: "pi", FileShort: "i", Long: []string{"reverse", "unified", "strip", "input", "forward", "remove-empty-files", "force", "get", "dry-run", "backup-if-mismatch", "no-backup-if-mismatch"}, ValueLong: []string{"strip", "input", "get"}, Operand: AnyPath},
 	{Name: "wget", Short: "cqSOoPUT", ValueShort: "OoPUT", Operand: AnyPath,
 		Long: []string{"header", "spider"}, ValueLong: []string{"header"}},
 	{Name: "nc", Short: "lpw", ValueShort: "pw", Operand: AnyPath},

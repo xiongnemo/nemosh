@@ -738,7 +738,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
 | `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
 | `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
-| `patch` | `-i -p -R`; no fuzz | refused by name |
+| `patch` | `-R -u -p -i -N -E -f -g`, `--dry-run` and busybox's long forms; `[ORIGFILE [PATCHFILE]]`; a /dev/null side creates or empties a file, and without -p a name is its last component; no fuzz | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
 | `ps` | none; `PID PPID THR RSS TIME COMMAND` | refused by name |
@@ -1118,6 +1118,16 @@ the file untouched.
 The names in a diff come from whoever wrote it, so `patch` checks them with the
 same containment helper the archivers use -- `--- ../../etc/passwd` is the same
 attack a tar entry would be.
+
+The rest is busybox's: `patching file F`, `creating F` and `removing F` go to
+stdout; a file whose old side is /dev/null, or dated 1970 as `diff -N` dates one,
+is created with its directories, and one whose new side is /dev/null is emptied,
+or removed under -E; the file is the one `+++` names, `---`'s under -R; `\ No
+newline at end of file` is honoured either way; and when a file's hunk fails the
+next file is patched still, with the status 1 at the end. Two things are not
+busybox's: its patch searches forward for a hunk's context, and it answers 0 to
+input that holds no diff at all, which is refused here as GNU refuses it. An
+empty patch changes nothing and succeeds.
 
 One consequence worth naming: **adding `diff` shadows the system's.** A test of
 process substitution had been asserting GNU's normal-format output, because until

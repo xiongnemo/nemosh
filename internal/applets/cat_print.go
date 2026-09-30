@@ -59,7 +59,7 @@ func (p *catPrinter) copyNumbered(ctx context.Context, stdout io.Writer, input i
 		line, err := reader.ReadString('\n')
 		if line != "" {
 			text := line
-			if trailingNewline(line) != "" {
+			if strings.HasSuffix(line, "\n") {
 				text = strings.TrimSuffix(line[:len(line)-1], "\r")
 			}
 			if !p.nonBlank || text != "" {
