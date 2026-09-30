@@ -69,6 +69,24 @@ func TestRuntime_stopsWithTheGivenMessage_whenAQuestionOperatorFindsNothingSet(t
 	}
 }
 
+// With no word, `?` says busybox's varunset words and `:?` adds `or null`; a word written is the
+// message as it expands, empty included, which both references agree on. `:?` said `?`'s, and
+// an empty message was the default one.
+func TestRuntime_questionOperatorSaysBusyboxsWords(t *testing.T) {
+	for _, test := range []struct{ script, want string }{
+		{script: "echo ${nope?}", want: "nemosh: nope: parameter not set\n"},
+		{script: "echo ${nope:?}", want: "nemosh: nope: parameter not set or null\n"},
+		{script: "x=; echo ${x:?}", want: "nemosh: x: parameter not set or null\n"},
+		{script: "e=; echo ${nope?$e}", want: "nemosh: nope: \n"},
+	} {
+		t.Run(test.script, func(t *testing.T) {
+			if status, _, stderr := runSetScript(t, test.script+"\n"); status != 2 || stderr != test.want {
+				t.Fatalf("status = %d, stderr = %q, want 2 and %q", status, stderr, test.want)
+			}
+		})
+	}
+}
+
 func TestRuntime_refusesAnOperatorItDoesNotImplement(t *testing.T) {
 	// An unrecognised operator used to expand to its own literal text and exit
 	// 0, so an operator this shell did not have silently became data.

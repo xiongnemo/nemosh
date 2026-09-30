@@ -97,11 +97,18 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 		if !missing {
 			return value, nil
 		}
-		message := r.expandOperand(ctx, word, operandValue, savedStatus)
-		if message == "" {
-			message = "parameter not set"
+		// With no word the message is busybox's varunset's, and `:?` adds `or null` to it:
+		// `${x:?}` is `x: parameter not set or null`. A word written is the message as it
+		// expands, empty included -- `${x?$e}` with e empty is `x: ` in both references. The
+		// default was said for both, and `:?` said `?`'s.
+		if word == "" {
+			message := "parameter not set"
+			if strings.HasPrefix(operator, ":") {
+				message += " or null"
+			}
+			return "", fmt.Errorf("%s: %s", name, message)
 		}
-		return "", fmt.Errorf("%s: %s", name, message)
+		return "", fmt.Errorf("%s: %s", name, r.expandOperand(ctx, word, operandValue, savedStatus))
 	case "=":
 		if !missing {
 			return value, nil
