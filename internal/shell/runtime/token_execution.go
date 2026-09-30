@@ -164,7 +164,11 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		r.vars["_"] = ""
 		return r.abortOnShellError(lineResult{status: status})
 	}
-	r.traceCommand(ctx, args, savedStatus)
+	if command[0].arithmetic && len(args) == 2 {
+		r.traceArithmetic(ctx, args[1], savedStatus)
+	} else {
+		r.traceCommand(ctx, args, savedStatus)
+	}
 	result := r.dispatchCommand(ctx, commandArgs, assignments, expanded, operations, savedStatus)
 	// `$_` is the last argument of the command that just finished, or its name when
 	// it had none, and it is set after the command -- so a function's own `$_` is its

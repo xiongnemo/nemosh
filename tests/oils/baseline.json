@@ -86,8 +86,7 @@
       "Regression: a[-1]=1": "fail",
       "[[ -v a[i] ]] with invalid negative index": "fail",
       "crash dump": "fail",
-      "unset -v a[i] with out-of-bound negative index": "fail",
-      "xtrace a+=()": "fail"
+      "unset -v a[i] with out-of-bound negative index": "fail"
     },
     "array.test.sh": {
       "Exporting array doesn't do anything, not even first element": "fail",
@@ -791,7 +790,6 @@
     },
     "xtrace.test.sh": {
       "Assignments and assign builtins": "fail",
-      "Regression: xtrace for \"a+=(v)\"": "fail",
       "Regression: xtrace for \"declare -a a+=(v)\"": "fail",
       "[[ ]]": "fail",
       "set -o verbose prints unevaluated code": "fail",

@@ -179,6 +179,7 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 			r.failAssignment()
 			return
 		}
+		r.traceArrayAssignment(ctx, assignment, "", savedStatus)
 		r.assignCompound(ctx, assignment.name, assignment.raw, assignment.append, savedStatus)
 		return
 	}
@@ -187,6 +188,7 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 	// itself and so skipped the first two -- and ignored `+=`, so `a[1]+=z` replaced the
 	// element where bash appends to it.
 	value := strings.Join(r.expandWord(ctx, assignment.value, savedStatus), " ")
+	r.traceArrayAssignment(ctx, assignment, value, savedStatus)
 	if assignment.append {
 		value = r.appendedValue(target, value)
 	}
@@ -247,6 +249,8 @@ func (r Runtime) applyMixedAssignments(ctx context.Context, command []word, save
 			fields[index] = keepEmptySubscript(fields[index])
 		}
 		assignments, _ := leadingAssignments(fields)
+		// Each on its own line under `set -x`, beside the arrays, as bash traces them.
+		r.traceCommand(ctx, fields, savedStatus)
 		if r.assignVars(assignments) != 0 {
 			return true
 		}

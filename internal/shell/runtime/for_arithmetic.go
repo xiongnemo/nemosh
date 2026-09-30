@@ -33,10 +33,12 @@ func parseArithmeticForHeader(header string) (arithmeticLoop, bool) {
 	if len(parts) != 3 {
 		return arithmeticLoop{}, false
 	}
+	// Blanks before each part are dropped and those after it kept, as bash keeps them: they
+	// are in its trace, its $BASH_COMMAND and its `declare -f`, `((i++  ))`.
 	return arithmeticLoop{
-		initialize: strings.TrimSpace(parts[0]),
-		condition:  strings.TrimSpace(parts[1]),
-		step:       strings.TrimSpace(parts[2]),
+		initialize: strings.TrimLeft(parts[0], " \t"),
+		condition:  strings.TrimLeft(parts[1], " \t"),
+		step:       strings.TrimLeft(parts[2], " \t"),
 	}, true
 }
 
@@ -76,10 +78,8 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 	if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.initialize), savedStatus); ended {
 		return result
 	}
-	if node.arith.initialize != "" {
-		if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.initialize, savedStatus)); err != nil {
-			return r.arithmeticForFailure(err)
-		}
+	if _, err := r.evaluateArithmetic(r.arithmeticForPart(ctx, node.arith.initialize, savedStatus)); err != nil {
+		return r.arithmeticForFailure(err)
 	}
 	status := 0
 	for {
@@ -92,7 +92,7 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 		if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.condition), savedStatus); ended {
 			return result
 		}
-		keepGoing, err := r.arithmeticLoopCondition(r.expandArithmeticText(ctx, node.arith.condition, savedStatus))
+		keepGoing, err := r.arithmeticLoopCondition(r.arithmeticForPart(ctx, node.arith.condition, savedStatus))
 		if err != nil {
 			return r.arithmeticForFailure(err)
 		}
@@ -123,12 +123,21 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 		if result, ended := r.debugTrapHead(ctx, node.line, arithmeticHead(node.arith.step), savedStatus); ended {
 			return result
 		}
-		if node.arith.step != "" {
-			if _, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, node.arith.step, savedStatus)); err != nil {
-				return r.arithmeticForFailure(err)
-			}
+		if _, err := r.evaluateArithmetic(r.arithmeticForPart(ctx, node.arith.step, savedStatus)); err != nil {
+			return r.arithmeticForFailure(err)
 		}
 	}
+}
+
+// arithmeticForPart is one of the loop's parts as it is evaluated: expanded, an empty one
+// being 1, as bash has it, and traced under `set -x` as `(( ))` is.
+func (r Runtime) arithmeticForPart(ctx context.Context, part string, savedStatus int) string {
+	expanded := "1"
+	if part != "" {
+		expanded = r.expandArithmeticText(ctx, part, savedStatus)
+	}
+	r.traceArithmetic(ctx, expanded, savedStatus)
+	return expanded
 }
 
 // arithmeticForFailure ends the loop over an error in its header. A counter that

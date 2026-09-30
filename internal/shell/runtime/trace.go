@@ -18,10 +18,6 @@ func (r Runtime) traceCommand(ctx context.Context, args []string, savedStatus in
 	if !r.options.xtrace || len(args) == 0 {
 		return
 	}
-	prefix := ""
-	if custom, ok := r.vars["PS4"]; ok {
-		prefix = r.tracePrefix(ctx, custom, savedStatus)
-	}
 	assignments, _ := leadingAssignments(args)
 	quoted := make([]string, len(args))
 	for index, arg := range args {
@@ -31,7 +27,19 @@ func (r Runtime) traceCommand(ctx context.Context, args []string, savedStatus in
 		}
 		quoted[index] = traceWord(arg)
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s%s\n", prefix, strings.Join(quoted, " "))
+	r.traceLine(ctx, strings.Join(quoted, " "), savedStatus)
+}
+
+// traceLine writes one line of the trace: PS4, expanded, and then text.
+func (r Runtime) traceLine(ctx context.Context, text string, savedStatus int) {
+	if !r.options.xtrace {
+		return
+	}
+	prefix := ""
+	if custom, ok := r.vars["PS4"]; ok {
+		prefix = r.tracePrefix(ctx, custom, savedStatus)
+	}
+	fmt.Fprintf(r.streams.Stderr, "%s%s\n", prefix, text)
 }
 
 // tracePrefix expands PS4, as POSIX asks and both references do: `PS4='+$LINENO: '` is
