@@ -31,7 +31,9 @@ func (r Runtime) shift(args []string) int {
 	if len(args) > 0 {
 		parsed, err := strconv.Atoi(args[0])
 		if err != nil || parsed < 0 {
+			// It ends a script, as busybox's number() raises it: shift is a special builtin.
 			fmt.Fprintf(r.streams.Stderr, "shift: invalid count: %s\n", args[0])
+			r.raiseShellError()
 			return 2
 		}
 		count = parsed

@@ -30,7 +30,9 @@ func (r Runtime) local(ctx context.Context, args []string) int {
 		err = fmt.Errorf("-p, -F and -g are declare's; local declares")
 	}
 	if err != nil {
+		// It ends a script, as busybox's local ends it: local is special there.
 		fmt.Fprintf(r.streams.Stderr, "local: %v\n", err)
+		r.raiseShellError()
 		return 2
 	}
 	for _, arg := range names {

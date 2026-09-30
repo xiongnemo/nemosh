@@ -137,13 +137,15 @@ func TestRuntime_refusesAnUnknownLetter_whenSetIsGivenOne(t *testing.T) {
 	}
 }
 
+// A name set has not got is 1, as busybox's minus_o answers it, and the script goes on; bash
+// answers 2.
 func TestRuntime_refusesAnUnknownLongName_whenSetIsGivenOne(t *testing.T) {
 	// When
 	status, _, stderr := runSetScript(t, "set -o bogus\n")
 
 	// Then
-	if status != 2 {
-		t.Fatalf("status = %d, want 2", status)
+	if status != 1 {
+		t.Fatalf("status = %d, want 1", status)
 	}
 	if !strings.Contains(stderr, "illegal option") || !strings.Contains(stderr, "bogus") {
 		t.Fatalf("stderr = %q, want an illegal-option diagnostic naming bogus", stderr)

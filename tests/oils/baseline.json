@@ -632,7 +632,8 @@
       "set": "ash-only"
     },
     "sh-func.test.sh": {
-      "Scope of global variable when sourced in function (Shell Functions aren't Closures)": "fail"
+      "Scope of global variable when sourced in function (Shell Functions aren't Closures)": "fail",
+      "return \"\" (a lot of disagreement)": "fail"
     },
     "sh-options-bash.test.sh": {
       "OSH calling bash with SHELLOPTS does not change braceexpand": "fail",

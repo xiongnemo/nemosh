@@ -72,9 +72,15 @@ func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
 		if len(args) == 1 && r.trapStatus != nil {
 			savedStatus = *r.trapStatus
 		}
+		r.badStatus(args)
 		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}
 	case "return":
 		status := exitStatus(args[1:], savedStatus)
+		// A status that is no number ends the script, as busybox's number() raises it; it
+		// went on with 2.
+		if r.badStatus(args) {
+			return lineResult{status: 2, control: flowAbort}
+		}
 		if r.sourceDepth == 0 && r.functionDepth == 0 {
 			// Outside a function and a sourced file, return ends the shell as exit does, as
 			// busybox-w32 reads it: `return 3` ends a script with 3, the EXIT trap seeing 3, and
@@ -106,6 +112,19 @@ func throughCommandPrefix(args []string) []string {
 		return rest
 	}
 	return args
+}
+
+// badStatus is whether exit or return was given a status that is no number, which it reports
+// in the words break and continue use. It said nothing.
+func (r Runtime) badStatus(args []string) bool {
+	if len(args) < 2 {
+		return false
+	}
+	if _, err := strconv.Atoi(args[1]); err == nil {
+		return false
+	}
+	fmt.Fprintf(r.streams.Stderr, "%s: %s: numeric argument required\n", args[0], args[1])
+	return true
 }
 
 func exitStatus(args []string, savedStatus int) int {
