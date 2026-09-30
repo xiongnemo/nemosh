@@ -91,44 +91,47 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 	if node.overArguments {
 		return r.executeForOverArguments(ctx, node, savedStatus)
 	}
+	// The list is expanded whole before the first turn, as POSIX 2.9.4.2 has it and both
+	// references do. Each word was expanded as the loop reached it, after the turns before
+	// had assigned the variable, so `a=a; for a in u $a` gave u twice, and a later word that
+	// failed to expand did so after the turns before it had run.
+	var values []string
 	for _, item := range node.values {
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
-		values := r.expandCommandWord(ctx, item, savedStatus)
+		values = append(values, r.expandCommandWord(ctx, item, savedStatus)...)
 		if r.shellErrorRaised() {
 			return r.shellErrorResult()
 		}
-	iteration:
-		for _, value := range values {
-			// Each turn is a command of its own to the DEBUG trap, on the loop's line.
-			if result, ended := r.debugTrapHead(ctx, node.line, loopHead(node), savedStatus); ended {
-				return result
+	}
+	for _, value := range values {
+		// Each turn is a command of its own to the DEBUG trap, on the loop's line.
+		if result, ended := r.debugTrapHead(ctx, node.line, loopHead(node), savedStatus); ended {
+			return result
+		}
+		if r.assignVar(node.name, value) != 0 {
+			return r.loopVariableRefused()
+		}
+		bodyStatus, control := r.executeProgram(ctx, node.body, savedStatus)
+		status, savedStatus = bodyStatus, bodyStatus
+		if ctx.Err() != nil {
+			return lineResult{status: contextStatus(ctx)}
+		}
+		switch control {
+		case flowNone:
+		case flowContinue:
+			if !r.loops.consume() {
+				return lineResult{status: 0, control: flowContinue}
 			}
-			if r.assignVar(node.name, value) != 0 {
-				return r.loopVariableRefused()
+			status, savedStatus = 0, 0
+		case flowBreak:
+			if !r.loops.consume() {
+				return lineResult{status: 0, control: flowBreak}
 			}
-			bodyStatus, control := r.executeProgram(ctx, node.body, savedStatus)
-			status, savedStatus = bodyStatus, bodyStatus
-			if ctx.Err() != nil {
-				return lineResult{status: contextStatus(ctx)}
-			}
-			switch control {
-			case flowNone:
-			case flowContinue:
-				if !r.loops.consume() {
-					return lineResult{status: 0, control: flowContinue}
-				}
-				status, savedStatus = 0, 0
-				continue iteration
-			case flowBreak:
-				if !r.loops.consume() {
-					return lineResult{status: 0, control: flowBreak}
-				}
-				return lineResult{status: 0}
-			default:
-				return lineResult{status: status, control: control}
-			}
+			return lineResult{status: 0}
+		default:
+			return lineResult{status: status, control: control}
 		}
 	}
 	return lineResult{status: status}
@@ -208,7 +211,10 @@ func (r Runtime) loopVariableRefused() lineResult {
 
 func (r Runtime) executeForOverArguments(ctx context.Context, node loopNode, savedStatus int) lineResult {
 	status := 0
-	for _, value := range r.params.values {
+	// The parameters as they are now, whatever a turn makes of them: `set --` in the body
+	// wrote over the list the loop was walking, so `for a; do set -- q r s; done` went on
+	// with r and s where both references go on with the arguments it began with.
+	for _, value := range append([]string(nil), r.params.values...) {
 		if ctx.Err() != nil {
 			return lineResult{status: contextStatus(ctx)}
 		}
