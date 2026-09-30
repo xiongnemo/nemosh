@@ -112,9 +112,11 @@ func TestDu_followsLinksAsAsked(t *testing.T) {
 	if got := names(lines("-a", "-H", "t/link")); got != "t/link t/link/back t/link/f" {
 		t.Errorf("du -a -H t/link named %q, want what it points at", got)
 	}
-	// Under -L the loop through back and the second way into a both end where they begin.
-	if got := names(lines("-a", "-L", "t")); got != "t t/a t/a/f" {
-		t.Errorf("du -a -L t named %q, want t/a once and the loop not walked", got)
+	// Under -L the loop through back and the second way into a both end where they begin. a is
+	// counted once, by whichever of its names t lists first: the walk takes the order the
+	// directory gives, as busybox's does, which is not the alphabet's on Linux.
+	if got := names(lines("-a", "-L", "t")); got != "t t/a t/a/f" && got != "t t/link t/link/f" {
+		t.Errorf("du -a -L t named %q, want a once, by either name, and the loop not walked", got)
 	}
 	// -l counts a by both ways into it, and the loop still ends: back leads into t, which is
 	// being walked.
