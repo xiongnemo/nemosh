@@ -44,6 +44,12 @@ const (
 	// remembered -- by how it started. See lineedit_prefix_history.go.
 	keyHistoryPrefixBackward
 	keyHistoryPrefixForward
+	// readline's, which busybox's editor has not got: transpose-chars, C-t; yank-last-arg,
+	// M-. and M-_; and M-u, M-l and M-c, which change a word's case, the letter the value.
+	// See lineedit_readline.go.
+	keyTranspose
+	keyYankLastArg
+	keyWordCase
 )
 
 type key struct {
@@ -87,6 +93,17 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyEndOfInput}, 1
 	case 0x01:
 		return key{kind: keyHome}, 1
+	// C-b, C-f, C-p and C-n are the arrows, as busybox's editor and readline bind them.
+	case 0x02:
+		return key{kind: keyLeft}, 1
+	case 0x06:
+		return key{kind: keyRight}, 1
+	case 0x10:
+		return key{kind: keyUp}, 1
+	case 0x0e:
+		return key{kind: keyDown}, 1
+	case 0x14:
+		return key{kind: keyTranspose}, 1
 	case 0x05:
 		return key{kind: keyEnd}, 1
 	case 0x07:
@@ -140,6 +157,10 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 			return key{kind: keyWordLeft}, 2
 		case 'f':
 			return key{kind: keyWordRight}, 2
+		case '.', '_':
+			return key{kind: keyYankLastArg}, 2
+		case 'u', 'l', 'c':
+			return key{kind: keyWordCase, value: rune(buffer[1])}, 2
 		}
 		// Anything else Meta is skipped whole rather than inserted, so an
 		// unbound Alt key cannot leave its letter in the line.

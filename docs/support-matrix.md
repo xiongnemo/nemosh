@@ -416,6 +416,19 @@ cleared the whole line before -- a more destructive gesture wearing the same key
 One slot rather than readline's ring of many. Everything past the first entry needs `M-y`
 to reach and a rotation state to explain, and the first entry is what the gesture is for.
 
+### The line editor's other readline keys
+
+- `^B`, `^F`, `^P` and `^N` are the arrows, as busybox's editor and readline bind them.
+  Like Right, `^F` at the end of the line takes the suggestion.
+- The rest are bash's, since busybox's editor has none of them:
+  - `^T` is transpose-chars. The character before the cursor goes over the one at it, and
+    at the end of the line the two before the cursor swap.
+  - `M-.` and `M-_` are yank-last-arg. They put in the last word of the line before, as
+    `!$` would have it. Pressed again straight away, each reaches one line further back,
+    and past the oldest line it puts in nothing.
+  - `M-u`, `M-l` and `M-c` put the rest of the next word in upper case, lower case, or
+    capitalised, a word being letters and digits as readline's are.
+
 ### History, and `$!`
 
 `HISTCONTROL` honours `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups`, and

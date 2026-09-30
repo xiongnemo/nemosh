@@ -89,6 +89,8 @@ type lineEditor struct {
 	// the line. It owns the prompt and most of the keys while it lives; see
 	// lineedit_search.go.
 	search *historySearch
+	// lastArg is yank-last-arg's, between one press and the next; see lineedit_readline.go.
+	lastArg lastArgument
 }
 
 // defaultTerminalColumns is used when the terminal will not say. Eighty is the
@@ -152,6 +154,7 @@ func (e *lineEditor) resetDrawState() {
 func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error) {
 	e.buffer = newLineBuffer()
 	e.recall = 0
+	e.lastArg = lastArgument{}
 	e.resetDrawState()
 	fmt.Fprint(e.screen, prompt)
 
@@ -201,6 +204,10 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 				e.redraw(prompt)
 				continue
 			}
+		}
+		// yank-last-arg repeats only when pressed again straight after itself.
+		if key.kind != keyYankLastArg {
+			e.lastArg.active = false
 		}
 		switch key.kind {
 		case keyEnter:
@@ -274,6 +281,12 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			e.beginHistorySearch()
 			e.drawSearch()
 			continue
+		case keyTranspose:
+			e.buffer.transpose()
+		case keyWordCase:
+			e.buffer.changeWordCase(key.value)
+		case keyYankLastArg:
+			e.yankLastArg()
 		}
 		e.redraw(prompt)
 	}
