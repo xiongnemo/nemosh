@@ -674,6 +674,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `pidof` | `-s -o PID[,PID]`; the name is matched whole, not as a pattern | refused by name |
 | `truncate` | `-s SIZE` with `K M G` and `KB MB GB`, a leading `+` or `-`, and `-c` | refused by name |
 | `sync` | none; on Windows each volume is flushed, which takes an elevated session, as busybox-w32's does | ignored with every other argument, and that is said, as busybox's plain `sync` says it |
+| `shred` | `-f -u -z -n N -s SIZE`, `-v -x` taken; random passes then zeros, each flushed, and `-s` past the end too. A FILE that cannot be opened ends it, as busybox's xopen does | refused by name |
 | `fsync` | `-d`, which is the same here; on Windows a file that cannot be written passes unflushed, as busybox-w32's does | refused by name |
 | `ts` | `-i -s`, and a strftime FORMAT operand | refused by name |
 | `unlink` | none; a directory is refused | refused by name |

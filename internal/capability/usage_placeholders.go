@@ -23,6 +23,8 @@ var valuePlaceholders = map[string]string{
 	"dcf":                     "FILE",
 	"pidofo":                  "PID",
 	"truncates":               "SIZE",
+	"shredn":                  "N",
+	"shreds":                  "SIZE",
 	"installg":                "GRP",
 	"installm":                "MODE",
 	"installo":                "USER",
