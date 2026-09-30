@@ -337,7 +337,6 @@
       "HISTFILESIZE shrinks the history file when changed": "fail",
       "HISTSIZE shrinks the in-memory history when changed": "fail",
       "history -a": "fail",
-      "history -c clears in-memory history": "fail",
       "history -d to delete history from end": "fail",
       "history -n reads *new* commands from the history file, and appends them to the current history": "fail",
       "history -r reads from the history file, and appends it to the current history": "fail",
@@ -401,9 +400,7 @@
       "'set' and 'eval' round trip": "fail",
       "A single + is an ignored flag; not an argument": "fail",
       "set - leading single dash is ignored, turns off xtrace verbose (#2364)": "fail",
-      "set -eu (flag parsing)": "fail",
-      "set -u with undefined var in interactive shell does NOT exit the interpreter": "fail",
-      "set -u with undefined variable exits the interpreter": "fail"
+      "set -eu (flag parsing)": "fail"
     },
     "builtin-special.test.sh": {
       "Prefix assignments persist after readonly, but NOT exported (set -o posix)": "ash-only",
@@ -586,22 +583,12 @@
       "Here doc with bad comsub delimiter": "ash-only"
     },
     "interactive.test.sh": {
-      "'exit' in oshrc (regression)": "fail",
-      "--rcfile with parse error - shell is executed anyway": "fail",
       "Error message with bad oshrc file (currently ignored)": "fail",
       "HISTFILE default value": "fail",
       "HISTFILE is written in interactive shell": "fail",
       "HISTFILE=my-history loads history from that file, and writes back to it": "fail",
       "HISTFILE=my-history with history -a": "fail",
-      "NO ASSERTIONS: Are startup files sourced before or after job control?": "fail",
-      "PROMPT_COMMAND can see $?, like bash": "fail",
-      "PROMPT_COMMAND that writes to BASH_REMATCH": "fail",
-      "fatal errors continue": "fail",
-      "interactive shell loads rcfile (when combined with -c)": "fail",
-      "interactive shell runs PROMPT_COMMAND after each command": "fail",
-      "parse error in PROMPT_COMMAND": "fail",
-      "runtime error in PROMPT_COMMAND": "fail",
-      "shell doesn't load rcfile/rcdir if --norc is given": "fail"
+      "NO ASSERTIONS: Are startup files sourced before or after job control?": "fail"
     },
     "introspect.test.sh": {
       "${BASH_SOURCE[@]} with line numbers": "fail",
@@ -660,8 +647,7 @@
       "\\l for TTY device basename": "fail",
       "current working dir": "fail",
       "default PS1": "fail",
-      "hostname": "fail",
-      "sh -i": "fail"
+      "hostname": "fail"
     },
     "quote.test.sh": {
       "$\"\" is a synonym for \"\"": "ash-only"
@@ -704,10 +690,8 @@
     },
     "sh-options.test.sh": {
       "$- with -c": "fail",
-      "$- with interactive shell": "fail",
       "$- with pipefail": "fail",
       "-u is nounset": "fail",
-      "interactive shell starts with emacs mode on": "fail",
       "nounset": "fail",
       "set -o vi/emacs": "fail",
       "set without args lists variables": "fail",
@@ -717,7 +701,6 @@
     "sh-usage.test.sh": {
       "LC_CTYPE=invalid": "fail",
       "Set LC_ALL LC_CTYPE LC_COLLATE LANG - affects glob ?": "fail",
-      "accepts --login flag (dash and mksh don't accept long flags)": "fail",
       "sh +c is accepted": "fail",
       "sh - and sh -- stop flag processing": "fail"
     },
@@ -811,9 +794,6 @@
     "var-sub.test.sh": {
       "Bad var sub": "ash-only",
       "Braced block inside ${}": "fail"
-    },
-    "vars-bash.test.sh": {
-      "$SHELL is set to what is in /etc/passwd": "fail"
     },
     "vars-special.test.sh": {
       "$?": "fail",

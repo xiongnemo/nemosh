@@ -54,7 +54,9 @@ func (r Runtime) executeStatements(ctx context.Context, program []programNode, s
 		discarded = 0
 		result := r.executeNode(ctx, item, status)
 		status = result.status
-		if result.control == flowDiscard && topLevel && !r.options.errExit {
+		// A shell error ends the line and not a session's command string, as it ends one line
+		// at a prompt: `nemosh -i -c`, bash's; see MarkSession.
+		if topLevel && (result.control == flowDiscard && !r.options.errExit || result.control == flowAbort && r.interactive.session) {
 			result.control = flowNone
 			discarded = statementLine(item)
 		}

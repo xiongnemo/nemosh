@@ -33,6 +33,11 @@ type invocation struct {
 	listShopts    bool
 	reusableShopt bool
 	operands      []string
+	// rcfile, norc and noprofile are bash's --rcfile FILE, --norc and --noprofile: the file a
+	// session reads in $ENV's place, none, and a login shell's profiles skipped.
+	rcfile    string
+	norc      bool
+	noprofile bool
 }
 
 // invocationOption is one option for `set` to apply: a letter, or the name after -o.
@@ -57,7 +62,12 @@ func parseInvocation(args []string) (invocation, error) {
 			break
 		}
 		if strings.HasPrefix(arg, "--") {
-			return parsed, fmt.Errorf("%w %s", errInvalidOption, arg)
+			taken, err := parsed.longOption(args[index:])
+			if err != nil {
+				return parsed, err
+			}
+			index += taken - 1
+			continue
 		}
 		if len(arg) < 2 || arg[0] != '-' && arg[0] != '+' {
 			break
@@ -84,10 +94,33 @@ func parseInvocation(args []string) (invocation, error) {
 	if parsed.command && len(parsed.operands) == 0 {
 		return parsed, errors.New("-c requires an argument")
 	}
-	if parsed.interactive && (parsed.command || !parsed.stdin && len(parsed.operands) > 0) {
-		return parsed, errors.New("-i reads commands from the terminal, so it cannot also run -c or a script")
+	if parsed.interactive && !parsed.command && !parsed.stdin && len(parsed.operands) > 0 {
+		return parsed, errors.New("-i reads commands from the terminal, so it cannot also run a script")
 	}
 	return parsed, nil
+}
+
+// longOption is one of bash's long options, which busybox has none of, and answers how many
+// arguments it took: --rcfile FILE and --init-file FILE name the file a session reads in place
+// of $ENV, --norc reads none, --noprofile skips a login shell's profiles, and --login is -l.
+func (i *invocation) longOption(args []string) (int, error) {
+	switch args[0] {
+	case "--rcfile", "--init-file":
+		if len(args) < 2 {
+			return 0, fmt.Errorf("%s: option requires an argument", args[0])
+		}
+		i.rcfile = args[1]
+		return 2, nil
+	case "--norc":
+		i.norc = true
+	case "--noprofile":
+		i.noprofile = true
+	case "--login":
+		i.login = true
+	default:
+		return 0, fmt.Errorf("%w %s", errInvalidOption, args[0])
+	}
+	return 1, nil
 }
 
 // letter sorts one option letter into the ones that say how to start and the ones for
@@ -129,6 +162,8 @@ func (i invocation) session(stdinIsTerminal bool) bool {
 func (c command) runInvocation(ctx context.Context, controller *interruptController, parsed invocation) error {
 	c.invocation = parsed
 	switch {
+	case parsed.interactive && parsed.command:
+		return c.runSessionCommand(ctx, controller, parsed.operands[0], parsed.operands[1:])
 	case parsed.session(c.stdinIsTerminal):
 		return c.runInteractive(ctx, controller)
 	case parsed.command:
@@ -177,7 +212,7 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 	if c.invocation.listShopts {
 		rt.ListShopts(c.invocation.reusableShopt)
 	}
-	if c.invocation.login && !c.invocation.checkOnly {
+	if c.invocation.login && !c.invocation.checkOnly && !c.invocation.noprofile {
 		if status, exited := sourceLoginProfiles(ctx, rt, c.stderr); exited {
 			return startupExit(rt, status)
 		}
@@ -192,8 +227,38 @@ func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 	if err := c.startShell(ctx, rt, "is"); err != nil {
 		return err
 	}
-	if status, exited := sourceStartupFile(ctx, rt, c.stderr); exited {
+	if status, exited := c.sourceRCFile(ctx, rt); exited {
 		return startupExit(rt, status)
 	}
 	return nil
+}
+
+// runSessionCommand is `nemosh -i -c COMMAND`, bash's: a session, which reads its rc file, with
+// COMMAND in place of the lines a prompt would read, and then done. An error that ends a line at
+// a prompt ends one of COMMAND's lines, and the lines after it run; see runtime.MarkSession.
+// It was refused, as -i with -c.
+func (c command) runSessionCommand(ctx context.Context, controller *interruptController, script string, args []string) error {
+	rt := c.newRuntime()
+	invocation := commandStringInvocation(args)
+	rt.SetArguments(invocation.name, invocation.args)
+	if err := c.startShell(ctx, rt, "ic"); err != nil {
+		return err
+	}
+	if status, exited := c.sourceRCFile(ctx, rt); exited {
+		return startupExit(rt, status)
+	}
+	rt.MarkSession()
+	return c.runScriptWith(ctx, controller, rt, script)
+}
+
+// sourceRCFile is a session's rc file: $ENV, or bash's --rcfile FILE in its place, or none for
+// --norc.
+func (c command) sourceRCFile(ctx context.Context, rt runtime.Runtime) (int, bool) {
+	switch {
+	case c.invocation.norc:
+		return 0, false
+	case c.invocation.rcfile != "":
+		return sourceProfile(ctx, rt, c.stderr, c.invocation.rcfile, rt.ResolvePath(c.invocation.rcfile))
+	}
+	return sourceStartupFile(ctx, rt, c.stderr)
 }

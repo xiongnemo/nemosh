@@ -76,7 +76,8 @@ func TestInvocation_refusesWhatSetRefuses(t *testing.T) {
 		{name: "an unknown name", args: []string{"-o", "nosuch", "-c", "echo ran"}, words: []string{"illegal option -o nosuch"}, hint: true},
 		{name: "an inert letter", args: []string{"-v", "-c", "echo ran"}, words: []string{"-v: not implemented"}},
 		{name: "-c with nothing to run", args: []string{"-e", "-c"}, words: []string{"-c requires an argument"}},
-		{name: "-i with a script", args: []string{"-i", "-c", "echo ran"}, words: []string{"-i reads commands"}},
+		{name: "-i with a script", args: []string{"-i", "script.sh"}, words: []string{"-i reads commands"}},
+		{name: "--rcfile with nothing after it", args: []string{"--rcfile"}, words: []string{"--rcfile: option requires an argument"}},
 		{name: "an unknown long option", args: []string{"-e", "--nosuch"}, words: []string{"invalid option --nosuch"}, hint: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {

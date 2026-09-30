@@ -59,6 +59,11 @@ sessionLoop:
 		// ended while the last command ran is named once here rather than waiting for
 		// somebody to run `jobs`.
 		rt.ReportFinishedJobs()
+		if input.Len() == 0 {
+			if result := rt.RunPromptCommand(ctx); result.Exited {
+				return interactiveStatusError(result.Status)
+			}
+		}
 		fmt.Fprint(c.stderr, interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus))
 		var lineResult interactiveLine
 		for {

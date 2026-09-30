@@ -76,6 +76,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// while the last command ran, or while you were reading, gets named once here
 		// instead of waiting to be discovered by `jobs`.
 		rt.ReportFinishedJobs()
+		// PROMPT_COMMAND before a primary prompt, bash's; see runtime.RunPromptCommand.
+		if input.Len() == 0 {
+			if result := rt.RunPromptCommand(ctx); result.Exited {
+				return interactiveStatusError(result.Status)
+			}
+		}
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
 		line, err := readLineInRawMode(ctx, terminal, editor, prompt)
 		if ctx.Err() != nil {

@@ -58,16 +58,7 @@ func (r *Runtime) RunInteractive(ctx context.Context, script Script) Interactive
 		}
 		r.interactive.status = status
 	}
-	if control == flowExit {
-		r.interactive.closed = true
-		status = r.runExitTrap(context.WithoutCancel(ctx), status)
-		r.jobScope.seal()
-	}
-	if control == flowExec {
-		r.interactive.closed = true
-		r.lifecycle.exitSuppressed = true
-		r.jobScope.seal()
-	}
+	status = r.endSession(ctx, control, status)
 	return InteractiveResult{Status: status, Exited: r.interactive.closed}
 }
 

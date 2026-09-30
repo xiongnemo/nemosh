@@ -57,9 +57,14 @@ Usage: nemosh [OPTION]... -c COMMAND [NAME [ARG]...]
 
 Options:
   -c COMMAND    run COMMAND and exit; NAME becomes $0 and ARG... the positionals
-  -i            run interactively even when stdin is not a terminal
+  -i            run interactively even when stdin is not a terminal; with -c, read
+                the rc file first and go on past an error, as a prompt does
   -s            read the script from standard input; ARG... are the positionals
   -l            login shell: read /etc/profile and $HOME/.profile first
+  --login       the same as -l
+  --rcfile FILE read FILE in place of $ENV when interactive (or --init-file)
+  --norc        read no rc file when interactive
+  --noprofile   read no profiles as a login shell
   -n            parse the script and report syntax errors without running it
   -aCeEfux      the "set" options of the same letters; +LETTER turns one off
   -o NAME       the "set -o" option NAME, such as pipefail; +o NAME turns it off
