@@ -124,12 +124,14 @@ func (i *invocation) longOption(args []string) (int, error) {
 }
 
 // letter sorts one option letter into the ones that say how to start and the ones for
-// `set`. The first kind take only `-`: `+c` goes to `set`, which refuses it by name.
+// `set`. The first kind are the same with `+` as with `-`, as busybox reads them
+// (procargs in shell/ash.c: "bash 3.2 indeed handles -c CMD and +c CMD the same"): `sh +c
+// 'echo hi'` runs the command. `+c` went to `set`, which refused it.
 func (i *invocation) letter(letter byte, enable bool) {
 	switch {
 	case letter == 'n':
 		i.checkOnly = enable
-	case !enable || strings.IndexByte("csil", letter) < 0:
+	case strings.IndexByte("csil", letter) < 0:
 		i.options = append(i.options, invocationOption{letter: letter, enable: enable})
 	case letter == 'c':
 		i.command = true

@@ -40,6 +40,9 @@ func TestInvocation_takesShellOptionsBeforeTheScript(t *testing.T) {
 		{name: "letters grouped with c", args: []string{"-ec", `echo "$- $0 $1"`, "name", "one"}, stdout: "ec name one\n"},
 		{name: "-c before the other letters", args: []string{"-c", "-u", `echo "$-"; echo "$unset"`}, stdout: "uc\n", status: 2},
 		{name: "+ turns one off", args: []string{"-e", "+e", "-c", "false; echo survived"}, stdout: "survived\n"},
+		// c, s, i and l are the same with + as with -, as busybox reads them.
+		{name: "+c is -c", args: []string{"+c", `echo "hi $0"`, "name"}, stdout: "hi name\n"},
+		{name: "+s is -s", stdin: `echo "$- $1"`, args: []string{"+s", "a"}, stdout: "s a\n"},
 		{name: "-s gives stdin its positionals", stdin: `echo "$- $1 $2"`, args: []string{"-s", "a", "b"}, stdout: "s a b\n"},
 		{name: "stdin is s without asking", stdin: `echo "$-"`, stdout: "s\n"},
 		{name: "a script file adds nothing", args: []string{"-f", script}, stdout: "before \nafter\n"},

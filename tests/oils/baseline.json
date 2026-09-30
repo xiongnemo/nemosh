@@ -659,7 +659,6 @@
     "sh-usage.test.sh": {
       "LC_CTYPE=invalid": "fail",
       "Set LC_ALL LC_CTYPE LC_COLLATE LANG - affects glob ?": "fail",
-      "sh +c is accepted": "fail",
       "sh - and sh -- stop flag processing": "fail"
     },
     "smoke.test.sh": {
