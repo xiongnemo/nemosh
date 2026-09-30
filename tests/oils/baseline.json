@@ -101,7 +101,6 @@
       "declare -F with shopt -s extdebug prints more info": "fail",
       "declare -p": "fail",
       "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
-      "declare -p and value.Undef": "fail",
       "declare -p arr": "fail",
       "eval -- \"$(declare -p arr)\" (restore arrays w/ unset elements)": "fail",
       "syntax error in array assignment": "ash-only",

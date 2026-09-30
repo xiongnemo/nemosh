@@ -162,6 +162,9 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 	}
 	// Before the value, so `declare -i n=2+3` stores 5.
 	r.applyDeclaredAttributes(name, options)
+	if !assigned {
+		r.markDeclared(name)
+	}
 	if options.nameref {
 		if status := r.declareNameref(name, value, assigned); status != 0 {
 			return status
@@ -262,7 +265,7 @@ func (r Runtime) declarationText(name string) (string, bool) {
 	}
 	value, set := r.vars[name]
 	if !set {
-		if flags != "-" {
+		if flags != "-" || r.attributes[name].declared {
 			// Declared and never assigned: bash prints the attributes and no value.
 			return fmt.Sprintf("declare -%s %s", flags, name), true
 		}

@@ -30,6 +30,20 @@ type variableAttributes struct {
 	exported bool
 	// nameref is `declare -n`: the value is the name this one leads to; see nameref.go.
 	nameref bool
+	// declared is a name `declare`, `local` or `typeset` named with no value: still unset,
+	// and there all the same, so `declare -p` shows it as bash does, `declare -- x`. It was
+	// not found.
+	declared bool
+}
+
+// markDeclared records that a name was declared, with or without a value to come.
+func (r Runtime) markDeclared(name string) {
+	if r.attributes == nil {
+		return
+	}
+	attributes := r.attributes[name]
+	attributes.declared = true
+	r.attributes[name] = attributes
 }
 
 // attributesOf answers for a name or for the array an element belongs to.

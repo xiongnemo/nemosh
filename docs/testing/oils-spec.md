@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2082 of the 2548 cases bash passes: 81.7%.**
+**nemosh passes 2083 of the 2548 cases bash passes: 81.8%.**
 
-Of the other 466, it does 108 the way the files record of ash, which may be busybox's
-way, and 358 neither way.
+Of the other 465, it does 108 the way the files record of ash, which may be busybox's
+way, and 357 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 358 neither way.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2082 |
+| that nemosh passes of those | 2083 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -58,7 +58,7 @@ of ash.
 | array.test.sh | 78 | 78 | 71 | 91.0% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 7 | 77.8% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
-| assign-extended.test.sh | 39 | 34 | 24 | 70.6% | 1 | 0 |
+| assign-extended.test.sh | 39 | 34 | 25 | 73.5% | 1 | 0 |
 | assign.test.sh | 48 | 45 | 37 | 82.2% | 1 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 4 | 44.4% | 3 | 9 |
@@ -173,4 +173,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 11 | 64.7% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2665 | 2548 | 2082 | 81.7% | 108 | 1447 |
+| all | 2665 | 2548 | 2083 | 81.8% | 108 | 1447 |

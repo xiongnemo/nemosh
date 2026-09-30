@@ -97,6 +97,11 @@ func TestDeclare_otherForms(t *testing.T) {
 		{name: "-p prints an associative array", script: "declare -A m\nm[a]=1\ndeclare -p m\n", want: "declare -A m=([a]=\"1\" )\n"},
 		{name: "-p prints an indexed array", script: "declare -a a=(x)\ndeclare -p a\n", want: "declare -a a=([0]=\"x\")\n"},
 		{name: "-p prints a scalar", script: "declare s=v\ndeclare -p s\n", want: "declare -- s=\"v\"\n"},
+		// Declared with no value, a name is unset and there all the same, as bash has it; it
+		// was not found. A local is, until the call returns, and unset takes it away.
+		{name: "-p prints a name declared unset", script: "declare u\ndeclare -p u\necho \"${u-unset}\"\n", want: "declare -- u\nunset\n"},
+		{name: "-p prints a local declared unset", script: "f() { local v; declare -p v; }\nv=1\nf\ndeclare -p v\n", want: "declare -- v\ndeclare -- v=\"1\"\n"},
+		{name: "unset takes the declaration away", script: "declare w\nunset w\ndeclare -p w 2>/dev/null || echo gone\n", want: "gone\n"},
 		{name: "-x exports", script: "declare -x E=1\nenv | grep '^E=1$'\n", want: "E=1\n"},
 	}
 	for _, test := range tests {
