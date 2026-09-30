@@ -223,6 +223,11 @@ func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, n
 		return nil
 	}
 	for _, found := range expr.FindAllString(line, -1) {
+		// An empty match is not printed, as busybox's grep does not print one: `grep -o
+		// '[0-9]*'` is the numbers, where it was an empty line before each.
+		if found == "" {
+			continue
+		}
 		if err := printer.emit(name, lineNumber, found, true, withNames); err != nil {
 			return err
 		}
