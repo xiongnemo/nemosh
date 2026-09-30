@@ -89,7 +89,11 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		history:     r.history,
 		// A subshell starts with no pending break: `(break)` inside a loop does
 		// not break the loop outside it, because the loop is not in the subshell.
-		loops: newLoopLevels(),
+		// It knows it is inside one, though, as busybox's forked subshell does: a
+		// break or continue there ends the subshell -- `(echo B; break; echo C)` and
+		// `$(echo pre; break; echo in)` stop at it -- where it was ignored and the
+		// rest ran. See executeCompoundCommand, which keeps it from the loop.
+		loops: &loopLevels{depth: r.loops.depth},
 		// Shared: $SECONDS in a subshell counts from when the shell started, not
 		// from when the subshell did.
 		special: r.special,
