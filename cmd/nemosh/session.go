@@ -169,6 +169,7 @@ sessionLoop:
 			fmt.Fprintln(c.stderr)
 			continue
 		}
+		fmt.Fprint(c.stderr, rt.CommandPrompt(executionCtx, lastStatus))
 		result := rt.RunInteractive(executionCtx, script)
 		lastStatus = result.Status
 		clear()

@@ -145,7 +145,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			rt.ReportInteractiveParseError(parseErr)
 			continue
 		}
-		status, exited, done := c.runEditedLine(ctx, &rt, controller, script)
+		status, exited, done := c.runEditedLine(ctx, &rt, controller, script, lastStatus)
 		lastStatus = status
 		// That command had the terminal in cooked mode, where a console read hands back a
 		// line ending CRLF -- and the terminator of the line it consumed last is still
@@ -162,8 +162,9 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	}
 }
 
-// runEditedLine executes one parsed command and reports what the loop should do
-// next: the status, whether the shell exited, and a terminal error if any.
+// runEditedLine executes one parsed command, after PS0, and reports what the loop should do
+// next: the status, whether the shell exited, and a terminal error if any. lastStatus is the
+// command before's, which PS0's $? is.
 //
 // The Runtime is taken **by pointer**, and that is not a style choice. RunInteractive and
 // CloseInteractive have pointer receivers because they carry interactive state from one
@@ -172,13 +173,14 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 // command correctly on a copy and threw the status away, so `$?` at the prompt was zero
 // after every command -- while the prompt itself, which is drawn from this function's
 // return value rather than from the runtime, showed the right one.
-func (c command) runEditedLine(ctx context.Context, rt *runtime.Runtime, controller *interruptController, script runtime.Script) (int, bool, error) {
+func (c command) runEditedLine(ctx context.Context, rt *runtime.Runtime, controller *interruptController, script runtime.Script, lastStatus int) (int, bool, error) {
 	executionCtx, clear, interrupted := controller.begin(ctx)
 	if interrupted {
 		clear()
 		fmt.Fprintln(c.stderr)
 		return 130, false, nil
 	}
+	fmt.Fprint(c.stderr, rt.CommandPrompt(executionCtx, lastStatus))
 	result := rt.RunInteractive(executionCtx, script)
 	clear()
 	if ctx.Err() != nil {

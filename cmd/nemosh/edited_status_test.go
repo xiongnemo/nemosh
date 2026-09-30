@@ -49,7 +49,7 @@ func TestRunEditedLine_carriesTheStatusToTheNextCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parse %q: %v", text, err)
 		}
-		status, _, runErr := shell.runEditedLine(ctx, &rt, controller, script)
+		status, _, runErr := shell.runEditedLine(ctx, &rt, controller, script, 0)
 		if runErr != nil {
 			t.Fatalf("run %q: %v", text, runErr)
 		}
@@ -72,5 +72,29 @@ func TestRunEditedLine_carriesTheStatusToTheNextCommand(t *testing.T) {
 	run("echo $?\n")
 	if got := stdout.String(); got != "0\n" {
 		t.Errorf("`echo $?` after `true` printed %q, want %q", got, "0\n")
+	}
+}
+
+// The edited loop writes PS0 as the plain one does: before the command, with $? the status of
+// the one before, which the loop hands it.
+func TestRunEditedLine_writesPS0BeforeTheCommand(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout, Stderr: &stderr})
+	shell := command{stdout: &stdout, stderr: &stderr, registry: applets.DefaultRegistry}
+	controller := &interruptController{}
+	for _, step := range []struct {
+		text       string
+		lastStatus int
+	}{{"PS0='<$?>'\n", 0}, {"echo ran\n", 7}} {
+		script, err := runtime.ParseScript(step.text)
+		if err != nil {
+			t.Fatalf("parse %q: %v", step.text, err)
+		}
+		if _, _, err := shell.runEditedLine(context.Background(), &rt, controller, script, step.lastStatus); err != nil {
+			t.Fatalf("run %q: %v", step.text, err)
+		}
+	}
+	if stdout.String() != "ran\n" || stderr.String() != "<7>" {
+		t.Fatalf("stdout %q, stderr %q, want %q and %q", stdout.String(), stderr.String(), "ran\n", "<7>")
 	}
 }

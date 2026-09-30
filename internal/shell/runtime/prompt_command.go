@@ -27,6 +27,18 @@ func (r *Runtime) RunPromptCommand(ctx context.Context) InteractiveResult {
 	return InteractiveResult{Status: r.interactive.status}
 }
 
+// CommandPrompt is bash's PS0, which a session prints to stderr once it has read a command and
+// before it runs it (eval.c): decoded and then expanded, as ${PS0@P} would be and as bash does
+// every prompt, with \# the command about to run, \! its history number and $? the last
+// command's status. Unset or empty, or empty once expanded, it prints nothing. busybox has none.
+func (r Runtime) CommandPrompt(ctx context.Context, lastStatus int) string {
+	value := r.vars["PS0"]
+	if value == "" || r.initErr != nil {
+		return ""
+	}
+	return r.promptTransform(ctx, value, lastStatus)
+}
+
 func (r Runtime) promptCommands() []string {
 	if !r.arrays.has("PROMPT_COMMAND") {
 		if value := r.vars["PROMPT_COMMAND"]; value != "" {

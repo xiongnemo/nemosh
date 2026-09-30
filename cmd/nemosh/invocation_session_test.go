@@ -85,3 +85,26 @@ func TestSession_runsPromptCommand(t *testing.T) {
 		})
 	}
 }
+
+// PS0 is written to stderr once a command has been read and before it runs: decoded as a
+// prompt and then expanded, bash's order, so an escape that a variable holds stays as it is;
+// \# is the command about to run, \! its history number, $? the command before's. Unset or
+// empty it writes nothing. bash's, measured in bash 5.3; busybox has none.
+func TestSession_writesPS0BeforeEachCommand(t *testing.T) {
+	t.Setenv("PS1", "")
+	t.Setenv("PS2", "")
+	stdin := `PS0='[\# \! $?]'
+echo one
+false
+x='\u'; PS0='[$x]'
+echo two
+PS0=
+echo three
+`
+
+	result := runInvocation(t, stdin, "--norc", "-i")
+
+	if result.stdout != "one\ntwo\nthree\n" || result.stderr != `[2 2 0][3 3 0][4 4 1][\u][\u]` {
+		t.Fatalf("stdout %q, stderr %q", result.stdout, result.stderr)
+	}
+}
