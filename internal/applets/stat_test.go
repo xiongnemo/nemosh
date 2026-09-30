@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -127,8 +128,19 @@ func TestStat_linkAndFollowed(t *testing.T) {
 	if err := os.Symlink("five.txt", filepath.Join(dir, "link")); err != nil {
 		t.Skipf("no symbolic link here: %v", err)
 	}
-	if got, _, _ := statIn(t, dir, "-c", "%N|%F|%s|%A", "link"); got != "'link' -> 'five.txt'|symbolic link|8|lrwxrwxrwx\n" {
-		t.Errorf("stat -c %%N|%%F|%%s|%%A link: %q", got)
+	// A link's own permissions are lrwxrwxrwx, as Linux and busybox-w32 show them. macOS gives a
+	// link the umask's, and CI found lrwxr-xr-x there, so on macOS the want is read from the link.
+	mode := "lrwxrwxrwx"
+	if runtime.GOOS == "darwin" {
+		info, err := os.Lstat(filepath.Join(dir, "link"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		mode = "l" + info.Mode().String()[1:]
+	}
+	want := "'link' -> 'five.txt'|symbolic link|8|" + mode + "\n"
+	if got, _, _ := statIn(t, dir, "-c", "%N|%F|%s|%A", "link"); got != want {
+		t.Errorf("stat -c %%N|%%F|%%s|%%A link: %q, want %q", got, want)
 	}
 	if got, _, _ := statIn(t, dir, "-L", "-c", "%N|%F|%s", "link"); got != "link|regular file|5\n" {
 		t.Errorf("stat -L -c %%N|%%F|%%s link: %q", got)

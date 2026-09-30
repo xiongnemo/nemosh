@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
@@ -42,13 +43,26 @@ func fileOwner(handle windows.Handle) (uid uint32, shared bool) {
 		return 0, false
 	case owner.Equals(self) || owner.String() == "S-1-0-0":
 		return defaultWindowsUID, false
-	case owner.IdentifierAuthority() == windows.SECURITY_NT_AUTHORITY && owner.SubAuthorityCount() == 5 &&
-		owner.SubAuthority(0) == accountAuthority:
-		if id := owner.SubAuthority(4); id >= 500 && id < defaultWindowsUID {
-			uid = id
-		}
+	}
+	if id, ok := accountRID(owner.String()); ok && id >= 500 && id < defaultWindowsUID {
+		uid = id
 	}
 	return uid, currentUserID() != 0 && grantsFullAccess(descriptor)
+}
+
+// accountRID is the relative ID of a local or domain account's SID, S-1-5-21-a-b-c-RID, read from
+// the SID's string. x/sys/windows reads a SID's authority and sub-authorities through a pointer
+// Windows hands back into the SID, which here is Go's own memory, and the race detector's
+// pointer checks reject it: "checkptr: pointer arithmetic result points to invalid allocation".
+// CI met it on a runner whose files the Administrators group owns.
+func accountRID(sid string) (uint32, bool) {
+	fields := strings.Split(sid, "-")
+	if len(fields) != 8 || fields[0] != "S" || fields[1] != "1" || fields[2] != "5" ||
+		fields[3] != strconv.Itoa(accountAuthority) {
+		return 0, false
+	}
+	id, err := strconv.ParseUint(fields[7], 10, 32)
+	return uint32(id), err == nil
 }
 
 // processUserSID is the account this process runs as, asked once.
