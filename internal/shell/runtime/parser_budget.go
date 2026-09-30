@@ -23,6 +23,9 @@ type parseBudget struct {
 	heredocsScanned bool
 	// numbering is where the lines being parsed came from, for $LINENO; see line_numbers.go.
 	numbering lineNumbering
+	// session is input a session is still reading, whose last line a `\` continues onto the
+	// next it reads; anything else ends where its text does. See numberedLogicalLines.
+	session bool
 }
 
 func (budget *parseBudget) heredoc(marker string) (pendingHeredoc, bool) {

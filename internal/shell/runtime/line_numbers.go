@@ -92,6 +92,14 @@ func parseScriptAt(source string, first int) (Script, error) {
 	return parseScript(source, &parseBudget{numbering: lineNumbering{first: first}}, 0)
 }
 
+// parseSessionAt is parseScriptAt for what a session has read so far; see parseBudget.session.
+func parseSessionAt(source string, first int) (Script, error) {
+	if len(source) > maxParseInputBytes {
+		return Script{}, fmt.Errorf("input bytes: %w", errParseLimit)
+	}
+	return parseScript(source, &parseBudget{numbering: lineNumbering{first: first}, session: true}, 0)
+}
+
 // appendNumbered adds a line to a pass's output with where it starts, which is the line
 // it was cut from.
 func appendNumbered(lines []string, at []int, line string, start int) ([]string, []int) {

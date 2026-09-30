@@ -56,7 +56,6 @@ func TestParseScript_reportsIncompleteLexicalConstructs(t *testing.T) {
 		{name: "single quote", source: "echo 'open"},
 		{name: "double quote", source: "echo \"open"},
 		{name: "command substitution", source: "echo $(echo $(echo hi)) $(echo"},
-		{name: "continued line", source: "echo value\\\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -68,6 +67,17 @@ func TestParseScript_reportsIncompleteLexicalConstructs(t *testing.T) {
 				t.Fatalf("ParseScript() error = %v, want ErrIncompleteScript", err)
 			}
 		})
+	}
+}
+
+// A line a `\` continues is incomplete in a session, which reads the next line to finish it,
+// and complete at the end of a script, as both references read one: the command ends there.
+func TestParseScript_continuedLineWaitsOnlyInASession(t *testing.T) {
+	if _, err := parseSessionAt("echo value\\\n", 1); !errors.Is(err, ErrIncompleteScript) {
+		t.Fatalf("session: error = %v, want ErrIncompleteScript", err)
+	}
+	if _, err := ParseScript("echo value\\\n"); err != nil {
+		t.Fatalf("script: error = %v, want none", err)
 	}
 }
 

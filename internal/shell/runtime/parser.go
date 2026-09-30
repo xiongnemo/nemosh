@@ -36,7 +36,7 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 		return Script{}, err
 	}
 	source = quoteAssignmentSubscripts(source)
-	lines, starts, err := numberedLogicalLines(source)
+	lines, starts, err := numberedLogicalLines(source, budget.session && depth == 0)
 	if err != nil {
 		return Script{}, err
 	}

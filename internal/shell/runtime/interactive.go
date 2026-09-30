@@ -30,7 +30,7 @@ type interactiveState struct {
 // prompt reports the lines it was typed on. Input still waiting for more lines is not
 // counted yet, because it comes back whole with them.
 func (r *Runtime) ParseSessionInput(source string) (Script, error) {
-	script, err := parseScriptAt(source, r.interactive.linesRead+1)
+	script, err := parseSessionAt(source, r.interactive.linesRead+1)
 	if !errors.Is(err, ErrIncompleteScript) {
 		r.interactive.linesRead += strings.Count(strings.TrimSuffix(source, "\n"), "\n") + 1
 	}

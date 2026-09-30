@@ -8,13 +8,13 @@ import "strings"
 
 // The source must already have been through normalizeLineEndings.
 func logicalLines(source string) ([]string, error) {
-	lines, _, err := numberedLogicalLines(source)
+	lines, _, err := numberedLogicalLines(source, false)
 	return lines, err
 }
 
 // numberedLogicalLines is logicalLines with, for each line, the index of the physical
-// line its text starts on.
-func numberedLogicalLines(source string) ([]string, []int, error) {
+// line its text starts on. waits is a session's input, which goes on past its text.
+func numberedLogicalLines(source string, waits bool) ([]string, []int, error) {
 	physical := strings.Split(source, "\n")
 	if len(physical) > 0 && physical[len(physical)-1] == "" {
 		physical = physical[:len(physical)-1]
@@ -24,6 +24,17 @@ func numberedLogicalLines(source string) ([]string, []int, error) {
 		scanner.beginPhysicalLine(index)
 		scanner.scanLine(line)
 		scanner.finishPhysicalLine(line)
+	}
+	// A `\` that ends the input ends it there, as both references read one: before the last
+	// newline it joins nothing, and the command ends; with none after it, it is a backslash of
+	// its own, so `eval 'echo ok\'` says ok\. It was a line waiting for one that never came,
+	// and the script was refused. A session's input goes on, and waits for the line.
+	if last := len(physical) - 1; scanner.continued && !waits && last >= 0 && strings.HasSuffix(physical[last], `\`) {
+		scanner.continued = false
+		if !strings.HasSuffix(source, "\n") {
+			scanner.logical.WriteString(`\\`)
+		}
+		scanner.finishPhysicalLine("")
 	}
 	if err := scanner.incompleteError(); err != nil {
 		return scanner.lines, scanner.starts, err

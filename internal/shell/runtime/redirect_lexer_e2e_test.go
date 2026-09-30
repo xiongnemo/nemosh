@@ -165,18 +165,16 @@ func TestRuntime_redirectExpansionCannotCreateRedirectSyntax(t *testing.T) {
 	assertFileText(t, path, ">literal\n")
 }
 
-func TestRuntime_trailingBackslashFailsBeforeExecution(t *testing.T) {
+// A `\` that ends a script with nothing after it is a backslash of its own, as busybox-w32 and
+// bash read it: the command runs and echo writes it. It was refused as a line waiting for more.
+func TestRuntime_trailingBackslashIsABackslash(t *testing.T) {
 	probe := filepath.ToSlash(filepath.Join(t.TempDir(), "probe.txt"))
 	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{})
 
-	status := rt.RunScript(context.Background(), "echo ran >"+probe+" \\")
-
-	if status == 0 {
-		t.Fatal("expected lexical failure")
+	if status := rt.RunScript(context.Background(), "echo ran >"+probe+" \\"); status != 0 {
+		t.Fatalf("status = %d, want 0", status)
 	}
-	if _, err := os.Stat(probe); !os.IsNotExist(err) {
-		t.Fatalf("command executed: %v", err)
-	}
+	assertFileText(t, probe, "ran \\\n")
 }
 
 func escapeSpaces(value string) string {
