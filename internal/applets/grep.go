@@ -68,7 +68,7 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 	if err != nil {
 		return err
 	}
-	withNames := flags.showNames(len(targets))
+	withNames := flags.showNames(len(paths), targets)
 	matched, unread := false, false
 	for _, target := range targets {
 		found, err := grepOne(target, expr, flags, withNames, printer)

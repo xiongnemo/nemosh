@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -26,8 +27,8 @@ import (
 //	$ grep -r hit rd           ->  rd/f.txt:hit
 //
 // -r is the one that was most missed, and the one whose output shape matters: the
-// filename prefix appears because more than one file is being searched, which is
-// the same rule that governs it for several named operands.
+// filename prefix appears because a directory was searched, as it does for several
+// named operands; see showNames.
 
 // grepFlags is the whole option surface, in one place so the parser and the
 // matcher cannot disagree about what was asked for.
@@ -168,6 +169,8 @@ func parseGrepFlags(flags string, into *grepFlags) error {
 type grepTarget struct {
 	name   string
 	opener func() (io.ReadCloser, error)
+	// walked is a file -r found in a directory operand, rather than one named.
+	walked bool
 }
 
 // grepTargets expands the operands into things to search, walking directories
@@ -236,11 +239,16 @@ func walkGrepTargets(ctx context.Context, flags grepFlags, shown, native string,
 			return nil
 		}
 		// Named the way the operand was, so the output reads as a path relative to
-		// what was asked about rather than an absolute one.
-		relative, relErr := filepath.Rel(native, current)
-		name := filepath.ToSlash(filepath.Join(shown, relative))
-		if relErr != nil {
-			name = filepath.ToSlash(current)
+		// what was asked about rather than an absolute one: the operand as it was
+		// written, then a slash unless it ends in one, as busybox's concat_path_file
+		// joins them. `grep -r x .` names ./t/f; the join was cleaned, and said t/f.
+		name := filepath.ToSlash(current)
+		if relative, relErr := filepath.Rel(native, current); relErr == nil {
+			name = filepath.ToSlash(shown)
+			if !strings.HasSuffix(name, "/") {
+				name += "/"
+			}
+			name += filepath.ToSlash(relative)
 		}
 		targets = append(targets, fileTarget(name, current))
 		return nil
@@ -257,7 +265,7 @@ func namedTarget(ctx context.Context, view ProcessView, path string) grepTarget 
 
 func fileTarget(shown, native string) grepTarget {
 	// The -r walk, which reaches files by host path rather than through the process view.
-	return grepTarget{name: shown, opener: func() (io.ReadCloser, error) {
+	return grepTarget{name: shown, walked: true, opener: func() (io.ReadCloser, error) {
 		file, err := os.Open(native)
 		if err != nil {
 			return nil, err
@@ -268,22 +276,22 @@ func fileTarget(shown, native string) grepTarget {
 
 // showNames decides whether a match carries its filename.
 //
-// GNU's rule, and the reason `grep -r` output looks different from `grep file`:
-// the name appears when more than one file is being searched. -h suppresses it
-// and -H forces it.
-func (f grepFlags) showNames(targets int) bool {
+// busybox's rule, and the reason `grep -r` output looks different from `grep file`:
+// the name appears when more than one FILE was named, or when -r went into a
+// directory, as busybox's grep_dir sets -H. -h suppresses it and -H forces it.
+//
+// A directory walked names its files even when it held only one: which file
+// matched is the thing the reader does not know. Measured -- `grep -r hit rd` on
+// a single-file directory prints `rd/f.txt:hit`. -r alone named them too, and
+// `grep -r x file`, one file named, is `x` there and not `file:x`.
+func (f grepFlags) showNames(operands int, targets []grepTarget) bool {
 	switch {
 	case f.noFilename:
 		return false
-	case f.withFilename, f.recursive:
-		// -r always names the file, even when the tree turned out to hold only
-		// one: the operand was a directory, so which file matched is the thing
-		// the reader does not know. Measured -- `grep -r hit rd` on a
-		// single-file directory prints `rd/f.txt:hit`, and counting targets got
-		// this wrong.
+	case f.withFilename, operands > 1:
 		return true
 	}
-	return targets > 1
+	return slices.ContainsFunc(targets, func(target grepTarget) bool { return target.walked })
 }
 
 func parseMaxCount(value string) (int, error) {
