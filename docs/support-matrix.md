@@ -750,8 +750,8 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `realpath` | none | treated as a path operand |
 | `rm` | `-f -i -r -R -v`; of `-f` and `-i` the later wins, `.` and `..` are refused, and a read-only file is removed as busybox-w32 removes one | refused by name |
 | `rmdir` | `-p -v`, `--ignore-fail-on-non-empty` and the other long forms; `-v` names each directory before it is removed | refused by name |
-| `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -t -w` | refused by name |
-| `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -t -w` | refused by name |
+| `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -s -t -w`, as `md5sum` | refused by name |
+| `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -s -t -w`, as `md5sum` | refused by name |
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
 | `shuf` | `-n -e -i -z` | refused by name |
 | `strings` | `-n -t -o -a -f` | refused by name |
@@ -760,7 +760,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `seq` | `-w -s`, and `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` as strtod reads them, fractions included; a zero increment refused | refused by name |
 | `sleep` | duration operand | reported as an invalid duration |
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
-| `sha256sum`, `md5sum` | `-b -c -t -w`; `-c` accepts both the two-space and `*` spellings | refused by name |
+| `sha256sum`, `md5sum` | `-b -c -s -t -w`, as busybox's: `-b` marks a name with `*`, and `-c` reads the two-space, the `*` and the one-space spellings, counts every line, and ends a list with a failure with `WARNING: N of M computed checksums did NOT match`; `-s` and `-w` need `-c` | refused by name |
 | `sort` | busybox's `-n -g -h -M -V -u -c -s -z -b -r -d -f -i -o -k -t`, keys with character offsets and their own letters; `-m -S -T` taken and ignored | refused by name |
 | `stat` | `-c -t -L -f`: busybox's layout, its terse line, and every letter of its `-c` and `-f` formats, each with printf's flags, width and precision. On Windows the values are busybox-w32's: the volume's serial number for the device, the file's index for the inode, 4095 for the account's own files and 0 for a system account's, the mode made up as `chmod` makes it up, and the creation time for the change time | refused by name |
 | `split` | `-l -b -a`, `-b` with `b k m g`; the bytes as they come, and as many letters as `-a` asks, `aa` upwards by default | refused by name |
@@ -794,7 +794,8 @@ The six most recently added -- `tac`, `rev`, `nl`, `base64`, `sha256sum`,
 `md5sum` -- were measured against **GNU coreutils**, not busybox: busybox's are
 the small versions, and the behaviour people rely on, including the checksum
 format printed in every release note, is GNU's. Each carries the observed output
-in its test table.
+in its test table. The checksum format is busybox's as well, and `-c`, `-s` and
+`-b` have since been measured against busybox-w32 and follow it.
 
 Three of these diverge from GNU on purpose, and say so where it matters:
 

@@ -1,7 +1,6 @@
 package applets
 
 import (
-	"bufio"
 	"context"
 	"crypto/md5"
 	"crypto/sha256"
@@ -122,14 +121,15 @@ func newSha256sumApplet() Applet { return newChecksumApplet("sha256sum", sha256.
 
 func newMd5sumApplet() Applet { return newChecksumApplet("md5sum", md5.New) }
 
-// The output format is GNU's `<hex>  <name>`, two spaces.
+// The output format is `<hex>  <name>`, two spaces, and with -b `<hex> *<name>`, busybox's and
+// GNU's alike; -t after -b is two spaces again.
 //
-// Measured: the coreutils build on this machine prints `<hex> *<name>` instead,
+// Measured: the coreutils build on this machine prints `<hex> *<name>` without -b,
 // because it defaults to binary mode on Windows and marks it with the asterisk.
-// Two spaces is chosen anyway -- it is what GNU prints on every other platform,
-// what every README shows, and what a script comparing against a published
-// checksum will have. Nothing is lost by it: this never translates line endings,
-// so the two modes would produce identical digests here regardless of the mark.
+// Two spaces is chosen anyway -- it is what busybox-w32 prints, what GNU prints on
+// every other platform, what every README shows, and what a script comparing against
+// a published checksum will have. Nothing is lost by it: this never translates line
+// endings, so the two modes produce identical digests here whatever the mark.
 //
 // `-c` accepts either form for exactly that reason, since a file of sums may well
 // have been produced by the build that writes the asterisk.
@@ -144,7 +144,7 @@ func newChecksumApplet(name string, newHash func() hash.Hash) Applet {
 // argument, and resolve turns the parsed options into a hash.
 func newChecksumAppletWith(name, valued string, resolve func(appletOptions) (func() hash.Hash, error)) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "bctw", valued)
+		options, paths, err := parseAppletOptions(ctx, args, "bcstw", valued)
 		if err != nil {
 			return err
 		}
@@ -153,10 +153,20 @@ func newChecksumAppletWith(name, valued string, resolve func(appletOptions) (fun
 			return err
 		}
 		if options.has('c') {
-			return checkSums(ctx, name, newHash, paths, stdin, stdout, stderr, options.has('w'))
+			return checkSums(ctx, name, newHash, paths, stdin, stdout, stderr, options.has('s'), options.has('w'))
+		}
+		// -s and -w say how -c reports, and busybox refuses either without it.
+		for _, letter := range []byte{'s', 'w'} {
+			if options.has(letter) {
+				return fmt.Errorf("-%c requires -c", letter)
+			}
+		}
+		mark := " "
+		if options.last("bt") == 'b' {
+			mark = "*"
 		}
 		if len(paths) == 0 {
-			return writeSum(stdout, newHash, stdin, "-")
+			return writeSum(stdout, newHash, stdin, mark+"-")
 		}
 		view := ProcessViewFromContext(ctx)
 		opened := true
@@ -171,7 +181,7 @@ func newChecksumAppletWith(name, valued string, resolve func(appletOptions) (fun
 				opened = false
 				continue
 			}
-			sumErr := writeSum(stdout, newHash, file, path)
+			sumErr := writeSum(stdout, newHash, file, mark+path)
 			file.Close()
 			if sumErr != nil {
 				return sumErr
@@ -184,90 +194,12 @@ func newChecksumAppletWith(name, valued string, resolve func(appletOptions) (fun
 	}}
 }
 
-func writeSum(stdout io.Writer, newHash func() hash.Hash, reader io.Reader, name string) error {
+// writeSum writes reader's hash and name, which comes marked: a blank for text, a `*` for binary.
+func writeSum(stdout io.Writer, newHash func() hash.Hash, reader io.Reader, marked string) error {
 	digest := newHash()
 	if _, err := io.Copy(digest, reader); err != nil {
 		return err
 	}
-	_, err := fmt.Fprintf(stdout, "%s  %s\n", hex.EncodeToString(digest.Sum(nil)), name)
+	_, err := fmt.Fprintf(stdout, "%s %s\n", hex.EncodeToString(digest.Sum(nil)), marked)
 	return err
-}
-
-// checkSums verifies a list, printing `name: OK` or `name: FAILED` per line and
-// failing overall if any did.
-//
-// A line that cannot be parsed is reported rather than skipped in silence. GNU
-// warns and continues; the status is what a script reads, and a file of sums that
-// is half garbage should not come back clean.
-func checkSums(ctx context.Context, applet string, newHash func() hash.Hash, paths []string, stdin io.Reader, stdout, stderr io.Writer, warn bool) error {
-	view := ProcessViewFromContext(ctx)
-	failures, malformed := 0, 0
-	verify := func(reader io.Reader) error {
-		scanner := bufio.NewScanner(reader)
-		scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
-		for scanner.Scan() {
-			line := strings.TrimRight(scanner.Text(), "\r")
-			if strings.TrimSpace(line) == "" {
-				continue
-			}
-			want, name, ok := parseSumLine(line)
-			if !ok {
-				malformed++
-				if warn {
-					fmt.Fprintf(stderr, "%s: improperly formatted checksum line\n", applet)
-				}
-				continue
-			}
-			file, err := OpenProcessInput(ctx, view, name)
-			if err != nil {
-				failures++
-				fmt.Fprintf(stdout, "%s: FAILED open or read\n", name)
-				continue
-			}
-			digest := newHash()
-			_, copyErr := io.Copy(digest, file)
-			file.Close()
-			if copyErr != nil {
-				failures++
-				fmt.Fprintf(stdout, "%s: FAILED open or read\n", name)
-				continue
-			}
-			if hex.EncodeToString(digest.Sum(nil)) != want {
-				failures++
-				fmt.Fprintf(stdout, "%s: FAILED\n", name)
-				continue
-			}
-			fmt.Fprintf(stdout, "%s: OK\n", name)
-		}
-		return scanner.Err()
-	}
-	if err := eachTextInput(ctx, paths, stdin, verify); err != nil {
-		return err
-	}
-	switch {
-	case failures > 0:
-		return ExitStatusMessage(1, fmt.Errorf("%d computed checksum did NOT match", failures))
-	case malformed > 0:
-		return ExitStatusMessage(1, fmt.Errorf("no properly formatted checksum lines found"))
-	}
-	return nil
-}
-
-// parseSumLine reads `<hex>  <name>` and `<hex> *<name>`, which are GNU's text
-// and binary spellings. Both are accepted because a list may have come from
-// either build.
-func parseSumLine(line string) (sum, name string, ok bool) {
-	sum, rest, found := strings.Cut(line, " ")
-	if !found || sum == "" {
-		return "", "", false
-	}
-	if _, err := hex.DecodeString(sum); err != nil {
-		return "", "", false
-	}
-	name = strings.TrimPrefix(rest, " ")
-	name = strings.TrimPrefix(name, "*")
-	if name == "" {
-		return "", "", false
-	}
-	return sum, name, true
 }
