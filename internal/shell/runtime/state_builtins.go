@@ -128,6 +128,11 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 	}
 	for _, name := range args {
 		base, subscript, hasSubscript := splitSubscriptedName(name)
+		// A name no variable can have is busybox's error, and ends the script as a special
+		// builtin's does: `unset a-b` returned 0, having done nothing.
+		if !isValidVariableName(base) {
+			return r.refuseName("unset: ", name)
+		}
 		if r.isReadonly(base) {
 			return r.refuseReadonly("unset: ", base)
 		}
