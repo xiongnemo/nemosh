@@ -51,6 +51,10 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 		return r.assignReadResult(options, line)
 	}
 	line, status := r.collectWithTimeout(ctx, input, options)
+	// What came before the time ran out is assigned, as both references assign it.
+	if status == 142 {
+		r.assignReadResult(options, line)
+	}
 	if status != 0 {
 		return status
 	}
@@ -87,7 +91,7 @@ func (r Runtime) writeReadPrompt(options readOptions) {
 // bound.
 func (r Runtime) collectWithTimeout(ctx context.Context, input io.Reader, options readOptions) (readLineResult, int) {
 	if !options.hasTimeout {
-		line, err := collectReadLine(ctx, input, options)
+		line, err := collectReadLine(ctx, input, options, nil)
 		if err != nil && ctx.Err() == nil {
 			fmt.Fprintf(r.streams.Stderr, "read: %v\n", err)
 			return readLineResult{}, 1
@@ -99,10 +103,11 @@ func (r Runtime) collectWithTimeout(ctx context.Context, input io.Reader, option
 		err  error
 	}
 	results := make(chan outcome, 1)
+	progress := &readProgress{}
 	readCtx, cancelRead := context.WithCancel(ctx)
 	defer cancelRead()
 	go func() {
-		line, err := collectReadLine(readCtx, input, options)
+		line, err := collectReadLine(readCtx, input, options, progress)
 		results <- outcome{line: line, err: err}
 	}()
 	timer := time.NewTimer(options.timeout)
@@ -115,7 +120,7 @@ func (r Runtime) collectWithTimeout(ctx context.Context, input io.Reader, option
 		}
 		return result.line, 0
 	case <-timer.C:
-		return readLineResult{}, 142
+		return progress.line(), 142
 	case <-ctx.Done():
 		return readLineResult{}, contextStatus(ctx)
 	}

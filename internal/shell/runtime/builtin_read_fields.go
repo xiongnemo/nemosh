@@ -28,7 +28,7 @@ type readLineResult struct {
 	delimited bool
 }
 
-func collectReadLine(ctx context.Context, input io.Reader, options readOptions) (readLineResult, error) {
+func collectReadLine(ctx context.Context, input io.Reader, options readOptions, progress *readProgress) (readLineResult, error) {
 	var text []byte
 	var escaped []bool
 	buffer := []byte{0}
@@ -56,6 +56,7 @@ func collectReadLine(ctx context.Context, input io.Reader, options readOptions) 
 					continue
 				}
 				text, escaped = append(text, char), append(escaped, true)
+				progress.add(char, true)
 			case !options.raw && char == '\\':
 				pendingEscape = true
 			case char == options.delimiter && !options.exactly:
@@ -66,6 +67,7 @@ func collectReadLine(ctx context.Context, input io.Reader, options readOptions) 
 				}, nil
 			default:
 				text, escaped = append(text, char), append(escaped, false)
+				progress.add(char, false)
 			}
 			continue
 		}
