@@ -38,7 +38,9 @@ func TestExpandHistory(t *testing.T) {
 		// Quoting. The asymmetry is the point.
 		{name: "single quotes protect", line: "echo '!!'", want: "echo '!!'", changed: false},
 		{name: "double quotes do not", line: `echo "!!"`, want: `echo "grep needle haystack"`, changed: true},
-		{name: "a backslash escapes", line: `echo \!\!`, want: "echo !!", changed: true},
+		// The backslash stays for the shell to remove, and the line is not echoed: no
+		// expansion took place.
+		{name: "a backslash escapes", line: `echo \!\!`, want: `echo \!\!`, changed: false},
 		{name: "a quote inside the other kind", line: `echo "it's !$"`, want: `echo "it's haystack"`, changed: true},
 
 		// A `!` that begins nothing is text, which is what keeps `!=` working.
@@ -167,8 +169,8 @@ func TestApplyHistoryExpansion(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var stderr bytes.Buffer
-			line, runnable := applyHistoryExpansion(fakeHistory{"echo hi"}, &stderr, test.line)
-			if runnable != test.runnable {
+			line, outcome := applyHistoryExpansion(fakeHistory{"echo hi"}, &historyExpander{}, &stderr, test.line)
+			if runnable := outcome == historyRun; runnable != test.runnable {
 				t.Fatalf("runnable = %v, want %v", runnable, test.runnable)
 			}
 			if line != test.wantLine {

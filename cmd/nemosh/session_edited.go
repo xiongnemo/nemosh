@@ -41,6 +41,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	lastStatus := 0
 	ignoredEOFs := 0
 	var input strings.Builder
+	var expander historyExpander
 
 	for {
 		// Completion follows `cd`, so the directory is refreshed each round
@@ -114,10 +115,18 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// shell proper never sees an unexpanded `!`. Shared with the plain loop in
 		// session.go, which is the half that was forgotten on the first attempt -- and
 		// which is the path a piped script takes.
-		expanded, runnable := applyHistoryExpansion(rt, c.stderr, line)
-		if !runnable {
+		expanded, outcome := applyHistoryExpansion(rt, &expander, c.stderr, line)
+		if outcome == historyPrinted && rt.HistoryRecording() {
+			// A :p prints the line and records it, and it does not run.
+			editor.remember(expanded)
+			rt.RecordInteractiveLine(expanded)
+			saved.append(expanded)
+		}
+		if outcome != historyRun {
 			input.Reset()
-			lastStatus = 1
+			if outcome == historyRefused {
+				lastStatus = 1
+			}
 			continue
 		}
 		line = expanded

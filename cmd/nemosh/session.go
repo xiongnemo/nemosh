@@ -47,6 +47,7 @@ func (c command) runInteractive(ctx context.Context, controller *interruptContro
 	lastStatus := 0
 	ignoredEOFs := 0
 	var input strings.Builder
+	var expander historyExpander
 
 sessionLoop:
 	for {
@@ -127,8 +128,11 @@ sessionLoop:
 		// The same expansion the edited loop does. This is the path a piped script
 		// takes, and giving it only to the terminal path would make `!!` depend on
 		// how the shell was started.
-		expanded, runnable := applyHistoryExpansion(rt, c.stderr, line)
-		if !runnable {
+		expanded, outcome := applyHistoryExpansion(rt, &expander, c.stderr, line)
+		if outcome != historyRun {
+			if outcome == historyPrinted && rt.HistoryRecording() {
+				rt.RecordInteractiveLine(expanded)
+			}
 			input.Reset()
 			continue
 		}

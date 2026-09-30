@@ -479,26 +479,43 @@ the part with no channel behind it and is still refused.
 
 ### History expansion
 
-`!!`, `!n`, `!-n`, `!string`, `!?text?`, `!$`, `!^`, `!*` and `^old^new`, on interactive
-input only -- a textual rewrite done before the line is parsed, so the shell proper never
-sees an unexpanded `!`. The expanded line is echoed on **stderr** before it runs, which is
-what bash does and what keeps a redirected stdout holding only what the command wrote.
+bash's, on interactive input only: readline's histexpand.c under the settings bash gives
+it, ported rather than recalled, and measured against bash 5.3. busybox has none. It is a
+textual rewrite done before the line is parsed, so the shell proper never sees an
+unexpanded `!`. The expanded line is echoed on **stderr** before it runs, which is what bash
+does and what keeps a redirected stdout holding only what the command wrote.
 
-Three rules, all measured rather than recalled:
+- **Events:** `!!`, `!n`, `!-n`, `!string`, `!?string?`, and `!#`, the line so far.
+- **Word designators**, after a `:`, or without one when they begin with `^ $ * - %`:
+  - `0`, `n`, `^`, `$`, `x-y`, `x*`, `x-` and `*`;
+  - `%`, the word the last `!?string?` matched.
 
+  The words are the shell's, so quotes stay in their word and an operator is a word of
+  its own: `!$` of `echo "a b"|wc` is `wc`, and `!:1` is `"a b"`.
+- **Modifiers**, each after a `:`:
+  - `h t r e` take a path apart.
+  - `q` and `x` quote.
+  - `p` prints the line, records it, and does not run it.
+  - `s/old/new/` substitutes, with `&` for old, any delimiter, and the last one optional at
+    the end. An empty old is the last one.
+  - `&` repeats the last substitution.
+  - `g` or `a` repeat along the line, and `G` repeat in each word.
+- `^old^new^` at the start of a line is `!!:s^old^new^`.
+
+What is not an expansion is bash's too:
 - **Single quotes protect and double quotes do not.** `echo '!!'` is two characters;
   `echo "!!"` is the previous command. The asymmetry looks like a bug until you rely on it.
-- **A backslash escapes**, and is consumed: `\!` is a literal `!`.
-- **A `!` that begins nothing is text** -- at end of line, before a blank, or before `=` --
-  which is what keeps `[ x != y ]` working. A reference also ends at the first character
-  that could not begin a command name, so `!ls|wc` finds `ls` and leaves the pipe alone.
+- **A backslash protects the `!` after it**, and stays for the shell to remove.
+- **A `!` that begins nothing is text:** at the end of the line, or before a blank, `=`
+  or an operator. That is what keeps `[ x != y ]` working.
+- **Nor is a `!` the shell uses:** `$!`, `${!name}` and `[!...]`, or one inside single
+  quotes within a `$(...)`.
+- A `#` that begins a word ends expansion for the rest of the line.
 
-A reference that resolves to nothing is an **error and the line does not run**, because
-leaving the text as typed would send `!vim` to PATH as a command name.
-
-Two deliberate narrowings. There is no `:s/old/new/` modifier syntax beyond `^old^new`,
-and `!^`/`!*` on a line with no arguments give the empty string where bash's answer varies
-with context.
+A reference that cannot be resolved is an **error and the line does not run**. The reason
+is in bash's words: `event not found`, `bad word specifier`, `substitution failed`,
+`unrecognized history modifier` or `no previous substitution`. Leaving the text as typed
+would send `!vim` to PATH as a command name.
 
 It also fixed something else: the **non-terminal interactive loop recorded no history at
 all**, so `history` was empty whenever the shell was interactive without a terminal. Both
