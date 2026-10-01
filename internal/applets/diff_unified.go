@@ -26,6 +26,12 @@ import (
 // All three were taken and ignored.
 func (r diffRequest) writeUnified(stdout io.Writer, edits []diffEdit, hunks []diffHunk) error {
 	left, right := r.left, r.right
+	if r.absent[0] {
+		left = "/dev/null"
+	}
+	if r.absent[1] {
+		right = "/dev/null"
+	}
 	if len(r.labels) > 0 {
 		left = r.labels[0]
 	}

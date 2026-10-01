@@ -105,6 +105,7 @@ var valuePlaceholders = map[string]string{
 	"basenames":               "SUFFIX",
 	"mvt":                     "DIR",
 	"diffL":                   "LABEL",
+	"diffS":                   "FILE",
 	"patchp":                  "COUNT",
 	"patchi":                  "DIFF",
 	"lsw":                     "COLS",

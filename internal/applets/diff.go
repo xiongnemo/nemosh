@@ -17,7 +17,7 @@ import (
 
 func newDiffApplet() Applet {
 	return simpleApplet{name: "diff", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "uqiwBNsrabdTt", "UL")
+		options, operands, err := parseAppletOptions(ctx, args, "uqiwBNsrabdTt", "ULS")
 		if err != nil {
 			return err
 		}
@@ -46,8 +46,10 @@ func newDiffApplet() Applet {
 			initialTab:         options.has('T'),
 			expandTabs:         options.has('t'),
 			text:               options.has('a'),
+			recursive:          options.has('r'),
+			start:              options.value('S'),
 		}
-		return request.run(ctx, stdin, stdout)
+		return request.diffOperands(ctx, stdin, stdout)
 	}}
 }
 
@@ -65,16 +67,25 @@ type diffRequest struct {
 	// is -a, which diffs files that hold a NUL as text.
 	labels                       []string
 	initialTab, expandTabs, text bool
+	// recursive is -r and start -S; absent is, for -N in a directory, which side has no such
+	// file, which is read as empty and named /dev/null. See diff_dir.go.
+	recursive bool
+	start     string
+	absent    [2]bool
 }
 
 func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
-	left, err := readDiffLines(ctx, r.left, stdin, r.treatAbsentAsEmpty)
-	if err != nil {
-		return err
+	var left, right []string
+	var err error
+	if !r.absent[0] {
+		if left, err = readDiffLines(ctx, r.left, stdin, r.treatAbsentAsEmpty); err != nil {
+			return err
+		}
 	}
-	right, err := readDiffLines(ctx, r.right, stdin, r.treatAbsentAsEmpty)
-	if err != nil {
-		return err
+	if !r.absent[1] {
+		if right, err = readDiffLines(ctx, r.right, stdin, r.treatAbsentAsEmpty); err != nil {
+			return err
+		}
 	}
 	// Two files that are not the same and hold a NUL are binary, and that they differ is all
 	// that is said, as busybox says it, but under -a. Their lines were diffed.
