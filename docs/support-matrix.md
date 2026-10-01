@@ -788,7 +788,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
 | `shuf` | `-n -e -i -z` | refused by name |
 | `strings` | `-n -t -o -a -f` | refused by name |
-| `awk` | the POSIX language; `-F -v -f --`, operands mixing files and `VAR=VALUE` | refused by name |
+| `awk` | the POSIX language; `-F -v -f --`, and busybox's `-e PROGRAM` (read with any `-f` in the order given, as one program), `-E FILE` (`-f` that ends the options) and `-W` (said to be ignored); operands mixing files and `VAR=VALUE` | refused by name |
 | `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {} r w l`, s's flags `g p N i w`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |
 | `seq` | `-w -s`, and `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` as strtod reads them, fractions included; a zero increment refused | refused by name |
 | `sleep` | duration operand | reported as an invalid duration |

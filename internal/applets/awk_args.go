@@ -2,6 +2,7 @@ package applets
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -23,6 +24,11 @@ import (
 //
 // A value may be joined to its letter or stand apart -- `-F:` and `-F :` are the same, as
 // are `-vx=1` and `-v x=1` -- and `--` ends the options.
+//
+// busybox's GNU forms are taken too: `-e PROGRAM` is program text where `-f` is a file, the
+// two read in the order given as one program, and `-E FILE` is `-f FILE` that ends the
+// options, so what follows is ARGV however it begins. `-W` is said to be ignored, and is, as
+// busybox ignores it. Each was refused as an invalid option.
 
 type awkInvocation struct {
 	program string
@@ -37,7 +43,7 @@ type awkInvocation struct {
 	hasSeparator   bool
 }
 
-func parseAwkArguments(view ProcessView, args []string) (*awkInvocation, error) {
+func parseAwkArguments(view ProcessView, args []string, stderr io.Writer) (*awkInvocation, error) {
 	invocation := &awkInvocation{}
 	var sources []string
 	index := 0
@@ -52,7 +58,7 @@ func parseAwkArguments(view ProcessView, args []string) (*awkInvocation, error) 
 			break
 		}
 		letter := argument[1]
-		if strings.IndexByte("Fvf", letter) < 0 {
+		if strings.IndexByte("FvfeEW", letter) < 0 {
 			return nil, fmt.Errorf("awk: invalid option -- %c", letter)
 		}
 		value := argument[2:]
@@ -63,8 +69,16 @@ func parseAwkArguments(view ProcessView, args []string) (*awkInvocation, error) 
 			}
 			value = args[index]
 		}
+		if letter == 'W' {
+			fmt.Fprintln(stderr, "awk: -W is ignored")
+			continue
+		}
 		if err := invocation.applyOption(view, letter, value, &sources); err != nil {
 			return nil, err
+		}
+		if letter == 'E' {
+			index++
+			break
 		}
 	}
 	if len(sources) == 0 {
@@ -74,8 +88,8 @@ func parseAwkArguments(view ProcessView, args []string) (*awkInvocation, error) 
 		invocation.program = args[index]
 		index++
 	} else {
-		// Several `-f` files are **one program**, joined by newlines, so a function
-		// defined in the first is callable from the second.
+		// Several `-f` files and `-e` texts are **one program**, joined by newlines, so a
+		// function defined in the first is callable from the second.
 		invocation.program = strings.Join(sources, "\n")
 	}
 	invocation.operands = args[index:]
@@ -91,12 +105,14 @@ func (v *awkInvocation) applyOption(view ProcessView, letter byte, value string,
 			return fmt.Errorf("-v takes var=value, not %q", value)
 		}
 		v.assignments = append(v.assignments, value)
-	case 'f':
+	case 'f', 'E':
 		text, err := readAwkSource(view, value)
 		if err != nil {
 			return err
 		}
 		*sources = append(*sources, text)
+	case 'e':
+		*sources = append(*sources, value)
 	}
 	return nil
 }

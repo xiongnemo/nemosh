@@ -155,7 +155,7 @@ var usageTextMore = map[string]Usage{
 		Options: map[string]string{"l": "list the signal names", "q": "no diagnostic when nothing matched"},
 		Notes:   []string{"The name is matched whole rather than as a pattern, which is the difference between a tidy-up and an accident.", "Windows has no signals; each name is a behaviour this shell reproduces. See `kill`."}},
 	"awk": {Summary: "Scan text for patterns and act on them.", Operands: "PROGRAM [FILE|VAR=VALUE]...",
-		Options: map[string]string{"F": "the field separator", "v": "set VAR=VALUE before BEGIN", "f": "read the program from a file"},
+		Options: map[string]string{"F": "the field separator", "v": "set VAR=VALUE before BEGIN", "f": "read the program from a file", "e": "program text; with -f, read in the order given", "E": "the same as -f, and the last option", "W": "accepted, and said to be ignored"},
 		Notes: []string{
 			"The POSIX language: patterns and actions, BEGIN and END, fields, arrays, user functions, getline and printf.",
 			"length, substr, index, match and split count runes rather than bytes, so length(\"héllo\") is 5.",

@@ -104,7 +104,7 @@ var commands = []Command{
 	{Name: "unlink", Operand: AnyPath},
 	{Name: "usleep", Operand: AnyPath},
 	{Name: "uuidgen"},
-	{Name: "awk", Short: "Fvf", ValueShort: "Fvf", Operand: AnyPath},
+	{Name: "awk", Short: "FvfeEW", ValueShort: "FvfeEW", FileShort: "fE", Operand: AnyPath},
 	{Name: "cpio", Short: "tiodmvu0FH", ValueShort: "FH", FileShort: "F", Operand: AnyPath},
 	{Name: "ascii", Operand: AnyPath},
 	{Name: "expand", Short: "it", ValueShort: "t", Long: []string{"initial", "tabs"}, ValueLong: []string{"tabs"}, Operand: AnyPath},
