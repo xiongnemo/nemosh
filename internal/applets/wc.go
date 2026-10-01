@@ -202,13 +202,24 @@ func countBytes(input io.Reader) (wcCounts, error) {
 		if size > 0 {
 			counts.chars++
 		}
-		if r == '\n' {
-			counts.lines++
-			// -L is the width of the longest line, in characters, not counting
-			// the newline.
+		switch {
+		case r == '\n' || r == '\r' || r == '\f' || r == '\v':
+			// -L is the width of the longest line, not counting what ends it. A carriage
+			// return, a form feed and a vertical tab end one too, and all but the vertical
+			// tab start the next at the left, as busybox's wc has them; only a newline is a
+			// line for -l.
 			counts.longest = max(counts.longest, lineWidth)
-			lineWidth = 0
-		} else if size > 0 {
+			if r == '\n' {
+				counts.lines++
+			}
+			if r != '\v' {
+				lineWidth = 0
+			}
+		case r == '\t':
+			// A tab reaches the next multiple of eight, as busybox and GNU count it; it
+			// counted nothing.
+			lineWidth = (lineWidth | 7) + 1
+		case size > 0:
 			lineWidth += textgrid.RuneCells(r)
 		}
 		if size > 0 && unicode.IsSpace(r) {
