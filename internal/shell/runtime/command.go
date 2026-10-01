@@ -101,9 +101,13 @@ func isRuntimeBuiltin(name string) bool {
 	return false
 }
 
+// isSpecialBuiltin is whether name is a special builtin as busybox's ash marks one: POSIX's,
+// times among them, and ash's own local, with source for `.`. An assignment in front of one
+// stays, and an error in one, a redirection's too, ends a script. times and local were
+// plain, so `E=x local v` left E unset and `local v 2>/no/such/dir` went on.
 func isSpecialBuiltin(name string) bool {
 	switch name {
-	case ":", ".", "break", "continue", "eval", "exec", "exit", "export", "readonly", "return", "set", "shift", "source", "trap", "unset":
+	case ":", ".", "break", "continue", "eval", "exec", "exit", "export", "local", "readonly", "return", "set", "shift", "source", "times", "trap", "unset":
 		return true
 	default:
 		return false

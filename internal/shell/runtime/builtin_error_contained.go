@@ -26,9 +26,9 @@ func (r Runtime) containedError(name string, status int) int {
 }
 
 // errorEndsShell is whether an error in the builtin name ends a script: busybox's special
-// builtins, which are POSIX's with local and times.
+// builtins, which are POSIX's with local.
 func errorEndsShell(name string) bool {
-	return isSpecialBuiltin(name) || name == "local" || name == "times"
+	return isSpecialBuiltin(name)
 }
 
 // plainResult is a special builtin's result under `command`, which makes it a plain one: an

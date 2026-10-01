@@ -427,6 +427,9 @@
       "assign to readonly variable - errexit": "fail",
       "local after readonly": "fail"
     },
+    "command-parsing.test.sh": {
+      "Prefix env on assignment": "ash-only"
+    },
     "command-sub.test.sh": {
       "Command Sub trailing newline removed": "fail",
       "Command Sub trailing whitespace not removed": "fail",
