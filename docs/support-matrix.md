@@ -699,7 +699,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `ed` | `-s -p`; addresses including `/re/` and marks, and `a i c d p n l = s g v m t j k r w e f q Q h H`. Follows GNU, not busybox | refused by name |
 | `dc` | `-e -f -x`; the stack machine, registers as stacks, `[strings]` and the conditionals. `!` refused | refused by name |
 | `bc` | the POSIX language; `-s -q -w`. `-l`, `read()` and an obase above 16 refused by name | refused by name |
-| `df` | `-h -H -k -m -B SIZE -P -T -t TYPE`, `-a` taken; the last of `-k -m -B` counts, `POSIXLY_CORRECT` counts 512-byte blocks, and blocks round to nearest, all as busybox has them. A drive letter is a filesystem, mounted at its root, and `-T` names what Windows calls it, NTFS or FAT32 | refused by name |
+| `df` | `-h -H -k -m -B SIZE -P -T -t TYPE`, `-a` taken; the last of `-k -m -B` counts, `POSIXLY_CORRECT` counts 512-byte blocks, and blocks round to nearest, all as busybox has them. A drive letter is a filesystem, mounted at its root, and `-T` names what Windows calls it, NTFS or FAT32; a FILE that is not there has no mount point, status 1, as busybox says | refused by name |
 | `stty` | `size`, `echo`, `-echo`, `sane`, `-a`; everything else refused by name | refused by name |
 | `getopt` | `-o -l -n -q -Q -u -a -T -s`, and the old form where the first operand is the option string | refused by name |
 | `ipcalc` | `-b -n -m -p -h -s`; a non-contiguous netmask is used as given | refused by name |

@@ -3,6 +3,7 @@ package applets
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -44,6 +45,13 @@ func filesystemsForOperands(view ProcessView, operands []string, stderr io.Write
 		native, err := resolveHostPath(view, operand)
 		if err != nil {
 			return nil, err
+		}
+		// busybox's find_mount_point stats FILE first, and what is not there is on no
+		// volume. Its letter's was answered, with status 0.
+		if _, err := os.Stat(native); err != nil {
+			fmt.Fprintf(stderr, "df: %s: cannot find mount point\n", operand)
+			failed = true
+			continue
 		}
 		volume := filepath.VolumeName(native)
 		if volume == "" {

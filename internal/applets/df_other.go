@@ -33,8 +33,9 @@ func collectFilesystems(view ProcessView, operands []string, stderr io.Writer) (
 			return nil, err
 		}
 		var stat unix.Statfs_t
+		// What cannot be stat'ed is on no filesystem, as busybox's find_mount_point says it.
 		if err := unix.Statfs(native, &stat); err != nil {
-			fmt.Fprintf(stderr, "df: %s: %s\n", operand, CauseText(err))
+			fmt.Fprintf(stderr, "df: %s: cannot find mount point\n", operand)
 			failed = true
 			continue
 		}
