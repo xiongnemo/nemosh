@@ -72,14 +72,14 @@ var errPrintfStop = errors.New("stopped by \\c")
 // one of them was not the number its conversion wanted.
 func writePrintfPass(out, diagnostics io.Writer, format string, operands []string) (int, bool, error) {
 	used, failed := 0, false
-	next := func() string {
+	next := func() (string, bool) {
 		if used < len(operands) {
 			value := operands[used]
 			used++
-			return value
+			return value, true
 		}
 		used++
-		return ""
+		return "", false
 	}
 	var text strings.Builder
 	for index := 0; index < len(format); index++ {
@@ -102,7 +102,8 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			continue
 		}
 		if spec, layout, width, ok := printfTimeSpecification(format[index:]); ok {
-			rendered, err := renderPrintfTime(spec, layout, next())
+			operand, _ := next()
+			rendered, err := renderPrintfTime(spec, layout, operand)
 			if err != nil {
 				fmt.Fprintf(diagnostics, "printf: %v\n", err)
 				failed = true
@@ -171,15 +172,23 @@ func printfSpecification(rest string) (string, byte, int) {
 	return rest[:index], rest[index], index + 1
 }
 
-func renderPrintfConversion(spec string, verb byte, next func() string) (string, error) {
+// printfNext hands a conversion its operand, and says whether there was one: one that is
+// missing is zero to a number, where one given empty is a number neither reference reads.
+type printfNext func() (string, bool)
+
+func renderPrintfConversion(spec string, verb byte, next printfNext) (string, error) {
+	if strings.IndexByte("diouxXeEfFgGcsbq", verb) < 0 {
+		return "", fmt.Errorf("invalid conversion specification %%%c", verb)
+	}
+	operand, given := next()
 	switch verb {
 	case 'd', 'i':
 		// The zero an unreadable operand stands for is rendered with the operand's own
 		// width and flags, and the error goes back beside it for the caller to report.
-		value, err := printfSigned(next())
+		value, err := printfSigned(operand, given)
 		return fmt.Sprintf(spec+"d", value), err
 	case 'o', 'x', 'X', 'u':
-		value, err := printfUnsigned(next())
+		value, err := printfUnsigned(operand, given)
 		if verb == 'u' {
 			return fmt.Sprintf(spec+"d", value), err
 		}
@@ -193,7 +202,6 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 		// says, where Go's has as many as read back, so `printf %g 123456789` was
 		// 1.23456789e+08 where both references say 1.23457e+08; and inf is inf, not +Inf.
 		layout := parseCSpec(strings.TrimPrefix(spec, "%"))
-		operand := next()
 		if code, ok := printfCharacterCode(strings.TrimSpace(operand)); ok {
 			return cFloat(layout, verb, float64(code)), nil
 		}
@@ -203,17 +211,18 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 		}
 		return cFloat(layout, verb, value), nil
 	case 'c':
-		operand := next()
 		if operand == "" {
-			return "", nil
+			// The empty string's first character is its end, a NUL, which both references
+			// write, padded to the width; this wrote nothing.
+			return fmt.Sprintf(spec+"c", 0), nil
 		}
 		return fmt.Sprintf(spec+"s", operand[:1]), nil
 	case 's':
-		return fmt.Sprintf(spec+"s", next()), nil
+		return fmt.Sprintf(spec+"s", operand), nil
 	case 'b':
 		// XSI's %b: the operand's own escape sequences are processed. A \c among them ends
 		// all output, the rest of the format and every operand to come, as in busybox.
-		expanded, stop := expandEchoEscapes(next())
+		expanded, stop := expandEchoEscapes(operand)
 		if stop {
 			return fmt.Sprintf(spec+"s", expanded), errPrintfStop
 		}
@@ -222,7 +231,7 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 		// bash's %q: quote the operand so the shell would read it back as itself.
 		// The point of it is `eval` and generated scripts -- a file name with a
 		// space or a quote in it survives being written into a command line.
-		return fmt.Sprintf(spec+"s", shellquote.Backslash(next())), nil
+		return fmt.Sprintf(spec+"s", shellquote.Backslash(operand)), nil
 	default:
 		return "", fmt.Errorf("invalid conversion specification %%%c", verb)
 	}

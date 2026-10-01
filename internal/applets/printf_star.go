@@ -23,7 +23,7 @@ func printfNumberOrStar(rest string, index int) int {
 }
 
 // resolvePrintfStars writes each `*` in a specification as the operand it stands for.
-func resolvePrintfStars(spec string, next func() string) (string, error) {
+func resolvePrintfStars(spec string, next printfNext) (string, error) {
 	if !strings.Contains(spec, "*") {
 		return spec, nil
 	}

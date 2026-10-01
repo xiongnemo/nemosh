@@ -14,11 +14,17 @@ import (
 // An unsigned conversion takes the whole unsigned range, and a negative number as the
 // same bits: `%u` of 18446744073709551615 is that number, and `%x` of -42 is
 // ffffffffffffffd6. Both were refused or printed with a minus sign.
+//
+// An operand that is missing is zero, as POSIX has it and bash does; one given empty or
+// blank is no number, which both references say -- `invalid number ''` and status 1 --
+// where it was a silent zero too. given says which.
 
 // printfSigned is the operand of %d and %i.
-func printfSigned(operand string) (int64, error) {
+func printfSigned(operand string, given bool) (int64, error) {
 	magnitude, negative, empty, ok := printfDigits(operand)
 	switch {
+	case empty && given:
+		return 0, errPrintfNumber{operand: operand}
 	case empty:
 		return 0, nil
 	case !ok, !negative && magnitude > 1<<63-1, negative && magnitude > 1<<63:
@@ -31,9 +37,11 @@ func printfSigned(operand string) (int64, error) {
 
 // printfUnsigned is the operand of %u, %o, %x and %X. A negative one has to fit the signed
 // range, as it does in busybox, and is then taken as its bits.
-func printfUnsigned(operand string) (uint64, error) {
+func printfUnsigned(operand string, given bool) (uint64, error) {
 	magnitude, negative, empty, ok := printfDigits(operand)
 	switch {
+	case empty && given:
+		return 0, errPrintfNumber{operand: operand}
 	case empty:
 		return 0, nil
 	case !ok, negative && magnitude > 1<<63:

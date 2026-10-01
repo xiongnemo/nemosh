@@ -326,6 +326,7 @@
       "Runtime error for invalid integer": "ash-only",
       "Too large": "fail",
       "bash truncates long strftime string at 128": "ash-only",
+      "empty string (osh is more strict)": "ash-only",
       "leading spaces are accepted in value given to %d %X, but not trailing spaces": "ash-only",
       "printf negative integer overflow": "ash-only",
       "printf negative numbers": "ash-only",
