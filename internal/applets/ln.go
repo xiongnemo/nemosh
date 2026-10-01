@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -106,7 +107,9 @@ func (r lnRequest) link(target, last string) error {
 	}
 	if symbolic {
 		// A symbolic link holds its target as written, to be read from where the link is.
-		err = os.Symlink(target, host)
+		if err = os.Symlink(target, host); err != nil {
+			err = symlinkFailure(host, err)
+		}
 	} else {
 		err = os.Link(targetHost, host)
 	}
@@ -114,6 +117,20 @@ func (r lnRequest) link(target, last string) error {
 		return operandFailure(name, err)
 	}
 	return nil
+}
+
+// symlinkFailure is why a symbolic link could not be made, as busybox says it: a NAME that is
+// there is `File exists`, and one in a directory that is not is `No such file or directory`.
+// Go's Symlink on Windows tries again without the unprivileged flag after any failure, so both
+// came back as the privilege that second try lacked, "Permission denied".
+func symlinkFailure(host string, err error) error {
+	if _, statErr := os.Lstat(host); statErr == nil {
+		return fs.ErrExist
+	}
+	if _, statErr := os.Stat(filepath.Dir(host)); errors.Is(statErr, fs.ErrNotExist) {
+		return fs.ErrNotExist
+	}
+	return err
 }
 
 // clearName makes way for the link under -b or -f, as busybox does: -b renames what is there
