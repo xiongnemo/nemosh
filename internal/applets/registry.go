@@ -152,6 +152,7 @@ func portableApplets() []Applet {
 		newShredApplet(),
 		newTtysizeApplet(),
 		newResetApplet(),
+		newPipeProgressApplet("pipe_progress"),
 		newMvApplet(),
 		newChmodApplet(),
 		newGrepApplet(),

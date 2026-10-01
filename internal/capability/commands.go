@@ -99,6 +99,7 @@ var commands = []Command{
 	{Name: "shred", Short: "fuzvxns", ValueShort: "ns", Operand: AnyPath},
 	{Name: "ttysize", Operand: AnyPath},
 	{Name: "reset", Operand: AnyPath},
+	{Name: "pipe_progress"},
 	{Name: "ts", Short: "is", Operand: AnyPath},
 	{Name: "unlink", Operand: AnyPath},
 	{Name: "usleep", Operand: AnyPath},

@@ -140,6 +140,8 @@ var usageTextMore = map[string]Usage{
 		Notes: []string{"`80 24` when no standard stream is a terminal. With operands, the width for each w and the height for each h, in that order, as busybox's does."}},
 	"reset": {Summary: "Put the terminal back as it was at the start.",
 		Notes: []string{"It resets the display, clears the screen and does what `stty sane` does, on a terminal only; with its output elsewhere it does nothing. Arguments are not read, as busybox's reads none."}},
+	"pipe_progress": {Summary: "Copy standard input to standard output, with a dot on stderr each second it moves.",
+		Notes: []string{"A newline ends the dots when the input ends. Arguments are not read, as busybox's reads none."}},
 	"link": {Summary: "Make another name for a file.", Operands: "FILE LINK",
 		Notes: []string{"A hard link, and an existing LINK is refused rather than replaced."}},
 	"unlink": {Summary: "Remove one name.", Operands: "FILE",

@@ -160,8 +160,8 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		"sync": true,
 		// ttysize reads no options either: each operand is w, h or nothing, `-Z` among them.
 		"ttysize": true,
-		// reset reads no arguments, as busybox's reads none.
-		"reset": true,
+		// reset reads no arguments, as busybox's reads none, and nor does pipe_progress.
+		"reset": true, "pipe_progress": true,
 	}
 	for _, name := range appletNames(t) {
 		if noOptionParsing[name] || launchesSomething[name] {

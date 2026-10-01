@@ -716,6 +716,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `fsync` | `-d`, which is the same here; on Windows a file that cannot be written passes unflushed, as busybox-w32's does | refused by name |
 | `ts` | `-i -s`, and a strftime FORMAT operand | refused by name |
 | `reset` | none; on a terminal busybox-w32's sequence, then `stty sane`, and nothing when its output is not one | not read, as busybox reads none |
+| `pipe_progress` | none; the input passes through whole, a dot on stderr for each read that comes in a later second than the one before, and a newline at the end, as busybox's | not read, as busybox reads none |
 | `ttysize` | none; `[w] [h]` operands, and `80 24` without a terminal, as busybox's | an operand like any other, which prints nothing |
 | `unlink` | none; a directory is refused | refused by name |
 | `usleep` | none; a microsecond count | read as a number, so a bad one is refused |
