@@ -21,6 +21,13 @@ var errExternalPathNotAbsolute = errors.New("external native path is not absolut
 
 var errExternalNotExecutable = errors.New("external command is not executable")
 
+// What a name that is there and will not run is, for the hint beside busybox's "Permission
+// denied"; see notExecutableHint.
+var (
+	errExternalIsDirectory = errors.New("a directory")
+	errExternalIsDevice    = errors.New("a device")
+)
+
 func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	workingDirectory, err := r.nativeWorkingDirectory()
 	if err != nil {
@@ -140,7 +147,7 @@ func (r Runtime) externalCommandPath(name string) (string, error) {
 			return "", err
 		}
 		if resolved.Device {
-			return "", fmt.Errorf("%s is not executable: %w", resolved.Canonical, errExternalNotExecutable)
+			return "", fmt.Errorf("%s is %w: %w", resolved.Canonical, errExternalIsDevice, errExternalNotExecutable)
 		}
 		return executableCandidate(resolved.Native)
 	}
@@ -195,8 +202,14 @@ func executableCandidate(candidate string) (string, error) {
 	if executable {
 		return absolute, nil
 	}
+	// A file that is there and is no program is refused as one, 126, as busybox-w32 refuses it,
+	// once the suffixes have had their turn; it said not found, 127.
+	refusal := errExternalNotFound
+	if _, err := os.Stat(absolute); err == nil {
+		refusal = fmt.Errorf("executable %q: %w", absolute, errExternalNotExecutable)
+	}
 	if runtime.GOOS != "windows" || hasWindowsExecutableSuffixOrDot(absolute) {
-		return "", errExternalNotFound
+		return "", refusal
 	}
 	var firstSuffixErr error
 	for _, suffix := range windowsExecutableSuffixes {
@@ -215,7 +228,7 @@ func executableCandidate(candidate string) (string, error) {
 	if firstSuffixErr != nil {
 		return "", firstSuffixErr
 	}
-	return "", errExternalNotFound
+	return "", refusal
 }
 
 func requireAbsoluteNativePath(kind, path string) (string, error) {
@@ -238,7 +251,7 @@ func isExecutableFile(path string) (bool, error) {
 		return false, fmt.Errorf("stat executable %q: %w", path, err)
 	}
 	if info.IsDir() {
-		return false, fmt.Errorf("executable %q is a directory: %w", path, errExternalNotExecutable)
+		return false, fmt.Errorf("executable %q is %w: %w", path, errExternalIsDirectory, errExternalNotExecutable)
 	}
 	if runtime.GOOS != "windows" {
 		if info.Mode().Perm()&0o111 == 0 {

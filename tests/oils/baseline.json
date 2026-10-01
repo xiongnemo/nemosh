@@ -434,7 +434,6 @@
     "command_.test.sh": {
       "Command block": "fail",
       "Name too long": "ash-only",
-      "Permission denied": "fail",
       "hash with args": "fail",
       "hash without args prints the cache": "fail"
     },

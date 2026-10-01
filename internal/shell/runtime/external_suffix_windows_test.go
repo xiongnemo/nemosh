@@ -30,24 +30,27 @@ func TestExecutableCandidate_windowsTriesTheBareNameBeforeAppendingSuffixes(t *t
 		}
 	}
 
+	// A file that is there and is no program is refused as one, busybox-w32's 126, where a name
+	// that is not there at all is not found.
 	for _, testCase := range []struct {
 		candidate string
 		want      string
+		refusal   error
 	}{
 		{candidate: "shebang", want: "shebang"},
 		{candidate: "real.exe", want: "real.exe"},
 		{candidate: "wrapped.txt", want: "wrapped.txt.exe"},
 		{candidate: "tool", want: "tool.sh"},
-		{candidate: "plain"},
-		{candidate: "notes.txt"},
-		{candidate: "missing"},
+		{candidate: "plain", refusal: errExternalNotExecutable},
+		{candidate: "notes.txt", refusal: errExternalNotExecutable},
+		{candidate: "missing", refusal: errExternalNotFound},
 	} {
 		t.Run(testCase.candidate, func(t *testing.T) {
 			got, err := executableCandidate(filepath.Join(dir, testCase.candidate))
 
 			if testCase.want == "" {
-				if !errors.Is(err, errExternalNotFound) {
-					t.Fatalf("executableCandidate(%q) = %q, %v, want not found", testCase.candidate, got, err)
+				if !errors.Is(err, testCase.refusal) {
+					t.Fatalf("executableCandidate(%q) = %q, %v, want %v", testCase.candidate, got, err, testCase.refusal)
 				}
 				return
 			}

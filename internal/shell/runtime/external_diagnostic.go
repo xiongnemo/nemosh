@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 )
 
@@ -28,9 +29,10 @@ func (r Runtime) reportLookupFailure(name string, err error) int {
 		})
 		return 127
 	case errors.Is(err, errExternalNotExecutable):
+		// busybox's words, EACCES's, for a file or a directory alike; the hint says which.
 		r.report(name, shellDiagnostic{
-			message: err.Error(),
-			hint:    notExecutableHint(name),
+			message: "Permission denied",
+			hint:    notExecutableHint(name, err),
 			channel: debugExec,
 			details: r.debugDetails(debugExec, func() []string { return r.lookupDetails(name) }),
 		})
@@ -65,9 +67,17 @@ func (r Runtime) notFoundHint(name string) string {
 	return fmt.Sprintf("no directory on PATH holds %s; `command -v %s` answers the same question", name, name)
 }
 
-func notExecutableHint(name string) string {
-	if strings.HasSuffix(strings.ToLower(name), ".dll") {
+// notExecutableHint says what a name that is there is, that it will not run.
+func notExecutableHint(name string, err error) string {
+	switch {
+	case errors.Is(err, errExternalIsDirectory):
+		return name + " is a directory, which is not executable"
+	case errors.Is(err, errExternalIsDevice):
+		return name + " is a device, which is not executable"
+	case strings.HasSuffix(strings.ToLower(name), ".dll"):
 		return "a DLL is loaded by a program, not launched as one"
+	case goruntime.GOOS != "windows":
+		return "the file is there but is not executable; chmod +x makes it so"
 	}
 	return "the file is there but is not something Windows will start; check that it is a program and not data"
 }
