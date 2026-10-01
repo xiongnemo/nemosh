@@ -815,7 +815,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `unix2dos` | `-d -u`; converts **in place** with a file operand | refused by name |
 | `unzip` | `-l -t -p -j -n -o -q -K -d -x` | refused by name |
 | `uudecode` | `-o`; `-o -` writes to stdout | refused by name |
-| `uuencode` | `[FILE] NAME`; `-m` refused | refused by name |
+| `uuencode` | `[FILE] NAME`, and `-m` for busybox's `begin-base64` form, which `uudecode` reads back | refused by name |
 | `wget` | `-O -P -U -T -q -S --header --spider`; `-c` and `-o` accepted | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
 | `whois` | `-h -p`; `-i` accepted | refused by name |

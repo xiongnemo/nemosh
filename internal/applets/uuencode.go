@@ -3,6 +3,7 @@ package applets
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -38,13 +39,33 @@ func newUuencodeApplet() Applet {
 		// header is where uudecode will write.
 		source := operands[:len(operands)-1]
 		recorded := operands[len(operands)-1]
-		if options.has('m') {
-			return fmt.Errorf("base64 output is not implemented; use `base64` instead")
-		}
 		return eachTextInputQuoted(ctx, source, stdin, func(reader io.Reader) error {
+			if options.has('m') {
+				return writeBase64Uuencoded(stdout, reader, recorded)
+			}
 			return writeUuencoded(stdout, reader, recorded)
 		})
 	}}
+}
+
+// writeBase64Uuencoded is -m, RFC 1521's form as busybox writes it: `begin-base64`, the data in
+// base64 a 45-byte piece to a line, and `====` to end it. It was refused.
+func writeBase64Uuencoded(stdout io.Writer, reader io.Reader, name string) error {
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(stdout, "begin-base64 644 %s\n", name); err != nil {
+		return err
+	}
+	for offset := 0; offset < len(data); offset += 45 {
+		chunk := data[offset:min(offset+45, len(data))]
+		if _, err := fmt.Fprintln(stdout, base64.StdEncoding.EncodeToString(chunk)); err != nil {
+			return err
+		}
+	}
+	_, err = fmt.Fprint(stdout, "====\n")
+	return err
 }
 
 func writeUuencoded(stdout io.Writer, reader io.Reader, name string) error {
@@ -113,14 +134,24 @@ func decodeUuencoded(ctx context.Context, stdout io.Writer, reader io.Reader, op
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	name := ""
-	started := false
+	started, base64Body := false, false
 	var decoded []byte
+	var encoded strings.Builder
 	for scanner.Scan() {
 		line := strings.TrimRight(scanner.Text(), "\r")
 		if !started {
-			if fields := strings.Fields(line); len(fields) == 3 && fields[0] == "begin" {
-				name, started = fields[2], true
+			// `begin-base64` is -m's header, RFC 1521's, and its body is base64 to a `====`
+			// line, as busybox's uudecode reads it; it was passed over as no header at all.
+			if fields := strings.Fields(line); len(fields) == 3 && (fields[0] == "begin" || fields[0] == "begin-base64") {
+				name, started, base64Body = fields[2], true, fields[0] == "begin-base64"
 			}
+			continue
+		}
+		if base64Body {
+			if line == "====" {
+				break
+			}
+			encoded.WriteString(strings.TrimSpace(line))
 			continue
 		}
 		if line == "end" {
@@ -140,6 +171,12 @@ func decodeUuencoded(ctx context.Context, stdout io.Writer, reader io.Reader, op
 	}
 	if !started {
 		return fmt.Errorf("no `begin' line found")
+	}
+	if base64Body {
+		var err error
+		if decoded, err = base64.StdEncoding.DecodeString(encoded.String()); err != nil {
+			return fmt.Errorf("invalid base64 data")
+		}
 	}
 	return writeDecodedUu(ctx, stdout, decoded, name, options)
 }
