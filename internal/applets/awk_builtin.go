@@ -174,8 +174,10 @@ func (in *awkInterp) builtinIndex(node awkBuiltinExpr) (awkValue, error) {
 	if err != nil {
 		return awkValue{}, err
 	}
+	// An empty needle is found nowhere, as busybox's index answers 0 for it; this answered 1,
+	// where strings.Index finds it, which is gawk's answer.
 	at := strings.Index(haystack, needle)
-	if at < 0 {
+	if at < 0 || needle == "" {
 		return awkNum(0), nil
 	}
 	return awkNum(float64(utf8.RuneCountInString(haystack[:at]) + 1)), nil

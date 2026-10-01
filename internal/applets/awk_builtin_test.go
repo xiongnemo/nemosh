@@ -43,6 +43,12 @@ func TestAwkStringBuiltins(t *testing.T) {
 		},
 		{name: "index finds a substring", program: `BEGIN{print index("hello","ll")}`, want: "3\n"},
 		{name: "index answers 0 when absent", program: `BEGIN{print index("hello","z")}`, want: "0\n"},
+		// The empty string is found nowhere, as busybox's B_ix answers; it was 1, which is
+		// gawk's answer.
+		{
+			name: "index of the empty string is 0", program: `BEGIN{print index("abc",""), index("","")}`, want: "0 0\n",
+			diverges: []string{"gawk"},
+		},
 		{name: "length of a string", program: `BEGIN{print length("hello")}`, want: "5\n"},
 		{name: "length with no argument is the record", program: `{print length}`, input: "abcd\n", want: "4\n"},
 		{name: "length of a number goes through CONVFMT", program: `BEGIN{print length(12345)}`, want: "5\n"},
