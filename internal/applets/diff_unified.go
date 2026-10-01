@@ -3,6 +3,7 @@ package applets
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 // The unified output format: the header, and the hunks.
@@ -19,18 +20,50 @@ import (
 // grouping is computed before anything is written rather than emitted as the edit
 // script is walked.
 
+// The header names the files, but where -L labels them: the first -L the first file, and the
+// last of the others the second, as busybox takes them. -T puts a tab after each line's marker,
+// and -t writes a tab as the spaces to the next multiple of eight, counted from the line's start.
+// All three were taken and ignored.
 func (r diffRequest) writeUnified(stdout io.Writer, edits []diffEdit, hunks []diffHunk) error {
+	left, right := r.left, r.right
+	if len(r.labels) > 0 {
+		left = r.labels[0]
+	}
+	if len(r.labels) > 1 {
+		right = r.labels[len(r.labels)-1]
+	}
 	// No timestamps in the header: busybox omits them, and a timestamp would make
 	// the output differ between two runs over unchanged files.
-	if _, err := fmt.Fprintf(stdout, "--- %s\n+++ %s\n", r.left, r.right); err != nil {
+	if _, err := fmt.Fprintf(stdout, "--- %s\n+++ %s\n", left, right); err != nil {
 		return err
 	}
 	for _, hunk := range hunks {
-		if err := writeDiffHunk(stdout, edits[hunk.from:hunk.to]); err != nil {
+		if err := r.writeDiffHunk(stdout, edits[hunk.from:hunk.to]); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// diffLineText is a line as a hunk writes it, after its marker.
+func (r diffRequest) diffLineText(text string) string {
+	if r.expandTabs && strings.IndexByte(text, '\t') >= 0 {
+		var expanded strings.Builder
+		for index := 0; index < len(text); index++ {
+			if text[index] != '\t' {
+				expanded.WriteByte(text[index])
+				continue
+			}
+			for expanded.WriteByte(' '); expanded.Len()%8 != 0; {
+				expanded.WriteByte(' ')
+			}
+		}
+		text = expanded.String()
+	}
+	if r.initialTab {
+		return "\t" + text
+	}
+	return text
 }
 
 // diffHunk is a half-open range of the edit script.
@@ -71,7 +104,7 @@ func groupDiffHunks(edits []diffEdit, context int) []diffHunk {
 	return hunks
 }
 
-func writeDiffHunk(stdout io.Writer, edits []diffEdit) error {
+func (r diffRequest) writeDiffHunk(stdout io.Writer, edits []diffEdit) error {
 	leftStart, leftCount, rightStart, rightCount := hunkRanges(edits)
 	if _, err := fmt.Fprintf(stdout, "@@ -%s +%s @@\n",
 		hunkRange(leftStart, leftCount), hunkRange(rightStart, rightCount)); err != nil {
@@ -85,7 +118,7 @@ func writeDiffHunk(stdout io.Writer, edits []diffEdit) error {
 		case editAdd:
 			marker = "+"
 		}
-		if _, err := fmt.Fprintf(stdout, "%s%s\n", marker, edit.text); err != nil {
+		if _, err := fmt.Fprintf(stdout, "%s%s\n", marker, r.diffLineText(edit.text)); err != nil {
 			return err
 		}
 	}

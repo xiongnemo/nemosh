@@ -42,6 +42,9 @@ func newDiffApplet() Applet {
 			ignoreSpace:        options.has('b'),
 			ignoreBlank:        options.has('B'),
 			treatAbsentAsEmpty: options.has('N'),
+			labels:             options.all('L'),
+			initialTab:         options.has('T'),
+			expandTabs:         options.has('t'),
 		}
 		return request.run(ctx, stdin, stdout)
 	}}
@@ -57,6 +60,9 @@ type diffRequest struct {
 	ignoreSpace        bool
 	ignoreBlank        bool
 	treatAbsentAsEmpty bool
+	// labels are -L's, and initialTab and expandTabs -T and -t; see diff_unified.go.
+	labels                 []string
+	initialTab, expandTabs bool
 }
 
 func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
