@@ -58,6 +58,12 @@ func (r *cpRun) copy(source, dest pathOperand, top bool) bool {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return r.fail(cannotStat(dest.operand, err))
 	}
+	// A device or a pipe of the system's that is there is written to, as one of the shell's is,
+	// and never removed and made afresh as a file is: off Windows `cp f /dev/null` tried to
+	// unlink /dev/null, and as root would have.
+	if destExists && destInfo.Mode()&(os.ModeDevice|os.ModeNamedPipe) != 0 {
+		return r.copyToDevice(source, dest, sourceInfo)
+	}
 	if destExists {
 		if os.SameFile(sourceInfo, destInfo) {
 			return r.fail(fmt.Errorf("'%s' and '%s' are the same file", source.operand, dest.operand))
