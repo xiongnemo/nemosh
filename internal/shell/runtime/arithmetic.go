@@ -185,6 +185,12 @@ func (p *arithmeticParser) binary(level int) (int64, error) {
 	}
 	for {
 		operator := p.peek()
+		// A character no operator is refuses the expression where it stands, before an
+		// assignment it follows is made, as both references read it: `(( a = 3 + 4 # x ))`
+		// leaves a alone. It ended the operand, a was 7, and the # was refused after.
+		if strayArithmeticToken(operator) {
+			return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", operator)
+		}
 		if !slices.Contains(arithmeticPrecedence[level], operator) {
 			return left, nil
 		}

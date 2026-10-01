@@ -10,6 +10,10 @@ import "strings"
 // line that ends in an operator, the logical line ends in a blank, and the # begins a comment
 // there as before.
 func (scanner *syntaxScanner) commentStartsAt(line string, index int) bool {
+	// In an arithmetic span the # is the expression's; see inArithmetic.
+	if scanner.inArithmetic() {
+		return false
+	}
 	if index > 0 || !scanner.joined || scanner.logical.Len() == 0 {
 		return commentStarts(line, index)
 	}

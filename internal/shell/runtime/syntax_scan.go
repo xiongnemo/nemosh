@@ -113,22 +113,17 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				continue
 			}
 		}
-		// An arithmetic expansion is stepped over whole, before the command
-		// substitution branch below can claim its first `(`. Otherwise the `))`
-		// that closes it is counted as one substitution close and one group
-		// close, and the group close is matched against whatever is really
-		// open: `{ echo $((1+2)); }` fails with `unexpected ), expected }`.
-		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && scanner.quote() != '\'' {
-			if end, ok := arithmeticExpansionEnd(line, index+3); ok {
-				scanner.logical.WriteString(line[index : end+1])
-				index = end
-				continue
-			}
+		// An arithmetic expansion that closes on this line is stepped over whole; see
+		// stepArithmeticExpansion. One that goes on is an arithmetic span.
+		if end, stepped := scanner.stepArithmeticExpansion(line, index); stepped {
+			index = end
+			continue
 		}
 		if char == '$' && index+1 < len(line) && line[index+1] == '(' && scanner.quote() != '\'' {
 			scanner.quotes = append(scanner.quotes, 0)
 			scanner.logical.WriteString("$(")
-			scanner.substitutions = append(scanner.substitutions, openSubstitution{body: scanner.logical.Len()})
+			arithmetic := index+2 < len(line) && line[index+2] == '('
+			scanner.substitutions = append(scanner.substitutions, openSubstitution{body: scanner.logical.Len(), arithmetic: arithmetic})
 			index++
 			continue
 		}
@@ -177,6 +172,9 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				index = end - 1
 				continue
 			}
+			if !scanner.casePattern() && scanner.openArithmeticCommand(line, index) {
+				continue
+			}
 			if !scanner.casePattern() {
 				scanner.groupClosers = append(scanner.groupClosers, ')')
 			}
@@ -220,10 +218,6 @@ func (scanner *syntaxScanner) scanLine(line string) {
 		scanner.logical.WriteByte(char)
 	}
 }
-
-// openSubstitution is a `$(` the scan is inside: body is where in logical its body begins,
-// and depth how many of the body's own parentheses are open.
-type openSubstitution struct{ body, depth int }
 
 // substitutionParenthesis follows an unquoted parenthesis inside a `$(`. One of the body's
 // own opens a level and closes it -- a subshell's, a function's, an array's, a `<(`'s -- and a

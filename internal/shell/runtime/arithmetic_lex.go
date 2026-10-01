@@ -135,6 +135,12 @@ func matchingBracket(expression string, open int) int {
 	return -1
 }
 
+// strayArithmeticToken is a character tokenizeArithmetic could not classify: no name, number
+// or operator, and not the comma either. A `#` that is not a base's is one.
+func strayArithmeticToken(token string) bool {
+	return len(token) == 1 && token != "," && !isNameByte(token[0]) && matchArithmeticOperator(token) == ""
+}
+
 func matchArithmeticOperator(rest string) string {
 	for _, operator := range arithmeticOperators {
 		if strings.HasPrefix(rest, operator) {
