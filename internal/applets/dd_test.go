@@ -175,10 +175,8 @@ func TestDfReport(t *testing.T) {
 	if lines[0] != "Filesystem           1K-blocks      Used Available Use% Mounted on" {
 		t.Fatalf("df's header is %q", lines[0])
 	}
-	for _, line := range lines[1:] {
-		if !strings.Contains(line, "%") {
-			t.Fatalf("df row %q has no percentage", line)
-		}
+	if len(dfRows(t, lines[1:])) == 0 {
+		t.Fatalf("df printed %q, which has no rows", got)
 	}
 	human, _, status := runApplet(t, "df", []string{"-h"}, "")
 	if status != 0 {
@@ -189,9 +187,29 @@ func TestDfReport(t *testing.T) {
 	}
 	// An operand narrows it to the one filesystem that path is on.
 	one, _, status := runApplet(t, "df", []string{t.TempDir()}, "")
-	if status != 0 || len(strings.Split(strings.TrimRight(one, "\n"), "\n")) != 2 {
+	if status != 0 || len(dfRows(t, strings.Split(strings.TrimRight(one, "\n"), "\n")[1:])) != 1 {
 		t.Fatalf("df on one directory printed %q status %d", one, status)
 	}
+}
+
+// dfRows is df's rows, a name too long for its column joined to the line of numbers after it,
+// as busybox's layout splits such a row. Away from Windows the name is the operand's path,
+// which on a CI runner is longer than twenty, and a row was taken for one with no percentage.
+func dfRows(t *testing.T, lines []string) []string {
+	t.Helper()
+	var rows []string
+	name := ""
+	for _, line := range lines {
+		if !strings.Contains(line, "%") {
+			name = line
+			continue
+		}
+		rows, name = append(rows, name+line), ""
+	}
+	if name != "" {
+		t.Fatalf("df row %q has no numbers after it", name)
+	}
+	return rows
 }
 
 // TestDfArithmetic covers the two rules that are decisions rather than measurements.
