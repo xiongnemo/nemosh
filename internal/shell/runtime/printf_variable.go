@@ -23,9 +23,10 @@ func (r Runtime) appletStatus(ctx context.Context, name string, err error) int {
 	// already normalizes on its own path; this one compared against the sentinel and
 	// never matched, so every `producer | head -1` where the producer was an applet
 	// reported a write failure that POSIX would have passed over in silence. Silence, and
-	// SIGPIPE's status, as both references leave it: `yes | head -1` is 141 to pipefail.
+	// SIGPIPE's status, as both references leave it: `yes | head -1` is 141 to pipefail --
+	// unless the shell ignores SIGPIPE; see brokenPipe.
 	if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
-		return brokenPipeStatus
+		return r.brokenPipe(name)
 	}
 	status, message := AppletFailure(name, err)
 	if message != "" {

@@ -94,7 +94,12 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 			return r.programStatus(exitErr.ProcessState)
 		}
 		// The copy into a pipe no one reads failed, and the program with it: SIGPIPE's 141.
+		// When the shell ignores SIGPIPE the program only saw its write fail, and it exited 0,
+		// which a status of its own would have overtaken here.
 		if errors.Is(normalizePipelineWriteError(err), errPipelineDownstreamClosed) {
+			if r.pipeStage.current() == pipeIgnored {
+				return 0
+			}
 			return brokenPipeStatus
 		}
 		// A program that demands administrator is present and runnable and still

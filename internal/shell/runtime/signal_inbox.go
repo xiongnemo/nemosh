@@ -113,12 +113,21 @@ func (r Runtime) setTrap(name trapName, action string) {
 		r.traps[name] = action
 	}
 	r.signals.catch(name, action != "-")
+	if name == trapPIPE {
+		r.pipeStage.dispose(dispositionOf(action))
+	}
 }
 
 // deliverSignals runs the traps of the signals that arrived during the command that has
 // just finished. The command's status is what `$?` is inside each trap and after them all,
 // unless a trap ends the shell: `trap 'exit 3' TERM` is how a job says it was stopped.
 func (r Runtime) deliverSignals(ctx context.Context, result lineResult) lineResult {
+	// SIGPIPE comes from the shell's own write, not from outside: see pipe_trap.go.
+	if r.pipeStage.takeCaught() {
+		if trapped := r.runTrap(ctx, trapPIPE, result.status); trapped.control != flowNone {
+			return trapped
+		}
+	}
 	for _, signal := range r.signals.take() {
 		name := signalTraps[signal]
 		action, set := r.traps[name]

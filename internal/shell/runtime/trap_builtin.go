@@ -10,7 +10,8 @@ import (
 
 // trap implements the POSIX `trap` builtin over the conditions this shell
 // promises: EXIT and INT (docs/design/v0-readiness.md, P0.4); HUP, QUIT and TERM,
-// which `kill` can send a background job (signal_inbox.go); and ERR, which is
+// which `kill` can send a background job (signal_inbox.go); PIPE, which a write into a
+// pipe no one reads raises (pipe_trap.go); and ERR, which is
 // not a signal at all and so needs nothing Windows lacks -- busybox and bash both
 // have it, and they agree on every case measured (errTrapTriggers).
 //
@@ -129,6 +130,8 @@ func trapConditionName(operand string) (trapName, bool) {
 		return trapQUIT, true
 	case "TERM", "15":
 		return trapTERM, true
+	case "PIPE", "13":
+		return trapPIPE, true
 	default:
 		if _, err := strconv.Atoi(operand); err == nil || slices.Contains(portableSignalNames, name) {
 			return "", true

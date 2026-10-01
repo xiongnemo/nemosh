@@ -24,14 +24,27 @@ type pipeStage struct {
 	// is the program's, and ends only it.
 	programs atomic.Int32
 	abandon  context.CancelCauseFunc
+	// disposition is what SIGPIPE does to the shell, and caught that it came while a trap
+	// caught it; top is the shell itself, whose SIGPIPE is the process's. See pipe_trap.go.
+	disposition atomic.Int32
+	caught      atomic.Bool
+	top         bool
 }
 
 // brokenPipeStatus is what a write into a pipe no one reads leaves: SIGPIPE's 128+13.
 const brokenPipeStatus = 128 + int(syscall.SIGPIPE)
 
-// readerGone ends the shell as SIGPIPE ends it, unless the write was a program's.
+// readerGone ends the shell as SIGPIPE ends it, unless the write was a program's or the
+// shell ignores SIGPIPE or catches it.
 func (s *pipeStage) readerGone() {
-	if s != nil && s.programs.Load() == 0 {
+	if s == nil || s.programs.Load() != 0 {
+		return
+	}
+	switch s.current() {
+	case pipeIgnored:
+	case pipeCaught:
+		s.caught.Store(true)
+	default:
 		s.abandon(jobSignal(syscall.SIGPIPE))
 	}
 }
@@ -52,7 +65,8 @@ func (s *pipeStage) running() func() {
 // standard error is its own.
 func (r Runtime) ownStage(ctx context.Context, top bool) (context.Context, Runtime, func()) {
 	ctx, abandon := context.WithCancelCause(ctx)
-	stage := &pipeStage{abandon: abandon}
+	stage := &pipeStage{abandon: abandon, top: top}
+	stage.dispose(r.pipeDispositionFor(top))
 	r.pipeStage = stage
 	restores := r.fds.answerTo(stage, top)
 	return ctx, r, func() {
