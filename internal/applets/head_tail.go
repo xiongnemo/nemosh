@@ -24,7 +24,13 @@ func runHeadTail(ctx context.Context, applet string, args []string, stdin io.Rea
 		return err
 	}
 	if len(paths) == 0 {
-		// stdin has no name, so -v cannot print one for it either.
+		// Under -v stdin is headed as `-` is, "standard input", as busybox's head and GNU's
+		// head it. It was not: stdin has no name, this said, and named `-` all the same.
+		if headers == headersAlways {
+			if _, err := io.WriteString(stdout, headTailHeader("-", true)); err != nil {
+				return err
+			}
+		}
 		return copy(stdout, stdin, spec)
 	}
 	view := ProcessViewFromContext(ctx)
