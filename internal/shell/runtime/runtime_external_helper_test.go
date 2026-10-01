@@ -59,7 +59,15 @@ func TestRuntimeHelperProcess(t *testing.T) {
 			os.Exit(0)
 		}
 		if os.Args[i+1] == "write-large" {
-			_, _ = io.CopyN(os.Stdout, strings.NewReader(strings.Repeat("x", 64*1024)), 1024*1024)
+			// A mebibyte, more than any pipe holds, so a reader that leaves early leaves this
+			// still writing. It was 64 KiB, the whole of its source, which a Linux or macOS pipe
+			// takes in one go: the writer was done before its reader left, and nothing failed.
+			chunk := []byte(strings.Repeat("x", 64*1024))
+			for range 16 {
+				if _, err := os.Stdout.Write(chunk); err != nil {
+					break
+				}
+			}
 			os.Exit(0)
 		}
 		fmt.Fprintln(os.Stdout, os.Args[i+1])
