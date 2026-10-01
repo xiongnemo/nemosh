@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -49,13 +50,17 @@ func (e *testEvaluator) applyBinary(left, operator, right string) (bool, error) 
 }
 
 // busybox's getn spells a non-numeric operand `%s: bad number` and leaves
-// status 2 behind (coreutils/test.c:468).
+// status 2 behind (coreutils/test.c:468). An empty one is not named, as there: it was
+// `: bad number`.
 func testNumber(operand string) (int64, error) {
 	value, err := strconv.ParseInt(strings.TrimSpace(operand), 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("%s: bad number", operand)
+	switch {
+	case err == nil:
+		return value, nil
+	case operand == "":
+		return 0, errors.New("bad number")
 	}
-	return value, nil
+	return 0, fmt.Errorf("%s: bad number", operand)
 }
 
 func (e *testEvaluator) compareFiles(left, operator, right string) (bool, error) {

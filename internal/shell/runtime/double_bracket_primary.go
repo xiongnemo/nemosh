@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strconv"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -138,30 +137,11 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 	return r.evaluateConditionComparison(operator, left.text, right.text)
 }
 
-// evaluateConditionComparison covers the numeric and file operators, which are
-// `[`'s and are evaluated by `[`'s own code.
+// evaluateConditionComparison covers the numeric and file operators, which are `[`'s and are
+// evaluated by `[`'s own code. The numeric ones were read here, and an operand that is no
+// number was said of the operator, `[[: -lt: integer expression expected`, where `[` names
+// the operand, `x: bad number`, as busybox's [[ does; and `[[ " 3" -eq 3 ]]`, which `[` and
+// both references take, was refused.
 func (r Runtime) evaluateConditionComparison(operator, left, right string) (bool, error) {
-	switch operator {
-	case "-eq", "-ne", "-lt", "-le", "-gt", "-ge":
-		leftNumber, leftErr := strconv.ParseInt(left, 10, 64)
-		rightNumber, rightErr := strconv.ParseInt(right, 10, 64)
-		if leftErr != nil || rightErr != nil {
-			return false, fmt.Errorf("%s: integer expression expected", operator)
-		}
-		switch operator {
-		case "-eq":
-			return leftNumber == rightNumber, nil
-		case "-ne":
-			return leftNumber != rightNumber, nil
-		case "-lt":
-			return leftNumber < rightNumber, nil
-		case "-le":
-			return leftNumber <= rightNumber, nil
-		case "-gt":
-			return leftNumber > rightNumber, nil
-		}
-		return leftNumber >= rightNumber, nil
-	}
-	// The file comparisons are `test`'s, evaluated by `test`'s own code.
 	return applets.EvaluateConditionPrimary(r, operator, left, right)
 }
