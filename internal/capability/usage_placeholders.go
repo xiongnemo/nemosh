@@ -65,6 +65,7 @@ var valuePlaceholders = map[string]string{
 	"base32w":                 "COLUMN",
 	"shufn":                   "COUNT",
 	"shufi":                   "LO-HI",
+	"shufo":                   "FILE",
 	"iconvf":                  "ENCODING",
 	"iconvt":                  "ENCODING",
 	"iconvo":                  "FILE",

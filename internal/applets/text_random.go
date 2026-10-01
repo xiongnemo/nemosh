@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -80,14 +81,16 @@ func isBase32Rune(character rune) bool {
 }
 
 // newShufApplet permutes lines. -n takes at most that many, -e treats the
-// operands as the input, -i generates a range, -z uses NUL terminators.
+// operands as the input, -i generates a range, -z uses NUL terminators, and -o
+// writes to a FILE, opened once the input is read, so it may be the input, as
+// busybox opens it.
 //
 // The order is genuinely random, so the tests assert the *set* and the count
 // rather than a sequence -- a test that pinned an order would either be wrong or
 // would prove the shuffle does not shuffle.
 func newShufApplet() Applet {
 	return simpleApplet{name: "shuf", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "ez", "ni")
+		options, operands, err := parseAppletOptions(ctx, args, "ez", "nio")
 		if err != nil {
 			return err
 		}
@@ -107,13 +110,29 @@ func newShufApplet() Applet {
 		if options.has('z') {
 			terminator = "\x00"
 		}
-		for _, line := range lines {
-			if _, err := io.WriteString(stdout, line+terminator); err != nil {
-				return err
-			}
+		if !options.has('o') {
+			return writeShuffled(stdout, lines, terminator)
 		}
-		return nil
+		view := ProcessViewFromContext(ctx)
+		file, err := openProcessOutput(view, options.value('o'), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
+		if err != nil {
+			return cannotOpen(options.value('o'), err)
+		}
+		err = writeShuffled(file, lines, terminator)
+		if closeErr := file.Close(); err == nil {
+			err = closeErr
+		}
+		return err
 	}}
+}
+
+func writeShuffled(out io.Writer, lines []string, terminator string) error {
+	for _, line := range lines {
+		if _, err := io.WriteString(out, line+terminator); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func shufInput(ctx context.Context, options appletOptions, operands []string, stdin io.Reader) ([]string, error) {

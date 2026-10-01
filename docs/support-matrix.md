@@ -786,7 +786,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -s -t -w`, as `md5sum` | refused by name |
 | `sha3sum` | `-a 224\|256\|384\|512` (default 224), `-b -c -s -t -w`, as `md5sum` | refused by name |
 | `sum` | `-r` (BSD, the default), `-s` (System V) | refused by name |
-| `shuf` | `-n -e -i -z` | refused by name |
+| `shuf` | `-n -e -i -z -o`; `-o FILE` is opened once the input is read, so it may be the input, as busybox's is | refused by name |
 | `strings` | `-n -t -o -a -f` | refused by name |
 | `awk` | the POSIX language; `-F -v -f --`, and busybox's `-e PROGRAM` (read with any `-f` in the order given, as one program), `-E FILE` (`-f` that ends the options) and `-W` (said to be ignored); operands mixing files and `VAR=VALUE` | refused by name |
 | `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {} r w l`, s's flags `g p N i w`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]` | refused by name |

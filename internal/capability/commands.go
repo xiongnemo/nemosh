@@ -111,7 +111,7 @@ var commands = []Command{
 	{Name: "unexpand", Short: "fat", ValueShort: "t", Long: []string{"first-only", "tabs", "all"}, ValueLong: []string{"tabs"}, Operand: AnyPath},
 	{Name: "join", Short: "aveot12j", ValueShort: "aveot12j", Operand: AnyPath},
 	{Name: "base32", Short: "diw", ValueShort: "w", Operand: AnyPath},
-	{Name: "shuf", Short: "ezni", ValueShort: "ni", Operand: AnyPath},
+	{Name: "shuf", Short: "ezino", ValueShort: "nio", FileShort: "o", Operand: AnyPath},
 	{Name: "dos2unix", Short: "ud", Operand: AnyPath},
 	{Name: "unix2dos", Short: "ud", Operand: AnyPath},
 	{Name: "iconv", Short: "lcfto", ValueShort: "fto", Operand: AnyPath},
