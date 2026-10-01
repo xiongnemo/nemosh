@@ -36,6 +36,10 @@ type sedStream struct {
 	// onOpenError is how an unreadable operand is reported. busybox warns and
 	// carries on with status 1 (editors/sed.c:1061), so the stream keeps going.
 	onOpenError func(error)
+	// binary is -b, which keeps a line's carriage return as part of the line, as
+	// busybox-w32 reads a file in binary mode for it: `sed -b 's/$/X/'` puts the X
+	// after the CR, and `sed -b -i` writes a CRLF file back as CRLF.
+	binary bool
 }
 
 // Next answers the line, whether that line was terminated in the input, and
@@ -73,6 +77,9 @@ func (s *sedStream) fill() error {
 				// only
 				// whether there *was* an ending is kept, not which one.
 				line, ending := splitLineEnding(s.scanner.Text())
+				if s.binary && ending == "\r\n" {
+					line += "\r"
+				}
 				s.head, s.hasHead, s.headEnded = line, true, ending != ""
 				return nil
 			}

@@ -26,6 +26,8 @@ type sedProgram struct {
 	// quiet is -n: the pattern space is not printed at the end of the script, so
 	// only an explicit p writes anything.
 	quiet bool
+	// binary is -b, busybox-w32's: a carriage return is kept as part of its line.
+	binary bool
 	// view is the process the run is in, which resolves a file command's FILE.
 	view ProcessView
 }
@@ -189,11 +191,12 @@ type sedOptions struct {
 	// common form and keeps no backup.
 	inPlace bool
 	suffix  string
+	binary  bool
 }
 
 // sedArgs reads sed's options, leaving the operands.
 //
-// -n, -e, -E, -r, -f and -i. -f collects a script from a file, so it is resolved
+// -n, -e, -E, -r, -f, -i and -b. -f collects a script from a file, so it is resolved
 // here rather than at parse time: a missing script file is an error about that
 // file, not about a script.
 func sedArgs(ctx context.Context, args []string) (sedOptions, error) {
@@ -256,6 +259,8 @@ func readSedFlags(ctx context.Context, arg string, args []string, index int, opt
 			options.quiet = true
 		case 'E', 'r':
 			options.extended = true
+		case 'b':
+			options.binary = true
 		case 'i':
 			// The suffix is attached and never a separate word, which is what
 			// keeps `sed -i script file` from taking the script as a suffix.

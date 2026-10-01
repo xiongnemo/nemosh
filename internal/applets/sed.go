@@ -33,6 +33,7 @@ func newSedApplet() Applet {
 		if err != nil {
 			return err
 		}
+		program.binary = options.binary
 		if options.inPlace {
 			return runSedInPlace(ctx, program, options.operands, options.suffix, stderr)
 		}
@@ -48,7 +49,7 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 		return err
 	}
 	failed := false
-	stream := &sedStream{onOpenError: func(err error) {
+	stream := &sedStream{binary: p.binary, onOpenError: func(err error) {
 		fmt.Fprintf(stderr, "sed: %v\n", err)
 		failed = true
 	}}
