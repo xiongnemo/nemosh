@@ -768,7 +768,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `nc` | `-l -p -w`; `-e` **refused by name** | refused by name |
 | `nl` | `-b a\|t\|n\|pBRE -i -s -v -w -p` and their long forms; numbers carry on from one file to the next, and `pBRE` is GNU's | refused by name |
 | `od` | `-a -b -c -d -D -f -h -H -i -I -l -L -o -O -B -s -x -X -v`, `-t` of every kind and size busybox's has (`d o u x` of 1 2 4 8 bytes or `C S I L`, `f` of 4 or 8 or `F D`, `a`, `c`, and `z` after), `-A -N -j -S -w`, their long forms, and `--traditional`'s OFFSET and LABEL; each type a line of its own, several in columns as GNU od lays them out | refused by name |
-| `paste` | `-s -d`; the delimiter list cycles | refused by name |
+| `paste` | `-s -d`; the delimiter list cycles, its escapes read as busybox's (`\t`, `\n`, `\\`, and `\0` for no delimiter) | refused by name |
 | `pgrep` | `-l -x -v -P PPID`, `-e` taken; a regular expression on the process name, which `-P` makes optional | refused by name |
 | `pkill` | `-x -v -e -l -P PPID` and a leading `-SIG`; a regular expression on the process name, which `-P` makes optional. `-e` says `NAME killed (pid N)`, and `-l` lists the signals | refused by name |
 | `patch` | `-R -u -p -i -N -E -f -g`, `--dry-run` and busybox's long forms; `[ORIGFILE [PATCHFILE]]`; a /dev/null side creates or empties a file, and without -p a name is its last component; no fuzz | refused by name |

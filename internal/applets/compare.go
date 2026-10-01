@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 // comm and paste, which take two inputs at once; cmp is in cmp.go.
@@ -115,11 +116,12 @@ func newPasteApplet() Applet {
 		if err != nil {
 			return err
 		}
-		delimiters := "\t"
+		delimiters := []rune{'\t'}
 		if options.has('d') {
-			if delimiters = options.value('d'); delimiters == "" {
+			if options.value('d') == "" {
 				return fmt.Errorf("delimiter list cannot be empty")
 			}
+			delimiters = pasteDelimiters(options.value('d'))
 		}
 		view := ProcessViewFromContext(ctx)
 		columns := make([][]string, 0, max(len(paths), 1))
@@ -196,14 +198,35 @@ func everyNthLine(lines []string, start, step int) []string {
 	return picked
 }
 
+// pasteDelimiters is -d's list, its escapes read as busybox's
+// strcpy_and_process_escape_sequences reads them: \t \n \\ and the rest of C's, and \0 a
+// delimiter that is nothing. It was taken as written, so `-d '\t,'` put a backslash and a t
+// between the columns.
+func pasteDelimiters(list string) []rune {
+	var delimiters []rune
+	for at := 0; at < len(list); {
+		if list[at] == '\\' {
+			character, used := dumpEscape(list[at+1:])
+			delimiters = append(delimiters, rune(character))
+			at += 1 + used
+			continue
+		}
+		character, size := utf8.DecodeRuneInString(list[at:])
+		delimiters = append(delimiters, character)
+		at += size
+	}
+	return delimiters
+}
+
 // joinWithDelimiters cycles through the delimiter list, which is what -d takes:
 // `-d,;` alternates comma and semicolon between columns.
-func joinWithDelimiters(fields []string, delimiters string) string {
-	separators := []rune(delimiters)
+func joinWithDelimiters(fields []string, delimiters []rune) string {
 	var joined strings.Builder
 	for index, field := range fields {
 		if index > 0 {
-			joined.WriteRune(separators[(index-1)%len(separators)])
+			if delimiter := delimiters[(index-1)%len(delimiters)]; delimiter != 0 {
+				joined.WriteRune(delimiter)
+			}
 		}
 		joined.WriteString(field)
 	}
