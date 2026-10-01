@@ -107,6 +107,16 @@ func TestAwkFileOperands(t *testing.T) {
 		}
 	})
 
+	// Standard input is `-`, from the first record to END, as busybox names it; it was empty.
+	// Measured against busybox-w32.
+	t.Run("FILENAME is - for standard input", func(t *testing.T) {
+		t.Parallel()
+		program := `BEGIN{print "[" FILENAME "]"} {print "[" FILENAME "]"} END{print "[" FILENAME "]"}`
+		if got, _, _ := runAwkCommand(t, []string{program}, "x\n"); got != "[]\n[-]\n[-]\n" {
+			t.Fatalf("got %q", got)
+		}
+	})
+
 	t.Run("an assignment operand takes effect where it stands", func(t *testing.T) {
 		t.Parallel()
 		one, two := setup(t)

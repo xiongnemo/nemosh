@@ -16,7 +16,7 @@ import (
 //
 // **NR runs across every file and FNR restarts in each**, which is the whole reason both
 // exist. FILENAME follows the file being read and is empty in BEGIN, since no file is open
-// yet -- measured, and both references agree.
+// yet -- measured, and both references agree -- and is `-` for standard input.
 
 // runInputs is the record loop over everything the command line named.
 func (in *awkInterp) runInputs() error {
@@ -43,7 +43,10 @@ func (in *awkInterp) runInputs() error {
 	}
 	if !read {
 		// No file operands at all -- only assignments, or nothing -- means standard
-		// input. That is what makes `awk '{print v, $0}' v=1` work on a pipe.
+		// input. That is what makes `awk '{print v, $0}' v=1` work on a pipe. FILENAME is
+		// `-` then, from the first record to END, as busybox's next_input_file names it;
+		// it was empty.
+		in.vars["FILENAME"] = awkStr("-")
 		return in.runRecordsFrom(bufio.NewReader(in.input))
 	}
 	return nil
