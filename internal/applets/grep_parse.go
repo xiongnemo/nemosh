@@ -21,7 +21,7 @@ import (
 // `[-m N] [-A|B|C N] { PATTERN | -e PATTERN... | -f FILE... }`.
 const grepValuedLetters = "mABCef"
 
-func grepArgs(ctx context.Context, args []string) (grepFlags, []string, error) {
+func grepArgs(ctx context.Context, args []string, stdin io.Reader) (grepFlags, []string, error) {
 	flags := grepFlags{}
 	// Options may follow the pattern and the files, `grep TODO *.go -n`, as getopt lets them.
 	permute := optionsPermute(ProcessViewFromContext(ctx))
@@ -52,7 +52,7 @@ func grepArgs(ctx context.Context, args []string) (grepFlags, []string, error) {
 			index++
 			continue
 		}
-		consumed, err := readGrepLetters(ctx, arg, args, index, &flags)
+		consumed, err := readGrepLetters(ctx, arg, args, index, &flags, stdin)
 		if err != nil {
 			return grepFlags{}, nil, err
 		}
@@ -93,7 +93,7 @@ func parseGrepLongOption(arg string) error {
 // readGrepLetters reads one argument's worth of clustered letters, reporting how
 // many arguments it used. A valued letter ends the cluster, because the rest of
 // the word is its value.
-func readGrepLetters(ctx context.Context, arg string, args []string, index int, flags *grepFlags) (int, error) {
+func readGrepLetters(ctx context.Context, arg string, args []string, index int, flags *grepFlags, stdin io.Reader) (int, error) {
 	for position := 1; position < len(arg); position++ {
 		letter := arg[position]
 		if !strings.ContainsRune(grepValuedLetters, rune(letter)) {
@@ -106,7 +106,7 @@ func readGrepLetters(ctx context.Context, arg string, args []string, index int, 
 		if err != nil {
 			return 0, err
 		}
-		if err := applyGrepValue(ctx, letter, value, flags); err != nil {
+		if err := applyGrepValue(ctx, letter, value, flags, stdin); err != nil {
 			return 0, err
 		}
 		return consumed, nil
@@ -126,7 +126,7 @@ func grepOptionValue(arg string, args []string, index, position int, letter byte
 	return args[index+1], 2, nil
 }
 
-func applyGrepValue(ctx context.Context, letter byte, value string, flags *grepFlags) error {
+func applyGrepValue(ctx context.Context, letter byte, value string, flags *grepFlags, stdin io.Reader) error {
 	switch letter {
 	case 'm':
 		count, err := parseGrepNumber(value)
@@ -158,7 +158,7 @@ func applyGrepValue(ctx context.Context, letter byte, value string, flags *grepF
 		flags.patterns = append(flags.patterns, value)
 		flags.patternsGiven = true
 	case 'f':
-		patterns, err := readGrepPatternFile(ctx, value)
+		patterns, err := readGrepPatternFile(ctx, value, stdin)
 		if err != nil {
 			return err
 		}
@@ -175,11 +175,19 @@ func applyGrepValue(ctx context.Context, letter byte, value string, flags *grepF
 // An empty file yields no patterns, and grep then matches nothing and exits 1 --
 // the measured reference answer, and the opposite of what treating "no pattern"
 // as "empty pattern" would give.
-func readGrepPatternFile(ctx context.Context, path string) ([]string, error) {
-	view := ProcessViewFromContext(ctx)
-	file, err := openProcessTextInput(ctx, view, path)
-	if err != nil {
-		return nil, operandFailure(path, err)
+//
+// `-f -` is standard input, as busybox's fopen_or_warn_stdin and GNU have it: `... | grep -f -
+// log` takes the lines piped in as its patterns. It was a file named -, not there.
+func readGrepPatternFile(ctx context.Context, path string, stdin io.Reader) ([]string, error) {
+	var file io.ReadCloser
+	if path == "-" {
+		file = io.NopCloser(decodeTextInput(stdin))
+	} else {
+		opened, err := openProcessTextInput(ctx, ProcessViewFromContext(ctx), path)
+		if err != nil {
+			return nil, operandFailure(path, err)
+		}
+		file = opened
 	}
 	data, readErr := io.ReadAll(file)
 	closeErr := file.Close()

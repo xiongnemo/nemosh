@@ -43,7 +43,7 @@ type awkInvocation struct {
 	hasSeparator   bool
 }
 
-func parseAwkArguments(view ProcessView, args []string, stderr io.Writer) (*awkInvocation, error) {
+func parseAwkArguments(view ProcessView, args []string, stdin io.Reader, stderr io.Writer) (*awkInvocation, error) {
 	invocation := &awkInvocation{}
 	var sources []string
 	index := 0
@@ -73,7 +73,7 @@ func parseAwkArguments(view ProcessView, args []string, stderr io.Writer) (*awkI
 			fmt.Fprintln(stderr, "awk: -W is ignored")
 			continue
 		}
-		if err := invocation.applyOption(view, letter, value, &sources); err != nil {
+		if err := invocation.applyOption(view, letter, value, &sources, stdin); err != nil {
 			return nil, err
 		}
 		if letter == 'E' {
@@ -96,7 +96,7 @@ func parseAwkArguments(view ProcessView, args []string, stderr io.Writer) (*awkI
 	return invocation, nil
 }
 
-func (v *awkInvocation) applyOption(view ProcessView, letter byte, value string, sources *[]string) error {
+func (v *awkInvocation) applyOption(view ProcessView, letter byte, value string, sources *[]string, stdin io.Reader) error {
 	switch letter {
 	case 'F':
 		v.fieldSeparator, v.hasSeparator = awkExpandAssignmentValue(value), true
@@ -106,7 +106,7 @@ func (v *awkInvocation) applyOption(view ProcessView, letter byte, value string,
 		}
 		v.assignments = append(v.assignments, value)
 	case 'f', 'E':
-		text, err := readAwkSource(view, value)
+		text, err := readAwkProgram(view, value, stdin)
 		if err != nil {
 			return err
 		}
@@ -115,6 +115,19 @@ func (v *awkInvocation) applyOption(view ProcessView, letter byte, value string,
 		*sources = append(*sources, value)
 	}
 	return nil
+}
+
+// readAwkProgram is the FILE of -f and -E: standard input for `-`, as busybox's awk reads it,
+// and otherwise a file. `-f -` was a file named -.
+func readAwkProgram(view ProcessView, name string, stdin io.Reader) (string, error) {
+	if name != "-" {
+		return readAwkSource(view, name)
+	}
+	text, err := readAllText(stdin)
+	if err != nil {
+		return "", operandFailure(name, err)
+	}
+	return text, nil
 }
 
 // readAwkSource reads a program file, through the same UTF-16 decoding every text applet

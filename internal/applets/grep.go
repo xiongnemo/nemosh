@@ -46,7 +46,7 @@ func grepStatus(err error) error {
 }
 
 func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	flags, paths, err := grepArgs(ctx, args)
+	flags, paths, err := grepArgs(ctx, args, stdin)
 	if err != nil {
 		return err
 	}

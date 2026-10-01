@@ -23,7 +23,7 @@ func newSedApplet() Applet {
 		if len(args) == 0 {
 			return missingOperand()
 		}
-		options, err := sedArgs(ctx, args)
+		options, err := sedArgs(ctx, args, stdin)
 		if err != nil {
 			return err
 		}
