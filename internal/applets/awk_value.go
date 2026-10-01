@@ -187,10 +187,48 @@ func formatAwkNumber(value float64, format string) string {
 		}
 		return strconv.FormatInt(int64(value), 10)
 	}
-	// CONVFMT and OFMT are C format strings, and Go's fmt reads `%.6g` the same way.
-	// A format awk would accept and Go would not is a stage-7 problem, when printf's
-	// own machinery lands; until then a bad one renders as Go's %!verb, which is loud.
-	return fmt.Sprintf(format, value)
+	return awkNumberFormat(format, value)
+}
+
+// awkNumberFormat is CONVFMT or OFMT made of a number, a C format with the number for its
+// conversion, as busybox's fmt_num makes it: %e %f %g and their capitals as printf does them,
+// and %d %i %o %u %x %X of its integer part. %s is the number at %.6g, as gawk writes it, where
+// busybox calls it an invalid format. The text around the conversion stands, as in gawk. A
+// format went to Go's fmt, so `CONVFMT = "%d"` keyed a[3.7] as `%!d(float64=3.7)`, where both
+// references say 3.
+func awkNumberFormat(format string, value float64) string {
+	var out strings.Builder
+	for index := 0; index < len(format); index++ {
+		if format[index] != '%' {
+			out.WriteByte(format[index])
+			continue
+		}
+		if index+1 < len(format) && format[index+1] == '%' {
+			out.WriteByte('%')
+			index++
+			continue
+		}
+		spec, verb, width := awkPrintfSpec(format[index:], func() awkValue { return awkNum(value) })
+		switch {
+		case verb == 0:
+			out.WriteByte('%')
+			continue
+		case strings.IndexByte("eEfFgG", verb) >= 0:
+			out.WriteString(cFloat(parseCSpec(spec[1:]), verb, value))
+		case strings.IndexByte("diouxX", verb) >= 0:
+			letter := verb
+			if letter == 'i' || letter == 'u' {
+				letter = 'd'
+			}
+			out.WriteString(fmt.Sprintf(spec+string(letter), awkToInt64(value)))
+		case verb == 's':
+			out.WriteString(fmt.Sprintf(spec+"s", cFloat(cSpec{precision: 6}, 'g', value)))
+		default:
+			out.WriteString(format[index : index+width])
+		}
+		index += width - 1
+	}
+	return out.String()
 }
 
 // awkScanNumber reads the leading number of a string, and reports whether the *whole*
