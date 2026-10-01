@@ -1546,7 +1546,10 @@ consequence and the same thing every Windows unzip does.
 **Listing does not check**, deliberately: `tar -t` is how somebody inspects an
 archive they do not trust, so hiding the hostile entry would defeat the purpose.
 
-`tar` reuses this build's own gzip, so `tar -czf` needs no second program.
+`tar` reuses this build's own gzip, so `tar -czf` needs no second program. It writes
+no other compression: `-cj`, and `-ca` with a name that ends in bz2, xz or lzma, are
+refused before the archive is opened, as Go has no bzip2 writer. Under `-a` a name
+that ends in gz is gzip, a `.tgz` as a `.tar.gz`, as busybox reads the name.
 
 **What `tar` takes**, as busybox selects it. Listing and extracting take the
 FILEs named and what is under them, each a pattern matched against as many

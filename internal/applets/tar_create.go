@@ -45,6 +45,12 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 		}
 		base = root
 	}
+	// Refused before the archive is opened, so no file is made. A plain tar under a .tbz2 or
+	// -j, which is what was written, is a wrong answer that says nothing.
+	method := r.creationCompression()
+	if method != "" && method != "gzip" {
+		return fmt.Errorf("cannot compress with %s: gzip is the one compressor here", method)
+	}
 	out, release, err := r.createArchiveOutput(ctx, stdout)
 	if err != nil {
 		return err
@@ -59,7 +65,7 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 	}
 	stream := out
 	var closer io.Closer
-	if r.gzip || (r.autoDetect && strings.HasSuffix(strings.ToLower(r.file), ".gz")) {
+	if method == "gzip" {
 		writer := gzip.NewWriter(out)
 		stream, closer = writer, writer
 	}
@@ -105,6 +111,27 @@ func createPath(view ProcessView, base, operand string) (string, error) {
 func (c *tarCreation) passOver(err error) {
 	fmt.Fprintf(c.stderr, "tar: %v\n", err)
 	c.failed = true
+}
+
+// creationCompression is what a new archive is compressed with: -z's gzip, -j's bzip2, or under
+// -a what the name ends in, as busybox's tar reads it: gz, bz2, xz or lzma, so a .tgz is gzip as
+// a .tar.gz is. -a looked for .gz alone, and wrote a .tgz plain.
+func (r tarRequest) creationCompression() string {
+	switch {
+	case r.gzip:
+		return "gzip"
+	case r.bzip2:
+		return "bzip2"
+	case !r.autoDetect:
+		return ""
+	}
+	name := strings.ToLower(r.file)
+	for _, rule := range []struct{ suffix, method string }{{"gz", "gzip"}, {"bz2", "bzip2"}, {"xz", "xz"}, {"lzma", "lzma"}} {
+		if strings.HasSuffix(name, rule.suffix) {
+			return rule.method
+		}
+	}
+	return ""
 }
 
 func (r tarRequest) createArchiveOutput(ctx context.Context, stdout io.Writer) (io.Writer, func(), error) {
