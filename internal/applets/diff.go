@@ -45,6 +45,7 @@ func newDiffApplet() Applet {
 			labels:             options.all('L'),
 			initialTab:         options.has('T'),
 			expandTabs:         options.has('t'),
+			text:               options.has('a'),
 		}
 		return request.run(ctx, stdin, stdout)
 	}}
@@ -60,9 +61,10 @@ type diffRequest struct {
 	ignoreSpace        bool
 	ignoreBlank        bool
 	treatAbsentAsEmpty bool
-	// labels are -L's, and initialTab and expandTabs -T and -t; see diff_unified.go.
-	labels                 []string
-	initialTab, expandTabs bool
+	// labels are -L's, and initialTab and expandTabs -T and -t; see diff_unified.go. text
+	// is -a, which diffs files that hold a NUL as text.
+	labels                       []string
+	initialTab, expandTabs, text bool
 }
 
 func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
@@ -73,6 +75,14 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 	right, err := readDiffLines(ctx, r.right, stdin, r.treatAbsentAsEmpty)
 	if err != nil {
 		return err
+	}
+	// Two files that are not the same and hold a NUL are binary, and that they differ is all
+	// that is said, as busybox says it, but under -a. Their lines were diffed.
+	if !r.text && (diffBinary(left) || diffBinary(right)) && !slices.Equal(left, right) {
+		if _, err := fmt.Fprintf(stdout, "Files %s and %s differ\n", r.left, r.right); err != nil {
+			return err
+		}
+		return ErrExitFalse
 	}
 	edits := diffLines(left, right, r.compare)
 	hunks := groupDiffHunks(edits, r.context)
@@ -131,6 +141,16 @@ func (r diffRequest) normalise(line string) string {
 	return strings.TrimSuffix(kept.String(), " ")
 }
 
+// diffBinary is whether a file's lines hold a NUL.
+func diffBinary(lines []string) bool {
+	for _, line := range lines {
+		if strings.IndexByte(line, 0) >= 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // diffSpace is C's isspace.
 func diffSpace(c byte) bool {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r'
@@ -141,19 +161,25 @@ func diffSpace(c byte) bool {
 // empty.
 func onlyEmptyLinesChange(edits []diffEdit) bool {
 	for _, edit := range edits {
-		if edit.kind != editKeep && edit.text != "" {
+		if edit.kind != editKeep && edit.text != "\n" {
 			return false
 		}
 	}
 	return true
 }
 
+// readDiffLines is a FILE's lines, each with the newline that ends it, as busybox's read_token
+// reads it into the line: a last line with none is another line than the same text with one, and
+// the files differ, which they did not. A CRLF ends a line as an LF does.
 func readDiffLines(ctx context.Context, path string, stdin io.Reader, absentIsEmpty bool) ([]string, error) {
 	var lines []string
 	// busybox's diff stats each FILE first, and names one that is not there as it cannot stat
 	// it: `diff: can't stat 'FILE'`.
 	err := eachTextInputNaming(ctx, []string{path}, stdin, func(reader io.Reader) error {
-		return eachLine(reader, func(line, _ string) error {
+		return eachLine(reader, func(line, ending string) error {
+			if ending != "" {
+				line += "\n"
+			}
 			lines = append(lines, line)
 			return nil
 		})

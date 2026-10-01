@@ -118,8 +118,16 @@ func (r diffRequest) writeDiffHunk(stdout io.Writer, edits []diffEdit) error {
 		case editAdd:
 			marker = "+"
 		}
-		if _, err := fmt.Fprintf(stdout, "%s%s\n", marker, r.diffLineText(edit.text)); err != nil {
+		// A line keeps its newline, so a last line without one is said to have none, as
+		// busybox and every diff say it, and patch reads it.
+		text, ended := strings.CutSuffix(edit.text, "\n")
+		if _, err := fmt.Fprintf(stdout, "%s%s\n", marker, r.diffLineText(text)); err != nil {
 			return err
+		}
+		if !ended {
+			if _, err := fmt.Fprintln(stdout, `\ No newline at end of file`); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
