@@ -476,15 +476,16 @@ func TestFree_reportsTheSameMemoryAsTheSampler(t *testing.T) {
 	if reported != wantTotal {
 		t.Fatalf("free reported %d KB total, sampler says %d KB", reported, wantTotal)
 	}
-	// -m scales down by 1024 from -k, which is the check that the divisor is
-	// applied rather than the unit merely accepted.
+	// -m scales down to megabytes, rounded to the nearest as busybox rounds, which is
+	// the check that the divisor is applied rather than the unit merely accepted.
 	inMegabytes, _, err := runSmall(t, t.TempDir(), "", "free", "-m")
 	if err != nil {
 		t.Fatal(err)
 	}
 	megaFields := strings.Fields(strings.Split(inMegabytes, "\n")[1])
 	megaTotal, err := strconv.ParseUint(megaFields[1], 10, 64)
-	if err != nil || megaTotal != wantTotal/1024 {
-		t.Fatalf("free -m reported %v, want %d", megaFields[1], wantTotal/1024)
+	wantMega := (snapshot.Memory.TotalPhysical + 1<<19) >> 20
+	if err != nil || megaTotal != wantMega {
+		t.Fatalf("free -m reported %v, want %d", megaFields[1], wantMega)
 	}
 }

@@ -14,16 +14,21 @@ import (
 // its meters from, so this applet is a formatter rather than a measurement --
 // which also means the two cannot disagree about how much memory the machine has.
 //
-// The column layout is busybox's, measured 2026-08-22:
+// The column layout is busybox's, measured 2026-08-22: a label of seven and values of twelve.
+// The header was printed five narrower than this and the rows one, out of line with each other.
 //
 //	              total        used        free      shared  buff/cache   available
 //	Mem:       66833188    32505304    16598704           0    17729180           0
 //	Swap:      21573812     9244800    12329012
 
-// freeScale is the divisor a unit option selects. Kilobytes are the default,
-// which is what both references do and why `free` numbers look large.
+// freeScale is the unit an option selects, as busybox's free reads it: from the first
+// argument alone, -b -k -m or -g, each value rounded to the nearest, and -h each in the
+// largest unit that leaves it under 1024, with one decimal, `63.7G`. Kilobytes are the
+// default, which is what both references do and why `free` numbers look large. The values
+// were cut short rather than rounded, -h was taken and ignored, and of several options the
+// first of b, m and g in that order won.
 type freeScale struct {
-	divisor uint64
+	unit uint64
 }
 
 func newFreeApplet() Applet {
@@ -49,23 +54,23 @@ func newFreeApplet() Applet {
 }
 
 func freeScaleFor(options appletOptions) freeScale {
-	switch {
-	case options.has('b'):
-		return freeScale{divisor: 1}
-	case options.has('m'):
-		return freeScale{divisor: 1024 * 1024}
-	case options.has('g'):
-		return freeScale{divisor: 1024 * 1024 * 1024}
+	if len(options.order) == 0 {
+		return freeScale{unit: 1024}
 	}
-	return freeScale{divisor: 1024}
+	switch options.order[0] {
+	case 'b':
+		return freeScale{unit: 1}
+	case 'm':
+		return freeScale{unit: 1 << 20}
+	case 'g':
+		return freeScale{unit: 1 << 30}
+	case 'h':
+		return freeScale{unit: 0}
+	}
+	return freeScale{unit: 1024}
 }
 
-func (s freeScale) of(value uint64) uint64 {
-	if s.divisor <= 1 {
-		return value
-	}
-	return value / s.divisor
-}
+func (s freeScale) of(value uint64) string { return humanReadable(value, 1, s.unit) }
 
 // writeFreeTable prints the two rows busybox prints.
 //
@@ -78,15 +83,15 @@ func (s freeScale) of(value uint64) uint64 {
 // `shared` is always zero: Windows has no equivalent counter, and inventing one
 // from working-set overlap would be a guess presented as a measurement.
 func writeFreeTable(stdout io.Writer, memory proc.Memory, scale freeScale) error {
-	header := fmt.Sprintf("%14s%12s%12s%12s%12s%12s", "total", "used", "free", "shared", "buff/cache", "available")
+	header := fmt.Sprintf("       %12s%12s%12s%12s%12s%12s", "total", "used", "free", "shared", "buff/cache", "available")
 	if _, err := fmt.Fprintln(stdout, header); err != nil {
 		return err
 	}
-	mem := fmt.Sprintf("Mem:   %11d%12d%12d%12d%12d%12d",
+	mem := fmt.Sprintf("Mem:   %12s%12s%12s%12s%12s%12s",
 		scale.of(memory.TotalPhysical),
 		scale.of(memory.UsedPhysical()),
 		scale.of(memory.AvailablePhysical),
-		0,
+		scale.of(0),
 		scale.of(memory.Cached),
 		scale.of(memory.AvailablePhysical))
 	if _, err := fmt.Fprintln(stdout, mem); err != nil {
@@ -106,7 +111,7 @@ func writeFreeTable(stdout io.Writer, memory proc.Memory, scale freeScale) error
 	if swapTotal > swapUsed {
 		swapFree = swapTotal - swapUsed
 	}
-	_, err := fmt.Fprintf(stdout, "Swap:  %11d%12d%12d\n",
+	_, err := fmt.Fprintf(stdout, "Swap:  %12s%12s%12s\n",
 		scale.of(swapTotal), scale.of(swapUsed), scale.of(swapFree))
 	return err
 }
