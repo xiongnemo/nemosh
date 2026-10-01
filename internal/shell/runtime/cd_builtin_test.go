@@ -110,8 +110,9 @@ func TestRuntime_namesTheReason_whenCdTargetsARegularFile(t *testing.T) {
 	status := rt.RunScript(context.Background(), "cd plain.txt\n")
 
 	// Then
-	if status != 1 {
-		t.Fatalf("status = %d, want 1", status)
+	// busybox's 2, from the error cdcmd raises.
+	if status != 2 {
+		t.Fatalf("status = %d, want 2", status)
 	}
 	if strings.Contains(stderr.String(), "<nil>") {
 		t.Fatalf("stderr = %q, want a real reason rather than a formatted nil", stderr.String())

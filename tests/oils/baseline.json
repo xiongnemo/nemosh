@@ -209,6 +209,7 @@
       "cd BAD/..": "ash-only",
       "cd and $PWD": "fail",
       "cd permits double bare dash": "fail",
+      "cd to nonexistent dir": "ash-only",
       "cd with 2 or more args - with strict_arg_parse": "ash-only",
       "cd with 2 or more args is allowed (strict_arg_parse disabled)": "ash-only",
       "cd with no arguments": "fail",

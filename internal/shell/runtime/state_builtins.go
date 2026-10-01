@@ -240,6 +240,18 @@ func reportCD(r Runtime, quiet bool, format string, args ...any) {
 	fmt.Fprintf(r.streams.Stderr, format, args...)
 }
 
+// cdFailure says why the shell could not go to target, and answers the status for it: busybox's
+// words and its 2 for cd, from the error cdcmd raises (`can't cd to %s`), which leaves 2 as any
+// regular builtin's error does. pushd and popd are bash's, and say bash's, with 1.
+func (r Runtime) cdFailure(as, target, reason string, quiet bool) int {
+	if as != "cd" {
+		reportCD(r, quiet, "%s: %s: %s\n", as, target, reason)
+		return 1
+	}
+	reportCD(r, quiet, "cd: can't cd to %s: %s\n", target, reason)
+	return 2
+}
+
 // tryChangeDirectory is one attempt. quiet suppresses the diagnostics, which is what lets
 // the CDPATH search try several places without narrating each miss.
 func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet, physical bool) int {
@@ -254,12 +266,11 @@ func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet, physi
 		// suggestion it cannot complete.
 		var hostOnly pathmodel.HostOnlyUNCError
 		if errors.As(err, &hostOnly) {
-			reportCD(r, quiet, "%s: %s: No such file or directory\n", as, target)
+			status := r.cdFailure(as, target, "No such file or directory", quiet)
 			reportCD(r, quiet, "hint: %v\n", hostOnly)
-			return 1
+			return status
 		}
-		reportCD(r, quiet, "%s: %s: %v\n", as, target, err)
-		return 1
+		return r.cdFailure(as, target, err.Error(), quiet)
 	}
 	if resolved.Device {
 		// Refused, and not as "not a directory" -- `test -d /dev` is true, and a shell
@@ -269,8 +280,7 @@ func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet, physi
 		// directory the shell was in before while `pwd` said /dev, which is a silent
 		// disagreement rather than an error. /tmp is the contrast that makes this a rule
 		// rather than an inconsistency: `cd /tmp` works because /tmp has a native mapping.
-		reportCD(r, quiet, "%s: %s: a device directory cannot be a working directory\n", as, target)
-		return 1
+		return r.cdFailure(as, target, "a device directory cannot be a working directory", quiet)
 	}
 	info, err := os.Stat(resolved.Native)
 	if err != nil {
@@ -279,15 +289,13 @@ func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet, physi
 		// specified.` -- where every shell says `No such file or directory`.
 		// applets.CauseText is the mapping every applet diagnostic already uses, so a
 		// missing directory reads the same whether an applet or a builtin found it.
-		reportCD(r, quiet, "%s: %s: %s\n", as, target, applets.CauseText(err))
-		return 1
+		return r.cdFailure(as, target, applets.CauseText(err), quiet)
 	}
 	// Not folded into the branch above: with a nil error there was nothing to
 	// format, so a `cd` onto a regular file reported the literal text <nil> as
 	// its reason.
 	if !info.IsDir() {
-		reportCD(r, quiet, "%s: %s: Not a directory\n", as, target)
-		return 1
+		return r.cdFailure(as, target, "Not a directory", quiet)
 	}
 	if physical {
 		resolved = r.physicalPath(resolved)

@@ -10,9 +10,9 @@ cd //example-host
 '''
 
 [expect]
-status = 1
+status = 2
 stdout = ""
-stderr = "cd: //example-host: No such file or directory\nhint: //example-host is not a directory root; use //example-host/share\n"
+stderr = "cd: can't cd to //example-host: No such file or directory\nhint: //example-host is not a directory root; use //example-host/share\n"
 
 [notes]
 standard = "Win32 UNC filesystem roots"
