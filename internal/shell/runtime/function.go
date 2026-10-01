@@ -42,8 +42,12 @@ func (r Runtime) functionCommand(ctx context.Context, args []string, assignments
 		}
 		caller = *temporary
 	}
+	names := make([]string, 0, len(assignments))
+	for _, assignment := range assignments {
+		names = append(names, assignment.name)
+	}
 	result := caller.withAppliedRedirects(operations, func(redirected Runtime) lineResult {
-		return redirected.callFunctionResult(ctx, definition, args[1:], savedStatus)
+		return redirected.callFunctionWith(ctx, definition, args[1:], savedStatus, names)
 	})
 	if temporary != nil {
 		for _, assignment := range assignments {
@@ -65,6 +69,14 @@ func (r Runtime) callFunction(ctx context.Context, definition functionDefinition
 // a bare `return` first thing returns it and an ERR trap's handler sees the status that fired
 // it. It started at 0, and `err() { echo $?; }; trap err ERR` said 0 for every failure.
 func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefinition, args []string, savedStatus int) lineResult {
+	return r.callFunctionWith(ctx, definition, args, savedStatus, nil)
+}
+
+// callFunctionWith is the call with the names its own prefix assignments bind, `v=1 f`. They
+// are the call's locals, as ash's evalfun makes them, so a `local v` in the body declares v
+// again and keeps its value, as both references have it; it was unset. A call the body makes
+// gets none of them: there `local v` is a local of its own, as busybox has it.
+func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefinition, args []string, savedStatus int, assigned []string) lineResult {
 	if err := ctx.Err(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: function call: %v\n", err)
 		return lineResult{status: 1}
@@ -87,6 +99,9 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 	// caller's parameters, so a local OPTIND restored is where the caller's getopts starts
 	// over, as busybox has it.
 	scope := newLocalScope()
+	for _, name := range assigned {
+		scope.saved[name] = r.variableAsItIs(name)
+	}
 	r.locals = scope
 	restoring := r
 	restoring.params = caller

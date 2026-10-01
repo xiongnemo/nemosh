@@ -129,11 +129,11 @@
       "wait with invalid arg": "ash-only"
     },
     "ble-features.test.sh": {
-      "[bash_unset] function call with tempenv vs tempenv-eval": "fail",
+      "[bash_unset] function call with tempenv vs tempenv-eval": "ash-only",
       "[bash_unset] local-unset / dynamic-unset for localvar": "ash-only",
       "[bash_unset] local-unset / dynamic-unset for localvar (mutated from tempenv)": "ash-only",
       "[bash_unset] local-unset / dynamic-unset for tempenv": "ash-only",
-      "[bash_unset] localvar-inherit from tempenv": "fail"
+      "[bash_unset] localvar-inherit from tempenv": "ash-only"
     },
     "ble-idioms.test.sh": {
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",

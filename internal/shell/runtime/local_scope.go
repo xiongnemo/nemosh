@@ -37,12 +37,7 @@ func (r Runtime) makeLocal(name string) {
 	if _, already := r.locals.saved[name]; already {
 		return
 	}
-	saved := savedVariable{attributes: r.attributes[name]}
-	saved.value, saved.set = r.vars[name]
-	saved.env, saved.inEnv = r.env.LookupEnv(name)
-	saved.array, saved.indexed = r.arrays.take(name)
-	saved.keys = r.arrays.associative[name]
-	_, saved.readonly = r.readonly[name]
+	saved := r.variableAsItIs(name)
 	r.locals.saved[name] = saved
 	exported := r.isExported(name)
 	delete(r.vars, name)
@@ -56,6 +51,17 @@ func (r Runtime) makeLocal(name string) {
 		r.inheritLocal(name, saved)
 	}
 	r.markVarMutation(name)
+}
+
+// variableAsItIs is all of a name as it stands, for a scope to put back.
+func (r Runtime) variableAsItIs(name string) savedVariable {
+	saved := savedVariable{attributes: r.attributes[name]}
+	saved.value, saved.set = r.vars[name]
+	saved.env, saved.inEnv = r.env.LookupEnv(name)
+	saved.array, saved.indexed = r.arrays.take(name)
+	saved.keys = r.arrays.associative[name]
+	_, saved.readonly = r.readonly[name]
+	return saved
 }
 
 // restore puts back every name the call made local, and the options if it asked.
