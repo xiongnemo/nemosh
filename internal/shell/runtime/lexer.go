@@ -29,6 +29,8 @@ type shellToken struct {
 	// arrayLiteral marks a declaration utility's operand written as an array literal,
 	// `x=(a b)`, and not one that only expanded to text like it; see arrayOperands.
 	arrayLiteral bool
+	// offset is where the token begins in the text it was read from; see line_breaks.go.
+	offset int
 }
 
 func scanShellTokens(line string) ([]shellToken, error) {

@@ -8,13 +8,14 @@ import "strings"
 
 // The source must already have been through normalizeLineEndings.
 func logicalLines(source string) ([]string, error) {
-	lines, _, err := numberedLogicalLines(source, false)
+	lines, _, _, err := numberedLogicalLines(source, false)
 	return lines, err
 }
 
 // numberedLogicalLines is logicalLines with, for each line, the index of the physical
-// line its text starts on. waits is a session's input, which goes on past its text.
-func numberedLogicalLines(source string, waits bool) ([]string, []int, error) {
+// line its text starts on, and where in its text a later one begins (breaksWithin). waits is
+// a session's input, which goes on past its text.
+func numberedLogicalLines(source string, waits bool) ([]string, []int, [][]int, error) {
 	physical := strings.Split(source, "\n")
 	if len(physical) > 0 && physical[len(physical)-1] == "" {
 		physical = physical[:len(physical)-1]
@@ -37,13 +38,13 @@ func numberedLogicalLines(source string, waits bool) ([]string, []int, error) {
 		scanner.finishPhysicalLine("")
 	}
 	if err := scanner.incompleteError(); err != nil {
-		return scanner.lines, scanner.starts, err
+		return scanner.lines, scanner.starts, scanner.lineBreaks, err
 	}
 	scanner.flushLogicalLine()
 	if scanner.syntaxErr != nil {
-		return scanner.lines, scanner.starts, scanner.syntaxErr
+		return scanner.lines, scanner.starts, scanner.lineBreaks, scanner.syntaxErr
 	}
-	return scanner.lines, scanner.starts, nil
+	return scanner.lines, scanner.starts, scanner.lineBreaks, nil
 }
 
 func (scanner *syntaxScanner) beginPhysicalLine(index int) {
@@ -88,9 +89,15 @@ func (scanner *syntaxScanner) flushLogicalLine() {
 		}
 		offset += len(segment) - len(strings.TrimLeft(segment, logicalLineCutset))
 		if normalized := trimLogicalSegment(segment); normalized != "" {
+			cursor := 0
 			for _, line := range splitLeadingReservedWord(normalized) {
+				at := offset + cursor
+				if found := strings.Index(normalized[cursor:], line); found >= 0 {
+					at, cursor = offset+cursor+found, cursor+found+len(line)
+				}
 				scanner.lines = append(scanner.lines, line)
-				scanner.starts = append(scanner.starts, scanner.segmentStart(offset))
+				scanner.starts = append(scanner.starts, scanner.segmentStart(at))
+				scanner.lineBreaks = append(scanner.lineBreaks, scanner.breaksWithin(at, len(line)))
 			}
 		}
 	}

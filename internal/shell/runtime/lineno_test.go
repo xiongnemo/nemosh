@@ -38,6 +38,16 @@ func TestLineno_isTheLineTheCommandStartsOn(t *testing.T) {
 		{name: "a background job", script: "\n{ echo $LINENO; } &\nwait\n", want: "2\n"},
 		{name: "under set -u", script: "set -u\necho $LINENO\n", want: "2\n"},
 		{name: "an ERR trap names the failing line", script: "trap 'echo $LINENO' ERR\n\nfalse\n", want: "3\n"},
+		// A command a list goes on to on a line of its own is on that line. Each had its
+		// list's first line; see line_breaks.go.
+		{name: "after &&", script: "echo $LINENO &&\necho $LINENO\n", want: "1\n2\n"},
+		{name: "after | and a blank line", script: "true |\n\necho $LINENO\n", want: "3\n"},
+		{name: "after a continued line", script: "echo $LINENO && \\\n  echo $LINENO\n", want: "1\n2\n"},
+		{name: "a stage after a continued line", script: "echo a \\\n| { read x; echo $x $LINENO; }\n", want: "a 2\n"},
+		{name: "after a group over lines", script: "{ echo $LINENO\n} && echo $LINENO\n", want: "1\n2\n"},
+		{name: "a group after &&", script: "{ echo $LINENO; } &&\n{ echo $LINENO; }\n", want: "1\n2\n"},
+		{name: "an ERR trap past &&", script: "trap 'echo $LINENO' ERR\ntrue &&\n  false\n", want: "3\n"},
+		{name: "past a heredoc in the list", script: "cat <<E &&\nbody\nE\necho $LINENO\n", want: "body\n4\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if stdout, _ := runScriptCapturing(test.script); stdout != test.want {

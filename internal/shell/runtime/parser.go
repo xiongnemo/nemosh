@@ -36,11 +36,12 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 		return Script{}, err
 	}
 	source = quoteAssignmentSubscripts(source)
-	lines, starts, err := numberedLogicalLines(source, budget.session && depth == 0)
+	lines, starts, breaks, err := numberedLogicalLines(source, budget.session && depth == 0)
 	if err != nil {
 		return Script{}, err
 	}
 	budget.numberLines(starts)
+	budget.numbering.lines, budget.numbering.breaks = lines, breaks
 	return prepareScript(lines, budget, depth)
 }
 
@@ -48,11 +49,14 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 // (budget.numbering) through them.
 func prepareScript(lines []string, budget *parseBudget, depth int) (Script, error) {
 	at := budget.numbering.at
+	before, beforeAt := lines, at
 	lines, at = joinLinebreakIn(lines, at)
 	lines, at = splitCompoundConditions(lines, at)
 	lines, at = expandCaseArmLines(lines, at)
 	lines, at = expandElifLines(lines, at)
 	budget.numbering.at = at
+	budget.numbering.breaks = carryBreaks(before, beforeAt, budget.numbering.breaks, lines, at)
+	budget.numbering.lines = lines
 	spans, err := compoundSpans(lines)
 	if err != nil {
 		return Script{}, err

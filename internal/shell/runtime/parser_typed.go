@@ -38,6 +38,7 @@ func parseTypedLineWithBudget(line string, budget *parseBudget, depth int) (list
 	if err != nil {
 		return list{}, err
 	}
+	budget.numbering.readText = line
 	if len(tokens) == 0 {
 		return list{}, nil
 	}
@@ -135,7 +136,7 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 			if err := refuseMisplacedArrayLiteral(words); err != nil {
 				return andOr{}, err
 			}
-			parsed.commands = append(parsed.commands, simpleCommand{words: words, redirects: redirects, line: budget.line()})
+			parsed.commands = append(parsed.commands, simpleCommand{words: words, redirects: redirects, line: budget.commandLine(commandTokens)})
 		}
 		result.pipelines = append(result.pipelines, parsed)
 		if len(result.pipelines) > 1 {

@@ -1,9 +1,6 @@
 package runtime
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 // lineNumbering places what is being parsed in the source it came from, which is what
 // $LINENO reports: the line a command starts on.
@@ -16,9 +13,9 @@ import (
 // left once the heredoc bodies are out, and origins turns that count back into the
 // source's.
 //
-// A command continued onto a new line inside a list -- `a &&` then `b` on the next --
-// reports the line its list began on, because the join leaves no trace of where the
-// second line started. Both references say the line b is on.
+// A command a list goes on to on a line of its own -- `a &&` then `b` on the next -- is on
+// that line, as both references have it: each line carries where the later physical lines
+// it joined begin in its text (line_breaks.go).
 type lineNumbering struct {
 	// first is the source line the text begins on: 1 for a script, and the running
 	// command's line for text parsed while it runs -- eval, a trap, a session's input.
@@ -33,6 +30,15 @@ type lineNumbering struct {
 	at []int
 	// current is the index of the line whose commands are being built.
 	current int
+	// lines and breaks are, for each line the passes hand on, its text and where a later
+	// physical line begins in it; currentText and currentBreaks the line being built's. See
+	// line_breaks.go.
+	lines         []string
+	breaks        [][]int
+	currentText   string
+	currentBreaks []int
+	// readText is the text the tokens being built into commands were read from.
+	readText string
 }
 
 // number is the source line for an index among the lines left once heredoc bodies were
@@ -53,6 +59,10 @@ func (budget *parseBudget) line() int {
 func (budget *parseBudget) enterLine(index int) {
 	if index >= 0 && index < len(budget.numbering.at) {
 		budget.numbering.current = budget.numbering.at[index]
+	}
+	budget.numbering.currentText, budget.numbering.currentBreaks = "", nil
+	if index >= 0 && index < len(budget.numbering.lines) && index < len(budget.numbering.breaks) {
+		budget.numbering.currentText, budget.numbering.currentBreaks = budget.numbering.lines[index], budget.numbering.breaks[index]
 	}
 }
 
@@ -80,7 +90,7 @@ func (budget *parseBudget) numberLines(starts []int) {
 func parseNestedScript(text, before string, budget *parseBudget, depth int) (Script, error) {
 	saved := budget.numbering
 	defer func() { budget.numbering = saved }()
-	budget.numbering.base = saved.current + strings.Count(before, "\n")
+	budget.numbering.base = saved.current + saved.linesBefore(before)
 	return parseScript(text, budget, depth+1)
 }
 

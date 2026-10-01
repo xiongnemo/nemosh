@@ -11,6 +11,7 @@ type syntaxScanner struct {
 	// logicalStart is the one the logical line in progress began on, and breaks the
 	// offsets in it where each later physical line began.
 	starts        []int
+	lineBreaks    [][]int
 	logicalStart  int
 	breaks        []int
 	logical       strings.Builder

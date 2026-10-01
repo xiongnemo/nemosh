@@ -8,6 +8,8 @@ import (
 type parsedGroup struct {
 	brace bool
 	body  Script
+	// width is how long the group was as written, which its placeholder is not.
+	width int
 }
 
 func (g parsedGroup) withRedirects(redirects []redirectOperation) commandNode {
@@ -155,8 +157,8 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		if err != nil {
 			return "", nil, err
 		}
-		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested}
-		output.WriteString("__nemosh_group__")
+		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested, width: end + 1 - start}
+		output.WriteString(groupPlaceholder)
 		index = end + 1
 	}
 	return output.String(), groups, nil
@@ -172,6 +174,7 @@ func scanExtractedGroups(line string, groups map[int]parsedGroup, budget *parseB
 		if ok && tokens[index].kind == tokenWord {
 			tokens[index].group = &group
 		}
+		tokens[index].offset = unmaskedOffset(starts[index], groups)
 	}
 	return tokens, nil
 }
