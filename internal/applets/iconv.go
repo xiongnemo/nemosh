@@ -89,11 +89,40 @@ func lookupEncoding(options appletOptions, letter byte) (encoding.Encoding, erro
 		// the name itself is what asks for it.
 		return unicode.UTF16(unicode.LittleEndian, unicode.UseBOM), nil
 	}
-	found, err := ianaindex.IANA.Encoding(name)
+	found, err := ianaindex.IANA.Encoding(iconvIANAName(name))
 	if err != nil || found == nil {
 		return nil, fmt.Errorf("conversion from/to `%s' is not supported", name)
 	}
 	return found, nil
+}
+
+// iconvIANAName is the IANA name for the names busybox-w32's iconv takes and IANA does not:
+// ASCII, and a Windows code page by its number, `CP1252`, as busybox-w32 names every one. Both
+// were "not supported". Any other name is its own.
+func iconvIANAName(name string) string {
+	upper := strings.ToUpper(name)
+	if upper == "ASCII" {
+		return "US-ASCII"
+	}
+	if number, ok := strings.CutPrefix(upper, "CP"); ok {
+		if iana, known := iconvCodePages[number]; known {
+			return iana
+		}
+	}
+	return name
+}
+
+// iconvCodePages are the Windows code pages x/text has a codec for, by number.
+var iconvCodePages = map[string]string{
+	"437": "IBM437", "850": "IBM850", "852": "IBM852", "855": "IBM855", "858": "IBM00858",
+	"860": "IBM860", "862": "IBM862", "863": "IBM863", "865": "IBM865", "866": "IBM866",
+	"874": "windows-874", "932": "Shift_JIS", "936": "GBK", "949": "EUC-KR", "950": "Big5",
+	"1250": "windows-1250", "1251": "windows-1251", "1252": "windows-1252", "1253": "windows-1253",
+	"1254": "windows-1254", "1255": "windows-1255", "1256": "windows-1256", "1257": "windows-1257",
+	"1258": "windows-1258", "10000": "macintosh", "20127": "US-ASCII", "20866": "KOI8-R",
+	"21866": "KOI8-U", "28591": "ISO-8859-1", "28592": "ISO-8859-2", "28595": "ISO-8859-5",
+	"28597": "ISO-8859-7", "28605": "ISO-8859-15", "50220": "ISO-2022-JP", "51932": "EUC-JP",
+	"52936": "HZ-GB-2312", "54936": "GB18030",
 }
 
 func convertEncoding(stdout io.Writer, reader io.Reader, from, to encoding.Encoding, drop bool) error {

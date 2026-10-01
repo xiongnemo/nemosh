@@ -1801,6 +1801,9 @@ can follow it:
   explicit BOM forms. An uninvited BOM breaks `#!` lines and CSV headers.
 - **A character the target cannot represent is an error**, not a silent
   substitution. `-c` is how a caller asks for the lossy behaviour on purpose.
+- **A name is IANA's, or busybox-w32's**: `ASCII`, and a Windows code page by its
+  number, `CP1252` for windows-1252 and `CP936` for GBK, for each code page there is
+  a codec for here.
 
 `iconv -l` lists only encodings this build can actually construct, and a test
 converts to every name it prints — a name that appeared and then failed would be
