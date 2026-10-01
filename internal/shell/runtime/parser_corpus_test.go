@@ -105,14 +105,21 @@ func TestParserCorpus(t *testing.T) {
 // what is missing, and turns into a passing test the moment it is fixed -- at which point
 // the case moves into parser_corpus.json and stops being skipped.
 //
-// What is in here, at the time of writing:
-//
-//   - **`esac` as a pattern.** `case a in esac) ...` is rejected by both references and
-//     accepted here. Being too permissive about a word nobody writes on purpose, which is
-//     why it is last.
-//   - **`$(())`**, the empty arithmetic expression, which is zero in both references.
+// None is known now. The last, `esac` as a pattern -- `case a in esac) ...`, rejected by both
+// references and accepted here -- closed on 2026-10-01, and `$(())` before it. The file stays,
+// empty, for the next one measured.
 func TestParserGaps(t *testing.T) {
-	gaps := loadParserCases(t, "parser_gaps.json")
+	data, err := os.ReadFile("testdata/parser_gaps.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var gaps []parserCase
+	if err := json.Unmarshal(data, &gaps); err != nil {
+		t.Fatalf("parse parser_gaps.json: %v", err)
+	}
+	if len(gaps) == 0 {
+		t.Skip("no parser gap is known")
+	}
 	for _, testcase := range gaps {
 		t.Run(caseName(testcase.Script), func(t *testing.T) {
 			stdout, status := runScriptCapturing(testcase.Script)

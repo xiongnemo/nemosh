@@ -33,6 +33,12 @@ func requireCaseBoundary(stack []compoundFrame, line string) error {
 	if !ok || pattern == "" {
 		return fmt.Errorf("case: expected pattern)")
 	}
+	// An esac where a pattern goes closes the case, in both references, and what follows it is
+	// then a syntax error: `case x in esac) echo e;; esac`. It was taken for a pattern. Behind
+	// the open parenthesis POSIX allows, `(esac)`, it is a pattern there too.
+	if first, _, _ := strings.Cut(pattern, "|"); strings.TrimSpace(first) == "esac" && !strings.HasPrefix(strings.TrimSpace(line), "(") {
+		return fmt.Errorf("syntax error: unexpected )")
+	}
 	return nil
 }
 

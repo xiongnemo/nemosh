@@ -1,9 +1,1 @@
-[
- {
-  "script": "case a in esac) echo weird;; esac",
-  "stdout": "",
-  "status": 2,
-  "nemosh": "",
-  "nemoshStatus": 0
- }
-]
+[]

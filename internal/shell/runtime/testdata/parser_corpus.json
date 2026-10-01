@@ -903,5 +903,10 @@
   "script": "while read l; do echo \"got $l\"; done <<EOF | cat\nx\nEOF",
   "stdout": "got x\n",
   "status": 0
+ },
+ {
+  "script": "case a in esac) echo weird;; esac",
+  "stdout": "",
+  "status": 2
  }
 ]
