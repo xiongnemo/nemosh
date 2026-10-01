@@ -1554,6 +1554,13 @@ that cannot be read -- is said and passed over, the rest stored, and the status
 is 1 after `tar: some names were not archived`, as busybox goes on. The archive
 being written is not stored in itself.
 
+A name is stored as it is given, and what is under a directory is joined to it
+as busybox joins it, so `tar cf a.tar .` holds `./f.txt`. What busybox takes off
+the front of a name -- slashes, a leading `../`, everything up to the last
+`/../` -- is taken off, and said the first time: `tar: removing leading '../'
+from member names`. On Windows a drive is taken off too, which busybox-w32
+keeps, though no tar extracts `C:/x/f.txt` where it says.
+
 Two answers are not busybox's. A FILE that took nothing is said and fails the
 command; busybox asks instead whether an entry it took is *spelled* like the
 FILE, so `tar xf a.tar 'src/*.txt'` fails there having extracted what it

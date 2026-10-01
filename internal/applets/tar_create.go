@@ -7,21 +7,21 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
 // Creating a tar archive. Split from tar.go for the size ceiling; extraction is
 // the half that has to distrust its input, and this is the half that produces it.
 
-// tarCreation is an archive being written: the writer, the file it goes to when it is one, and
-// whether a name could not be stored.
+// tarCreation is an archive being written: the writer, the file it goes to when it is one,
+// whether a name could not be stored, and whether a prefix taken off a name has been said.
 type tarCreation struct {
-	archive *tar.Writer
-	stderr  io.Writer
-	self    os.FileInfo
-	failed  bool
+	archive      *tar.Writer
+	stderr       io.Writer
+	self         os.FileInfo
+	failed, said bool
 }
 
 // create writes the archive. A name that cannot be stored -- one that is not there, a file or a
@@ -101,15 +101,17 @@ func (r tarRequest) createArchiveOutput(ctx context.Context, stdout io.Writer) (
 // again. A link is otherwise stored as one, with its target, which it was stored without. The
 // error it returns ends the archive; a name it cannot store it passes over.
 func (r tarRequest) addTarEntry(c *tarCreation, native, name string, above []os.FileInfo) error {
-	if excludedFromArchive(r.selection.reject, name) {
-		return nil
-	}
 	info, err := os.Lstat(native)
 	if err == nil && r.dereference {
 		info, err = os.Stat(native)
 	}
 	if err != nil {
 		c.passOver(operandFailure(name, err))
+		return nil
+	}
+	// Matched once it is known to be there, as busybox stats a name before it asks.
+	member := c.memberName(name)
+	if excludedFromArchive(r.selection.reject, member) {
 		return nil
 	}
 	if c.self != nil && os.SameFile(c.self, info) {
@@ -139,16 +141,19 @@ func (r tarRequest) addTarEntry(c *tarCreation, native, name string, above []os.
 	}
 	// Stored with forward slashes and no drive letter, which is what makes the
 	// archive readable by tar on any platform -- and what stops this build
-	// writing the very drive-qualified names its own extractor refuses.
-	header.Name = name
+	// writing the very drive-qualified names its own extractor refuses. A name
+	// that is all prefix, `/` itself, is not stored; what is under it is.
+	header.Name = member
 	if info.IsDir() {
 		header.Name += "/"
 	}
-	if r.verbose {
-		fmt.Fprintln(c.stderr, header.Name)
-	}
-	if err := c.archive.WriteHeader(header); err != nil {
-		return err
+	if member != "" {
+		if r.verbose {
+			fmt.Fprintln(c.stderr, header.Name)
+		}
+		if err := c.archive.WriteHeader(header); err != nil {
+			return err
+		}
 	}
 	if file != nil {
 		// The size the header gives, exactly: a file that grew is cut there, and one that
@@ -171,11 +176,63 @@ func (r tarRequest) addTarEntry(c *tarCreation, native, name string, above []os.
 		c.passOver(operandFailure(name, err))
 		return nil
 	}
+	// Joined as busybox's concat_path_file joins them, so `.` holds `./a`; they were cleaned,
+	// and `.` held `a`.
 	for _, entry := range entries {
-		inner := path.Join(name, entry.Name())
+		inner := strings.TrimSuffix(name, "/") + "/" + entry.Name()
 		if err := r.addTarEntry(c, filepath.Join(native, entry.Name()), inner, append(above, info)); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// memberName is the name an entry is stored by: the name as given, less what busybox's
+// skip_unsafe_prefix takes off one -- leading slashes, a leading `../`, all up to the last
+// `/../` -- and on Windows a drive before them, which busybox-w32 keeps, though no tar
+// extracts it where it says. The first time something is taken off, it is said. Such a name
+// was stored whole, and this build's own extraction refused it.
+func (c *tarCreation) memberName(name string) string {
+	cut := 0
+	if runtime.GOOS == "windows" && len(name) >= 2 && name[1] == ':' {
+		cut = 2
+	}
+	cut += unsafePrefix(name[cut:])
+	if cut > 0 && !c.said {
+		fmt.Fprintf(c.stderr, "tar: removing leading '%s' from member names\n", name[:cut])
+		c.said = true
+	}
+	return name[cut:]
+}
+
+// unsafePrefix is how much of a name skip_unsafe_prefix takes off. A name ending in `/..` is
+// all prefix; `/..name` is a name.
+func unsafePrefix(name string) int {
+	at := 0
+	for {
+		switch {
+		case strings.HasPrefix(name[at:], "/"):
+			at++
+			continue
+		case strings.HasPrefix(name[at:], "../"):
+			at += 3
+			continue
+		}
+		next := -1
+		for search := at; next < 0; {
+			found := strings.Index(name[search:], "/..")
+			if found < 0 {
+				return at
+			}
+			end := search + found + 3
+			switch {
+			case end == len(name):
+				return end
+			case name[end] == '/':
+				next = end + 1
+			}
+			search = end
+		}
+		at = next
+	}
 }
