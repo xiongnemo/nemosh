@@ -119,26 +119,6 @@ func (n findSize) eval(c findCandidate, _ *findRun) bool {
 	return compareFindCount(n.comparison, units, n.count)
 }
 
-type findMtime struct {
-	comparison byte
-	days       int64
-	now        time.Time
-}
-
-func (n findMtime) eval(c findCandidate, _ *findRun) bool {
-	info, err := c.info()
-	if err != nil {
-		return false
-	}
-	// Whole 24-hour periods, truncated, so -mtime 0 is "changed today" and
-	// -mtime +1 is "at least two days old".
-	age := int64(n.now.Sub(info.ModTime()) / (24 * time.Hour))
-	if age < 0 {
-		age = 0
-	}
-	return compareFindCount(n.comparison, age, n.days)
-}
-
 type findNewer struct{ than time.Time }
 
 func (n findNewer) eval(c findCandidate, _ *findRun) bool {

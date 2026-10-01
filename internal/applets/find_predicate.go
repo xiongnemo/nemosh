@@ -6,7 +6,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // findTypeLetters are the entries this walk can classify. busybox also accepts
@@ -44,8 +43,8 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return p.typePredicate(operand)
 	case "-size":
 		return p.sizePredicate(operand)
-	case "-mtime":
-		return p.mtimePredicate(operand)
+	case "-mtime", "-atime", "-ctime", "-mmin", "-amin", "-cmin":
+		return p.timePredicate(operand)
 	case "-newer":
 		return p.newerPredicate(operand)
 	case "-empty":
@@ -135,19 +134,6 @@ func (p *findParser) sizePredicate(operand string) (findNode, error) {
 		return nil, fmt.Errorf("-size: invalid size %q", value)
 	}
 	return findSize{comparison: comparison, count: count, unit: unit}, nil
-}
-
-func (p *findParser) mtimePredicate(operand string) (findNode, error) {
-	value, err := p.argument(operand)
-	if err != nil {
-		return nil, err
-	}
-	comparison, digits := splitFindComparison(value)
-	days, err := strconv.ParseInt(digits, 10, 64)
-	if err != nil || days < 0 {
-		return nil, fmt.Errorf("invalid number %q", value)
-	}
-	return findMtime{comparison: comparison, days: days, now: time.Now()}, nil
 }
 
 // -newer is resolved at parse time: the operand is a path, so a missing one is
