@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 )
@@ -14,7 +15,7 @@ type descriptorReader struct {
 func (r descriptorReader) Read(buffer []byte) (int, error) {
 	reader, err := r.table.reader(r.fd)
 	if err != nil {
-		return 0, err
+		return 0, closedFor("read", err)
 	}
 	return reader.Read(buffer)
 }
@@ -22,9 +23,26 @@ func (r descriptorReader) Read(buffer []byte) (int, error) {
 func (r descriptorReader) ReadContext(ctx context.Context, buffer []byte) (int, error) {
 	reader, err := r.table.reader(r.fd)
 	if err != nil {
-		return 0, err
+		return 0, closedFor("read", err)
 	}
 	return readWithContext(ctx, reader, buffer)
+}
+
+// closedDescriptorError is a read or a write through a descriptor `<&-` or `>&-` closed, in
+// busybox's applets' words: `cat: write error: Bad file descriptor`, and `read error` for a
+// read. errors.Is still finds errDescriptorClosed in it.
+type closedDescriptorError struct{ verb string }
+
+func (e closedDescriptorError) Error() string { return e.verb + " error: Bad file descriptor" }
+
+func (e closedDescriptorError) Unwrap() error { return errDescriptorClosed }
+
+// closedFor is err, worded as closedDescriptorError when it is a closed descriptor's.
+func closedFor(verb string, err error) error {
+	if errors.Is(err, errDescriptorClosed) {
+		return closedDescriptorError{verb: verb}
+	}
+	return err
 }
 
 func (r descriptorReader) LeaseStdinFile(ctx context.Context) (*os.File, func(), bool) {
@@ -50,7 +68,7 @@ type descriptorWriter struct {
 func (w descriptorWriter) Write(buffer []byte) (int, error) {
 	writer, err := w.table.writer(w.fd)
 	if err != nil {
-		return 0, err
+		return 0, closedFor("write", err)
 	}
 	return writer.Write(buffer)
 }

@@ -77,7 +77,7 @@ func TestPrintf_reportsANonNumericOperandAndGoesOn(t *testing.T) {
 	if stdout != "[  0][next]\n" {
 		t.Fatalf("stdout = %q, want the zero and the rest", stdout)
 	}
-	if !strings.Contains(stderr, "abc: invalid number") {
+	if !strings.Contains(stderr, "printf: invalid number 'abc'") {
 		t.Fatalf("stderr = %q, want the diagnostic", stderr)
 	}
 	if status, ok := applets.StatusCode(err); !ok || status != 1 {

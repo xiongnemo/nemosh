@@ -57,12 +57,12 @@ func newPrintfApplet() Applet {
 	}}
 }
 
-// errPrintfNumber is an operand a numeric conversion could not read. It is reported and
-// written as zero, which is busybox's answer -- bash writes the digits it managed to read,
-// so `12abc` is 12 there and 0 here.
+// errPrintfNumber is an operand a numeric conversion could not read. It is reported in
+// busybox's words, multiconvert's, and written as zero, which is busybox's answer -- bash
+// writes the digits it managed to read, so `12abc` is 12 there and 0 here.
 type errPrintfNumber struct{ operand string }
 
-func (e errPrintfNumber) Error() string { return fmt.Sprintf("%s: invalid number", e.operand) }
+func (e errPrintfNumber) Error() string { return fmt.Sprintf("invalid number '%s'", e.operand) }
 
 // errPrintfStop is \c, in the format or in a %b operand: output ends there, and no operand
 // after it is used -- `printf '%s\c' x y` is x, as in busybox, where it went on to y.

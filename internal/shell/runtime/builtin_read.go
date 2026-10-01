@@ -29,7 +29,7 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 	}
 	input, err := r.fds.reader(options.descriptor)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "read: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "read: %v\n", closedFor("read", err))
 		return 1
 	}
 	r.writeReadPrompt(options, input)
