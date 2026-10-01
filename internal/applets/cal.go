@@ -84,17 +84,17 @@ func calRequest(operands []string, wholeYear bool) (int, int, error) {
 		}
 		return int(now.Month()), now.Year(), nil
 	case 1:
-		year, err := calNumber(operands[0], 1, 9999)
+		year, err := xatouRange(operands[0], 1, 9999)
 		if err != nil {
 			return 0, 0, err
 		}
 		return 0, year, nil
 	case 2:
-		month, err := calNumber(operands[0], 1, 12)
+		month, err := xatouRange(operands[0], 1, 12)
 		if err != nil {
 			return 0, 0, err
 		}
-		year, err := calNumber(operands[1], 1, 9999)
+		year, err := xatouRange(operands[1], 1, 9999)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -106,10 +106,10 @@ func calRequest(operands []string, wholeYear bool) (int, int, error) {
 	return 0, 0, fmt.Errorf("extra operand '%s'", operands[2])
 }
 
-// calNumber reads a month or a year as busybox's xatou_range does: digits alone, or `invalid
-// number`, and then within the bounds, or `number 13 is not in 1..12 range`. Both were
-// `invalid number`, and a sign was taken.
-func calNumber(text string, low, high int) (int, error) {
+// xatouRange reads a number as busybox's xatou_range does -- cal's month and year, ipcalc's
+// prefix: digits alone, or `invalid number`, and then within the bounds, or `number 13 is not
+// in 1..12 range`. cal's were both `invalid number`, and a sign was taken.
+func xatouRange(text string, low, high int) (int, error) {
 	value, err := strconv.ParseUint(text, 10, 32)
 	if err != nil {
 		return 0, fmt.Errorf("invalid number '%s'", text)

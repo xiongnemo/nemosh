@@ -94,11 +94,9 @@ func calculateIP(options appletOptions, operands []string) ([]string, error) {
 // this command, and a script reading NETMASK from it expects that number.
 func ipPrefix(text string, present bool, operands []string, address net.IP) (int, error) {
 	if present {
-		prefix, err := strconv.Atoi(text)
-		if err != nil || prefix < 0 || prefix > 32 {
-			return 0, fmt.Errorf("number %s is not in 0..32 range", text)
-		}
-		return prefix, nil
+		// A netmask after the slash is no number, as busybox's xatoul_range reads it:
+		// `invalid number '255.255.255.0'`. It was said to be out of range.
+		return xatouRange(text, 0, 32)
 	}
 	if len(operands) == 2 {
 		mask := net.ParseIP(operands[1]).To4()
