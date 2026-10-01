@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 )
 
@@ -38,6 +39,7 @@ func newDiffApplet() Applet {
 			same:               options.has('s'),
 			ignoreCase:         options.has('i'),
 			ignoreAll:          options.has('w'),
+			ignoreSpace:        options.has('b'),
 			ignoreBlank:        options.has('B'),
 			treatAbsentAsEmpty: options.has('N'),
 		}
@@ -52,6 +54,7 @@ type diffRequest struct {
 	same               bool
 	ignoreCase         bool
 	ignoreAll          bool
+	ignoreSpace        bool
 	ignoreBlank        bool
 	treatAbsentAsEmpty bool
 }
@@ -66,7 +69,11 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 		return err
 	}
 	edits := diffLines(left, right, r.compare)
-	if !anyDifference(edits) {
+	hunks := groupDiffHunks(edits, r.context)
+	if r.ignoreBlank {
+		hunks = slices.DeleteFunc(hunks, func(hunk diffHunk) bool { return onlyEmptyLinesChange(edits[hunk.from:hunk.to]) })
+	}
+	if len(hunks) == 0 {
 		if r.same {
 			if _, err := fmt.Fprintf(stdout, "Files %s and %s are identical\n", r.left, r.right); err != nil {
 				return err
@@ -82,26 +89,57 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 		// failure to *compare* is status 2, and grepStatus is the precedent.
 		return ErrExitFalse
 	}
-	if err := r.writeUnified(stdout, left, right, edits); err != nil {
+	if err := r.writeUnified(stdout, edits, hunks); err != nil {
 		return err
 	}
 	return ErrExitFalse
 }
 
-// compare answers whether two lines count as equal, which is where -i, -w and -B
+// compare answers whether two lines count as equal, which is where -i, -w and -b
 // take effect: they change what "the same line" means rather than how the diff is
-// computed.
+// computed. A line is read as busybox's read_token reads it: -w passes over every
+// white space character, and -b reads a run of them as one space, the newline that
+// ends the line among them, so white space at a line's end is no difference and a
+// run at its start is one. -w read a run as one space, which is -b's meaning, so
+// `ab` and `a b` differed; -b was taken and ignored.
 func (r diffRequest) compare(left, right string) bool {
-	normalise := func(line string) string {
-		if r.ignoreAll {
-			line = strings.Join(strings.Fields(line), " ")
-		}
-		if r.ignoreCase {
-			line = strings.ToLower(line)
-		}
+	return r.normalise(left) == r.normalise(right)
+}
+
+func (r diffRequest) normalise(line string) string {
+	if r.ignoreCase {
+		line = strings.ToLower(line)
+	}
+	if !r.ignoreAll && !r.ignoreSpace {
 		return line
 	}
-	return normalise(left) == normalise(right)
+	var kept strings.Builder
+	for index := 0; index < len(line); index++ {
+		switch {
+		case !diffSpace(line[index]):
+			kept.WriteByte(line[index])
+		case !r.ignoreAll && (index == 0 || !diffSpace(line[index-1])):
+			kept.WriteByte(' ')
+		}
+	}
+	return strings.TrimSuffix(kept.String(), " ")
+}
+
+// diffSpace is C's isspace.
+func diffSpace(c byte) bool {
+	return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r'
+}
+
+// onlyEmptyLinesChange is whether every line a hunk adds or removes is empty, the hunk -B
+// passes over, as busybox's does; it was taken and ignored. A line of white space is not
+// empty.
+func onlyEmptyLinesChange(edits []diffEdit) bool {
+	for _, edit := range edits {
+		if edit.kind != editKeep && edit.text != "" {
+			return false
+		}
+	}
+	return true
 }
 
 func readDiffLines(ctx context.Context, path string, stdin io.Reader, absentIsEmpty bool) ([]string, error) {
@@ -142,15 +180,6 @@ type diffEdit struct {
 	// leftLine and rightLine are one-based positions, zero where the line does
 	// not exist on that side.
 	leftLine, rightLine int
-}
-
-func anyDifference(edits []diffEdit) bool {
-	for _, edit := range edits {
-		if edit.kind != editKeep {
-			return true
-		}
-	}
-	return false
 }
 
 // diffLines computes an edit script.

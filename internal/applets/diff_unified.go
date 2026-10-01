@@ -19,13 +19,13 @@ import (
 // grouping is computed before anything is written rather than emitted as the edit
 // script is walked.
 
-func (r diffRequest) writeUnified(stdout io.Writer, left, right []string, edits []diffEdit) error {
+func (r diffRequest) writeUnified(stdout io.Writer, edits []diffEdit, hunks []diffHunk) error {
 	// No timestamps in the header: busybox omits them, and a timestamp would make
 	// the output differ between two runs over unchanged files.
 	if _, err := fmt.Fprintf(stdout, "--- %s\n+++ %s\n", r.left, r.right); err != nil {
 		return err
 	}
-	for _, hunk := range groupDiffHunks(edits, r.context) {
+	for _, hunk := range hunks {
 		if err := writeDiffHunk(stdout, edits[hunk.from:hunk.to]); err != nil {
 			return err
 		}

@@ -741,7 +741,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `cp` | `-a -d -P -L -H -p -f -i -n -l -s -T -t -u -v -r -R`, and busybox's long forms; a file is never copied onto itself, and a destination that is there is replaced, read-only or not, as busybox-w32 replaces it. `-r` follows symbolic links, where busybox copies them | refused by name |
 | `cut` | `-b -c -f -F -d -O -s -D -n` and `--output-delimiter`; `-c` counts bytes, as busybox's does, `-F` splits where an extended regular expression matches, and a `-d` of a newline cuts lines | refused by name |
 | `date` | `-d -D -I -r -R -u` and busybox's long forms; TIME in every form busybox's parse_datestr reads, and `%N` in FORMAT. Setting the clock, `-s` or a TIME operand, is refused | refused by name |
-| `diff` | `-u -U -q -s -i -w -B -N -L`; unified always | refused by name |
+| `diff` | `-u -U -q -s -i -w -b -B -N -L`; unified always; `-w`, `-b` and `-B` read lines as busybox's read_token does, so `-w` passes over all white space, `-b` a change in how much of it there is, and `-B` a hunk of empty lines only | refused by name |
 | `dirname` | none needed; one NAME, a second refused | refused by name |
 | `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
 | `du` | `-a -s -d -c -h -k -m -b -l -x -H -L`; what the filesystem allocated, in kilobytes, each directory printed after what it holds and in the order it lists them. A directory and a file with several links are counted once unless `-l`, and a junction is a link as a symbolic link is. Of `-h -k -m`, `-H -L` and `-s -d` the last wins | refused by name |
