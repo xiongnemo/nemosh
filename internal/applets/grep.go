@@ -224,7 +224,11 @@ func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, n
 	if flags.invert {
 		return nil
 	}
-	for _, found := range expr.FindAllString(line, -1) {
+	matches := expr.FindAllString(line, -1)
+	if flags.wordMatch {
+		matches = grepWords(expr, line)
+	}
+	for _, found := range matches {
 		// An empty match is not printed, as busybox's grep does not print one: `grep -o
 		// '[0-9]*'` is the numbers, where it was an empty line before each.
 		if found == "" {
@@ -235,6 +239,38 @@ func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, n
 		}
 	}
 	return nil
+}
+
+// grepWord names the group -w's pattern holds the word in, between the characters around it.
+const grepWord = "word"
+
+// grepWords is -w -o's matches: the words alone, where the characters on either side of each
+// were printed with it, `apple ` and ` foo`. A search goes on from the end of a word rather
+// than from past the character after it, so a word one space after another is found too; it
+// was not. A word cannot begin where the last ended, since that is no boundary.
+func grepWords(expr *regexp.Regexp, line string) []string {
+	var words []string
+	names := expr.SubexpNames()
+	for start := 0; start <= len(line); {
+		found := expr.FindStringSubmatchIndex(line[start:])
+		if found == nil {
+			break
+		}
+		from, to := -1, -1
+		for group, name := range names {
+			if name == grepWord && found[2*group] >= 0 {
+				from, to = start+found[2*group], start+found[2*group+1]
+				break
+			}
+		}
+		if from < 0 || from == start && start > 0 {
+			start += max(found[0], 1)
+			continue
+		}
+		words = append(words, line[from:to])
+		start = max(to, from+1)
+	}
+	return words
 }
 
 // grepDrainAfter writes the trailing context still owed when -m stopped the scan.

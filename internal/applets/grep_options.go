@@ -112,8 +112,9 @@ func (f grepFlags) compile() (*regexp.Regexp, error) {
 		case f.wordMatch:
 			// GNU's definition: the match must not be adjacent to a word
 			// character on either side. \b would be close but is wrong for a
-			// pattern that starts or ends with a non-word character.
-			pattern = `(?:\A|\W)(?:` + pattern + `)(?:\z|\W)`
+			// pattern that starts or ends with a non-word character. The word is
+			// the group named grepWord, which is what -o prints; see grepWords.
+			pattern = `(?:\A|\W)(?P<` + grepWord + `>` + pattern + `)(?:\z|\W)`
 		default:
 			pattern = "(?:" + pattern + ")"
 		}
