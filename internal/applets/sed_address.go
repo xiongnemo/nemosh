@@ -18,6 +18,7 @@ import (
 //	2,4      lines two to four
 //	2,$      line two to the end
 //	/a/,/b/  from a match on a to the next match on b
+//	/a/,+2   a match on a and the two lines after it, busybox's and GNU's
 //	5!       every line except five
 
 // sedAddress selects lines. A zero value selects all of them, which is what an
@@ -32,6 +33,10 @@ type sedAddress struct {
 	// active tracks an open range between lines, which is why a program is
 	// executed through a pointer: a range's state is per run, not per command.
 	active bool
+	// following is the N of `,+N`, which ends the range N lines after the line that
+	// opened it, the line until; it was refused as no address after the comma.
+	following, until int
+	relative         bool
 }
 
 // sedEndpoint is one side of an address: a line number, the last line, or a
@@ -77,6 +82,10 @@ func (a *sedAddress) selectsBeforeNegation(line string, number int, isLast bool)
 	if !a.ranged {
 		return a.start.matches(line, number, isLast)
 	}
+	if a.active && a.relative {
+		a.active = number < a.until
+		return true
+	}
 	if a.active {
 		// The closing address is tested on a *later* line than the opening one,
 		// so a one-line range like `2,2` still spans one line rather than
@@ -88,6 +97,11 @@ func (a *sedAddress) selectsBeforeNegation(line string, number int, isLast bool)
 		return true
 	}
 	if a.start.matches(line, number, isLast) {
+		if a.relative {
+			a.until = number + a.following
+			a.active = a.following > 0
+			return true
+		}
 		a.active = true
 		// A numeric end at or before the start makes the range one line long,
 		// so it is closed at once rather than left open to the end of the input.
@@ -124,7 +138,18 @@ func parseSedAddress(script string, extended bool) (sedAddress, string, error) {
 		return address, rest, nil
 	}
 	address.start = start
-	if strings.HasPrefix(rest, ",") {
+	if strings.HasPrefix(rest, ",+") && len(rest) > 2 && rest[2] >= '0' && rest[2] <= '9' {
+		// `,+N`, as busybox reads it: digits after the plus, which a plus alone has not.
+		digits := 2
+		for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+			digits++
+		}
+		following, err := strconv.Atoi(rest[2:digits])
+		if err != nil {
+			return address, "", fmt.Errorf("invalid address: %s", rest[1:digits])
+		}
+		address.ranged, address.relative, address.following, rest = true, true, following, rest[digits:]
+	} else if strings.HasPrefix(rest, ",") {
 		end, remainder, endFound, err := parseSedEndpoint(rest[1:], extended)
 		if err != nil {
 			return address, "", err

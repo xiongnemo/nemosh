@@ -789,7 +789,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `shuf` | `-n -e -i -z -o`; `-o FILE` is opened once the input is read, so it may be the input, as busybox's is | refused by name |
 | `strings` | `-n -t -o -a -f` | refused by name |
 | `awk` | the POSIX language; `-F -v -f --`, and busybox's `-e PROGRAM` (read with any `-f` in the order given, as one program), `-E FILE` (`-f` that ends the options) and `-W` (said to be ignored); operands mixing files and `VAR=VALUE` | refused by name |
-| `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {} r w l`, s's flags `g p N i w`, addresses (`N`, `$`, `/re/`, ranges, `!`), `-n -e -E -r -f -i[SUFFIX]`, and busybox-w32's `-b`, which keeps a line's carriage return as part of it, so `sed -b -i` writes a CRLF file back as CRLF | refused by name |
+| `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {} r w l`, s's flags `g p N i w`, addresses (`N`, `$`, `/re/`, ranges, busybox's `addr,+N`, `!`), `-n -e -E -r -f -i[SUFFIX]`, and busybox-w32's `-b`, which keeps a line's carriage return as part of it, so `sed -b -i` writes a CRLF file back as CRLF | refused by name |
 | `seq` | `-w -s`, and `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` as strtod reads them, fractions included; a zero increment refused | refused by name |
 | `sleep` | duration operand | reported as an invalid duration |
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
