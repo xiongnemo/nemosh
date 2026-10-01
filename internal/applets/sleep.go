@@ -40,12 +40,11 @@ func (sleepApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 
 	total := time.Duration(0)
 	for _, operand := range operands {
+		// busybox's words, single quotes and all: `sleep: invalid number '1x'`. This said
+		// `invalid duration "1x"`.
 		duration, err := parseSleepDuration(operand)
-		if err != nil {
-			return writeSleepDiagnostic(stderr, fmt.Sprintf("sleep: invalid duration %q", operand))
-		}
-		if duration > maxSleepDuration-total {
-			return writeSleepDiagnostic(stderr, fmt.Sprintf("sleep: invalid duration %q", operand))
+		if err != nil || duration > maxSleepDuration-total {
+			return writeSleepDiagnostic(stderr, fmt.Sprintf("sleep: invalid number '%s'", operand))
 		}
 		total += duration
 	}

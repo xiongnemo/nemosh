@@ -106,12 +106,18 @@ func calRequest(operands []string, wholeYear bool) (int, int, error) {
 	return 0, 0, fmt.Errorf("extra operand '%s'", operands[2])
 }
 
+// calNumber reads a month or a year as busybox's xatou_range does: digits alone, or `invalid
+// number`, and then within the bounds, or `number 13 is not in 1..12 range`. Both were
+// `invalid number`, and a sign was taken.
 func calNumber(text string, low, high int) (int, error) {
-	value, err := strconv.Atoi(text)
-	if err != nil || value < low || value > high {
+	value, err := strconv.ParseUint(text, 10, 32)
+	if err != nil {
 		return 0, fmt.Errorf("invalid number '%s'", text)
 	}
-	return value, nil
+	if value < uint64(low) || value > uint64(high) {
+		return 0, fmt.Errorf("number %s is not in %d..%d range", text, low, high)
+	}
+	return int(value), nil
 }
 
 func writeCalendarMonth(out io.Writer, month, year, weekstart int) error {
