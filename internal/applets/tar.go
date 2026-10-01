@@ -219,10 +219,10 @@ func (r tarRequest) extractionRoot(ctx context.Context) (string, error) {
 	// does the same.
 	info, err := os.Stat(native)
 	if err != nil {
-		return "", fmt.Errorf("cannot change directory to '%s': %v", target, err)
+		return "", fmt.Errorf("cannot change directory to '%s': %s", target, causeText(err))
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("cannot change directory to '%s': not a directory", target)
+		return "", fmt.Errorf("cannot change directory to '%s': Not a directory", target)
 	}
 	return native, nil
 }

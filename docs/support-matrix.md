@@ -1561,6 +1561,11 @@ the front of a name -- slashes, a leading `../`, everything up to the last
 from member names`. On Windows a drive is taken off too, which busybox-w32
 keeps, though no tar extracts `C:/x/f.txt` where it says.
 
+`-C` is where creating finds the names, wherever it stands among the
+arguments, as busybox changes to it once the archive is open; the archive and
+`-T`'s list are found where tar began. A `-C` that is not there is refused
+before the archive is opened, where busybox has already emptied it.
+
 `-v` names each entry, and a second `-v`, or `-t` with one, gives busybox's long
 line: the mode as `ls -l` has it, the owner and group, the size, the local time,
 the name, and where a link points. The names go to stdout, but to stderr where

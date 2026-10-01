@@ -34,6 +34,17 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 	if len(r.operands) == 0 {
 		return fmt.Errorf("no files given to archive")
 	}
+	// The names are found in -C's directory, as busybox changes to it. It is looked for
+	// before the archive is opened, where busybox opens it first and truncates it for a -C
+	// that is not there.
+	base := ""
+	if r.directory != "" {
+		root, err := r.extractionRoot(ctx)
+		if err != nil {
+			return err
+		}
+		base = root
+	}
 	out, release, err := r.createArchiveOutput(ctx, stdout)
 	if err != nil {
 		return err
@@ -55,7 +66,7 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 	creation.archive = tar.NewWriter(stream)
 	view := ProcessViewFromContext(ctx)
 	for _, operand := range r.operands {
-		native, err := resolveHostPath(view, operand)
+		native, err := createPath(view, base, operand)
 		if err != nil {
 			creation.passOver(operandFailure(operand, err))
 			continue
@@ -77,6 +88,16 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 		return ExitStatus(1)
 	}
 	return nil
+}
+
+// createPath is where a name to archive is: under -C's directory when it is relative, and as
+// the shell resolves it otherwise. It was always the shell's working directory, and
+// `tar -C src -cf a.tar a.txt` did not find a.txt.
+func createPath(view ProcessView, base, operand string) (string, error) {
+	if base == "" || strings.HasPrefix(filepath.ToSlash(operand), "/") || filepath.VolumeName(operand) != "" {
+		return resolveHostPath(view, operand)
+	}
+	return filepath.Join(base, filepath.FromSlash(operand)), nil
 }
 
 // passOver says why a name is not stored, and remembers that one was not. The name is bare in
