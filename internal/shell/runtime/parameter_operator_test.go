@@ -87,6 +87,16 @@ func TestRuntime_questionOperatorSaysBusyboxsWords(t *testing.T) {
 	}
 }
 
+// `=` cannot assign to a positional or special parameter, and says so in busybox's words, which
+// are setvar's: ash_test param_expand_assign has them.
+func TestRuntime_assignOperatorOnAPositionalIsABadVariableName(t *testing.T) {
+	for _, script := range []string{"set --; echo _${1=word}\necho after\n", "set --; echo _${1:=}\necho after\n"} {
+		if status, stdout, stderr := runSetScript(t, script); status != 2 || stdout != "" || stderr != "nemosh: 1: bad variable name\n" {
+			t.Errorf("%q: status = %d, stdout = %q, stderr = %q, want 2 and busybox's words", script, status, stdout, stderr)
+		}
+	}
+}
+
 func TestRuntime_refusesAnOperatorItDoesNotImplement(t *testing.T) {
 	// An unrecognised operator used to expand to its own literal text and exit
 	// 0, so an operator this shell did not have silently became data.

@@ -127,8 +127,9 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 			}
 			return assigned, nil
 		}
+		// busybox's words, from setvar; bash says `$1: cannot assign in this way`.
 		if !isVariableName(name) {
-			return "", fmt.Errorf("%s: cannot assign in this way", name)
+			return "", fmt.Errorf("%s: bad variable name", name)
 		}
 		// Through assignVar, so a readonly name refuses and an exported one reaches
 		// the environment; this wrote the map directly and did neither.
