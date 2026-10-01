@@ -6,9 +6,10 @@ import (
 	"strings"
 )
 
-// cFloat is C's %e %E %f %g %G: six digits unless the precision says, the exponent in two
-// digits at least, %g's trailing zeros dropped, and inf and nan as C spells them. Go's %g is
-// the shortest form that reads back instead, and msvcrt writes 1.#INF000e+000.
+// cFloat is C's %e %E %f %F %g %G: six digits unless the precision says, the exponent in two
+// digits at least, %g's trailing zeros dropped, and inf and nan as C spells them, in upper case
+// under the upper-case letters. Go's %g is the shortest form that reads back instead, and
+// msvcrt writes 1.#INF000e+000. printf and awk's printf use it too.
 func cFloat(spec cSpec, verb byte, value float64) string {
 	sign := ""
 	switch {
@@ -27,7 +28,7 @@ func cFloat(spec cSpec, verb byte, value float64) string {
 	case finite:
 		body = cFloatDigits(spec, verb|0x20, math.Abs(value))
 	}
-	if verb == 'E' || verb == 'G' {
+	if verb == 'E' || verb == 'F' || verb == 'G' {
 		body = strings.ToUpper(body)
 	}
 	return cPad(spec, sign, body, finite)

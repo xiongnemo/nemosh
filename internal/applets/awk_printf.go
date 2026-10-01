@@ -2,6 +2,7 @@ package applets
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -164,10 +165,21 @@ func (in *awkInterp) renderAwkConversion(spec string, verb byte, next func() awk
 	case 'o', 'x', 'X':
 		return fmt.Sprintf(spec+string(verb), awkToInt64(next().num())), nil
 	case 'e', 'E', 'f', 'F', 'g', 'G':
-		// Go writes a two-digit exponent, where busybox on Windows writes three
-		// (`1.234500e+003`). That is the MSVC runtime rather than a rule; C99 and gawk
-		// both say two.
-		return fmt.Sprintf(spec+string(verb), next().num()), nil
+		// C's conversions, as printf's are: %g has six digits unless the precision says, where
+		// Go's fmt gave as many as read back, `printf "%g", 123456789` 1.23456789e+08. The
+		// exponent has two digits, where busybox on Windows writes three (`1.234500e+003`):
+		// the MSVC runtime rather than a rule; C99 and gawk both say two. Infinity and NaN are
+		// spelled as print spells them, gawk's `+inf`, upper case under %E %F %G as gawk has it.
+		layout := parseCSpec(strings.TrimPrefix(spec, "%"))
+		value := next().num()
+		if math.IsInf(value, 0) || math.IsNaN(value) {
+			text := formatAwkNumber(value, "")
+			if verb == 'E' || verb == 'F' || verb == 'G' {
+				text = strings.ToUpper(text)
+			}
+			return cPad(layout, "", text, false), nil
+		}
+		return cFloat(layout, verb, value), nil
 	case 'c':
 		return fmt.Sprintf(spec+"s", in.printfChar(next())), nil
 	case 's':

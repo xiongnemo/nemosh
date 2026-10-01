@@ -189,15 +189,19 @@ func renderPrintfConversion(spec string, verb byte, next func() string) (string,
 		}
 		return fmt.Sprintf(spec+string(verb), value), err
 	case 'e', 'E', 'f', 'F', 'g', 'G':
+		// C's conversions rather than Go's, see cFloat: %g has six digits unless the precision
+		// says, where Go's has as many as read back, so `printf %g 123456789` was
+		// 1.23456789e+08 where both references say 1.23457e+08; and inf is inf, not +Inf.
+		layout := parseCSpec(strings.TrimPrefix(spec, "%"))
 		operand := next()
 		if code, ok := printfCharacterCode(strings.TrimSpace(operand)); ok {
-			return fmt.Sprintf(spec+string(verb), float64(code)), nil
+			return cFloat(layout, verb, float64(code)), nil
 		}
 		value, err := strconv.ParseFloat(strings.TrimSpace(operand), 64)
 		if err != nil && strings.TrimSpace(operand) != "" {
-			return fmt.Sprintf(spec+string(verb), 0.0), errPrintfNumber{operand: operand}
+			return cFloat(layout, verb, 0), errPrintfNumber{operand: operand}
 		}
-		return fmt.Sprintf(spec+string(verb), value), nil
+		return cFloat(layout, verb, value), nil
 	case 'c':
 		operand := next()
 		if operand == "" {
