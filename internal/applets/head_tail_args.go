@@ -49,6 +49,16 @@ func headTailArgs(applet string, args []string, defaultCount int, allowBytes, pe
 		if arg == "--" {
 			return spec, headers, append(operands, args[index+1:]...), nil
 		}
+		// `tail +3` is from the third line on, the form -n +3 had before it. busybox's tail
+		// takes it as its first argument and only there: `tail -n 1 +3` opens a FILE named +3.
+		if index == 0 && applet == "tail" && len(arg) > 1 && arg[0] == '+' && isASCIIDigit(arg[1]) {
+			count, err := headTailCount(arg[1:])
+			if err != nil {
+				return countSpec{}, headers, nil, err
+			}
+			spec = countSpec{count: count, fromStart: true}
+			continue
+		}
 		// A lone `-` is stdin, which is an operand and not an option.
 		if len(arg) < 2 || arg[0] != '-' {
 			if !permute {
