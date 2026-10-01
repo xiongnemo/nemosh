@@ -122,3 +122,14 @@ func TestRuntime_reportsSyntaxError_whenBangHasNoCommand(t *testing.T) {
 		t.Fatalf("status = %d, stdout = %q, want 2 and no output", status, stdout)
 	}
 }
+
+// The one `!` is the pipeline's, at its front. A second, and one at the front of a later stage,
+// are syntax errors in busybox, as in POSIX's grammar; they ran a command named `!`.
+func TestRuntime_refusesABangThatIsNotAtThePipelinesFront(t *testing.T) {
+	for _, script := range []string{"! ! true\n", ": | ! true\n", "! true | ! false\n"} {
+		status, stdout, stderr := runNegationScript(t, script)
+		if status != 2 || stdout != "" || !strings.Contains(stderr, "syntax error: unexpected !") {
+			t.Errorf("%q: status %d, stdout %q, stderr %q; want a syntax error", script, status, stdout, stderr)
+		}
+	}
+}

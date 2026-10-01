@@ -115,6 +115,13 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 		}
 		parsed := pipeline{negated: negated}
 		for _, commandTokens := range commands {
+			// The one `!` is the pipeline's, at its front. A second, `! ! true`, and one at the
+			// front of a later stage, `: | ! true`, are syntax errors in busybox, as in POSIX's
+			// grammar, and bash refuses the second too. Both ran a command named `!`, as dash
+			// reads them.
+			if len(commandTokens) > 0 && isPipelineNegationToken(commandTokens[0]) {
+				return andOr{}, fmt.Errorf("syntax error: unexpected !")
+			}
 			command, redirects, err := parseRedirectsWithBudget(commandTokens, budget)
 			if err != nil {
 				return andOr{}, classifyCommandError(err)
@@ -152,8 +159,8 @@ func isAndOrOperator(kind tokenKind) bool {
 
 // stripPipelineNegation takes the `!` reserved word off the front of a pipeline.
 // POSIX 2.9.2 gives it the whole pipeline, not the first command, so it comes
-// off before the stages are split. Only one is recognised; a second `!` is an
-// ordinary word, which is how dash reads it.
+// off before the stages are split. Only one is recognised; a second `!` is refused
+// where the stages are read.
 func stripPipelineNegation(tokens []shellToken) ([]shellToken, bool) {
 	if len(tokens) == 0 || !isPipelineNegationToken(tokens[0]) {
 		return tokens, false
