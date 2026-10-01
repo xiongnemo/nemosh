@@ -1549,6 +1549,11 @@ removed and written anew, so a link there is replaced rather than written
 through; `--overwrite` writes into it, and `-k` stops the extraction at it.
 Modification times are restored but under `-m`.
 
+A name `tar -c` cannot store -- one that is not there, a file or a directory
+that cannot be read -- is said and passed over, the rest stored, and the status
+is 1 after `tar: some names were not archived`, as busybox goes on. The archive
+being written is not stored in itself.
+
 Two answers are not busybox's. A FILE that took nothing is said and fails the
 command; busybox asks instead whether an entry it took is *spelled* like the
 FILE, so `tar xf a.tar 'src/*.txt'` fails there having extracted what it
