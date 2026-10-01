@@ -813,7 +813,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `uniq` | `-c -d -u -i -z -f -s -w`, and an OUTPUT operand | refused by name |
 | `unexpand` | `-t -a -f`, `--tabs --all --first-only`; busybox's expand.c: -t converts throughout unless -f, and a line that begins with a word has the run after it converted too | refused by name |
 | `unix2dos` | `-d -u`; converts **in place** with a file operand | refused by name |
-| `unzip` | `-l -t -p -j -n -o -q -K -d -x` | refused by name |
+| `unzip` | `-l -v -t -p -j -n -o -q -K -d DIR -x`, an option anywhere, and after `-x` the members left out, as busybox reads them | refused by name |
 | `uudecode` | `-o`; `-o -` writes to stdout | refused by name |
 | `uuencode` | `[FILE] NAME`, and `-m` for busybox's `begin-base64` form, which `uudecode` reads back | refused by name |
 | `wget` | `-O -P -U -T -q -S --header --spider`; `-c` and `-o` accepted | refused by name |
@@ -1598,6 +1598,13 @@ busybox-w32 says `Permission denied`.
 the *end* of the file, so it cannot be read from a pipe. With neither `-o` nor
 `-n`, an existing file is left alone and said so -- busybox prompts, and there is
 no prompt here.
+
+What `unzip` prints is busybox's: `Archive:  NAME`, then `   creating: DIR/` and
+`  inflating: NAME` on standard output, and `-l`'s and `-v`'s tables column for
+column, the archive's DOS dates month first. The total counts the entries listed,
+where busybox's counts every entry in the archive. NAME may leave out its `.zip`,
+`-d` makes one level and then must change into it, and a pattern is fnmatch's,
+which a `*` crosses a slash in.
 
 ### `cpio` and `ar`, the two with no library behind them
 

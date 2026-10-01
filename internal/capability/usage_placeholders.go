@@ -80,7 +80,6 @@ var valuePlaceholders = map[string]string{
 	"tarexclude":              "PATTERN",
 	"tarstrip-components":     "N",
 	"unzipd":                  "DIR",
-	"unzipx":                  "PATTERN",
 	"odA":                     "RADIX",
 	"odt":                     "TYPE",
 	"odN":                     "SIZE",
