@@ -49,18 +49,12 @@ func sedArgs(ctx context.Context, args []string, stdin io.Reader) (sedOptions, e
 			continue
 		}
 		if strings.HasPrefix(arg, "--") {
-			switch arg {
-			case "--quiet", "--silent":
-				options.quiet = true
-				continue
-			case "--regexp-extended":
-				options.extended = true
-				continue
-			case "--in-place":
-				options.inPlace = true
-				continue
+			consumed, err := readSedLongOption(ctx, arg, args, index, &options, stdin)
+			if err != nil {
+				return sedOptions{}, err
 			}
-			return sedOptions{}, fmt.Errorf("unsupported sed option: %s", arg)
+			index += consumed - 1
+			continue
 		}
 		consumed, err := readSedFlags(ctx, arg, args, index, &options, stdin)
 		if err != nil {
@@ -121,6 +115,59 @@ func readSedFlags(ctx context.Context, arg string, args []string, index int, opt
 		}
 	}
 	return 1, nil
+}
+
+// sedLongOptions are busybox's long options for sed, each taken as getopt_long takes one: by
+// any prefix that names it alone, so `--expr` is --expression.
+var sedLongOptions = []string{"expression", "file", "in-place", "quiet", "regexp-extended", "silent"}
+
+// readSedLongOption reads one of them, reporting how many arguments it used. --expression and
+// --file take their value after `=` or as the next argument, and --in-place its suffix after
+// `=` alone, as -i's is attached. Only --quiet, --silent, --regexp-extended and a bare
+// --in-place were taken, so `sed --expression=s/a/b/` was refused.
+func readSedLongOption(ctx context.Context, arg string, args []string, index int, options *sedOptions, stdin io.Reader) (int, error) {
+	given, value, valued := strings.Cut(arg[2:], "=")
+	name := ""
+	for _, candidate := range sedLongOptions {
+		if given == "" || !strings.HasPrefix(candidate, given) {
+			continue
+		}
+		if name != "" {
+			return 0, fmt.Errorf("option '%s' is ambiguous", arg)
+		}
+		name = candidate
+	}
+	consumed := 1
+	switch {
+	case name == "":
+		return 0, fmt.Errorf("unsupported sed option: %s", arg)
+	case name == "expression" || name == "file":
+		if !valued {
+			if index+1 >= len(args) {
+				return 0, fmt.Errorf("option '--%s' requires an argument", name)
+			}
+			value, consumed = args[index+1], 2
+		}
+	case valued && name != "in-place":
+		return 0, fmt.Errorf("option '--%s' doesn't allow an argument", name)
+	}
+	switch name {
+	case "quiet", "silent":
+		options.quiet = true
+	case "regexp-extended":
+		options.extended = true
+	case "in-place":
+		options.inPlace, options.suffix = true, value
+	case "expression":
+		options.scripts = append(options.scripts, value)
+	case "file":
+		script, err := readSedScriptFile(ctx, value, stdin)
+		if err != nil {
+			return 0, err
+		}
+		options.scripts = append(options.scripts, script)
+	}
+	return consumed, nil
 }
 
 // sedFlagValue is the rest of the word, or the next argument when the word ends
