@@ -132,6 +132,11 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			failed, err = true, nil
 		}
 		if err != nil {
+			// What came before the conversion is written first, as busybox and bash
+			// write it; it was dropped with the rest.
+			if _, writeErr := io.WriteString(out, text.String()); writeErr != nil {
+				return used, failed, writeErr
+			}
 			return used, failed, err
 		}
 		text.WriteString(rendered)
