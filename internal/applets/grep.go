@@ -152,6 +152,12 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 	// trailing lines still owed to the last match.
 	before := &grepRing{limit: flags.beforeContext}
 	after := 0
+	// -m0 reads no line and prints nothing, and the status is 1, as GNU's grep has it. busybox's
+	// prints no line either, but counts the one it stopped at, so its -c says 1 and its status
+	// is 0. -m0 printed every match.
+	if flags.limited && flags.maxCount == 0 {
+		return false, nil
+	}
 	for scanner.Scan() {
 		lineNumber++
 		line := scanner.Text()
@@ -194,14 +200,16 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 			}
 			after = flags.afterContext
 		}
-		if flags.maxCount > 0 && count >= flags.maxCount {
+		if flags.limited && count >= flags.maxCount {
 			// The trailing context of the last match is still owed, which is what
 			// busybox does: `grep -A1 -m1 M` prints the match and the line after
-			// it. Measured.
-			if err := grepDrainAfter(scanner, printer, name, &lineNumber, after, withNames); err != nil {
+			// it. Measured. Then -c and -l answer for what was read, as without -m:
+			// returning here left `grep -c -m2` and `grep -l -m1` saying nothing.
+			// See grepDrainAfter for where the context ends.
+			if err := grepDrainAfter(scanner, printer, expr, flags.invert, name, &lineNumber, after, withNames); err != nil {
 				return matched, err
 			}
-			return matched, scanner.Err()
+			break
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -274,8 +282,13 @@ func grepWords(expr *regexp.Regexp, line string) []string {
 }
 
 // grepDrainAfter writes the trailing context still owed when -m stopped the scan.
-func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, name string, lineNumber *int, after int, withNames bool) error {
+// It ends at a line that would have been selected, as busybox's and GNU's grep end it there:
+// `grep -A2 -m1 a` over banana, apple and cherry is banana alone. It went on through apple.
+func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, expr *regexp.Regexp, invert bool, name string, lineNumber *int, after int, withNames bool) error {
 	for ; after > 0 && scanner.Scan(); after-- {
+		if expr.MatchString(scanner.Text()) != invert {
+			return nil
+		}
 		*lineNumber++
 		if err := printer.emit(name, *lineNumber, scanner.Text(), false, withNames); err != nil {
 			return err

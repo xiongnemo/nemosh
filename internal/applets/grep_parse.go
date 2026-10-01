@@ -133,7 +133,7 @@ func applyGrepValue(ctx context.Context, letter byte, value string, flags *grepF
 		if err != nil {
 			return err
 		}
-		flags.maxCount = count
+		flags.maxCount, flags.limited = count, true
 	case 'A':
 		count, err := parseGrepNumber(value)
 		if err != nil {

@@ -50,7 +50,10 @@ type grepFlags struct {
 	noMessages   bool
 	noFilename   bool
 	withFilename bool
-	maxCount     int
+	// maxCount is -m's count, and limited is whether -m was given at all, so -m0 selects
+	// nothing rather than everything.
+	maxCount int
+	limited  bool
 	// withoutMatch is -L: the files that did *not* match, which is -l inverted.
 	withoutMatch bool
 	// afterContext and beforeContext are -A and -B; -C sets both.
