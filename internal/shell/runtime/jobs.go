@@ -54,7 +54,7 @@ func padJobLine(text string) string {
 }
 
 // reportSignalled says, on stderr, how each of these jobs ended if kill ended it: the word
-// busybox's `wait` prints, `Terminated` or `Killed`. Not for INT, which neither reference
+// busybox's `wait %N` prints, `Terminated` or `Killed`. Not for INT, which neither reference
 // reports -- an interrupt is something the person just did, not news to them.
 //
 // Only for jobs that have ended, so the signal can be read without the scope's lock.

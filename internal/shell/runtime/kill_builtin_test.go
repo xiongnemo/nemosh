@@ -35,9 +35,10 @@ func TestKill_stopsABackgroundJob(t *testing.T) {
 	// Given / When: a job that would run for half a minute, killed at once
 	stdout, stderr, status := runKill(t, "sleep 30 &\nkill %1\nwait\njobs\n")
 
-	// Then: `wait` names how it ended, as busybox's does, and says nothing else
-	if stderr != "Terminated\n" {
-		t.Fatalf("stderr = %q, want only %q", stderr, "Terminated\n")
+	// Then: a `wait` with no operands says nothing of how it ended, as busybox's says nothing
+	// -- `wait %1` names it -- and nothing else is said
+	if stderr != "" {
+		t.Fatalf("stderr = %q, want nothing", stderr)
 	}
 	if status != 0 {
 		t.Fatalf("status = %d, want 0", status)

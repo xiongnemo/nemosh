@@ -50,7 +50,8 @@ func (r Runtime) waitAll(ctx context.Context) int {
 		r.jobScope.releaseAll(records)
 		return contextStatus(ctx)
 	}
-	r.reportSignalled(records)
+	// Silent about how each ended, as busybox's is: its waitcmd hands dowait no job to report
+	// for, so `kill %1; wait` says nothing, where `wait %1` says Terminated. Each said its word.
 	r.disposeCoprocs(records)
 	r.jobScope.consumeAll(records)
 	return 0
