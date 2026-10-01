@@ -137,14 +137,15 @@ func truncateAt(output io.Writer, size int64) error {
 
 // copyRecords is the loop, and it answers what to report even when it fails.
 func (r ddRequest) copyRecords(ctx context.Context, source io.Reader, sink io.Writer) (ddCounts, ddCounts, error) {
-	var read, written ddCounts
+	var read ddCounts
+	output := ddOutput{sink: sink, size: r.outputSize, gathers: r.inputSize != r.outputSize}
 	if err := r.skipInput(source); err != nil {
-		return read, written, err
+		return read, output.written, err
 	}
 	block := make([]byte, r.inputSize)
 	for !r.hasCount || read.full+read.partial < r.count {
 		if err := ctx.Err(); err != nil {
-			return read, written, err
+			return read, output.written, err
 		}
 		length, err := source.Read(block)
 		if length > 0 {
@@ -153,24 +154,69 @@ func (r ddRequest) copyRecords(ctx context.Context, source io.Reader, sink io.Wr
 			} else {
 				read.partial++
 			}
-			piece := r.convert(block[:length])
-			if _, writeErr := sink.Write(piece); writeErr != nil {
-				return read, written, writeErr
-			}
-			if int64(len(piece)) == r.outputSize {
-				written.full++
-			} else {
-				written.partial++
+			if writeErr := output.write(r.convert(block[:length])); writeErr != nil {
+				return read, output.written, writeErr
 			}
 		}
 		if err == io.EOF {
-			return read, written, nil
+			break
 		}
 		if err != nil {
-			return read, written, err
+			return read, output.written, err
 		}
 	}
-	return read, written, nil
+	err := output.finish()
+	return read, output.written, err
+}
+
+// ddOutput is the writing half. With one block size a record goes out as it came in. With ibs
+// and obs two sizes the records are gathered into blocks of obs, each written when it is full
+// and the rest at the end, as busybox's dd does with its second buffer: `dd ibs=4 obs=8
+// count=2` is "1+0 records out". Each record went out as it came, "0+2".
+type ddOutput struct {
+	sink    io.Writer
+	size    int64
+	gathers bool
+	pending []byte
+	written ddCounts
+}
+
+func (o *ddOutput) write(record []byte) error {
+	if !o.gathers {
+		return o.put(record)
+	}
+	for len(record) > 0 {
+		taken := min(len(record), int(o.size)-len(o.pending))
+		o.pending, record = append(o.pending, record[:taken]...), record[taken:]
+		if int64(len(o.pending)) == o.size {
+			if err := o.put(o.pending); err != nil {
+				return err
+			}
+			o.pending = o.pending[:0]
+		}
+	}
+	return nil
+}
+
+// finish writes what was gathered short of a block, as a partial record.
+func (o *ddOutput) finish() error {
+	if len(o.pending) == 0 {
+		return nil
+	}
+	return o.put(o.pending)
+}
+
+// put writes one record and counts it, whole when it is a block of obs.
+func (o *ddOutput) put(record []byte) error {
+	if _, err := o.sink.Write(record); err != nil {
+		return err
+	}
+	if int64(len(record)) == o.size {
+		o.written.full++
+	} else {
+		o.written.partial++
+	}
+	return nil
 }
 
 // skipInput moves past the first `skip` input blocks.
