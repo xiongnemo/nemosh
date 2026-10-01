@@ -105,6 +105,16 @@ func (r *cpRun) singleCopy(view ProcessView, source string, dest pathOperand) (b
 	}
 	sourceIsDir := err == nil && sourceInfo.IsDir()
 	destIsDir := destErr == nil && destInfo.IsDir()
+	// A DEST written with a slash after it is a directory or it is nothing. A file there is
+	// ENOTDIR to stat, as busybox says of `cp a.txt a.txt/`, and a name not there is none a
+	// file can be made with: busybox's open of `nope/` fails. The slash went unseen, so
+	// `cp a.txt nope/` made a file nope and answered 0.
+	if err == nil && !sourceIsDir && !destIsDir && endsInSeparator(dest.operand) {
+		if destErr == nil {
+			return false, cannotStat(dest.operand, errNotADirectory)
+		}
+		return false, cannotCreate(dest.operand, directoryNameNotThere)
+	}
 	if r.flags.noTargetDir && !sourceIsDir && destIsDir {
 		return false, fmt.Errorf("'%s' is a directory", dest.operand)
 	}
@@ -144,6 +154,11 @@ type pathOperand struct {
 	// device is a device of the shell's, /dev/null or /dev/stdin, which has no host path; see
 	// cp_device.go.
 	device bool
+}
+
+// endsInSeparator is whether name ends in a path separator: a slash, or a backslash on Windows.
+func endsInSeparator(name string) bool {
+	return name != "" && os.IsPathSeparator(name[len(name)-1])
 }
 
 // joinHost is a directory's host path and the name of something in it.

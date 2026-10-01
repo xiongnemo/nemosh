@@ -7,6 +7,10 @@ import (
 	"syscall"
 )
 
+// directoryNameNotThere is what creating a file named with a separator after it fails with:
+// ERROR_INVALID_NAME, which busybox-w32 makes EINVAL, `Invalid argument`.
+var directoryNameNotThere error = syscall.Errno(123)
+
 // removeForOverwrite removes a file in a copy's way, as unlink would: a directory is refused,
 // where os.Remove would take an empty one. A read-only file is made writable first, as
 // busybox-w32's unlink does (win32/mingw.c:1954), since Windows will not delete it otherwise.

@@ -7,6 +7,10 @@ import (
 	"syscall"
 )
 
+// directoryNameNotThere is what open(2) of a name with a slash after it fails with when
+// O_CREAT asks for a file: EISDIR.
+var directoryNameNotThere error = syscall.EISDIR
+
 // removeForOverwrite removes a file in a copy's way, as unlink would: a directory is refused,
 // where os.Remove would take an empty one.
 func removeForOverwrite(native string) error {
