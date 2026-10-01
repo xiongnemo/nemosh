@@ -24,7 +24,7 @@ func walkFindBelow(run *findRun, displayRoot, hostRoot, path string, entry fs.Di
 		return err
 	}
 	candidate := findCandidate{display: display, host: path, entry: entry, depth: depth}
-	if entry.IsDir() && !expression.prunes(candidate) {
+	if entry.IsDir() && !expression.prunes(candidate) && !run.leavesVolume(expression, path) {
 		entries, err := os.ReadDir(path)
 		if err != nil {
 			return operandFailure(display, err)

@@ -69,6 +69,10 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return p.regexPredicate(operand)
 	case "-maxdepth", "-mindepth":
 		return p.depthOption(operand)
+	case "-xdev":
+		// A global option too.
+		p.expression.oneVolume = true
+		return findTrue{}, nil
 	case "-depth":
 		// A global option, as -maxdepth is, true wherever it stands.
 		p.expression.depthFirst = true

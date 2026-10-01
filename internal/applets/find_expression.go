@@ -23,6 +23,8 @@ type findExpression struct {
 	maxDepth int
 	// depthFirst is -depth: a directory after its entries; see walkFindDepthFirst.
 	depthFirst bool
+	// oneVolume is -xdev: no directory on another volume is gone into; see find_xdev.go.
+	oneVolume bool
 }
 
 // findNode is one node of the expression tree. It reports whether the candidate
@@ -60,6 +62,8 @@ type findRun struct {
 	err    error
 	// pruned is that -prune was true of the entry just evaluated.
 	pruned bool
+	// volumes are the PATHs' volumes, which -xdev keeps the walk on.
+	volumes []uint64
 }
 
 // evaluate applies the expression to one entry, and reports whether the walk

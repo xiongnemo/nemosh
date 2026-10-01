@@ -21,6 +21,9 @@ func newFindApplet() Applet {
 			return err
 		}
 		run := &findRun{stdout: stdout}
+		if expression.oneVolume {
+			run.volumes = findVolumes(view, paths)
+		}
 		for _, root := range paths {
 			// A device path has no host root to walk, so it is walked from the
 			// table instead. The callback is the same one: an entry is an
@@ -78,7 +81,7 @@ func walkFindPath(run *findRun, displayRoot, hostRoot string, expression findExp
 		// Pruning rather than filtering: -maxdepth 1 must stop the walk from
 		// reading a subdirectory, not read it and discard the entries. -prune
 		// true of a directory stops it there too.
-		if entry != nil && entry.IsDir() && (run.pruned || expression.prunes(candidate)) {
+		if entry != nil && entry.IsDir() && (run.pruned || expression.prunes(candidate) || run.leavesVolume(expression, path)) {
 			return fs.SkipDir
 		}
 		return nil
