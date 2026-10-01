@@ -85,6 +85,23 @@ func decodeTextInput(input io.Reader) io.Reader {
 	return reader
 }
 
+// lazyTextInput is decodeTextInput put off until the first read, for an applet that may not read
+// its input at all. Its one Peek blocks until a byte arrives, which a reader owes its caller only
+// when it reads: awk decoded its standard input before running the program, so with a pipe that
+// stayed open and sent nothing, `awk 'BEGIN{print 1}'` and `awk '{print}' FILE` waited on it for
+// ever and printed nothing.
+type lazyTextInput struct {
+	source  io.Reader
+	decoded io.Reader
+}
+
+func (r *lazyTextInput) Read(buffer []byte) (int, error) {
+	if r.decoded == nil {
+		r.decoded = decodeTextInput(r.source)
+	}
+	return r.decoded.Read(buffer)
+}
+
 func equalBytes(left, right []byte) bool {
 	if len(left) != len(right) {
 		return false

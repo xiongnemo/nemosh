@@ -47,8 +47,9 @@ func (awkApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 		return ExitStatusMessage(2, err)
 	}
 	// Standard input is decoded the way every text applet decodes its input, so a UTF-16
-	// pipe is text rather than interleaved NULs.
-	status, err := runAwkProgram(ctx, program, invocation, decodeTextInput(stdin), stdout, stderr)
+	// pipe is text rather than interleaved NULs -- when it is read, which a BEGIN alone or a
+	// list of files never does.
+	status, err := runAwkProgram(ctx, program, invocation, &lazyTextInput{source: stdin}, stdout, stderr)
 	if err != nil {
 		return ExitStatusMessage(2, err)
 	}
