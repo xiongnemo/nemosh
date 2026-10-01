@@ -69,6 +69,10 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return p.regexPredicate(operand)
 	case "-maxdepth", "-mindepth":
 		return p.depthOption(operand)
+	case "-follow":
+		// -L, as busybox's -follow is, wherever it stands.
+		p.expression.follow = 'L'
+		return findTrue{}, nil
 	case "-xdev":
 		// A global option too.
 		p.expression.oneVolume = true

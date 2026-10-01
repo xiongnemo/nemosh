@@ -21,8 +21,10 @@ type findExpression struct {
 	// subdirectory rather than filter its entries out afterwards.
 	minDepth int
 	maxDepth int
-	// depthFirst is -depth: a directory after its entries; see walkFindDepthFirst.
+	// depthFirst is -depth: a directory after its entries; see find_tree.go.
 	depthFirst bool
+	// follow is -L, every symbolic link followed, or -H, the PATHs alone; 0 for neither.
+	follow byte
 	// oneVolume is -xdev: no directory on another volume is gone into; see find_xdev.go.
 	oneVolume bool
 }
@@ -74,6 +76,11 @@ func (e findExpression) evaluate(candidate findCandidate, run *findRun) error {
 	}
 	e.root.eval(candidate, run)
 	return run.err
+}
+
+// follows is whether a symbolic link at depth is taken for what it points at.
+func (e findExpression) follows(depth int) bool {
+	return e.follow == 'L' || e.follow == 'H' && depth == 0
 }
 
 // prunes reports whether the walk should stop descending here, which is the

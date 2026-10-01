@@ -26,7 +26,7 @@ var findOperators = map[string]bool{"!": true, "(": true, ")": true}
 // expression before any walking starts.
 func parseFindArguments(args []string, view ProcessView) ([]string, findExpression, error) {
 	var paths []string
-	index := 0
+	follow, index := findLinkOptions(args)
 	for ; index < len(args); index++ {
 		if strings.HasPrefix(args[index], "-") || findOperators[args[index]] {
 			break
@@ -37,12 +37,36 @@ func parseFindArguments(args []string, view ProcessView) ([]string, findExpressi
 		paths = []string{"."}
 	}
 
-	parser := &findParser{args: args[index:], view: view, expression: findExpression{maxDepth: -1}}
+	parser := &findParser{args: args[index:], view: view, expression: findExpression{maxDepth: -1, follow: follow}}
 	expression, err := parser.parse()
 	if err != nil {
 		return nil, findExpression{}, err
 	}
 	return paths, expression, nil
+}
+
+// findLinkOptions reads the -H, -L and -P before the PATHs, letters alone or together, as
+// busybox's find reads them, and a `--` after them: -L follows every symbolic link, -H the
+// PATHs, and -P none, which is the default. L wins over H wherever each stands, as busybox
+// sets both flags and -L's covers -H's. They were taken for the start of the expression.
+func findLinkOptions(args []string) (byte, int) {
+	follow, index := byte(0), 0
+	for ; index < len(args); index++ {
+		arg := args[index]
+		if arg == "--" {
+			return follow, index + 1
+		}
+		if len(arg) < 2 || arg[0] != '-' || strings.Trim(arg[1:], "HLP") != "" {
+			break
+		}
+		switch {
+		case strings.Contains(arg, "L"):
+			follow = 'L'
+		case strings.Contains(arg, "H") && follow == 0:
+			follow = 'H'
+		}
+	}
+	return follow, index
 }
 
 type findParser struct {

@@ -60,8 +60,8 @@ func newFindApplet() Applet {
 }
 
 func walkFindPath(run *findRun, displayRoot, hostRoot string, expression findExpression) error {
-	if expression.depthFirst {
-		return walkFindDepthFirst(run, displayRoot, hostRoot, expression)
+	if expression.depthFirst || expression.follow != 0 {
+		return walkFindTree(run, displayRoot, hostRoot, expression)
 	}
 	return filepath.WalkDir(hostRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		display, depth, err := findDisplayPath(displayRoot, hostRoot, path)
