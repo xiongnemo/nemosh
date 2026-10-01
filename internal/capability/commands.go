@@ -149,6 +149,9 @@ var commands = []Command{
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,
 	// and there is no kind for "one fixed word".
 	{Name: "su", Short: "cstWN", ValueShort: "cs", Operand: AnyPath},
+	// Windows only, as su is. chattr's letters after a dash are the attributes it clears, and R.
+	{Name: "lsattr", Short: "Radl", Operand: AnyPath},
+	{Name: "chattr", Short: "Rahnrst", Operand: AnyPath},
 	{Name: "tac", Operand: AnyPath},
 	{Name: "tail", Short: "ncqvfFs", ValueShort: "ncs", Operand: AnyPath},
 	{Name: "test", Operand: AnyPath},

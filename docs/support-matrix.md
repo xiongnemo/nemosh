@@ -582,7 +582,7 @@ loops record the whole command now, as the edited one always did.
 
 ## Applets
 
-All 63 registered applets ship, plus `su` on Windows. **Name presence is not option parity**, and the
+All 63 registered applets ship, plus `su`, `lsattr` and `chattr` on Windows. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 ### Devices
@@ -797,6 +797,8 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `stat` | `-c -t -L -f`: busybox's layout, its terse line, and every letter of its `-c` and `-f` formats, each with printf's flags, width and precision. On Windows the values are busybox-w32's: the volume's serial number for the device, the file's index for the inode, 4095 for the account's own files and 0 for a system account's, the mode made up as `chmod` makes it up, and the creation time for the change time | refused by name |
 | `split` | `-l -b -a`, `-b` with `b k m g`; the bytes as they come, and as many letters as `-a` asks, `aa` upwards by default | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
+| `lsattr` | `-R -a -d -l`; Windows only, see **`lsattr` and `chattr`** | refused by name |
+| `chattr` | `-R`, and `-` or `+` with `r h s a t n`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `tac` | none | refused by name |
 | `tsort` | none; a cycle is reported rather than truncated | refused by name |
 | `tar` | `-c -t -x -v -z -j -a -O -f -C`, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too | refused by name |
@@ -2271,3 +2273,30 @@ it, so a filter stripping the colour does not keep a stray marker.
 it, including the same two pre-existing Windows differences from busybox: the
 mode reads `drwxrwxrwx` where busybox says `drwxrwxr-x`, and the link count is 1.
 Neither is `-d`'s doing.
+
+### `lsattr` and `chattr`
+
+The pair busybox-w32 has for Windows' file attributes rather than ext2's flags,
+registered on Windows alone, as `su` is: on Linux and macOS the names are
+e2fsprogs', and an applet there would shadow the real one. `lsattr` prints the same
+eleven columns, `R o e c S r h s a t n` -- a reparse point, offline, encrypted,
+compressed, sparse, read only, hidden, system, archive, temporary and not indexed --
+and the first is `l` for a symbolic link, `j` for a junction, `m` for a volume mounted
+on a folder and `A` for an app execution alias. `-l` spells them out, `Hidden,
+Archive`, or `---`. A directory's entries come in the order Windows gives them, `.`
+and `..` first under `-a`, as busybox's readdir gives them; at the root of a volume,
+which has neither, they come last, as busybox-w32 makes them up.
+
+`chattr` changes the six that Windows lets a program change, `-` clearing and `+`
+setting: `chattr +h -a f`. An `R` among the letters after a dash is `-R`, which goes
+down through directories but past no link. What it cannot change is named with
+strerror's reason, `chattr: cannot set the attributes of sub: Invalid argument` for a
+temporary directory, and the rest are changed. The refusals are busybox's, in this
+shell's words: no letter to change, one both set and cleared, a letter it has not
+got.
+
+A junction is a link to both, so neither goes down through one, though Go calls a
+junction a directory. Both answer 1 when something failed, where busybox-w32
+answers 0 whatever happened; e2fsprogs, whose options these are, says 1. A path under
+a FILE is joined with one slash, as `cp` and `rm` join them, so `lsattr 'C:\'` lists
+`C:/Windows` where busybox lists `C:\/Windows`.

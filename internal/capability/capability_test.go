@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -113,6 +114,11 @@ var runsUntilStopped = map[string]bool{"xargs -p": true, "tail -F": true}
 // held instead by TestHttpd_acceptsItsDeclaredOptions in internal/applets, which
 // runs the same code against a context that is already cancelled.
 var launchesSomething = map[string]bool{"su": true, "httpd": true}
+
+// windowsOnly are the rows of applets the registry carries on Windows alone: Windows' file
+// attributes, which elsewhere are e2fsprogs' names for flags of another kind. On Windows they
+// are measured like the rest.
+var windowsOnly = map[string]bool{"lsattr": true, "chattr": true}
 
 // And an option the table does not claim must be refused, or the claim is not
 // saying anything. An applet that accepts everything would pass the test above
@@ -260,7 +266,7 @@ func TestEveryRowIsMeasured(t *testing.T) {
 	// Then
 	for _, name := range capability.Names() {
 		command, _ := capability.Lookup(name)
-		if command.Builtin || measured[name] || launchesSomething[name] {
+		if command.Builtin || measured[name] || launchesSomething[name] || windowsOnly[name] && goruntime.GOOS != "windows" {
 			continue
 		}
 		t.Errorf("%s is neither an applet nor a builtin: nothing measures it, and a row nothing measures belongs in completions/", name)
