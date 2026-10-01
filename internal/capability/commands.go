@@ -105,7 +105,7 @@ var commands = []Command{
 	{Name: "usleep", Operand: AnyPath},
 	{Name: "uuidgen"},
 	{Name: "awk", Short: "FvfeEW", ValueShort: "FvfeEW", FileShort: "fE", Operand: AnyPath},
-	{Name: "cpio", Short: "tiodmvu0FH", ValueShort: "FH", FileShort: "F", Operand: AnyPath},
+	{Name: "cpio", Short: "tiodmvu0FH", ValueShort: "FH", FileShort: "F", Long: []string{"create", "extract", "file", "format", "ignore-devno", "list", "null", "quiet", "renumber-inodes", "to-stdout", "verbose"}, ValueLong: []string{"file", "format"}, Operand: AnyPath},
 	{Name: "ascii", Operand: AnyPath},
 	{Name: "expand", Short: "it", ValueShort: "t", Long: []string{"initial", "tabs"}, ValueLong: []string{"tabs"}, Operand: AnyPath},
 	{Name: "unexpand", Short: "fat", ValueShort: "t", Long: []string{"first-only", "tabs", "all"}, ValueLong: []string{"tabs"}, Operand: AnyPath},

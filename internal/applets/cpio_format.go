@@ -206,7 +206,7 @@ func writeCpioPadding(writer io.Writer, length int64) error {
 	return err
 }
 
-// countingReader and countingWriter exist for one line of output: both references
+// countingReader exists for one line of output: reading an archive, both references
 // end with `N blocks` on stderr, where a block is 512 bytes and N covers the whole
 // archive including the trailer. Reporting it means knowing the byte total, and the
 // stream may be a pipe with nothing to measure afterwards.
@@ -219,17 +219,6 @@ func (c *countingReader) Read(buffer []byte) (int, error) {
 	read, err := c.inner.Read(buffer)
 	c.total += int64(read)
 	return read, err
-}
-
-type countingWriter struct {
-	inner io.Writer
-	total int64
-}
-
-func (c *countingWriter) Write(buffer []byte) (int, error) {
-	written, err := c.inner.Write(buffer)
-	c.total += int64(written)
-	return written, err
 }
 
 // cpioBlocks rounds up, which is why 388 bytes reads as `1 blocks` -- including

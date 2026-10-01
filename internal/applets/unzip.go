@@ -197,7 +197,7 @@ func (r unzipRequest) header(stdout io.Writer, name string) {
 func (r unzipRequest) run(archive *zip.Reader, root string, stdout, stderr io.Writer) error {
 	var selected []*zip.File
 	for _, entry := range archive.File {
-		if !unzipMatches(r.exclude, entry.Name) && (len(r.wanted) == 0 || unzipMatches(r.wanted, entry.Name)) {
+		if !fnmatchAny(r.exclude, entry.Name) && (len(r.wanted) == 0 || fnmatchAny(r.wanted, entry.Name)) {
 			selected = append(selected, entry)
 		}
 	}
@@ -213,10 +213,11 @@ func (r unzipRequest) run(archive *zip.Reader, root string, stdout, stderr io.Wr
 	return nil
 }
 
-// unzipMatches is busybox's find_list_entry: fnmatch(3) without FNM_PATHNAME, so a `*`
-// crosses a slash and `unzip a.zip '*.txt'` takes sub/b.txt as well. filepath.Match stopped
-// at one.
-func unzipMatches(patterns []string, name string) bool {
+// fnmatchAny is whether name matches one of patterns as busybox's archivers match a member,
+// unzip's find_list_entry and cpio's filter_accept_list: fnmatch(3) without FNM_PATHNAME, so
+// a `*` crosses a slash and `unzip a.zip '*.txt'` takes sub/b.txt as well. filepath.Match
+// stopped at one.
+func fnmatchAny(patterns []string, name string) bool {
 	for _, pattern := range patterns {
 		if pattern == name {
 			return true

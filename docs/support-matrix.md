@@ -737,7 +737,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `factor` | none; numbers from operands or stdin | refused by name |
 | `fold` | `-w -s -b`; columns counted as busybox's adjust_column counts them, a tab to the next multiple of eight, a backspace back one, a carriage return to the start, and `-b` every byte one; a UTF-8 character is one column, where busybox-w32's build counts its bytes | refused by name |
 | `free` | `-b -k -m -g -h`, read from the first argument alone as busybox reads it, values rounded to the nearest and `-h` in busybox's `63.7G`; busybox's columns | refused by name |
-| `cpio` | `-t -i -o -d -m -v -u -0 -F -H`; only `newc` is read or written | refused by name |
+| `cpio` | `-t -i -o -d -m -v -u -0 -F -H`, and busybox's long options, `--quiet` and `--to-stdout` among them; only `newc` is read or written | refused by name |
 | `cp` | `-a -d -P -L -H -p -f -i -n -l -s -T -t -u -v -r -R`, and busybox's long forms; a file is never copied onto itself, and a destination that is there is replaced, read-only or not, as busybox-w32 replaces it. `-r` follows symbolic links, where busybox copies them | refused by name |
 | `cut` | `-b -c -f -F -d -O -s -D -n` and `--output-delimiter`; `-c` counts bytes, as busybox's does, `-F` splits where an extended regular expression matches, and a `-d` of a newline cuts lines | refused by name |
 | `date` | `-d -D -I -r -R -u` and busybox's long forms; TIME in every form busybox's parse_datestr reads, and `%N` in FORMAT. Setting the clock, `-s` or a TIME operand, is refused | refused by name |
@@ -1627,6 +1627,9 @@ is only shared if every caller reaches it.
   110 bytes first and answered `unexpected EOF` for every small archive in either.
 - **A missing trailer is reported.** cpio ends with an explicit `TRAILER!!!` entry,
   so truncation is knowable rather than a guess.
+- **What it says is busybox's**: reading an archive ends with `N blocks` on stderr,
+  unless `--quiet`, and writing one says nothing. A pattern is fnmatch's, so a `*`
+  crosses a slash, and `-i --to-stdout` writes each file's data to stdout instead.
 - **`ar`'s operation is a verb**, not an option: `ar t lib.a`. Only the *first word*
   is examined, and that is a fix rather than a preference -- scanning every argument
   meant a Windows temporary path, which contains a `p` in `AppData`, was read as the

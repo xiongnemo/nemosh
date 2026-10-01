@@ -45,6 +45,8 @@ var valuePlaceholders = map[string]string{
 	"awkW":                    "OPTION",
 	"cpioF":                   "FILE",
 	"cpioH":                   "FORMAT",
+	"cpiofile":                "FILE",
+	"cpioformat":              "FORMAT",
 	"base64w":                 "COLUMN",
 	"sha3suma":                "BITS",
 	"foldw":                   "WIDTH",

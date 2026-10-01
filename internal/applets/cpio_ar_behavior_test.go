@@ -33,10 +33,10 @@ func TestCpio_roundTripsAndListsLikeBusybox(t *testing.T) {
 	if stdout != "" {
 		t.Fatalf("cpio -o -F wrote %q to stdout, which should have gone to the file", stdout)
 	}
-	// Both references end with this on stderr. It is how a caller knows the whole
-	// archive was written when every member was silent.
-	if !strings.Contains(stderr, "blocks") {
-		t.Fatalf("cpio -o did not report a block count: %q", stderr)
+	// busybox's -o says nothing once it has written the archive; the count of blocks
+	// is for reading one, below. GNU's -o counts them too.
+	if stderr != "" {
+		t.Fatalf("cpio -o said %q; busybox's says nothing", stderr)
 	}
 
 	// Then: it reads back, in order, with the sizes it stored

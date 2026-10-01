@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -22,9 +21,18 @@ import (
 // The three modes are exclusive and one is required, which is busybox's shape:
 // -t lists, -i extracts, -o creates.
 
+// cpioLongOptions are busybox's, by any prefix that names one alone, each to its letter.
+// --quiet, --to-stdout and the two --create options this build already obeys -- its device
+// numbers are 0 and its inodes counted from 1 -- have none, and go to bytes nobody types.
+// They were all unrecognized.
+var cpioLongOptions = map[string]string{
+	"extract": "i", "list": "t", "create": "o", "format": "H", "file": "F", "verbose": "v",
+	"null": "0", "quiet": "\x01", "to-stdout": "\x02", "ignore-devno": "\x03", "renumber-inodes": "\x03",
+}
+
 func newCpioApplet() Applet {
 	return simpleApplet{name: "cpio", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "tiodmvu0", "FH")
+		options, operands, err := parseAppletOptions(ctx, longOptionWords(args, cpioLongOptions), "tiodmvu0\x01\x02\x03", "FH")
 		if err != nil {
 			return err
 		}
@@ -48,6 +56,8 @@ func newCpioApplet() Applet {
 			keepTime:    options.has('m'),
 			overwrite:   options.has('u'),
 			nulSplit:    options.has('0'),
+			quiet:       options.has('\x01'),
+			toStdout:    options.has('\x02'),
 			file:        options.value('F'),
 			wanted:      operands,
 			view:        ProcessViewFromContext(ctx),
@@ -64,9 +74,13 @@ type cpioRequest struct {
 	keepTime    bool
 	overwrite   bool
 	nulSplit    bool
-	file        string
-	wanted      []string
-	view        ProcessView
+	// quiet is --quiet: no count of blocks read.
+	quiet bool
+	// toStdout is --to-stdout: -i writes each file's data to stdout and makes nothing.
+	toStdout bool
+	file     string
+	wanted   []string
+	view     ProcessView
 }
 
 func (r cpioRequest) run(stdin io.Reader, stdout, stderr io.Writer) error {
@@ -92,6 +106,9 @@ func (r cpioRequest) run(stdin io.Reader, stdout, stderr io.Writer) error {
 	}
 	// Both references end with this, on stderr so a pipe is unaffected. It is the
 	// only way to know an archive was read whole when the members were skipped.
+	if r.quiet {
+		return nil
+	}
 	_, err := fmt.Fprintf(stderr, "%d blocks\n", cpioBlocks(counted.total))
 	return err
 }
@@ -126,10 +143,28 @@ func (r cpioRequest) readArchive(reader io.Reader, stdout, stderr io.Writer) err
 			}
 			continue
 		}
+		if r.toStdout {
+			if err := r.extractToStdout(reader, *entry, stdout); err != nil {
+				return err
+			}
+			continue
+		}
 		if err := r.extract(reader, *entry, collisions, stderr); err != nil {
 			return err
 		}
 	}
+}
+
+// extractToStdout is -i --to-stdout: a file's data goes to stdout, as busybox's
+// data_extract_to_stdout sends it, and anything else is passed over.
+func (r cpioRequest) extractToStdout(reader io.Reader, entry cpioEntry, stdout io.Writer) error {
+	if !entry.isRegular() || entry.size == 0 {
+		return r.skipBody(reader, entry)
+	}
+	if _, err := io.CopyN(stdout, reader, entry.size); err != nil {
+		return fmt.Errorf("cannot read %s: %v", entry.name, err)
+	}
+	return skipCpioPadding(reader, entry.size)
 }
 
 // skipBody advances past an entry's data and its padding, which has to happen for
@@ -144,19 +179,10 @@ func (r cpioRequest) skipBody(reader io.Reader, entry cpioEntry) error {
 	return skipCpioPadding(reader, entry.size)
 }
 
+// selects is busybox's filter_accept_list: fnmatch(3) without FNM_PATHNAME, so `cpio -t
+// '*.txt'` takes sub/b.txt as well; filepath.Match stopped at the slash.
 func (r cpioRequest) selects(name string) bool {
-	if len(r.wanted) == 0 {
-		return true
-	}
-	for _, pattern := range r.wanted {
-		if pattern == name {
-			return true
-		}
-		if matched, err := filepath.Match(pattern, name); err == nil && matched {
-			return true
-		}
-	}
-	return false
+	return len(r.wanted) == 0 || fnmatchAny(r.wanted, name)
 }
 
 func (r cpioRequest) writeListing(entry cpioEntry, stdout io.Writer) error {

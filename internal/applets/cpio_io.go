@@ -156,6 +156,9 @@ func (r cpioRequest) setTime(entry cpioEntry, native string) error {
 // The names are taken exactly as given: cpio archives a *list*, and expanding or
 // descending anything would make it a second, worse tar. `-0` reads NUL-separated
 // names, which is how `find -print0` hands over a name with a newline in it.
+//
+// It says nothing once the archive is written, as busybox's cpio -o says nothing; the
+// count of blocks is for reading one. GNU's -o counts them, and so did this.
 func (r cpioRequest) createArchive(stdin io.Reader, stdout, stderr io.Writer) error {
 	destination := stdout
 	var file *os.File
@@ -170,8 +173,7 @@ func (r cpioRequest) createArchive(stdin io.Reader, stdout, stderr io.Writer) er
 		defer file.Close()
 		destination = file
 	}
-	counted := &countingWriter{inner: destination}
-	writer := bufio.NewWriter(counted)
+	writer := bufio.NewWriter(destination)
 	// A serial number per entry rather than the real inode: Windows does not offer
 	// one through os.FileInfo, and a header field that is always zero would claim
 	// every member is the same file.
@@ -185,13 +187,7 @@ func (r cpioRequest) createArchive(stdin io.Reader, stdout, stderr io.Writer) er
 	if err := writeCpioTrailer(writer); err != nil {
 		return err
 	}
-	// Flushed before the count is read, or it reports the buffer rather than the
-	// archive -- which for anything under 4 KB is zero blocks.
-	if err := writer.Flush(); err != nil {
-		return err
-	}
-	_, err := fmt.Fprintf(stderr, "%d blocks\n", cpioBlocks(counted.total))
-	return err
+	return writer.Flush()
 }
 
 func (r cpioRequest) addOne(writer io.Writer, name string, serial int64, stderr io.Writer) error {
