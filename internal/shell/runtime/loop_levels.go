@@ -76,19 +76,17 @@ func (l *loopLevels) clear() { l.remaining = 0 }
 //
 // Measured against bash and dash: a missing operand is 1, a non-numeric one is a
 // diagnostic and a failure, and 0 is refused -- `break 0` would have to mean
-// "break no loops", which is not something either shell will do quietly.
+// "break no loops", which is not something either shell will do quietly. Both are
+// "Illegal number: 0", as the ash family says it, where they were bash's "numeric
+// argument required" and "loop count out of range".
 func parseLoopLevel(word string, name string) (int, error) {
 	if word == "" {
 		return 1, nil
 	}
-	count, err := strconv.Atoi(word)
-	if err != nil {
-		return 0, fmt.Errorf("%s: %s: numeric argument required", name, word)
+	if count, err := strconv.Atoi(word); err == nil && count >= 1 {
+		return count, nil
 	}
-	if count < 1 {
-		return 0, fmt.Errorf("%s: %s: loop count out of range", name, word)
-	}
-	return count, nil
+	return 0, fmt.Errorf("%s: Illegal number: %s", name, word)
 }
 
 // loopControlResult turns `break`/`continue` and their operand into the result the

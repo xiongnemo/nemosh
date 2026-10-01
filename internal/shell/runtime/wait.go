@@ -93,7 +93,9 @@ func (r Runtime) waitTarget(operand string) (jobID, int) {
 			fmt.Fprintf(r.streams.Stderr, "wait: pid %s is not a child of this shell\n", operand)
 			return 0, 127
 		}
-		fmt.Fprintf(r.streams.Stderr, "wait: `%s': not a pid or valid job spec\n", operand)
+		// As the ash family says it, and as exit and shift do here; it was bash's "`abc': not a
+		// pid or valid job spec".
+		fmt.Fprintf(r.streams.Stderr, "wait: Illegal number: %s\n", operand)
 		return 0, 2
 	}
 	// %%, %- and the rest; see job_spec.go. A spec that names no job is the 127 above.

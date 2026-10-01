@@ -121,19 +121,19 @@ func TestLoopLevels_refusesACountThatIsNotOne(t *testing.T) {
 	}{
 		{
 			name:   "not a number",
-			script: "for a in 1; do break abc; done\n", fragment: "numeric argument required",
+			script: "for a in 1; do break abc; done\n", fragment: "break: Illegal number: abc",
 		},
 		{
 			name:   "zero would mean breaking no loops",
-			script: "for a in 1; do break 0; done\n", fragment: "loop count out of range",
+			script: "for a in 1; do break 0; done\n", fragment: "break: Illegal number: 0",
 		},
 		{
 			name:   "negative",
-			script: "for a in 1; do continue -1; done\n", fragment: "loop count out of range",
+			script: "for a in 1; do continue -1; done\n", fragment: "continue: Illegal number: -1",
 		},
 		{
 			name:   "continue names itself in the diagnostic",
-			script: "for a in 1; do continue xyz; done\n", fragment: "continue: xyz",
+			script: "for a in 1; do continue xyz; done\n", fragment: "continue: Illegal number: xyz",
 		},
 	}
 	for _, test := range tests {

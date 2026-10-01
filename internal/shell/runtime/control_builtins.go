@@ -115,7 +115,8 @@ func throughCommandPrefix(args []string) []string {
 }
 
 // badStatus is whether exit or return was given a status that is no number, which it reports
-// in the words break and continue use. It said nothing.
+// as "Illegal number", as every ash does and as shift, break, continue and wait do here too. It
+// said nothing, and then bash's "x: numeric argument required".
 func (r Runtime) badStatus(args []string) bool {
 	if len(args) < 2 {
 		return false
@@ -123,7 +124,7 @@ func (r Runtime) badStatus(args []string) bool {
 	if _, err := strconv.Atoi(args[1]); err == nil {
 		return false
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s: %s: numeric argument required\n", args[0], args[1])
+	fmt.Fprintf(r.streams.Stderr, "%s: Illegal number: %s\n", args[0], args[1])
 	return true
 }
 
