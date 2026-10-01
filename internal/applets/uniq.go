@@ -25,7 +25,8 @@ func (uniqApplet) Name() string {
 // Adjacent lines are one run when what they compare is the same: past -f's first N fields and
 // then -s's N characters, at most -w's N characters of what is left, ASCII case folded under -i.
 // The first line of each run is written, after its size under -c, to OUTPUT when there is one;
-// -z ends each with NUL, which busybox has for the output alone.
+// -z ends each with NUL, and reads a NUL as the end of a line as a newline is; see
+// readUniqLines.
 //
 // It took -c -d -u -i and refused a second operand, where busybox writes the result to it.
 func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
@@ -65,7 +66,7 @@ func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 		}
 		output = file
 	}
-	lines, err := readUniqLines(reader)
+	lines, err := readUniqLines(reader, input.zero)
 	if opened != nil {
 		err = errors.Join(err, opened.Close())
 	}
@@ -144,15 +145,28 @@ func openUniqOutput(view ProcessView, path string) (io.WriteCloser, error) {
 	return file, nil
 }
 
-func readUniqLines(input io.Reader) ([]string, error) {
+// readUniqLines splits input into lines at newlines, a CR before one dropped, and under -z at
+// NULs as well, as busybox's getline ends a line at either and its -z sets only what is written
+// after one: `sort -z | uniq -z` is one line per name. Under -z a NUL ended nothing, so
+// `printf 'a\0a\0b\0' | uniq -z` was a single line with a NUL added. busybox's getline ends a
+// line at a NUL without -z too; that is not copied, as cut does not copy it.
+func readUniqLines(input io.Reader, zero bool) ([]string, error) {
 	reader := bufio.NewReader(input)
 	var lines []string
 	for {
-		line, err := reader.ReadString('\n')
-		if line != "" {
-			line = strings.TrimSuffix(line, "\n")
-			line = strings.TrimSuffix(line, "\r")
-			lines = append(lines, line)
+		chunk, err := reader.ReadString('\n')
+		if chunk != "" {
+			ended := strings.HasSuffix(chunk, "\n")
+			chunk = strings.TrimSuffix(strings.TrimSuffix(chunk, "\n"), "\r")
+			pieces := []string{chunk}
+			if zero {
+				pieces = strings.Split(chunk, "\x00")
+				// A NUL last in the input ends the line before it, and begins none.
+				if !ended && len(pieces) > 1 && pieces[len(pieces)-1] == "" {
+					pieces = pieces[:len(pieces)-1]
+				}
+			}
+			lines = append(lines, pieces...)
 		}
 		if err == nil {
 			continue
