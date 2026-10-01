@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// factor, fold, tsort and strings: four small tools in one file because each is a
-// handful of lines and they share nothing but the operand seam.
+// factor, tsort and strings: three small tools in one file because each is a
+// handful of lines and they share nothing but the operand seam. fold is in fold.go.
 //
 // Every output shape was measured against busybox-w32 v1.38.0 on 2026-08-22.
 
@@ -74,75 +74,6 @@ func writeFactors(stdout io.Writer, text string) error {
 	}
 	_, err = fmt.Fprintln(stdout, out.String())
 	return err
-}
-
-// newFoldApplet wraps long lines. -w sets the width, default 80; -s prefers to
-// break at a space.
-func newFoldApplet() Applet {
-	return simpleApplet{name: "fold", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "bs", "w")
-		if err != nil {
-			return err
-		}
-		width := 80
-		if options.has('w') {
-			parsed, err := strconv.Atoi(options.value('w'))
-			if err != nil || parsed <= 0 {
-				return fmt.Errorf("illegal width value '%s'", options.value('w'))
-			}
-			width = parsed
-		}
-		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
-			// The breaks fold *inserts* are newlines; the ending the input had goes
-			// on the last piece only. Measured against busybox, which is the only
-			// way to know: folding a CRLF line at width three answers three pieces,
-			// the first two ended by a bare newline and the last keeping the CRLF --
-			// so the file keeps its endings at the real ends of lines and gets plain
-			// newlines only where a line was cut.
-			return eachLine(reader, func(line, ending string) error {
-				pieces := foldLine(line, width, options.has('s'))
-				for index, piece := range pieces {
-					terminator := "\n"
-					if index == len(pieces)-1 {
-						terminator = ending
-					}
-					if _, err := io.WriteString(stdout, piece+terminator); err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-		})
-	}}
-}
-
-// foldLine cuts one line into pieces of at most width runes.
-//
-// Runes, not bytes, so a CJK line is never cut through the middle of a character
-// -- the same reason `rev` decodes rather than reversing bytes. An empty line
-// yields one empty piece rather than none, because dropping it would lose a line.
-func foldLine(line string, width int, atSpaces bool) []string {
-	runes := []rune(line)
-	if len(runes) == 0 {
-		return []string{""}
-	}
-	var pieces []string
-	for len(runes) > width {
-		cut := width
-		if atSpaces {
-			// The last space inside the limit, if there is one. Without one the
-			// cut stays hard: -s prefers a space, it does not require one.
-			for index := width; index > 0; index-- {
-				if runes[index-1] == ' ' {
-					cut = index
-					break
-				}
-			}
-		}
-		pieces = append(pieces, string(runes[:cut]))
-		runes = runes[cut:]
-	}
-	return append(pieces, string(runes))
 }
 
 // newTsortApplet topologically sorts `before after` pairs.
