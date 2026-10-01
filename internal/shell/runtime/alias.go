@@ -5,6 +5,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // maxAliasSubstitutions bounds the chain `alias a=b; alias b=c; c` can build.
@@ -81,7 +83,7 @@ func (r Runtime) printAlias(name string, reusable bool) {
 	case reusable:
 		prefix = "alias "
 	}
-	fmt.Fprintf(r.streams.Stdout, "%s%s=%s\n", prefix, name, singleQuoteForReuse(r.aliases[name]))
+	fmt.Fprintf(r.streams.Stdout, "%s%s=%s\n", prefix, name, shellquote.Ash(r.aliases[name]))
 }
 
 // unalias removes the aliases it names, as busybox's reads its operands: options up to the

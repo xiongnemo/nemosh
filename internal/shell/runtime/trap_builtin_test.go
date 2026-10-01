@@ -69,13 +69,13 @@ func TestRuntime_listsTheArmedHandlers_whenTrapHasNoArguments(t *testing.T) {
 }
 
 func TestRuntime_quotesTheListedAction_whenItContainsASingleQuote(t *testing.T) {
-	// The listing has to be readable back in, so an embedded quote closes,
-	// escapes, and reopens.
+	// The listing has to be readable back in, so an embedded quote is written in double
+	// quotes between single-quoted parts, as busybox and dash write it.
 	// When
 	status, stdout, _ := runSetScript(t, "trap \"echo it's\" INT\ntrap\n")
 
 	// Then
-	if status != 0 || !strings.Contains(stdout, `trap -- 'echo it'\''s' INT`) {
+	if status != 0 || !strings.Contains(stdout, `trap -- 'echo it'"'"'s' INT`) {
 		t.Fatalf("status = %d, stdout = %q, want the action requoted", status, stdout)
 	}
 }

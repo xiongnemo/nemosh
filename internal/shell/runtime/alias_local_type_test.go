@@ -76,7 +76,7 @@ func TestRuntime_takesAnAliasValueThatIsNotWords(t *testing.T) {
 	status, stdout, stderr := runSetScript(t, "alias c='a | b' q=\"echo it's\"\nalias c q\n")
 
 	// Then
-	if want := "c='a | b'\nq='echo it'\\''s'\n"; status != 0 || stdout != want {
+	if want := "c='a | b'\nq='echo it'\"'\"'s'\n"; status != 0 || stdout != want {
 		t.Fatalf("got %q/%d, want %q/0; stderr = %q", stdout, status, want, stderr)
 	}
 }

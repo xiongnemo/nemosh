@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // trap implements the POSIX `trap` builtin over the conditions this shell
@@ -87,7 +89,7 @@ func (r Runtime) printTraps(conditions []string) int {
 	for _, condition := range conditions {
 		if name, ok := trapConditionName(condition); ok && name != "" {
 			if action, set := r.traps[name]; set {
-				fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", singleQuoteForReuse(action), name)
+				fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", shellquote.Ash(action), name)
 			}
 		}
 	}
@@ -96,7 +98,7 @@ func (r Runtime) printTraps(conditions []string) int {
 
 func (r Runtime) listTraps() int {
 	for _, name := range slices.Sorted(maps.Keys(r.traps)) {
-		fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", singleQuoteForReuse(r.traps[name]), name)
+		fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", shellquote.Ash(r.traps[name]), name)
 	}
 	return 0
 }

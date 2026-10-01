@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // traceCommand is `set -x`: write the command about to run to stderr, after
@@ -74,5 +76,5 @@ func traceWord(arg string) string {
 	if arg != "" && !strings.ContainsAny(arg, " \t\n'\"\\$`|&;<>()*?[") {
 		return arg
 	}
-	return singleQuoteForReuse(arg)
+	return shellquote.Ash(arg)
 }

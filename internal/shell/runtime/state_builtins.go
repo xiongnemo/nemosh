@@ -10,6 +10,7 @@ import (
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 func (r Runtime) pwd() int { return r.printDirectory(r.WorkingDirectory()) }
@@ -337,7 +338,7 @@ func (r Runtime) listExported() int {
 		if !found || name == "" {
 			continue
 		}
-		fmt.Fprintf(r.streams.Stdout, "export %s=%s\n", name, singleQuoteForReuse(value))
+		fmt.Fprintf(r.streams.Stdout, "export %s=%s\n", name, shellquote.Ash(value))
 	}
 	for _, name := range r.pendingExports() {
 		fmt.Fprintf(r.streams.Stdout, "export %s\n", name)

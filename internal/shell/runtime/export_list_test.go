@@ -68,7 +68,7 @@ func TestExport_quotesAValueForReuse(t *testing.T) {
 	_, stdout, _ := runSetScript(t, "export Q=\"it's here\"\nexport\n")
 
 	// Then
-	if !strings.Contains(stdout, `export Q='it'\''s here'`) {
+	if !strings.Contains(stdout, `export Q='it'"'"'s here'`) {
 		t.Fatalf("stdout = %q, want the value quoted for reuse", stdout)
 	}
 }

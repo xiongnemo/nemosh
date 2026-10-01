@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 func (r Runtime) command(ctx context.Context, args []string) int {
@@ -39,7 +41,7 @@ func (r Runtime) commandV(args []string) int {
 	// An alias is answered with the definition that makes it and a reserved word with its
 	// name, as busybox answers them: `command -v for` and an alias were not found.
 	if value, ok := r.aliases[name]; ok {
-		fmt.Fprintf(r.streams.Stdout, "alias %s=%s\n", name, singleQuoteForReuse(value))
+		fmt.Fprintf(r.streams.Stdout, "alias %s=%s\n", name, shellquote.Ash(value))
 		return 0
 	}
 	if ReservedWord(name) || r.isKnownCommand(name) {

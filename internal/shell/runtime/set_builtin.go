@@ -6,6 +6,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // setOptionLine is how the `set -o` listing prints a row: busybox's, padded to sixteen with
@@ -242,11 +244,14 @@ func (r Runtime) listShellVariables() int {
 			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, list)
 			continue
 		}
-		fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, singleQuoteForReuse(r.vars[name]))
+		fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, shellquote.Ash(r.vars[name]))
 	}
 	return 0
 }
 
+// singleQuoteForReuse is a word in single quotes as bash writes one back out, a quote in it
+// ending them, escaped, and opening them again, for printing a function as bash prints one.
+// The ash family's own listings are shellquote.Ash.
 func singleQuoteForReuse(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 }

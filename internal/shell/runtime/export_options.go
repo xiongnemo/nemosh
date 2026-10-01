@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // export's and readonly's options.
@@ -81,7 +83,7 @@ func (r Runtime) listReadonly() int {
 			value, set = r.dynamicParameter(name)
 		}
 		if set {
-			fmt.Fprintf(r.streams.Stdout, "readonly %s=%s\n", name, singleQuoteForReuse(value))
+			fmt.Fprintf(r.streams.Stdout, "readonly %s=%s\n", name, shellquote.Ash(value))
 			continue
 		}
 		fmt.Fprintf(r.streams.Stdout, "readonly %s\n", name)
