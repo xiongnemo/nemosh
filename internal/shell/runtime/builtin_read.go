@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,9 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 	options, err := parseReadOptions(args)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "read: %v\n", err)
+		if _, name := errors.AsType[readNameError](err); name {
+			return 1
+		}
 		return 2
 	}
 	input, err := r.fds.reader(options.descriptor)

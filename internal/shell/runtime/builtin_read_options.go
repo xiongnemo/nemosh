@@ -139,11 +139,17 @@ func (o *readOptions) apply(letter byte, value string) error {
 func (o *readOptions) validate() error {
 	for _, name := range o.names {
 		if !isValidVariableName(name) {
-			return fmt.Errorf("%s: not a valid variable name", name)
+			return readNameError(name + ": not a valid variable name")
 		}
 	}
 	if o.arrayName != "" && !isValidVariableName(o.arrayName) {
-		return fmt.Errorf("%s: not a valid array name", o.arrayName)
+		return readNameError(o.arrayName + ": not a valid array name")
 	}
 	return nil
 }
+
+// readNameError is a name read cannot assign. Its status is 1 in both references, where an
+// option read cannot take is a usage error, 2; it was 2 as well.
+type readNameError string
+
+func (e readNameError) Error() string { return string(e) }

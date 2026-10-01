@@ -317,20 +317,23 @@ func TestRead_promptsOnlyAtATerminal(t *testing.T) {
 
 // A bad option has to say so. The whole reason this rewrite exists is that `-r`
 // was accepted as a variable name, so an unknown option quietly becoming one is
-// exactly the regression to guard against.
+// exactly the regression to guard against. An option it cannot take is a usage
+// error, 2, and a name it cannot assign is 1, as both references have them; the
+// name was 2 as well.
 func TestRead_refusesWhatItCannotDo(t *testing.T) {
 	tests := []struct {
 		name     string
 		script   string
 		fragment string
+		status   int
 	}{
-		{name: "an unknown option", script: "read -Z x\n", fragment: "not an option this build has"},
-		{name: "an option with no argument", script: "read -n\n", fragment: "requires an argument"},
-		{name: "a non-numeric count", script: "read -n abc x\n", fragment: "invalid number"},
-		{name: "a bad timeout", script: "read -t abc x\n", fragment: "invalid timeout"},
-		{name: "a bad descriptor", script: "read -u abc x\n", fragment: "invalid file descriptor"},
-		{name: "not a variable name", script: "read 9bad\n", fragment: "not a valid variable name"},
-		{name: "-a with a bad name after it", script: "read -a arr 9bad\n", fragment: "not a valid variable name"},
+		{name: "an unknown option", script: "read -Z x\n", fragment: "not an option this build has", status: 2},
+		{name: "an option with no argument", script: "read -n\n", fragment: "requires an argument", status: 2},
+		{name: "a non-numeric count", script: "read -n abc x\n", fragment: "invalid number", status: 2},
+		{name: "a bad timeout", script: "read -t abc x\n", fragment: "invalid timeout", status: 2},
+		{name: "a bad descriptor", script: "read -u abc x\n", fragment: "invalid file descriptor", status: 2},
+		{name: "not a variable name", script: "read 9bad\n", fragment: "not a valid variable name", status: 1},
+		{name: "-a with a bad name after it", script: "read -a arr 9bad\n", fragment: "not a valid variable name", status: 1},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -338,8 +341,8 @@ func TestRead_refusesWhatItCannotDo(t *testing.T) {
 			status, _, stderr := runReadScript(t, "input\n", test.script)
 
 			// Then
-			if status != 2 {
-				t.Fatalf("status = %d, want 2, stderr = %q", status, stderr)
+			if status != test.status {
+				t.Fatalf("status = %d, want %d, stderr = %q", status, test.status, stderr)
 			}
 			if !strings.Contains(stderr, test.fragment) {
 				t.Fatalf("stderr = %q, want it to contain %q", stderr, test.fragment)
