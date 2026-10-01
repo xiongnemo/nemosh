@@ -89,6 +89,11 @@ func (r Runtime) describeFor(mode byte, name string) bool {
 // applets, and were "a builtin applet".
 var ashBuiltinApplets = map[string]bool{"echo": true, "printf": true, "test": true, "[": true, "true": true, "false": true}
 
+// appletBuiltins are the other way about: builtins here, which need the shell to run a command
+// or search its PATH, and applets in busybox, which calls them builtin applets: `type which` is
+// "which is a builtin applet" there. They were "a shell builtin".
+var appletBuiltins = map[string]bool{"time": true, "timeout": true, "which": true}
+
 // commandKind is one way the shell could read a name: the word `type -t` answers, the
 // sentence `type` does, and the path when it is a file.
 type commandKind struct {
@@ -122,8 +127,11 @@ func (r Runtime) commandKinds(name string) []commandKind {
 	}
 	if isRuntimeBuiltin(name) && !isSpecialBuiltin(name) {
 		description := name + " is a shell builtin"
-		if errorEndsShell(name) {
+		switch {
+		case errorEndsShell(name):
 			description = name + " is a special shell builtin"
+		case appletBuiltins[name]:
+			description = name + " is a builtin applet"
 		}
 		kinds = append(kinds, commandKind{word: "builtin", description: description})
 	}
