@@ -366,7 +366,6 @@ func TestFind_refusesAMalformedExpression(t *testing.T) {
 		{name: "iname without a pattern", args: []string{".", "-iname"}, wantWord: "-iname"},
 		{name: "an action this build does not have", args: []string{".", "-exec", "echo", "{}", ";"}, wantWord: "-exec"},
 		{name: "delete, which is refused deliberately", args: []string{".", "-delete"}, wantWord: "-delete"},
-		{name: "depth, whose traversal order is not implemented", args: []string{".", "-depth"}, wantWord: "-depth"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// Given

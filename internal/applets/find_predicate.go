@@ -60,6 +60,10 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return p.regexPredicate(operand)
 	case "-maxdepth", "-mindepth":
 		return p.depthOption(operand)
+	case "-depth":
+		// A global option, as -maxdepth is, true wherever it stands.
+		p.expression.depthFirst = true
+		return findTrue{}, nil
 	}
 	return nil, fmt.Errorf("unsupported expression: %s", operand)
 }

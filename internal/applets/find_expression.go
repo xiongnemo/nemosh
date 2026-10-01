@@ -21,6 +21,8 @@ type findExpression struct {
 	// subdirectory rather than filter its entries out afterwards.
 	minDepth int
 	maxDepth int
+	// depthFirst is -depth: a directory after its entries; see walkFindDepthFirst.
+	depthFirst bool
 }
 
 // findNode is one node of the expression tree. It reports whether the candidate
