@@ -295,13 +295,22 @@ jobs:
       #
       # 14 MiB leaves about 23% for growth, the same proportion as every raise
       # before it.
+      #
+      # Raised to 18 MiB on 2026-10-01, when the Windows build reached 14,681,600
+      # bytes, 1,536 over, at 0a74029. No dependency did it: go.mod has only moved
+      # uniseg from indirect to direct since the last raise, and `-s -w` is in
+      # force -- an unstripped build of the same tree is 20.3 MiB, above the new
+      # ceiling, so dropping the flags still trips it. The growth is five weeks of
+      # behaviour, in the shell and the applets alike, and the commits queued
+      # behind this one add another 0.15 MiB, measured. 18 MiB leaves about 21%
+      # over where the queue lands, the proportion every raise has kept.
       - name: binary size ceiling
         shell: bash
         run: |
           binary="dist/nemosh"
           [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
           size=$(wc -c < "$binary")
-          ceiling=14680064
+          ceiling=18874368
           echo "$binary is $size bytes, ceiling $ceiling"
           if [ "$size" -gt "$ceiling" ]; then
             echo "the binary grew past the ceiling; check the release flags and go.mod before raising it"
