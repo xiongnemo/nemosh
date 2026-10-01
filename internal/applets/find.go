@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/fs"
 	"path/filepath"
@@ -32,6 +33,9 @@ func newFindApplet() Applet {
 				}
 				return expression.evaluate(findCandidate{display: path, entry: entry, depth: depth}, run)
 			})
+			if errors.Is(err, errFindQuit) {
+				return nil
+			}
 			if err != nil {
 				return err
 			}
@@ -42,7 +46,9 @@ func newFindApplet() Applet {
 			if err != nil {
 				return err
 			}
-			if err := walkFindPath(run, root, hostRoot, expression); err != nil {
+			if err := walkFindPath(run, root, hostRoot, expression); errors.Is(err, errFindQuit) {
+				return nil
+			} else if err != nil {
 				return err
 			}
 		}

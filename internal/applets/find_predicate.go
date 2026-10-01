@@ -52,6 +52,10 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return findEmpty{}, nil
 	case "-prune":
 		return findPrune{}, nil
+	case "-quit":
+		// An action, so no -print is added for it, as busybox adds none; see findQuit.
+		p.hasAction = true
+		return findQuit{}, nil
 	case "-regex":
 		return p.regexPredicate(operand)
 	case "-maxdepth", "-mindepth":

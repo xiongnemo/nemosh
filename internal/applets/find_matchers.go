@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path"
@@ -43,6 +44,20 @@ type findPrune struct{}
 
 func (findPrune) eval(_ findCandidate, run *findRun) bool {
 	run.pruned = true
+	return true
+}
+
+// errFindQuit is how -quit ends the walk: it stops there, and the status is what it was, as
+// busybox's exits. -quit was refused as an unsupported expression.
+var errFindQuit = errors.New("quit")
+
+// findQuit is -quit.
+type findQuit struct{}
+
+func (findQuit) eval(_ findCandidate, run *findRun) bool {
+	if run.err == nil {
+		run.err = errFindQuit
+	}
 	return true
 }
 
