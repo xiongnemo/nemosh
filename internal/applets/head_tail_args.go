@@ -1,9 +1,6 @@
 package applets
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
 
 // head and tail take their options with the value attached or detached, and they
 // head their output when there is more than one file to tell apart.
@@ -180,8 +177,8 @@ func headTailCountValue(arg string, args []string, index, position int, letter b
 	return args[index+1], 1, nil
 }
 
-// bareCountOption reads the `-3` form: a dash followed by digits and nothing
-// else.
+// bareCountOption reads the `-3` form: a dash followed by a count, digits with
+// b, k or m or nothing after them, as -n takes one; see headTailCount.
 //
 // A trailing letter is an error rather than a cluster, because busybox reads the
 // whole thing as the number and says so -- `head -2n` answers
@@ -196,11 +193,11 @@ func bareCountOption(arg string) (int, bool, error) {
 	if rest[0] < '0' || rest[0] > '9' {
 		return 0, false, nil
 	}
-	count, err := strconv.Atoi(rest)
-	if err != nil || count < 0 {
-		// Single quotes, matching busybox: `head -2n` answers
-		// `head: invalid number '2n'`.
-		return 0, false, fmt.Errorf("invalid number '%s'", rest)
+	// Single quotes, matching busybox: `head -2n` answers
+	// `head: invalid number '2n'`.
+	count, err := headTailCount(rest)
+	if err != nil {
+		return 0, false, err
 	}
 	return count, true, nil
 }

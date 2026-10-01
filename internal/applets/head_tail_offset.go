@@ -2,9 +2,8 @@ package applets
 
 import (
 	"bufio"
-	"fmt"
 	"io"
-	"strconv"
+	"math"
 	"strings"
 )
 
@@ -41,20 +40,28 @@ func parseCountSpec(text string, bytes bool) (countSpec, error) {
 	case strings.HasPrefix(text, "-"):
 		spec.allButLast, digits = true, text[1:]
 	}
-	value, err := strconv.Atoi(digits)
-	if err != nil || value < 0 || strings.HasPrefix(digits, "+") || strings.HasPrefix(digits, "-") {
-		// busybox's exact wording, single quotes included: `head -n2c` answers
-		// `head: invalid number '2c'`. Measured 2026-08-22. This said
-		// `invalid count: 2c`, which named the same problem in different words --
-		// and a script matching on the reference's text would miss it.
-		//
-		// The digits rather than the whole operand, because that is what busybox
-		// reports once a sign has been taken off: `head -n-x` answers
-		// `invalid number 'x'`, not `'-x'`.
-		return countSpec{}, fmt.Errorf("invalid number '%s'", digits)
+	// busybox's exact wording, single quotes included: `head -n2c` answers
+	// `head: invalid number '2c'`. Measured 2026-08-22. This said
+	// `invalid count: 2c`, which named the same problem in different words --
+	// and a script matching on the reference's text would miss it.
+	//
+	// The digits rather than the whole operand, because that is what busybox
+	// reports once a sign has been taken off: `head -n-x` answers
+	// `invalid number 'x'`, not `'-x'`.
+	value, err := headTailCount(digits)
+	if err != nil {
+		return countSpec{}, err
 	}
 	spec.count = value
 	return spec, nil
+}
+
+// headTailCount is a count once its sign is off, as busybox's eat_num reads one with
+// bkm_suffixes: decimal digits, and b, k or m after them for 512, 1024 or 1048576. A second
+// sign, a blank or any other letter is an invalid number. `head -c 1k` was one.
+func headTailCount(digits string) (int, error) {
+	value, err := busyboxNumberBase(digits, 10, math.MaxInt, math.MaxInt, bkmSuffixes)
+	return int(value), err
 }
 
 // copyLinesFromStart is `tail -n +N`: everything from line N onward, counting from 1.
