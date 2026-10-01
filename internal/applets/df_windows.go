@@ -97,7 +97,18 @@ func volumeUsage(root string) (filesystemUsage, bool) {
 	return filesystemUsage{
 		device:    letter,
 		mount:     letter + "/",
+		fsType:    volumeFilesystem(path),
 		used:      total - free,
 		available: free,
 	}, true
+}
+
+// volumeFilesystem is the name Windows gives a volume's filesystem, NTFS, FAT32 or exFAT, as
+// busybox-w32's mount table carries it; "-" where it will not say.
+func volumeFilesystem(root *uint16) string {
+	name := make([]uint16, windows.MAX_PATH+1)
+	if err := windows.GetVolumeInformation(root, nil, 0, nil, nil, nil, &name[0], uint32(len(name))); err != nil {
+		return "-"
+	}
+	return windows.UTF16ToString(name)
 }

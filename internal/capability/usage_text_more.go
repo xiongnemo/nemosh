@@ -60,7 +60,9 @@ var usageTextMore = map[string]Usage{
 			"A search does not wrap, and says so when it runs out: wrapping would make \"no more\" indistinguishable from \"none at all\".",
 		}},
 	"df": {Summary: "Report free space on each filesystem.", Operands: "[FILE]...",
-		Options: map[string]string{"h": "print sizes as K, M and G", "k": "print 1K blocks, which is the default"},
+		Options: map[string]string{"h": "print sizes as K, M and G", "H": "the same as -h", "k": "print 1K blocks, which is the default",
+			"m": "print 1M blocks", "B": "print blocks of this size, 512, 1M or a bare K, M or G", "P": "the POSIX headings, 1024-blocks and Capacity",
+			"T": "print each filesystem's type", "t": "print only the filesystems of this type, NTFS or FAT32", "a": "taken: every volume that is ready is listed"},
 		Notes: []string{
 			"A filesystem here is a drive letter, mounted at its root -- C: on C:/ -- because that is what Windows volumes are.",
 			"The percentage is of used plus available rather than of the raw size, so a quota does not make a full disk read low.",

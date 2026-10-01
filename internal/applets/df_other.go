@@ -39,9 +39,11 @@ func collectFilesystems(view ProcessView, operands []string, stderr io.Writer) (
 			continue
 		}
 		size := uint64(stat.Bsize)
+		// The type is the mount table's to say, which this build does not read; see above.
 		rows = append(rows, filesystemUsage{
 			device:    native,
 			mount:     native,
+			fsType:    "-",
 			used:      (stat.Blocks - stat.Bfree) * size,
 			available: stat.Bavail * size,
 		})

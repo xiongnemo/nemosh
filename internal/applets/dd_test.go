@@ -218,19 +218,35 @@ func TestDfArithmetic(t *testing.T) {
 		})
 	}
 	for _, testcase := range []struct {
-		bytes uint64
-		human bool
-		want  string
+		bytes, unit uint64
+		want        string
 	}{
-		// Blocks round up: part of a block still occupies the block.
-		{bytes: 1, want: "1"}, {bytes: 1024, want: "1"}, {bytes: 1025, want: "2"}, {bytes: 0, want: "0"},
+		// Blocks round to nearest, as busybox's make_human_readable_str counts them: -m's
+		// 26890.34 MiB is 26890, where it rounded up.
+		{bytes: 1, unit: 1024, want: "0"}, {bytes: 1024, unit: 1024, want: "1"}, {bytes: 1536, unit: 1024, want: "2"},
+		{bytes: 0, unit: 1024, want: "0"}, {bytes: 27535712 * 1024, unit: 1 << 20, want: "26890"},
 		// One decimal always, which is busybox's rule for df and not GNU's for du.
-		{bytes: 1024 * 1024 * 1024, human: true, want: "1.0G"},
-		{bytes: 152372838, human: true, want: "145.3M"},
-		{bytes: 512, human: true, want: "512"},
+		{bytes: 1024 * 1024 * 1024, want: "1.0G"},
+		{bytes: 152372838, want: "145.3M"},
+		{bytes: 512, want: "512"},
 	} {
-		if got := diskAmount(testcase.bytes, testcase.human); got != testcase.want {
-			t.Fatalf("diskAmount(%d, %v) = %q, want %q", testcase.bytes, testcase.human, got, testcase.want)
+		if got := diskAmount(testcase.bytes, testcase.unit); got != testcase.want {
+			t.Fatalf("diskAmount(%d, %d) = %q, want %q", testcase.bytes, testcase.unit, got, testcase.want)
+		}
+	}
+	// The block heading, as busybox names it: in K or M where it is a whole number of them,
+	// rounded where it is not, and in full under -P.
+	for _, testcase := range []struct {
+		layout diskFreeLayout
+		want   string
+	}{
+		{diskFreeLayout{unit: 1024}, "1K-blocks"}, {diskFreeLayout{unit: 1 << 20}, "1M-blocks"},
+		{diskFreeLayout{unit: 512}, "512-blocks"}, {diskFreeLayout{unit: 1000}, "1000-blocks"},
+		{diskFreeLayout{unit: 1536}, "2K-blocks"}, {diskFreeLayout{unit: 1024, posix: true}, "1024-blocks"},
+		{diskFreeLayout{unit: 1 << 20, posix: true}, "1048576-blocks"}, {diskFreeLayout{}, "     Size"},
+	} {
+		if got := blockHeading(testcase.layout); got != testcase.want {
+			t.Errorf("blockHeading(%+v) = %q, want %q", testcase.layout, got, testcase.want)
 		}
 	}
 }
