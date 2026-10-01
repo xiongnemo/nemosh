@@ -725,7 +725,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
 | `basename` | `-a -s`, and the `basename PATH [SUFFIX]` form, a third operand refused | refused by name |
-| `bunzip2`, `bzcat` | `-c -d -f -k -t`; **decompress only** | refused by name |
+| `bunzip2`, `bzcat` | `-c -d -f -k -t`, and `-` for standard input; **decompress only** | refused by name |
 | `cat` | `-n -b -v -e -t -A`, `-u` taken and ignored | refused by name |
 | `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
 | `clear` | none | refused by name |
@@ -750,7 +750,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
-| `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
+| `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's | refused by name |
@@ -1671,6 +1671,14 @@ cannot stand in for either.
 - An existing companion is not overwritten without `-f`, so a second run cannot
   silently destroy an archive; and a half-written companion is deleted on failure,
   so a truncated archive never looks like a real one.
+- **A FILE is taken in busybox's order**: stat'ed, then opened, then named, and the
+  companion made only where nothing is -- `cannot open 'FILE.gz': File exists`. So
+  `gzip f` a second time says f is not there, which is so, and a directory is
+  `cannot open 'd': Is a directory`, where busybox-w32 says `Permission denied`.
+  A FILE named `-` is standard input, to standard output.
+- **The companion has the original's permissions**, less the umask's, so a private
+  file's archive is private too; and `gunzip` gives the file it writes the time
+  the data holds, the last member's, as busybox's does.
 - `.tgz` and `.tbz` stand for `.tar.gz` and `.tar.bz2`, so decompressing one
   restores the `.tar` rather than losing the extension.
 

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 // gzip, gunzip, zcat, bunzip2 and bzcat.
@@ -81,7 +82,7 @@ func newCompressApplet(name string, mode compressMode) Applet {
 		if len(paths) == 0 {
 			return request.filter(stdin, stdout)
 		}
-		return request.eachFile(ctx, paths, stdout, stderr)
+		return request.eachFile(ctx, paths, stdin, stdout, stderr)
 	}}
 }
 
@@ -117,17 +118,25 @@ func (r compressRequest) filter(stdin io.Reader, stdout io.Writer) error {
 	if r.test {
 		stdout = io.Discard
 	}
-	return r.copyThrough(stdin, stdout)
+	_, err := r.copyThrough(stdin, stdout)
+	return err
 }
 
 // eachFile handles the operand form, where the default is to *replace* the file
 // on disk and remove the original -- which is the behaviour that surprises people
-// and is what both references do.
-func (r compressRequest) eachFile(ctx context.Context, paths []string, stdout, stderr io.Writer) error {
+// and is what both references do. A FILE named - is standard input, to standard
+// output, as busybox's bbunpack takes one; it was looked for as a file.
+func (r compressRequest) eachFile(ctx context.Context, paths []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	view := ProcessViewFromContext(ctx)
 	failed := false
 	for _, path := range paths {
-		if err := r.oneFile(view, path, stdout); err != nil {
+		var err error
+		if path == "-" {
+			err = r.filter(stdin, stdout)
+		} else {
+			err = r.oneFile(view, path, stdout)
+		}
+		if err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", r.applet, err)
 			failed = true
 		}
@@ -138,22 +147,26 @@ func (r compressRequest) eachFile(ctx context.Context, paths []string, stdout, s
 	return nil
 }
 
+// oneFile takes FILE in bbunpack's order, so each failure is the one busybox reports: it
+// is stat'ed, `FILE: No such file or directory`, then opened, `cannot open 'FILE'`, a
+// directory among what cannot be, and only then named and written. The name was looked
+// at first, so `gunzip nope` was an unknown suffix and a second `gzip f` said f.gz
+// already existed, where there was no f to compress.
 func (r compressRequest) oneFile(view ProcessView, path string, stdout io.Writer) error {
 	native, err := resolveHostPath(view, path)
 	if err != nil {
 		return operandFailure(path, err)
 	}
-	if !r.toStdout {
-		// Not opened here: on Windows a file cannot be deleted while a handle to
-		// it is open, so rewriteFile opens and closes the source itself before
-		// removing it. Holding it open across the remove failed with "The process
-		// cannot access the file because it is being used by another process" --
-		// measured, and invisible on Unix where the unlink would have succeeded.
-		return r.rewriteFile(view, native, path)
-	}
-	source, err := os.Open(native)
+	info, err := os.Stat(native)
 	if err != nil {
 		return operandFailure(path, err)
+	}
+	source, err := OpenHostInput(native)
+	if err != nil {
+		return cannotOpen(path, err)
+	}
+	if !r.toStdout {
+		return r.rewriteFile(view, native, path, info, source)
 	}
 	defer source.Close()
 	return fileFault(path, r.filter(source, stdout))
@@ -162,29 +175,35 @@ func (r compressRequest) oneFile(view ProcessView, path string, stdout io.Writer
 // rewriteFile is the default: write the companion file, then remove the original
 // unless -k said to keep it.
 //
+// The companion is made where nothing is, as busybox opens it O_EXCL: what is there is
+// `cannot open 'FILE.gz': File exists`, and -f removes it first. It has the original's
+// permissions less the umask's, as busybox gives it the original's mode, so a private
+// file's archive is private too; it was made 0666 less the umask's. gunzip gives it the
+// time the data holds, when it holds one.
+//
 // The original is removed only after the new file is complete *and both handles
 // are closed*, so an interrupted run leaves the input intact rather than losing
-// both -- and so Windows will actually let the remove happen.
-func (r compressRequest) rewriteFile(view ProcessView, native, path string) error {
+// both -- and so Windows will actually let the remove happen. Holding the source open
+// across the remove failed with "The process cannot access the file because it is
+// being used by another process" -- measured, and invisible on Unix.
+func (r compressRequest) rewriteFile(view ProcessView, native, path string, info os.FileInfo, source io.ReadCloser) error {
 	target, err := r.targetName(native)
-	if err != nil {
-		return operandFailure(path, err)
-	}
-	if !r.force {
-		if _, err := os.Stat(target); err == nil {
-			return fmt.Errorf("%s already exists", filepathBase(target))
-		}
-	}
-	source, err := os.Open(native)
-	if err != nil {
-		return operandFailure(path, err)
-	}
-	destination, err := createFile(view, target)
 	if err != nil {
 		source.Close()
 		return operandFailure(path, err)
 	}
-	writeErr := r.copyThrough(source, destination)
+	shown, _ := r.targetName(path)
+	// unlink(2)'s, which leaves a directory where it is.
+	if found, err := os.Lstat(target); err == nil && r.force && !found.IsDir() {
+		os.Remove(target)
+	}
+	mode := maskedMode(info.Mode().Perm(), processFileModeMask(view))
+	destination, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+	if err != nil {
+		source.Close()
+		return cannotOpen(shown, err)
+	}
+	stamp, writeErr := r.copyThrough(source, destination)
 	closeErr := destination.Close()
 	if err := source.Close(); err != nil && closeErr == nil {
 		closeErr = err
@@ -198,29 +217,38 @@ func (r compressRequest) rewriteFile(view ProcessView, native, path string) erro
 		}
 		return operandFailure(path, closeErr)
 	}
+	if !stamp.IsZero() {
+		os.Chtimes(target, stamp, stamp)
+	}
 	if r.keep {
 		return nil
 	}
 	return os.Remove(native)
 }
 
-func (r compressRequest) copyThrough(source io.Reader, destination io.Writer) error {
+// copyThrough writes source to destination through the codec. Decompressing gzip, it
+// says when the data was modified, by the last member's MTIME, as busybox's gunzip
+// sets the file it writes from it.
+func (r compressRequest) copyThrough(source io.Reader, destination io.Writer) (time.Time, error) {
 	if r.decompress {
 		reader, err := decompressor(r.mode.codec, source)
 		if err != nil {
-			return err
+			return time.Time{}, err
 		}
 		_, err = io.Copy(destination, reader)
-		return err
+		if gunzip, ok := reader.(*gunzipReader); ok {
+			return gunzip.member.ModTime, err
+		}
+		return time.Time{}, err
 	}
 	writer, err := gzip.NewWriterLevel(destination, r.level)
 	if err != nil {
-		return err
+		return time.Time{}, err
 	}
 	if _, err := io.Copy(writer, source); err != nil {
-		return err
+		return time.Time{}, err
 	}
-	return writer.Close()
+	return time.Time{}, writer.Close()
 }
 
 // fileFault is err as it is said of FILE. A fault in the data stands alone, as busybox
