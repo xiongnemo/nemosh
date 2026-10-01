@@ -759,7 +759,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `ln` | `-s -f -n -b -S -v -T`; `TARGET... DIR`, and a lone `TARGET` linked into the working directory | refused by name |
 | `iconv` | `-f -t -l -c -o` | refused by name |
 | `join` | `-a -v -e -o -t -1 -2 -j`; two files sorted on their join fields, merged a key at a time as busybox's are, so lines out of order are not paired | refused by name |
-| `ls` | busybox-w32's: `-1AaCxdgLHRFplinshrSXvctuQqk`, `-w N` (0 for no limit), `-T N`, `--full-time`, `--group-directories-first`, `--color[=always\|never\|auto]`; of `-C -x -l` the last wins, columns are as wide as busybox's, `total` counts blocks, and a directory's links on Windows are two and its subdirectories. The mode column is still Go's, `-rw-rw-rw-` where busybox-w32 shows its umask's `-rw-rw-r--` | refused by name |
+| `ls` | busybox-w32's: `-1AaCxdgLHRFplinshrSXvctuQqk`, `-w N` (0 for no limit), `-T N`, `--full-time`, `--group-directories-first`, `--color[=always\|never\|auto]`; of `-C -x -l` the last wins, columns are as wide as busybox's, `total` counts blocks, and a directory's links on Windows are two and its subdirectories. The mode column is made up as `stat`'s is, busybox-w32's: read and write for everyone less the umask's group and other write, and run for a directory or a program | refused by name |
 | `micro` | `-H -R`; one file at a time | refused by name |
 | `mkdir` | `-m -p -v` and their long forms; `-v` names each directory made, a parent with its slash | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |

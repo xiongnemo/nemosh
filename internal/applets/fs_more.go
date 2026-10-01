@@ -21,6 +21,7 @@ func newLsApplet() Applet {
 		options.colored = colorEnabled(options.color, stdout)
 		// A terminal shows a `?` for what it cannot, as busybox's ls turns -q on for one.
 		options.printable = options.printable || stdoutIsTerminal(stdout)
+		options.umask = processFileModeMask(ProcessViewFromContext(ctx))
 		if len(paths) == 0 {
 			paths = []string{"."}
 		}

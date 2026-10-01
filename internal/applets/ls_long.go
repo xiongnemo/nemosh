@@ -54,7 +54,7 @@ const (
 // blocks columns -i and -s put before it are lsEntryPrefix's.
 func formatLongEntry(entry lsEntry, options lsOptions) string {
 	name := lsDisplayName(entry, options)
-	mode := lsModeString(entry.info)
+	mode := lsModeString(entry.path, entry.info, options.umask)
 	size := lsSizeText(entry.info.Size(), options)
 	// A link says so in the first column and names its target, which is what busybox does
 	// and what this did not: the ten junctions in a home directory came out as
@@ -157,25 +157,30 @@ func lsTimeColumn(when, now time.Time) string {
 // `d?r-xr-xr-x` -- eleven characters, shifting every column after it one place right. Found by
 // running `ls -alh` in a home directory that has OneDrive in it, which is a shape no temporary
 // directory in a test was ever going to produce.
-func lsModeString(info os.FileInfo) string {
-	// Perm().String() is always ten characters with a leading `-`, so its tail is exactly
-	// the nine permission characters.
-	permissions := info.Mode().Perm().String()[1:]
+//
+// The permissions are made up as stat makes them up, by currentPermissions: on Windows
+// busybox-w32's, read and write for everyone less the umask's group and other write, and run
+// for a directory or a program. They were Go's, `-rw-rw-rw-` where busybox-w32 and this build's
+// own stat both said `-rw-r--r--`; a set-id or sticky bit is now shown where it stands too.
+func lsModeString(native string, info os.FileInfo, umask uint32) string {
+	kind := uint32(0o100000)
 	switch {
 	case info.IsDir():
-		return "d" + permissions
+		kind = 0o040000
 	case info.Mode()&os.ModeNamedPipe != 0:
-		return "p" + permissions
+		kind = 0o010000
 	case info.Mode()&os.ModeSocket != 0:
-		return "s" + permissions
+		kind = 0o140000
+	case info.Mode()&os.ModeCharDevice != 0:
+		kind = 0o020000
 	case info.Mode()&os.ModeDevice != 0:
-		if info.Mode()&os.ModeCharDevice != 0 {
-			return "c" + permissions
-		}
-		return "b" + permissions
-	default:
-		return "-" + permissions
+		kind = 0o060000
 	}
+	// A device or a pipe keeps the bits it was described with: /dev/null is crw-rw-rw-.
+	if !info.IsDir() && !info.Mode().IsRegular() {
+		return statModeString(kind | bitsOfFileMode(info.Mode()))
+	}
+	return statModeString(kind | currentPermissions(native, info, umask))
 }
 
 // longEntryOwner names the account in the owner column.

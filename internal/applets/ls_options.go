@@ -80,6 +80,8 @@ type lsOptions struct {
 	timeKey          lsTimeKey
 	fullTime         bool
 	follow           lsFollow
+	// umask is the shell's, which the mode column is made up through; see lsModeString.
+	umask uint32
 }
 
 // lsShowsDotEntries reports whether `.` and `..` belong in the listing. -A asks
