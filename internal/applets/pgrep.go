@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/proc"
@@ -23,7 +24,7 @@ import (
 
 func newPgrepApplet() Applet {
 	return simpleApplet{name: "pgrep", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		matcher, err := parseProcessPattern(ctx, "pgrep", args, "lx")
+		matcher, err := parseProcessPattern(ctx, "pgrep", args, "lxve")
 		if err != nil {
 			return err
 		}
@@ -48,12 +49,20 @@ func newPgrepApplet() Applet {
 }
 
 func newPkillApplet() Applet {
-	return simpleApplet{name: "pkill", runContext: func(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
+	return simpleApplet{name: "pkill", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
 		signal, rest, err := splitLeadingSignal(args)
 		if err != nil {
 			return err
 		}
-		matcher, err := parseProcessPattern(ctx, "pkill", rest, "x")
+		// -l lists the signals instead, as kill -l does and busybox's pkill -l, whatever else
+		// was given.
+		if options, _, err := parseAppletOptions(ctx, rest, "xvel", "P"); err == nil && options.has('l') {
+			for _, known := range proc.Signals() {
+				fmt.Fprintf(stdout, "%2d) %s\n", known.Number, known.Name)
+			}
+			return nil
+		}
+		matcher, err := parseProcessPattern(ctx, "pkill", rest, "xve")
 		if err != nil {
 			return err
 		}
@@ -69,6 +78,11 @@ func newPkillApplet() Applet {
 			if err := proc.Terminate(process.PID, signal); err != nil {
 				fmt.Fprintf(stderr, "pkill: %v\n", err)
 				failed = true
+				continue
+			}
+			// -e says what it killed, in the words procps and busybox both print.
+			if matcher.echo {
+				fmt.Fprintf(stdout, "%s killed (pid %d)\n", process.Name, process.PID)
 			}
 		}
 		if failed {
@@ -78,9 +92,12 @@ func newPkillApplet() Applet {
 	}}
 }
 
+// processMatcher is what pgrep and pkill select by: a pattern, the parent -P names, and -v to
+// take every process the two together do not match, as busybox's -v takes them.
 type processMatcher struct {
-	pattern *regexp.Regexp
-	long    bool
+	pattern            *regexp.Regexp
+	parent             int
+	long, invert, echo bool
 }
 
 // parseProcessPattern reads the options and the one pattern operand.
@@ -88,9 +105,20 @@ type processMatcher struct {
 // An empty pattern is refused. `pkill ""` would match every process on the
 // machine, and a command that can do that by omission is a command that will.
 func parseProcessPattern(ctx context.Context, applet string, args []string, short string) (processMatcher, error) {
-	options, operands, err := parseAppletOptions(ctx, args, short, "")
+	options, operands, err := parseAppletOptions(ctx, args, short, "P")
 	if err != nil {
 		return processMatcher{}, err
+	}
+	matcher := processMatcher{parent: -1, long: options.has('l'), invert: options.has('v'), echo: options.has('e')}
+	// -P PPID selects a parent's children, and with it the pattern may be left out, as
+	// busybox's takes them: `pgrep -P $$` is this shell's children.
+	if options.has('P') {
+		if matcher.parent, err = strconv.Atoi(options.value('P')); err != nil || matcher.parent < 0 {
+			return processMatcher{}, fmt.Errorf("invalid number '%s'", options.value('P'))
+		}
+		if len(operands) == 0 {
+			return matcher, nil
+		}
 	}
 	switch {
 	case len(operands) == 0:
@@ -112,7 +140,8 @@ func parseProcessPattern(ctx context.Context, applet string, args []string, shor
 	}
 	// -x is already in the pattern, anchored above; keeping a copy of the answer beside it
 	// invited the two to disagree.
-	return processMatcher{pattern: compiled, long: options.has('l')}, nil
+	matcher.pattern = compiled
+	return matcher, nil
 }
 
 // find lists the matches. The executable suffix is matched with or without,
@@ -124,11 +153,20 @@ func (m processMatcher) find() ([]proc.Process, error) {
 	}
 	var matches []proc.Process
 	for _, process := range all {
-		if m.pattern.MatchString(process.Name) || m.pattern.MatchString(trimExecutableSuffix(process.Name)) {
+		if m.matches(process) != m.invert {
 			matches = append(matches, process)
 		}
 	}
 	return matches, nil
+}
+
+// matches is whether a process is the one asked for: a child of -P's parent, if one was
+// named, whose name the pattern matches, if there is one.
+func (m processMatcher) matches(process proc.Process) bool {
+	if m.parent >= 0 && process.PPID != m.parent {
+		return false
+	}
+	return m.pattern == nil || m.pattern.MatchString(process.Name) || m.pattern.MatchString(trimExecutableSuffix(process.Name))
 }
 
 func trimExecutableSuffix(name string) string {

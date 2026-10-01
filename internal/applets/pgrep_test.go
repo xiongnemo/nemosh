@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -174,5 +176,40 @@ func waitFor(t *testing.T, condition func() bool, message string) {
 			t.Fatal(message)
 		}
 		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// pgrep -P names a parent's children and needs no pattern then, -v takes what the rest does
+// not, and pkill -e says what it killed, as busybox's do. Against a process this test started,
+// whose parent this test is.
+func TestPgrep_selectsByParentAndInverts_andPkillSaysWhatItKilled(t *testing.T) {
+	if _, ok := listableOrSkip(t); !ok {
+		return
+	}
+	binary := buildHelperShell(t)
+	child := exec.Command(binary, "-c", "sleep 60")
+	if err := child.Start(); err != nil {
+		t.Fatalf("starting the helper: %v", err)
+	}
+	defer func() { _ = child.Process.Kill() }()
+	waitFor(t, func() bool {
+		_, _, err := runAppletWithInput(t, "", "pgrep", helperName)
+		return err == nil
+	}, "pgrep never saw the helper")
+	pid := strconv.Itoa(child.Process.Pid)
+	lines := func(text string) []string { return strings.Split(strings.TrimSpace(text), "\n") }
+
+	if stdout, _, err := runAppletWithInput(t, "", "pgrep", "-P", strconv.Itoa(os.Getpid())); err != nil || !slices.Contains(lines(stdout), pid) {
+		t.Fatalf("pgrep -P %d = %q, %v; want the helper, %s", os.Getpid(), stdout, err, pid)
+	}
+	if stdout, _, _ := runAppletWithInput(t, "", "pgrep", "-v", "-x", helperName); slices.Contains(lines(stdout), pid) {
+		t.Fatalf("pgrep -v -x %s listed the helper it was told to leave out", helperName)
+	}
+	stdout, stderr, err := runAppletWithInput(t, "", "pkill", "-e", "-x", helperName)
+	if want := filepath.Base(binary) + " killed (pid " + pid + ")\n"; err != nil || stdout != want {
+		t.Fatalf("pkill -e = %q, %q, %v; want %q", stdout, stderr, err, want)
+	}
+	if stdout, _, err := runAppletWithInput(t, "", "pkill", "-l"); err != nil || !strings.HasPrefix(stdout, " 1) HUP\n") {
+		t.Fatalf("pkill -l = %q, %v; want the signal list", stdout, err)
 	}
 }

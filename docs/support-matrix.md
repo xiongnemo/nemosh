@@ -754,7 +754,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`) | refused by name |
-| `id` | `-u -g -G -n`, and their clusters | refused by name |
+| `id` | `-u -g -G -n -r`, and their clusters; `-r` is the same id, Windows having no real one apart, and alone is refused as busybox refuses it | refused by name |
 | `install` | `-c -d -D -p -s -v -b -o -g -m -t` and busybox's long forms; the mode is 0755 or `-m`'s, whatever the umask. `-o` and `-g` take a number or a name, on Windows this session's account or root, and change nothing there, as busybox-w32's chown does not. `-s` runs strip, which is a program and no applet, so it is not found and the status is 1 | refused by name |
 | `ln` | `-s -f -n -b -S -v -T`; `TARGET... DIR`, and a lone `TARGET` linked into the working directory | refused by name |
 | `iconv` | `-f -t -l -c -o` | refused by name |
@@ -769,8 +769,8 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `nl` | `-b a\|t\|n\|pBRE -i -s -v -w -p` and their long forms; numbers carry on from one file to the next, and `pBRE` is GNU's | refused by name |
 | `od` | `-a -b -c -d -D -f -h -H -i -I -l -L -o -O -B -s -x -X -v`, `-t` of every kind and size busybox's has (`d o u x` of 1 2 4 8 bytes or `C S I L`, `f` of 4 or 8 or `F D`, `a`, `c`, and `z` after), `-A -N -j -S -w`, their long forms, and `--traditional`'s OFFSET and LABEL; each type a line of its own, several in columns as GNU od lays them out | refused by name |
 | `paste` | `-s -d`; the delimiter list cycles | refused by name |
-| `pgrep` | `-l -x`, a regular expression on the process name | refused by name |
-| `pkill` | `-x` and a leading `-SIG`, a regular expression on the process name | refused by name |
+| `pgrep` | `-l -x -v -P PPID`, `-e` taken; a regular expression on the process name, which `-P` makes optional | refused by name |
+| `pkill` | `-x -v -e -l -P PPID` and a leading `-SIG`; a regular expression on the process name, which `-P` makes optional. `-e` says `NAME killed (pid N)`, and `-l` lists the signals | refused by name |
 | `patch` | `-R -u -p -i -N -E -f -g`, `--dry-run` and busybox's long forms; `[ORIGFILE [PATCHFILE]]`; a /dev/null side creates or empties a file, and without -p a name is its last component; no fuzz | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |

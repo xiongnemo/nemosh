@@ -21,9 +21,15 @@ import (
 // `[ "$(id -u)" = 0 ]` in a prompt mean something here.
 func newIDApplet() Applet {
 	return simpleApplet{name: "id", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "ugGn", "")
+		options, operands, err := parseAppletOptions(ctx, args, "ugGnr", "")
 		if err != nil {
 			return err
+		}
+		// -r asks for the real id where it differs from the effective one, which a Windows token
+		// has no notion of: the answer is the same id, as busybox-w32 gives it. Alone it says
+		// nothing, and busybox refuses it the same way.
+		if options.has('r') && !options.has('u') && !options.has('g') && !options.has('G') {
+			return fmt.Errorf("-r: needs one of -u, -g or -G to say which id")
 		}
 		if len(operands) > 0 {
 			return fmt.Errorf("%s: this build reports only the current user", operands[0])
