@@ -145,8 +145,6 @@ func redirectHint(err error) string {
 	switch {
 	case strings.Contains(text, "cannot overwrite existing file"):
 		return "`set -C` is on; write with `>|` to truncate anyway, or `>>` to append"
-	case errors.Is(err, errAmbiguousRedirect):
-		return "the operand expanded to more or fewer than one word; quote it to keep it whole"
 	case errors.As(err, new(noSuchDevice)):
 		return "the shell's /dev holds null, zero, random, urandom, clipboard, stdin, stdout, stderr and fd/N"
 	case strings.Contains(text, "The system cannot find the path"),

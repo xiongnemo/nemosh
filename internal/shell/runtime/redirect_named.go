@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -65,19 +66,23 @@ func splitDescriptorName(value string) (string, string) {
 	return "", value
 }
 
-// resolveDuplication reads a duplication's source once its word is expanded.
+// resolveDuplication reads a duplication's source once its word is expanded, as a file
+// redirection's word is and as busybox expands both: no field splitting and no pathname
+// expansion, and "$@" joined. The word was split and globbed, so `>& 1*` duplicated the
+// descriptor a file named 10 matched, and `>& $x` with a blank in x was ambiguous; busybox
+// writes both streams to a file of that name.
 func (r Runtime) resolveDuplication(ctx context.Context, operation redirectOperation, savedStatus int) (redirectOperation, error) {
-	fields := r.expandCommandWord(ctx, operation.operand, savedStatus)
-	if len(fields) != 1 {
-		return operation, errAmbiguousRedirect
+	word := strings.Join(r.expandingAssignment().expandWord(ctx, operation.operand, savedStatus), " ")
+	if word == "" {
+		return operation, errors.New("bad fd number")
 	}
-	resolved, _, err := parseDupRedirect(operation.target, fields[0], fields[0])
+	resolved, _, err := parseDupRedirect(operation.target, word, word)
 	if err != nil && operation.bothStreams {
 		// Not a descriptor, and `>&` had no number in front: a file for both streams.
-		return redirectOperation{kind: redirectOutput, target: 1, bothStreams: true, path: fields[0]}, nil
+		return redirectOperation{kind: redirectOutput, target: 1, bothStreams: true, path: word}, nil
 	}
 	if err != nil {
-		return operation, fmt.Errorf("%s: bad file descriptor", fields[0])
+		return operation, fmt.Errorf("%s: bad file descriptor", word)
 	}
 	resolved.name = operation.name
 	return resolved, nil

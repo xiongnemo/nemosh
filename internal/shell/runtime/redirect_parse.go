@@ -10,7 +10,6 @@ import (
 var (
 	errUnsupportedRedirect   = errors.New("unsupported redirection")
 	errMissingRedirectTarget = errors.New("missing redirection target")
-	errAmbiguousRedirect     = errors.New("ambiguous redirection target")
 	errMalformedRedirect     = errors.New("malformed redirection")
 )
 

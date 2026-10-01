@@ -605,6 +605,7 @@
       "File redirect without matching any file": "fail",
       "File redirects have word splitting too!": "ash-only",
       "File redirects with glob args (bash and zsh only)": "fail",
+      "Non-file redirects don't respect glob args (we differe from bash)": "ash-only",
       "Redirect with brace expansion isn't allowed": "ash-only",
       "ysh behavior when glob doesn't match": "fail"
     },

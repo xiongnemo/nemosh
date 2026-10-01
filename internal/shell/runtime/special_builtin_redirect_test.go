@@ -29,8 +29,9 @@ func TestRuntime_specialBuiltinsFailedRedirectionEndsTheScript(t *testing.T) {
 		{"echo hi > BAD; echo \"after $?\"", "after 1\n", 0},
 		{"x=1 > BAD; echo \"after $?\"", "after 1\n", 0},
 		{"f() { :; }; f > BAD; echo \"after $?\"", "after 1\n", 0},
-		// A descriptor made a copy of itself is left as it is, open or not, in both
-		// references, so nothing fails: `3>&3` with 3 closed, and bash's `3>&3-`.
+		// A descriptor made a copy of itself is left as it is, open or not, so nothing
+		// fails: `3>&3` with 3 closed, in both references, and bash's `3>&3-`, which
+		// busybox-w32 has not got and refuses as a redir error.
 		{": 3>&3; echo hello; : 3>&3-; echo again", "hello\nagain\n", 0},
 	} {
 		script := strings.ReplaceAll(test.script, "BAD", bad)
