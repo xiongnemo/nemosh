@@ -60,16 +60,19 @@ func parseCountSpec(text string, bytes bool) (countSpec, error) {
 // copyLinesFromStart is `tail -n +N`: everything from line N onward, counting from 1.
 //
 // `+0` and `+1` both mean the whole input, which is what both references do -- there is no
-// line zero to skip to.
+// line zero to skip to. Each line keeps the ending it came with, as copyTail keeps it, so a
+// last line with none is written with none; one was added, and a CRLF became an LF.
 func copyLinesFromStart(stdout io.Writer, input io.Reader, count int) error {
 	scanner := bufio.NewScanner(input)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	scanner.Split(scanLineWithEnding)
 	seen := 0
 	for scanner.Scan() {
 		seen++
 		if seen < count {
 			continue
 		}
-		if _, err := fmt.Fprintln(stdout, scanner.Text()); err != nil {
+		if _, err := io.WriteString(stdout, scanner.Text()); err != nil {
 			return err
 		}
 	}
@@ -99,14 +102,17 @@ func copyAllButLastLines(stdout io.Writer, input io.Reader, count int) error {
 	if count == 0 {
 		return copyLinesFromStart(stdout, input, 1)
 	}
+	// Each line keeps its ending, as copyLinesFromStart keeps it; a CRLF became an LF.
 	scanner := bufio.NewScanner(input)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	scanner.Split(scanLineWithEnding)
 	held := make([]string, 0, count+1)
 	for scanner.Scan() {
 		held = append(held, scanner.Text())
 		if len(held) <= count {
 			continue
 		}
-		if _, err := fmt.Fprintln(stdout, held[0]); err != nil {
+		if _, err := io.WriteString(stdout, held[0]); err != nil {
 			return err
 		}
 		held = held[1:]
