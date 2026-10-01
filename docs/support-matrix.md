@@ -748,7 +748,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command` (an applet) | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
-| `find` | `-name -iname -path -ipath -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -prune -quit -print -print0 -maxdepth -mindepth -depth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
+| `find` | `-name -iname -path -ipath -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -maxdepth -mindepth -depth`, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9` | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
@@ -1061,7 +1061,13 @@ failure shape `stream_options.go` exists to prevent for `cat -n f.txt`. Path
 collection now stops at `!`, `(` and `)`.
 
 **Tests.** `-name`, `-iname`, `-path`, `-ipath`, `-type`, `-size`, `-mtime`,
-`-newer`, `-empty`. `-name` matches the basename, not the path, because busybox
+`-atime`, `-ctime`, `-mmin`, `-amin`, `-cmin`, `-newer`, `-empty`, `-perm`, `-inum`,
+`-samefile`, `-links`, `-executable`. The time tests hold the age in whole seconds
+against N days or minutes, as busybox's time_cmp does; the change time is the
+creation time on Windows, which keeps no change time. `-perm`, `-inum`, `-samefile`
+and `-links` ask what `stat` says: busybox-w32's made-up mode, the volume serial and
+the file index, the count of hard links. `-executable` is `test -x`'s judgement.
+`-name` matches the basename, not the path, because busybox
 uses `fnmatch` without `FNM_PATHNAME` and a basename carries no separator for
 `*` to cross; `-path` matches the whole path *with* the separator crossable, for
 the same reason in reverse — which is why `-name` uses Go's `path.Match` and
@@ -1075,17 +1081,18 @@ never match.
 
 **Global options.** `-maxdepth` and `-mindepth`, which bound the traversal rather
 than filter it: `-maxdepth 1` stops the walk from *reading* a subdirectory
-instead of reading it and discarding the entries.
+instead of reading it and discarding the entries. `-depth` walks a directory's
+entries before the directory itself.
 
 `-prune` is true and keeps the walk out of a directory it is true of, and `-regex`
 matches the whole path against a basic regular expression, both as busybox's.
 
-Still **refused before the first directory is read**: `-exec`, `-delete`,
-`-perm`, `-depth`, `-user`, `-group`, and the rest.
+Still **refused before the first directory is read**: `-exec`, `-ok`, `-delete`,
+`-xdev`, `-L`, `-user`, `-group`, and the rest.
 
 ```console
-$ find . -perm 644
-find: unsupported expression: -perm
+$ find . -exec rm {} \;
+find: unsupported expression: -exec
 $ echo $?
 1
 ```

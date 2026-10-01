@@ -47,6 +47,16 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return p.timePredicate(operand)
 	case "-newer":
 		return p.newerPredicate(operand)
+	case "-perm":
+		return p.permPredicate(operand)
+	case "-inum":
+		return p.inumPredicate(operand)
+	case "-samefile":
+		return p.samefilePredicate(operand)
+	case "-links":
+		return p.linksPredicate(operand)
+	case "-executable":
+		return findExecutable{}, nil
 	case "-empty":
 		return findEmpty{}, nil
 	case "-prune":

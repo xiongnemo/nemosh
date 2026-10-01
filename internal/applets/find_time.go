@@ -66,11 +66,8 @@ func (c findCandidate) stamp(which byte) (time.Time, bool) {
 	if which == 'm' {
 		return info.ModTime(), true
 	}
-	if c.host == "" {
-		return time.Time{}, false
-	}
-	record, err := hostStatRecord(c.host, false, 0)
-	if err != nil {
+	record, ok := c.statRecord(0)
+	if !ok {
 		return time.Time{}, false
 	}
 	if which == 'a' {
