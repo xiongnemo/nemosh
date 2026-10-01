@@ -172,7 +172,7 @@ func (e *testEvaluator) peek() string {
 func isTestUnaryOperator(word string) bool {
 	switch word {
 	case "-b", "-c", "-d", "-e", "-f", "-g", "-h", "-k", "-L", "-p", "-r",
-		"-s", "-S", "-t", "-u", "-w", "-x", "-z", "-n", "-O", "-G", "-v", "-o":
+		"-s", "-S", "-t", "-u", "-w", "-x", "-z", "-n", "-O", "-G", "-v", "-o", "-R":
 		return true
 	}
 	return false

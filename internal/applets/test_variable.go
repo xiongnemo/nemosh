@@ -21,6 +21,21 @@ func (e *testEvaluator) variableIsSet(name string) bool {
 	return set
 }
 
+// namerefView is the shell behind a process view, asked whether one of its variables is a
+// nameref.
+type namerefView interface {
+	VariableIsNameref(name string) bool
+}
+
+// variableIsNameref is `test -R name`, bash's: whether a shell variable is set and is a
+// nameref. Run on its own, test has no shell and so no namerefs.
+func (e *testEvaluator) variableIsNameref(name string) bool {
+	if shell, ok := e.view.(namerefView); ok {
+		return shell.VariableIsNameref(name)
+	}
+	return false
+}
+
 // optionView is the shell behind a process view, asked whether one of its options is on.
 type optionView interface {
 	ShellOptionIsOn(name string) bool

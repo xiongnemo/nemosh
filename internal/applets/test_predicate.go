@@ -84,6 +84,8 @@ func (e *testEvaluator) unaryPrimary(operator, operand string) (bool, error) {
 		return e.isTerminal(operand)
 	case "-v":
 		return e.variableIsSet(operand), nil
+	case "-R":
+		return e.variableIsNameref(operand), nil
 	case "-o":
 		return e.optionIsOn(operand), nil
 	case "-h", "-L":
@@ -221,7 +223,7 @@ func EvaluateConditionPrimary(view ProcessView, operator, left, right string) (b
 // list is `test`'s, so the two cannot disagree about what `-s` is.
 func IsUnaryConditionOperator(operator string) bool {
 	switch operator {
-	case "-e", "-f", "-d", "-r", "-w", "-x", "-s", "-z", "-n", "-L", "-h", "-b", "-c", "-p", "-S", "-t", "-g", "-u", "-k", "-O", "-G":
+	case "-e", "-f", "-d", "-r", "-w", "-x", "-s", "-z", "-n", "-L", "-h", "-b", "-c", "-p", "-S", "-t", "-g", "-u", "-k", "-O", "-G", "-R":
 		return true
 	}
 	return false

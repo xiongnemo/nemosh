@@ -28,3 +28,10 @@ func (r Runtime) variableIsSet(ctx context.Context, name string) bool {
 func (r Runtime) VariableIsSet(name string) bool {
 	return r.variableIsSet(context.Background(), name)
 }
+
+// VariableIsNameref answers `test -R` and `[[ -R ]]`, bash's: whether name is set and is a
+// nameref, `declare -n ref=x` and not `declare -n ref` with nothing for it to lead to.
+func (r Runtime) VariableIsNameref(name string) bool {
+	_, set := r.vars[name]
+	return set && r.attributes[name].nameref
+}

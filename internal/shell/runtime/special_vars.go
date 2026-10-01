@@ -1,6 +1,8 @@
 package runtime
 
 import (
+	cryptorand "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -9,7 +11,7 @@ import (
 	"time"
 )
 
-// The variables the shell computes rather than stores: $RANDOM, $SECONDS, $PPID,
+// The variables the shell computes rather than stores: $RANDOM, $SRANDOM, $SECONDS, $PPID,
 // $FUNCNAME, $LINENO, $EPOCHSECONDS and $EPOCHREALTIME, and the $PIPESTATUS array.
 //
 // All four were simply unset, which reads as the empty string, so `$RANDOM` in a
@@ -74,6 +76,9 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 	switch name {
 	case "RANDOM":
 		return strconv.Itoa(r.special.random.IntN(randomMaximum)), true
+	case "SRANDOM":
+		// bash 5.1's: 32 bits from the system's generator each time, which nothing seeds.
+		return strconv.FormatUint(uint64(secureRandom32()), 10), true
 	case "SECONDS":
 		elapsed := int(time.Since(r.special.started).Seconds())
 		return strconv.Itoa(elapsed + r.special.secondsOffset), true
@@ -152,8 +157,18 @@ func (r Runtime) assignSpecialVar(name, value string) bool {
 		}
 		r.special.started, r.special.secondsOffset = time.Now(), offset
 		return true
+	case "SRANDOM":
+		// An assignment does nothing, as in bash: there is no seed to give it.
+		return true
 	}
 	return false
+}
+
+// secureRandom32 is SRANDOM's number, from crypto/rand, which does not fail.
+func secureRandom32() uint32 {
+	var bytes [4]byte
+	_, _ = cryptorand.Read(bytes[:])
+	return binary.LittleEndian.Uint32(bytes[:])
 }
 
 // recordPipeStatus fills $PIPESTATUS, which is the only way to find out that the
