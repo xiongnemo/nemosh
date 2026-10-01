@@ -109,7 +109,7 @@ func arithmetic(operator, left, right string) (string, error) {
 	leftNumber, leftOk := exprNumber(left)
 	rightNumber, rightOk := exprNumber(right)
 	if !leftOk || !rightOk {
-		return "", fmt.Errorf("non-integer argument")
+		return "", fmt.Errorf("non-numeric argument")
 	}
 	switch operator {
 	case "+":

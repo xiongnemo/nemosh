@@ -32,8 +32,10 @@ import (
 // might legitimately be zero, and that is not a bug here.
 func newExprApplet() Applet {
 	return simpleApplet{name: "expr", runContext: func(_ context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+		// busybox's words for no expression and for a word in a sum, "too few arguments" and
+		// "non-numeric argument"; they were GNU's, "missing operand" and "non-integer argument".
 		if len(args) == 0 {
-			return ExitStatusMessage(2, fmt.Errorf("missing operand"))
+			return ExitStatusMessage(2, fmt.Errorf("too few arguments"))
 		}
 		parser := &exprParser{tokens: args}
 		value, err := parser.parseOr()
