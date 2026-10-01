@@ -246,7 +246,9 @@ func isNotThere(err error) bool {
 }
 
 // longOptionWords turns each long option in names into the letter it stands for, `--name` and
-// `--name=VALUE` alike, before `--`.
+// `--name=VALUE` alike, before `--`. A name may be cut short to any prefix that names one option
+// alone, as getopt_long takes `--par` for --parents in every busybox applet with long options;
+// only the whole name was taken, so `mkdir --par` was an unrecognized option.
 func longOptionWords(args []string, names map[string]string) []string {
 	words := make([]string, 0, len(args))
 	for index, arg := range args {
@@ -254,7 +256,7 @@ func longOptionWords(args []string, names map[string]string) []string {
 			return append(words, args[index:]...)
 		}
 		name, value, valued := strings.Cut(strings.TrimPrefix(arg, "--"), "=")
-		if letter, known := names[name]; known && strings.HasPrefix(arg, "--") {
+		if letter, known := longOptionLetter(names, name); known && strings.HasPrefix(arg, "--") {
 			if words = append(words, "-"+letter); valued {
 				words = append(words, value)
 			}
@@ -263,4 +265,23 @@ func longOptionWords(args []string, names map[string]string) []string {
 		words = append(words, arg)
 	}
 	return words
+}
+
+// longOptionLetter is the letter of the long option given names, whole or by a prefix of names
+// that all stand for one letter. A prefix two letters share is ambiguous, and names nothing.
+func longOptionLetter(names map[string]string, given string) (string, bool) {
+	if letter, known := names[given]; known || given == "" {
+		return letter, known
+	}
+	letter := ""
+	for name, candidate := range names {
+		if !strings.HasPrefix(name, given) {
+			continue
+		}
+		if letter != "" && letter != candidate {
+			return "", false
+		}
+		letter = candidate
+	}
+	return letter, letter != ""
 }
