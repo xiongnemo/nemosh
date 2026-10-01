@@ -19,7 +19,7 @@ func runInvocation(t *testing.T, stdin string, args ...string) runResult {
 
 // The shell's options on its own command line, as `set` would take them. Every one of
 // these was "invalid option" and status 2 before a line ran; each answer is busybox-w32's,
-// measured, apart from the order of the letters in `$-`.
+// measured, the order of the letters in `$-` too.
 func TestInvocation_takesShellOptionsBeforeTheScript(t *testing.T) {
 	script := filepath.Join(t.TempDir(), "errexit.sh")
 	if err := os.WriteFile(script, []byte("echo \"before $1\"\nfalse\necho after\n"), 0o644); err != nil {
@@ -37,7 +37,7 @@ func TestInvocation_takesShellOptionsBeforeTheScript(t *testing.T) {
 		{name: "a script after --", args: []string{"--", script, "two"}, stdout: "before two\nafter\n"},
 		{name: "a script after -", args: []string{"-", script}, stdout: "before \nafter\n"},
 		{name: "-o pipefail", args: []string{"-o", "pipefail", "-c", `false | true; echo "$? $-"`}, stdout: "1 c\n"},
-		{name: "letters grouped with c", args: []string{"-ec", `echo "$- $0 $1"`, "name", "one"}, stdout: "ec name one\n"},
+		{name: "letters grouped with c", args: []string{"-ec", `echo "$- $0 $1"`, "name", "one"}, stdout: "ce name one\n"},
 		{name: "-c before the other letters", args: []string{"-c", "-u", `echo "$-"; echo "$unset"`}, stdout: "uc\n", status: 2},
 		{name: "+ turns one off", args: []string{"-e", "+e", "-c", "false; echo survived"}, stdout: "survived\n"},
 		// c, s, i and l are the same with + as with -, as busybox reads them.
@@ -128,7 +128,7 @@ func TestInvocation_shoptOptions(t *testing.T) {
 	}{
 		{name: "-O sets", args: []string{"-O", "nullglob", "-c", "echo foo *.none bar"}, stdout: "foo bar\n"},
 		{name: "+O unsets", args: []string{"+O", "nullglob", "-c", "echo foo *.none bar"}, stdout: "foo *.none bar\n"},
-		{name: "among letters", args: []string{"-eO", "dotglob", "-c", "shopt -p dotglob; echo $-"}, stdout: "shopt -s dotglob\nec\n"},
+		{name: "among letters", args: []string{"-eO", "dotglob", "-c", "shopt -p dotglob; echo $-"}, stdout: "shopt -s dotglob\nce\n"},
 		{name: "an unknown name", args: []string{"-O", "nosuch", "-c", "echo ran"}, stdout: "", status: 2},
 		// Only as the last argument: bash takes whatever follows -O as its name, -c included.
 		{name: "+O last lists commands", args: []string{"+O"}, stdout: "shopt -u array_expand_once\n"},
@@ -158,7 +158,7 @@ func TestInvocation_loginShellIsReported(t *testing.T) {
 // shell's name. `$-` had no i and $0 was empty.
 func TestInvocation_sessionReportsItself(t *testing.T) {
 	result := runInvocation(t, "echo \"[$-] [$0] [$1]\"\n", "-i", "-s", "one")
-	if !strings.Contains(result.stdout, "[is] [nemosh] [one]\n") {
+	if !strings.Contains(result.stdout, "[si] [nemosh] [one]\n") {
 		t.Fatalf("stdout %q, want the session's $-, $0 and $1", result.stdout)
 	}
 }

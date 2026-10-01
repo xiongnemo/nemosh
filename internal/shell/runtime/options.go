@@ -151,16 +151,26 @@ func shellOptionSpecByName(name string) (shellOptionSpec, bool) {
 	return shellOptionSpec{}, false
 }
 
-// letters spells the enabled options the way `$-` reports them: the short
-// letters that are on, in table order, then how the shell was started. An option
-// with no short form has nothing to contribute.
+// busyboxLetters is busybox's option table, with how the shell was started among the options,
+// as ash.c has it. `$-` spells it from the end, walking optlist from NOPTS-1 down: `set -eu`
+// under -c is `uce`. T, which busybox has not got, sits after E, its pair in bash.
+const busyboxLetters = "efIimnscxvCabuET"
+
+// letters spells the enabled options the way `$-` reports them: the short letters that are on,
+// and how the shell was started, in busyboxLetters' order backwards. An option with no short
+// form has nothing to contribute.
 func (o *shellOptions) letters() string {
-	var enabled strings.Builder
+	on := o.invocation
 	for _, spec := range shellOptionSpecs {
 		if spec.letter != 0 && !spec.bash && *spec.field(o) {
-			enabled.WriteByte(spec.letter)
+			on += string(spec.letter)
 		}
 	}
-	enabled.WriteString(o.invocation)
+	var enabled strings.Builder
+	for index := len(busyboxLetters) - 1; index >= 0; index-- {
+		if strings.IndexByte(on, busyboxLetters[index]) >= 0 {
+			enabled.WriteByte(busyboxLetters[index])
+		}
+	}
 	return enabled.String()
 }

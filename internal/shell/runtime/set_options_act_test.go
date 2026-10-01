@@ -225,7 +225,7 @@ func TestRuntime_takesAnOptionNameAfterOInALetterGroup(t *testing.T) {
 	status, stdout, stderr := runSetScript(t, "set -euo pipefail\necho \"[$-]\"\nset -o | grep -E '^(pipefail|nounset)'\nset +euo pipefail\necho \"[$-]\"\n")
 
 	// Then
-	if status != 0 || stdout != "[eu]\nnounset         on\npipefail        on\n[]\n" {
+	if status != 0 || stdout != "[ue]\nnounset         on\npipefail        on\n[]\n" {
 		t.Fatalf("status = %d, stdout = %q, stderr = %q", status, stdout, stderr)
 	}
 }

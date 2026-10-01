@@ -55,10 +55,10 @@ The letters mean what `set` makes them mean, so `nemosh -eu -o pipefail script` 
 and so does a script that begins `#!/bin/sh -e`, which is launched as `nemosh -e script`.
 Only `-c` and `-i` were read before, and only as the first argument; every other
 option was "invalid". `-l` reads `/etc/profile` and `$HOME/.profile` first. `-n`
-parses the script and runs none of it. `$-` ends with `c` for a command string, `s`
-for commands read from standard input, and `is` for a session. The letters come in
-table order rather than busybox's, which only matters to a script comparing `$-` as
-a whole. A name `-o` does not have exits 2, bash's answer. busybox reports it and then
+parses the script and runs none of it. `$-` has `c` for a command string, `s` for
+commands read from standard input, and `i` and `s` for a session, among the letters
+that are on in busybox's order, from the end of its option table: `set -eu` under `-c`
+is `uce`. A name `-o` does not have exits 2, bash's answer. busybox reports it and then
 exits 0.
 
 busybox-w32's other options are here too:
