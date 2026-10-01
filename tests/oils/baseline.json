@@ -637,8 +637,7 @@
       "-u is nounset": "fail",
       "nounset": "fail",
       "set without args lists variables": "fail",
-      "stubbed out bash options": "fail",
-      "vi and emacs are mutually exclusive": "fail"
+      "stubbed out bash options": "fail"
     },
     "sh-usage.test.sh": {
       "LC_CTYPE=invalid": "fail",

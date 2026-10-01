@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 )
 
 // `shopt` -- the option builtin bash keeps apart from `set -o`, with bash's names and bash's
@@ -147,10 +149,14 @@ func (r Runtime) setShopt(name string, value bool) error {
 }
 
 // shoptSetOptions is -o: the names are `set -o`'s and so is what they do. Named options are
-// printed in shopt's form, and the whole listing in `set -o`'s, as bash prints them.
+// printed in shopt's form, and the whole listing in `set -o`'s, as bash prints them -- in
+// bash's order too, by name, where `set -o` keeps busybox's.
 func (r Runtime) shoptSetOptions(request shoptRequest, names []string) int {
 	if len(names) == 0 {
-		for _, spec := range shellOptionSpecs {
+		specs := slices.SortedFunc(slices.Values(shellOptionSpecs), func(a, b shellOptionSpec) int {
+			return strings.Compare(a.name, b.name)
+		})
+		for _, spec := range specs {
 			value := *spec.field(r.options)
 			switch {
 			case request.quiet, request.set && !value, request.unset && value:

@@ -107,6 +107,12 @@ func TestShopt_answersAsBashDoes(t *testing.T) {
 			stdout: "st=0\nset +o pipefail\nset +o errexit\n", status: 1,
 		},
 		{
+			// bash's order, by name; `set +o` keeps busybox's, where vi comes before emacs.
+			name:   "-o lists by name",
+			script: "shopt -po | grep -E 'emacs$|vi$'; set +o | grep -E 'emacs$|vi$'\n",
+			stdout: "set +o emacs\nset +o vi\nset +o vi\nset +o emacs\n",
+		},
+		{
 			name:   "-o with an unknown name",
 			script: "shopt -o nosuch 2>&1; echo \"st=$?\"\n",
 			stdout: "shopt: nosuch: invalid option name\nst=1\n",
