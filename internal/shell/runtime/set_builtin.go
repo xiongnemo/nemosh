@@ -12,8 +12,9 @@ import (
 
 // setOptionLine is how the `set -o` listing prints a row: busybox's, padded to sixteen with
 // no tab (ash.c's plus_minus_o). It was bash's shape, a tab after the name, which busybox does
-// not write.
-const setOptionLine = "%-16s%s\n"
+// not write. Fifteen and a blank is the same sixteen for every name busybox has, and keeps a
+// blank after one of bash's that is longer: `interactive-comments` ran into its `on`.
+const setOptionLine = "%-15s %s\n"
 
 // shellOptionLine is how `shopt -o` prints a row, bash's shape since busybox has no shopt: the
 // name padded, then a tab. shopt, which has bash's names, has bash's width too; see shoptLine.

@@ -18,3 +18,13 @@ func TestRuntime_setOAndDivisionAreWordedAsBusyboxWordsThem(t *testing.T) {
 		t.Errorf("$((5 %% 0)): got %d, %q; want 2 and busybox's divide by zero", status, stderr)
 	}
 }
+
+// set -o lists the options both shells have in busybox's order, and a name longer than the
+// padding still has a blank before its state.
+func TestRuntime_setOListsInBusyboxsOrder(t *testing.T) {
+	stdout, _ := runScriptCapturing("set -o | head -6; set -o | grep '^interactive-comments'\n")
+	want := "errexit         off\nnoglob          off\nignoreeof       off\nmonitor         off\nnoexec          off\nxtrace          off\ninteractive-comments on\n"
+	if stdout != want {
+		t.Errorf("set -o: got %q, want %q", stdout, want)
+	}
+}

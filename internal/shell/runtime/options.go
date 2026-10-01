@@ -107,25 +107,29 @@ var shellOptionSpecs = append(busyboxOptionSpecs, bashOptionSpecs...)
 
 // A zero letter means the option has an `-o` name and no short form, which is
 // how busybox carries pipefail.
+//
+// In busybox's order, its optletters_optnames (shell/ash.c), which is the order `set -o`
+// and `set +o` list them in; T, which busybox has not got, after E, its pair in bash. They
+// were listed allexport first, so `set -o` read in another order than busybox's.
 var busyboxOptionSpecs = []shellOptionSpec{
-	{'a', "allexport", func(o *shellOptions) *bool { return &o.allExport }, false},
-	{'b', "notify", func(o *shellOptions) *bool { return &o.notify }, false},
-	{'C', "noclobber", func(o *shellOptions) *bool { return &o.noClobber }, false},
 	{'e', "errexit", func(o *shellOptions) *bool { return &o.errExit }, false},
-	{'E', "errtrace", func(o *shellOptions) *bool { return &o.errTrace }, false},
-	{'T', "functrace", func(o *shellOptions) *bool { return &o.funcTrace }, false},
 	{'f', "noglob", func(o *shellOptions) *bool { return &o.noGlob }, false},
 	{'I', "ignoreeof", func(o *shellOptions) *bool { return &o.ignoreEOF }, false},
 	{'m', "monitor", func(o *shellOptions) *bool { return &o.monitor }, false},
 	{'n', "noexec", func(o *shellOptions) *bool { return &o.noExec }, false},
-	{'u', "nounset", func(o *shellOptions) *bool { return &o.noUnset }, false},
-	{'v', "verbose", func(o *shellOptions) *bool { return &o.verbose }, false},
 	{'x', "xtrace", func(o *shellOptions) *bool { return &o.xtrace }, false},
+	{'v', "verbose", func(o *shellOptions) *bool { return &o.verbose }, false},
+	{'C', "noclobber", func(o *shellOptions) *bool { return &o.noClobber }, false},
+	{'a', "allexport", func(o *shellOptions) *bool { return &o.allExport }, false},
+	{'b', "notify", func(o *shellOptions) *bool { return &o.notify }, false},
+	{'u', "nounset", func(o *shellOptions) *bool { return &o.noUnset }, false},
+	{'E', "errtrace", func(o *shellOptions) *bool { return &o.errTrace }, false},
+	{'T', "functrace", func(o *shellOptions) *bool { return &o.funcTrace }, false},
+	{0, "vi", func(o *shellOptions) *bool { return &o.vi }, false},
 	{0, "pipefail", func(o *shellOptions) *bool { return &o.pipefail }, false},
 	{0, "nocaseglob", func(o *shellOptions) *bool { return &o.noCaseGlob }, false},
 	{0, "nohiddenglob", func(o *shellOptions) *bool { return &o.noHiddenGlob }, false},
 	{0, "nohidsysglob", func(o *shellOptions) *bool { return &o.noHidSysGlob }, false},
-	{0, "vi", func(o *shellOptions) *bool { return &o.vi }, false},
 }
 
 func (o *shellOptions) clone() *shellOptions {
