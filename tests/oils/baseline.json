@@ -636,7 +636,6 @@
       "$- with pipefail": "fail",
       "-u is nounset": "fail",
       "nounset": "fail",
-      "set -o vi/emacs": "fail",
       "set without args lists variables": "fail",
       "stubbed out bash options": "fail",
       "vi and emacs are mutually exclusive": "fail"

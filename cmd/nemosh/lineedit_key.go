@@ -50,6 +50,9 @@ const (
 	keyTranspose
 	keyYankLastArg
 	keyWordCase
+	// keyEscape is Escape on its own, which is only a key in vi mode: it goes to command
+	// mode. See lineedit_vi.go.
+	keyEscape
 )
 
 type key struct {
@@ -136,6 +139,16 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyUnknown}, 1
 	}
 	return key{kind: keyRune, value: r}, size
+}
+
+// decodeViKey is decodeKey for vi mode, where Escape is a key of its own. Only a terminal's
+// sequence, `[` or `O` after it, is read with it; any other byte is the next key, so an Escape
+// typed just before a command letter is both, as busybox's read_key splits them.
+func decodeViKey(buffer []byte) (key, int) {
+	if len(buffer) >= 2 && buffer[0] == 0x1b && buffer[1] != '[' && buffer[1] != 'O' {
+		return key{kind: keyEscape}, 1
+	}
+	return decodeKey(buffer)
 }
 
 // decodeEscapeSequence handles the CSI forms a terminal sends for the arrows

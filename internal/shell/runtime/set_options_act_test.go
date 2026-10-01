@@ -179,8 +179,8 @@ func TestRuntime_leavesAnAssignmentUnexported_whenAllExportIsOff(t *testing.T) {
 }
 
 // ignoreeof is -I, as in busybox, and `set -o` names the options busybox-w32 has that this
-// shell had no name for. vi and monitor are named and refused: asking for either was
-// "illegal option", which says the option does not exist.
+// shell had no name for. monitor is named and refused: asking for it was "illegal option",
+// which says the option does not exist.
 func TestRuntime_namesBusyboxOptions(t *testing.T) {
 	// When
 	status, stdout, _ := runSetScript(t, "set -I\necho \"[$-]\"\nset -o\n")
@@ -194,11 +194,26 @@ func TestRuntime_namesBusyboxOptions(t *testing.T) {
 			t.Errorf("set -o = %q, want it to list %s", stdout, name)
 		}
 	}
-	for _, option := range []string{"-o vi", "-m", "-o monitor"} {
+	for _, option := range []string{"-m", "-o monitor"} {
 		status, _, stderr := runSetScript(t, "set "+option+"\n")
 		if status != 2 || !strings.Contains(stderr, "not implemented") {
 			t.Errorf("set %s = %d %q, want a refusal that names why", option, status, stderr)
 		}
+	}
+}
+
+// `set -o vi` is busybox's vi editing mode, which the session's line editor reads before each
+// line. emacs is bash's other mode, and asking for either turns the other off, as bash has
+// them; turning one off leaves the other as it was.
+func TestRuntime_viAndEmacsAreTheEditorsTwoModes(t *testing.T) {
+	// When
+	status, stdout, stderr := runSetScript(t, "set -o vi; echo $?\n[[ -o vi ]] && echo vi\n"+
+		"set -o emacs\n[[ -o vi ]] || echo not vi\n[[ -o emacs ]] && echo emacs\n"+
+		"set -o vi\n[[ -o emacs ]] || echo not emacs\nset +o vi\n[[ -o vi || -o emacs ]] || echo neither\n")
+
+	// Then
+	if want := "0\nvi\nnot vi\nemacs\nnot emacs\nneither\n"; status != 0 || stdout != want {
+		t.Fatalf("status = %d, stdout = %q, stderr = %q, want %q", status, stdout, stderr, want)
 	}
 }
 

@@ -44,8 +44,9 @@ type shellOptions struct {
 	// ignoreEOF is `set -o ignoreeof`, -I: an end of input at a prompt is refused
 	// rather than taken as `exit`. The session loops read it (IgnoresEOF).
 	ignoreEOF bool
-	// monitor and vi are accepted names that are refused when asked for; see
-	// inertShellOptionNames.
+	// monitor is an accepted name that is refused when asked for; see inertShellOptions. vi is
+	// the line editor's vi mode, which a session reads before each line it edits
+	// (cmd/nemosh/lineedit_vi.go).
 	monitor bool
 	vi      bool
 	// autoCD is `shopt -s autocd`: a bare directory name means `cd` to it. Off by

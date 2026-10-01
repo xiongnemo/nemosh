@@ -57,7 +57,9 @@ func lineEditorFor(stdin *os.File, screen io.Writer, workingDirectory string) *l
 	if stdin == nil || !term.IsTerminal(int(stdin.Fd())) {
 		return nil
 	}
-	return newLineEditor(stdin, screen, workingDirectory)
+	editor := newLineEditor(stdin, screen, workingDirectory)
+	editor.inputWaiting = keyWaiting(stdin)
+	return editor
 }
 
 // terminalFile reports the *os.File behind a reader, which is what raw mode

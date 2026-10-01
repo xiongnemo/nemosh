@@ -148,13 +148,15 @@ func (r Runtime) setOptionName(name string, enable bool) error {
 	if err := inertOptionRefusal(spec.letter, enable); err != nil {
 		return err
 	}
-	if reason, inert := inertShellOptionNames[name]; inert && enable {
-		return fmt.Errorf("-o %s: not implemented: %s", name, reason)
-	}
 	if err := fixedOptionRefusal(spec, enable); err != nil {
 		return err
 	}
 	*spec.field(r.options) = enable
+	// vi and emacs are the line editor's two modes, and asking for one leaves the other, as
+	// bash has them. busybox has only vi.
+	if enable && (spec.name == "vi" || spec.name == "emacs") {
+		r.options.vi, r.options.emacs = spec.name == "vi", spec.name == "emacs"
+	}
 	return nil
 }
 
@@ -184,13 +186,6 @@ var inertShellOptions = map[byte]string{
 		"moment at which its lines are read one by one to be echoed",
 	'm': "there is no job control to switch on: nothing here can stop a job " +
 		"and resume it, which is what fg and bg are refused for too",
-}
-
-// inertShellOptionNames is the same for options that have only a name. busybox accepts
-// both of these; asking for either was "illegal option", which says the option does not
-// exist rather than that this shell cannot do it.
-var inertShellOptionNames = map[string]string{
-	"vi": "the line editor's keys are emacs's, and there is no vi mode to switch to",
 }
 
 // Every other option acts: -a exports what is assigned (readonly.go), -C

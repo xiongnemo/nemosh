@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/xiongnemo/nemosh/internal/completionspec"
 )
@@ -91,6 +92,10 @@ type lineEditor struct {
 	search *historySearch
 	// lastArg is yank-last-arg's, between one press and the next; see lineedit_readline.go.
 	lastArg lastArgument
+	// vi is `set -o vi`'s mode, and inputWaiting whether another key arrives within a wait,
+	// which tells a lone Escape from the start of a sequence there; see lineedit_vi.go.
+	vi           viState
+	inputWaiting func(time.Duration) bool
 }
 
 // defaultTerminalColumns is used when the terminal will not say. Eighty is the
@@ -155,6 +160,7 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 	e.buffer = newLineBuffer()
 	e.recall = 0
 	e.lastArg = lastArgument{}
+	e.vi = viState{on: e.vi.on}
 	e.resetDrawState()
 	fmt.Fprint(e.screen, prompt)
 
@@ -208,6 +214,10 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		// yank-last-arg repeats only when pressed again straight after itself.
 		if key.kind != keyYankLastArg {
 			e.lastArg.active = false
+		}
+		if e.vi.on && e.viKey(key) {
+			e.redraw(prompt)
+			continue
 		}
 		switch key.kind {
 		case keyEnter:
@@ -306,7 +316,16 @@ func (e *lineEditor) nextKey() (key, error) {
 			}
 			e.afterCarriageReturn = false
 		}
-		if decoded, consumed := decodeKey(e.pending); decoded.kind != keyIncomplete {
+		decode := decodeKey
+		if e.vi.on {
+			decode = decodeViKey
+		}
+		// An Escape nothing follows soon is the key itself, in vi mode.
+		if e.vi.on && len(e.pending) == 1 && e.pending[0] == 0x1b && (e.inputWaiting == nil || !e.inputWaiting(escapeWait)) {
+			e.pending = e.pending[:0]
+			return key{kind: keyEscape}, nil
+		}
+		if decoded, consumed := decode(e.pending); decoded.kind != keyIncomplete {
 			e.afterCarriageReturn = decoded.kind == keyEnter && consumed == 1 && e.pending[0] == '\r'
 			e.enterFromPair = decoded.kind == keyEnter && consumed == 2
 			e.pending = e.pending[consumed:]

@@ -48,7 +48,6 @@ these names why, and names what busybox-w32 does with the same name.
 | `set -b` | 2 | Completion is already reported at the next prompt, which is the default behaviour it would be switching off. What `-b` asks for is the report *immediately*, mid-command, and there is no notification channel to switch on for that. |
 | `set -v` | 2 | A script is parsed in full before any of it runs, so by the time the option is set there is no unread input left to echo. `nemosh -v` is refused for the same reason. `set -n` acts: nothing after it runs, as in both references, and `nemosh -n SCRIPT` is the syntax check. |
 | `set -m`, `set -o monitor` | 2 | There is no job control to switch on: nothing here can stop a job and resume it, which is what `fg` and `bg` are refused for too. busybox-w32 accepts the option, with job control compiled out. |
-| `set -o vi` | 2 | The line editor's keys are emacs's, and there is no vi mode to switch to. busybox-w32 has one. |
 
 The shell's own command line takes what busybox's does:
 `nemosh [-ils] [-|+aCeEfnux] [-|+o NAME]... [-c COMMAND [NAME [ARG]...] | SCRIPT [ARG]...]`.
@@ -428,6 +427,37 @@ to reach and a rotation state to explain, and the first entry is what the gestur
     and past the oldest line it puts in nothing.
   - `M-u`, `M-l` and `M-c` put the rest of the next word in upper case, lower case, or
     capitalised, a word being letters and digits as readline's are.
+
+### The line editor's vi mode
+
+`set -o vi` is busybox's vi editing mode, from the next line on, and `set -o emacs` or
+`set +o vi` leaves it; vi and emacs turn each other off, as bash's two modes do. A line
+starts in insert mode, where the keys are the ones above. Escape goes to command mode, one
+character back, and there the keys are busybox's (libbb/lineedit.c):
+
+| Keys | Do |
+| --- | --- |
+| `i` `I` `a` `A` | insert at the cursor, at the start, after the cursor, at the end |
+| `x` `X` | delete the character under the cursor, or the one before it |
+| `w` `W` `e` `E` `b` `B` | the word motions: `w`, `e` and `b` stop at punctuation, the capitals only at blanks |
+| `0` `$` `h` `l` Space Backspace | the start, the end, left and right |
+| `j` `k` | the next and the previous history line |
+| `d` or `c` with `w` `W` `e` `E` `b` `B` Space `$` | delete over the motion, and `c` goes on to insert; `dd` and `cc` take the whole line |
+| `D` `C` | delete to the end, and `C` goes on to insert |
+| `p` `P` | put back what the last deletion took, after the cursor or at it |
+| `r` | replace the character under the cursor with the next key |
+
+Enter, `^C`, `^D`, `^L`, `^U`, `^W`, `^N`, `^P`, Delete, the arrows, Home and End, Ctrl-Left
+and Ctrl-Right, and Page Up and Page Down do what they do in insert mode. Any other key does
+nothing in command mode, so a mistyped letter never lands in the line. A history line is
+shown with the cursor at its start, in either mode, as busybox has it.
+
+busybox-w32 reads the console's key events, where Escape is always a key of its own. This
+editor reads what a terminal sends, which begins its sequences with Escape. So an Escape is
+read with the next byte only when that is `[` or `O`, and one that nothing follows within
+50 ms is the key on its own, the wait busybox's read_key makes on a terminal. Alt and a
+letter arrives as Escape and the letter, so in vi mode it is the two keys. No counts, no
+`u`, and `.` repeats nothing, as in busybox.
 
 ### History, and `$!`
 

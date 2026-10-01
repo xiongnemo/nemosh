@@ -9,11 +9,11 @@ import "fmt"
 //   - acting: braceexpand (-B) turns brace expansion off and on; physical (-P) makes cd and
 //     pwd follow links, see directory_options.go; histexpand (-H) and history are the
 //     prompt's `!` expansion and its history, on in a session and off in a script, as in
-//     bash;
-//   - recorded: remembered and reported, changing nothing -- emacs, the only editing mode
-//     there is; hashall (-h), since a command is looked up afresh each time; nolog, which
-//     bash ignores too; posix, since the behaviour here is busybox ash's, a POSIX shell's,
-//     either way; interactive-comments, shared with shopt's name;
+//     bash; emacs turns busybox's vi off, the line editor's other mode (set_builtin.go);
+//   - recorded: remembered and reported, changing nothing -- hashall (-h), since a command is
+//     looked up afresh each time; nolog, which bash ignores too; posix, since the behaviour
+//     here is busybox ash's, a POSIX shell's, either way; interactive-comments, shared with
+//     shopt's name;
 //   - fixed: igncr is always on, as a script's carriage returns are dropped here as in
 //     busybox-w32; keyword (-k), onecmd (-t) and privileged (-p) are always off. The value
 //     there is is accepted, and the other refused with the reason.

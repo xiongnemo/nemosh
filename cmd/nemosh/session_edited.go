@@ -84,6 +84,8 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			}
 		}
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
+		// `set -o vi` takes effect at the next line, as busybox reads its flag for each one.
+		editor.vi.on = rt.ShellOptionIsOn("vi")
 		line, err := readLineInRawMode(ctx, terminal, editor, prompt)
 		if ctx.Err() != nil {
 			rt.CloseInteractive(ctx)
