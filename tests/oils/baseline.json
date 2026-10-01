@@ -461,10 +461,6 @@
       "(( )) with redirect": "fail",
       "literal strings inside (( ))": "fail"
     },
-    "empty-bodies.test.sh": {
-      "Empty do/done": "ash-only",
-      "Empty then/fi": "ash-only"
-    },
     "errexit-osh.test.sh": {
       "Regression": "fail",
       "command_sub_errexit stops at first error": "fail",

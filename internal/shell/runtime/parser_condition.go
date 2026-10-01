@@ -23,6 +23,30 @@ import (
 // which is how a compound used where a command is expected is represented everywhere else.
 // A group's status is its last command's, which is exactly a compound_list's.
 
+// requireCommands refuses a compound_list with no command in it -- `then fi`, `else fi`, `do
+// done` -- which POSIX's grammar has not got: both references refuse each at the word that
+// came where a command should, and these ran nothing, successfully.
+func requireCommands(body []programNode, keyword string) error {
+	if len(body) == 0 {
+		return fmt.Errorf("syntax error: %s with no command", keyword)
+	}
+	return nil
+}
+
+// parseGroupBody reads what a group holds. A brace group needs a separator before its `}`,
+// and neither kind may hold no command: `( )` is refused in both references, `unexpected
+// ")"`, and ran nothing here, successfully.
+func parseGroupBody(opener byte, body, before string, budget *parseBudget, depth int) (Script, error) {
+	if opener == '{' && !hasBraceSeparator(body) {
+		return Script{}, fmt.Errorf("syntax error: expected separator before }")
+	}
+	nested, err := parseNestedScript(body, before, budget, depth)
+	if err == nil && len(nested.program) == 0 {
+		return Script{}, fmt.Errorf("syntax error: %c with no command", opener)
+	}
+	return nested, err
+}
+
 // conditionKeywords open a compound whose header is a condition rather than a name or a word.
 // An elif is one too, for the elif rewrite; see expandElifLines.
 var conditionKeywords = [...]string{"if", "elif", "while", "until"}
@@ -99,7 +123,13 @@ func parseCondition(lines []string, spans []compoundSpan, byStart map[int]int, s
 		return list{}, err
 	}
 	if span.start+1 >= end && !isDefinition {
-		return parseTypedLineWithBudget(header, budget, depth)
+		// `if; then` and `while; do` are a condition with no command in it, which POSIX's grammar
+		// has not got and both references refuse; the second ran forever.
+		condition, err := parseTypedLineWithBudget(header, budget, depth)
+		if err == nil && len(condition.items) == 0 {
+			return list{}, fmt.Errorf("syntax error: %s with no condition", keyword)
+		}
+		return condition, err
 	}
 	var program []programNode
 	if isDefinition {

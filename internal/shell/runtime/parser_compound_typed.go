@@ -81,12 +81,17 @@ func parseTypedIf(lines []string, spans []compoundSpan, byStart map[int]int, spa
 		thenEnd = span.elseIndex
 	}
 	thenBody, err := parseTypedProgram(lines, spans, byStart, span.thenIndex+1, thenEnd, budget, depth)
+	if err == nil {
+		err = requireCommands(thenBody, "then")
+	}
 	if err != nil {
 		return nil, err
 	}
 	var elseBody []programNode
 	if span.elseIndex >= 0 {
-		elseBody, err = parseTypedProgram(lines, spans, byStart, span.elseIndex+1, span.end, budget, depth)
+		if elseBody, err = parseTypedProgram(lines, spans, byStart, span.elseIndex+1, span.end, budget, depth); err == nil {
+			err = requireCommands(elseBody, "else")
+		}
 	}
 	return ifNode{condition: condition, thenBody: thenBody, elseBody: elseBody}, err
 }
@@ -95,6 +100,9 @@ func parseTypedIf(lines []string, spans []compoundSpan, byStart map[int]int, spa
 // entered again before it is read, and the loop carries it for what its header expands.
 func parseTypedLoop(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, budget *parseBudget, depth int) (programNode, error) {
 	body, err := parseTypedProgram(lines, spans, byStart, span.doIndex+1, span.end, budget, depth)
+	if err == nil {
+		err = requireCommands(body, "do")
+	}
 	if err != nil {
 		return nil, err
 	}
