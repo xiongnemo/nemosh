@@ -24,19 +24,9 @@ import (
 
 func newTarApplet() Applet {
 	return simpleApplet{name: "tar", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, tarOldStyle(args), "ctxvzjaO", "fC")
+		request, options, err := newTarRequest(ctx, args, stdin)
 		if err != nil {
 			return err
-		}
-		request := tarRequest{
-			verbose:    options.has('v'),
-			toStdout:   options.has('O'),
-			gzip:       options.has('z'),
-			bzip2:      options.has('j'),
-			file:       options.value('f'),
-			directory:  options.value('C'),
-			operands:   operands,
-			autoDetect: options.has('a'),
 		}
 		// Exactly one operation, counted rather than fallen through. A switch on the
 		// three letters in order silently *chose* one when several were given, so
@@ -53,13 +43,20 @@ func newTarApplet() Applet {
 		if operations != 1 {
 			return fmt.Errorf("exactly one of -c, -t or -x is required")
 		}
-		switch {
-		case options.has('c'):
+		if options.has('c') {
 			return request.create(ctx, stdout, stderr)
-		case options.has('t'):
-			return request.list(ctx, stdin, stdout)
 		}
-		return request.extract(ctx, stdin, stdout, stderr)
+		// Listing and extracting take the names given; see tarSelection.
+		request.selection.accept = request.operands
+		if options.has('t') {
+			err = request.list(ctx, stdin, stdout)
+		} else {
+			err = request.extract(ctx, stdin, stdout, stderr)
+		}
+		if err == nil && request.selection.unmatched(stderr) {
+			return ExitStatus(1)
+		}
+		return err
 	}}
 }
 
@@ -88,6 +85,10 @@ type tarRequest struct {
 	file       string
 	directory  string
 	operands   []string
+	// keepOld is -k, keepTime all but -m, dereference -h, and the rest their long options;
+	// selection is what is listed, extracted or left out of an archive (tar_select.go).
+	keepOld, keepTime, dereference, noRecursion, overwrite bool
+	selection                                              *tarSelection
 	// view is the shell tar runs in, whose umask what it extracts is made through.
 	view ProcessView
 }
@@ -149,6 +150,9 @@ func (r tarRequest) list(ctx context.Context, stdin io.Reader, stdout io.Writer)
 		if err != nil {
 			return fmt.Errorf("invalid tar archive: %v", err)
 		}
+		if !r.selection.takes(header.Name) {
+			continue
+		}
 		// The name is printed as the archive holds it, unchecked -- listing is
 		// how somebody inspects a suspicious archive, so a refusal here would
 		// hide exactly what they are looking for. Extraction is where the check
@@ -188,6 +192,9 @@ func (r tarRequest) extract(ctx context.Context, stdin io.Reader, stdout, stderr
 		if err != nil {
 			return fmt.Errorf("invalid tar archive: %v", err)
 		}
+		if !r.selection.takes(header.Name) {
+			continue
+		}
 		if err := r.extractEntry(reader, header, root, collisions, stdout, stderr); err != nil {
 			return err
 		}
@@ -219,9 +226,17 @@ func (r tarRequest) extractionRoot(ctx context.Context) (string, error) {
 	return native, nil
 }
 
-// extractEntry writes one entry, having checked where it may land.
+// extractEntry writes one entry, having checked where it may land. -v says the name the archive
+// holds, even of an entry --strip-components leaves nothing of, as busybox lists it.
 func (r tarRequest) extractEntry(reader *tar.Reader, header *tar.Header, root string,
 	collisions *archiveCollisions, stdout, stderr io.Writer) error {
+	listed := header.Name
+	if !r.selection.strippedEntry(header) {
+		if r.verbose {
+			fmt.Fprintln(stderr, listed)
+		}
+		return nil
+	}
 	safe, err := safeArchivePath(header.Name)
 	if err != nil {
 		// Refused and skipped rather than aborting: a hostile entry among honest
@@ -241,7 +256,7 @@ func (r tarRequest) extractEntry(reader *tar.Reader, header *tar.Header, root st
 		return nil
 	}
 	if r.verbose {
-		fmt.Fprintln(stderr, safe)
+		fmt.Fprintln(stderr, listed)
 	}
 	if r.toStdout {
 		if header.Typeflag != tar.TypeReg {
@@ -258,16 +273,7 @@ func (r tarRequest) extractEntry(reader *tar.Reader, header *tar.Header, root st
 		if err := os.MkdirAll(filepath.Dir(destination), createMode(r.view, 0o755)); err != nil {
 			return err
 		}
-		file, err := createFile(r.view, destination)
-		if err != nil {
-			return err
-		}
-		_, copyErr := io.Copy(file, reader)
-		closeErr := file.Close()
-		if copyErr != nil {
-			return copyErr
-		}
-		return closeErr
+		return r.extractFile(reader, header, safe, destination)
 	}
 	// A symlink, device, fifo or socket entry. Windows has no honest equivalent
 	// for most of these and a symlink needs a privilege this may not have, so

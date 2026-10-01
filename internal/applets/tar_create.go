@@ -33,7 +33,11 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 	archive := tar.NewWriter(stream)
 	view := ProcessViewFromContext(ctx)
 	for _, operand := range r.operands {
-		if err := addTarOperand(archive, view, operand, r.verbose, stderr); err != nil {
+		native, err := resolveHostPath(view, operand)
+		if err != nil {
+			return operandFailure(operand, err)
+		}
+		if err := r.addTarEntry(archive, native, filepath.ToSlash(operand), nil, stderr); err != nil {
 			return err
 		}
 	}
@@ -59,58 +63,78 @@ func (r tarRequest) createArchiveOutput(ctx context.Context, stdout io.Writer) (
 	return file, func() { file.Close() }, nil
 }
 
-// addTarOperand walks one operand into the archive, storing slash-separated
-// names so the archive is readable on every platform.
-func addTarOperand(archive *tar.Writer, view ProcessView, operand string, verbose bool, stderr io.Writer) error {
-	native, err := resolveHostPath(view, operand)
-	if err != nil {
-		return operandFailure(operand, err)
+// addTarEntry puts a name into the archive, and what is under it but under --no-recursion. A
+// name an exclusion matches is left out, and all under it; -h stores what a symbolic link
+// points at, a directory's contents too, and a directory -h comes back to is not gone into
+// again. A link is otherwise stored as one, with its target, which it was stored without.
+func (r tarRequest) addTarEntry(archive *tar.Writer, native, name string, above []os.FileInfo, stderr io.Writer) error {
+	if excludedFromArchive(r.selection.reject, name) {
+		return nil
 	}
-	return filepath.WalkDir(native, func(current string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return operandFailure(operand, walkErr)
+	info, err := os.Lstat(native)
+	if err == nil && r.dereference {
+		info, err = os.Stat(native)
+	}
+	if err != nil {
+		return operandFailure(name, err)
+	}
+	link := ""
+	if info.Mode()&os.ModeSymlink != 0 {
+		if link, err = os.Readlink(native); err != nil {
+			return operandFailure(name, err)
 		}
-		relative, err := filepath.Rel(native, current)
-		if err != nil {
-			return err
-		}
-		name := path.Join(filepath.ToSlash(operand), filepath.ToSlash(relative))
-		if relative == "." {
-			name = filepath.ToSlash(operand)
-		}
-		info, err := entry.Info()
-		if err != nil {
-			return err
-		}
-		header, err := tar.FileInfoHeader(info, "")
-		if err != nil {
-			return err
-		}
-		// Stored with forward slashes and no drive letter, which is what makes the
-		// archive readable by tar on any platform -- and what stops this build
-		// writing the very drive-qualified names its own extractor refuses.
-		header.Name = name
-		if entry.IsDir() {
-			header.Name += "/"
-		}
-		if verbose {
-			fmt.Fprintln(stderr, header.Name)
-		}
-		if err := archive.WriteHeader(header); err != nil {
-			return err
-		}
-		if entry.IsDir() || !info.Mode().IsRegular() {
+	}
+	header, err := tar.FileInfoHeader(info, filepath.ToSlash(link))
+	if err != nil {
+		return err
+	}
+	// Stored with forward slashes and no drive letter, which is what makes the
+	// archive readable by tar on any platform -- and what stops this build
+	// writing the very drive-qualified names its own extractor refuses.
+	header.Name = name
+	if info.IsDir() {
+		header.Name += "/"
+	}
+	if r.verbose {
+		fmt.Fprintln(stderr, header.Name)
+	}
+	if err := archive.WriteHeader(header); err != nil {
+		return err
+	}
+	if info.Mode().IsRegular() {
+		return copyIntoArchive(archive, native)
+	}
+	if !info.IsDir() || r.noRecursion {
+		return nil
+	}
+	for _, ancestor := range above {
+		if os.SameFile(ancestor, info) {
 			return nil
 		}
-		file, err := os.Open(current)
-		if err != nil {
+	}
+	entries, err := os.ReadDir(native)
+	if err != nil {
+		return operandFailure(name, err)
+	}
+	for _, entry := range entries {
+		inner := path.Join(name, entry.Name())
+		if err := r.addTarEntry(archive, filepath.Join(native, entry.Name()), inner, append(above, info), stderr); err != nil {
 			return err
 		}
-		_, copyErr := io.Copy(archive, file)
-		closeErr := file.Close()
-		if copyErr != nil {
-			return copyErr
-		}
-		return closeErr
-	})
+	}
+	return nil
+}
+
+// copyIntoArchive is a file's contents, after its header.
+func copyIntoArchive(archive *tar.Writer, native string) error {
+	file, err := os.Open(native)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(archive, file)
+	closeErr := file.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	return closeErr
 }

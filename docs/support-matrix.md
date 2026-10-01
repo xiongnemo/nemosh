@@ -802,7 +802,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `chattr` | `-R`, and `-` or `+` with `r h s a t n`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `tac` | none | refused by name |
 | `tsort` | none; a cycle is reported rather than truncated | refused by name |
-| `tar` | `-c -t -x -v -z -j -a -O -f -C`, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too | refused by name |
+| `tar` | `-c -t -x -v -z -j -a -O -f -C -k -m -o -h -T -X`, busybox's long options, `--exclude`, `--strip-components`, `--no-recursion` and `--overwrite` among them, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too; the FILEs name what is listed or extracted, see **The archivers** | refused by name |
 | `tail` | `-n -c -q -v -f -F -s`, the `-N` form, and an attached value (`-n2`, `-n+2`); every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
 | `test`, `[` | POSIX expressions; on Windows `-x` is busybox-w32's execute bit: a directory, a name ending `.com .exe .sh .bat .cmd`, or a file that begins `#!` or is a program image, and not a DLL whatever it is called | an operand, per the POSIX one-argument rule |
 | `tee` | `-a -i`; `-` is stdout, and a file that cannot be opened is named while the rest are written | refused by name |
@@ -1536,6 +1536,25 @@ consequence and the same thing every Windows unzip does.
 archive they do not trust, so hiding the hostile entry would defeat the purpose.
 
 `tar` reuses this build's own gzip, so `tar -czf` needs no second program.
+
+**What `tar` takes**, as busybox selects it. Listing and extracting take the
+FILEs named and what is under them, each a pattern matched against as many
+leading components of an entry's name as the pattern has: `src/sub` takes
+`src/sub/b.log`, and `src/*.txt` takes `src/a.txt`. `--exclude` and `-X` are
+matched the same way, so `*.log` there matches a first component only.
+`--strip-components` shortens the names as they are written; the FILEs select by
+the names the archive holds, and `tar -t` lists them whole. Creating leaves out
+what an exclusion matches at the start of any component. A file already there is
+removed and written anew, so a link there is replaced rather than written
+through; `--overwrite` writes into it, and `-k` stops the extraction at it.
+Modification times are restored but under `-m`.
+
+Two answers are not busybox's. A FILE that took nothing is said and fails the
+command; busybox asks instead whether an entry it took is *spelled* like the
+FILE, so `tar xf a.tar 'src/*.txt'` fails there having extracted what it
+matched, and only the first such FILE is named. And a directory standing where a
+file is extracted is `Is a directory` here, as busybox says on Linux, where
+busybox-w32 says `Permission denied`.
 `unzip` requires a file operand and says why: zip keeps its central directory at
 the *end* of the file, so it cannot be read from a pipe. With neither `-o` nor
 `-n`, an existing file is left alone and said so -- busybox prompts, and there is
