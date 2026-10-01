@@ -28,7 +28,9 @@ func newArApplet() Applet {
 		if err != nil {
 			return err
 		}
-		options, operands, err := parseAppletOptions(ctx, rest, "xptrov", "")
+		// c is taken and does nothing, as busybox's getopt string "voc" takes it, so
+		// `ar rc lib.a x.o`, GNU's way of writing it, works; it was an invalid option.
+		options, operands, err := parseAppletOptions(ctx, rest, "xptrovc", "")
 		if err != nil {
 			return err
 		}
@@ -68,7 +70,7 @@ func arVerb(args []string) (byte, []string, error) {
 	// in the middle of the file name and listing the archive. GNU refuses that
 	// invocation on its `l`, which is the same answer.
 	for index := 0; index < len(first); index++ {
-		if !containsByte("xptrov", first[index]) {
+		if !containsByte("xptrovc", first[index]) {
 			return 0, nil, invalidOption(first[index])
 		}
 	}
@@ -107,7 +109,7 @@ func (r arRequest) run(stdout, stderr io.Writer) error {
 	}
 	file, err := os.Open(native)
 	if err != nil {
-		return operandFailure(r.archive, err)
+		return cannotOpen(r.archive, err)
 	}
 	defer file.Close()
 	return r.read(bufio.NewReader(file), stdout, stderr)

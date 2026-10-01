@@ -691,7 +691,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
 | `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
-| `ar` | verbs `x p t r`, plus `-o -v`; the long-name table is read, never written | refused by name |
+| `ar` | verbs `x p t r`, plus `-o -v`, and `c`, taken and ignored as busybox takes it; the long-name table is read, never written | refused by name |
 | `ascii` | none; the character table, read down in eight columns | refused by name |
 | `arch` | none; the same name `uname -m` gives | refused by name |
 | `cal` | `-m -y`, and `[[MONTH] YEAR]`; September 1752 is short, as in every cal. `-j` is refused | read as a number, so a bad one is refused |

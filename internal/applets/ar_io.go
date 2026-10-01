@@ -78,7 +78,7 @@ func (r arRequest) create(native string, stderr io.Writer) error {
 	}
 	file, err := createFile(r.view, native)
 	if err != nil {
-		return operandFailure(r.archive, err)
+		return cannotOpen(r.archive, err)
 	}
 	writer := bufio.NewWriter(file)
 	writeErr := r.writeMembers(writer, stderr)

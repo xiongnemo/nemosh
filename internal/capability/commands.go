@@ -80,7 +80,7 @@ var commands = []Command{
 	{Name: "fold", Short: "bsw", ValueShort: "w", Operand: AnyPath},
 	{Name: "tsort", Operand: AnyPath},
 	{Name: "strings", Short: "afont", ValueShort: "nt", Operand: AnyPath},
-	{Name: "ar", Short: "xptrov", Operand: AnyPath},
+	{Name: "ar", Short: "xptrovc", Operand: AnyPath},
 	{Name: "arch"},
 	{Name: "cal", Short: "my", Operand: AnyPath},
 	{Name: "getopt", Short: "qQuaTolns", ValueShort: "olns", Operand: AnyPath,
