@@ -4,9 +4,9 @@ import (
 	"context"
 )
 
-// expandCommandWords expands a simple command's words in POSIX 2.9.1's order: the command
-// name and its arguments first, then the assignments in front of them, one at a time, each
-// bound while the ones after it expand.
+// A simple command's words expand in POSIX 2.9.1's order: the command name and its arguments
+// first, then the assignments in front of them, one at a time, each bound while the ones after
+// it expand. Its redirections are made between the two; see runSimpleWords.
 //
 // They were expanded together and in the order written, and every assignment was made after
 // all of them had expanded, so no assignment saw another: `a=1 b=$a` left b empty, `x=6 y=$x`
@@ -16,16 +16,23 @@ import (
 //
 // Leading assignments are expanded unsplit. Recognised on the word rather than on its
 // expansion, which is the only place the distinction still exists: see assignment_expand.go
-// for what `d=$(date)` did without this. The second result is how many of the tokens they
-// are, so the caller can tell them from the command without looking again at the text.
-func (r Runtime) expandCommandWords(ctx context.Context, command []word, savedStatus int) ([]shellToken, int) {
+// for what `d=$(date)` did without this.
+
+// assignmentPrefix is how many of a command's words are the assignments in front of it.
+func assignmentPrefix(command []word) int {
 	prefix := 0
 	for prefix < len(command) && isAssignmentWord(command[prefix]) {
 		prefix++
 	}
+	return prefix
+}
+
+// expandCommandArguments expands the command name and its arguments, the words after the
+// assignments in front of them: a declaration utility's assignment operands unsplit.
+func (r Runtime) expandCommandArguments(ctx context.Context, words []word, savedStatus int) []shellToken {
 	var rest []shellToken
 	declaration := false
-	for index, item := range command[prefix:] {
+	for index, item := range words {
 		var values []string
 		literal := false
 		if declaration && isAssignmentWord(item) {
@@ -41,8 +48,7 @@ func (r Runtime) expandCommandWords(ctx context.Context, command []word, savedSt
 			rest[marked].arrayLiteral = literal
 		}
 	}
-	leading := r.expandLeadingAssignments(ctx, command[:prefix], savedStatus)
-	return append(leading, rest...), len(leading)
+	return rest
 }
 
 // expandLeadingAssignments expands the assignments in front of a command in order, binding

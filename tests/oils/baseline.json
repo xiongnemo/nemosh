@@ -120,7 +120,8 @@
       "Using ${x-default} after unsetting a temp binding shadowing a global": "fail",
       "readonly $x where x='b c'": "fail",
       "readonly a=(1 2) no_value c=(3 4) makes 'no_value' readonly": "fail",
-      "readonly array should not be modified by a+=(1)": "fail"
+      "readonly array should not be modified by a+=(1)": "fail",
+      "redirect after bare assignment": "ash-only"
     },
     "background.test.sh": {
       "wait -n with arguments - arguments are respected": "fail",
@@ -591,6 +592,7 @@
       "$\"\" is a synonym for \"\"": "ash-only"
     },
     "redirect-command.test.sh": {
+      "Redirect in assignment": "ash-only",
       "redirect bash extensions:   [[  ((  for ((": "fail"
     },
     "redirect-multi.test.sh": {
@@ -661,6 +663,7 @@
       "temp assignment x=~ env": "fail"
     },
     "toysh-posix.test.sh": {
+      "Evaluation order of redirect and ${undef?error}": "ash-only",
       "Failed redirect in assignment, vs. export": "ash-only",
       "Fatal error": "ash-only",
       "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",

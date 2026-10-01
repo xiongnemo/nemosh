@@ -9,9 +9,9 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2091 of the 2548 cases bash passes: 82.1%.**
+**nemosh passes 2088 of the 2548 cases bash passes: 81.9%.**
 
-Of the other 457, it does 107 the way the files record of ash, which may be busybox's
+Of the other 460, it does 110 the way the files record of ash, which may be busybox's
 way, and 350 neither way.
 
 | | cases |
@@ -21,7 +21,7 @@ way, and 350 neither way.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2091 |
+| that nemosh passes of those | 2088 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -59,7 +59,7 @@ of ash.
 | assign-deferred.test.sh | 9 | 9 | 7 | 77.8% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | assign-extended.test.sh | 39 | 34 | 25 | 73.5% | 1 | 0 |
-| assign.test.sh | 48 | 45 | 37 | 82.2% | 1 | 28 |
+| assign.test.sh | 48 | 45 | 36 | 80.0% | 2 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
 | ble-features.test.sh | 9 | 9 | 4 | 44.4% | 3 | 9 |
 | ble-idioms.test.sh | 26 | 26 | 21 | 80.8% | 2 | 23 |
@@ -138,7 +138,7 @@ of ash.
 | process-sub.test.sh | 9 | 9 | 9 | 100.0% | 0 | 5 |
 | prompt.test.sh | 31 | 24 | 22 | 91.7% | 0 | 0 |
 | quote.test.sh | 35 | 35 | 34 | 97.1% | 1 | 35 |
-| redirect-command.test.sh | 23 | 23 | 22 | 95.7% | 0 | 22 |
+| redirect-command.test.sh | 23 | 23 | 21 | 91.3% | 1 | 22 |
 | redirect-multi.test.sh | 13 | 13 | 5 | 38.5% | 2 | 7 |
 | redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 28 |
 | regex.test.sh | 37 | 36 | 33 | 91.7% | 0 | 10 |
@@ -152,7 +152,7 @@ of ash.
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
 | tilde.test.sh | 14 | 12 | 11 | 91.7% | 1 | 10 |
-| toysh-posix.test.sh | 22 | 22 | 15 | 68.2% | 7 | 22 |
+| toysh-posix.test.sh | 22 | 22 | 14 | 63.6% | 8 | 22 |
 | toysh.test.sh | 8 | 7 | 6 | 85.7% | 0 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
 | unicode.test.sh | 7 | 2 | 1 | 50.0% | 0 | 2 |
@@ -173,4 +173,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 11 | 64.7% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2665 | 2548 | 2091 | 82.1% | 107 | 1447 |
+| all | 2665 | 2548 | 2088 | 81.9% | 110 | 1447 |

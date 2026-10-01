@@ -108,22 +108,21 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// so `cat <(echo hi)` still has a file to open; a snapshot carries its own expansion
 	// state, so a background job or a subshell removes its own and not another's.
 	defer r.cleanUpProcessSubstitutions()
-	var ok bool
-	operations, ok = r.expandRedirectOperations(ctx, operations, savedStatus)
-	if r.shellErrorRaised() {
-		return r.shellErrorResult()
-	}
-	if !ok {
-		return lineResult{status: 1}
-	}
 	// `[[ ]]` is handled here, before expansion, because that is the whole of
 	// what makes it different: inside it a word is not split and not globbed, and
 	// whether the right-hand side was quoted still matters. See double_bracket.go.
 	if isDoubleBracket(command) {
+		expanded, ok := r.expandRedirectOperations(ctx, operations, savedStatus)
+		if r.shellErrorRaised() {
+			return r.shellErrorResult()
+		}
+		if !ok {
+			return lineResult{status: 1}
+		}
 		// Its redirections are made, as any command's are: `[[ -r $f ]] 2>/dev/null` and
 		// `[[ $x ]] > log` create their files in both references. They were expanded here and
 		// then dropped.
-		return r.withAppliedRedirectsFor(false, operations, func(redirected Runtime) lineResult {
+		return r.withAppliedRedirectsFor(false, expanded, func(redirected Runtime) lineResult {
 			return redirected.runDoubleBracket(ctx, command, savedStatus)
 		})
 	}
@@ -144,8 +143,14 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// Where this command's own substitutions begin, so an assignment-only command can exit
 	// with the status of the last one *it* performed rather than one from an earlier line.
 	mark := r.expansion.substitutionMark()
-	// The words in POSIX's order, the assignments one at a time; see command_words.go.
-	expanded, assigned := r.expandCommandWords(ctx, command, savedStatus)
+	return r.runSimpleWords(ctx, command, operations, mark, savedStatus)
+}
+
+// runExpandedWords runs a simple command once its words are expanded: its redirections are
+// made here unless the caller made them already and passes none. tracer is the shell that
+// writes the trace, to the standard error the command had before its redirections, as
+// busybox's preverrout_fd keeps it.
+func (r Runtime) runExpandedWords(ctx context.Context, tracer Runtime, command []word, expanded []shellToken, assigned int, operations []redirectOperation, mark, savedStatus int) lineResult {
 	if r.shellErrorRaised() {
 		return r.shellErrorResult()
 	}
@@ -156,7 +161,7 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	}
 	assignments, commandArgs := splitAssignments(args, assigned)
 	if len(assignments) > 0 && len(commandArgs) == 0 {
-		r.traceCommand(ctx, args, savedStatus)
+		tracer.traceCommand(ctx, args, savedStatus)
 		if failed := r.redirectionsOnly(operations, lineResult{}); failed.status != 0 {
 			return failed
 		}
@@ -165,9 +170,9 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 		return r.abortOnShellError(lineResult{status: status})
 	}
 	if command[0].arithmetic && len(args) == 2 {
-		r.traceArithmetic(ctx, args[1], savedStatus)
+		tracer.traceArithmetic(ctx, args[1], savedStatus)
 	} else {
-		r.traceCommand(ctx, args, savedStatus)
+		tracer.traceCommand(ctx, args, savedStatus)
 	}
 	result := r.dispatchCommand(ctx, commandArgs, assignments, expanded, operations, savedStatus)
 	// `$_` is the last argument of the command that just finished, or its name when
