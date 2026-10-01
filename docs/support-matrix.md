@@ -177,6 +177,7 @@ cancellation, and an external command in the job, launched with
 | a pid that has already exited | refused, not reported as killed — the check busybox makes with `GetExitCodeProcess` first |
 | a job that has already ended | refused the same way. Both references accept `kill %1` for a job that has ended but not been reported; they refuse `kill $pid` once the process is gone, and here `$!` is `%1`, so the second is what a script is writing |
 | pid `0` or negative | refused on Windows: those mean process groups, which Windows has not got in the POSIX sense. Passed through elsewhere |
+| its failures | busybox's statuses, in this shell's words. No operand is `expected a job or a process id`, 1, where bash prints its usage with 2; a signal it does not know is `invalid signal 'X'`; an operand that is no number is `invalid pid 'X'`; one it could not signal is `cannot signal pid N: No such process` (or `Permission denied`), in strerror's words, where Windows said `The parameter is incorrect.`; and the status is how many operands failed, as busybox counts them, 255 at most. A job spec that names no job is 2, and since every spec is found before anything is sent, nothing is signalled. `%%` and `%-` with no such job are `No current job` and `No previous job`, as every ash says them |
 
 `kill` does not claim the job, so a later `wait %N` still finds it.
 

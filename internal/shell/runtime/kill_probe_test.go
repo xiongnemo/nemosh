@@ -40,7 +40,9 @@ func TestKill_zeroSaysNoOnceTheJobHasEnded(t *testing.T) {
 	if strings.Contains(stdout, "polls=100") {
 		t.Fatalf("the probe never said the job had ended:\n%s", stdout)
 	}
-	if !strings.Contains(stdout, "after=1") || !strings.Contains(stderr, "already ended") {
+	// Said of the pid, which has no process now; under the goroutine launcher `$!` is `%1`,
+	// and it is the job that has ended.
+	if !strings.Contains(stdout, "after=1") || !strings.Contains(stderr, ": No such process") && !strings.Contains(stderr, "%1: the job has already ended") {
 		t.Fatalf("stdout = %q, stderr = %q; want a failed probe that says the job has ended", stdout, stderr)
 	}
 }

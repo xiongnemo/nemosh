@@ -3,7 +3,7 @@
 package proc
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"golang.org/x/sys/windows"
@@ -37,7 +37,7 @@ func Terminate(pid, signal int) error {
 	if pid <= 0 {
 		// Zero and negative address process groups, which Windows has not got in
 		// the POSIX sense. Refusing beats guessing which processes were meant.
-		return fmt.Errorf("%d: this build signals a single process id", pid)
+		return killFailure(pid, errors.New("this build signals a single process id"))
 	}
 	access := uint32(windows.PROCESS_TERMINATE | windows.PROCESS_QUERY_LIMITED_INFORMATION)
 	if signal == 0 {
@@ -47,16 +47,16 @@ func Terminate(pid, signal int) error {
 	}
 	handle, err := windows.OpenProcess(access, false, uint32(pid))
 	if err != nil {
-		return fmt.Errorf("%d: %w", pid, err)
+		return killFailure(pid, err)
 	}
 	defer windows.CloseHandle(handle)
 
 	var code uint32
 	if err := windows.GetExitCodeProcess(handle, &code); err != nil {
-		return fmt.Errorf("%d: %w", pid, err)
+		return killFailure(pid, err)
 	}
 	if code != stillActive {
-		return fmt.Errorf("%d: no such process", pid)
+		return killFailure(pid, ErrNoSuchProcess)
 	}
 	if signal == 0 {
 		return nil
@@ -64,9 +64,23 @@ func Terminate(pid, signal int) error {
 	// The exit code busybox leaves behind, so a wrapper reading it sees the same
 	// number under either shell.
 	if err := windows.TerminateProcess(handle, uint32(signal)<<24); err != nil {
-		return fmt.Errorf("%d: %w", pid, err)
+		return killFailure(pid, err)
 	}
 	return nil
+}
+
+// killCause words what OpenProcess answers as strerror would. A pid that names no process is
+// ERROR_INVALID_PARAMETER, which busybox-w32 turns into "Invalid argument"; it is ESRCH's "No
+// such process" here, which is what happened and what busybox says of it on Linux. One this
+// session may not touch is busybox-w32's EACCES.
+func killCause(err error) error {
+	switch {
+	case errors.Is(err, windows.ERROR_INVALID_PARAMETER):
+		return ErrNoSuchProcess
+	case errors.Is(err, windows.ERROR_ACCESS_DENIED):
+		return errors.New("Permission denied")
+	}
+	return err
 }
 
 // List reports every process this session can see, excluding the caller.

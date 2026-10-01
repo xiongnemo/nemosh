@@ -3,7 +3,7 @@
 package proc
 
 import (
-	"fmt"
+	"errors"
 	"syscall"
 )
 
@@ -14,9 +14,21 @@ import (
 // unlike Windows where there is nothing to pass it to.
 func Terminate(pid, signal int) error {
 	if err := syscall.Kill(pid, syscall.Signal(signal)); err != nil {
-		return fmt.Errorf("%d: %w", pid, err)
+		return killFailure(pid, err)
 	}
 	return nil
+}
+
+// killCause is strerror's words for the two answers kill(2) gives about a pid, which Go spells
+// in lower case.
+func killCause(err error) error {
+	switch {
+	case errors.Is(err, syscall.ESRCH):
+		return ErrNoSuchProcess
+	case errors.Is(err, syscall.EPERM):
+		return errors.New("Operation not permitted")
+	}
+	return err
 }
 
 // List is refused here rather than approximated.

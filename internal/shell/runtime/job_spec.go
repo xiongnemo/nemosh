@@ -31,6 +31,19 @@ func (s *jobScope) resolveJobSpec(spec string) jobID {
 	return jobID(value)
 }
 
+// noSuchJob is what kill, jobs and wait say of a spec that names no job: "No current job" and
+// "No previous job" for those two, as every ash says them, busybox's and dash among them, and
+// "%9: no such job" for the rest. `kill %%` with no jobs said "%%: no such job".
+func noSuchJob(spec string) string {
+	switch spec {
+	case "%", "%%", "%+":
+		return "No current job"
+	case "%-":
+		return "No previous job"
+	}
+	return spec + ": no such job"
+}
+
 // snapshot is the table newest first, the order busybox lists it in: the current job, then
 // the previous one, then the rest.
 func (s *jobScope) snapshot() []*jobRecord {

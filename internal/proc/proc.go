@@ -17,7 +17,10 @@
 // Linux here is a build-and-test target rather than a supported one.
 package proc
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Process is declared in sample.go, because the list and the monitor want the same type. It
 // used to be a pair of fields -- pid and image name -- and that was all Toolhelp32 could
@@ -30,3 +33,15 @@ import "errors"
 // must report it rather than treat it as an empty list -- "nothing matched" and
 // "I cannot see" are different answers, and only one of them is safe to act on.
 var ErrListUnsupported = errors.New("listing processes is not implemented on this platform")
+
+// ErrNoSuchProcess is a pid with no running process behind it, whether there never was one or
+// it has exited: strerror's words for ESRCH, as the C library spells them everywhere.
+var ErrNoSuchProcess = errors.New("No such process")
+
+// killFailure is a signal that could not be sent: `cannot signal pid N: why`, the pid unquoted
+// and the why as strerror words it (killCause), the shape busybox gives it. It said `N: The
+// parameter is incorrect.` on Windows for a pid that was not there, and `N: no such process`
+// elsewhere.
+func killFailure(pid int, err error) error {
+	return fmt.Errorf("cannot signal pid %d: %w", pid, killCause(err))
+}

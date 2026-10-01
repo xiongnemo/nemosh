@@ -152,7 +152,7 @@ func (r Runtime) selectJobs(records []*jobRecord, request jobsRequest) ([]*jobRe
 		for _, operand := range request.operands {
 			record, ok := r.jobScope.lookup(r.jobScope.resolveJobSpec(operand))
 			if !ok {
-				fmt.Fprintf(r.streams.Stderr, "jobs: %s: no such job\n", operand)
+				fmt.Fprintf(r.streams.Stderr, "jobs: %s\n", noSuchJob(operand))
 				status = 2
 				continue
 			}

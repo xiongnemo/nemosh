@@ -115,7 +115,8 @@ func (v *topView) confirmKill() {
 		v.prompting = false
 		if label == "Terminate" {
 			if err := proc.Terminate(row.Process.PID, 15); err != nil {
-				v.status.SetText(fmt.Sprintf("[red]kill %d: %v", row.Process.PID, err))
+				// `cannot signal pid N: why`, which names the pid itself.
+				v.status.SetText(fmt.Sprintf("[red]%v", err))
 			} else {
 				v.status.SetText(fmt.Sprintf("[green]terminated %d", row.Process.PID))
 			}

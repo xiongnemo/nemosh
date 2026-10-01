@@ -40,7 +40,8 @@ func TestRuntime_jobsTableAsBusyboxKeepsIt(t *testing.T) {
 		},
 		{
 			"sleep 5 &\njobs -r; jobs -s; echo \"st=$?\"\nkill %%; wait %%\nkill %% 2>/dev/null; echo \"none=$?\"",
-			line("[1]+  Running") + "st=0\nnone=1\n",
+			// `kill %%` once there is no job is "No current job" and 2, busybox's getjob error.
+			line("[1]+  Running") + "st=0\nnone=2\n",
 		},
 	}
 	for _, test := range tests {

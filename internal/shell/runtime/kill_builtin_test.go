@@ -66,6 +66,8 @@ func TestKill_leavesTheJobWaitable(t *testing.T) {
 	}
 }
 
+// With busybox's statuses: a job spec that names no job is 2, its getjob error, and any other
+// failure counts one towards the status.
 func TestKill_refusesWhatItCannotDo(t *testing.T) {
 	for _, test := range []struct {
 		name   string
@@ -73,12 +75,17 @@ func TestKill_refusesWhatItCannotDo(t *testing.T) {
 		want   string
 		status int
 	}{
-		{name: "no such job", script: "kill %9\n", want: "no such job", status: 1},
-		{name: "not a job and not a number", script: "kill nope\n", want: "illegal pid: nope", status: 1},
-		{name: "job zero", script: "kill %0\n", want: "%0: no such job", status: 1},
+		{name: "no such job", script: "kill %9\n", want: "kill: %9: no such job", status: 2},
+		{name: "not a job and not a number", script: "kill nope\n", want: "kill: invalid pid 'nope'", status: 1},
+		{name: "job zero", script: "kill %0\n", want: "%0: no such job", status: 2},
 		// 1, which both references answer; this used to be 2.
-		{name: "an unknown signal", script: "kill -BOGUS 1\n", want: "invalid signal", status: 1},
-		{name: "nothing at all", script: "kill\n", want: "expected a job or a process id", status: 2},
+		{name: "an unknown signal", script: "kill -BOGUS 1\n", want: "kill: invalid signal 'BOGUS'", status: 1},
+		{name: "-s and nothing after it", script: "kill -s\n", want: "kill: invalid signal 's'", status: 1},
+		{name: "nothing at all", script: "kill\n", want: "kill: expected a job or a process id", status: 1},
+		{name: "a signal and nothing to send it to", script: "kill -9\n", want: "expected a job or a process id", status: 1},
+		{name: "one count for each operand that failed", script: "kill nope 99999999 never\n", want: "kill: invalid pid 'never'", status: 3},
+		{name: "a pid with no process", script: "kill 99999999\n", want: "kill: cannot signal pid 99999999: No such process", status: 1},
+		{name: "-- ends the options", script: "kill -- nope\n", want: "kill: invalid pid 'nope'", status: 1},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// When
@@ -92,6 +99,33 @@ func TestKill_refusesWhatItCannotDo(t *testing.T) {
 				t.Fatalf("status = %d, want %d", status, test.status)
 			}
 		})
+	}
+}
+
+// kill, jobs and wait say which job a spec meant when there is none, "No current job" or "No
+// previous job", as every ash does, busybox's and dash among them. Each said "%%: no such job".
+func TestJobSpec_aSpecThatNamesNoJobSaysWhichOneIsMissing(t *testing.T) {
+	for script, want := range map[string]string{
+		"kill %%\n": "kill: No current job\n",
+		"jobs %-\n": "jobs: No previous job\n",
+		"wait %+\n": "wait: No current job\n",
+		"wait %7\n": "wait: %7: no such job\n",
+	} {
+		if _, stderr, _ := runKill(t, script); stderr != want {
+			t.Errorf("%q: stderr = %q, want %q", script, stderr, want)
+		}
+	}
+}
+
+// Every job spec is found before anything is sent, as busybox's killcmd finds them: one that
+// names no job leaves the job that is there alone. `%1` was killed, and the status was 1.
+func TestKill_aJobSpecThatNamesNoJobSendsNothing(t *testing.T) {
+	// When
+	stdout, stderr, _ := runKill(t, "sleep 30 &\nkill %1 %9\necho \"st=$?\"\nkill -0 %1 && echo alive\nkill %1\nwait\n")
+
+	// Then
+	if !strings.HasPrefix(stdout, "st=2\nalive\n") || !strings.Contains(stderr, "kill: %9: no such job") {
+		t.Fatalf("stdout = %q, stderr = %q; want st=2, the job alive, and %%9 named", stdout, stderr)
 	}
 }
 

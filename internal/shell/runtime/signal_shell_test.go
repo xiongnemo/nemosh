@@ -35,9 +35,15 @@ func TestEndJobs_endsWhatIsStillRunning(t *testing.T) {
 			if len(ended) != 1 || !regexp.MustCompile(want).MatchString(ended[0]) {
 				t.Fatalf("EndJobs named %q, want the one job still running (%s)", ended, want)
 			}
+			// A pid with no process is 1. A goroutine job has no pid and `$!` is `%3`, a spec that
+			// now names no job, which is busybox's 2.
 			rt.RunScript(context.Background(), "kill -0 $p 2>/dev/null; echo \"asked=$?\"\n")
-			if stdout.String() != "asked=1\n" {
-				t.Fatalf("stdout %q: the job is still there", stdout.String())
+			want = "asked=1\n"
+			if launcher == "goroutine" {
+				want = "asked=2\n"
+			}
+			if stdout.String() != want {
+				t.Fatalf("stdout %q, want %q: the job is still there", stdout.String(), want)
 			}
 		})
 	}

@@ -99,7 +99,7 @@ func (r Runtime) waitTarget(operand string) (jobID, int) {
 	// %%, %- and the rest; see job_spec.go. A spec that names no job is the 127 above.
 	id := r.jobScope.resolveJobSpec(operand)
 	if id == 0 {
-		fmt.Fprintf(r.streams.Stderr, "wait: %s: no such job\n", operand)
+		fmt.Fprintf(r.streams.Stderr, "wait: %s\n", noSuchJob(operand))
 		return 0, 127
 	}
 	return id, 0
@@ -112,6 +112,6 @@ func (r Runtime) unclaimable(operand string, id jobID) int {
 		fmt.Fprintf(r.streams.Stderr, "wait: %s: is already being waited for\n", operand)
 		return 2
 	}
-	fmt.Fprintf(r.streams.Stderr, "wait: %s: no such job\n", operand)
+	fmt.Fprintf(r.streams.Stderr, "wait: %s\n", noSuchJob(operand))
 	return 127
 }

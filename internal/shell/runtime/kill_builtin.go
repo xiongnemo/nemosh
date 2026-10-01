@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -22,11 +23,11 @@ import (
 //
 // A pid operand is killed for real, through internal/proc -- the same code the
 // pkill applet uses, so the two cannot disagree about what killing means.
+//
+// Its failures have busybox's statuses, in this shell's words: no operand is 1, where bash
+// prints its usage with 2; and the status is how many operands failed, as busybox counts
+// them -- 255 at most here, where 256 would have read as success.
 func (r Runtime) killBuiltin(args []string) int {
-	if len(args) == 0 {
-		fmt.Fprintln(r.streams.Stderr, "kill: expected a job or a process id")
-		return 2
-	}
 	signal, operands, err := parseKillSignal(args)
 	if err != nil {
 		// 1, as both references answer a signal they will not send.
@@ -38,16 +39,27 @@ func (r Runtime) killBuiltin(args []string) int {
 	}
 	if len(operands) == 0 {
 		fmt.Fprintln(r.streams.Stderr, "kill: expected a job or a process id")
-		return 2
+		return 1
 	}
-	status := 0
+	// Every job is found before anything is sent, as busybox's killcmd turns them all into pids
+	// first: a spec that names none is its getjob error, 2, and nothing is signalled.
+	for _, operand := range operands {
+		if !strings.HasPrefix(operand, "%") {
+			continue
+		}
+		if _, ok := r.jobScope.lookup(r.jobScope.resolveJobSpec(operand)); !ok {
+			fmt.Fprintf(r.streams.Stderr, "kill: %s\n", noSuchJob(operand))
+			return 2
+		}
+	}
+	failures := 0
 	for _, operand := range operands {
 		if err := r.killOne(operand, signal); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "kill: %v\n", err)
-			status = 1
+			failures++
 		}
 	}
-	return status
+	return min(failures, 255)
 }
 
 func (r Runtime) killOne(operand string, signal int) error {
@@ -56,13 +68,18 @@ func (r Runtime) killOne(operand string, signal int) error {
 	}
 	pid, err := strconv.Atoi(operand)
 	if err != nil {
-		// busybox's wording, which names the operand rather than the option.
-		return fmt.Errorf("illegal pid: %s", operand)
+		// The operand, quoted, as busybox names it.
+		return fmt.Errorf("invalid pid '%s'", operand)
 	}
 	// A job that is a process goes through its record, so its status is 128+n and
-	// `jobs` names the signal, as for `kill %N`.
+	// `jobs` names the signal, as for `kill %N`. One that has ended is a pid with no
+	// process, said of the pid that was written.
 	if id, found := r.jobScope.lookupPID(pid); found {
-		return r.killJob("%"+strconv.FormatUint(uint64(id), 10), signal)
+		err := r.killJob("%"+strconv.FormatUint(uint64(id), 10), signal)
+		if errors.Is(err, errJobEnded) {
+			return fmt.Errorf("cannot signal pid %d: %w", pid, proc.ErrNoSuchProcess)
+		}
+		return err
 	}
 	if pid == os.Getpid() && signal != 0 && r.killSelf(signal) {
 		return nil
@@ -112,11 +129,11 @@ func (r Runtime) killSelf(signal int) bool {
 func (r Runtime) killJob(spec string, signal int) error {
 	record, ok := r.jobScope.lookup(r.jobScope.resolveJobSpec(spec))
 	if !ok {
-		return fmt.Errorf("%s: no such job", spec)
+		return errors.New(noSuchJob(spec))
 	}
 	select {
 	case <-record.done:
-		return fmt.Errorf("%s: the job has already ended", spec)
+		return fmt.Errorf("%s: %w", spec, errJobEnded)
 	default:
 	}
 	if signal == 0 {
@@ -135,7 +152,7 @@ func (r Runtime) killJob(spec string, signal int) error {
 	}
 	// Noted before the cancel, so the status the job ends with is the signal's.
 	if !r.jobScope.markSignalled(record, signal) {
-		return fmt.Errorf("%s: the job has already ended", spec)
+		return fmt.Errorf("%s: %w", spec, errJobEnded)
 	}
 	record.cancel()
 	return nil
@@ -154,6 +171,11 @@ func parseKillSignal(args []string) (int, []string, error) {
 	if len(args) == 0 || !strings.HasPrefix(args[0], "-") || args[0] == "-" {
 		return signal, args, nil
 	}
+	// `--` ends the options, so `kill -- -123` names a group, in both references; it was a
+	// signal named "-".
+	if args[0] == "--" {
+		return signal, args[1:], nil
+	}
 	spec := args[0][1:]
 	// -L is bash's spelling of -l.
 	if spec == "l" || spec == "L" {
@@ -165,18 +187,31 @@ func parseKillSignal(args []string) (int, []string, error) {
 		return 0, nil, fmt.Errorf("-n: option requires an argument")
 	}
 	if (spec == "s" || spec == "n") && len(args) > 1 {
-		number, err := proc.ParseSignal(args[1])
+		number, err := killSignalNumber(args[1])
 		if err != nil {
 			return 0, nil, err
 		}
 		return number, args[2:], nil
 	}
-	number, err := proc.ParseSignal(spec)
+	number, err := killSignalNumber(spec)
 	if err != nil {
 		return 0, nil, err
 	}
 	return number, args[1:], nil
 }
+
+// killSignalNumber is proc.ParseSignal, with the name it does not know quoted as busybox
+// quotes it.
+func killSignalNumber(spec string) (int, error) {
+	number, err := proc.ParseSignal(spec)
+	if errors.Is(err, proc.ErrUnknownSignal) {
+		return 0, fmt.Errorf("invalid signal '%s'", spec)
+	}
+	return number, err
+}
+
+// errJobEnded is a job that has finished, which no signal reaches.
+var errJobEnded = errors.New("the job has already ended")
 
 // defaultKillSignal is TERM, as everywhere.
 const defaultKillSignal = 15
