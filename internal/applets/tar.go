@@ -77,7 +77,8 @@ func tarOldStyle(args []string) []string {
 }
 
 type tarRequest struct {
-	verbose    bool
+	// verbose counts -t and -v, as busybox's verboseFlag does; see tar_listing.go.
+	verbose    int
 	toStdout   bool
 	gzip       bool
 	bzip2      bool
@@ -158,8 +159,8 @@ func (r tarRequest) list(ctx context.Context, stdin io.Reader, stdout io.Writer)
 		// hide exactly what they are looking for. Extraction is where the check
 		// belongs.
 		line := header.Name
-		if r.verbose {
-			line = fmt.Sprintf("%s %8d %s", header.FileInfo().Mode(), header.Size, header.Name)
+		if r.verbose > 1 {
+			line = tarListing(header)
 		}
 		if _, err := fmt.Fprintln(stdout, line); err != nil {
 			return err
@@ -231,10 +232,11 @@ func (r tarRequest) extractionRoot(ctx context.Context) (string, error) {
 func (r tarRequest) extractEntry(reader *tar.Reader, header *tar.Header, root string,
 	collisions *archiveCollisions, stdout, stderr io.Writer) error {
 	listed := header.Name
+	if r.verbose > 1 {
+		listed = tarListing(header)
+	}
 	if !r.selection.strippedEntry(header) {
-		if r.verbose {
-			fmt.Fprintln(stderr, listed)
-		}
+		r.sayExtracted(stdout, stderr, listed)
 		return nil
 	}
 	safe, err := safeArchivePath(header.Name)
@@ -255,9 +257,7 @@ func (r tarRequest) extractEntry(reader *tar.Reader, header *tar.Header, root st
 		fmt.Fprintf(stderr, "tar: skipping %v\n", err)
 		return nil
 	}
-	if r.verbose {
-		fmt.Fprintln(stderr, listed)
-	}
+	r.sayExtracted(stdout, stderr, listed)
 	if r.toStdout {
 		if header.Typeflag != tar.TypeReg {
 			return nil

@@ -17,11 +17,12 @@ import (
 
 // tarCreation is an archive being written: the writer, the file it goes to when it is one,
 // whether a name could not be stored, and whether a prefix taken off a name has been said.
+// names is where -v names each entry: stdout, but stderr when the archive goes there.
 type tarCreation struct {
-	archive      *tar.Writer
-	stderr       io.Writer
-	self         os.FileInfo
-	failed, said bool
+	archive       *tar.Writer
+	stderr, names io.Writer
+	self          os.FileInfo
+	failed, said  bool
 }
 
 // create writes the archive. A name that cannot be stored -- one that is not there, a file or a
@@ -38,7 +39,10 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 		return err
 	}
 	defer release()
-	creation := &tarCreation{stderr: stderr}
+	creation := &tarCreation{stderr: stderr, names: stdout}
+	if r.file == "" || r.file == "-" {
+		creation.names = stderr
+	}
 	if file, ok := out.(interface{ Stat() (os.FileInfo, error) }); ok {
 		creation.self, _ = file.Stat()
 	}
@@ -148,8 +152,8 @@ func (r tarRequest) addTarEntry(c *tarCreation, native, name string, above []os.
 		header.Name += "/"
 	}
 	if member != "" {
-		if r.verbose {
-			fmt.Fprintln(c.stderr, header.Name)
+		if r.verbose > 0 {
+			fmt.Fprintln(c.names, header.Name)
 		}
 		if err := c.archive.WriteHeader(header); err != nil {
 			return err

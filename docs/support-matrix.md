@@ -1561,6 +1561,14 @@ the front of a name -- slashes, a leading `../`, everything up to the last
 from member names`. On Windows a drive is taken off too, which busybox-w32
 keeps, though no tar extracts `C:/x/f.txt` where it says.
 
+`-v` names each entry, and a second `-v`, or `-t` with one, gives busybox's long
+line: the mode as `ls -l` has it, the owner and group, the size, the local time,
+the name, and where a link points. The names go to stdout, but to stderr where
+stdout carries the archive or, under `-O`, the data. Two answers are not
+busybox-w32's. Its build lists the owner and group by number even where the
+archive names them; busybox lists the names by default, and so does this. And
+under `-O` busybox mixes the names into the data.
+
 Two answers are not busybox's. A FILE that took nothing is said and fails the
 command; busybox asks instead whether an entry it took is *spelled* like the
 FILE, so `tar xf a.tar 'src/*.txt'` fails there having extracted what it

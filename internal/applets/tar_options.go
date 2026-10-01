@@ -81,7 +81,12 @@ func newTarRequest(ctx context.Context, args []string, stdin io.Reader) (tarRequ
 	if err != nil {
 		return request, options, err
 	}
-	request.verbose, request.toStdout = options.has('v'), options.has('O')
+	request.toStdout = options.has('O')
+	for _, letter := range options.order {
+		if letter == 't' || letter == 'v' {
+			request.verbose++
+		}
+	}
 	request.gzip, request.bzip2, request.autoDetect = options.has('z'), options.has('j'), options.has('a')
 	request.file, request.directory = options.value('f'), options.value('C')
 	request.keepOld, request.keepTime, request.dereference = options.has('k'), !options.has('m'), options.has('h')
