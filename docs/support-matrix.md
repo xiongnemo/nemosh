@@ -1707,6 +1707,14 @@ pipe.** `cat x.gz | busybox zcat` answers `lseek(...): Invalid seek` while
 `busybox zcat < x.gz` works — it seeks on its input, which a redirect allows and a
 pipe does not. This reads sequentially, so both work.
 
+Each of the five says what busybox's says of data it cannot read, in its own name and
+without the FILE's: `gunzip: invalid magic`, `corrupted data`, `unexpected end of
+file`, `crc error`. `zcat` reads bzip2 as well as gzip, as busybox's does, the data's
+first bytes choosing, and anything else is `no gzip/bzip2/xz magic`; xz it cannot
+read. What follows a gzip member or a bzip2 stream, and is not another, is passed
+over. Where busybox's `bunzip2` gives its decoder's return code, `bunzip error -3`,
+this says what its `gunzip` says of the same fault.
+
 ### The network clients
 
 `wget`, `nc`, `whois`, `ssl_client`, `httpd`, `ftpget` and `ftpput`, added

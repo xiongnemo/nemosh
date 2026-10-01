@@ -1,9 +1,9 @@
 package applets
 
 import (
-	"compress/bzip2"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -27,7 +27,7 @@ import (
 
 // compressMode is what a name does by default.
 type compressMode struct {
-	// codec is "gzip" or "bzip2".
+	// codec is "gzip" or "bzip2", or "" for zcat's, which the data's first bytes choose.
 	codec string
 	// decompress is the default direction for this name.
 	decompress bool
@@ -47,7 +47,7 @@ func newGunzipApplet() Applet {
 }
 
 func newZcatApplet() Applet {
-	return newCompressApplet("zcat", compressMode{codec: "gzip", decompress: true, alwaysStdout: true, suffixes: []string{".gz", ".tgz", ".z"}})
+	return newCompressApplet("zcat", compressMode{decompress: true, alwaysStdout: true, suffixes: []string{".gz", ".tgz", ".z"}})
 }
 
 func newBunzip2Applet() Applet {
@@ -65,6 +65,7 @@ func newCompressApplet(name string, mode compressMode) Applet {
 			return err
 		}
 		request := compressRequest{
+			applet:     name,
 			mode:       mode,
 			decompress: mode.decompress || options.has('d'),
 			toStdout:   mode.alwaysStdout || options.has('c'),
@@ -94,6 +95,8 @@ func compressionLevel(options appletOptions) int {
 }
 
 type compressRequest struct {
+	// applet is the name it was run as, which its messages start with: zcat's are zcat's.
+	applet     string
 	mode       compressMode
 	decompress bool
 	toStdout   bool
@@ -111,46 +114,10 @@ type compressRequest struct {
 // a pipe does not. This reads sequentially and handles both, which is a
 // divergence where the reference is simply broken.
 func (r compressRequest) filter(stdin io.Reader, stdout io.Writer) error {
-	if r.decompress {
-		reader, err := r.reader(stdin)
-		if err != nil {
-			return err
-		}
-		out := io.Writer(stdout)
-		if r.test {
-			out = io.Discard
-		}
-		if _, err := io.Copy(out, reader); err != nil {
-			return err
-		}
-		return closeIfCloser(reader)
+	if r.test {
+		stdout = io.Discard
 	}
-	writer, err := gzip.NewWriterLevel(stdout, r.level)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(writer, stdin); err != nil {
-		return err
-	}
-	return writer.Close()
-}
-
-func (r compressRequest) reader(input io.Reader) (io.Reader, error) {
-	if r.mode.codec == "bzip2" {
-		return bzip2.NewReader(input), nil
-	}
-	reader, err := gzip.NewReader(input)
-	if err != nil {
-		return nil, fmt.Errorf("invalid compressed data")
-	}
-	return reader, nil
-}
-
-func closeIfCloser(reader io.Reader) error {
-	if closer, ok := reader.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
+	return r.copyThrough(stdin, stdout)
 }
 
 // eachFile handles the operand form, where the default is to *replace* the file
@@ -161,7 +128,7 @@ func (r compressRequest) eachFile(ctx context.Context, paths []string, stdout, s
 	failed := false
 	for _, path := range paths {
 		if err := r.oneFile(view, path, stdout); err != nil {
-			fmt.Fprintf(stderr, "%s: %v\n", r.name(), err)
+			fmt.Fprintf(stderr, "%s: %v\n", r.applet, err)
 			failed = true
 		}
 	}
@@ -169,13 +136,6 @@ func (r compressRequest) eachFile(ctx context.Context, paths []string, stdout, s
 		return ExitStatus(1)
 	}
 	return nil
-}
-
-func (r compressRequest) name() string {
-	if r.mode.codec == "bzip2" {
-		return "bunzip2"
-	}
-	return "gzip"
 }
 
 func (r compressRequest) oneFile(view ProcessView, path string, stdout io.Writer) error {
@@ -196,29 +156,7 @@ func (r compressRequest) oneFile(view ProcessView, path string, stdout io.Writer
 		return operandFailure(path, err)
 	}
 	defer source.Close()
-
-	{
-		if r.decompress {
-			reader, err := r.reader(source)
-			if err != nil {
-				return operandFailure(path, err)
-			}
-			out := io.Writer(stdout)
-			if r.test {
-				out = io.Discard
-			}
-			_, err = io.Copy(out, reader)
-			return err
-		}
-		writer, err := gzip.NewWriterLevel(stdout, r.level)
-		if err != nil {
-			return err
-		}
-		if _, err := io.Copy(writer, source); err != nil {
-			return err
-		}
-		return writer.Close()
-	}
+	return fileFault(path, r.filter(source, stdout))
 }
 
 // rewriteFile is the default: write the companion file, then remove the original
@@ -256,7 +194,7 @@ func (r compressRequest) rewriteFile(view ProcessView, native, path string) erro
 		// truncated archive looking like a real one.
 		os.Remove(target)
 		if writeErr != nil {
-			return operandFailure(path, writeErr)
+			return fileFault(path, writeErr)
 		}
 		return operandFailure(path, closeErr)
 	}
@@ -268,14 +206,12 @@ func (r compressRequest) rewriteFile(view ProcessView, native, path string) erro
 
 func (r compressRequest) copyThrough(source io.Reader, destination io.Writer) error {
 	if r.decompress {
-		reader, err := r.reader(source)
+		reader, err := decompressor(r.mode.codec, source)
 		if err != nil {
 			return err
 		}
-		if _, err := io.Copy(destination, reader); err != nil {
-			return err
-		}
-		return closeIfCloser(reader)
+		_, err = io.Copy(destination, reader)
+		return err
 	}
 	writer, err := gzip.NewWriterLevel(destination, r.level)
 	if err != nil {
@@ -285,6 +221,15 @@ func (r compressRequest) copyThrough(source io.Reader, destination io.Writer) er
 		return err
 	}
 	return writer.Close()
+}
+
+// fileFault is err as it is said of FILE. A fault in the data stands alone, as busybox
+// says one.
+func fileFault(path string, err error) error {
+	if _, ok := errors.AsType[compressFault](err); ok || err == nil {
+		return err
+	}
+	return operandFailure(path, err)
 }
 
 // targetName is the companion file's name: the suffix appended when compressing,
@@ -308,7 +253,7 @@ func (r compressRequest) targetName(native string) (string, error) {
 			return stripped, nil
 		}
 	}
-	return "", fmt.Errorf("unknown suffix")
+	return "", errors.New("unknown suffix - ignored")
 }
 
 func filepathBase(path string) string {
