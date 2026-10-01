@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"testing"
+	"time"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -39,6 +40,7 @@ func TestMain(m *testing.M) {
 			os.Exit(m.Run())
 		}
 	}
+	sweepStaleJobBinaries()
 	directory, err := os.MkdirTemp("", "nemosh-job-binary-")
 	if err == nil {
 		if binary, built := buildJobBinary(directory); built {
@@ -56,6 +58,20 @@ func TestMain(m *testing.M) {
 // jobBinaryVariable names, for a copy of this binary run as a helper, the nemosh the
 // first one built.
 const jobBinaryVariable = "NEMOSH_TEST_JOB_BINARY"
+
+// sweepStaleJobBinaries removes the job binaries earlier runs left. A run removes its own as
+// it ends, but on Windows that fails while a job it started still runs the binary, and the
+// Job Object ends those only once this process has: about 300 runs had left 6 GB in the
+// temporary directory by 2026-10-01, a disk 97% full. One an hour old belongs to no run still
+// going, and one a run still holds refuses to be removed anyway.
+func sweepStaleJobBinaries() {
+	stale, _ := filepath.Glob(filepath.Join(os.TempDir(), "nemosh-job-binary-*"))
+	for _, directory := range stale {
+		if info, err := os.Stat(directory); err == nil && time.Since(info.ModTime()) > time.Hour {
+			_ = os.RemoveAll(directory)
+		}
+	}
+}
 
 func buildJobBinary(directory string) (string, bool) {
 	binary := filepath.Join(directory, "nemosh")
