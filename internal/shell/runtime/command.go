@@ -66,10 +66,9 @@ func (r Runtime) isKnownCommand(name string) bool {
 	if isRuntimeBuiltin(name) {
 		return true
 	}
-	if parsed, ok := newFunctionName(name); ok {
-		if _, found := r.functions[parsed]; found {
-			return true
-		}
+	// The function dispatch would call, as type asks it; a name with a slash is a path.
+	if _, found := r.calledFunction(name); found {
+		return true
 	}
 	_, ok := r.lookupApplet(name)
 	return ok

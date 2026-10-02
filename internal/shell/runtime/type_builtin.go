@@ -131,10 +131,11 @@ func (r Runtime) commandKinds(name string) []commandKind {
 	if isRuntimeBuiltin(name) && isSpecialBuiltin(name) {
 		kinds = append(kinds, commandKind{word: "builtin", description: name + " is a special shell builtin"})
 	}
-	if parsed, ok := newFunctionName(name); ok {
-		if _, found := r.functions[parsed]; found {
-			kinds = append(kinds, commandKind{word: "function", description: name + " is a function"})
-		}
+	// The function dispatch would call, which a name with a slash never is: it is a path, by
+	// busybox's rule and POSIX's. `f/g() { ...; }` was called a function, and running f/g
+	// looked for the file.
+	if _, found := r.calledFunction(name); found {
+		kinds = append(kinds, commandKind{word: "function", description: name + " is a function"})
 	}
 	if isRuntimeBuiltin(name) && !isSpecialBuiltin(name) {
 		description := name + " is a shell builtin"
