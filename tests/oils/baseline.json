@@ -364,7 +364,6 @@
     "builtin-type-bash.test.sh": {
       "type -P does not find directories (regression)": "fail",
       "type -a -\u003e alias; prints alias definition": "fail",
-      "type -f builtin -\u003e not found": "fail",
       "type -t -\u003e file": "fail",
       "type -t -\u003e keyword": "fail",
       "type -t -\u003e not found": "fail",

@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -15,44 +16,50 @@ import (
 // person: `-t` answers one word -- alias, keyword, function, builtin, file -- `-p`
 // the path of a file and nothing otherwise, `-P` the path whatever else the name
 // is, and `-a` every interpretation rather than the first. `-t` was refused, so
-// `[ "$(type -t f)" = function ]` failed, and a keyword was `not found`.
+// `[ "$(type -t f)" = function ]` failed, and a keyword was `not found`. `-f` leaves
+// functions out, as command does, so `type -f f` asks what f would be without its
+// function; it was an invalid option.
 func (r Runtime) typeBuiltin(args []string) int {
-	mode, names, err := parseTypeOptions(args)
+	mode, noFunctions, names, err := parseTypeOptions(args)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "type: %v\n", err)
 		return 2
 	}
 	status := 0
 	for _, name := range names {
-		if !r.describeFor(mode, name) {
+		if !r.describeFor(mode, noFunctions, name) {
 			status = 1
 		}
 	}
 	return status
 }
 
-func parseTypeOptions(args []string) (byte, []string, error) {
-	mode := byte(0)
+func parseTypeOptions(args []string) (byte, bool, []string, error) {
+	mode, noFunctions := byte(0), false
 	for index, argument := range args {
 		if argument == "--" {
-			return mode, args[index+1:], nil
+			return mode, noFunctions, args[index+1:], nil
 		}
 		if len(argument) < 2 || argument[0] != '-' {
-			return mode, args[index:], nil
+			return mode, noFunctions, args[index:], nil
 		}
 		for _, letter := range argument[1:] {
-			if !strings.ContainsRune("tpPa", letter) {
+			switch {
+			case letter == 'f':
+				noFunctions = true
+			case strings.ContainsRune("tpPa", letter):
+				mode = byte(letter)
+			default:
 				// bash's words: these are bash's options, which busybox's type has none of.
-				return 0, nil, fmt.Errorf("-%c: invalid option", letter)
+				return 0, false, nil, fmt.Errorf("-%c: invalid option", letter)
 			}
-			mode = byte(letter)
 		}
 	}
-	return mode, nil, nil
+	return mode, noFunctions, nil, nil
 }
 
 // describeFor answers one name in the given mode and reports whether it was found.
-func (r Runtime) describeFor(mode byte, name string) bool {
+func (r Runtime) describeFor(mode byte, noFunctions bool, name string) bool {
 	if mode == 'P' {
 		resolved, err := r.externalCommandPath(name)
 		if err != nil {
@@ -62,6 +69,9 @@ func (r Runtime) describeFor(mode byte, name string) bool {
 		return true
 	}
 	kinds := r.commandKinds(name)
+	if noFunctions {
+		kinds = slices.DeleteFunc(kinds, func(kind commandKind) bool { return kind.word == "function" })
+	}
 	if len(kinds) == 0 {
 		if mode != 't' && mode != 'p' {
 			fmt.Fprintf(r.streams.Stderr, "type: %s: not found\n", name)

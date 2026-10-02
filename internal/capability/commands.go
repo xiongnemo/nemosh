@@ -218,7 +218,7 @@ var commands = []Command{
 	{Name: "timeout", Operand: AnyPath, Builtin: true},
 	{Name: "times", Operand: AnyPath, Builtin: true},
 	{Name: "trap", Operand: AnyPath, Builtin: true},
-	{Name: "type", Operand: AnyPath, Builtin: true},
+	{Name: "type", Short: "afpPt", Operand: AnyPath, Builtin: true},
 	{Name: "typeset", Operand: AnyPath, Builtin: true},
 	{Name: "umask", Operand: AnyPath, Builtin: true},
 	{Name: "unalias", Operand: AnyPath, Builtin: true},

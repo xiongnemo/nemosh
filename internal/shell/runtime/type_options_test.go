@@ -21,6 +21,9 @@ func TestType_answersAsDispatchWould(t *testing.T) {
 		{name: "a special builtin is not shadowed", script: "break() { :; }\ntype -t break\n", want: "builtin\n"},
 		{name: "-p of a builtin is nothing", script: "type -p cd\necho \"st=$?\"\n", want: "st=0\n"},
 		{name: "an applet runs in the shell", script: "type -t cat\n", want: "builtin\n"},
+		// -f leaves functions out, as command does: what the name would be without its
+		// function, or not found.
+		{name: "-f leaves a function out", script: "cd() { :; }\nf() { :; }\ntype -f cd; type -ft f\necho \"st=$?\"\n", want: "cd is a shell builtin\nst=1\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if stdout, _ := runScriptCapturing(test.script); stdout != test.want {
