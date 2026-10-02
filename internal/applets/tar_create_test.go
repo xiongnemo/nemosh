@@ -15,7 +15,7 @@ func TestTar_goesOnPastANameItCannotStore(t *testing.T) {
 	root := writeSmallFixture(t, map[string]string{"d/g.txt": "x\n", "f.txt": "hello\n"})
 	_, stderr, err := runSmall(t, root, "", "tar", "cf", "c.tar", "d", "nope", "f.txt")
 	if status, _ := applets.StatusCode(err); status != 1 ||
-		stderr != "tar: nope: No such file or directory\ntar: some names were not archived\n" {
+		stderr != "tar: nope: No such file or directory\ntar: error exit delayed from previous errors\n" {
 		t.Errorf("tar cf d nope f.txt = %q, %v; want nope said and status 1", stderr, err)
 	}
 	if stdout, _, err := runSmall(t, root, "", "tar", "tf", "c.tar"); stdout != "d/\nd/g.txt\nf.txt\n" || err != nil {
@@ -38,7 +38,7 @@ func TestTar_passesOverAFileItCannotRead(t *testing.T) {
 	}
 	_, stderr, err := runSmall(t, root, "", "tar", "cf", "c.tar", "d")
 	if status, _ := applets.StatusCode(err); status != 1 ||
-		stderr != "tar: cannot open 'd/a.txt': Permission denied\ntar: some names were not archived\n" {
+		stderr != "tar: cannot open 'd/a.txt': Permission denied\ntar: error exit delayed from previous errors\n" {
 		t.Errorf("tar cf d = %q, %v; want d/a.txt said and status 1", stderr, err)
 	}
 	if stdout, _, err := runSmall(t, root, "", "tar", "tf", "c.tar"); stdout != "d/\nd/b.txt\n" || err != nil {

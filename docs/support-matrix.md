@@ -1565,8 +1565,8 @@ Modification times are restored but under `-m`.
 
 A name `tar -c` cannot store -- one that is not there, a file or a directory
 that cannot be read -- is said and passed over, the rest stored, and the status
-is 1 after `tar: some names were not archived`, as busybox goes on. The archive
-being written is not stored in itself.
+is 1 after busybox's closing words, `tar: error exit delayed from previous
+errors`. The archive being written is not stored in itself.
 
 A name is stored as it is given, and what is under a directory is joined to it
 as busybox joins it, so `tar cf a.tar .` holds `./f.txt`. What busybox takes off

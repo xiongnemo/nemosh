@@ -90,7 +90,7 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 		}
 	}
 	if creation.failed {
-		fmt.Fprintln(stderr, "tar: some names were not archived")
+		fmt.Fprintln(stderr, "tar: error exit delayed from previous errors")
 		return ExitStatus(1)
 	}
 	return nil

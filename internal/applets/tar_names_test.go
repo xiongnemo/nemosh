@@ -51,7 +51,7 @@ func TestTar_saysAMissingNameItWouldExclude(t *testing.T) {
 	root := writeSmallFixture(t, map[string]string{"f.txt": "hi\n"})
 	_, stderr, err := runSmall(t, root, "", "tar", "cf", "t.tar", "--exclude", "nope", "nope", "f.txt")
 	if status, _ := applets.StatusCode(err); status != 1 ||
-		stderr != "tar: nope: No such file or directory\ntar: some names were not archived\n" {
+		stderr != "tar: nope: No such file or directory\ntar: error exit delayed from previous errors\n" {
 		t.Errorf("tar cf --exclude nope nope = %q, %v; want nope said and status 1", stderr, err)
 	}
 }
