@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -21,7 +22,7 @@ import (
 // too. What *is* refused is a prefix outside 0..32 and an address that is not one.
 func newIpcalcApplet() Applet {
 	return simpleApplet{name: "ipcalc", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "bnmphs", "")
+		options, operands, err := parseAppletOptions(ctx, longOptionWords(args, ipcalcLongOptions), "bnmphs", "")
 		if err != nil {
 			return err
 		}
@@ -30,6 +31,9 @@ func newIpcalcApplet() Applet {
 		}
 		if len(operands) > 2 {
 			return fmt.Errorf("extra operand '%s'", operands[2])
+		}
+		if err := ipcalcAsked(options, operands); err != nil {
+			return ExitStatusMessage(1, err)
 		}
 		lines, err := calculateIP(options, operands)
 		if err != nil {
@@ -80,10 +84,29 @@ func calculateIP(options appletOptions, operands []string) ([]string, error) {
 	if options.has('h') {
 		lines = append(lines, "HOSTNAME="+resolveIPName(address))
 	}
-	if len(lines) == 0 {
-		return nil, fmt.Errorf("nothing was asked for; use -b, -n, -m, -p or -h")
-	}
 	return lines, nil
+}
+
+// ipcalcLongOptions are busybox's, by any prefix that names one alone. They were unrecognized.
+var ipcalcLongOptions = map[string]string{
+	"netmask": "m", "broadcast": "b", "network": "n", "prefix": "p", "hostname": "h", "silent": "s",
+}
+
+// ipcalcAsked is what busybox's ipcalc asks before it reads the address: with neither -b, -n
+// nor -p, there must be an -m or an -h to answer, and no NETMASK, which only those three use.
+// Either is its usage, which -s does not silence. They were asked after the address, so
+// `ipcalc -s 300.1.1.1` said nothing where busybox's says what is wanted, and `ipcalc -m
+// 10.0.0.5 255.255.255.0` printed back the netmask it was given.
+func ipcalcAsked(options appletOptions, operands []string) error {
+	switch {
+	case options.has('b') || options.has('n') || options.has('p'):
+		return nil
+	case !options.has('m') && !options.has('h'):
+		return errors.New("nothing was asked for; use -b, -n, -m, -p or -h")
+	case len(operands) == 2:
+		return errors.New("a NETMASK is only used by -b, -n or -p")
+	}
+	return nil
 }
 
 // ipPrefix answers the prefix length, from the address, from a netmask operand, or from the

@@ -702,7 +702,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `df` | `-h -H -k -m -B SIZE -P -T -t TYPE`, `-a` taken; the last of `-k -m -B` counts, `POSIXLY_CORRECT` counts 512-byte blocks, and blocks round to nearest, all as busybox has them. A drive letter is a filesystem, mounted at its root, and `-T` names what Windows calls it, NTFS or FAT32; a FILE that is not there has no mount point, status 1, as busybox says | refused by name |
 | `stty` | `size`, `echo`, `-echo`, `sane`, `-a`; everything else refused by name | refused by name |
 | `getopt` | `-o -l -n -q -Q -u -a -T -s`, and the old form where the first operand is the option string | refused by name |
-| `ipcalc` | `-b -n -m -p -h -s`; a non-contiguous netmask is used as given | refused by name |
+| `ipcalc` | `-b -n -m -p -h -s`, and busybox's long options; a non-contiguous netmask is used as given; with neither -b, -n nor -p, an -m or -h is wanted and no NETMASK, asked before the address as busybox asks it | refused by name |
 | `groups` | none; one name, the one `id -gn` gives -- a user other than this one is refused | refused by name |
 | `killall` | `-l -q`, and a leading `-SIGNAL`; the name is matched whole, not as a pattern | refused by name |
 | `link` | none; an existing LINK is refused rather than replaced | refused by name |

@@ -86,7 +86,7 @@ var commands = []Command{
 	{Name: "getopt", Short: "qQuaTolns", ValueShort: "olns", Operand: AnyPath,
 		Long:      []string{"options", "long", "longoptions", "name", "shell", "quiet", "quiet-output", "unquoted", "alternative", "test"},
 		ValueLong: []string{"options", "long", "longoptions", "name", "shell"}},
-	{Name: "ipcalc", Short: "bnmphs", Operand: AnyPath},
+	{Name: "ipcalc", Short: "bnmphs", Long: []string{"broadcast", "hostname", "netmask", "network", "prefix", "silent"}, Operand: AnyPath},
 	{Name: "groups", Operand: AnyPath},
 	{Name: "killall", Short: "lq", Operand: AnyPath},
 	{Name: "link", Operand: AnyPath},
