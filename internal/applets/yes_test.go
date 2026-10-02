@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -37,9 +38,7 @@ func TestDefaultRegistry_printsDefaultYUntilWriterFails_whenYesRunsWithoutOperan
 	if !errors.Is(err, errYesWriterStopped) {
 		t.Fatalf("expected bounded writer error, got %v", err)
 	}
-	if got := stdout.String(); got != "y\ny\ny\n" {
-		t.Fatalf("expected repeated default output %q, got %q", "y\ny\ny\n", got)
-	}
+	assertWholeLines(t, stdout.String(), "y\n", 3)
 }
 
 func TestDefaultRegistry_printsArgumentsJoinedBySpacesUntilWriterFails_whenYesRunsWithOperands(t *testing.T) {
@@ -54,9 +53,7 @@ func TestDefaultRegistry_printsArgumentsJoinedBySpacesUntilWriterFails_whenYesRu
 	if !errors.Is(err, errYesWriterStopped) {
 		t.Fatalf("expected bounded writer error, got %v", err)
 	}
-	if got := stdout.String(); got != "hello world\nhello world\n" {
-		t.Fatalf("expected repeated operand output %q, got %q", "hello world\nhello world\n", got)
-	}
+	assertWholeLines(t, stdout.String(), "hello world\n", 2)
 }
 
 func TestDefaultRegistry_treatsDashLikeString_whenYesRunsWithDashOperand(t *testing.T) {
@@ -71,9 +68,7 @@ func TestDefaultRegistry_treatsDashLikeString_whenYesRunsWithDashOperand(t *test
 	if !errors.Is(err, errYesWriterStopped) {
 		t.Fatalf("expected bounded writer error, got %v", err)
 	}
-	if got := stdout.String(); got != "-n\n-n\n" {
-		t.Fatalf("expected dash operand output %q, got %q", "-n\n-n\n", got)
-	}
+	assertWholeLines(t, stdout.String(), "-n\n", 2)
 }
 
 func TestDefaultRegistry_stopsWhenContextIsCancelled_whenYesRuns(t *testing.T) {
@@ -89,8 +84,16 @@ func TestDefaultRegistry_stopsWhenContextIsCancelled_whenYesRuns(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context cancellation, got %v", err)
 	}
-	if got := stdout.String(); got != "y\ny\n" {
-		t.Fatalf("expected output before cancellation %q, got %q", "y\ny\n", got)
+	assertWholeLines(t, stdout.String(), "y\n", 2)
+}
+
+// assertWholeLines checks that got is unit repeated, at least least times. yes writes a block of
+// whole lines at a time, so a writer that stops after some writes holds that many blocks.
+func assertWholeLines(t *testing.T, got, unit string, least int) {
+	t.Helper()
+	count := strings.Count(got, unit)
+	if count < least || got != strings.Repeat(unit, count) {
+		t.Fatalf("expected at least %d whole lines of %q, got %d bytes starting %q", least, unit, len(got), got[:min(len(got), 40)])
 	}
 }
 
