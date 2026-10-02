@@ -1,6 +1,9 @@
 package runtime_test
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // An indexed array in bash is sparse. `a=(p); a[3]=z` has two elements, not four.
 //
@@ -102,5 +105,15 @@ func TestSparseArrays_refusesAnAssignmentPastTheStart(t *testing.T) {
 	}
 	if !contains(stderr, "bad array subscript") {
 		t.Fatalf("stderr = %q, want it to say the subscript is bad", stderr)
+	}
+}
+
+// `a[]=x` names no element: bash's bad subscript, the statement abandoned with the rest of its
+// line, status 1, and the array untouched. It was no assignment, and ran as a command called
+// a[]=x, status 127. Measured against bash 5.3.
+func TestArray_anEmptySubscriptIsABadOne(t *testing.T) {
+	status, stdout, stderr := runSetScript(t, "a=(1 2 3)\na[]=42; echo same\necho status=$?\necho ${a[@]}\n")
+	if stdout != "status=1\n1 2 3\n" || status != 0 || !strings.Contains(stderr, "a[]: bad array subscript") {
+		t.Fatalf("got %q/%d, stderr %q", stdout, status, stderr)
 	}
 }

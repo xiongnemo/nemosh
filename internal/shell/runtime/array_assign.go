@@ -29,6 +29,9 @@ type arrayAssignment struct {
 	raw   string
 	value word
 	list  bool
+	// noSubscript is `a[]=x`, brackets with nothing between them, which is bash's bad
+	// subscript; see assignArray.
+	noSubscript bool
 }
 
 // parseArrayAssignmentWord reads one word as an array assignment.
@@ -52,6 +55,9 @@ func parseArrayAssignmentWord(item word) (arrayAssignment, bool) {
 		assignment.name, assignment.append = name, true
 	} else {
 		assignment.name = target
+	}
+	if base, empty := strings.CutSuffix(assignment.name, "[]"); empty && isValidVariableName(base) {
+		return arrayAssignment{name: base, noSubscript: true}, true
 	}
 	if reference, ok := parseArrayReference(assignment.name); ok {
 		// Left as text here and resolved when the assignment runs: a subscript is
@@ -171,6 +177,13 @@ func writtenElementTarget(item word) (string, bool) {
 func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, savedStatus int) {
 	r = r.assigningPlainly()
 	target := assignment.name + "[" + assignment.subscript + "]"
+	// `a[]=x` names no element: bash's bad subscript, and the statement abandoned, status 1.
+	// It was no assignment, and ran as a command of that name.
+	if assignment.noSubscript {
+		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", target)
+		r.failAssignment()
+		return
+	}
 	if assignment.list {
 		// A list is an array's and not an element's: bash refuses `a[0]=(3 4)` and abandons the
 		// command, where the list was written over the whole of a.
