@@ -42,7 +42,8 @@ func parseTypeOptions(args []string) (byte, []string, error) {
 		}
 		for _, letter := range argument[1:] {
 			if !strings.ContainsRune("tpPa", letter) {
-				return 0, nil, fmt.Errorf("-%c: not an option this build has; it takes -t -p -P -a", letter)
+				// bash's words: these are bash's options, which busybox's type has none of.
+				return 0, nil, fmt.Errorf("-%c: invalid option", letter)
 			}
 			mode = byte(letter)
 		}

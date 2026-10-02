@@ -125,8 +125,8 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 			case 'n':
 				options.nameref = true
 			default:
-				return options, nil, fmt.Errorf(
-					"-%c: not an option this build has; it takes -A -a -i -l -u -n -r -x -p -g -f -F", letter)
+				// bash's words: declare is bash's, which busybox has not.
+				return options, nil, fmt.Errorf("-%c: invalid option", letter)
 			}
 		}
 	}

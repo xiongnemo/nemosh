@@ -144,7 +144,7 @@ func TestDeclare_refusesWhatItCannotHonour(t *testing.T) {
 		script   string
 		fragment string
 	}{
-		{name: "trace", script: "declare -t f\n", fragment: "not an option this build has"},
+		{name: "trace", script: "declare -t f\n", fragment: "declare: -t: invalid option"},
 		{name: "both kinds at once", script: "declare -Aa m\n", fragment: "cannot both be given"},
 		{name: "not a name", script: "declare 9bad=1\n", fragment: "not a valid name"},
 	}

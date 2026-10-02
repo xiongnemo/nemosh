@@ -128,7 +128,8 @@ func (o *readOptions) apply(letter byte, value string) error {
 		}
 		o.timeout, o.hasTimeout = time.Duration(seconds*float64(time.Second)), true
 	default:
-		return fmt.Errorf("-%c: not an option this build has; it takes -r -s -p -a -d -n -N -u -t", letter)
+		// busybox's nextopt words, as for every builtin it has: `illegal option -Y`.
+		return fmt.Errorf("illegal option -%c", letter)
 	}
 	return nil
 }

@@ -32,7 +32,7 @@ func (r Runtime) parseWaitOptions(args []string) (waitOptions, []string, int) {
 				continue
 			}
 			if letter != 'p' {
-				fmt.Fprintf(r.streams.Stderr, "wait: -%c: invalid option\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "wait: illegal option -%c\n", letter)
 				return options, nil, 2
 			}
 			// -p's name is the rest of the word, or the next one.

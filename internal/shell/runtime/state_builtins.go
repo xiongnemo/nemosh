@@ -110,7 +110,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 				nameref = true
 			default:
 				// It ends a script, as busybox's nextopt raises it: unset is a special builtin.
-				fmt.Fprintf(r.streams.Stderr, "unset: -%c: invalid option; it takes -f -v -n\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "unset: illegal option -%c\n", letter)
 				r.raiseShellError()
 				return 2
 			}

@@ -327,7 +327,7 @@ func TestRead_refusesWhatItCannotDo(t *testing.T) {
 		fragment string
 		status   int
 	}{
-		{name: "an unknown option", script: "read -Z x\n", fragment: "not an option this build has", status: 2},
+		{name: "an unknown option", script: "read -Z x\n", fragment: "read: illegal option -Z", status: 2},
 		{name: "an option with no argument", script: "read -n\n", fragment: "requires an argument", status: 2},
 		{name: "a non-numeric count", script: "read -n abc x\n", fragment: "invalid number", status: 2},
 		{name: "a bad timeout", script: "read -t abc x\n", fragment: "invalid timeout", status: 2},

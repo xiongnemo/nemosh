@@ -92,7 +92,7 @@ func parseJobsArgs(args []string) (jobsRequest, error) {
 			case 's':
 				request.stopped = true
 			default:
-				return request, fmt.Errorf("-%c: invalid option; it takes -l -p -r -s", letter)
+				return request, fmt.Errorf("illegal option -%c", letter)
 			}
 		}
 	}
