@@ -25,7 +25,7 @@ func TestCpio_archivesADirectoryEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, stderr, err := runSmall(t, root, "sub\nsub/a.txt\n", "cpio", "-o", "-F", "out.cpio"); err != nil {
+	if _, stderr, err := runSmall(t, root, "sub\nsub/a.txt\n", "cpio", "-o", "-H", "newc", "-F", "out.cpio"); err != nil {
 		t.Fatalf("cpio -o: %v (%s)", err, stderr)
 	}
 	stdout, stderr, err := runSmall(t, root, "", "cpio", "-tv", "-F", "out.cpio")
@@ -71,7 +71,7 @@ func TestCpio_synthesisesTheModeItStores(t *testing.T) {
 	// Restored so the temporary directory can be removed on every platform.
 	t.Cleanup(func() { os.Chmod(filepath.Join(root, "ro.txt"), 0o600) })
 
-	if _, stderr, err := runSmall(t, root, "rw.txt\nro.txt\n", "cpio", "-o", "-F", "out.cpio"); err != nil {
+	if _, stderr, err := runSmall(t, root, "rw.txt\nro.txt\n", "cpio", "-o", "-H", "newc", "-F", "out.cpio"); err != nil {
 		t.Fatalf("cpio -o: %v (%s)", err, stderr)
 	}
 	stdout, _, err := runSmall(t, root, "", "cpio", "-tv", "-F", "out.cpio")
@@ -102,7 +102,7 @@ func TestCpio_readsNulSeparatedNames(t *testing.T) {
 	}
 
 	// Without -0 the same input would be four names, two of them nonexistent.
-	if _, stderr, err := runSmall(t, root, "a.txt\x00b.txt\x00", "cpio", "-o", "-0", "-F", "out.cpio"); err != nil {
+	if _, stderr, err := runSmall(t, root, "a.txt\x00b.txt\x00", "cpio", "-o", "-H", "newc", "-0", "-F", "out.cpio"); err != nil {
 		t.Fatalf("cpio -o0: %v (%s)", err, stderr)
 	}
 	stdout, _, err := runSmall(t, root, "", "cpio", "-t", "-F", "out.cpio")
@@ -115,7 +115,7 @@ func TestCpio_readsNulSeparatedNames(t *testing.T) {
 
 	// And a final name with no separator after it is still a name, the way a last
 	// line without a newline is.
-	if _, stderr, err := runSmall(t, root, "a.txt\x00b.txt", "cpio", "-o", "-0", "-F", "two.cpio"); err != nil {
+	if _, stderr, err := runSmall(t, root, "a.txt\x00b.txt", "cpio", "-o", "-H", "newc", "-0", "-F", "two.cpio"); err != nil {
 		t.Fatalf("cpio -o0 without a trailing NUL: %v (%s)", err, stderr)
 	}
 	if stdout, _, err = runSmall(t, root, "", "cpio", "-t", "-F", "two.cpio"); err != nil {
@@ -135,7 +135,7 @@ func TestCpio_skipsBlankNames(t *testing.T) {
 	}
 	// Including a CRLF line, because a list built on this platform is very likely
 	// to have them and "a.txt\r" is not a file that exists.
-	if _, stderr, err := runSmall(t, root, "\na.txt\r\n\n", "cpio", "-o", "-F", "out.cpio"); err != nil {
+	if _, stderr, err := runSmall(t, root, "\na.txt\r\n\n", "cpio", "-o", "-H", "newc", "-F", "out.cpio"); err != nil {
 		t.Fatalf("cpio -o: %v (%s)", err, stderr)
 	}
 	stdout, _, err := runSmall(t, root, "", "cpio", "-t", "-F", "out.cpio")
@@ -151,7 +151,7 @@ func TestCpio_skipsBlankNames(t *testing.T) {
 // missing a file the caller asked for should not look like a success.
 func TestCpio_reportsANameItCannotRead(t *testing.T) {
 	root := t.TempDir()
-	if _, _, err := runSmall(t, root, "missing.txt\n", "cpio", "-o", "-F", "out.cpio"); err == nil {
+	if _, _, err := runSmall(t, root, "missing.txt\n", "cpio", "-o", "-H", "newc", "-F", "out.cpio"); err == nil {
 		t.Fatal("cpio -o accepted a name that does not exist")
 	}
 }
@@ -168,7 +168,7 @@ func TestCpio_restoresTheMtimeOnlyWithDashM(t *testing.T) {
 	if err := os.Chtimes(filepath.Join(source, "a.txt"), old, old); err != nil {
 		t.Fatal(err)
 	}
-	if _, stderr, err := runSmall(t, source, "a.txt\n", "cpio", "-o", "-F", "out.cpio"); err != nil {
+	if _, stderr, err := runSmall(t, source, "a.txt\n", "cpio", "-o", "-H", "newc", "-F", "out.cpio"); err != nil {
 		t.Fatalf("cpio -o: %v (%s)", err, stderr)
 	}
 	archive, err := os.ReadFile(filepath.Join(source, "out.cpio"))
@@ -337,7 +337,7 @@ func TestCpio_verboseWritesToStderrNotTheArchive(t *testing.T) {
 	}
 
 	// No -F, so the archive goes to stdout and -v must not join it there.
-	stdout, stderr, err := runSmall(t, root, "a.txt\n", "cpio", "-o", "-v")
+	stdout, stderr, err := runSmall(t, root, "a.txt\n", "cpio", "-o", "-H", "newc", "-v")
 	if err != nil {
 		t.Fatalf("cpio -o -v: %v (%s)", err, stderr)
 	}
@@ -392,7 +392,7 @@ func TestCpio_archivesASymlinkEntry(t *testing.T) {
 		t.Skipf("this machine cannot create a symlink, which Windows needs a privilege for: %v", err)
 	}
 
-	if _, stderr, err := runSmall(t, root, "link\ntarget.txt\n", "cpio", "-o", "-F", "out.cpio"); err != nil {
+	if _, stderr, err := runSmall(t, root, "link\ntarget.txt\n", "cpio", "-o", "-H", "newc", "-F", "out.cpio"); err != nil {
 		t.Fatalf("cpio -o: %v (%s)", err, stderr)
 	}
 	stdout, _, err := runSmall(t, root, "", "cpio", "-tv", "-F", "out.cpio")

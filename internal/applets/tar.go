@@ -32,8 +32,7 @@ func newTarApplet() Applet {
 		// three letters in order silently *chose* one when several were given, so
 		// `tar -c -x -f a.tar src` created the archive and ignored the -x -- and
 		// somebody who typed both meant one of them and got the other half the time.
-		// busybox refuses the same invocation by printing its usage, and this
-		// applet's own sibling cpio already requires exactly one of -t -i -o.
+		// busybox refuses the same invocation by printing its usage.
 		operations := 0
 		for _, letter := range "ctx" {
 			if options.has(byte(letter)) {

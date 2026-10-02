@@ -3,6 +3,7 @@ package applets
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -18,8 +19,8 @@ import (
 // on its stdin and nothing else. That makes it the pair to `find`, which this
 // build has, and it is how initramfs images and RPM payloads are built.
 //
-// The three modes are exclusive and one is required, which is busybox's shape:
-// -t lists, -i extracts, -o creates.
+// One of the three modes is required: -t lists, -i extracts, -o creates. See cpioMode for
+// which one a mixture means.
 
 // cpioLongOptions are busybox's, by any prefix that names one alone, each to its letter.
 // --quiet, --to-stdout and the two --create options this build already obeys -- its device
@@ -36,17 +37,8 @@ func newCpioApplet() Applet {
 		if err != nil {
 			return err
 		}
-		modes := 0
-		for _, letter := range "tio" {
-			if options.has(byte(letter)) {
-				modes++
-			}
-		}
-		if modes != 1 {
-			return fmt.Errorf("exactly one of -t, -i or -o is required")
-		}
-		if options.has('H') && options.value('H') != "newc" {
-			return fmt.Errorf("only -H newc is written; %q is not a format this build produces", options.value('H'))
+		if err := cpioMode(options); err != nil {
+			return err
 		}
 		request := cpioRequest{
 			list:        options.has('t'),
@@ -64,6 +56,24 @@ func newCpioApplet() Applet {
 		}
 		return request.run(stdin, stdout, stderr)
 	}}
+}
+
+// cpioMode is busybox's choice of what to do, which no exclusion governs: -o creates, and
+// needs -H newc to, and otherwise -t lists, whether or not -i came too, and -i extracts. -H
+// names the format -o writes; an archive read is known by its magic. A mixture was refused,
+// and a bare -o wrote newc, which neither reference does: busybox's shows its usage, and
+// GNU's writes its old binary format. busybox's reads only the first letter of -H, so
+// `-H nonsense` writes newc there; it is refused here, as GNU's refuses it.
+func cpioMode(options appletOptions) error {
+	switch {
+	case options.has('o') && !options.has('H'):
+		return errors.New("-o requires -H newc")
+	case options.has('o') && options.value('H') != "newc":
+		return fmt.Errorf("only -H newc is written; %q is not a format this build produces", options.value('H'))
+	case !options.has('o') && !options.has('t') && !options.has('i'):
+		return errors.New("one of -t, -i or -o is required")
+	}
+	return nil
 }
 
 type cpioRequest struct {
