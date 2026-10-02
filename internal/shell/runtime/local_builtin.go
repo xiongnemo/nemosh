@@ -19,11 +19,13 @@ import (
 // a function, which is also what `declare` itself now is there (declareInFunction).
 //
 // Outside a function there is nothing to restore to, and the shells report that
-// rather than quietly behaving like an assignment.
+// rather than quietly behaving like an assignment. busybox raises it, so it ends a script
+// with 2, local being special there; it was 1, and the script went on.
 func (r Runtime) local(ctx context.Context, args []string) int {
 	if r.functionDepth == 0 || r.locals == nil {
 		fmt.Fprintln(r.streams.Stderr, "local: not in a function")
-		return 1
+		r.raiseShellError()
+		return 2
 	}
 	options, names, err := parseDeclareOptions(args)
 	if err == nil && (options.print || options.functionNames || options.global) {

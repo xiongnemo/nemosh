@@ -144,13 +144,15 @@ func TestRuntime_leavesAnAssignmentGlobal_whenLocalIsNotUsed(t *testing.T) {
 	}
 }
 
+// busybox's local is special, and raises this, so the script ends with 2, as it does for an
+// option local cannot take.
 func TestRuntime_reportsLocalOutsideAFunction(t *testing.T) {
 	// When
-	status, _, stderr := runSetScript(t, "local x=1\n")
+	status, stdout, stderr := runSetScript(t, "local x=1\necho after\n")
 
 	// Then
-	if status != 1 || !strings.Contains(stderr, "not in a function") {
-		t.Fatalf("status = %d, stderr = %q, want 1 and a not-in-a-function diagnostic", status, stderr)
+	if status != 2 || stdout != "" || !strings.Contains(stderr, "not in a function") {
+		t.Fatalf("status = %d, stdout = %q, stderr = %q, want 2, nothing, and a not-in-a-function diagnostic", status, stdout, stderr)
 	}
 }
 
