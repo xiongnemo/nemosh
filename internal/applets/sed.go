@@ -64,7 +64,8 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 			stream.openers = append(stream.openers, func() (io.ReadCloser, error) {
 				file, err := OpenProcessOperand(ctx, view, name, stdin)
 				if err != nil {
-					return nil, cannotOpen(name, err)
+					// busybox's fopen_or_warn: the name bare, and on to the next.
+					return nil, operandFailure(name, err)
 				}
 				// Decoded, because a regular expression cannot match across UTF-16
 				// code units: `sed s/hello/x/` over a file Notepad wrote used to match

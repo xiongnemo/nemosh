@@ -105,7 +105,8 @@ func (in *awkInterp) openRecordSource(name string) (*bufio.Reader, io.Closer, er
 	}
 	file, err := openProcessInput(ProcessViewFromContext(in.ctx), name)
 	if err != nil {
-		return nil, nil, cannotOpen(name, err)
+		// busybox's fopen_or_warn: the name bare, as a -f FILE's is quoted, xfopen's.
+		return nil, nil, operandFailure(name, err)
 	}
 	// Through the same UTF-16 decoding every text applet uses.
 	return bufio.NewReader(decodeTextInput(file)), file, nil

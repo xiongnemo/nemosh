@@ -59,13 +59,14 @@ func newLineEndingApplet(name string, direction lineEndingDirection) Applet {
 func convertLineEndingsInPlace(ctx context.Context, paths []string, direction lineEndingDirection) error {
 	view := ProcessViewFromContext(ctx)
 	for _, path := range paths {
+		// busybox's xfopen_for_read: `can't open 'f'`, as nemosh says it. It was the name bare.
 		native, err := resolveHostPath(view, path)
 		if err != nil {
-			return operandFailure(path, err)
+			return cannotOpen(path, err)
 		}
 		original, err := os.ReadFile(native)
 		if err != nil {
-			return operandFailure(path, err)
+			return cannotOpen(path, err)
 		}
 		converted := direction(original)
 		if bytes.Equal(converted, original) {
