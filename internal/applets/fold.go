@@ -2,9 +2,7 @@ package applets
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"strconv"
 	"strings"
 )
 
@@ -25,11 +23,11 @@ func newFoldApplet() Applet {
 		}
 		width := 80
 		if options.has('w') {
-			parsed, err := strconv.Atoi(options.value('w'))
-			if err != nil || parsed <= 0 {
-				return fmt.Errorf("illegal width value '%s'", options.value('w'))
+			// busybox's xatou_range(w_opt, 1, 10000): `number 0 is not in 1..10000 range`, and
+			// `invalid number 'x'`. Each was "illegal width value", and 10001 was taken.
+			if width, err = xatouRange(options.value('w'), 1, 10000); err != nil {
+				return err
 			}
-			width = parsed
 		}
 		folding := folder{width: width, atBlanks: options.has('s'), bytes: options.has('b')}
 		return eachTextFile(ctx, paths, stdin, func(reader io.Reader) error {
