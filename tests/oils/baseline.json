@@ -282,7 +282,6 @@
     "builtin-history.test.sh": {
       "HISTFILE unset": "fail",
       "HISTFILESIZE shrinks the history file when changed": "fail",
-      "HISTSIZE shrinks the in-memory history when changed": "fail",
       "history usage": "ash-only",
       "recording history can be toggled with set -o/+o history": "fail",
       "shopt histappend - osh ignores shopt and appends, bash sometimes overwrites": "fail"

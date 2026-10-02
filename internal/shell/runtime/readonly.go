@@ -170,4 +170,9 @@ func (r Runtime) markVarMutation(name string) {
 	if name == "OPTIND" && r.params != nil {
 		r.params.getopts = getoptsFrom(r.vars["OPTIND"])
 	}
+	// HISTSIZE assigned trims the list at once, the newest kept, as bash's sv_histsize
+	// does; it waited for the next line to be recorded.
+	if name == "HISTSIZE" {
+		r.history.truncate(r.historyLimit())
+	}
 }

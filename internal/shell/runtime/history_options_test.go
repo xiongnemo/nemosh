@@ -134,3 +134,15 @@ func TestHistory_aSkipsWhatTheSessionWrote(t *testing.T) {
 		t.Fatalf("status %d, file %q, %v; want only the pushed line", status, data, err)
 	}
 }
+
+// HISTSIZE assigned trims the list at once, the newest kept, as bash's does; it waited for
+// the next line to be recorded. Measured against bash 5.3.
+func TestHistory_HISTSIZETrimsTheListWhenAssigned(t *testing.T) {
+	// When
+	_, stdout, stderr := runSetScript(t, "history -s a; history -s b; history -s c\nHISTSIZE=2\nhistory\nHISTSIZE=0\nhistory\necho end\n")
+
+	// Then
+	if want := "1  b\n2  c\nend\n"; stdout != want {
+		t.Fatalf("stdout = %q, want %q; stderr %q", stdout, want, stderr)
+	}
+}
