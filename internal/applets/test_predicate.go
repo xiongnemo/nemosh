@@ -51,7 +51,8 @@ func (e *testEvaluator) applyBinary(left, operator, right string) (bool, error) 
 
 // busybox's getn spells a non-numeric operand `%s: bad number` and leaves
 // status 2 behind (coreutils/test.c:468). An empty one is not named, as there: it was
-// `: bad number`.
+// `: bad number`. One too big for a long long is strtoll's ERANGE, `%s: out of range`,
+// which getn says first; it was a bad number.
 func testNumber(operand string) (int64, error) {
 	value, err := strconv.ParseInt(strings.TrimSpace(operand), 10, 64)
 	switch {
@@ -59,6 +60,8 @@ func testNumber(operand string) (int64, error) {
 		return value, nil
 	case operand == "":
 		return 0, errors.New("bad number")
+	case errors.Is(err, strconv.ErrRange):
+		return 0, fmt.Errorf("%s: out of range", operand)
 	}
 	return 0, fmt.Errorf("%s: bad number", operand)
 }
