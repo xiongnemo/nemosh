@@ -49,14 +49,14 @@ func parseDdOperands(args []string) (ddRequest, error) {
 		if !found {
 			return request, fmt.Errorf("unrecognized operand '%s'", argument)
 		}
-		if err := request.apply(name, value); err != nil {
+		if err := request.apply(argument, name, value); err != nil {
 			return request, err
 		}
 	}
 	return request, nil
 }
 
-func (r *ddRequest) apply(name, value string) error {
+func (r *ddRequest) apply(argument, name, value string) error {
 	switch name {
 	case "if":
 		r.input = value
@@ -83,12 +83,17 @@ func (r *ddRequest) apply(name, value string) error {
 		return err
 	}
 	switch name {
-	case "bs":
-		r.inputSize, r.outputSize = number, number
-	case "ibs":
-		r.inputSize = number
-	case "obs":
-		r.outputSize = number
+	case "bs", "ibs", "obs":
+		// busybox-w32's xatoul_range_sfx(val, 1, ULONG_MAX/2): its unsigned long is 32 bits.
+		if number < 1 || number > ddMaxBlock {
+			return fmt.Errorf("number %d is not in 1..%d range", number, ddMaxBlock)
+		}
+		if name != "obs" {
+			r.inputSize = number
+		}
+		if name != "ibs" {
+			r.outputSize = number
+		}
 	case "count":
 		r.count, r.hasCount = number, true
 	case "skip":
@@ -96,13 +101,13 @@ func (r *ddRequest) apply(name, value string) error {
 	case "seek":
 		r.seek = number
 	default:
-		return fmt.Errorf("unrecognized operand '%s'", name)
-	}
-	if r.inputSize < 1 || r.outputSize < 1 {
-		return fmt.Errorf("invalid number '%s'", value)
+		return fmt.Errorf("unrecognized operand '%s'", argument)
 	}
 	return nil
 }
+
+// ddMaxBlock is the largest block busybox-w32's dd takes.
+const ddMaxBlock = 1<<31 - 1
 
 func (r *ddRequest) applyConv(list string) error {
 	for _, conversion := range strings.Split(list, ",") {
@@ -144,7 +149,9 @@ func ddNumber(text string) (int64, error) {
 	for _, factor := range strings.Split(text, "x") {
 		value, err := ddOneNumber(factor)
 		if err != nil {
-			return 0, err
+			// The operand is named whole: `bs=x` was `invalid number ''`, the empty factor
+			// either side of the x.
+			return 0, fmt.Errorf("invalid number '%s'", text)
 		}
 		total *= value
 	}
