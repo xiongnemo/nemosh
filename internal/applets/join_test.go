@@ -65,13 +65,13 @@ func TestJoin_isBusyboxsMergeJoin(t *testing.T) {
 		{[]string{"-a", "12"}, "-a and -v take either 1 or 2"},
 		{[]string{"-t", "::"}, "separators are single characters"},
 		{[]string{"-t", ""}, "separators are single characters"},
-		{[]string{"-1", "0"}, "field 0 doesn't exist"},
+		{[]string{"-1", "0"}, "field 0 does not exist"},
 		{[]string{"-1", "x"}, "invalid number 'x'"},
 		{[]string{"-2", "3000000000"}, "number 3000000000 is not in 0..2147483647 range"},
 		{[]string{"-o", "3.1"}, "field specifier must be 0, 1.x or 2.x"},
 		{[]string{"-o", "00"}, "field specifier must be 0, 1.x or 2.x"},
 		{[]string{"-o", "1."}, "field specifier must be 0, 1.x or 2.x"},
-		{[]string{"-o", "1.0"}, "field number can't be 0"},
+		{[]string{"-o", "1.0"}, "field number cannot be 0"},
 		{[]string{"-o", "1.x"}, "invalid number 'x'"},
 		{[]string{"-o", "1.123456789012345678901"}, "field specifier too large"},
 	} {
@@ -84,7 +84,7 @@ func TestJoin_isBusyboxsMergeJoin(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"-", "-"}, "can't combine stdin with itself"},
+		{[]string{"-", "-"}, "cannot combine stdin with itself"},
 		{[]string{"f1"}, "missing operand"},
 		{[]string{"f1", "f2", "f3"}, "extra operand 'f3'"},
 	} {

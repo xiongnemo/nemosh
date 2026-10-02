@@ -40,7 +40,7 @@ func newJoinApplet() Applet {
 			return err
 		}
 		if operands[0] == "-" && operands[1] == "-" {
-			return errors.New("can't combine stdin with itself")
+			return errors.New("cannot combine stdin with itself")
 		}
 		view := ProcessViewFromContext(ctx)
 		var files [2]*joinFile
@@ -98,7 +98,7 @@ func parseJoinSpec(options appletOptions) (joinSpec, error) {
 			return spec, err
 		}
 		if field == 0 {
-			return spec, errors.New("field 0 doesn't exist")
+			return spec, errors.New("field 0 does not exist")
 		}
 		if letter == 'j' {
 			spec.fields = [2]int{field - 1, field - 1}
@@ -139,7 +139,7 @@ func parseJoinFormat(list string) ([]joinOutputField, error) {
 				return nil, err
 			}
 			if field == 0 {
-				return nil, errors.New("field number can't be 0")
+				return nil, errors.New("field number cannot be 0")
 			}
 			format = append(format, joinOutputField{file: int(entry[0] - '0'), field: field - 1})
 		default:

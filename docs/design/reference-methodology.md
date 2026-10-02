@@ -90,10 +90,11 @@ not taken where it is the reference's own invention:
 
 | Nemosh | busybox | why |
 | --- | --- | --- |
-| `cannot open 'x'` | `can't open 'x'` | The contraction is busybox's; GNU coreutils writes `cannot`. Carries no behaviour. |
-| `unsupported expression: -mtime` | `unrecognized: -mtime` | Matches Nemosh's own vocabulary, which says `unsupported <applet> option` elsewhere. |
+| `cannot open 'x'` | `can't open 'x'` | The contraction is busybox's; GNU coreutils writes `cannot`. Carries no behaviour. Every `can't` busybox says is `cannot` here: `cannot cd to`, `cannot find label for jump to`. |
+| `option does not take an argument -- x` | `option doesn't take an argument -- x` | The contraction again. The rest is getopt's, word for word, as both references say it on Windows, whose getopt is NetBSD's: `unknown option -- x`, `option requires an argument -- x`, `ambiguous option -- x`. |
+| `unsupported expression: -fstype` | `unrecognized: -fstype` | find's own. It matched an `unsupported <applet> option` the other applets said, which they no longer do; open to busybox's words. |
 
-Both are recorded as declared divergences in the behavior corpus, so the
+These are recorded as declared divergences in the behavior corpus, so the
 differential runner reports them instead of being surprised by them.
 
 Where wording *is* identical it is because it is not anyone's invention:

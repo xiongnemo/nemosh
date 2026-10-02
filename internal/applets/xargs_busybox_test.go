@@ -83,7 +83,7 @@ func TestXargs_failsAsBusyboxDoes(t *testing.T) {
 		{args: []string{"-n", "x", "echo"}, input: "a\n", want: "invalid number 'x'", status: 1},
 		{args: []string{"-n1r", "echo"}, input: "a\n", want: "invalid number '1r'", status: 1},
 		{args: []string{"-s", "8", "echo"}, input: "aaaaaaaaaa\n", want: "argument line too long", status: 1},
-		{args: []string{"-s", "5", "echo"}, input: "a\n", want: "can't fit single argument within argument list size limit", status: 1},
+		{args: []string{"-s", "5", "echo"}, input: "a\n", want: "cannot fit single argument within argument list size limit", status: 1},
 		{args: []string{"-s", "12", "-I", "{}", "echo", "{}"}, input: "abcdef\nabcdefg\n", want: "argument line too long", status: 1},
 		{args: []string{"-s", "13", "-I", "{}", "echo", "{}"}, input: "abcd\nabcdefg\n", want: "argument line too long", status: 1, stdout: "abcd\n"},
 		{args: []string{"-P", "x", "echo"}, input: "a\n", want: "invalid number 'x'", status: 1},

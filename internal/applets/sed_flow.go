@@ -45,7 +45,7 @@ func flattenSedProgram(program *sedProgram) error {
 			}
 			target, ok := program.labels[command.label]
 			if !ok {
-				return fmt.Errorf("can't find label for jump to `%s'", command.label)
+				return fmt.Errorf("cannot find label for jump to '%s'", command.label)
 			}
 			command.jump = target
 		}

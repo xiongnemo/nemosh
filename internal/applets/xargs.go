@@ -94,7 +94,7 @@ func (xargsApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdo
 		run.room -= len(word) + 1
 	}
 	if run.room <= 0 {
-		return errors.New("can't fit single argument within argument list size limit")
+		return errors.New("cannot fit single argument within argument list size limit")
 	}
 	run.most = run.room
 	if options.has('n') {

@@ -126,7 +126,7 @@ func TestOd_refusesAsBusyboxDoes(t *testing.T) {
 		{"-A z text", "bad output address radix 'z' (must be [doxn])"},
 		{"-N 5x text", "invalid number '5x'"},
 		{"-N -1 text", "invalid number '-1'"},
-		{"-j 100 text", "can't skip past end of combined input"},
+		{"-j 100 text", "cannot skip past end of combined input"},
 		{"-S 5000000000 s1", "invalid number '5000000000'"},
 		{"-S 5000000k s1", "number 5000000k is not in 0..4294967295 range"},
 		{"-N 9999999999999999999k s1", "number 9999999999999999999k is not in 0..18446744073709551615 range"},

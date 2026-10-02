@@ -114,7 +114,7 @@ func (r *odRun) skipBytes(input io.Reader) error {
 		if err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
-		return errors.New("can't skip past end of combined input")
+		return errors.New("cannot skip past end of combined input")
 	}
 	return nil
 }

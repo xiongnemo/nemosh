@@ -72,7 +72,7 @@ func (r Runtime) timeBuiltin(ctx context.Context, args []string) int {
 		}
 		file, err := os.OpenFile(r.resolvePath(output), flags, r.createMode(0o666))
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "time: can't open '%s': %s\n", output, applets.CauseText(err))
+			fmt.Fprintf(r.streams.Stderr, "time: cannot open '%s': %s\n", output, applets.CauseText(err))
 			return 1
 		}
 		defer file.Close()

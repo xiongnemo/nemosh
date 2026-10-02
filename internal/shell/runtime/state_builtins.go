@@ -242,14 +242,15 @@ func reportCD(r Runtime, quiet bool, format string, args ...any) {
 }
 
 // cdFailure says why the shell could not go to target, and answers the status for it: busybox's
-// words and its 2 for cd, from the error cdcmd raises (`can't cd to %s`), which leaves 2 as any
-// regular builtin's error does. pushd and popd are bash's, and say bash's, with 1.
+// words, but "cannot" for its "can't", and its 2 for cd, from the error cdcmd raises (`can't cd
+// to %s`), which leaves 2 as any regular builtin's error does. pushd and popd are bash's, and
+// say bash's, with 1.
 func (r Runtime) cdFailure(as, target, reason string, quiet bool) int {
 	if as != "cd" {
 		reportCD(r, quiet, "%s: %s: %s\n", as, target, reason)
 		return 1
 	}
-	reportCD(r, quiet, "cd: can't cd to %s: %s\n", target, reason)
+	reportCD(r, quiet, "cd: cannot cd to %s: %s\n", target, reason)
 	return 2
 }
 
