@@ -122,9 +122,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		expanded, outcome := applyHistoryExpansion(rt, &expander, c.stderr, line)
 		if outcome == historyPrinted && rt.HistoryRecording() {
 			// A :p prints the line and records it, and it does not run.
-			editor.remember(expanded)
-			rt.RecordInteractiveLine(expanded, saved.writes(expanded))
-			saved.append(expanded)
+			keepCommand(rt, editor, saved, expanded)
 		}
 		if outcome != historyRun {
 			input.Reset()
@@ -146,12 +144,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// saw one would be surprised to find the other different.
 		// `set +o history` keeps it out of all three, as in bash.
 		if command := strings.TrimRight(input.String(), "\n"); rt.HistoryRecording() {
-			editor.remember(command)
-			rt.RecordInteractiveLine(command, saved.writes(command))
-			// Written now rather than at exit: a session that is killed still leaves
-			// what it ran, and two windows appending interleave whole lines instead
-			// of overwriting each other.
-			saved.append(command)
+			keepCommand(rt, editor, saved, command)
 		}
 		input.Reset()
 		if parseErr != nil {

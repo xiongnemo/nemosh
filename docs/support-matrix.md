@@ -476,7 +476,9 @@ letter arrives as Escape and the letter, so in vi mode it is the two keys. No co
 whatever** until 2026-09-13, which matters more than the size of the change: a leading
 space is how everyone keeps a token out of their history, so ` export TOKEN=...` silently
 wrote the secret to disk. A feature that is absent is noticed; a habit that does nothing
-is trusted anyway. An unknown `HISTCONTROL` word and an unusable `HISTSIZE` are both
+is trusted anyway. Until 2026-10-02 it still did, half: such a line was kept out of
+`history` but written to the history file and walked by the arrows. HISTCONTROL now
+decides for all three. An unknown `HISTCONTROL` word and an unusable `HISTSIZE` are both
 ignored rather than refused, so an rc file shared with bash cannot stop this shell
 starting.
 
