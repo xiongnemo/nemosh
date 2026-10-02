@@ -32,10 +32,23 @@ func TestRuntime_indirectionNamesAnyParameter(t *testing.T) {
 			}
 		})
 	}
-	// A ref that is not set, or whose value names no parameter, stops the script.
+	// A ref that is not set, or whose value names no parameter, abandons the line it is on,
+	// status 1.
 	for _, script := range []string{`unset ref; echo "${!ref}"; echo reached`, `ref='a b'; echo "${!ref}"; echo reached`, `ref=''; echo "${!ref}"; echo reached`} {
-		if stdout, status := runScriptCapturing(script); stdout != "" || status == 0 {
-			t.Errorf("%s: got %q/%d, want the script stopped", script, stdout, status)
+		if stdout, status := runScriptCapturing(script); stdout != "" || status != 1 {
+			t.Errorf("%s: got %q/%d, want the line abandoned, status 1", script, stdout, status)
 		}
+	}
+}
+
+// An indirection that cannot be made abandons the command the shell was running -- the rest
+// of its line, the function it called -- status 1, and the script goes on with the next, as
+// bash's expand_wdesc_error does. It ended the script. Measured against bash 5.3.
+func TestIndirect_anErrorAbandonsTheCommandAndTheScriptGoesOn(t *testing.T) {
+	script := "echo \"${!undef}\"; echo same-line\necho next s=$?\n" +
+		"b='bad name'; x=${!b}; echo same2\necho next2 s=$?\n" +
+		"f() { echo \"${!undef}\"; echo in-f; }\nf; echo after-f\necho last s=$?\n"
+	if stdout, status := runScriptCapturing(script); stdout != "next s=1\nnext2 s=1\nlast s=1\n" || status != 0 {
+		t.Fatalf("got %q/%d, want each abandoned line skipped and the rest run", stdout, status)
 	}
 }

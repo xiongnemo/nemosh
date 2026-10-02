@@ -123,7 +123,7 @@ func (r Runtime) buildParameter(ctx context.Context, build *fieldBuilder, part w
 	if text, indirect, err := r.indirectText(ctx, part.text, savedStatus); indirect {
 		if err != nil || text == "" {
 			if err != nil {
-				r.reportExpansionError(err)
+				r.reportIndirectError(err)
 			}
 			build.expansion("", part.quote)
 			return

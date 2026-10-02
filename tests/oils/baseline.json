@@ -692,15 +692,10 @@
       "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "ash-only"
     },
     "var-ref.test.sh": {
-      "${!a[@]-'default'} is legal but fails with more than one element": "fail",
       "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
-      "${!undef:-}": "fail",
       "Array indirect expansion with replacements": "fail",
       "Array indirect expansion with suffix operators": "fail",
-      "Bad var ref": "fail",
-      "Bad var ref 2": "fail",
       "Bizarre tilde expansion in array index": "fail",
-      "Indirect expansion TO fancy expansion features bash disallows": "fail",
       "Var ref, then error with ${ ? }": "fail"
     },
     "var-sub-quote.test.sh": {

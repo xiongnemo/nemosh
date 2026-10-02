@@ -18,6 +18,19 @@ import (
 // `${!ref-default}` gave the empty string. And a ref that was not set gave the empty string
 // where bash stops with `invalid indirect expansion`.
 
+// reportIndirectError is an indirection that cannot be made -- ref not set, or its value no
+// name -- which is bash's expand_wdesc_error: the command the shell was running is abandoned,
+// the function it called and the loop it was in, status 1, and the shell goes on with the
+// next, as failglob's error does; see shellErrorResult. It ended the script, status 2, as
+// busybox's bad substitution does; busybox has no indirection.
+func (r Runtime) reportIndirectError(err error) {
+	if r.expansion.shellError {
+		return
+	}
+	fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+	r.expansion.shellError, r.expansion.discard = true, true
+}
+
 // indirectText is `${!ref...}` rewritten as the expansion of the parameter ref names, and
 // whether the text was an indirection at all. The text is empty when ref names nothing
 // without that being an error; see indirectTarget.
