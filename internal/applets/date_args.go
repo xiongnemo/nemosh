@@ -5,9 +5,11 @@ import (
 	"strings"
 )
 
-// dateLongOptions are busybox's (coreutils/date.c:144): the long forms and the letter each is.
-var dateLongOptions = map[string]byte{
-	"rfc-822": 'R', "rfc-2822": 'R', "set": 's', "utc": 'u', "date": 'd', "reference": 'r',
+// dateLongOptions are busybox's (coreutils/date.c:144): the long forms and the letter each is,
+// taken by any prefix that names one alone, as getopt_long takes them. Only the whole name was
+// taken, so `date --da=...` was an unknown option.
+var dateLongOptions = map[string]string{
+	"rfc-822": "R", "rfc-2822": "R", "set": "s", "utc": "u", "date": "d", "reference": "r",
 }
 
 // parseDateArgs reads date's options and operands: a +FMT, and then TIME to set the clock to,
@@ -30,11 +32,16 @@ func parseDateArgs(args []string, permute bool) (dateRequest, error) {
 		}
 		if strings.HasPrefix(arg, "--") {
 			name, value, valued := strings.Cut(arg[2:], "=")
-			letter, known := dateLongOptions[name]
-			if !known || valued != strings.ContainsRune("sdr", rune(letter)) && valued {
+			letter, err := longOptionLetter(dateLongOptions, name)
+			takesValue := letter != 0 && strings.IndexByte("sdr", letter) >= 0
+			switch {
+			case err != nil:
+				return request, fmt.Errorf("date: %w", err)
+			case letter == 0:
 				return request, fmt.Errorf("date: %w", unknownLongOption(arg))
-			}
-			if strings.ContainsRune("sdr", rune(letter)) && !valued {
+			case valued && !takesValue:
+				return request, fmt.Errorf("date: %w", optionTakesNoArgument(name))
+			case takesValue && !valued:
 				if index+1 >= len(args) {
 					return request, fmt.Errorf("date: %w", missingOptionArgument(name))
 				}
