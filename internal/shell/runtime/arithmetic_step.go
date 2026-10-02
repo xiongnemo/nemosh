@@ -168,8 +168,10 @@ func (p *arithmeticParser) apply(left int64, operator string, right int64) (int6
 	return value, err
 }
 
-// integerPower raises left to right by repeated multiplication, because these are
-// integers and math.Pow would round.
+// integerPower raises left to right by squaring, as busybox's math.c and bash's ipow do,
+// because these are integers and math.Pow would round. It multiplied right times, so
+// `$(( 0**72**7 ))`, ten trillion multiplications, hung the shell; the answer, wrapped at
+// 64 bits, is the same either way.
 func integerPower(left, right int64) (int64, error) {
 	if right < 0 {
 		// bash gives "exponent less than 0" and so does this: the answer is a
@@ -177,8 +179,11 @@ func integerPower(left, right int64) (int64, error) {
 		return 0, fmt.Errorf("arithmetic: exponent less than 0")
 	}
 	result := int64(1)
-	for count := int64(0); count < right; count++ {
-		result *= left
+	for ; right != 0; right >>= 1 {
+		if right&1 != 0 {
+			result *= left
+		}
+		left *= left
 	}
 	return result, nil
 }
