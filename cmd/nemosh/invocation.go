@@ -232,6 +232,7 @@ func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 	if status, exited := c.sourceRCFile(ctx, rt); exited {
 		return startupExit(rt, status)
 	}
+	setDefaultHistoryFile(rt)
 	return nil
 }
 
@@ -249,6 +250,7 @@ func (c command) runSessionCommand(ctx context.Context, controller *interruptCon
 	if status, exited := c.sourceRCFile(ctx, rt); exited {
 		return startupExit(rt, status)
 	}
+	setDefaultHistoryFile(rt)
 	rt.MarkSession()
 	return c.runScriptWith(ctx, controller, rt, script)
 }

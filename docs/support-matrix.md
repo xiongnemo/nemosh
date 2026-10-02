@@ -75,8 +75,9 @@ Both glob options are off by default, as they are in busybox.
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.
 
-History survives the session. `HISTFILE` names the file and defaults to
-`~/.nemosh_history`; `HISTFILESIZE` caps it at 500 lines by default; setting
+History survives the session. `HISTFILE` names the file, exported or not, and a
+prompt sets it to `~/.nemosh_history` once the rc file has run without setting it,
+as busybox sets `~/.ash_history`; `HISTFILESIZE` caps it at 500 lines by default; setting
 either to nothing turns saving off, which is bash's rule and busybox's. Lines
 are appended one at a time in a single write, so a session that is killed still
 leaves what it ran and two windows interleave whole lines rather than

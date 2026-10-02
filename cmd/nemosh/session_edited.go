@@ -29,10 +29,10 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	if err := c.startSession(ctx, rt); err != nil {
 		return err
 	}
-	// After the rc file, so an `export HISTFILE=...` in it is honoured, and
-	// before the first prompt, so the first thing typed already has yesterday to
-	// suggest from.
-	saved := newHistoryFile(rt.LookupEnv, func(path string) (string, bool) { return nativePath(rt, path) })
+	// After the rc file, so a `HISTFILE=...` in it is honoured, exported or not, as
+	// both references honour it, and before the first prompt, so the first thing
+	// typed already has yesterday to suggest from. Only an exported one was.
+	saved := newHistoryFile(rt.LookupVariable, func(path string) (string, bool) { return nativePath(rt, path) })
 	loaded, held := saved.loadCounted()
 	for _, line := range loaded {
 		editor.remember(line)

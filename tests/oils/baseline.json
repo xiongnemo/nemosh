@@ -500,7 +500,6 @@
     },
     "interactive.test.sh": {
       "Error message with bad oshrc file (currently ignored)": "fail",
-      "HISTFILE default value": "fail",
       "HISTFILE is written in interactive shell": "fail",
       "HISTFILE=my-history loads history from that file, and writes back to it": "fail",
       "HISTFILE=my-history with history -a": "fail",
@@ -725,8 +724,7 @@
       "$_ with pipeline and subshell": "fail",
       "BASH_VERSION / OILS_VERSION": "fail",
       "Some vars are set, even without startup file, or env: PATH, PWD": "fail",
-      "UID EUID PPID can't be changed": "fail",
-      "Vars set interactively only: $HISTFILE": "fail"
+      "UID EUID PPID can't be changed": "fail"
     },
     "whitespace.test.sh": {
       "Default IFS does not include \\r \\v \\f": "fail",
