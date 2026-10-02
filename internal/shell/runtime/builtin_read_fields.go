@@ -29,6 +29,11 @@ type readLineResult struct {
 }
 
 func collectReadLine(ctx context.Context, input io.Reader, options readOptions, progress *readProgress) (readLineResult, error) {
+	if file, ok := regularFile(input); ok {
+		ahead := &seekBackReader{file: file}
+		defer ahead.giveBack()
+		input = ahead
+	}
 	var text []byte
 	var escaped []bool
 	buffer := []byte{0}
