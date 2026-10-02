@@ -16,6 +16,12 @@ var ErrInterrupt = errors.New("interrupt")
 // interrupt is what ended ctx.
 func ignoringInterrupt(parent context.Context) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancelCause(context.WithoutCancel(parent))
+	// A parent already ended is seen now. AfterFunc would see it too, but on a goroutine of
+	// its own, and a read could start in between and block on a pipe nothing ends: so it did
+	// on a Linux runner, tee -i waiting ten minutes on a context its parent had ended.
+	if cause := context.Cause(parent); cause != nil && !errors.Is(cause, ErrInterrupt) {
+		cancel(cause)
+	}
 	stop := context.AfterFunc(parent, func() {
 		if cause := context.Cause(parent); !errors.Is(cause, ErrInterrupt) {
 			cancel(cause)

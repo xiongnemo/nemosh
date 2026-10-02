@@ -36,11 +36,13 @@ func TestTee_goesOnThroughAnInterruptWithI(t *testing.T) {
 		{nil, ErrInterrupt},
 		{[]string{"-i"}, errors.New("terminated")},
 	} {
+		// Ended before tee starts: a read on an io.Pipe that has begun is not one the context
+		// can end, so cancelling after the start raced the first read, and lost on Linux.
 		ctx, cancel := context.WithCancelCause(context.Background())
 		reader, writer := io.Pipe()
+		cancel(test.cause)
 		done := make(chan error, 1)
 		go func() { done <- newTeeApplet().Run(ctx, test.args, reader, io.Discard, io.Discard) }()
-		cancel(test.cause)
 		if err := <-done; err == nil {
 			t.Errorf("tee %q ended by %v: nil, want it to stop", test.args, test.cause)
 		}
