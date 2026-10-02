@@ -23,7 +23,9 @@ var errLineAbandoned = errors.New("line abandoned")
 // see interactive_lineedit.go.
 type lineEditor struct {
 	// kills is what ^K, ^U and ^W took, for ^Y to put back. See lineedit_kill.go.
-	kills            killRing
+	kills killRing
+	// undo is what the line was before each change to it, for C-_. See lineedit_undo.go.
+	undo             lineUndo
 	input            io.Reader
 	screen           io.Writer
 	workingDirectory string
@@ -160,6 +162,7 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 	e.buffer = newLineBuffer()
 	e.recall = 0
 	e.lastArg = lastArgument{}
+	e.undo = lineUndo{}
 	e.vi = viState{on: e.vi.on}
 	e.resetDrawState()
 	fmt.Fprint(e.screen, prompt)
@@ -211,18 +214,8 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 				continue
 			}
 		}
-		// yank-last-arg repeats only when pressed again straight after itself; a kill joins
-		// the one before only straight after it; M-y turns the ring only straight after a yank.
-		if key.kind != keyYankLastArg {
-			e.lastArg.active = false
-		}
-		killing := key.kind == keyClearLine || key.kind == keyKillToEnd || key.kind == keyDeleteWord || key.kind == keyDeleteWordForward
-		if !killing {
-			e.kills.joining = false
-		}
-		if key.kind != keyYank && key.kind != keyYankPop {
-			e.kills.yanked.active = false
-		}
+		// What the key before began ends here unless this one goes on with it; see beforeKey.
+		killing, before := e.beforeKey(key)
 		if e.vi.on && e.viKey(key) {
 			e.redraw(prompt)
 			continue
@@ -307,8 +300,12 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			e.buffer.changeWordCase(key.value)
 		case keyYankLastArg:
 			e.yankLastArg()
+		case keyUndo:
+			e.undo.undo(e.buffer)
+		case keyRevertLine:
+			e.undo.revert(e.buffer)
 		}
-		e.kills.joining = killing
+		e.afterKey(key, killing, before)
 		e.redraw(prompt)
 	}
 }

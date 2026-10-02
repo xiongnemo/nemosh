@@ -55,6 +55,10 @@ const (
 	// keyEscape is Escape on its own, which is only a key in vi mode: it goes to command
 	// mode. See lineedit_vi.go.
 	keyEscape
+	// keyUndo is C-_ and C-x C-u, and keyRevertLine M-r: readline's undo and revert-line.
+	// See lineedit_undo.go.
+	keyUndo
+	keyRevertLine
 )
 
 type key struct {
@@ -125,6 +129,10 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyClearLine}, 1
 	case 0x17:
 		return key{kind: keyDeleteWord}, 1
+	case 0x1f:
+		return key{kind: keyUndo}, 1
+	case 0x18:
+		return decodeControlX(buffer)
 	case 0x1b:
 		return decodeEscapeSequence(buffer)
 	}
@@ -153,6 +161,18 @@ func decodeViKey(buffer []byte) (key, int) {
 	return decodeKey(buffer)
 }
 
+// decodeControlX is readline's C-x prefix, a key and the one after it: C-x C-u is undo.
+// Any other pair is skipped whole, as an unbound Meta key is.
+func decodeControlX(buffer []byte) (key, int) {
+	if len(buffer) < 2 {
+		return key{kind: keyIncomplete}, 0
+	}
+	if buffer[1] == 0x15 {
+		return key{kind: keyUndo}, 2
+	}
+	return key{kind: keyUnknown}, 2
+}
+
 // decodeEscapeSequence handles the CSI forms a terminal sends for the arrows
 // and the navigation block.
 func decodeEscapeSequence(buffer []byte) (key, int) {
@@ -176,6 +196,8 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 			return key{kind: keyYankLastArg}, 2
 		case 'y':
 			return key{kind: keyYankPop}, 2
+		case 'r':
+			return key{kind: keyRevertLine}, 2
 		case 'u', 'l', 'c':
 			return key{kind: keyWordCase, value: rune(buffer[1])}, 2
 		}

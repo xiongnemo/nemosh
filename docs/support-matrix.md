@@ -450,6 +450,11 @@ held one entry, the newest, until 2026-10-02.
     and past the oldest line it puts in nothing.
   - `M-u`, `M-l` and `M-c` put the rest of the next word in upper case, lower case, or
     capitalised, a word being letters and digits as readline's are.
+  - `C-_` and `C-x C-u` are undo: each takes back the last change to the line, and
+    pressed again the one before. Characters typed one after another are one change, up
+    to twenty of them, as readline joins them, and a key that only moves the cursor is
+    none. `M-r` is revert-line, every change taken back. A line recalled from history
+    starts its own undo.
 
 ### The line editor's vi mode
 
