@@ -48,6 +48,13 @@ func processHandleCount(t *testing.T) int {
 // 18: not proportional to the work, so not a leak. Running the identical batch a
 // second time puts the plateau behind the measurement, and what is left is the
 // handles that batch genuinely failed to return.
+//
+// Not all of it, under load: with the gate's other packages running beside it, the second
+// run of 300 pipelines moved the count by 18 and by 24 where the scheduler had started fewer
+// threads before it, and nothing was kept. leakAllowance is what a run may grow by. A leak
+// is one handle an operation, which moves the count by hundreds.
+const leakAllowance = 64
+
 func leakedHandles(t *testing.T, work func()) int {
 	t.Helper()
 	work()
@@ -80,7 +87,7 @@ func TestHandles_surviveRepeatedFileRedirects(t *testing.T) {
 	})
 
 	// Then
-	if growth > 16 {
+	if growth > leakAllowance {
 		t.Fatalf("handle count grew by %d across a repeat of %d redirect pairs, after the runtime's own growth had settled", growth, operations)
 	}
 }
@@ -107,7 +114,7 @@ func TestHandles_surviveRepeatedPipelines(t *testing.T) {
 	})
 
 	// Then
-	if growth > 16 {
+	if growth > leakAllowance {
 		t.Fatalf("handle count grew by %d across a repeat of %d pipelines", growth, operations)
 	}
 }
