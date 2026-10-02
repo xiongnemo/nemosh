@@ -65,30 +65,42 @@ func (r Runtime) historyLimit() int {
 // The *raw* line is what the space rule reads, so this has to run before anything trims
 // it. That is the whole subtlety: by the time a line has been through the parser there is
 // no leading space left to notice.
-func (r Runtime) recordHistoryLine(raw string) {
+func (r Runtime) recordHistoryLine(raw string) { r.addHistoryLine(raw, false) }
+
+// addHistoryLine is recordHistoryLine for a line the history file has already, or has
+// not, and answers whether it went in.
+func (r Runtime) addHistoryLine(raw string, saved bool) bool {
 	control := parseHistoryControl(r.vars["HISTCONTROL"])
 	if control.ignoreSpace && strings.HasPrefix(raw, " ") {
-		return
+		return false
 	}
 	line := strings.TrimRight(raw, "\n")
 	if strings.TrimSpace(line) == "" {
-		return
+		return false
 	}
 	if control.ignoreDups {
 		if entries := r.history.list(); len(entries) > 0 && entries[len(entries)-1] == line {
-			return
+			return false
 		}
 	}
 	if control.eraseDups {
 		r.history.erase(line)
 	}
-	r.history.record(line)
+	added := r.history.record(line, saved)
 	r.history.truncate(r.historyLimit())
+	return added
 }
 
 // RecordInteractiveLine is the interactive loops' entry point, which applies HISTCONTROL.
+// saved is whether the session writes the line to its history file itself, which it does
+// a line at a time, as busybox's does; `history -a` writes the lines it did not. The
+// answer is whether the line was kept.
 //
 // Separate from RecordHistory, which the startup file's replay uses: lines read back from
 // disk have already been filtered once, and running them through the space rule again
 // would drop nothing while costing a parse of HISTCONTROL per line.
-func (r Runtime) RecordInteractiveLine(raw string) { r.recordHistoryLine(raw) }
+func (r Runtime) RecordInteractiveLine(raw string, saved bool) bool {
+	added := r.addHistoryLine(raw, saved)
+	r.history.noteLine(added, saved && added)
+	return added
+}

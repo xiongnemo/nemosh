@@ -33,10 +33,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	// before the first prompt, so the first thing typed already has yesterday to
 	// suggest from.
 	saved := newHistoryFile(rt.LookupEnv, func(path string) (string, bool) { return nativePath(rt, path) })
-	for _, line := range saved.load() {
+	loaded, held := saved.loadCounted()
+	for _, line := range loaded {
 		editor.remember(line)
 		rt.RecordHistory(line)
 	}
+	rt.NoteHistoryFile(held)
 
 	lastStatus := 0
 	ignoredEOFs := 0
@@ -121,7 +123,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		if outcome == historyPrinted && rt.HistoryRecording() {
 			// A :p prints the line and records it, and it does not run.
 			editor.remember(expanded)
-			rt.RecordInteractiveLine(expanded)
+			rt.RecordInteractiveLine(expanded, saved.writes(expanded))
 			saved.append(expanded)
 		}
 		if outcome != historyRun {
@@ -145,7 +147,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// `set +o history` keeps it out of all three, as in bash.
 		if command := strings.TrimRight(input.String(), "\n"); rt.HistoryRecording() {
 			editor.remember(command)
-			rt.RecordInteractiveLine(command)
+			rt.RecordInteractiveLine(command, saved.writes(command))
 			// Written now rather than at exit: a session that is killed still leaves
 			// what it ran, and two windows appending interleave whole lines instead
 			// of overwriting each other.

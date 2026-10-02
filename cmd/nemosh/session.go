@@ -131,7 +131,7 @@ sessionLoop:
 		expanded, outcome := applyHistoryExpansion(rt, &expander, c.stderr, line)
 		if outcome != historyRun {
 			if outcome == historyPrinted && rt.HistoryRecording() {
-				rt.RecordInteractiveLine(expanded)
+				rt.RecordInteractiveLine(expanded, false)
 			}
 			input.Reset()
 			continue
@@ -155,7 +155,7 @@ sessionLoop:
 		// run a command. An interactive session is an interactive session however its
 		// lines arrive. `set +o history` stops it, as in bash.
 		if rt.HistoryRecording() {
-			rt.RecordInteractiveLine(strings.TrimRight(input.String(), "\n"))
+			rt.RecordInteractiveLine(strings.TrimRight(input.String(), "\n"), false)
 		}
 		input.Reset()
 		if parseErr != nil {

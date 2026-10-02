@@ -99,12 +99,19 @@ func (h historyFile) enabled() bool { return h.path != "" && h.limit > 0 }
 // An unreadable file is not an error worth a word: a first run has no file, and
 // a caller that cannot read one keeps whatever it already had.
 func (h historyFile) load() []string {
+	lines, _ := h.loadCounted()
+	return lines
+}
+
+// loadCounted is load, and how many lines the file holds, the place `history -n` reads
+// on from.
+func (h historyFile) loadCounted() ([]string, int) {
 	if !h.enabled() {
-		return nil
+		return nil, 0
 	}
 	file, err := os.Open(h.path)
 	if err != nil {
-		return nil
+		return nil, 0
 	}
 	defer file.Close()
 	var lines []string
@@ -117,10 +124,16 @@ func (h historyFile) load() []string {
 			lines = append(lines, line)
 		}
 	}
+	held := len(lines)
 	if len(lines) > h.limit {
 		lines = lines[len(lines)-h.limit:]
 	}
-	return lines
+	return lines, held
+}
+
+// writes is whether append would write line: a file to write to, and a line that is one.
+func (h historyFile) writes(line string) bool {
+	return h.enabled() && strings.TrimSpace(line) != "" && !strings.ContainsAny(line, "\n\r")
 }
 
 // append adds one line and trims the file if it has grown far past the limit.

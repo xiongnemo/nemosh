@@ -83,6 +83,14 @@ leaves what it ran and two windows interleave whole lines rather than
 overwriting each other, and the file is rewritten only once it has grown to four
 times the cap (`libbb/lineedit.c:1826`, `:1841`).
 
+`history`'s options are bash's, busybox's taking none: `history N` lists the newest
+N; `-c` clears; `-d` takes out a position, one counted back from the end (`-1`), or a
+range (`2-4`); `-s` adds its words as one entry in place of the line that ran it; `-p`
+prints its words history-expanded; and `-a`, `-n`, `-r` and `-w` append to, read on
+from, read and write FILE or `HISTFILE`. `-a` writes only the lines the file has not
+got, which at a prompt is what `history -s` added, every typed line being written as
+it runs.
+
 Tab completion and the inline suggestion offer host names for `ssh`, read from
 `~/.ssh/config` -- and `/etc/hosts` off Windows. See
 `docs/design/completion.md`, Host names, for what is read and what deliberately

@@ -280,16 +280,9 @@
       "two flags: -ab": "ash-only"
     },
     "builtin-history.test.sh": {
-      "HISTFILE must point to a file": "fail",
-      "HISTFILE set to array": "fail",
       "HISTFILE unset": "fail",
       "HISTFILESIZE shrinks the history file when changed": "fail",
       "HISTSIZE shrinks the in-memory history when changed": "fail",
-      "history -a": "fail",
-      "history -d to delete history from end": "fail",
-      "history -n reads *new* commands from the history file, and appends them to the current history": "fail",
-      "history -r reads from the history file, and appends it to the current history": "fail",
-      "history -w writes out the in-memory history to the history file": "fail",
       "history usage": "ash-only",
       "recording history can be toggled with set -o/+o history": "fail",
       "shopt histappend - osh ignores shopt and appends, bash sometimes overwrites": "fail"
@@ -312,7 +305,7 @@
       "Invalid shift argument": "ash-only",
       "Print shell strings with normal chars: set and printf %q and ${x@Q}": "fail",
       "Print shell strings with weird chars: set and printf %q and ${x@Q}": "fail",
-      "history builtin usage": "fail"
+      "history builtin usage": "ash-only"
     },
     "builtin-printf.test.sh": {
       "%(strftime format)T": "fail",
