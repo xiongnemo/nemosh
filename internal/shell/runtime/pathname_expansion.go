@@ -22,7 +22,7 @@ func (r Runtime) expandPathnames(field string) []string {
 	// Everything up to the first segment with a metacharacter in it is fixed,
 	// and joining it back keeps a leading `/` or a `C:` where it was.
 	fixed := 0
-	for fixed < len(segments) && !containsGlobMeta(segments[fixed]) {
+	for fixed < len(segments) && !isGlobPattern(segments[fixed]) {
 		fixed++
 	}
 	if fixed == len(segments) {
@@ -64,7 +64,7 @@ func (r Runtime) expandPathnames(field string) []string {
 func (r Runtime) expandPathSegment(bases []string, segment string) []string {
 	var matches []string
 	for _, base := range bases {
-		if !containsGlobMeta(segment) {
+		if !isGlobPattern(segment) {
 			// A fixed segment after a globbed one still has to exist, or the
 			// branch it sits on is not a match.
 			candidate := joinGlobPath(base, unescapeGlob(segment))
@@ -175,6 +175,28 @@ func joinGlobPath(base, name string) string {
 // @(foo|bar).py` were left as written, since they had no star, question mark or bracket.
 func containsGlobMeta(text string) bool {
 	return strings.ContainsAny(text, "*?[") || hasExtendedPattern(text)
+}
+
+// isGlobPattern reports a segment with something to match: a `*` or `?`, an extended group, or
+// a `[` that a `]` after it may close. An unclosed `[` matches only itself, so a segment with
+// nothing else is a literal, looked up as the path it is rather than matched against every
+// name in its directory. `[` is the command every `if [ ... ]` runs, and the directory was
+// read for each one: 20000 tests in a loop took a second where `test` took a sixth of one.
+func isGlobPattern(segment string) bool {
+	if strings.ContainsAny(segment, "*?") || hasExtendedPattern(segment) {
+		return true
+	}
+	for index := 0; index < len(segment); index++ {
+		switch segment[index] {
+		case '\\':
+			index++
+		case '[':
+			if strings.IndexByte(segment[index+1:], ']') >= 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // matchGlobSegment applies `set -o nocaseglob`, which busybox implements as
