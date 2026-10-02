@@ -522,7 +522,6 @@
     },
     "nameref.test.sh": {
       "a[@] in nameref": "fail",
-      "bad mutation through nameref: ref[0]= where ref is array[0]": "fail",
       "name ref on Undef cell": "fail",
       "readonly var can't be assigned through nameref": "fail"
     },

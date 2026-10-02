@@ -1,6 +1,9 @@
 package runtime_test
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // Namerefs, bash's: `declare -n ref=name` makes ref another name for name, to read, to write
 // and to unset through. busybox has none; `local -n` was "not an option this build has", so a
@@ -92,5 +95,16 @@ func TestNameref(t *testing.T) {
 				t.Fatalf("got %q/%d, want %q/%d; stderr = %q", stdout, status, test.stdout, test.status, stderr)
 			}
 		})
+	}
+}
+
+// A nameref to an element takes no subscript of its own: `ref[0]=x` is no identifier, and the
+// statement is abandoned with the rest of its line, status 1, as bash abandons it. It went
+// on, status 0. Measured against bash 5.3.
+func TestNameref_aSubscriptOnANamerefToAnElementAbandonsTheLine(t *testing.T) {
+	script := "array=(X Y Z)\ntypeset -n ref='array[0]'\nref[0]=foo; echo same\necho status=$?\necho ${array[@]}\n"
+	status, stdout, stderr := runSetScript(t, script)
+	if stdout != "status=1\nX Y Z\n" || status != 0 || !strings.Contains(stderr, "`array[0]': not a valid identifier") {
+		t.Fatalf("got %q/%d, stderr %q", stdout, status, stderr)
 	}
 }

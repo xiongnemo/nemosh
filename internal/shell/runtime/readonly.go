@@ -63,7 +63,10 @@ func (r Runtime) assignVar(name string, value string) int {
 		return 0
 	}
 	if name, err = r.namerefElement(target); err != nil {
+		// A subscript on a nameref to an element, `ref[0]=x`, is no identifier: the statement
+		// is abandoned, status 1, as bash abandons it. It went on with 0.
 		fmt.Fprintln(r.streams.Stderr, err)
+		r.failAssignment()
 		return 1
 	}
 	if r.isReadonly(name) {
