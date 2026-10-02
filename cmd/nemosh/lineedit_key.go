@@ -59,6 +59,9 @@ const (
 	// See lineedit_undo.go.
 	keyUndo
 	keyRevertLine
+	// keyEditAndExecute is C-x C-e, readline's edit-and-execute-command: the line goes to an
+	// editor, and what it leaves runs. See edit_and_execute.go.
+	keyEditAndExecute
 )
 
 type key struct {
@@ -161,14 +164,18 @@ func decodeViKey(buffer []byte) (key, int) {
 	return decodeKey(buffer)
 }
 
-// decodeControlX is readline's C-x prefix, a key and the one after it: C-x C-u is undo.
-// Any other pair is skipped whole, as an unbound Meta key is.
+// decodeControlX is readline's C-x prefix, a key and the one after it: C-x C-u is undo and
+// C-x C-e edit-and-execute-command. Any other pair is skipped whole, as an unbound Meta key
+// is.
 func decodeControlX(buffer []byte) (key, int) {
 	if len(buffer) < 2 {
 		return key{kind: keyIncomplete}, 0
 	}
-	if buffer[1] == 0x15 {
+	switch buffer[1] {
+	case 0x15:
 		return key{kind: keyUndo}, 2
+	case 0x05:
+		return key{kind: keyEditAndExecute}, 2
 	}
 	return key{kind: keyUnknown}, 2
 }

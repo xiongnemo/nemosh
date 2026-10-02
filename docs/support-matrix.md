@@ -455,6 +455,10 @@ held one entry, the newest, until 2026-10-02.
     to twenty of them, as readline joins them, and a key that only moves the cursor is
     none. `M-r` is revert-line, every change taken back. A line recalled from history
     starts its own undo.
+  - `C-x C-e` is edit-and-execute-command: the line goes to a file and the file to
+    `VISUAL`, or `EDITOR`, or `emacs` (`vi` in vi mode), and what the editor leaves is
+    said on standard error and run as though typed, kept in history in the line's place.
+    An editor that fails runs nothing.
 
 ### The line editor's vi mode
 

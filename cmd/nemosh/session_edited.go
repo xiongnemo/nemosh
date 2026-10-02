@@ -98,6 +98,16 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			input.Reset()
 			continue
 		}
+		edited := errors.Is(err, errEditAndExecute)
+		if edited {
+			// C-x C-e: what the editor leaves is the line, as though typed; see
+			// edit_and_execute.go. It is not history-expanded, as bash's fc runs it.
+			var ok bool
+			if line, ok = c.editInEditor(ctx, &rt, controller, line, editor.vi.on); !ok {
+				continue
+			}
+			err = nil
+		}
 		if errors.Is(err, io.EOF) {
 			if input.Len() > 0 {
 				rt.CloseInteractive(ctx)
@@ -119,7 +129,10 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// shell proper never sees an unexpanded `!`. Shared with the plain loop in
 		// session.go, which is the half that was forgotten on the first attempt -- and
 		// which is the path a piped script takes.
-		expanded, outcome := applyHistoryExpansion(rt, &expander, c.stderr, line)
+		expanded, outcome := line, historyRun
+		if !edited {
+			expanded, outcome = applyHistoryExpansion(rt, &expander, c.stderr, line)
+		}
 		if outcome == historyPrinted && rt.HistoryRecording() {
 			// A :p prints the line and records it, and it does not run.
 			keepCommand(rt, editor, saved, expanded)

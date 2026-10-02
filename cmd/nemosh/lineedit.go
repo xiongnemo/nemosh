@@ -234,6 +234,9 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		case keyInterrupt:
 			fmt.Fprintln(e.screen)
 			return "", errLineAbandoned
+		case keyEditAndExecute:
+			fmt.Fprintln(e.screen)
+			return e.buffer.String(), errEditAndExecute
 		case keyRune:
 			e.buffer.insert(key.value)
 		case keyBackspace:
