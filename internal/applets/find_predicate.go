@@ -131,8 +131,12 @@ func (p *findParser) typePredicate(operand string) (findNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(letter) != 1 || !strings.Contains(findTypeLetters, letter) {
-		return nil, fmt.Errorf("-type: unsupported type %q; this shell classifies only %s", letter, describeFindTypes())
+	if len(letter) != 1 || !strings.Contains("bcdpfls", letter) {
+		// busybox's find_type, which knows b, p and s too.
+		return nil, fmt.Errorf("invalid argument '%s' to '-type'", letter)
+	}
+	if !strings.Contains(findTypeLetters, letter) {
+		return nil, fmt.Errorf("-type: unsupported type '%s'; this shell classifies only %s", letter, describeFindTypes())
 	}
 	return findType{letter: letter[0]}, nil
 }
@@ -145,11 +149,11 @@ func (p *findParser) sizePredicate(operand string) (findNode, error) {
 	comparison, digits := splitFindComparison(value)
 	unit, digits, err := splitFindSizeUnit(digits)
 	if err != nil {
-		return nil, fmt.Errorf("-size: invalid size %q", value)
+		return nil, fmt.Errorf("invalid number '%s'", value)
 	}
 	count, err := strconv.ParseInt(digits, 10, 64)
 	if err != nil || count < 0 {
-		return nil, fmt.Errorf("-size: invalid size %q", value)
+		return nil, fmt.Errorf("invalid number '%s'", value)
 	}
 	return findSize{comparison: comparison, count: count, unit: unit}, nil
 }
@@ -161,13 +165,14 @@ func (p *findParser) newerPredicate(operand string) (findNode, error) {
 	if err != nil {
 		return nil, err
 	}
+	// busybox's xstat: `can't stat 'f'`, as nemosh says it. It was the name bare.
 	host, err := resolveHostPath(p.view, name)
 	if err != nil {
-		return nil, operandFailure(name, err)
+		return nil, cannotStat(name, err)
 	}
 	info, err := os.Stat(host)
 	if err != nil {
-		return nil, operandFailure(name, err)
+		return nil, cannotStat(name, err)
 	}
 	return findNewer{than: info.ModTime()}, nil
 }
@@ -181,7 +186,7 @@ func (p *findParser) depthOption(operand string) (findNode, error) {
 	}
 	depth, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("invalid number %q", value)
+		return nil, fmt.Errorf("invalid number '%s'", value)
 	}
 	if depth < 0 {
 		return nil, fmt.Errorf("%s: %d is not a non-negative depth", operand, depth)

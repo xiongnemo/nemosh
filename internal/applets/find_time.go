@@ -32,7 +32,7 @@ func (p *findParser) timePredicate(operand string) (findNode, error) {
 	comparison, digits := splitFindComparison(value)
 	count, err := strconv.ParseInt(digits, 10, 64)
 	if err != nil || count < 0 {
-		return nil, fmt.Errorf("invalid number %q", value)
+		return nil, fmt.Errorf("invalid number '%s'", value)
 	}
 	unit := int64(24 * 60 * 60)
 	if strings.HasSuffix(operand, "min") {

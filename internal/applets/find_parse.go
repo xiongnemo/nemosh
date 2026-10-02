@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -91,7 +92,7 @@ func (p *findParser) parse() (findExpression, error) {
 	}
 	if p.index < len(p.args) {
 		// The only token that can stop the parse without being consumed.
-		return findExpression{}, fmt.Errorf("unpaired %q", p.args[p.index])
+		return findExpression{}, fmt.Errorf("unpaired '%s'", p.args[p.index])
 	}
 	if !p.hasAction {
 		root = findAnd{left: root, right: findPrint{terminator: '\n'}}
@@ -169,7 +170,7 @@ func (p *findParser) parsePrimary() (findNode, error) {
 			return nil, err
 		}
 		if p.peek() != ")" {
-			return nil, fmt.Errorf("unpaired %q", "(")
+			return nil, errors.New("unpaired '('")
 		}
 		p.next()
 		return inner, nil
@@ -177,7 +178,7 @@ func (p *findParser) parsePrimary() (findNode, error) {
 		// Reached where a test was required: either `find . )` or an empty
 		// group. busybox takes the first as a path operand and prints the whole
 		// tree before complaining; naming the operator is the honest answer.
-		return nil, fmt.Errorf("unpaired %q", ")")
+		return nil, errors.New("unpaired ')'")
 	case "-o", "-or", "-a", "-and":
 		return nil, fmt.Errorf("%s: missing an expression before it", token)
 	}
@@ -209,10 +210,11 @@ func (p *findParser) next() string {
 }
 
 // argument takes the operand a test requires, naming the test when it is absent
-// rather than reporting the end of the arguments.
+// rather than reporting the end of the arguments, in busybox's words: `-name requires an
+// argument`.
 func (p *findParser) argument(operand string) (string, error) {
 	if p.index >= len(p.args) {
-		return "", fmt.Errorf("%s: requires an argument", operand)
+		return "", fmt.Errorf("%s requires an argument", operand)
 	}
 	return p.next(), nil
 }
