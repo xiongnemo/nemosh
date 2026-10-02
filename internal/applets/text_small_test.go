@@ -143,7 +143,7 @@ func TestTsort_ordersDependenciesFirst(t *testing.T) {
 	dir := writeSmallFixture(t, map[string]string{
 		"t.txt":    "a b\nb c\nd e\n",
 		"loop.txt": "a b\nb a\n",
-		"one.txt":  "solo\n",
+		"one.txt":  "solo solo\n",
 	})
 	got, stderr, err := runSmall(t, dir, "", "tsort", "t.txt")
 	if err != nil {
@@ -171,12 +171,9 @@ func TestTsort_ordersDependenciesFirst(t *testing.T) {
 	if solo, _, _ := runSmall(t, dir, "", "tsort", "one.txt"); strings.TrimSpace(solo) != "solo" {
 		t.Fatalf("tsort on a lone item = %q", solo)
 	}
-	// A cycle is reported, not silently truncated: a partial order looks exactly
-	// like a complete one.
-	if _, stderr, err := runSmall(t, dir, "", "tsort", "loop.txt"); err == nil {
-		t.Fatal("tsort on a cycle succeeded, want a refusal")
-	} else if !strings.Contains(stderr+err.Error(), "loop") {
-		t.Fatalf("tsort on a cycle said %q, want it to name the loop", stderr+err.Error())
+	// A cycle is said and broken, and the rest written, with status 1.
+	if out, stderr, err := runSmall(t, dir, "", "tsort", "loop.txt"); err == nil || out != "a\nb\n" || stderr != "tsort: cycle at a\n" {
+		t.Fatalf("tsort on a cycle = %q, %q, %v; want a b, the cycle said, and a failure", out, stderr, err)
 	}
 }
 

@@ -801,7 +801,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `lsattr` | `-R -a -d -l`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `chattr` | `-R`, and `-` or `+` with `r h s a t n`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `tac` | none | refused by name |
-| `tsort` | none; a cycle is reported rather than truncated | refused by name |
+| `tsort` | none; its words are paired across lines and an odd one out refused, and a cycle is said, `cycle at NAME`, and broken, the rest written with status 1, as busybox's does; one FILE | refused by name |
 | `tar` | `-c -t -x -v -z -j -a -O -f -C -k -m -o -h -T -X`, busybox's long options, `--exclude`, `--strip-components`, `--no-recursion` and `--overwrite` among them, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too; the FILEs name what is listed or extracted, see **The archivers** | refused by name |
 | `tail` | `-n -c -q -v -f -F -s`, the `-N` form, `+N` as the first argument, and an attached value (`-n2`, `-n+2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's; every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
 | `test`, `[` | POSIX expressions; on Windows `-x` is busybox-w32's execute bit: a directory, a name ending `.com .exe .sh .bat .cmd`, or a file that begins `#!` or is a program image, and not a DLL whatever it is called | an operand, per the POSIX one-argument rule |

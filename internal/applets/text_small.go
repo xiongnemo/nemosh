@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -77,23 +78,37 @@ func writeFactors(stdout io.Writer, text string) error {
 }
 
 // newTsortApplet topologically sorts `before after` pairs.
+//
+// The words are one stream, paired across lines as both references pair them, and an odd one
+// out is `odd input` before anything is written. Each line was paired on its own, and a word
+// left over named an item alone, where both refuse it: `solo solo` is how an item with no
+// order is written. One FILE is read, or `-`; a second is an extra operand, where busybox's
+// shows its usage.
 func newTsortApplet() Applet {
-	return simpleApplet{name: "tsort", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "tsort", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		_, paths, err := parseAppletOptions(ctx, args, "", "")
 		if err != nil {
 			return err
 		}
-		graph := &tsortGraph{seen: map[string]bool{}, after: map[string][]string{}}
+		if len(paths) > 1 {
+			return fmt.Errorf("extra operand '%s'", paths[1])
+		}
+		var words []string
 		collect := func(reader io.Reader) error {
 			return eachLine(reader, func(line, _ string) error {
-				graph.addPairs(strings.Fields(line))
+				words = append(words, strings.Fields(line)...)
 				return nil
 			})
 		}
 		if err := eachTextInputQuoted(ctx, paths, stdin, collect); err != nil {
 			return err
 		}
-		return graph.write(stdout)
+		if len(words)%2 == 1 {
+			return errors.New("odd input")
+		}
+		graph := &tsortGraph{seen: map[string]bool{}, after: map[string][]string{}}
+		graph.addPairs(words)
+		return graph.write(stdout, stderr)
 	}}
 }
 
@@ -121,33 +136,37 @@ func (g *tsortGraph) addPairs(fields []string) {
 			g.after[fields[index]] = append(g.after[fields[index]], fields[index+1])
 		}
 	}
-	// An odd trailing field still names an item, which is how a standalone node
-	// with no edges reaches the output.
-	if len(fields)%2 == 1 {
-		g.note(fields[len(fields)-1])
-	}
 }
 
-func (g *tsortGraph) write(stdout io.Writer) error {
+// write writes the items, each after those that come before it. Where only a cycle is left it
+// is said, `cycle at NAME`, and broken at its first item, and the rest is written, status 1,
+// as both references write it. The output ended at the cycle, which looked exactly like a
+// complete order but for the status.
+func (g *tsortGraph) write(stdout, stderr io.Writer) error {
 	incoming := map[string]int{}
 	for _, name := range g.order {
 		for _, target := range g.after[name] {
 			incoming[target]++
 		}
 	}
-	emitted := map[string]bool{}
+	emitted, cycles := map[string]bool{}, false
 	for range g.order {
-		next := ""
+		next, first := "", ""
 		for _, name := range g.order {
-			if !emitted[name] && incoming[name] == 0 {
+			if emitted[name] {
+				continue
+			}
+			if first == "" {
+				first = name
+			}
+			if incoming[name] == 0 {
 				next = name
 				break
 			}
 		}
 		if next == "" {
-			// Everything remaining is in a cycle. Reported rather than silently
-			// truncated: a partial order looks exactly like a complete one.
-			return fmt.Errorf("input contains a loop")
+			next, cycles = first, true
+			fmt.Fprintf(stderr, "tsort: cycle at %s\n", next)
 		}
 		emitted[next] = true
 		for _, target := range g.after[next] {
@@ -156,6 +175,9 @@ func (g *tsortGraph) write(stdout io.Writer) error {
 		if _, err := fmt.Fprintln(stdout, next); err != nil {
 			return err
 		}
+	}
+	if cycles {
+		return ErrExitFalse
 	}
 	return nil
 }
