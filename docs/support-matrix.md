@@ -611,6 +611,13 @@ loops record the whole command now, as the edited one always did.
   to its own command's place: in `x | wc -l` all of x's commands are piped, where
   theirs pipe only the last.
 - `${#@}` is not pinned; POSIX leaves it unspecified and the references disagree.
+- A command name with a slash is a path, as busybox and POSIX have it, so a function
+  defined with one -- ble.sh's `ble/is-array` -- is never what runs, and `type` and
+  `command -v` say so. bash looks the name up among the functions first and calls it.
+- `$"..."` is a `$` and a double-quoted string, as busybox reads it. bash reads it as a
+  string to translate, which with no translation is the string itself.
+- A `$((` that no `))` closes is a syntax error, busybox's `missing '))'`; bash reads it
+  again as a command substitution holding a subshell, so `$((cmd) 2>&1)` runs cmd.
 
 ## Applets
 
