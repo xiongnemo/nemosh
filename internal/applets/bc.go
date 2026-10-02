@@ -58,7 +58,7 @@ func parseBcArguments(args []string) ([]string, error) {
 			return nil, fmt.Errorf("-l is not supported: the maths library would be a series expansion, " +
 				"and a wrong one is wrong in the last digits of an answer that still looks right")
 		case len(argument) > 1 && argument[0] == '-':
-			return nil, fmt.Errorf("unsupported option: %s", argument)
+			return nil, unknownOption(argument)
 		default:
 			files = append(files, argument)
 		}

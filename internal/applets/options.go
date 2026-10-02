@@ -217,6 +217,15 @@ func unknownLongOption(arg string) error {
 	return fmt.Errorf("unknown option -- %s", strings.TrimPrefix(arg, "--"))
 }
 
+// unknownOption is either, for an applet that reads its options a word at a time: a long one
+// named whole, a short one by its first letter.
+func unknownOption(arg string) error {
+	if strings.HasPrefix(arg, "--") {
+		return unknownLongOption(arg)
+	}
+	return invalidOption(arg[1])
+}
+
 func missingOptionArgument(name string) error {
 	return fmt.Errorf("option requires an argument -- %s", name)
 }

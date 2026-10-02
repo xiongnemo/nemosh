@@ -97,7 +97,7 @@ func parseGetoptRequest(args []string) (getoptRequest, error) {
 		case argument == "-T" || argument == "--test":
 			request.versionTest = true
 		default:
-			return request, fmt.Errorf("unsupported option: %s", argument)
+			return request, unknownOption(argument)
 		}
 	}
 	rest := args[index:]

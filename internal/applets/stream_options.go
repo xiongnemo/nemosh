@@ -1,10 +1,5 @@
 package applets
 
-import (
-	"fmt"
-	"strings"
-)
-
 // streamOperands separates the operands of a stream applet from its options,
 // and refuses any option the applet does not implement.
 //
@@ -41,16 +36,16 @@ func streamOptionsAndOperands(applet string, args []string, permute bool, suppor
 			given = append(given, arg)
 			continue
 		}
-		return nil, nil, unsupportedStreamOption(applet, arg, supported)
+		return nil, nil, unsupportedStreamOption(arg)
 	}
 	return given, paths, nil
 }
 
-func unsupportedStreamOption(applet, arg string, supported []string) error {
-	if len(supported) == 0 {
-		return fmt.Errorf("unsupported %s option: %s", applet, arg)
-	}
-	return fmt.Errorf("unsupported %s option: %s; this build implements %s", applet, arg, strings.Join(supported, ", "))
+// unsupportedStreamOption is getopt's word for an option head or tail does not have, as both
+// references say it on Windows; see invalidOption. It said `unsupported head option: -Y; this
+// build implements -n, -q, -v, -c`.
+func unsupportedStreamOption(arg string) error {
+	return unknownOption(arg)
 }
 
 func containsString(list []string, want string) bool {

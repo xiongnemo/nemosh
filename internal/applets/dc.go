@@ -93,7 +93,7 @@ func parseDcArguments(args []string) ([]string, []string, error) {
 			files = append(files, args[index+1:]...)
 			index = len(args)
 		case len(argument) > 1 && argument[0] == '-':
-			return nil, nil, fmt.Errorf("unsupported option: %s", argument)
+			return nil, nil, unknownOption(argument)
 		default:
 			files = append(files, argument)
 		}

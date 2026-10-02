@@ -63,7 +63,7 @@ func parseNprocIgnore(args []string) (int, error) {
 			value = strings.TrimPrefix(argument, "--ignore=")
 		default:
 			if strings.HasPrefix(argument, "-") {
-				return 0, fmt.Errorf("unsupported option: %s", argument)
+				return 0, unknownOption(argument)
 			}
 			// Not an option, so it is an operand -- and nproc takes none. Said in those
 			// words rather than as an option complaint, because it is not one.
