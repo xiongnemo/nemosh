@@ -31,15 +31,25 @@ func strftime(when time.Time, format string, strict bool) (string, error) {
 			out.WriteByte('%')
 			continue
 		}
-		index++
+		start := index
+		flags, width, used := strftimeModifiers(format[index+1:])
+		index += 1 + used
+		if index >= len(format) {
+			if strict {
+				return "", fmt.Errorf("unsupported format: %s", format[start:])
+			}
+			out.WriteString(format[start:])
+			continue
+		}
 		rendered, ok := strftimeConversion(when, format[index])
 		if !ok {
 			if strict {
-				return "", fmt.Errorf("unsupported format: %%%c", format[index])
+				return "", fmt.Errorf("unsupported format: %s", format[start:index+1])
 			}
-			rendered = "%" + string(format[index])
+			out.WriteString(format[start : index+1])
+			continue
 		}
-		out.WriteString(rendered)
+		out.WriteString(strftimePad(rendered, format[index], flags, width))
 	}
 	return out.String(), nil
 }
@@ -90,6 +100,9 @@ func strftimeConversion(when time.Time, verb byte) (string, bool) {
 		return fmt.Sprintf("%02d", (when.YearDay()+6-(int(when.Weekday())+6)%7)/7), true
 	case 'V':
 		return fmt.Sprintf("%02d", isoWeek), true
+	case 'q':
+		// The quarter, GNU's.
+		return strconv.Itoa((int(when.Month())-1)/3 + 1), true
 	case '%':
 		return "%", true
 	}
