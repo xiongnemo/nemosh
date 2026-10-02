@@ -6,7 +6,11 @@ import (
 	"strings"
 )
 
-const maxFunctionCallDepth = 128
+// maxFunctionCallDepth is how deep functions may call: a runaway recursion is said and ends
+// the call rather than the Go stack. It was 128, where busybox-w32 and bash both go 1000 deep
+// before Windows's megabyte of stack ends them, silently; this goes 20000 deep in under three
+// seconds, and overflows its own stack near 50000.
+const maxFunctionCallDepth = 10000
 
 // functionCommand runs a command that names a function, and answers with what the body
 // ended with -- `exit`, `break`, a shell error -- rather than only its status.
