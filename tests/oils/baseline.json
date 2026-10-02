@@ -255,21 +255,6 @@
       "eval usage": "fail",
       "source doesn't crash when targeting a directory": "fail"
     },
-    "builtin-fc.test.sh": {
-      "fc -l [first] [last] where first and last are indexes": "fail",
-      "fc -l [first] [last] where first and last are offsets from current command": "fail",
-      "fc -l [first] [last] where first and last are reversed indexes": "fail",
-      "fc -l [first] where first is an index": "fail",
-      "fc -l [first] where first is an offset from current command": "fail",
-      "fc -l lists history commands": "fail",
-      "fc -l lists history commands with default page size": "fail",
-      "fc -l when no history is present": "fail",
-      "fc -ln lists history commands without numbers": "fail",
-      "fc -lnr lists history commands without numbers in reverse order": "fail",
-      "fc -lr [first] [last] where first and last are reversed indexes does not undo reverse": "fail",
-      "fc -lr lists history commands in reverse order": "fail",
-      "fc errors out on too many args with strict_arg_parse": "ash-only"
-    },
     "builtin-getopts.test.sh": {
       "More Smooshing 1": "ash-only",
       "More Smooshing 2": "ash-only",

@@ -91,6 +91,15 @@ from, read and write FILE or `HISTFILE`. `-a` writes only the lines the file has
 got, which at a prompt is what `history -s` added, every typed line being written as
 it runs.
 
+`fc` is bash's, busybox having none. `-l` lists, `-n` without numbers and `-r` newest
+first; FIRST and LAST are numbers, numbers counted back from the newest, or the newest
+entry that starts with a word, read by bash's rules to the quirk (a FIRST naming the
+newest entry lists from the oldest). `-s [pat=rep] [command]`, and `-e -`, runs an
+entry again in place of the `fc` line. Without `-l` the entries go to a file and to
+`-e`'s editor, or `FCEDIT`'s, or `EDITOR`'s, or `vi`, and what the file holds when
+the editor succeeds is said on standard error and run. On Windows `fc` was the file
+compare, `fc.exe`, which that name still runs.
+
 Tab completion and the inline suggestion offer host names for `ssh`, read from
 `~/.ssh/config` -- and `/etc/hosts` off Windows. See
 `docs/design/completion.md`, Host names, for what is read and what deliberately

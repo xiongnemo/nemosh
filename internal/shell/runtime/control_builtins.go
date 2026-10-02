@@ -20,6 +20,8 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	args = named
 	switch args[0] {
 	case "exit", "exec", "return", "break", "continue", "eval", ".", "source":
+	case "fc":
+		return r.fcCommand(ctx, args[1:], assignments, operations, savedStatus), true
 	default:
 		return lineResult{}, false
 	}
