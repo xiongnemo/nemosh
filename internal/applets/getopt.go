@@ -193,31 +193,33 @@ func (r getoptRequest) looksLong(word string) bool {
 
 func (r getoptRequest) canonicaliseLong(word string, all []string, index int, options *[]string, stderr io.Writer) (int, bool) {
 	name, value, joined := strings.Cut(strings.TrimLeft(word, "-"), "=")
-	for _, long := range r.longOptions {
-		bare := strings.TrimRight(long, ":")
-		if bare != name {
-			continue
-		}
-		*options = append(*options, "--"+bare)
-		switch {
-		case joined:
-			*options = append(*options, r.quote(value))
-		case strings.HasSuffix(long, "::"):
-			// An optional argument is only taken when it was joined with `=`, which is
-			// the rule that stops `--colour ls` eating the operand.
-			*options = append(*options, r.quote(""))
-		case strings.HasSuffix(long, ":"):
-			if index+1 >= len(all) {
-				r.report(stderr, "option '--%s' requires an argument", bare)
-				return 0, true
-			}
-			*options = append(*options, r.quote(all[index+1]))
-			return 1, false
-		}
-		return 0, false
+	long, err := r.findLong(name, strings.TrimLeft(word, "-"))
+	if err != nil {
+		r.report(stderr, "%v", err)
+		return 0, true
 	}
-	r.report(stderr, "unknown option -- %s", name)
-	return 0, true
+	bare := "--" + strings.TrimRight(long, ":")
+	switch {
+	case strings.HasSuffix(long, "::"):
+		// An optional argument is only taken when it was joined with `=`, which is
+		// the rule that stops `--colour ls` eating the operand.
+		*options = append(*options, bare, r.quote(value))
+	case strings.HasSuffix(long, ":") && joined:
+		*options = append(*options, bare, r.quote(value))
+	case strings.HasSuffix(long, ":"):
+		if index+1 >= len(all) {
+			r.report(stderr, "option requires an argument -- %s", name)
+			return 0, true
+		}
+		*options = append(*options, bare, r.quote(all[index+1]))
+		return 1, false
+	case joined:
+		r.report(stderr, "option does not take an argument -- %s", name)
+		return 0, true
+	default:
+		*options = append(*options, bare)
+	}
+	return 0, false
 }
 
 func (r getoptRequest) canonicaliseShort(word string, all []string, index int, options *[]string, stderr io.Writer) (int, bool) {
@@ -230,27 +232,29 @@ func (r getoptRequest) canonicaliseShort(word string, all []string, index int, o
 			failed = true
 			continue
 		}
-		*options = append(*options, "-"+string(letter))
+		option := "-" + string(letter)
 		wants := takes+1 < len(r.shortOptions) && r.shortOptions[takes+1] == ':'
 		if !wants {
+			*options = append(*options, option)
 			continue
 		}
 		// The value is the rest of this word if there is any, otherwise the next one:
 		// `-bval` and `-b val` mean the same thing.
 		if position+1 < len(word) {
-			*options = append(*options, r.quote(word[position+1:]))
+			*options = append(*options, option, r.quote(word[position+1:]))
 			return 0, failed
 		}
 		optional := takes+2 < len(r.shortOptions) && r.shortOptions[takes+2] == ':'
 		if optional {
-			*options = append(*options, r.quote(""))
+			*options = append(*options, option, r.quote(""))
 			continue
 		}
+		// One whose argument is missing is said and left out, as both references leave it.
 		if index+1 >= len(all) {
 			r.report(stderr, "option requires an argument -- %c", letter)
 			return 0, true
 		}
-		*options = append(*options, r.quote(all[index+1]))
+		*options = append(*options, option, r.quote(all[index+1]))
 		return 1, failed
 	}
 	return 0, failed
