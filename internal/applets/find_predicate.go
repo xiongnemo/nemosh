@@ -37,7 +37,8 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return findPrint{terminator: 0}, nil
 	case "-name", "-iname":
 		return p.namePredicate(operand)
-	case "-path", "-ipath":
+	case "-path", "-wholename", "-ipath":
+		// -wholename is busybox's other name for -path.
 		return p.pathPredicate(operand)
 	case "-type":
 		return p.typePredicate(operand)
@@ -82,8 +83,15 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		p.expression.depthFirst = true
 		return findTrue{}, nil
 	}
-	return nil, fmt.Errorf("unsupported expression: %s", operand)
+	if findRefused[operand] {
+		return nil, fmt.Errorf("unsupported expression: %s", operand)
+	}
+	return nil, fmt.Errorf("unrecognized: %s", operand)
 }
+
+// findRefused are the predicates busybox-w32's find takes and this one refuses, which say so
+// as a refusal. One neither takes, -user and -fstype among them, is busybox's `unrecognized:`.
+var findRefused = map[string]bool{"-exec": true, "-ok": true, "-delete": true}
 
 // regexPredicate is busybox's -regex: a basic regular expression, as regcomp without
 // REG_EXTENDED reads one, that must match the whole path as find prints it.

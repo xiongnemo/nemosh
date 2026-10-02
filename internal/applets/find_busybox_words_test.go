@@ -25,6 +25,12 @@ func TestFind_saysWhatItCannotReadInBusyboxsWords(t *testing.T) {
 		{args: []string{".", "-size", "2x"}, want: "invalid number '2x'"},
 		{args: []string{".", "-newer", "nofile"}, want: "cannot stat 'nofile': No such file or directory"},
 		{args: []string{".", "(", "-name", "a.txt"}, want: "unpaired '('"},
+		// What neither find takes is unrecognized, and what busybox's takes and this one
+		// refuses is said as a refusal.
+		{args: []string{".", "-fstype", "x"}, want: "unrecognized: -fstype"},
+		{args: []string{".", "-user", "x"}, want: "unrecognized: -user"},
+		{args: []string{".", "-exec", "rm", "{}", ";"}, want: "unsupported expression: -exec"},
+		{args: []string{".", "-delete"}, want: "unsupported expression: -delete"},
 	} {
 		_, _, err := runSmall(t, dir, "", "find", test.args...)
 		if err == nil || err.Error() != test.want {
@@ -33,5 +39,14 @@ func TestFind_saysWhatItCannotReadInBusyboxsWords(t *testing.T) {
 	}
 	if _, _, err := runSmall(t, dir, "", "find", ".", "-type", "p"); err == nil || !strings.Contains(err.Error(), "unsupported type 'p'") {
 		t.Errorf("find . -type p = %v; want it refused by name", err)
+	}
+}
+
+// -wholename is busybox's other name for -path, and was refused. Measured against busybox-w32.
+func TestFind_wholenameIsPath(t *testing.T) {
+	dir := writeSmallFixture(t, map[string]string{"d/a.txt": "x", "b.txt": "y"})
+	stdout, _, err := runSmall(t, dir, "", "find", ".", "-wholename", "./d/*")
+	if err != nil || stdout != "./d/a.txt\n" {
+		t.Errorf("find . -wholename './d/*' = %q, %v; want ./d/a.txt", stdout, err)
 	}
 }

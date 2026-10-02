@@ -92,7 +92,7 @@ not taken where it is the reference's own invention:
 | --- | --- | --- |
 | `cannot open 'x'` | `can't open 'x'` | The contraction is busybox's; GNU coreutils writes `cannot`. Carries no behaviour. Every `can't` busybox says is `cannot` here: `cannot cd to`, `cannot find label for jump to`. |
 | `option does not take an argument -- x` | `option doesn't take an argument -- x` | The contraction again. The rest is getopt's, word for word, as both references say it on Windows, whose getopt is NetBSD's: `unknown option -- x`, `option requires an argument -- x`, `ambiguous option -- x`. |
-| `unsupported expression: -fstype` | `unrecognized: -fstype` | find's own. It matched an `unsupported <applet> option` the other applets said, which they no longer do; open to busybox's words. |
+| `unsupported expression: -exec` | `-exec` runs | A predicate busybox's find takes and this one refuses, `-exec`, `-ok` and `-delete`, is said as the refusal it is. One neither takes is busybox's word for word, `unrecognized: -fstype`. |
 
 These are recorded as declared divergences in the behavior corpus, so the
 differential runner reports them instead of being surprised by them.
