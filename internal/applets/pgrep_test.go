@@ -35,7 +35,7 @@ func TestPgrep_refusesWhatWouldMatchEverything(t *testing.T) {
 		// -f would have to read each process's command line, which needs
 		// privileges an ordinary session has not got, so it is refused rather
 		// than quietly matching the name instead.
-		{applet: "pgrep", args: []string{"-f", "x"}, want: "invalid option"},
+		{applet: "pgrep", args: []string{"-f", "x"}, want: "unknown option -- f"},
 		// A pause cannot be delivered on Windows, and delivered the way every other
 		// signal is it would terminate every match -- which `pkill -STOP` used to do.
 		{applet: "pkill", args: []string{"-STOP", "zzznosuchprocessname"}, want: "suspend"},

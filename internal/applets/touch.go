@@ -38,8 +38,10 @@ func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 		switch {
 		case args[index] == "--" || !strings.HasPrefix(args[index], "--"):
 			words = append(words, args[index])
-		case !long || valued && (letter == "c" || letter == "h"):
-			return fmt.Errorf("unrecognized option '%s'", args[index])
+		case !long:
+			return unknownLongOption(args[index])
+		case valued && (letter == "c" || letter == "h"):
+			return optionTakesNoArgument(name)
 		case valued:
 			words = append(words, "-"+letter, value)
 		default:

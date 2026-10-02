@@ -161,8 +161,11 @@ func topArgs(args []string) (topOptions, error) {
 			}
 			options.filter = text
 		default:
+			if strings.HasPrefix(argument, "--") {
+				return options, unknownLongOption(argument)
+			}
 			if strings.HasPrefix(argument, "-") {
-				return options, fmt.Errorf("unsupported top option: %s", argument)
+				return options, invalidOption(argument[1])
 			}
 			// Not an option, so not an option problem. top watches the whole machine
 			// and has nothing to point at a file with, and saying that is more use

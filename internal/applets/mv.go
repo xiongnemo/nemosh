@@ -196,7 +196,7 @@ func mvArguments(ctx context.Context, args []string) (appletOptions, []string, e
 			}
 			words = append(words, "-t", value)
 		default:
-			return appletOptions{}, nil, fmt.Errorf("unrecognized option '%s'", arg)
+			return appletOptions{}, nil, unknownLongOption(arg)
 		}
 	}
 	options, operands, err := parseAppletOptions(ctx, words, "finTv", "t")

@@ -110,7 +110,7 @@ func TestRun_returnsAppletStatus_whenDirectSortDispatchRejectsOption(t *testing.
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got := stderr.String(); got != "sort: invalid option -- 'j'\n" {
+	if got := stderr.String(); got != "sort: unknown option -- j\n" {
 		t.Fatalf("expected invalid option stderr, got %q", got)
 	}
 }

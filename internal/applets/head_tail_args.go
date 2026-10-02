@@ -182,7 +182,7 @@ func headTailCountValue(arg string, args []string, index, position int, letter b
 		return arg[position+1:], 0, nil
 	}
 	if index+1 >= len(args) {
-		return "", 0, fmt.Errorf("-%c: requires a count", letter)
+		return "", 0, missingOptionArgument(string(letter))
 	}
 	return args[index+1], 1, nil
 }

@@ -147,8 +147,8 @@ func TestChattr_refusesWhatBusyboxRefuses(t *testing.T) {
 		{[]string{"f.txt"}, "nothing to change: -LETTERS clears attributes and +LETTERS sets them"},
 		{[]string{"-R", "f.txt"}, "nothing to change: -LETTERS clears attributes and +LETTERS sets them"},
 		{[]string{"+r", "-r", "f.txt"}, "an attribute cannot be both set and cleared"},
-		{[]string{"+x", "f.txt"}, "invalid option -- 'x'"},
-		{[]string{"+R", "f.txt"}, "invalid option -- 'R'"},
+		{[]string{"+x", "f.txt"}, "unknown option -- x"},
+		{[]string{"+R", "f.txt"}, "unknown option -- R"},
 		{[]string{"+r"}, "missing operand"},
 	} {
 		// The error comes back for the shell to print, as "chattr: " and these words.

@@ -202,7 +202,7 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithInvalidOption(t *tes
 	result := runCutFailure(args)
 
 	// Then
-	assertCutFailure(t, result, "cut: invalid option -- 'x'\n")
+	assertCutFailure(t, result, "cut: unknown option -- x\n")
 }
 
 func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithUnsupportedOption(t *testing.T) {
@@ -211,8 +211,8 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithUnsupportedOption(t 
 		args       []string
 		wantStderr string
 	}{
-		{"unsupported -Z", []string{"-Z", "-f", "1"}, "cut: invalid option -- 'Z'\n"},
-		{"unsupported long option", []string{"--complement", "-f", "1"}, "cut: unrecognized option '--complement'\n"},
+		{"unsupported -Z", []string{"-Z", "-f", "1"}, "cut: unknown option -- Z\n"},
+		{"unsupported long option", []string{"--complement", "-f", "1"}, "cut: unknown option -- complement\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

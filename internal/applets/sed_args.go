@@ -3,7 +3,6 @@ package applets
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"strings"
 )
@@ -111,7 +110,7 @@ func readSedFlags(ctx context.Context, arg string, args []string, index int, opt
 			options.scripts = append(options.scripts, script)
 			return consumed, nil
 		default:
-			return 0, fmt.Errorf("unsupported sed option: -%c", letter)
+			return 0, invalidOption(letter)
 		}
 	}
 	return 1, nil
@@ -133,23 +132,23 @@ func readSedLongOption(ctx context.Context, arg string, args []string, index int
 			continue
 		}
 		if name != "" {
-			return 0, fmt.Errorf("option '%s' is ambiguous", arg)
+			return 0, ambiguousOption(given)
 		}
 		name = candidate
 	}
 	consumed := 1
 	switch {
 	case name == "":
-		return 0, fmt.Errorf("unsupported sed option: %s", arg)
+		return 0, unknownLongOption(arg)
 	case name == "expression" || name == "file":
 		if !valued {
 			if index+1 >= len(args) {
-				return 0, fmt.Errorf("option '--%s' requires an argument", name)
+				return 0, missingOptionArgument(given)
 			}
 			value, consumed = args[index+1], 2
 		}
 	case valued && name != "in-place":
-		return 0, fmt.Errorf("option '--%s' doesn't allow an argument", name)
+		return 0, optionTakesNoArgument(given)
 	}
 	switch name {
 	case "quiet", "silent":
@@ -177,7 +176,7 @@ func sedFlagValue(arg string, args []string, index, position int, letter byte) (
 		return arg[position+1:], 1, nil
 	}
 	if index+1 >= len(args) {
-		return "", 0, fmt.Errorf("option requires an argument -- '%c'", letter)
+		return "", 0, missingOptionArgument(string(letter))
 	}
 	return args[index+1], 2, nil
 }

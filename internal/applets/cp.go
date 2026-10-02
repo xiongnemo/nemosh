@@ -210,7 +210,7 @@ func cpArguments(ctx context.Context, args []string) (cpFlags, []string, error) 
 		case name == "parents" && !valued:
 			flags.parents = true
 		default:
-			return flags, nil, fmt.Errorf("unrecognized option '%s'", arg)
+			return flags, nil, unknownLongOption(arg)
 		}
 	}
 	options, operands, err := parseAppletOptions(ctx, words, "pdRrfinlsLHaPvuT", "t")

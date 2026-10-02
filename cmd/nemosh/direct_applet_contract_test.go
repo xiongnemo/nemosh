@@ -54,7 +54,7 @@ func TestDirectApplet_preservesStatusAndStderr_whenSelectedExplicitlyOrByInvocat
 
 		// Then
 		status, ok := applets.StatusCode(err)
-		if !ok || status != 2 || stdout.Len() != 0 || stderr.String() != "sort: invalid option -- 'j'\n" {
+		if !ok || status != 2 || stdout.Len() != 0 || stderr.String() != "sort: unknown option -- j\n" {
 			t.Fatalf("run(%v): status=(%d,%t) stdout=%q stderr=%q error=%v", args, status, ok, stdout.String(), stderr.String(), err)
 		}
 	}

@@ -9,7 +9,7 @@ command = ["uniq", "-x"]
 [expect]
 status = 1
 stdout = ""
-stderr = "uniq: invalid option -- 'x'\n"
+stderr = "uniq: unknown option -- x\n"
 
 [notes]
 standard = "BusyBox-w32 uniq utility"

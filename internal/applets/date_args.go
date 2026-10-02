@@ -32,11 +32,11 @@ func parseDateArgs(args []string, permute bool) (dateRequest, error) {
 			name, value, valued := strings.Cut(arg[2:], "=")
 			letter, known := dateLongOptions[name]
 			if !known || valued != strings.ContainsRune("sdr", rune(letter)) && valued {
-				return request, fmt.Errorf("date: unrecognized option '%s'", arg)
+				return request, fmt.Errorf("date: %w", unknownLongOption(arg))
 			}
 			if strings.ContainsRune("sdr", rune(letter)) && !valued {
 				if index+1 >= len(args) {
-					return request, fmt.Errorf("date: option '%s' requires an argument", arg)
+					return request, fmt.Errorf("date: %w", missingOptionArgument(name))
 				}
 				index++
 				value = args[index]
@@ -58,7 +58,7 @@ func parseDateArgs(args []string, permute bool) (dateRequest, error) {
 				value := arg[position+1:]
 				if value == "" {
 					if index+1 >= len(args) {
-						return request, fmt.Errorf("date: option requires an argument -- '%c'", letter)
+						return request, fmt.Errorf("date: %w", missingOptionArgument(string(letter)))
 					}
 					index++
 					value = args[index]
@@ -66,7 +66,7 @@ func parseDateArgs(args []string, permute bool) (dateRequest, error) {
 				request.set(letter, value)
 				position = len(arg)
 			default:
-				return request, fmt.Errorf("date: invalid option -- '%c'", letter)
+				return request, fmt.Errorf("date: %w", invalidOption(letter))
 			}
 		}
 	}

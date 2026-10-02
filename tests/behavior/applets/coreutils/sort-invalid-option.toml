@@ -9,7 +9,7 @@ command = ["sort", "-j"]
 [expect]
 status = 2
 stdout = ""
-stderr = "sort: invalid option -- 'j'\n"
+stderr = "sort: unknown option -- j\n"
 
 [notes]
 standard = "BusyBox-w32 sort utility"

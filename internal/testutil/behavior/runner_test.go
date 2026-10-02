@@ -134,7 +134,7 @@ func TestRunner_returnsAppletStatus_whenAppletReportsStatusCode(t *testing.T) {
 	if result.Stdout != "" {
 		t.Fatalf("expected empty stdout, got %q", result.Stdout)
 	}
-	if result.Stderr != "sort: invalid option -- 'j'\n" {
+	if result.Stderr != "sort: unknown option -- j\n" {
 		t.Fatalf("expected invalid option stderr, got %q", result.Stderr)
 	}
 }

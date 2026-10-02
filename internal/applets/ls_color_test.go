@@ -130,7 +130,7 @@ func TestLS_refusesAnUnknownLongOption(t *testing.T) {
 		t.Fatalf("ls --nosuchoption wrote %q before refusing", stdout)
 	}
 	message := stderr + err.Error()
-	if !strings.Contains(message, "--nosuchoption") {
+	if !strings.Contains(message, "unknown option -- nosuchoption") {
 		t.Fatalf("reported %q, want it to name the whole option", message)
 	}
 }

@@ -170,7 +170,7 @@ func parseGrepFlags(flags string, into *grepFlags) error {
 		case 'G':
 			into.extended = false
 		default:
-			return fmt.Errorf("unsupported grep option: -%c", flag)
+			return invalidOption(flag)
 		}
 	}
 	return nil

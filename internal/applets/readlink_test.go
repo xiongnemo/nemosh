@@ -92,7 +92,7 @@ func TestDefaultRegistry_refusesAnUnknownOption_whenReadlinkRunsWithOne(t *testi
 	err := lookupReadlink(t).Run(context.Background(), []string{"-z", "link"}, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
 
 	// Then
-	if err == nil || err.Error() != "invalid option -- 'z'" {
+	if err == nil || err.Error() != "unknown option -- z" {
 		t.Fatalf("expected readlink -z to be refused, got %v", err)
 	}
 }

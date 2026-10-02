@@ -139,7 +139,7 @@ func TestLn_takesBusyboxFormsAndOptions(t *testing.T) {
 	if _, _, err := run(); err == nil {
 		t.Fatal("ln with no operands succeeded")
 	}
-	if _, _, err := run("-z", "a", "b"); err == nil || !strings.Contains(err.Error(), "invalid option") {
+	if _, _, err := run("-z", "a", "b"); err == nil || err.Error() != "unknown option -- z" {
 		t.Fatalf("ln -z returned %v", err)
 	}
 	// A target that cannot be linked is named, and the rest are still linked, status 1.

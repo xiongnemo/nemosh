@@ -9,7 +9,7 @@ script = "ls -z"
 [expect]
 status = 1
 stdout = ""
-stderr = "ls: unsupported ls option: -z\n"
+stderr = "ls: unknown option -- z\n"
 
 [notes]
 standard = "BusyBox-w32 ls.c and testsuite/ls.tests"

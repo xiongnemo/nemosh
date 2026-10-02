@@ -126,11 +126,11 @@ func TestAppletOptions_nameAnUnknownLongOptionWhole(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"du", "--apparent-size"}, "unrecognized option '--apparent-size'"},
-		{[]string{"wc", "x", "--lines"}, "unrecognized option '--lines'"},
-		{[]string{"xargs", "--max-args=1", "echo"}, "unrecognized option '--max-args=1'"},
+		{[]string{"du", "--apparent-size"}, "unknown option -- apparent-size"},
+		{[]string{"wc", "x", "--lines"}, "unknown option -- lines"},
+		{[]string{"xargs", "--max-args=1", "echo"}, "unknown option -- max-args=1"},
 		// sort says so itself, and ends 2, as for any other bad option.
-		{[]string{"sort", "--foo=bar"}, "sort: unrecognized option '--foo=bar'\n"},
+		{[]string{"sort", "--foo=bar"}, "sort: unknown option -- foo=bar\n"},
 	} {
 		_, stderr, err := runPermuted(t, view, "", test.args...)
 		if reported := stderr; err == nil || reported != test.want && err.Error() != test.want {

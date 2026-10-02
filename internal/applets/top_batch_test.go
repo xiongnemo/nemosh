@@ -213,7 +213,7 @@ func TestTopArgs_refusesWhatItCannotRead(t *testing.T) {
 		{args: []string{"-s"}, because: "-s"},
 		{args: []string{"-o"}, because: "-o"},
 		{args: []string{"-f"}, because: "-f"},
-		{args: []string{"-Z"}, because: "-Z"},
+		{args: []string{"-Z"}, because: "unknown option -- Z"},
 		{args: []string{"extra"}, because: "extra"},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {

@@ -34,7 +34,7 @@ func TestLongOptions_takeAPrefixThatNamesOneAlone(t *testing.T) {
 	if info, err := os.Stat(filepath.Join(dir, "p", "q")); err != nil || !info.IsDir() {
 		t.Errorf("mkdir --par made no p/q: %v", err)
 	}
-	if _, stderr, err := runSmall(t, dir, "", "od", "--s", "2", "g"); err == nil || !strings.Contains(stderr+err.Error(), "--s") {
+	if _, stderr, err := runSmall(t, dir, "", "od", "--s", "2", "g"); err == nil || !strings.Contains(stderr+err.Error(), "option -- s") {
 		t.Errorf("od --s = %q, %v; want a refusal, --s being --skip-bytes and --strings both", stderr, err)
 	}
 }

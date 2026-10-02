@@ -1,7 +1,6 @@
 package applets
 
 import (
-	"fmt"
 	"math"
 	"strings"
 )
@@ -147,7 +146,7 @@ func (o *lsOptions) word(args []string, index int) (int, error) {
 			o.dirsFirst = true
 			return 1, nil
 		}
-		return 0, fmt.Errorf("unsupported ls option: %s", arg)
+		return 0, unknownLongOption(arg)
 	}
 	for position := 1; position < len(arg); position++ {
 		letter := arg[position]
@@ -162,7 +161,7 @@ func (o *lsOptions) word(args []string, index int) (int, error) {
 		value, used := arg[position+1:], 1
 		if value == "" {
 			if index+1 >= len(args) {
-				return 0, fmt.Errorf("option requires an argument -- '%c'", letter)
+				return 0, missingOptionArgument(string(letter))
 			}
 			value, used = args[index+1], 2
 		}
@@ -235,7 +234,7 @@ func (o *lsOptions) letter(letter byte) error {
 	default:
 		// Still refused by name: -Z is an SELinux context no Windows file has, and -m and
 		// -o are options busybox does not have either.
-		return fmt.Errorf("unsupported ls option: -%c", letter)
+		return invalidOption(letter)
 	}
 	return nil
 }

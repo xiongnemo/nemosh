@@ -390,7 +390,7 @@ func TestHttpd_acceptsItsDeclaredOptions(t *testing.T) {
 			if err == nil {
 				t.Fatalf("httpd -%c with two operands was accepted; it would have listened", letter)
 			}
-			if strings.Contains(err.Error(), "invalid option") {
+			if strings.Contains(err.Error(), "unknown option") {
 				t.Fatalf("httpd claims -%c and refused it: %v", letter, err)
 			}
 		})
@@ -403,8 +403,8 @@ func TestHttpd_refusesAnUndeclaredOption(t *testing.T) {
 	var stdout, stderr strings.Builder
 	err := newHttpdApplet().Run(context.Background(), []string{"-Z", t.TempDir(), "extra"},
 		strings.NewReader(""), &stdout, &stderr)
-	if err == nil || !strings.Contains(err.Error(), "invalid option") {
-		t.Fatalf("httpd -Z said %v, want an invalid option", err)
+	if err == nil || !strings.Contains(err.Error(), "unknown option -- Z") {
+		t.Fatalf("httpd -Z said %v, want an unknown option", err)
 	}
 }
 

@@ -69,8 +69,8 @@ func TestApplets_refuseAnUnknownOption(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected a failure, got stdout %q", stdout)
 			}
-			if !strings.Contains(err.Error(), "invalid option") || !strings.Contains(err.Error(), "z") {
-				t.Fatalf("err = %v, want an invalid-option diagnostic naming z", err)
+			if err.Error() != "unknown option -- z" {
+				t.Fatalf("err = %v, want an unknown-option diagnostic naming z", err)
 			}
 		})
 	}

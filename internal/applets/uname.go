@@ -99,7 +99,7 @@ func parseUnameFlags(args []string) (unameFlag, error) {
 		if strings.HasPrefix(arg, "--") {
 			bit, ok := unameFlagForLongOption(arg[2:])
 			if !ok {
-				return 0, fmt.Errorf("unsupported uname option: %s", arg)
+				return 0, unknownLongOption(arg)
 			}
 			flags |= bit
 			continue
@@ -117,7 +117,7 @@ func parseUnameFlags(args []string) (unameFlag, error) {
 			}
 			bit, ok := unameFlagForOption(arg[index])
 			if !ok {
-				return 0, fmt.Errorf("unsupported uname option: -%c", arg[index])
+				return 0, invalidOption(arg[index])
 			}
 			flags |= bit
 		}

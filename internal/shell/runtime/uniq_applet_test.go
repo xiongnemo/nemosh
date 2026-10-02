@@ -46,7 +46,7 @@ func TestRuntime_uniqReturnsStatusOne_whenRunWithInvalidOption(t *testing.T) {
 	if got := stdout.String(); got != "" {
 		t.Fatalf("expected empty stdout, got %q", got)
 	}
-	if got, want := stderr.String(), "uniq: invalid option -- 'x'\n"; got != want {
+	if got, want := stderr.String(), "uniq: unknown option -- x\n"; got != want {
 		t.Fatalf("expected stderr %q, got %q", want, got)
 	}
 }

@@ -59,13 +59,13 @@ func parseAwkArguments(view ProcessView, args []string, stdin io.Reader, stderr 
 		}
 		letter := argument[1]
 		if strings.IndexByte("FvfeEW", letter) < 0 {
-			return nil, fmt.Errorf("awk: invalid option -- %c", letter)
+			return nil, invalidOption(letter)
 		}
 		value := argument[2:]
 		if value == "" {
 			index++
 			if index >= len(args) {
-				return nil, fmt.Errorf("-%c needs a value", letter)
+				return nil, missingOptionArgument(string(letter))
 			}
 			value = args[index]
 		}

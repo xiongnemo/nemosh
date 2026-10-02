@@ -102,7 +102,7 @@ func wgetLongOptions(args []string) ([]string, []string, bool, error) {
 		case "header":
 			if !attached {
 				if index+1 >= len(args) {
-					return nil, nil, false, fmt.Errorf("option requires an argument -- 'header'")
+					return nil, nil, false, missingOptionArgument(name)
 				}
 				index++
 				value = args[index]
@@ -110,7 +110,7 @@ func wgetLongOptions(args []string) ([]string, []string, bool, error) {
 			// Repeatable, because one request usually needs more than one header.
 			headers = append(headers, value)
 		default:
-			return nil, nil, false, fmt.Errorf("unrecognized option -- '%s'", arg)
+			return nil, nil, false, unknownLongOption(arg)
 		}
 	}
 	return kept, headers, spider, nil

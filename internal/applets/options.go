@@ -89,7 +89,7 @@ func readAppletOptions(args []string, flags, valued string, permute bool) (apple
 		// A long option the applet has not turned into its letter is one it does not have. It
 		// was read as letters, `du --apparent-size` as `-`, and refused as that.
 		if strings.HasPrefix(arg, "--") {
-			return parsed, nil, fmt.Errorf("unrecognized option '%s'", arg)
+			return parsed, nil, unknownLongOption(arg)
 		}
 		for position := 1; position < len(arg); position++ {
 			letter := arg[position]
@@ -122,13 +122,34 @@ func optionArgument(args []string, index int, arg string, position int, letter b
 		return arg[position+1:], 0, nil
 	}
 	if index+1 >= len(args) {
-		return "", 0, fmt.Errorf("option requires an argument -- '%c'", letter)
+		return "", 0, missingOptionArgument(string(letter))
 	}
 	return args[index+1], 1, nil
 }
 
-func invalidOption(letter byte) error {
-	return fmt.Errorf("invalid option -- '%c'", letter)
+// What getopt says of an option it cannot take, in the words both references say it on
+// Windows: busybox-w32's getopt is the mingw runtime's and MSYS's GNU tools have Cygwin's, and
+// both are NetBSD's. A long option is named as it was typed, with any value it was given.
+// These were glibc's, `invalid option -- 'x'` and `unrecognized option '--x'`, which neither
+// says here.
+func invalidOption[Letter byte | rune](letter Letter) error {
+	return fmt.Errorf("unknown option -- %c", letter)
+}
+
+func unknownLongOption(arg string) error {
+	return fmt.Errorf("unknown option -- %s", strings.TrimPrefix(arg, "--"))
+}
+
+func missingOptionArgument(name string) error {
+	return fmt.Errorf("option requires an argument -- %s", name)
+}
+
+func ambiguousOption(given string) error {
+	return fmt.Errorf("ambiguous option -- %s", given)
+}
+
+func optionTakesNoArgument(given string) error {
+	return fmt.Errorf("option does not take an argument -- %s", given)
 }
 
 // twoOperandsWithOptions is the source-and-destination shape cp and mv take,

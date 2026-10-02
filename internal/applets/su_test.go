@@ -172,7 +172,7 @@ func TestPlanElevation_refuses(t *testing.T) {
 		},
 		{
 			name: "an option that does not exist", args: []string{"-Z"},
-			fragment: "invalid option",
+			fragment: "unknown option",
 		},
 		{
 			name: "-c with nothing after it", args: []string{"-c"},

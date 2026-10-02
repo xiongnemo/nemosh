@@ -28,12 +28,17 @@ func (r Runtime) timeoutBuiltin(ctx context.Context, args []string) int {
 		}
 		letter, value := option[1], option[2:]
 		if letter != 's' && letter != 'k' {
-			fmt.Fprintf(r.streams.Stderr, "timeout: unrecognized option '%s'\n", option)
+			// getopt's words, as both references say them on Windows, whose getopt is NetBSD's.
+			name := string(letter)
+			if letter == '-' {
+				name = value
+			}
+			fmt.Fprintf(r.streams.Stderr, "timeout: unknown option -- %s\n", name)
 			return 125
 		}
 		if value == "" {
 			if len(args) == 0 {
-				fmt.Fprintf(r.streams.Stderr, "timeout: option requires an argument -- '%c'\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "timeout: option requires an argument -- %c\n", letter)
 				return 125
 			}
 			value, args = args[0], args[1:]

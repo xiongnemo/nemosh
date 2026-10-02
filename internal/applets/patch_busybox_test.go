@@ -92,7 +92,7 @@ func TestPatch_isBusyboxs(t *testing.T) {
 	}{
 		{map[string]string{"new": "x\n"}, nil, "--- /dev/null\n+++ new\n@@ -0,0 +1 @@\n+one\n", "cannot open 'new': File exists"},
 		{nil, []string{"-i", "nosuch"}, "", "cannot open 'nosuch': No such file or directory"},
-		{nil, []string{"-l"}, "", "invalid option -- 'l'"},
+		{nil, []string{"-l"}, "", "unknown option -- l"},
 		{nil, []string{"-p", "x"}, "", "invalid number 'x'"},
 	} {
 		dir := writeSmallFixture(t, test.files)

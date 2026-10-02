@@ -31,7 +31,7 @@ func refusedTheOption(output string) bool {
 	if !strings.Contains(output, "option") {
 		return false
 	}
-	for _, verb := range []string{"unsupported", "invalid", "unrecognized"} {
+	for _, verb := range []string{"unsupported", "invalid", "unrecognized", "unknown"} {
 		if strings.Contains(output, verb) {
 			return true
 		}

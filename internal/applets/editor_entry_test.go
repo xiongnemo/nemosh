@@ -106,7 +106,7 @@ func TestEditor_operandAndOptionRules(t *testing.T) {
 		// being silently ignored.
 		{name: "two files", args: []string{"a.txt", "b.txt"}, because: "one file"},
 		{name: "three files", args: []string{"a.txt", "b.txt", "a.txt"}, because: "one file"},
-		{name: "an option it does not have", args: []string{"-Z", "a.txt"}, because: "invalid option"},
+		{name: "an option it does not have", args: []string{"-Z", "a.txt"}, because: "unknown option -- Z"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := WithProcessView(t.Context(), hostProcessView{cwd: root})

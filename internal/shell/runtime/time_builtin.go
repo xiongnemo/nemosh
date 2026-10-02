@@ -44,7 +44,7 @@ func (r Runtime) timeBuiltin(ctx context.Context, args []string) int {
 			appending = true
 		case "-f", "-o":
 			if len(args) == 0 {
-				fmt.Fprintf(r.streams.Stderr, "time: option requires an argument -- '%c'\n", option[1])
+				fmt.Fprintf(r.streams.Stderr, "time: option requires an argument -- %c\n", option[1])
 				return 1
 			}
 			if option == "-f" {
@@ -54,7 +54,9 @@ func (r Runtime) timeBuiltin(ctx context.Context, args []string) int {
 			}
 			args = args[1:]
 		default:
-			fmt.Fprintf(r.streams.Stderr, "time: unrecognized option '%s'\n", option)
+			// getopt's words, as both references say them on Windows, whose getopt is NetBSD's. A
+			// cluster is not read, so it is named whole.
+			fmt.Fprintf(r.streams.Stderr, "time: unknown option -- %s\n", strings.TrimPrefix(option[1:], "-"))
 			return 1
 		}
 	}

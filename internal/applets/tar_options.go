@@ -62,7 +62,7 @@ func tarArguments(args []string, request *tarRequest) ([]string, error) {
 			request.overwrite = request.overwrite || name == "overwrite"
 		case !valued && (name == "numeric-owner" || name == "no-same-permissions"):
 		default:
-			return nil, fmt.Errorf("unrecognized option '%s'", arg)
+			return nil, unknownLongOption(arg)
 		}
 	}
 	return words, nil

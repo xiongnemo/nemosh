@@ -84,7 +84,7 @@ func grepArgs(ctx context.Context, args []string, stdin io.Reader) (grepFlags, [
 func parseGrepLongOption(arg string) error {
 	name, value, present := strings.Cut(arg[2:], "=")
 	if name != "color" {
-		return fmt.Errorf("unsupported grep option: %s", arg)
+		return unknownLongOption(arg)
 	}
 	_, err := parseColorWhen(value, present)
 	return err
@@ -121,7 +121,7 @@ func grepOptionValue(arg string, args []string, index, position int, letter byte
 		return arg[position+1:], 1, nil
 	}
 	if index+1 >= len(args) {
-		return "", 0, fmt.Errorf("option requires an argument -- '%c'", letter)
+		return "", 0, missingOptionArgument(string(letter))
 	}
 	return args[index+1], 2, nil
 }

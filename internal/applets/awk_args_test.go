@@ -204,9 +204,9 @@ func TestAwkCommandRefusals(t *testing.T) {
 		status int
 	}{
 		{name: "no program at all", args: nil, says: "operand", status: 2},
-		{name: "an unknown option", args: []string{"-Z", "{print}"}, says: "invalid option", status: 2},
+		{name: "an unknown option", args: []string{"-Z", "{print}"}, says: "unknown option -- Z", status: 2},
 		{name: "-v without an equals", args: []string{"-v", "x", "BEGIN{}"}, says: "var=value", status: 2},
-		{name: "-F with nothing after it", args: []string{"-F"}, says: "needs a value", status: 2},
+		{name: "-F with nothing after it", args: []string{"-F"}, says: "option requires an argument -- F", status: 2},
 		{name: "a program that will not parse", args: []string{"BEGIN{"}, says: "", status: 2},
 		{name: "a missing input file", args: []string{"{print}", "no-such-file-here"}, says: "no-such-file-here", status: 2},
 		{name: "a missing program file", args: []string{"-f", "no-such-program-here"}, says: "no-such-program-here", status: 2},

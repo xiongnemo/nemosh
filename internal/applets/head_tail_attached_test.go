@@ -99,7 +99,7 @@ func TestHeadTail_refusesABadAttachedValue(t *testing.T) {
 		{applet: "head", args: []string{"-n2c", "n.txt"}, wantWord: "2c"},
 		{applet: "head", args: []string{"-2n", "n.txt"}, wantWord: "2n"},
 		{applet: "tail", args: []string{"-nx", "n.txt"}, wantWord: "x"},
-		{applet: "head", args: []string{"-n"}, wantWord: "-n"},
+		{applet: "head", args: []string{"-n"}, wantWord: "option requires an argument -- n"},
 		// Still an unimplemented option rather than a count.
 		{applet: "head", args: []string{"-z", "n.txt"}, wantWord: "z"},
 		{applet: "head", args: []string{"-f", "n.txt"}, wantWord: "f"},

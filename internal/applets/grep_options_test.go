@@ -64,9 +64,9 @@ func TestGrep_namesTheOptionItRefuses(t *testing.T) {
 		args []string
 		want string
 	}{
-		{args: []string{"--nonsense", "x"}, want: "unsupported grep option: --nonsense"},
-		{args: []string{"--colour=auto", "x"}, want: "unsupported grep option: --colour=auto"},
-		{args: []string{"-z", "x"}, want: "unsupported grep option: -z"},
+		{args: []string{"--nonsense", "x"}, want: "unknown option -- nonsense"},
+		{args: []string{"--colour=auto", "x"}, want: "unknown option -- colour=auto"},
+		{args: []string{"-z", "x"}, want: "unknown option -- z"},
 		{args: []string{"--color=purple", "x"}, want: "unsupported --color value: purple"},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {
@@ -92,9 +92,9 @@ func TestApplets_nameTheLongOptionTheyRefuse(t *testing.T) {
 		applet string
 		want   string
 	}{
-		{applet: "sort", want: "sort: unrecognized option '--nonsense'"},
-		{applet: "uniq", want: "uniq: unrecognized option '--nonsense'"},
-		{applet: "cut", want: "cut: unrecognized option '--nonsense'"},
+		{applet: "sort", want: "sort: unknown option -- nonsense"},
+		{applet: "uniq", want: "uniq: unknown option -- nonsense"},
+		{applet: "cut", want: "cut: unknown option -- nonsense"},
 	} {
 		t.Run(test.applet, func(t *testing.T) {
 			// When

@@ -301,8 +301,8 @@ func TestTar_takesBusyboxsLongOptions(t *testing.T) {
 		args []string
 		want string
 	}{
-		{args: []string{"--bogus"}, want: "unrecognized option '--bogus'"},
-		{args: []string{"--list=1"}, want: "unrecognized option '--list=1'"},
+		{args: []string{"--bogus"}, want: "unknown option -- bogus"},
+		{args: []string{"--list=1"}, want: "unknown option -- list=1"},
 		{args: []string{"-t", "--exclude"}, want: "option '--exclude' requires an argument"},
 	} {
 		if _, _, err := runSmall(t, root, "", "tar", test.args...); err == nil || err.Error() != test.want {

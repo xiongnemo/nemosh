@@ -37,7 +37,7 @@ func TestSed_longOptions(t *testing.T) {
 			t.Errorf("after --in-place=.bak, %s = %q, %v; want %q", name, data, err, want)
 		}
 	}
-	if _, stderr, err := runSmall(t, dir, "", "sed", "--posix", "p", "a.txt"); err == nil || !strings.Contains(stderr+err.Error(), "--posix") {
+	if _, stderr, err := runSmall(t, dir, "", "sed", "--posix", "p", "a.txt"); err == nil || !strings.Contains(stderr+err.Error(), "unknown option -- posix") {
 		t.Errorf("sed --posix = %q, %v; want a refusal naming it", stderr, err)
 	}
 }

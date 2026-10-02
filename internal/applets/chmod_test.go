@@ -182,7 +182,7 @@ func TestChmod_goesOnPastAMissingFile(t *testing.T) {
 		{[]string{"zz", "nope", "f", "g"}, nil, "chmod: nope: No such file or directory\n", "invalid mode 'zz'"},
 		{[]string{"zz", "nope2"}, nil, "chmod: nope2: No such file or directory\n", "exit status 1"},
 		{[]string{"644", "f", "-v"}, map[string]string{"POSIXLY_CORRECT": "1"}, "chmod: -v: No such file or directory\n", "exit status 1"},
-		{[]string{"-vr", "f"}, nil, "", "invalid option -- 'r'"},
+		{[]string{"-vr", "f"}, nil, "", "unknown option -- r"},
 		{[]string{"-R", "f"}, nil, "", "missing operand"},
 	} {
 		view.env = test.env

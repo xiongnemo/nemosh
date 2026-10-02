@@ -18,7 +18,7 @@ func TestRuntime_grepReturnsStatusTwo_whenTheInvocationIsWrong(t *testing.T) {
 		stderr string
 	}{
 		{name: "no pattern", script: "grep\n", stderr: "grep: missing pattern\n"},
-		{name: "unsupported option", script: "grep -z one\n", stderr: "grep: unsupported grep option: -z\n"},
+		{name: "unsupported option", script: "grep -z one\n", stderr: "grep: unknown option -- z\n"},
 		{name: "unreadable operand", script: "grep one nope.txt\n", stderr: "grep: nope.txt: No such file or directory\n"},
 	}
 	for _, testCase := range cases {

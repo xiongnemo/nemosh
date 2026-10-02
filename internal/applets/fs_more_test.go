@@ -181,7 +181,7 @@ func TestDefaultRegistry_returnsError_whenLsRunsWithUnsupportedFlag(t *testing.T
 	err := applet.Run(context.Background(), []string{"-z"}, &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{})
 
 	// Then
-	if err == nil || err.Error() != "unsupported ls option: -z" {
+	if err == nil || err.Error() != "unknown option -- z" {
 		t.Fatalf("expected unsupported option error, got %v", err)
 	}
 }
