@@ -542,7 +542,7 @@
       "Invalid for loop variable name": "ash-only",
       "Long Token - 65535 bytes": "fail",
       "Token that's too long for Oils - 65536 bytes": "fail",
-      "array literal inside array is a parse error": "fail",
+      "array literal inside array is a parse error": "ash-only",
       "bad var name in export": "fail",
       "bad var name in local": "fail",
       "} on the second line": "fail"

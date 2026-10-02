@@ -29,3 +29,18 @@ func TestRuntime_misplacedArrayLiteralIsASyntaxError(t *testing.T) {
 		t.Errorf("got %q/%d, want %q/0", stdout, status, "4\n2 3\np\nq\n")
 	}
 }
+
+// A parenthesis in an array literal that nothing quotes is a syntax error in busybox-w32 and
+// bash, a literal inside a literal among them; it was kept in an element, and `a=( inside=() )`
+// made one. Quoted, escaped, or opening a substitution, it is still an element's.
+func TestRuntime_aParenthesisInAnArrayLiteral(t *testing.T) {
+	for _, script := range []string{"echo hi; a=( inside=() )\necho len=${#a[@]}", "echo hi; a=( x (y) )\necho done"} {
+		if stdout, status := runScriptCapturing(script); stdout != "" || status != 2 {
+			t.Errorf("%q: got %q/%d, want the script refused with status 2", script, stdout, status)
+		}
+	}
+	script := "a=( \"(\" \\( x$(echo y) $((1+2)) )\necho ${a[@]}\n"
+	if stdout, status := runScriptCapturing(script); stdout != "( ( xy 3\n" || status != 0 {
+		t.Errorf("got %q/%d, want the elements kept", stdout, status)
+	}
+}

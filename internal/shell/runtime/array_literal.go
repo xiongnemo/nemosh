@@ -35,8 +35,28 @@ func arrayLiteralEnd(line string, open, depth int) (int, error) {
 		if hasUnquotedSemicolon(*token.parsed) {
 			return 0, fmt.Errorf("syntax error: unexpected ; in an array assignment")
 		}
+		if hasUnquotedParenthesis(*token.parsed) {
+			return 0, fmt.Errorf("syntax error: unexpected ( in an array assignment")
+		}
 	}
 	return end, nil
+}
+
+// hasUnquotedParenthesis reports a word holding a `(` that nothing quotes and no extended
+// pattern or process substitution opens. `a=( inside=() )` and `a=( x (y) )` are syntax
+// errors in busybox-w32 and bash, where the parenthesis was kept in an element.
+func hasUnquotedParenthesis(item word) bool {
+	for _, part := range item.parts {
+		if part.kind != wordPartLiteral || part.quote != quoteUnquoted {
+			continue
+		}
+		for index := 0; index < len(part.text); index++ {
+			if part.text[index] == '(' && (index == 0 || strings.IndexByte("@!*+?<>", part.text[index-1]) < 0) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // hasUnquotedSemicolon reports whether a word holds a `;` that nothing quotes. The lexer
