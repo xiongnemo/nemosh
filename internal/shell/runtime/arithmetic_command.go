@@ -46,15 +46,16 @@ func arithmeticCommandText(line string, index, end int) string {
 // The expression goes in double-quoted, as bash documents `((expr))`: `let "expr"`. So its
 // own blanks and stars are data -- `(( i < 10 ))` is one argument to let, and the `*` in
 // `(( a * b ))` is not a directory listing -- and its expansions are made, as they are in
-// $(( )). It went in single-quoted, and `(( $1 << 1 ))` handed let a `$` it cannot read. A
-// double quote inside is removed, as bash removes it; an expression the lexer cannot read
-// quoted goes in as it did.
+// $(( )). It went in single-quoted, and `(( $1 << 1 ))` handed let a `$` it cannot read. The
+// expression's own double quotes are removed, as bash removes them, and those of a command
+// substitution in it are its own: every one went, so `$(printf "%s" "$f")` lost the quotes
+// that kept its words together. An expression the lexer cannot read quoted goes in as it did.
 func arithmeticCommandTokens(line string, index, end int) []shellToken {
 	text := arithmeticCommandText(line, index, end)
 	expression := shellToken{kind: tokenWord, value: text, parsed: &word{
 		parts: []wordPart{{kind: wordPartLiteral, text: text, quote: quoteSingle}},
 	}}
-	if tokens, err := scanShellTokens(`"` + strings.ReplaceAll(text, `"`, "") + `"`); err == nil && len(tokens) == 1 && tokens[0].kind == tokenWord {
+	if tokens, err := scanShellTokens(`"` + withoutArithmeticQuotes(text) + `"`); err == nil && len(tokens) == 1 && tokens[0].kind == tokenWord {
 		expression = tokens[0]
 	}
 	return []shellToken{

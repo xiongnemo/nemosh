@@ -129,12 +129,13 @@ func (r Runtime) executeArithmeticFor(ctx context.Context, node loopNode, savedS
 	}
 }
 
-// arithmeticForPart is one of the loop's parts as it is evaluated: expanded, an empty one
-// being 1, as bash has it, and traced under `set -x` as `(( ))` is.
+// arithmeticForPart is one of the loop's parts as it is evaluated: expanded, its double
+// quotes removed as `(( ))` removes them, an empty one being 1, as bash has it, and traced
+// under `set -x` as `(( ))` is. `for ((i=0; i<"$n"; i++))` was a syntax error at the quote.
 func (r Runtime) arithmeticForPart(ctx context.Context, part string, savedStatus int) string {
 	expanded := "1"
 	if part != "" {
-		expanded = r.expandArithmeticText(ctx, part, savedStatus)
+		expanded = r.expandArithmeticText(ctx, withoutArithmeticQuotes(part), savedStatus)
 	}
 	r.traceArithmetic(ctx, expanded, savedStatus)
 	return expanded
