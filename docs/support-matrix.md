@@ -432,8 +432,11 @@ kill ring by name, they notice that `^U` lost something and stop pressing it.
 is readline's unix-line-discard, so `^U` with the cursor in the middle keeps the tail. It
 cleared the whole line before -- a more destructive gesture wearing the same key.
 
-One slot rather than readline's ring of many. Everything past the first entry needs `M-y`
-to reach and a rotation state to explain, and the first entry is what the gesture is for.
+The ring is readline's: the last ten kills, `M-d` (kill-word) among the keys that fill it,
+and a kill straight after another joined to it, so two `^W` are one entry that `^Y` puts
+back whole. **`M-y` straight after `^Y`** takes the yank back out and puts in the kill
+before it, round the ring, and the ring stays turned for the next `^Y`, until a kill. It
+held one entry, the newest, until 2026-10-02.
 
 ### The line editor's other readline keys
 

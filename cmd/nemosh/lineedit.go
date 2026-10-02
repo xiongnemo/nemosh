@@ -211,9 +211,17 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 				continue
 			}
 		}
-		// yank-last-arg repeats only when pressed again straight after itself.
+		// yank-last-arg repeats only when pressed again straight after itself; a kill joins
+		// the one before only straight after it; M-y turns the ring only straight after a yank.
 		if key.kind != keyYankLastArg {
 			e.lastArg.active = false
+		}
+		killing := key.kind == keyClearLine || key.kind == keyKillToEnd || key.kind == keyDeleteWord || key.kind == keyDeleteWordForward
+		if !killing {
+			e.kills.joining = false
+		}
+		if key.kind != keyYank && key.kind != keyYankPop {
+			e.kills.yanked.active = false
 		}
 		if e.vi.on && e.viKey(key) {
 			e.redraw(prompt)
@@ -260,15 +268,17 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			// unix-line-discard -- so ^U with the cursor in the middle keeps the
 			// tail. It cleared the whole line before, a more destructive gesture
 			// wearing the same key, and what it removed was gone for good.
-			e.kills.kill(e.buffer.killToStart())
+			e.kills.kill(e.buffer.killToStart(), true)
 		case keyKillToEnd:
-			e.kills.kill(e.buffer.killToEnd())
+			e.kills.kill(e.buffer.killToEnd(), false)
 		case keyYank:
-			e.buffer.yank(e.kills.yank())
+			e.yank()
+		case keyYankPop:
+			e.yankPop()
 		case keyDeleteWord:
-			e.kills.kill(e.buffer.killWord())
+			e.kills.kill(e.buffer.killWord(), true)
 		case keyDeleteWordForward:
-			e.buffer.deleteWordForward()
+			e.kills.kill(e.buffer.deleteWordForward(), false)
 		case keyWordLeft:
 			e.buffer.moveWordLeft()
 		case keyWordRight:
@@ -298,6 +308,7 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		case keyYankLastArg:
 			e.yankLastArg()
 		}
+		e.kills.joining = killing
 		e.redraw(prompt)
 	}
 }

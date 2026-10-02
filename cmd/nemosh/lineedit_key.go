@@ -28,6 +28,8 @@ const (
 	// keys destroyed what they removed until yank existed to take it back.
 	keyKillToEnd
 	keyYank
+	// keyYankPop is M-y: straight after ^Y, the kill before the one it put in.
+	keyYankPop
 	keyDeleteWord
 	keyDeleteWordForward
 	keyWordLeft
@@ -172,6 +174,8 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 			return key{kind: keyWordRight}, 2
 		case '.', '_':
 			return key{kind: keyYankLastArg}, 2
+		case 'y':
+			return key{kind: keyYankPop}, 2
 		case 'u', 'l', 'c':
 			return key{kind: keyWordCase, value: rune(buffer[1])}, 2
 		}

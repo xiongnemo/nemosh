@@ -189,11 +189,14 @@ func (b *lineBuffer) moveWordLeft() { b.cursor = b.wordStart() }
 func (b *lineBuffer) moveWordRight() { b.cursor = b.wordEnd() }
 
 // deleteWordForward removes the word ahead of the cursor, which is readline's
-// kill-word and busybox's Alt-D (libbb/lineedit.c:2926).
-func (b *lineBuffer) deleteWordForward() {
+// kill-word and busybox's Alt-D (libbb/lineedit.c:2926), and answers what it took, which
+// readline's kills.
+func (b *lineBuffer) deleteWordForward() string {
 	end := b.wordEnd()
 	if end == b.cursor {
-		return
+		return ""
 	}
+	taken := string(b.runes[b.cursor:end])
 	b.runes = append(b.runes[:b.cursor], b.runes[end:]...)
+	return taken
 }

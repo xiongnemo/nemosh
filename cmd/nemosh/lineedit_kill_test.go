@@ -126,8 +126,8 @@ func TestLineBuffer_yank(t *testing.T) {
 // silently empty it and make the next `^Y` paste nothing.
 func TestKillRing_anEmptyKillDoesNotClearIt(t *testing.T) {
 	ring := killRing{}
-	ring.kill("something")
-	ring.kill("")
+	ring.kill("something", false)
+	ring.kill("", false)
 	if got := ring.yank(); got != "something" {
 		t.Fatalf("the ring holds %q, want %q", got, "something")
 	}
@@ -146,7 +146,7 @@ func TestKillRing_roundTrip(t *testing.T) {
 			name: "^U then ^Y restores the line", text: "echo hello",
 			steps: func(b *lineBuffer, k *killRing) {
 				b.moveEnd()
-				k.kill(b.killToStart())
+				k.kill(b.killToStart(), true)
 				b.yank(k.yank())
 			},
 			want: "echo hello",
@@ -155,7 +155,7 @@ func TestKillRing_roundTrip(t *testing.T) {
 			name: "^K then ^Y at another place moves the text", text: "world echo ",
 			steps: func(b *lineBuffer, k *killRing) {
 				b.cursor = 0
-				k.kill(b.killToEnd()) // takes everything
+				k.kill(b.killToEnd(), false) // takes everything
 				b.yank(k.yank())
 			},
 			want: "world echo ",
@@ -164,7 +164,7 @@ func TestKillRing_roundTrip(t *testing.T) {
 			name: "^W then ^Y swaps two words", text: "world hello",
 			steps: func(b *lineBuffer, k *killRing) {
 				b.moveEnd()
-				k.kill(b.killWord()) // takes "hello"
+				k.kill(b.killWord(), true) // takes "hello"
 				b.moveHome()
 				b.yank(k.yank())
 				b.yank(" ")
