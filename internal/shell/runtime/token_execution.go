@@ -171,6 +171,7 @@ func (r Runtime) runExpandedWords(ctx context.Context, tracer Runtime, command [
 	}
 	if command[0].arithmetic && len(args) == 2 {
 		tracer.traceArithmetic(ctx, args[1], savedStatus)
+		r.arithmeticCommand = true
 	} else {
 		tracer.traceCommand(ctx, args, savedStatus)
 	}

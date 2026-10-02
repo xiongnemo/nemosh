@@ -35,8 +35,6 @@
       "Dynamic parsing of arithmetic": "fail",
       "Increment undefined variables with nounset": "fail",
       "Integer constant validation": "fail",
-      "Invalid LValue that looks like array": "fail",
-      "Invalid LValue: two sets of brackets": "fail",
       "Invalid constant": "fail",
       "Negative exponent": "fail",
       "No floating point": "ash-only",
@@ -443,7 +441,6 @@
       "hash without args prints the cache": "fail"
     },
     "dbracket.test.sh": {
-      "(( array1 == array2 )) doesn't work": "fail",
       "-eq coercion produces weird results": "fail",
       "-eq does dynamic arithmetic parsing (not supported in OSH)": "fail",
       "-eq on strings": "fail",

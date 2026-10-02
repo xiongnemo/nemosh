@@ -91,6 +91,9 @@ type Runtime struct {
 	// plainAssignment marks the writes of an assignment statement, which abandon the command
 	// when they cannot be made; see failAssignment. On the value for the same reason.
 	plainAssignment bool
+	// arithmeticCommand marks the `let` an `((expr))` became; see arithmeticCommandTokens. On
+	// the value, so it is that command's alone.
+	arithmeticCommand bool
 	// arrayOperands is the running command's operands written as array literals; see
 	// arrayLiteralOperands. On the value, so it is that command's alone.
 	arrayOperands map[string]bool
