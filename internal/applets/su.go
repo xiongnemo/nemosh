@@ -78,7 +78,7 @@ type elevationPlan struct {
 //	su [-tW] [-N|-s SHELL] [root]
 //	su [-tW] [-N|-s SHELL] -c CMD_STRING [[--] root [ARG0 [ARG...]]]
 func planElevation(args []string, view ProcessView, console consoleHandover) (elevationPlan, error) {
-	options, operands, err := readAppletOptions(args, "tWN", "cs", optionsPermute(view))
+	options, operands, err := readAppletOptions(args, "tWN", "cs", nil, optionsPermute(view))
 	if err != nil {
 		return elevationPlan{}, err
 	}

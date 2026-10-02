@@ -33,7 +33,7 @@ var cpioLongOptions = map[string]string{
 
 func newCpioApplet() Applet {
 	return simpleApplet{name: "cpio", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, longOptionWords(args, cpioLongOptions), "tiodmvu0\x01\x02\x03", "FH")
+		options, operands, err := parseAppletLongOptions(ctx, args, cpioLongOptions, "tiodmvu0\x01\x02\x03", "FH")
 		if err != nil {
 			return err
 		}

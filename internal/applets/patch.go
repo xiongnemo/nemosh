@@ -38,7 +38,7 @@ var patchLongOptions = map[string]string{
 
 func newPatchApplet() Applet {
 	return simpleApplet{name: "patch", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, longOptionWords(args, patchLongOptions), "RuNEfg\x01\x03", "pi\x02")
+		options, operands, err := parseAppletLongOptions(ctx, args, patchLongOptions, "RuNEfg\x01\x03", "pi\x02")
 		if err != nil {
 			return err
 		}

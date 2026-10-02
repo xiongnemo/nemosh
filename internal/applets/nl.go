@@ -22,7 +22,7 @@ import (
 // It took -b alone, and read a line of blanks as empty, where busybox numbers it.
 func newNlApplet() Applet {
 	return simpleApplet{name: "nl", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, longOptionWords(args, nlLongOptions), "p", "wsvib")
+		options, paths, err := parseAppletLongOptions(ctx, args, nlLongOptions, "p", "wsvib")
 		if err != nil {
 			return err
 		}

@@ -30,7 +30,7 @@ import (
 // so `install -m 755 tool bin/` and `install -d dir` in a script or a Makefile failed.
 func newInstallApplet() Applet {
 	return simpleApplet{name: "install", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, longOptionWords(args, installLongOptions), "cvbDdps", "gmot")
+		options, operands, err := parseAppletLongOptions(ctx, args, installLongOptions, "cvbDdps", "gmot")
 		if err != nil {
 			return err
 		}

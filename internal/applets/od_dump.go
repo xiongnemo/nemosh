@@ -26,10 +26,10 @@ import (
 func newOdApplet() Applet {
 	return simpleApplet{name: "od", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		words, traditional := odWords(args)
-		options, paths, err := parseAppletOptions(ctx, longOptionWords(words, map[string]string{
+		options, paths, err := parseAppletLongOptions(ctx, words, map[string]string{
 			"skip-bytes": "j", "address-radix": "A", "read-bytes": "N", "format": "t",
 			"output-duplicates": "v", "strings": "S", "width": "w",
-		}), "abcdDfhHiIlLoOBvxXs", "ANjtSw")
+		}, "abcdDfhHiIlLoOBvxXs", "ANjtSw")
 		if err != nil {
 			return err
 		}

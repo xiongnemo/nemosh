@@ -57,8 +57,7 @@ func (envApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 // --ignore-environment, --null and --unset for their letters. A lone `-` is -i. It took -i
 // alone and refused -u and -0.
 func parseEnvInvocation(args []string) (envInvocation, error) {
-	words := longOptionWords(args, map[string]string{"ignore-environment": "i", "null": "0", "unset": "u"})
-	options, remaining, err := parseAppletOptionsInOrder(words, "i0", "u")
+	options, remaining, err := parseAppletLongOptionsInOrder(args, map[string]string{"ignore-environment": "i", "null": "0", "unset": "u"}, "i0", "u")
 	if err != nil {
 		return envInvocation{}, err
 	}

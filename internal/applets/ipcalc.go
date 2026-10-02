@@ -22,7 +22,7 @@ import (
 // too. What *is* refused is a prefix outside 0..32 and an address that is not one.
 func newIpcalcApplet() Applet {
 	return simpleApplet{name: "ipcalc", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, longOptionWords(args, ipcalcLongOptions), "bnmphs", "")
+		options, operands, err := parseAppletLongOptions(ctx, args, ipcalcLongOptions, "bnmphs", "")
 		if err != nil {
 			return err
 		}
