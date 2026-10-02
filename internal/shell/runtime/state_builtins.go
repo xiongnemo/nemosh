@@ -166,6 +166,18 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 		if err != nil {
 			return 1
 		}
+		// A scalar's element 0 is the scalar, as bash reads it, so `unset 'x[0]'` unsets x;
+		// any other element of one is bash's error. Both were ignored, status 0.
+		if !r.arrays.has(base) {
+			if _, set := r.vars[base]; set || r.attributes[base].declared {
+				if index != 0 {
+					fmt.Fprintf(r.streams.Stderr, "unset: %s: not an array variable\n", base)
+					return 1
+				}
+				r.unsetName(base)
+			}
+			continue
+		}
 		// A negative subscript counts back from the last element, so `unset 'a[-1]'` drops
 		// it; it removed nothing at all. One that reaches past the start is bash's error.
 		index, withinRange := countFromEnd(index, r.arrays.span(base))

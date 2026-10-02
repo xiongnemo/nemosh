@@ -92,3 +92,23 @@ func TestUnset_removesAnAssociativeKey(t *testing.T) {
 		})
 	}
 }
+
+// A scalar's element 0 is the scalar, so `unset 'x[0]'` unsets x, and any other element of one
+// is bash's `not an array variable`, status 1, a declared name with no value among them; a
+// name that is nothing is passed over. Both were ignored, status 0. Measured against bash 5.3.
+func TestUnset_anElementOfAScalar(t *testing.T) {
+	for _, test := range []struct {
+		name, script, want string
+	}{
+		{name: "element 0 is the scalar", script: "x=1; unset -v 'x[0]'; echo s=$? x=${x-unset}\n", want: "s=0 x=unset\n"},
+		{name: "another is no array", script: "x=1; unset -v 'x[1]'; echo s=$? x=$x\n", want: "s=1 x=1\n"},
+		{name: "a declared name", script: "declare u; unset -v 'u[1]'; echo s=$?; unset -v 'u[k]'; echo s=$?\n", want: "s=1\ns=0\n"},
+		{name: "a name that is nothing", script: "unset -v 'nope[1]'; echo s=$?\n", want: "s=0\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if stdout, _ := runScriptCapturing(test.script); stdout != test.want {
+				t.Fatalf("stdout = %q, want %q", stdout, test.want)
+			}
+		})
+	}
+}
