@@ -125,12 +125,12 @@ func (r Runtime) expandProcessSubstitution(ctx context.Context, script *Script, 
 	}
 	file, err := os.CreateTemp("", "nemosh-procsub-*")
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: process substitution: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sprocess substitution: %v\n", r.diagnosticPrefix(), err)
 		return ""
 	}
 	r.expansion.registerProcessSubstitution(file.Name())
 	if err := r.runIntoFile(ctx, *script, file, savedStatus); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: process substitution: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sprocess substitution: %v\n", r.diagnosticPrefix(), err)
 		return ""
 	}
 	// Forward slashes, which is the spelling every operand in this shell is resolved

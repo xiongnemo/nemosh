@@ -48,7 +48,7 @@ func (r Runtime) appletStatus(ctx context.Context, name string, err error) int {
 // printf has no -v, so bash is the reference throughout.
 func (r Runtime) printfToVariable(ctx context.Context, args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(r.streams.Stderr, "printf: -v: option requires an argument")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"printf: -v: option requires an argument")
 		return 2
 	}
 	name, rest := args[0], args[1:]
@@ -63,18 +63,18 @@ func (r Runtime) printfToVariable(ctx context.Context, args []string) int {
 	if reference, ok := parseArrayReference(name); ok {
 		base = reference.name
 	} else if !isVariableName(name) {
-		fmt.Fprintf(r.streams.Stderr, "printf: `%s': not a valid identifier\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%sprintf: `%s': not a valid identifier\n", r.diagnosticPrefix(), name)
 		return 2
 	}
 	if r.isReadonly(base) {
 		// printf is an ordinary utility, so this refuses and the script goes on --
 		// the same as `read` into a readonly name, and as bash answers.
-		fmt.Fprintf(r.streams.Stderr, "printf: %s: readonly variable\n", base)
+		fmt.Fprintf(r.streams.Stderr, "%sprintf: %s: readonly variable\n", r.diagnosticPrefix(), base)
 		return 1
 	}
 	applet, ok := r.lookupApplet("printf")
 	if !ok {
-		fmt.Fprintln(r.streams.Stderr, "printf: not available in this build")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"printf: not available in this build")
 		return 127
 	}
 	var formatted strings.Builder

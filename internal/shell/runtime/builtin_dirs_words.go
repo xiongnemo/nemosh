@@ -21,7 +21,7 @@ var dirStackUsage = map[string]string{
 
 // misuseDirStack says a word the builtin cannot read, then its usage, and answers 2.
 func (r Runtime) misuseDirStack(builtin, word, problem string) int {
-	fmt.Fprintf(r.streams.Stderr, "%s: %s: %s\n", builtin, word, problem)
+	fmt.Fprintf(r.streams.Stderr, "%s%s: %s: %s\n", r.diagnosticPrefix(), builtin, word, problem)
 	fmt.Fprintf(r.streams.Stderr, "%s: usage: %s\n", builtin, dirStackUsage[builtin])
 	return 2
 }
@@ -48,9 +48,9 @@ func (r Runtime) stackPosition(word string) (position int, ok, inRange bool) {
 // otherwise that the word is out of range.
 func (r Runtime) stackOutOfRange(builtin, word string) int {
 	if len(r.dirStack.below) == 0 {
-		fmt.Fprintf(r.streams.Stderr, "%s: directory stack empty\n", builtin)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: directory stack empty\n", r.diagnosticPrefix(), builtin)
 	} else {
-		fmt.Fprintf(r.streams.Stderr, "%s: %s: directory stack index out of range\n", builtin, word)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %s: directory stack index out of range\n", r.diagnosticPrefix(), builtin, word)
 	}
 	return 1
 }
@@ -98,7 +98,7 @@ func (r Runtime) pushd(args []string) int {
 	case len(words) == 0:
 		return 0
 	case len(words) > 1:
-		fmt.Fprintln(r.streams.Stderr, "pushd: too many arguments")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"pushd: too many arguments")
 		return 1
 	case noChange:
 		r.dirStack.below = append([]string{words[0]}, r.dirStack.below...)

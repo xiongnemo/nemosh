@@ -7,7 +7,7 @@ import (
 
 func (r Runtime) RunScript(ctx context.Context, script string) int {
 	if r.initErr != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", r.initErr)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), r.initErr)
 		return 1
 	}
 	// The shell ends when a write of its own finds no reader; see pipe_stage.go.
@@ -43,7 +43,7 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 		status, control = r.executeRead(ctx, prepared.program, savedStatus)
 	}
 	if parseErr != nil && control == flowNone {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", parseErr)
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", r.diagnosticName(), parseErr)
 		status = 2
 		if runExitTrap {
 			return r.runExitTrap(context.WithoutCancel(ctx), status), flowNone
@@ -85,7 +85,7 @@ func (r Runtime) CloseBatch(savedStatus int) int {
 	// it is a no-op. Reported before the table goes, since the report itself
 	// needs a descriptor to come out of.
 	if err := r.fds.closeAll(); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 	}
 	// After the descriptors, whose closing is the end of input a `>(cmd)` reading from an
 	// `exec` redirect waits for: `exec > >(tee log)` has all of its log once this returns.
@@ -141,6 +141,6 @@ func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) li
 // of it runs, as bash says it while reading: a heredoc the end of the script closed.
 func (r Runtime) sayParseWarnings(script Script) {
 	for _, warning := range script.warnings {
-		fmt.Fprintln(r.streams.Stderr, "nemosh: "+warning)
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticName()+": "+warning)
 	}
 }

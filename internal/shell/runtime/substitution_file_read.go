@@ -47,7 +47,7 @@ func (r Runtime) readRedirectedFile(ctx context.Context, redirect redirectOperat
 	}
 	return r.withAppliedRedirects(operations, func(redirected Runtime) lineResult {
 		if _, err := io.Copy(redirected.streams.Stdout, redirected.streams.Stdin); err != nil {
-			fmt.Fprintf(redirected.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(redirected.streams.Stderr, "%s%v\n", redirected.diagnosticPrefix(), err)
 			return lineResult{status: 1}
 		}
 		return lineResult{}

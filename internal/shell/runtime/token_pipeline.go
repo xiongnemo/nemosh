@@ -175,7 +175,7 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 				stage.runtime.jobScope.cancelAndDrain()
 			}
 			if err := stage.runtime.fds.closeAll(); err != nil && result.status == 0 {
-				fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+				fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 				result.status = 1
 			}
 			results[index] = result
@@ -189,7 +189,7 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 	select {
 	case <-ctx.Done():
 		if err := pipeline.closeEndpoints(); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		}
 		<-done
 	case <-done:

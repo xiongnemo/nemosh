@@ -20,12 +20,12 @@ func TestPipeTrap_aPipeStageWithSIGPIPEIgnoredGoesOn(t *testing.T) {
 		{
 			name:   "the shell's own write",
 			script: "trap '' PIPE\n{ while echo x; do :; done; echo \"stopped $?\" >&2; } | head -1\n",
-			stdout: "x\n", stderr: "echo: write error: Broken pipe\nstopped 0\n",
+			stdout: "x\n", stderr: "nemosh: line 2: echo: write error: Broken pipe\nstopped 0\n",
 		},
 		{
 			name:   "a program's",
 			script: "trap '' 13\n{ yes; echo \"yes $?\" >&2; } | head -1\n",
-			stdout: "y\n", stderr: "yes: write error: Broken pipe\nyes 1\n",
+			stdout: "y\n", stderr: "nemosh: line 2: yes: write error: Broken pipe\nyes 1\n",
 		},
 		{
 			name:   "a trap is dropped in the stage",
@@ -71,7 +71,7 @@ func TestPipeTrap_aCaughtSIGPIPERunsTheTrapAfterTheFailedWrite(t *testing.T) {
 	// Then
 	select {
 	case status := <-done:
-		if want := "echo: write error: Broken pipe\ngot\nafter 1\n"; status != 0 || stderr.String() != want {
+		if want := "nemosh: line 2: echo: write error: Broken pipe\ngot\nafter 1\n"; status != 0 || stderr.String() != want {
 			t.Fatalf("status %d, stderr %q, want 0 and %q", status, stderr.String(), want)
 		}
 	case <-time.After(20 * time.Second):

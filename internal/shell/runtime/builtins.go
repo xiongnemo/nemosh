@@ -32,7 +32,7 @@ func (r Runtime) dotResult(ctx context.Context, args []string, savedStatus int, 
 		args = args[1:]
 	}
 	if len(args) == 0 {
-		fmt.Fprintf(r.streams.Stderr, "%s: missing file\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: missing file\n", r.diagnosticPrefix(), name)
 		return lineResult{status: 2}
 	}
 	// A file that cannot be read is busybox's `cannot open FILE: no such file`, and a shell error:
@@ -45,7 +45,7 @@ func (r Runtime) dotResult(ctx context.Context, args []string, savedStatus int, 
 		data, err = r.readDotSource(native, device)
 	}
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, redirectFailure{path: args[0], err: err})
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, redirectFailure{path: args[0], err: err})
 		if !special {
 			return lineResult{status: 2}
 		}

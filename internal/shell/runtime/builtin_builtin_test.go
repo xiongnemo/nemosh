@@ -17,7 +17,7 @@ func TestBuiltin(t *testing.T) {
 		{
 			name:   "not a builtin",
 			script: "builtin nosuch-zz\necho \"st=$?\"\n",
-			stdout: "st=1\n", stderr: "builtin: nosuch-zz: not a shell builtin\n",
+			stdout: "st=1\n", stderr: "nemosh: line 1: builtin: nosuch-zz: not a shell builtin\n",
 		},
 		{name: "no name", script: "builtin\necho \"st=$?\"\n", stdout: "st=0\n"},
 	}

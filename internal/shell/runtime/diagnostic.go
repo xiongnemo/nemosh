@@ -15,7 +15,7 @@ import (
 // whoever is debugging the shell itself, and printing it by default would leak
 // host paths into output that behavior cases compare byte for byte.
 type shellDiagnostic struct {
-	// message is the first line, after the `nemosh: ` or `<command>: ` prefix.
+	// message is the first line, after diagnosticPrefix and the command's name.
 	message string
 	// hint names the way out. Omitted when there is nothing useful to say;
 	// "try again" is not a hint.
@@ -45,10 +45,42 @@ const (
 
 var knownDebugChannels = []debugChannel{debugPath, debugExec, debugFD, debugPanic}
 
-// report writes a diagnostic in its layers. The prefix is the command's name
-// where there is one and `nemosh` where the shell itself is speaking.
+// diagnosticPrefix is what the shell's own messages begin with, as bash's error_prolog
+// writes it: the file the running code is in, or $0 where there is none, and the running
+// line -- `build.sh: line 3: `, and `nemosh: line 1: ` for a command string. At a prompt it
+// is the name alone, the line being the one just typed. It was `nemosh: ` everywhere, so a
+// script's message did not say which script, or where in it.
+func (r Runtime) diagnosticPrefix() string {
+	if r.interactive.session {
+		return r.diagnosticName() + ": "
+	}
+	return fmt.Sprintf("%s: line %d: ", r.diagnosticName(), r.currentLine())
+}
+
+// diagnosticName is bash's get_name_for_error: $BASH_SOURCE's first element, then $0, then
+// the shell's own name; and the shell's name at a prompt.
+func (r Runtime) diagnosticName() string {
+	if r.interactive.session {
+		return "nemosh"
+	}
+	if file := r.currentFile(); file != "" {
+		return file
+	}
+	if r.params != nil && r.params.name != "" {
+		return r.params.name
+	}
+	return "nemosh"
+}
+
+// report writes a diagnostic in its layers, after diagnosticPrefix. The prefix is the
+// command's name where there is one and `nemosh` where the shell itself is speaking.
 func (r Runtime) report(prefix string, diagnostic shellDiagnostic) {
-	fmt.Fprintf(r.streams.Stderr, "%s: %s\n", prefix, diagnostic.message)
+	if prefix == "nemosh" {
+		prefix = ""
+	} else {
+		prefix += ": "
+	}
+	fmt.Fprintf(r.streams.Stderr, "%s%s%s\n", r.diagnosticPrefix(), prefix, diagnostic.message)
 	if diagnostic.hint != "" {
 		fmt.Fprintf(r.streams.Stderr, "hint: %s\n", diagnostic.hint)
 	}
@@ -110,7 +142,7 @@ func (r Runtime) warnUnknownDebugChannel(name string) {
 		return
 	}
 	r.expansion.warnedDebugChannels[name] = true
-	fmt.Fprintf(r.streams.Stderr, "nemosh: NEMOSH_DEBUG: unknown channel %q; known channels are path, exec, fd, panic, all\n", name)
+	fmt.Fprintf(r.streams.Stderr, "%sNEMOSH_DEBUG: unknown channel %q; known channels are path, exec, fd, panic, all\n", r.diagnosticPrefix(), name)
 }
 
 // debugDetails builds the detail lines only when the channel is on, so a

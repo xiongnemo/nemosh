@@ -8,14 +8,14 @@ import "fmt"
 // so `trap -P INT` armed INT with a command named -P.
 func (r Runtime) printTrapActions(conditions []string) int {
 	if len(conditions) == 0 {
-		fmt.Fprintln(r.streams.Stderr, "trap: -P requires at least one signal name")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"trap: -P requires at least one signal name")
 		return 2
 	}
 	status := 0
 	for _, condition := range conditions {
 		name, ok := trapConditionName(condition)
 		if !ok {
-			fmt.Fprintf(r.streams.Stderr, "trap: %s: invalid signal specification\n", condition)
+			fmt.Fprintf(r.streams.Stderr, "%strap: %s: invalid signal specification\n", r.diagnosticPrefix(), condition)
 			status = 1
 			continue
 		}

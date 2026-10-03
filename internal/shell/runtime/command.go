@@ -12,7 +12,7 @@ import (
 func (r Runtime) command(ctx context.Context, args []string) int {
 	request, operands, err := parseCommandArgs(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "command: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%scommand: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	if request.defaultPath {

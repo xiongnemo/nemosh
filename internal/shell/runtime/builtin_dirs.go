@@ -99,7 +99,7 @@ func resolveDirStackOffset(index, length int) (int, bool) {
 // rather than doing nothing.
 func (r Runtime) exchangeTopDirectories() int {
 	if len(r.dirStack.below) == 0 {
-		fmt.Fprintln(r.streams.Stderr, "pushd: no other directory")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"pushd: no other directory")
 		return 1
 	}
 	target := r.dirStack.below[0]

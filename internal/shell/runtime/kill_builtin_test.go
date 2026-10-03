@@ -107,10 +107,10 @@ func TestKill_refusesWhatItCannotDo(t *testing.T) {
 // previous job", as every ash does, busybox's and dash among them. Each said "%%: no such job".
 func TestJobSpec_aSpecThatNamesNoJobSaysWhichOneIsMissing(t *testing.T) {
 	for script, want := range map[string]string{
-		"kill %%\n": "kill: No current job\n",
-		"jobs %-\n": "jobs: No previous job\n",
-		"wait %+\n": "wait: No current job\n",
-		"wait %7\n": "wait: %7: no such job\n",
+		"kill %%\n": "nemosh: line 1: kill: No current job\n",
+		"jobs %-\n": "nemosh: line 1: jobs: No previous job\n",
+		"wait %+\n": "nemosh: line 1: wait: No current job\n",
+		"wait %7\n": "nemosh: line 1: wait: %7: no such job\n",
 	} {
 		if _, stderr, _ := runKill(t, script); stderr != want {
 			t.Errorf("%q: stderr = %q, want %q", script, stderr, want)

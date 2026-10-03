@@ -24,7 +24,7 @@ cat g.txt
 [expect]
 status = 0
 stdout = "[1]\nkept\nforced\nforced\nappended\nx\nep\n"
-stderr = "nemosh: cannot create f.txt: File exists\n"
+stderr = "nemosh: line 3: cannot create f.txt: File exists\n"
 
 [notes]
 standard = "POSIX Shell Command Language - 2.7 Redirection, 2.14 set -C"

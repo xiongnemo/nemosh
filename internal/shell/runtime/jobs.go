@@ -107,7 +107,7 @@ func parseJobsArgs(args []string) (jobsRequest, error) {
 func (r Runtime) jobs(args []string) int {
 	request, err := parseJobsArgs(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sjobs: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	records, own := r.listedJobs()
@@ -132,7 +132,7 @@ func (r Runtime) jobs(args []string) int {
 			reported = append(reported, record)
 		}
 		if _, err := r.streams.Stdout.Write([]byte(line)); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%sjobs: %v\n", r.diagnosticPrefix(), err)
 			// Forgotten anyway: the status reached the caller's stream or it did not,
 			// and either way saying it again on the next ask is not the repair.
 			r.jobScope.forget(reported)
@@ -152,7 +152,7 @@ func (r Runtime) selectJobs(records []*jobRecord, request jobsRequest) ([]*jobRe
 		for _, operand := range request.operands {
 			record, ok := r.jobScope.lookup(r.jobScope.resolveJobSpec(operand))
 			if !ok {
-				fmt.Fprintf(r.streams.Stderr, "jobs: %s\n", noSuchJob(operand))
+				fmt.Fprintf(r.streams.Stderr, "%sjobs: %s\n", r.diagnosticPrefix(), noSuchJob(operand))
 				status = 2
 				continue
 			}
@@ -197,7 +197,7 @@ func (r Runtime) listedJobs() ([]*jobRecord, bool) {
 func (r Runtime) jobPIDs(records []*jobRecord) int {
 	for _, record := range records {
 		if _, err := fmt.Fprintln(r.streams.Stdout, record.identifier()); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "jobs: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%sjobs: %v\n", r.diagnosticPrefix(), err)
 			return 1
 		}
 	}

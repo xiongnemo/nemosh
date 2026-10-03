@@ -27,7 +27,7 @@ func (r Runtime) reportIndirectError(err error) {
 	if r.expansion.shellError {
 		return
 	}
-	fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+	fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 	r.expansion.shellError, r.expansion.discard = true, true
 }
 

@@ -27,7 +27,7 @@ func TestUnixPathCommand_aMissingBinNameIsItsLastPart(t *testing.T) {
 		})
 	}
 	stdout, stderr, status := runScriptForDevices(t, "/bin/nemosh-no-such-command\necho $?\n")
-	if stdout != "127\n" || !strings.HasPrefix(stderr, "nemosh-no-such-command: not found") || status != 0 {
+	if stdout != "127\n" || !strings.HasPrefix(stderr, "nemosh: line 1: nemosh-no-such-command: not found") || status != 0 {
 		t.Errorf("got %q/%d, stderr %q; want 127 and the last part named, as busybox-w32 names it", stdout, status, stderr)
 	}
 }

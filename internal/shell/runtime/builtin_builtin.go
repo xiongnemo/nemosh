@@ -20,7 +20,7 @@ func (r Runtime) builtinBuiltin(ctx context.Context, args []string) int {
 		return 0
 	}
 	if _, applet := r.lookupApplet(args[0]); !applet && !isRuntimeBuiltin(args[0]) {
-		fmt.Fprintf(r.streams.Stderr, "builtin: %s: not a shell builtin\n", args[0])
+		fmt.Fprintf(r.streams.Stderr, "%sbuiltin: %s: not a shell builtin\n", r.diagnosticPrefix(), args[0])
 		return 1
 	}
 	return r.runCommandResolved(ctx, args, false)

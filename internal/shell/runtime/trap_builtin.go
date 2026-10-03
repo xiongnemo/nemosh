@@ -44,7 +44,7 @@ func (r Runtime) trap(args []string) int {
 		// Any other option is refused, as in both references, and ends the script as a
 		// special builtin's usage error does in busybox. `trap -1 EXIT` armed EXIT with a
 		// command named -1, which ran as the shell exited.
-		fmt.Fprintf(r.streams.Stderr, "trap: illegal option %s\n", args[0])
+		fmt.Fprintf(r.streams.Stderr, "%strap: illegal option %s\n", r.diagnosticPrefix(), args[0])
 		r.raiseShellError()
 		return 2
 	}
@@ -63,14 +63,14 @@ func (r Runtime) trap(args []string) int {
 		name, ok := trapConditionName(condition)
 		if !ok {
 			// bash's wording, which busybox copies deliberately.
-			fmt.Fprintf(r.streams.Stderr, "trap: %s: invalid signal specification\n", condition)
+			fmt.Fprintf(r.streams.Stderr, "%strap: %s: invalid signal specification\n", r.diagnosticPrefix(), condition)
 			status = 1
 			continue
 		}
 		if name == "" {
 			// A real signal this shell cannot deliver. Saying it is invalid
 			// would send the reader hunting for a typo that is not there.
-			fmt.Fprintf(r.streams.Stderr, "trap: %s: not supported by this shell\n", condition)
+			fmt.Fprintf(r.streams.Stderr, "%strap: %s: not supported by this shell\n", r.diagnosticPrefix(), condition)
 			status = 1
 			continue
 		}

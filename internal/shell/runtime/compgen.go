@@ -138,13 +138,13 @@ func (spec *compgenSpec) set(r Runtime, letter byte, value string) bool {
 	switch letter {
 	case 'o':
 		if !slices.Contains(compgenOptionNames, value) {
-			fmt.Fprintf(r.streams.Stderr, "compgen: %s: invalid option name\n", value)
+			fmt.Fprintf(r.streams.Stderr, "%scompgen: %s: invalid option name\n", r.diagnosticPrefix(), value)
 			return false
 		}
 		spec.options[value] = true
 	case 'A':
 		if !slices.Contains(compgenActionOrder, value) {
-			fmt.Fprintf(r.streams.Stderr, "compgen: %s: invalid action name\n", value)
+			fmt.Fprintf(r.streams.Stderr, "%scompgen: %s: invalid action name\n", r.diagnosticPrefix(), value)
 			return false
 		}
 		spec.actions = append(spec.actions, value)
@@ -169,7 +169,7 @@ func (spec *compgenSpec) set(r Runtime, letter byte, value string) bool {
 }
 
 func (r Runtime) compgenUsage(message string) {
-	fmt.Fprintf(r.streams.Stderr, "compgen: %s\n", message)
+	fmt.Fprintf(r.streams.Stderr, "%scompgen: %s\n", r.diagnosticPrefix(), message)
 	fmt.Fprintln(r.streams.Stderr, "compgen: usage: compgen [-V varname] [-abcdefgjksuv] [-o option] [-A action] [-G globpat] [-W wordlist] [-F function] [-C command] [-X filterpat] [-P prefix] [-S suffix] [word]")
 }
 

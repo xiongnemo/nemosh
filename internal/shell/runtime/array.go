@@ -192,7 +192,7 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 	index, within := countFromEnd(index, span)
 	switch {
 	case !within:
-		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", reference.name)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: bad array subscript\n", r.diagnosticPrefix(), reference.name)
 		return nil, true
 	case isArray:
 		if value, set := r.arrays.valueAt(reference.name, index); set {

@@ -74,10 +74,10 @@ func TestRuntime_stopsWithTheGivenMessage_whenAQuestionOperatorFindsNothingSet(t
 // an empty message was the default one.
 func TestRuntime_questionOperatorSaysBusyboxsWords(t *testing.T) {
 	for _, test := range []struct{ script, want string }{
-		{script: "echo ${nope?}", want: "nemosh: nope: parameter not set\n"},
-		{script: "echo ${nope:?}", want: "nemosh: nope: parameter not set or null\n"},
-		{script: "x=; echo ${x:?}", want: "nemosh: x: parameter not set or null\n"},
-		{script: "e=; echo ${nope?$e}", want: "nemosh: nope: \n"},
+		{script: "echo ${nope?}", want: "nemosh: line 1: nope: parameter not set\n"},
+		{script: "echo ${nope:?}", want: "nemosh: line 1: nope: parameter not set or null\n"},
+		{script: "x=; echo ${x:?}", want: "nemosh: line 1: x: parameter not set or null\n"},
+		{script: "e=; echo ${nope?$e}", want: "nemosh: line 1: nope: \n"},
 	} {
 		t.Run(test.script, func(t *testing.T) {
 			if status, _, stderr := runSetScript(t, test.script+"\n"); status != 2 || stderr != test.want {
@@ -91,7 +91,7 @@ func TestRuntime_questionOperatorSaysBusyboxsWords(t *testing.T) {
 // are setvar's: ash_test param_expand_assign has them.
 func TestRuntime_assignOperatorOnAPositionalIsABadVariableName(t *testing.T) {
 	for _, script := range []string{"set --; echo _${1=word}\necho after\n", "set --; echo _${1:=}\necho after\n"} {
-		if status, stdout, stderr := runSetScript(t, script); status != 2 || stdout != "" || stderr != "nemosh: 1: bad variable name\n" {
+		if status, stdout, stderr := runSetScript(t, script); status != 2 || stdout != "" || stderr != "nemosh: line 1: 1: bad variable name\n" {
 			t.Errorf("%q: status = %d, stdout = %q, stderr = %q, want 2 and busybox's words", script, status, stdout, stderr)
 		}
 	}

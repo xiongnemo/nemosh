@@ -36,10 +36,10 @@ echo "not reached"
 	if got, want := stdout.String(), "command=2\nsubshell=2\ndirectory=2\n"; got != want {
 		t.Errorf("stdout %q, want %q", got, want)
 	}
-	want := ".: cannot open ./missing: no such file\n" +
-		".: cannot open ./missing: no such file\n" +
-		"source: cannot open ./sub: Is a directory\n" +
-		".: cannot open ./missing: no such file\n"
+	want := "nemosh: line 2: .: cannot open ./missing: no such file\n" +
+		"nemosh: line 3: .: cannot open ./missing: no such file\n" +
+		"nemosh: line 4: source: cannot open ./sub: Is a directory\n" +
+		"nemosh: line 5: .: cannot open ./missing: no such file\n"
 	if got := stderr.String(); got != want {
 		t.Errorf("stderr\n%s\nwant\n%s", got, want)
 	}

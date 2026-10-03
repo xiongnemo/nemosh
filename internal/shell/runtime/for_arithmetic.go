@@ -147,7 +147,7 @@ func (r Runtime) arithmeticForFailure(err error) lineResult {
 	if r.shellErrorRaised() {
 		return r.shellErrorResult()
 	}
-	fmt.Fprintf(r.streams.Stderr, "for: %v\n", err)
+	fmt.Fprintf(r.streams.Stderr, "%sfor: %v\n", r.diagnosticPrefix(), err)
 	return lineResult{status: 1}
 }
 

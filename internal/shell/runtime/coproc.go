@@ -180,7 +180,7 @@ func (s *jobScope) newest() (*jobRecord, bool) {
 }
 
 func (r Runtime) coprocFailure(err error) lineResult {
-	fmt.Fprintf(r.streams.Stderr, "coproc: %v\n", err)
+	fmt.Fprintf(r.streams.Stderr, "%scoproc: %v\n", r.diagnosticPrefix(), err)
 	return lineResult{status: 1}
 }
 

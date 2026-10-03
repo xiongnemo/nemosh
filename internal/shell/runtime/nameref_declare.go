@@ -13,7 +13,7 @@ func (r Runtime) declareNameref(name, value string, assigned bool) int {
 		current, set = r.vars[name]
 	}
 	if set && !isNamerefValue(current) {
-		fmt.Fprintf(r.streams.Stderr, "declare: `%s': invalid variable name for name reference\n", current)
+		fmt.Fprintf(r.streams.Stderr, "%sdeclare: `%s': invalid variable name for name reference\n", r.diagnosticPrefix(), current)
 		return 1
 	}
 	if assigned && r.isReadonly(name) {

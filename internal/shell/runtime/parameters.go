@@ -33,7 +33,7 @@ func (r Runtime) shift(args []string) int {
 		if err != nil || parsed < 0 {
 			// It ends a script, as busybox's number() raises it, and is said as the ash family
 			// says it: shift is a special builtin.
-			fmt.Fprintf(r.streams.Stderr, "shift: Illegal number: %s\n", args[0])
+			fmt.Fprintf(r.streams.Stderr, "%sshift: Illegal number: %s\n", r.diagnosticPrefix(), args[0])
 			r.raiseShellError()
 			return 2
 		}
@@ -43,9 +43,9 @@ func (r Runtime) shift(args []string) int {
 		// Both references are silent here; bash says so under `shopt -s shift_verbose`, in
 		// these words.
 		if r.options.shiftVerbose && len(args) > 0 {
-			fmt.Fprintf(r.streams.Stderr, "shift: %s: shift count out of range\n", args[0])
+			fmt.Fprintf(r.streams.Stderr, "%sshift: %s: shift count out of range\n", r.diagnosticPrefix(), args[0])
 		} else if r.options.shiftVerbose {
-			fmt.Fprintln(r.streams.Stderr, "shift: shift count out of range")
+			fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"shift: shift count out of range")
 		}
 		return 1
 	}

@@ -16,12 +16,12 @@ import (
 // busybox-w32 and bash.
 func TestRuntime_aBuiltinNamesAnOptionItCannotTake(t *testing.T) {
 	for _, test := range []struct{ script, stderr string }{
-		{"read -Y x", "read: illegal option -Y\n"},
-		{"unset -Y", "unset: illegal option -Y\n"},
-		{"wait -Y", "wait: illegal option -Y\n"},
-		{"jobs -Y", "jobs: illegal option -Y\n"},
-		{"declare -Y", "declare: -Y: invalid option\n"},
-		{"type -Y ls", "type: -Y: invalid option\n"},
+		{"read -Y x", "nemosh: line 1: read: illegal option -Y\n"},
+		{"unset -Y", "nemosh: line 1: unset: illegal option -Y\n"},
+		{"wait -Y", "nemosh: line 1: wait: illegal option -Y\n"},
+		{"jobs -Y", "nemosh: line 1: jobs: illegal option -Y\n"},
+		{"declare -Y", "nemosh: line 1: declare: -Y: invalid option\n"},
+		{"type -Y ls", "nemosh: line 1: type: -Y: invalid option\n"},
 	} {
 		var stderr bytes.Buffer
 		rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: new(bytes.Buffer), Stderr: &stderr})

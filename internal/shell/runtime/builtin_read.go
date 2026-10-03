@@ -25,7 +25,7 @@ type contextReader interface {
 func (r Runtime) read(ctx context.Context, args []string) int {
 	options, err := parseReadOptions(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "read: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sread: %v\n", r.diagnosticPrefix(), err)
 		if _, name := errors.AsType[readNameError](err); name {
 			return 1
 		}
@@ -33,7 +33,7 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 	}
 	input, err := r.fds.reader(options.descriptor)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "read: %v\n", closedFor("read", err))
+		fmt.Fprintf(r.streams.Stderr, "%sread: %v\n", r.diagnosticPrefix(), closedFor("read", err))
 		return 1
 	}
 	r.writeReadPrompt(options, input)
@@ -49,7 +49,7 @@ func (r Runtime) read(ctx context.Context, args []string) int {
 			if ctx.Err() != nil {
 				return contextStatus(ctx)
 			}
-			fmt.Fprintf(r.streams.Stderr, "read: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%sread: %v\n", r.diagnosticPrefix(), err)
 			return 1
 		}
 		return r.assignReadResult(options, line)
@@ -102,7 +102,7 @@ func (r Runtime) collectWithTimeout(ctx context.Context, input io.Reader, option
 	if !options.hasTimeout {
 		line, err := collectReadLine(ctx, input, options, nil)
 		if err != nil && ctx.Err() == nil {
-			fmt.Fprintf(r.streams.Stderr, "read: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%sread: %v\n", r.diagnosticPrefix(), err)
 			return readLineResult{}, 1
 		}
 		return line, 0
@@ -124,7 +124,7 @@ func (r Runtime) collectWithTimeout(ctx context.Context, input io.Reader, option
 	select {
 	case result := <-results:
 		if result.err != nil && ctx.Err() == nil {
-			fmt.Fprintf(r.streams.Stderr, "read: %v\n", result.err)
+			fmt.Fprintf(r.streams.Stderr, "%sread: %v\n", r.diagnosticPrefix(), result.err)
 			return readLineResult{}, 1
 		}
 		return result.line, 0
@@ -145,7 +145,7 @@ func (r Runtime) assignReadResult(options readOptions, line readLineResult) int 
 	separators := r.fieldSeparators()
 	if options.arrayName != "" {
 		if r.isReadonly(options.arrayName) {
-			fmt.Fprintf(r.streams.Stderr, "%s: readonly variable\n", options.arrayName)
+			fmt.Fprintf(r.streams.Stderr, "%s%s: readonly variable\n", r.diagnosticPrefix(), options.arrayName)
 			return 1
 		}
 		fields := splitReadFields(line.text, line.escaped, separators, 0)
@@ -162,7 +162,7 @@ func (r Runtime) assignReadResult(options readOptions, line readLineResult) int 
 	}
 	for _, name := range targets {
 		if r.isReadonly(name) {
-			fmt.Fprintf(r.streams.Stderr, "read: %s: readonly variable\n", name)
+			fmt.Fprintf(r.streams.Stderr, "%sread: %s: readonly variable\n", r.diagnosticPrefix(), name)
 			return 2
 		}
 	}

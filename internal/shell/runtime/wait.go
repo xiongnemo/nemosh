@@ -43,7 +43,7 @@ func (r Runtime) wait(ctx context.Context, args []string) int {
 func (r Runtime) waitAll(ctx context.Context) int {
 	records, ok := r.jobScope.claimAll()
 	if !ok {
-		fmt.Fprintln(r.streams.Stderr, "wait: job is already being waited for")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"wait: job is already being waited for")
 		return 2
 	}
 	if _, err := waitJobs(ctx, records); err != nil {
@@ -91,18 +91,18 @@ func (r Runtime) waitTarget(operand string) (jobID, int) {
 			}
 			// Otherwise no number names a child of this shell. bash's words, and its
 			// status.
-			fmt.Fprintf(r.streams.Stderr, "wait: pid %s is not a child of this shell\n", operand)
+			fmt.Fprintf(r.streams.Stderr, "%swait: pid %s is not a child of this shell\n", r.diagnosticPrefix(), operand)
 			return 0, 127
 		}
 		// As the ash family says it, and as exit and shift do here; it was bash's "`abc': not a
 		// pid or valid job spec".
-		fmt.Fprintf(r.streams.Stderr, "wait: Illegal number: %s\n", operand)
+		fmt.Fprintf(r.streams.Stderr, "%swait: Illegal number: %s\n", r.diagnosticPrefix(), operand)
 		return 0, 2
 	}
 	// %%, %- and the rest; see job_spec.go. A spec that names no job is the 127 above.
 	id := r.jobScope.resolveJobSpec(operand)
 	if id == 0 {
-		fmt.Fprintf(r.streams.Stderr, "wait: %s\n", noSuchJob(operand))
+		fmt.Fprintf(r.streams.Stderr, "%swait: %s\n", r.diagnosticPrefix(), noSuchJob(operand))
 		return 0, 127
 	}
 	return id, 0
@@ -112,9 +112,9 @@ func (r Runtime) waitTarget(operand string) (jobID, int) {
 // conflict, 2; not knowing it at all is the 127 above.
 func (r Runtime) unclaimable(operand string, id jobID) int {
 	if _, known := r.jobScope.lookup(id); known {
-		fmt.Fprintf(r.streams.Stderr, "wait: %s: is already being waited for\n", operand)
+		fmt.Fprintf(r.streams.Stderr, "%swait: %s: is already being waited for\n", r.diagnosticPrefix(), operand)
 		return 2
 	}
-	fmt.Fprintf(r.streams.Stderr, "wait: %s\n", noSuchJob(operand))
+	fmt.Fprintf(r.streams.Stderr, "%swait: %s\n", r.diagnosticPrefix(), noSuchJob(operand))
 	return 127
 }

@@ -35,7 +35,7 @@ echo [$z]
 [expect]
 status = 0
 stdout = "hi\nhi tail\nchained\nthere\na='b'\nb='echo chained'\ne='echo hi'\np='echo '\nq='there'\ncd is a shell builtin\ngrep is a builtin applet\n[inner]\n[outer]\n[]\n[]\n[global]\n"
-stderr = "e: not found\nhint: PATH is empty, so no directory was searched\n"
+stderr = "nemosh: line 12: e: not found\nhint: PATH is empty, so no directory was searched\n"
 
 [notes]
 standard = "POSIX Shell Command Language - 2.14 alias, type; local is an ash/bash extension"

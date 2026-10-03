@@ -31,7 +31,7 @@ func (r Runtime) exportOptions(args []string) (unexport bool, operands []string,
 				unexport = true
 			case 'p':
 			default:
-				fmt.Fprintf(r.streams.Stderr, "export: illegal option -%c\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "%sexport: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				r.raiseShellError()
 				return false, nil, 2, true
 			}
@@ -57,7 +57,7 @@ func (r Runtime) readonlyOptions(args []string) (declareOptions, []string, bool)
 				options.associative = true
 			case 'p':
 			default:
-				fmt.Fprintf(r.streams.Stderr, "readonly: illegal option -%c\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "%sreadonly: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				r.raiseShellError()
 				return options, nil, false
 			}

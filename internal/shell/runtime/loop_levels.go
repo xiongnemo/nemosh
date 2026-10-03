@@ -98,7 +98,7 @@ func (r Runtime) loopControlResult(name string, args []string) lineResult {
 	}
 	count, err := parseLoopLevel(operand, name)
 	if err != nil {
-		fmt.Fprintln(r.streams.Stderr, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		// A count that cannot be read is a special builtin's error, and it ends a script
 		// with status 2, as busybox ends it -- a word, 0 and a negative number alike; bash
 		// ends it for the word. Only the status reported it, and the loop went on, so a

@@ -10,7 +10,7 @@ func TestClosedDescriptor_isAWriteOrAReadError(t *testing.T) {
 		{script: "echo hi >&-; echo \"st=$?\" >&2\n", stderr: "echo: write error: Bad file descriptor\nst=1\n"},
 		{script: "printf x >&-; echo \"st=$?\" >&2\n", stderr: "printf: write error: Bad file descriptor\nst=1\n"},
 		{script: "cat <&-; echo \"st=$?\" >&2\n", stderr: "cat: read error: Bad file descriptor\nst=1\n"},
-		{script: "read x <&-; echo \"st=$?\" >&2\n", stderr: "read: read error: Bad file descriptor\nst=1\n"},
+		{script: "read x <&-; echo \"st=$?\" >&2\n", stderr: "nemosh: line 1: read: read error: Bad file descriptor\nst=1\n"},
 	} {
 		t.Run(test.script, func(t *testing.T) {
 			if _, _, stderr := runSetScript(t, test.script); stderr != test.stderr {

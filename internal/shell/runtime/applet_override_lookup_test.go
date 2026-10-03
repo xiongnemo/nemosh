@@ -127,8 +127,8 @@ func TestRuntime_reportsNotFound_whenAnOverriddenAppletHasNoExternal(t *testing.
 	}
 	// The first line is the contract a script greps and does not move; the hint
 	// after it is P1.1's and is allowed to say whatever is most useful.
-	if got := stderr.String(); !strings.HasPrefix(got, "cat: not found\n") {
-		t.Fatalf("expected stderr to start with %q, got %q", "cat: not found\n", got)
+	if got := stderr.String(); !strings.HasPrefix(got, "nemosh: line 1: cat: not found\n") {
+		t.Fatalf("expected stderr to start with %q, got %q", "nemosh: line 1: cat: not found\n", got)
 	}
 }
 

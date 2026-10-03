@@ -90,7 +90,7 @@ func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
 			// At a prompt, and in a trap's action, it is still only reported, as bash reports
 			// it everywhere: `trap 'return 42' DEBUG` is bash's alone, and bash goes on.
 			if r.interactive.session && r.subshellDepth == 0 || len(r.trapRunning) > 0 {
-				fmt.Fprintln(r.streams.Stderr, "return: not in a sourced script")
+				fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"return: not in a sourced script")
 				return lineResult{status: status}
 			}
 			return lineResult{status: status, control: flowExit}
@@ -126,7 +126,7 @@ func (r Runtime) badStatus(args []string) bool {
 	if _, err := strconv.Atoi(args[1]); err == nil {
 		return false
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s: Illegal number: %s\n", args[0], args[1])
+	fmt.Fprintf(r.streams.Stderr, "%s%s: Illegal number: %s\n", r.diagnosticPrefix(), args[0], args[1])
 	return true
 }
 

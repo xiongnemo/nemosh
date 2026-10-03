@@ -9,9 +9,9 @@ func TestDoubleBracket_readsANumberAsBracketDoes(t *testing.T) {
 	for _, test := range []struct {
 		script, stdout, stderr string
 	}{
-		{script: "[[ x -lt 1 ]]; echo \"st=$?\"\n", stdout: "st=2\n", stderr: "nemosh: [[: x: bad number\n"},
-		{script: "[[ 3 -eq e ]]; echo \"st=$?\"\n", stdout: "st=2\n", stderr: "nemosh: [[: e: bad number\n"},
-		{script: "[[ '' -eq 0 ]]; echo \"st=$?\"\n", stdout: "st=2\n", stderr: "nemosh: [[: bad number\n"},
+		{script: "[[ x -lt 1 ]]; echo \"st=$?\"\n", stdout: "st=2\n", stderr: "nemosh: line 1: [[: x: bad number\n"},
+		{script: "[[ 3 -eq e ]]; echo \"st=$?\"\n", stdout: "st=2\n", stderr: "nemosh: line 1: [[: e: bad number\n"},
+		{script: "[[ '' -eq 0 ]]; echo \"st=$?\"\n", stdout: "st=2\n", stderr: "nemosh: line 1: [[: bad number\n"},
 		{script: "[[ ' 3' -eq 3 ]]; echo \"st=$?\"\n", stdout: "st=0\n"},
 		{script: "[ '' -eq 0 ]; echo \"st=$?\"\n", stdout: "st=2\n", stderr: "[: bad number\n"},
 	} {

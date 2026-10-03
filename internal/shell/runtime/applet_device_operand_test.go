@@ -215,8 +215,8 @@ func TestDeviceMissing_isNotThere(t *testing.T) {
 		{"wc -c /dev/nosuch 2>&1; echo st=$?", "wc: /dev/nosuch: No such file or directory\nst=1\n"},
 		{"ls /dev/nosuch 2>&1; echo st=$?", "ls: /dev/nosuch: No such file or directory\nst=1\n"},
 		{"test -e /dev/nosuch || echo absent", "absent\n"},
-		{"{ echo x > /dev/nosuch; } 2>&1; echo st=$?", "nemosh: cannot create /dev/nosuch: nonexistent directory\nst=1\n"},
-		{"{ cat < /dev/nosuch; } 2>&1; echo st=$?", "nemosh: cannot open /dev/nosuch: no such file\nst=1\n"},
+		{"{ echo x > /dev/nosuch; } 2>&1; echo st=$?", "nemosh: line 1: cannot create /dev/nosuch: nonexistent directory\nst=1\n"},
+		{"{ cat < /dev/nosuch; } 2>&1; echo st=$?", "nemosh: line 1: cannot open /dev/nosuch: no such file\nst=1\n"},
 		{"cat /dev 2>&1; echo st=$?", "cat: cannot open '/dev': Is a directory\nst=1\n"},
 		{"echo x > /dev/zero; echo x > /dev/urandom; echo x | tee /dev/random; echo st=$?", "x\nst=0\n"},
 	} {

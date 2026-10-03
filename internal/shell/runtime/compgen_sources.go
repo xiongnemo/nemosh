@@ -112,7 +112,7 @@ func (r Runtime) compgenWords(ctx context.Context, list string, savedStatus int)
 	for _, piece := range compgenSplitWords(list, ifs) {
 		parsed, ok := compgenWord(piece)
 		if !ok {
-			fmt.Fprintf(r.streams.Stderr, "compgen: -W: %s: bad substitution\n", piece)
+			fmt.Fprintf(r.streams.Stderr, "%scompgen: -W: %s: bad substitution\n", r.diagnosticPrefix(), piece)
 			return nil, false
 		}
 		words = append(words, r.expandWord(ctx, parsed, savedStatus)...)
@@ -135,10 +135,10 @@ func (r Runtime) discardLine() {
 // COMP_POINT saying there is no line; COMPREPLY is what it answers, and is unset again after,
 // as they are. A function that fails with a shell error answers nothing.
 func (r Runtime) compgenFunction(ctx context.Context, name, word string, savedStatus int) ([]string, bool) {
-	fmt.Fprintln(r.streams.Stderr, "compgen: warning: -F option may not work as you expect")
+	fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"compgen: warning: -F option may not work as you expect")
 	definition, found := r.calledFunction(name)
 	if !found {
-		fmt.Fprintf(r.streams.Stderr, "compgen: function `%s' not found\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%scompgen: function `%s' not found\n", r.diagnosticPrefix(), name)
 		return nil, false
 	}
 	r.arrays.set("COMP_WORDS", nil)
@@ -174,10 +174,10 @@ func (r Runtime) compgenFunction(ctx context.Context, name, word string, savedSt
 // compgenCommand is -C: the command run with the command `compgen`, the word and an empty
 // previous word, as bash runs it, and each line of its output a completion.
 func (r Runtime) compgenCommand(ctx context.Context, command, word string, savedStatus int) []string {
-	fmt.Fprintln(r.streams.Stderr, "compgen: warning: -C option may not work as you expect")
+	fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"compgen: warning: -C option may not work as you expect")
 	script, err := r.parseHere(command + " compgen " + shellquote.Single(word) + " ''")
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "compgen: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%scompgen: %v\n", r.diagnosticPrefix(), err)
 		return nil
 	}
 	output := r.commandSubstitutionScript(ctx, script, savedStatus)

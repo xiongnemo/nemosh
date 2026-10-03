@@ -34,7 +34,7 @@ echo "rc=$?"
 
 [expect]
 status = 0
-stdout = "one\ntwo\nlate\na\nb\n1\n2\n3\na\na\nb\nrc=127\ntb echo tb echo tb\nrc=1\nalias e=''\nalias e_='for i in 1 2 3; do echo $i;'\nalias h='echo $v'\nalias s='echo a && echo b'\nalias tb='echo tb '\nalias x='echo one; echo two'\nalias y='echo a;'\nalias z='echo b; z'\nalias: e not found\nrc=1\n"
+stdout = "one\ntwo\nlate\na\nb\n1\n2\n3\na\na\nb\nrc=127\ntb echo tb echo tb\nrc=1\nalias e=''\nalias e_='for i in 1 2 3; do echo $i;'\nalias h='echo $v'\nalias s='echo a && echo b'\nalias tb='echo tb '\nalias x='echo one; echo two'\nalias y='echo a;'\nalias z='echo b; z'\nnemosh: line 23: alias: e not found\nrc=1\n"
 stderr = ""
 
 [notes]

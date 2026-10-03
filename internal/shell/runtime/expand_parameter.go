@@ -93,7 +93,7 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 	var stdout bytes.Buffer
 	child, err := r.subshellSnapshot(ctx)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return ""
 	}
 	// `set -e` does not reach inside, in either reference: `x=$(false; echo hi)` is hi, and
@@ -106,7 +106,7 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 	table := child.fds
 	if err := table.bindBorrowedWriter(1, &stdout); err != nil {
 		child.jobScope.cancelAndDrain()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, table.closeAll()))
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), errors.Join(err, table.closeAll()))
 		return ""
 	}
 	child = child.withFDTable(table)
@@ -124,7 +124,7 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 	r.expansion.recordSubstitution(status)
 	child.jobScope.cancelAndDrain()
 	if err := table.closeAll(); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return ""
 	}
 	// Without its NUL bytes, as both references take it -- a shell string holds none -- and

@@ -107,7 +107,7 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 			r.jobScope.noteExitSignal(record, signal)
 		}
 		if err := handoff.finish(); err != nil && status == 0 {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 			status = 1
 		}
 		r.jobScope.complete(record, status)
@@ -140,7 +140,7 @@ func (r Runtime) startJobProcess(command *exec.Cmd, handoff *jobHandoff, executa
 		return errors.Join(err, writer.Close())
 	}
 	if err := handoff.started(); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 	}
 	r.jobScope.supervisor.handOff(func() {
 		_, _ = writer.Write(data)
@@ -162,7 +162,7 @@ func (s *jobScope) lookupPID(pid int) (jobID, bool) {
 }
 
 func (r Runtime) jobLaunchFailure(err error) lineResult {
-	fmt.Fprintf(r.streams.Stderr, "nemosh: starting a background job: %v\n", err)
+	fmt.Fprintf(r.streams.Stderr, "%sstarting a background job: %v\n", r.diagnosticPrefix(), err)
 	return lineResult{status: 1}
 }
 
@@ -208,7 +208,7 @@ func JobStateFile(argument string) (*os.File, error) {
 func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
 	var state jobState
 	if err := json.Unmarshal(data, &state); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: job state: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sjob state: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	ctx, end := context.WithCancelCause(ctx)
@@ -222,7 +222,7 @@ func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
 		control, err = inheritedFile(state.Control, "job-control")
 	}
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: job: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sjob: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	if control != nil {

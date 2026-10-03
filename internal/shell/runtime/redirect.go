@@ -58,7 +58,7 @@ func arrayLiteralOperands(command []shellToken) map[string]bool {
 // expand, which said so as it failed.
 func (r Runtime) reportFailedRedirection(err error) {
 	if !errors.Is(err, errHeredocBody) {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 	}
 }
 
@@ -75,7 +75,7 @@ func (r Runtime) withAppliedRedirects(operations []redirectOperation, run func(R
 func (r Runtime) withAppliedRedirectsFor(special bool, operations []redirectOperation, run func(Runtime) lineResult) lineResult {
 	table, err := r.fds.clone()
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	if err := r.applyRedirectOperations(table, operations); err != nil {
@@ -88,7 +88,7 @@ func (r Runtime) withAppliedRedirectsFor(special bool, operations []redirectOper
 	}
 	result := run(r.withFDTable(table))
 	if err := table.closeAll(); err != nil && result.status == 0 {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		result.status = 1
 	}
 	return result

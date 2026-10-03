@@ -39,7 +39,7 @@ OLDPWD= cd - > /dev/null; echo "oldpwd=$?"
 pushd "" 2>&1; echo "pushd=$?"
 `
 	rt.RunScript(context.Background(), script)
-	want := "e=1\nd=1\nr=1\nexec=1\nredirect=1\nread=1 []\ncommand=127\nrm=0\ncd=0\nhome=0\noldpwd=0\nstayed=0\npushd: null directory\npushd=1\n"
+	want := "e=1\nd=1\nr=1\nexec=1\nredirect=1\nread=1 []\ncommand=127\nrm=0\ncd=0\nhome=0\noldpwd=0\nstayed=0\nnemosh: line 15: pushd: null directory\npushd=1\n"
 	if got := stdout.String(); got != want {
 		t.Errorf("got\n%s\nwant\n%s\nstderr: %s", got, want, stderr.String())
 	}

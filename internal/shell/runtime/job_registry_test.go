@@ -159,7 +159,7 @@ func TestRuntime_jobLimitIsSessionWide_acrossRootAndPrivateScopes(t *testing.T) 
 	if launchStatus != 0 || waitStatus != 1 || len(started) != 0 {
 		t.Fatalf("statuses = %d, %d, starts beyond the limit = %d; want 0, 1, 0", launchStatus, waitStatus, len(started))
 	}
-	if got := stderr.String(); got != "nemosh: job limit reached\n" {
+	if got := stderr.String(); got != "nemosh: line 1: job limit reached\n" {
 		t.Fatalf("stderr = %q, want job-limit diagnostic", got)
 	}
 }

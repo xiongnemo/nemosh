@@ -20,7 +20,7 @@ import (
 // something this cannot answer.
 func (r Runtime) help(args []string) int {
 	if len(args) > 0 {
-		fmt.Fprintf(r.streams.Stderr, "help: takes no operands; `type %s` describes one command\n", args[0])
+		fmt.Fprintf(r.streams.Stderr, "%shelp: takes no operands; `type %s` describes one command\n", r.diagnosticPrefix(), args[0])
 		return 2
 	}
 

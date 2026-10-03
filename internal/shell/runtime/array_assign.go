@@ -137,14 +137,14 @@ func (r Runtime) refusePrefixElements(command []word) ([]word, bool) {
 			return append(kept, command[index:]...), dropped
 		}
 		if ok && !assignment.list {
-			fmt.Fprintf(r.streams.Stderr, "`%s[%s]': not a valid identifier\n", assignment.name, assignment.subscript)
+			fmt.Fprintf(r.streams.Stderr, "%s`%s[%s]': not a valid identifier\n", r.diagnosticPrefix(), assignment.name, assignment.subscript)
 			dropped = true
 			continue
 		}
 		// So is one whose subscript or value is computed, as in `a[$i]=x f` and `a[0]=$v f`, and
 		// `a[1 + 1]=x f`, whose subscript is quoted by now. Each was made, and for good.
 		if target, element := writtenElementTarget(item); !ok && element {
-			fmt.Fprintf(r.streams.Stderr, "`%s': not a valid identifier\n", target)
+			fmt.Fprintf(r.streams.Stderr, "%s`%s': not a valid identifier\n", r.diagnosticPrefix(), target)
 			dropped = true
 			continue
 		}
@@ -180,7 +180,7 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 	// `a[]=x` names no element: bash's bad subscript, and the statement abandoned, status 1.
 	// It was no assignment, and ran as a command of that name.
 	if assignment.noSubscript {
-		fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", target)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: bad array subscript\n", r.diagnosticPrefix(), target)
 		r.failAssignment()
 		return
 	}
@@ -188,7 +188,7 @@ func (r Runtime) assignArray(ctx context.Context, assignment arrayAssignment, sa
 		// A list is an array's and not an element's: bash refuses `a[0]=(3 4)` and abandons the
 		// command, where the list was written over the whole of a.
 		if assignment.subscript != "" {
-			fmt.Fprintf(r.streams.Stderr, "%s: cannot assign list to array member\n", target)
+			fmt.Fprintf(r.streams.Stderr, "%s%s: cannot assign list to array member\n", r.diagnosticPrefix(), target)
 			r.failAssignment()
 			return
 		}

@@ -31,7 +31,7 @@ func (r Runtime) listKillSignals(operands []string) int {
 		}
 		number, err := proc.ParseSignal(operand)
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "kill: unknown signal '%s'\n", operand)
+			fmt.Fprintf(r.streams.Stderr, "%skill: unknown signal '%s'\n", r.diagnosticPrefix(), operand)
 			status = 1
 			continue
 		}

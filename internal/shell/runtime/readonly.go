@@ -56,7 +56,7 @@ func (r Runtime) assignVar(name string, value string) int {
 	// Through a nameref, to what it leads to; see nameref.go.
 	target, handled, err := r.namerefAssignment(name, value)
 	if err != nil {
-		fmt.Fprintln(r.streams.Stderr, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return 1
 	}
 	if handled {
@@ -65,7 +65,7 @@ func (r Runtime) assignVar(name string, value string) int {
 	if name, err = r.namerefElement(target); err != nil {
 		// A subscript on a nameref to an element, `ref[0]=x`, is no identifier: the statement
 		// is abandoned, status 1, as bash abandons it. It went on with 0.
-		fmt.Fprintln(r.streams.Stderr, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		r.failAssignment()
 		return 1
 	}
@@ -75,7 +75,7 @@ func (r Runtime) assignVar(name string, value string) int {
 	// `declare -i -l -u`, here so every way a value arrives is treated alike.
 	value, err = r.applyAttributes(name, value)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
 		r.failAssignment()
 		return 1
 	}
@@ -140,7 +140,7 @@ func (r Runtime) allExport() bool {
 // subshell that does it ends only the subshell. `read R` is the exception there, and here
 // -- it refuses, and the script goes on. This used to be a status of 1 and the next line.
 func (r Runtime) refuseReadonly(prefix, name string) int {
-	fmt.Fprintf(r.streams.Stderr, "%s%s: readonly variable\n", prefix, name)
+	fmt.Fprintf(r.streams.Stderr, "%s%s%s: readonly variable\n", r.diagnosticPrefix(), prefix, name)
 	r.raiseShellError()
 	return 1
 }
@@ -150,7 +150,7 @@ func (r Runtime) refuseReadonly(prefix, name string) int {
 // tail of a value split at a space, `export PATH=$PATH:...` over `C:/Program Files`, went
 // quietly into the environment as a name nothing could read back.
 func (r Runtime) refuseName(prefix, name string) int {
-	fmt.Fprintf(r.streams.Stderr, "%s%s: bad variable name\n", prefix, name)
+	fmt.Fprintf(r.streams.Stderr, "%s%s%s: bad variable name\n", r.diagnosticPrefix(), prefix, name)
 	r.raiseShellError()
 	return 2
 }

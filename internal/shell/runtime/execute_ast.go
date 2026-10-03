@@ -181,7 +181,7 @@ func jobAndOr(item andOr) andOr {
 func (r Runtime) launchBackground(run func(Runtime) lineResult) lineResult {
 	worker, err := r.subshellSnapshot(r.jobScope.ctx)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	return r.launchBackgroundSnapshot(worker, run)
@@ -195,14 +195,14 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 	worker.signals = newSignalInbox()
 	if err := worker.fds.bindBorrowedReader(0, bytes.NewReader(nil)); err != nil {
 		worker.jobScope.cancelAndDrain()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, worker.fds.closeAll()))
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), errors.Join(err, worker.fds.closeAll()))
 		return lineResult{status: 1}
 	}
 	// The worker's own scope cancel is what `kill %N` will reach for.
 	record, err := r.jobScope.registerCancellable(worker.jobScope.cancel)
 	if err != nil {
 		worker.jobScope.cancelAndDrain()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, worker.fds.closeAll()))
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), errors.Join(err, worker.fds.closeAll()))
 		return lineResult{status: 1}
 	}
 	record.deliver = worker.signals.offer
@@ -238,7 +238,7 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		})
 		worker.jobScope.cancelAndDrain()
 		if err := worker.fds.closeAll(); err != nil && result.status == 0 {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 			result.status = 1
 		}
 		r.jobScope.complete(record, result.status)

@@ -23,7 +23,7 @@ func (r Runtime) printDirectory(directory string) int {
 		return 1
 	}
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "pwd: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%spwd: %v\n", r.diagnosticPrefix(), err)
 		return 1
 	}
 	return 0
@@ -110,7 +110,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 				nameref = true
 			default:
 				// It ends a script, as busybox's nextopt raises it: unset is a special builtin.
-				fmt.Fprintf(r.streams.Stderr, "unset: illegal option -%c\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "%sunset: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				r.raiseShellError()
 				return 2
 			}
@@ -171,7 +171,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 		if !r.arrays.has(base) {
 			if _, set := r.vars[base]; set || r.attributes[base].declared {
 				if index != 0 {
-					fmt.Fprintf(r.streams.Stderr, "unset: %s: not an array variable\n", base)
+					fmt.Fprintf(r.streams.Stderr, "%sunset: %s: not an array variable\n", r.diagnosticPrefix(), base)
 					return 1
 				}
 				r.unsetName(base)
@@ -182,7 +182,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 		// it; it removed nothing at all. One that reaches past the start is bash's error.
 		index, withinRange := countFromEnd(index, r.arrays.span(base))
 		if !withinRange {
-			fmt.Fprintf(r.streams.Stderr, "unset: [%s]: bad array subscript\n", subscript)
+			fmt.Fprintf(r.streams.Stderr, "%sunset: [%s]: bad array subscript\n", r.diagnosticPrefix(), subscript)
 			return 1
 		}
 		r.arrays.unsetElement(base, index)
@@ -259,10 +259,10 @@ func reportCD(r Runtime, quiet bool, format string, args ...any) {
 // say bash's, with 1.
 func (r Runtime) cdFailure(as, target, reason string, quiet bool) int {
 	if as != "cd" {
-		reportCD(r, quiet, "%s: %s: %s\n", as, target, reason)
+		reportCD(r, quiet, "%s%s: %s: %s\n", r.diagnosticPrefix(), as, target, reason)
 		return 1
 	}
-	reportCD(r, quiet, "cd: cannot cd to %s: %s\n", target, reason)
+	reportCD(r, quiet, "%scd: cannot cd to %s: %s\n", r.diagnosticPrefix(), target, reason)
 	return 2
 }
 

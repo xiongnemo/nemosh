@@ -485,14 +485,20 @@ A failure is reported in up to three layers, because the three have different
 readers.
 
 ```text
-nemosh: <first line>
+<script>: line <N>: <command>: <first line>
 hint: <what to do instead>
 debug: <channel>: <detail>
 ```
 
-The **first line** is what a script greps. It is prefixed with the command's
-name where a command failed and with `nemosh` where the shell itself is
-speaking, and its wording does not change once published.
+The **first line** is what a script greps. It begins as bash's does: the file
+the failing command is in (the script, a sourced file, or the file a function
+was defined in), or `$0` for a command string, which is `nemosh` unless an
+operand gave one; then that command's line; then the command's name where a
+command failed. At a prompt the line is the one just typed, so the prefix is
+`nemosh: ` alone, and a script that does not parse is named without a line,
+because its message says where. A program's own messages, an applet's among
+them, are its own and carry none of this. The wording after the prefix does
+not change once published.
 
 The **hint** is for a person, and appears by default. It is written only where
 there is something useful to say — "try again" is not a hint — so its absence

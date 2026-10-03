@@ -32,7 +32,7 @@ func (r Runtime) directoryOptions(as string, args []string) (bool, []string, boo
 			case 'P':
 				physical = true
 			default:
-				fmt.Fprintf(r.streams.Stderr, "%s: illegal option -%c\n", as, letter)
+				fmt.Fprintf(r.streams.Stderr, "%s%s: illegal option -%c\n", r.diagnosticPrefix(), as, letter)
 				return false, nil, false
 			}
 		}
@@ -82,13 +82,13 @@ func (r Runtime) cdTarget(as string, args []string) (string, bool, bool) {
 	if len(args) == 0 {
 		home, set := r.vars["HOME"]
 		if !set {
-			fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: HOME not set", as))
+			fmt.Fprintf(r.streams.Stderr, "%s%s: HOME not set\n", r.diagnosticPrefix(), as)
 			return "", false, false
 		}
 		return currentIfEmpty(home), false, true
 	}
 	if args[0] == "" && as != "cd" {
-		fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: null directory", as))
+		fmt.Fprintf(r.streams.Stderr, "%s%s: null directory\n", r.diagnosticPrefix(), as)
 		return "", false, false
 	}
 	if args[0] != "-" {
@@ -96,7 +96,7 @@ func (r Runtime) cdTarget(as string, args []string) (string, bool, bool) {
 	}
 	previous, set := r.vars["OLDPWD"]
 	if !set {
-		fmt.Fprintln(r.streams.Stderr, fmt.Sprintf("%s: OLDPWD not set", as))
+		fmt.Fprintf(r.streams.Stderr, "%s%s: OLDPWD not set\n", r.diagnosticPrefix(), as)
 		return "", false, false
 	}
 	return currentIfEmpty(previous), true, true

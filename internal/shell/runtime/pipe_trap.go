@@ -89,7 +89,7 @@ func (r Runtime) brokenPipe(name string) int {
 	if disposition == pipeDefault || disposition == pipeCaught && !ashBuiltinApplets[name] {
 		return brokenPipeStatus
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s: write error: Broken pipe\n", name)
+	fmt.Fprintf(r.streams.Stderr, "%s%s: write error: Broken pipe\n", r.diagnosticPrefix(), name)
 	return 1
 }
 

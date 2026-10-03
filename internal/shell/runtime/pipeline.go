@@ -9,7 +9,7 @@ import (
 func (r Runtime) runPipeline(ctx context.Context, args []string) int {
 	commands, err := splitPipeline(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	if len(commands) == 1 {
@@ -28,18 +28,18 @@ func (r Runtime) runPipeline(ctx context.Context, args []string) int {
 		}
 		stage, err := r.snapshot(ctx)
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 			return 1
 		}
 		stage, err = stage.withStreams(streams)
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 			return 1
 		}
 		status = stage.runCommandWithLeadingAssignments(ctx, command)
 		stage.jobScope.cancelAndDrain()
 		if err := stage.fds.closeAll(); err != nil && status == 0 {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 			return 1
 		}
 		if status != 0 {

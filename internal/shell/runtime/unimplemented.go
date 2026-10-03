@@ -82,6 +82,6 @@ func (r Runtime) reportUnimplementedBuiltin(name string) (int, bool) {
 	if builtin.permanent {
 		verdict = "not implemented, and will not be"
 	}
-	fmt.Fprintf(r.streams.Stderr, "%s: %s: %s\n", name, verdict, builtin.reason)
+	fmt.Fprintf(r.streams.Stderr, "%s%s: %s: %s\n", r.diagnosticPrefix(), name, verdict, builtin.reason)
 	return unimplementedBuiltinStatus, true
 }

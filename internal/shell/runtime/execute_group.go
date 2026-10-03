@@ -30,7 +30,7 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 		var err error
 		commandRuntime, err = r.subshellSnapshotTracing(ctx, r.traceTurn.subshell())
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 			return lineResult{status: 1}
 		}
 		// A subshell's job table is its own, and starts empty: `( jobs )` lists nothing in
@@ -69,7 +69,7 @@ func (r Runtime) executeWithRedirects(ctx context.Context, operations []redirect
 	}
 	table, err := r.fds.clone()
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	if err := r.applyRedirectOperations(table, operations); err != nil {
@@ -78,7 +78,7 @@ func (r Runtime) executeWithRedirects(ctx context.Context, operations []redirect
 	}
 	result := run(r.withFDTable(table))
 	if err := table.closeAll(); err != nil && result.status == 0 {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		result.status = 1
 	}
 	return result

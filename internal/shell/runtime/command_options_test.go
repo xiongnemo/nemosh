@@ -14,7 +14,7 @@ func TestCommand_verboseAndDefaultPath(t *testing.T) {
 		status, stdout, stderr := runSetScript(t,
 			"f() { :; }\ncommand -V cd\ncommand -V ls\ncommand -V f\ncommand -v -V cd\ncommand -V nosuch\necho \"st=$?\"\n")
 		want := "cd is a shell builtin\nls is a builtin applet\nf is a function\ncd is a shell builtin\nst=1\n"
-		if stdout != want || status != 0 || stderr != "command: nosuch: not found\n" {
+		if stdout != want || status != 0 || stderr != "nemosh: line 6: command: nosuch: not found\n" {
 			t.Fatalf("got %q/%d, stderr %q; want %q/0", stdout, status, stderr, want)
 		}
 	})
@@ -31,7 +31,7 @@ func TestCommand_verboseAndDefaultPath(t *testing.T) {
 	})
 	t.Run("an option it has not got", func(t *testing.T) {
 		status, stdout, _ := runSetScript(t, "command -x ls 2>&1\necho \"st=$?\"\n")
-		if want := "command: illegal option -x\nst=2\n"; stdout != want || status != 0 {
+		if want := "nemosh: line 1: command: illegal option -x\nst=2\n"; stdout != want || status != 0 {
 			t.Fatalf("got %q/%d, want %q", stdout, status, want)
 		}
 	})

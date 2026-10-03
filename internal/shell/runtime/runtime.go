@@ -153,30 +153,30 @@ func NewRuntime(registry applets.Registry, streams Streams) (Runtime, error) {
 func (r Runtime) runCommandWithRedirects(ctx context.Context, args []string) int {
 	commandArgs, streams, cleanup, err := r.applyRedirects(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return 1
 	}
 	commandRuntime, err := r.snapshotShared()
 	if err != nil {
 		cleanupErr := cleanup()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, cleanupErr))
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), errors.Join(err, cleanupErr))
 		return 1
 	}
 	commandRuntime, err = commandRuntime.withStreams(streams)
 	if err != nil {
 		cleanupErr := cleanup()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", errors.Join(err, cleanupErr))
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), errors.Join(err, cleanupErr))
 		return 1
 	}
 	status := commandRuntime.runCommand(ctx, commandArgs)
 	commandRuntime.jobScope.drain()
 	closeErr := commandRuntime.fds.closeAll()
 	if err := cleanup(); err != nil && status == 0 {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return 1
 	}
 	if closeErr != nil && status == 0 {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", closeErr)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), closeErr)
 		return 1
 	}
 	return status

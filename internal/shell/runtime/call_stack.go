@@ -94,7 +94,7 @@ func (r Runtime) caller(args []string) int {
 	}
 	level, err := strconv.Atoi(args[0])
 	if err != nil || level < 0 {
-		fmt.Fprintf(r.streams.Stderr, "caller: %s: invalid number\n", args[0])
+		fmt.Fprintf(r.streams.Stderr, "%scaller: %s: invalid number\n", r.diagnosticPrefix(), args[0])
 		return 2
 	}
 	if level+1 >= len(lines) {

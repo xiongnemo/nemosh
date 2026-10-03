@@ -39,12 +39,12 @@ func (r Runtime) assignCompound(ctx context.Context, name, raw string, extend bo
 	// Through a nameref, the array it leads to; see nameref.go. One that leads nowhere yet
 	// becomes the array itself, and says so, as bash's does.
 	if _, set := r.vars[name]; !set && r.attributes[name].nameref {
-		fmt.Fprintf(r.streams.Stderr, "warning: %s: removing nameref attribute\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%swarning: %s: removing nameref attribute\n", r.diagnosticPrefix(), name)
 		r.applyDeclaredAttributes(name, declareOptions{removed: "n"})
 	}
 	name, err := r.namerefBase(name)
 	if err != nil {
-		fmt.Fprintln(r.streams.Stderr, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return 1
 	}
 	if r.isReadonly(name) {
@@ -100,7 +100,7 @@ func (r Runtime) writeIndexedElements(name string, elements []arrayElement, next
 		}
 		value, err := r.applyAttributes(name, value)
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+			fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
 			return 1
 		}
 		r.arrays.setElement(name, index, value)
@@ -127,7 +127,7 @@ func (r Runtime) assignAssociativeCompound(name string, elements []arrayElement,
 			return r.refuseElement(fmt.Sprintf("%s: %s: must use subscript when assigning associative array", name, element.text))
 		case element.key == "" && element.pair:
 			// Said and passed over, as bash does with a pair.
-			fmt.Fprintf(r.streams.Stderr, "%s: bad array subscript\n", element.text)
+			fmt.Fprintf(r.streams.Stderr, "%s%s: bad array subscript\n", r.diagnosticPrefix(), element.text)
 			continue
 		case element.key == "":
 			return r.refuseElement(element.text + ": bad array subscript")
@@ -154,7 +154,7 @@ func (r Runtime) assignAssociativeCompound(name string, elements []arrayElement,
 // `declare -a m=([-1]=x); echo $?` never gets to the echo, as `m=([-1]=x)` does not. A plain
 // assignment's other failures are failAssignment's.
 func (r Runtime) refuseElement(message string) int {
-	fmt.Fprintln(r.streams.Stderr, message)
+	fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), message)
 	if !r.expansion.shellError {
 		r.expansion.shellError, r.expansion.discard = true, true
 	}

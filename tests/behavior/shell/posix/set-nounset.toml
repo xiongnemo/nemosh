@@ -17,7 +17,7 @@ echo STILL
 [expect]
 status = 2
 stdout = "[]\n[fallback]\n"
-stderr = "nemosh: nope: parameter not set\n"
+stderr = "nemosh: line 5: nope: parameter not set\n"
 
 [notes]
 standard = "POSIX Shell Command Language - 2.5.2 Special Parameters, set -u"

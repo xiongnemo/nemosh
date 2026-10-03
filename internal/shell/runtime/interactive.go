@@ -43,7 +43,7 @@ func (r Runtime) IgnoresEOF() bool { return r.options.ignoreEOF }
 
 func (r *Runtime) RunInteractive(ctx context.Context, script Script) InteractiveResult {
 	if r.initErr != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", r.initErr)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), r.initErr)
 		r.interactive.status = 1
 		return InteractiveResult{Status: 1, Exited: r.interactive.closed}
 	}
@@ -63,7 +63,7 @@ func (r *Runtime) RunInteractive(ctx context.Context, script Script) Interactive
 }
 
 func (r *Runtime) ReportInteractiveParseError(err error) {
-	fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+	fmt.Fprintf(r.streams.Stderr, "%s: %v\n", r.diagnosticName(), err)
 	r.interactive.status = 2
 }
 

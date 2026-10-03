@@ -16,6 +16,6 @@ func (r Runtime) reportGlobFailure(pattern string) {
 	if r.expansion.shellError {
 		return
 	}
-	fmt.Fprintf(r.streams.Stderr, "nemosh: no match: %s\n", pattern)
+	fmt.Fprintf(r.streams.Stderr, "%sno match: %s\n", r.diagnosticPrefix(), pattern)
 	r.expansion.shellError, r.expansion.discard = true, true
 }

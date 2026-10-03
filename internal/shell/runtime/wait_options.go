@@ -32,20 +32,20 @@ func (r Runtime) parseWaitOptions(args []string) (waitOptions, []string, int) {
 				continue
 			}
 			if letter != 'p' {
-				fmt.Fprintf(r.streams.Stderr, "wait: illegal option -%c\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "%swait: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				return options, nil, 2
 			}
 			// -p's name is the rest of the word, or the next one.
 			name := option[index+1:]
 			if name == "" {
 				if len(args) == 0 {
-					fmt.Fprintln(r.streams.Stderr, "wait: -p: option requires an argument")
+					fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"wait: -p: option requires an argument")
 					return options, nil, 2
 				}
 				name, args = args[0], args[1:]
 			}
 			if !isVariableName(name) {
-				fmt.Fprintf(r.streams.Stderr, "wait: `%s': not a valid identifier\n", name)
+				fmt.Fprintf(r.streams.Stderr, "%swait: `%s': not a valid identifier\n", r.diagnosticPrefix(), name)
 				return options, nil, 1
 			}
 			options.variable = name

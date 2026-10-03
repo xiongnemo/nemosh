@@ -38,7 +38,7 @@ func (r Runtime) historyBuiltin(args []string) int {
 		}
 	}
 	if files > 1 {
-		fmt.Fprintln(r.streams.Stderr, "history: cannot use more than one of -anrw")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"history: cannot use more than one of -anrw")
 		return 1
 	}
 	if request.has('c') {
@@ -100,7 +100,7 @@ func (r Runtime) parseHistoryOptions(args []string) (historyRequest, []string, i
 
 // historyMisuse says what was wrong and how history is used, status 2, as bash's does.
 func (r Runtime) historyMisuse(why string) int {
-	fmt.Fprintf(r.streams.Stderr, "history: %s\n%s\n", why, historyUsage)
+	fmt.Fprintf(r.streams.Stderr, "%shistory: %s\n%s\n", r.diagnosticPrefix(), why, historyUsage)
 	return 2
 }
 
@@ -110,11 +110,11 @@ func (r Runtime) listHistory(operands []string) int {
 	if len(operands) > 0 {
 		number, ok := historyNumber(operands[0])
 		if !ok {
-			fmt.Fprintf(r.streams.Stderr, "history: %s: numeric argument required\n", operands[0])
+			fmt.Fprintf(r.streams.Stderr, "%shistory: %s: numeric argument required\n", r.diagnosticPrefix(), operands[0])
 			return 2
 		}
 		if len(operands) > 1 {
-			fmt.Fprintln(r.streams.Stderr, "history: too many arguments")
+			fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"history: too many arguments")
 			return 2
 		}
 		count = int(min(max(number, -number), maxHistoryEntries))
@@ -155,7 +155,7 @@ func (r Runtime) deleteHistory(position string) int {
 	}
 	offset, ok := historyNumber(position)
 	if !ok {
-		fmt.Fprintf(r.streams.Stderr, "history: %s: invalid number\n", position)
+		fmt.Fprintf(r.streams.Stderr, "%shistory: %s: invalid number\n", r.diagnosticPrefix(), position)
 		return 1
 	}
 	index := offset - 1
@@ -181,7 +181,7 @@ func historyIndex(text string, number, length int64) int64 {
 }
 
 func (r Runtime) historyOutOfRange(position string) int {
-	fmt.Fprintf(r.streams.Stderr, "history: %s: history position out of range\n", position)
+	fmt.Fprintf(r.streams.Stderr, "%shistory: %s: history position out of range\n", r.diagnosticPrefix(), position)
 	return 1
 }
 

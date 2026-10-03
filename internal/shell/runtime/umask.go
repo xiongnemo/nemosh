@@ -74,7 +74,7 @@ func (r Runtime) umask(args []string) int {
 				reusable = true
 			default:
 				// `umask -rwx` too, which reads as options before it can read as a mode.
-				fmt.Fprintf(r.streams.Stderr, "umask: illegal option -%c\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "%sumask: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				return 2
 			}
 		}
@@ -88,7 +88,7 @@ func (r Runtime) umask(args []string) int {
 		mask, err = applySymbolicMask(r.mask.value, args[0])
 	}
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "umask: illegal mode: %s\n", args[0])
+		fmt.Fprintf(r.streams.Stderr, "%sumask: illegal mode: %s\n", r.diagnosticPrefix(), args[0])
 		return 2
 	}
 	r.mask.set(mask)

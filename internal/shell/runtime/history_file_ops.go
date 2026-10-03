@@ -40,7 +40,7 @@ func (r Runtime) printHistoryExpansions(words []string) int {
 		if historyExpand != nil {
 			var err error
 			if expanded, err = historyExpand(word, r.history.list()); err != nil {
-				fmt.Fprintf(r.streams.Stderr, "history: %s: history expansion failed\n", word)
+				fmt.Fprintf(r.streams.Stderr, "%shistory: %s: history expansion failed\n", r.diagnosticPrefix(), word)
 				status = 1
 				continue
 			}
@@ -59,9 +59,9 @@ func (r Runtime) historyFileRequest(request historyRequest, operands []string) i
 	}
 	if name == "" {
 		if given {
-			fmt.Fprintln(r.streams.Stderr, "history: empty filename")
+			fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"history: empty filename")
 		} else {
-			fmt.Fprintln(r.streams.Stderr, "history: HISTFILE: parameter null or not set")
+			fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"history: HISTFILE: parameter null or not set")
 		}
 		if strings.ContainsRune(r.options.invocation, 'i') {
 			return 0
@@ -93,7 +93,7 @@ func (r Runtime) appendHistoryFile(name, path string) int {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, r.createMode(0o600))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Fprintf(r.streams.Stderr, "history: %s: cannot create: %s\n", name, applets.CauseText(err))
+			fmt.Fprintf(r.streams.Stderr, "%shistory: %s: cannot create: %s\n", r.diagnosticPrefix(), name, applets.CauseText(err))
 		}
 		return 1
 	}

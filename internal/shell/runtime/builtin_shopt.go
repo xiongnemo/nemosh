@@ -22,11 +22,11 @@ type shoptRequest struct {
 func (r Runtime) shoptBuiltin(args []string) int {
 	request, names, err := parseShoptArgs(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "shopt: %v\nshopt: usage: shopt [-pqsu] [-o] [optname ...]\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sshopt: %v\nshopt: usage: shopt [-pqsu] [-o] [optname ...]\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	if request.set && request.unset {
-		fmt.Fprintln(r.streams.Stderr, "shopt: cannot set and unset shell options simultaneously")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"shopt: cannot set and unset shell options simultaneously")
 		return 1
 	}
 	switch {
@@ -89,7 +89,7 @@ func (r Runtime) listShopts(request shoptRequest, names []string) int {
 	for _, name := range names {
 		option, known := lookupShoptOption(name)
 		if !known {
-			fmt.Fprintf(r.streams.Stderr, "shopt: %s: invalid shell option name\n", name)
+			fmt.Fprintf(r.streams.Stderr, "%sshopt: %s: invalid shell option name\n", r.diagnosticPrefix(), name)
 			status = 1
 			continue
 		}
@@ -120,14 +120,14 @@ func (r Runtime) toggleShopts(value bool, names []string) int {
 	status := 0
 	for _, name := range names {
 		if err := r.setShopt(name, value); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "shopt: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%sshopt: %v\n", r.diagnosticPrefix(), err)
 			status = 1
 			continue
 		}
 		// At a prompt, where an option of the interactive layer is meant to act, it says it
 		// does not.
 		if option, _ := lookupShoptOption(name); option.kind == shoptRecorded && r.interactive.session {
-			fmt.Fprintf(r.streams.Stderr, "shopt: %s: recorded, and changes nothing here: %s\n", name, option.why)
+			fmt.Fprintf(r.streams.Stderr, "%sshopt: %s: recorded, and changes nothing here: %s\n", r.diagnosticPrefix(), name, option.why)
 		}
 	}
 	return status
@@ -173,11 +173,11 @@ func (r Runtime) shoptSetOptions(request shoptRequest, names []string) int {
 		spec, known := shellOptionSpecByName(name)
 		switch {
 		case !known:
-			fmt.Fprintf(r.streams.Stderr, "shopt: %s: invalid option name\n", name)
+			fmt.Fprintf(r.streams.Stderr, "%sshopt: %s: invalid option name\n", r.diagnosticPrefix(), name)
 			status = 1
 		case request.set || request.unset:
 			if err := r.setOptionName(name, request.set); err != nil {
-				fmt.Fprintf(r.streams.Stderr, "shopt: %v\n", err)
+				fmt.Fprintf(r.streams.Stderr, "%sshopt: %v\n", r.diagnosticPrefix(), err)
 				status = 1
 			}
 		default:

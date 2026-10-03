@@ -25,7 +25,7 @@ func TestHistoryP_expandsItsWordsAgainstTheList(t *testing.T) {
 	if want := "echo b c\necho\nxecho b cy\nplain\ns=1\n"; stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
-	if want := "history: !x: history expansion failed\n"; stderr.String() != want {
+	if want := "nemosh: line 2: history: !x: history expansion failed\n"; stderr.String() != want {
 		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
 	}
 }

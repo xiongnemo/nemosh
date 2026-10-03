@@ -22,7 +22,7 @@ import (
 func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 	options, names, err := parseDeclareOptions(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "declare: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sdeclare: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	if options.functionNames {
@@ -154,7 +154,7 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		return r.assignElementByKind(ctx, reference, value)
 	}
 	if !isValidVariableName(name) {
-		fmt.Fprintf(r.streams.Stderr, "declare: %s: not a valid name\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%sdeclare: %s: not a valid name\n", r.diagnosticPrefix(), name)
 		return 1
 	}
 	if !r.declareArrayKind(name, options) {
@@ -213,7 +213,7 @@ func (r Runtime) assignElementByKind(ctx context.Context, reference arrayReferen
 		// An empty key names nothing, and bash refuses it and ends the script, as an
 		// assignment error does; here it was a key of its own.
 		if key == "" {
-			fmt.Fprintf(r.streams.Stderr, "%s[%s]: bad array subscript\n", reference.name, reference.subscript)
+			fmt.Fprintf(r.streams.Stderr, "%s%s[%s]: bad array subscript\n", r.diagnosticPrefix(), reference.name, reference.subscript)
 			r.raiseShellError()
 			return 1
 		}
@@ -242,7 +242,7 @@ func (r Runtime) printDeclarations(names []string) int {
 func (r Runtime) printOneDeclaration(name string) bool {
 	text, found := r.declarationText(name)
 	if !found {
-		fmt.Fprintf(r.streams.Stderr, "declare: %s: not found\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%sdeclare: %s: not found\n", r.diagnosticPrefix(), name)
 		return false
 	}
 	fmt.Fprintln(r.streams.Stdout, text)

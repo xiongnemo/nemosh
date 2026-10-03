@@ -48,16 +48,16 @@ type mapfileOptions struct {
 func (r Runtime) mapfile(ctx context.Context, name string, args []string) int {
 	options, err := parseMapfileOptions(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
 		return 2
 	}
 	if r.isReadonly(options.name) {
-		fmt.Fprintf(r.streams.Stderr, "%s: %s: readonly variable\n", name, options.name)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %s: readonly variable\n", r.diagnosticPrefix(), name, options.name)
 		return 1
 	}
 	input, err := r.fds.reader(options.descriptor)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
 		return 1
 	}
 	lines, err := readMapfileLines(ctx, input, options)
@@ -65,7 +65,7 @@ func (r Runtime) mapfile(ctx context.Context, name string, args []string) int {
 		if ctx.Err() != nil {
 			return contextStatus(ctx)
 		}
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
 		return 1
 	}
 	// -O assigns *into* the array rather than replacing it, which is what makes it

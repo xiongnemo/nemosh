@@ -47,7 +47,7 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 	}
 	input, err := r.fds.reader(0)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "select: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sselect: %v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	reader := bufio.NewReader(input)

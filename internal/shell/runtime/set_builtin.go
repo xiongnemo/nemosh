@@ -103,7 +103,7 @@ func (r Runtime) setLetterOptions(letters string, enable bool) int {
 			// A letter set has not got ends a script, as busybox's setoption raises it, where
 			// a -o name it has not got is only 1; see setNamedOption. One it has and cannot
 			// honour here is refused, and the script goes on.
-			fmt.Fprintf(r.streams.Stderr, "set: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%sset: %v\n", r.diagnosticPrefix(), err)
 			if errors.Is(err, ErrUnknownOption) {
 				r.raiseShellError()
 			}
@@ -115,7 +115,7 @@ func (r Runtime) setLetterOptions(letters string, enable bool) int {
 
 func (r Runtime) setNamedOption(name string, enable bool) int {
 	if err := r.setOptionName(name, enable); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "set: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sset: %v\n", r.diagnosticPrefix(), err)
 		// A name set has not got is 1, as busybox's minus_o answers it, and the script goes on.
 		if errors.Is(err, ErrUnknownOption) {
 			return 1

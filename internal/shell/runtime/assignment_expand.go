@@ -186,7 +186,7 @@ func (r Runtime) assignArrayElementText(ctx context.Context, reference arrayRefe
 	// two answered the same question differently, and there is one of them now.
 	index, withinRange := countFromEnd(index, r.arrays.span(reference.name))
 	if !withinRange {
-		fmt.Fprintf(r.streams.Stderr, "%s[%s]: bad array subscript\n", reference.name, reference.subscript)
+		fmt.Fprintf(r.streams.Stderr, "%s%s[%s]: bad array subscript\n", r.diagnosticPrefix(), reference.name, reference.subscript)
 		r.failAssignment()
 		return 1
 	}

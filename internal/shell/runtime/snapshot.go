@@ -88,7 +88,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		signals:     signals,
 		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...), function: r.params.function, getopts: r.params.getopts},
 		options:     r.options.clone(),
-		expansion:   newExpansionState(),
+		expansion:   r.snapshotExpansionState(),
 		aliases:     cloneMap(r.aliases),
 		aliasChain:  r.aliasChain,
 		aliasView:   r.aliasView, // the line's, as its other commands have; see alias_view.go

@@ -25,11 +25,11 @@ func (r Runtime) fcAgain(ctx context.Context, operands []string, savedStatus int
 		index, fault = fcEntryNumber(operands[0], entries, newest, len(entries)-1, false, false)
 	}
 	if fault != fcFound || index < 0 || index >= len(entries) {
-		fmt.Fprintln(r.streams.Stderr, "fc: no command found")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"fc: no command found")
 		return lineResult{status: 1}
 	}
 	if r.options.posix && len(operands) > 1 {
-		fmt.Fprintln(r.streams.Stderr, "fc: too many arguments")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"fc: too many arguments")
 		return lineResult{status: 1}
 	}
 	command := entries[index]
@@ -49,7 +49,7 @@ func (r Runtime) fcAgain(ctx context.Context, operands []string, savedStatus int
 func (r Runtime) fcEdit(ctx context.Context, lines []string, editor string, savedStatus int) lineResult {
 	file, err := os.CreateTemp("", "nemosh-fc-*.sh")
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "fc: cannot open temp file: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sfc: cannot open temp file: %v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	path := file.Name()
@@ -59,7 +59,7 @@ func (r Runtime) fcEdit(ctx context.Context, lines []string, editor string, save
 		err = closeErr
 	}
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "fc: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sfc: %v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	if editor == "" {
@@ -70,7 +70,7 @@ func (r Runtime) fcEdit(ctx context.Context, lines []string, editor string, save
 	}
 	edited, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "fc: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sfc: %v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	text := string(edited)

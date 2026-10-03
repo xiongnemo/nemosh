@@ -36,8 +36,8 @@ func TestSet_bashOptionNames(t *testing.T) {
 		{
 			name:   "and refuses the other",
 			script: "set -k 2>&1\necho \"st=$?\"\nset +o igncr 2>&1\necho \"st=$?\"\n",
-			stdout: "set: -o keyword: always off here: an assignment after the command name is an argument\nst=2\n" +
-				"set: +o igncr: always on here: a carriage return before a newline is dropped, as busybox-w32 drops it\nst=2\n",
+			stdout: "nemosh: line 1: set: -o keyword: always off here: an assignment after the command name is an argument\nst=2\n" +
+				"nemosh: line 3: set: +o igncr: always on here: a carriage return before a newline is dropped, as busybox-w32 drops it\nst=2\n",
 		},
 		{
 			// A script starts with bash's defaults: braceexpand and hashall on, the prompt's

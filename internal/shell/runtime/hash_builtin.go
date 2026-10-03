@@ -25,7 +25,7 @@ func (r Runtime) hashBuiltin(args []string) int {
 		}
 		for _, letter := range arg[1:] {
 			if letter != 'r' {
-				fmt.Fprintf(r.streams.Stderr, "hash: illegal option -%c\n", letter)
+				fmt.Fprintf(r.streams.Stderr, "%shash: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				return 2
 			}
 		}
@@ -37,7 +37,7 @@ func (r Runtime) hashBuiltin(args []string) int {
 			continue
 		}
 		if _, err := r.externalCommandPath(name); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "hash: %s: not found\n", name)
+			fmt.Fprintf(r.streams.Stderr, "%shash: %s: not found\n", r.diagnosticPrefix(), name)
 			status = 1
 		}
 	}

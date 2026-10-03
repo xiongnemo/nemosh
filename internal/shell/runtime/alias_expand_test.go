@@ -83,14 +83,14 @@ func TestRuntime_aliasAndUnaliasOptions(t *testing.T) {
 			// bash 5.3 lists every alias and reads no operand after -p: c is not defined.
 			name:   "alias -p reads no operand",
 			script: "alias a=1 b=2\nalias -p a c=3\nalias c\n",
-			stdout: "alias a='1'\nalias b='2'\n", stderr: "alias: c not found\n", status: 1,
+			stdout: "alias a='1'\nalias b='2'\n", stderr: "nemosh: line 3: alias: c not found\n", status: 1,
 		},
 		{name: "a name that reads as an option", script: "alias -- -p=dash\nalias -p\n", stdout: "alias -- -p='dash'\n"},
-		{name: "another option is a name", script: "alias -x\n", stderr: "alias: -x not found\n", status: 1},
+		{name: "another option is a name", script: "alias -x\n", stderr: "nemosh: line 1: alias: -x not found\n", status: 1},
 		{name: "unalias --", script: "alias a=1 b=2\nunalias -- a\nalias\n", stdout: "b='2'\n"},
 		{name: "unalias -a ends the command", script: "alias a=1 b=2\nunalias -a nosuch\nalias\n"},
-		{name: "unalias -x", script: "unalias -x\n", stderr: "unalias: illegal option -x\n", status: 2},
-		{name: "unalias NAME not found", script: "unalias nosuch\n", stderr: "unalias: nosuch not found\n", status: 1},
+		{name: "unalias -x", script: "unalias -x\n", stderr: "nemosh: line 1: unalias: illegal option -x\n", status: 2},
+		{name: "unalias NAME not found", script: "unalias nosuch\n", stderr: "nemosh: line 1: unalias: nosuch not found\n", status: 1},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

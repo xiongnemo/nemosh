@@ -22,7 +22,7 @@ import (
 func (r Runtime) typeBuiltin(args []string) int {
 	mode, noFunctions, names, err := parseTypeOptions(args)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "type: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%stype: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
 	status := 0
@@ -74,7 +74,7 @@ func (r Runtime) describeFor(mode byte, noFunctions bool, name string) bool {
 	}
 	if len(kinds) == 0 {
 		if mode != 't' && mode != 'p' {
-			fmt.Fprintf(r.streams.Stderr, "type: %s: not found\n", name)
+			fmt.Fprintf(r.streams.Stderr, "%stype: %s: not found\n", r.diagnosticPrefix(), name)
 		}
 		return false
 	}

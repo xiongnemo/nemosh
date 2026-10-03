@@ -31,12 +31,12 @@ var (
 func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	workingDirectory, err := r.nativeWorkingDirectory()
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		return 1
 	}
 	workingDirectory, err = requireAbsoluteNativePath("working directory", workingDirectory)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		return 1
 	}
 	executable, err := r.externalCommandPath(args[0])
@@ -52,12 +52,12 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	}
 	executable, err = requireAbsoluteNativePath("executable", executable)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		return 1
 	}
 	executable, launchArgs, err := r.externalLaunchTarget(executable, args[1:])
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		if errors.Is(err, errExternalNotFound) {
 			return 127
 		}
@@ -65,12 +65,12 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	}
 	cmd, err := r.externalCommand(ctx, executable, launchArgs)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		return 126
 	}
 	launchDirectory, err := launchWorkingDirectory(workingDirectory)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		return 126
 	}
 	cmd.Dir = launchDirectory
@@ -78,7 +78,7 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 	stdin, err := r.fds.reader(0)
 	if err != nil {
 		if !errors.Is(err, errDescriptorAbsent) && !errors.Is(err, errDescriptorClosed) {
-			fmt.Fprintf(r.streams.Stderr, "%s: stdin: %v\n", args[0], err)
+			fmt.Fprintf(r.streams.Stderr, "%s%s: stdin: %v\n", r.diagnosticPrefix(), args[0], err)
 			return 1
 		}
 	} else {
@@ -116,7 +116,7 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 			r.report(args[0], elevationDiagnostic(args[0]))
 			return 126
 		}
-		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", args[0], err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		return 126
 	}
 	return 0

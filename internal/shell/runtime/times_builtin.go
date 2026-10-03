@@ -17,7 +17,7 @@ import (
 func (r Runtime) times() int {
 	selfUser, selfSystem, err := processCPUTime()
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "times: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%stimes: %v\n", r.diagnosticPrefix(), err)
 		return 1
 	}
 	childUser, childSystem := r.childCPU.total()

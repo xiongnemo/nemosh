@@ -32,14 +32,14 @@ func (r Runtime) expandOutputSubstitution(ctx context.Context, script *Script, s
 	lifetime := context.WithoutCancel(ctx)
 	child, err := r.subshellSnapshot(lifetime)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: process substitution: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sprocess substitution: %v\n", r.diagnosticPrefix(), err)
 		return ""
 	}
 	pipe, err := newSubstitutionPipe()
 	if err != nil {
 		child.jobScope.cancelAndDrain()
 		_ = child.fds.closeAll()
-		fmt.Fprintf(r.streams.Stderr, "nemosh: process substitution: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sprocess substitution: %v\n", r.diagnosticPrefix(), err)
 		return ""
 	}
 	r.expansion.outputPipes = append(r.expansion.outputPipes, pipe)
@@ -69,12 +69,12 @@ func (child Runtime) readSubstitution(ctx context.Context, script Script, pipe *
 	}()
 	reader, err := pipe.accept()
 	if err != nil {
-		fmt.Fprintf(child.streams.Stderr, "nemosh: process substitution: %v\n", err)
+		fmt.Fprintf(child.streams.Stderr, "%sprocess substitution: %v\n", child.diagnosticPrefix(), err)
 		return
 	}
 	if err := table.bindOwnedReader(0, reader); err != nil {
 		_ = reader.Close()
-		fmt.Fprintf(child.streams.Stderr, "nemosh: process substitution: %v\n", err)
+		fmt.Fprintf(child.streams.Stderr, "%sprocess substitution: %v\n", child.diagnosticPrefix(), err)
 		return
 	}
 	child = child.withFDTable(table)

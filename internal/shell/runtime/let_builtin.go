@@ -19,7 +19,7 @@ import (
 // to `((`, so that `(( a[1][2] = 3 )); echo $?` says 1 where it said 2.
 func (r Runtime) let(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(r.streams.Stderr, "let: missing expression")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"let: missing expression")
 		return 2
 	}
 	name, failed := "let", 2
@@ -36,7 +36,7 @@ func (r Runtime) let(args []string) int {
 			return 1
 		}
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "%s: %v\n", name, err)
+			fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
 			return failed
 		}
 		last = value

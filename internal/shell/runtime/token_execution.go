@@ -71,7 +71,7 @@ func (r Runtime) runTokenLine(ctx context.Context, tokens []shellToken, savedSta
 func (r Runtime) runTokenPipeline(ctx context.Context, tokens []shellToken, savedStatus int) lineResult {
 	commands, err := splitTokenPipeline(tokens)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 2}
 	}
 	if len(commands) == 1 {
@@ -83,7 +83,7 @@ func (r Runtime) runTokenPipeline(ctx context.Context, tokens []shellToken, save
 	}
 	pipeline, err := r.prepareTokenPipeline(ctx, commands)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	return r.executeTokenPipeline(ctx, pipeline, savedStatus)
@@ -92,7 +92,7 @@ func (r Runtime) runTokenPipeline(ctx context.Context, tokens []shellToken, save
 func (r Runtime) runTokenCommand(ctx context.Context, tokens []shellToken, savedStatus int) lineResult {
 	command, operations, err := parseRedirects(tokens)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	words := make([]word, len(command))
@@ -256,7 +256,7 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 		if operation.duplicate {
 			resolved, err := r.resolveDuplication(ctx, operation, savedStatus)
 			if err != nil {
-				fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+				fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 				return nil, false
 			}
 			operations[index] = resolved

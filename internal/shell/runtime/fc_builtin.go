@@ -149,7 +149,7 @@ func fcNumberWord(word string) bool {
 }
 
 func (r Runtime) fcMisuse(why string) int {
-	fmt.Fprintf(r.streams.Stderr, "fc: %s\n%s\n", why, fcUsage)
+	fmt.Fprintf(r.streams.Stderr, "%sfc: %s\n%s\n", r.diagnosticPrefix(), why, fcUsage)
 	return 2
 }
 
@@ -183,10 +183,10 @@ func (r Runtime) fcSpan(entries []string, operands []string, listing bool) (int,
 	}
 	switch {
 	case firstFault == fcOutOfRange || lastFault == fcOutOfRange:
-		fmt.Fprintln(r.streams.Stderr, "fc: history specification out of range")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"fc: history specification out of range")
 		return 0, 0, false
 	case firstFault == fcNotFound || lastFault == fcNotFound:
-		fmt.Fprintln(r.streams.Stderr, "fc: no command found")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"fc: no command found")
 		return 0, 0, false
 	}
 	// A specification out of range is no error, per POSIX.

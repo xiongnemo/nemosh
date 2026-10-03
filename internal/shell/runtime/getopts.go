@@ -149,10 +149,10 @@ func (r Runtime) reportGetopts(name, value string, place getoptsState, status in
 	_ = r.assignVar("OPTIND", strconv.Itoa(place.next))
 	switch {
 	case !isValidVariableName(name):
-		fmt.Fprintf(r.streams.Stderr, "getopts: %s: bad variable name\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%sgetopts: %s: bad variable name\n", r.diagnosticPrefix(), name)
 		place, status = getoptsState{}, 2
 	case r.isReadonly(name):
-		fmt.Fprintf(r.streams.Stderr, "getopts: %s: readonly variable\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%sgetopts: %s: readonly variable\n", r.diagnosticPrefix(), name)
 		place, status = getoptsState{}, 2
 	default:
 		_ = r.assignVar(name, value)

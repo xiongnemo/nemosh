@@ -33,16 +33,16 @@ x=$(< missing)
 echo "status=$?"
 `
 	rt.RunScript(context.Background(), script)
-	want := "nemosh: cannot create missing/f: nonexistent directory\n" +
-		"nemosh: cannot open missing: no such file\n" +
-		"nemosh: cannot create .: Is a directory\n" +
-		"nemosh: cannot create .: Is a directory\n" +
-		"nemosh: cannot open .: Is a directory\n" +
-		"nemosh: cannot create missing/f: nonexistent directory\n" +
-		"nemosh: cannot create f: File exists\n" +
-		"nemosh: dup2(5,1): Bad file descriptor\n" +
-		"nemosh: dup2(7,0): Bad file descriptor\n" +
-		"nemosh: cannot open missing: no such file\n"
+	want := "nemosh: line 2: cannot create missing/f: nonexistent directory\n" +
+		"nemosh: line 3: cannot open missing: no such file\n" +
+		"nemosh: line 4: cannot create .: Is a directory\n" +
+		"nemosh: line 5: cannot create .: Is a directory\n" +
+		"nemosh: line 6: cannot open .: Is a directory\n" +
+		"nemosh: line 7: cannot create missing/f: nonexistent directory\n" +
+		"nemosh: line 8: cannot create f: File exists\n" +
+		"nemosh: line 9: dup2(5,1): Bad file descriptor\n" +
+		"nemosh: line 10: dup2(7,0): Bad file descriptor\n" +
+		"nemosh: line 11: cannot open missing: no such file\n"
 	if got := stderr.String(); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}

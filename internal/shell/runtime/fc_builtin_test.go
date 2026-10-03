@@ -25,7 +25,7 @@ func TestFc_listsAsBashsDoes(t *testing.T) {
 		{name: "a number past the end", script: load + "fc -l 99\n", want: all},
 		{name: "one counted back past the start", script: load + "fc -l -99\n", want: all},
 		{name: "0 is the newest", script: load + "fc -l 0\n", want: "3\t printf %s\\n three\n"},
-		{name: "a word nothing starts with", script: load + "fc -l nomatch; echo s=$?\n", want: "s=1\n", fragment: "fc: no command found"},
+		{name: "a word nothing starts with", script: load + "fc -l nomatch; echo s=$?\n", want: "s=1\n", fragment: "nemosh: line 2: fc: no command found"},
 		{name: "an empty list", script: "fc -l; echo s=$?\n", want: "s=0\n"},
 		{name: "an option it does not take", script: "fc -x; echo s=$?\n", want: "s=2\n", fragment: "fc: -x: invalid option\nfc: usage: "},
 		{name: "-e with no editor", script: "fc -e; echo s=$?\n", want: "s=2\n", fragment: "fc: -e: option requires an argument"},
@@ -66,7 +66,7 @@ func TestFc_runsAnEntryAgain(t *testing.T) {
 	if stdout != want {
 		t.Fatalf("stdout = %q, want %q", stdout, want)
 	}
-	if wantErr := "printf %s\\n three\necho 2\nfc: no command found\necho ONE\n"; stderr != wantErr {
+	if wantErr := "printf %s\\n three\necho 2\nnemosh: line 4: fc: no command found\necho ONE\n"; stderr != wantErr {
 		t.Fatalf("stderr = %q, want %q", stderr, wantErr)
 	}
 }

@@ -82,11 +82,11 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 // gets none of them: there `local v` is a local of its own, as busybox has it.
 func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefinition, args []string, savedStatus int, assigned []string) lineResult {
 	if err := ctx.Err(); err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: function call: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%sfunction call: %v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	if r.functionDepth >= maxFunctionCallDepth {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: function call depth exceeds %d\n", maxFunctionCallDepth)
+		fmt.Fprintf(r.streams.Stderr, "%sfunction call depth exceeds %d\n", r.diagnosticPrefix(), maxFunctionCallDepth)
 		return lineResult{status: 1}
 	}
 	// Once the call returns, `$LINENO` is the line that made it again, as both references

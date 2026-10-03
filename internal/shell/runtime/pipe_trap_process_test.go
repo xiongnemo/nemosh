@@ -21,8 +21,8 @@ func TestPipeTrap_theProcessKeepsWhatItsShellMadeOfSIGPIPE(t *testing.T) {
 		name, script, stderr string
 		status               int
 	}{
-		{name: "ignored", script: "trap '' PIPE\necho one\necho \"after $?\" >&2\n", stderr: "echo: write error: Broken pipe\nafter 1\n"},
-		{name: "caught", script: "trap 'echo got >&2' PIPE\necho one\necho \"after $?\" >&2\n", stderr: "echo: write error: Broken pipe\ngot\nafter 1\n"},
+		{name: "ignored", script: "trap '' PIPE\necho one\necho \"after $?\" >&2\n", stderr: "nemosh: line 2: echo: write error: Broken pipe\nafter 1\n"},
+		{name: "caught", script: "trap 'echo got >&2' PIPE\necho one\necho \"after $?\" >&2\n", stderr: "nemosh: line 2: echo: write error: Broken pipe\ngot\nafter 1\n"},
 		{name: "the default", script: "echo one\necho after >&2\n", status: brokenPipeStatus},
 		{name: "the default again", script: "trap '' PIPE\ntrap - PIPE\necho one\necho after >&2\n", status: brokenPipeStatus},
 	} {

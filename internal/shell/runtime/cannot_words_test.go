@@ -17,7 +17,7 @@ func TestRuntime_saysCannotWhereBusyboxSaysCant(t *testing.T) {
 		script, stderr string
 		status         int
 	}{
-		{"cd ./no-such-dir", "cd: cannot cd to ./no-such-dir: No such file or directory\n", 2},
+		{"cd ./no-such-dir", "nemosh: line 2: cd: cannot cd to ./no-such-dir: No such file or directory\n", 2},
 		{"echo a | sed 'b nolabel'", "sed: cannot find label for jump to 'nolabel'\n", 1},
 		{"time -o ./no-such-dir/t true", "time: cannot open './no-such-dir/t': No such file or directory\n", 1},
 	} {

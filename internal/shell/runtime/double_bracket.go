@@ -47,7 +47,7 @@ func isDoubleBracket(command []word) bool {
 // answer is no" distinguishable from "that was not an expression".
 func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStatus int) lineResult {
 	if soleLiteralText(command[len(command)-1]) != "]]" {
-		fmt.Fprintln(r.streams.Stderr, "nemosh: [[: missing ]]")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"[[: missing ]]")
 		return lineResult{status: 2}
 	}
 	terms := make([]conditionTerm, 0, len(command)-2)
@@ -73,7 +73,7 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStat
 		err = fmt.Errorf("unexpected %s", parser.peek().text)
 	}
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: [[: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s[[: %v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 2}
 	}
 	if value {

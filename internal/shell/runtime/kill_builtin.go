@@ -31,14 +31,14 @@ func (r Runtime) killBuiltin(args []string) int {
 	signal, operands, err := parseKillSignal(args)
 	if err != nil {
 		// 1, as both references answer a signal they will not send.
-		fmt.Fprintf(r.streams.Stderr, "kill: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%skill: %v\n", r.diagnosticPrefix(), err)
 		return 1
 	}
 	if signal == listSignals {
 		return r.listKillSignals(operands)
 	}
 	if len(operands) == 0 {
-		fmt.Fprintln(r.streams.Stderr, "kill: expected a job or a process id")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"kill: expected a job or a process id")
 		return 1
 	}
 	// Every job is found before anything is sent, as busybox's killcmd turns them all into pids
@@ -48,14 +48,14 @@ func (r Runtime) killBuiltin(args []string) int {
 			continue
 		}
 		if _, ok := r.jobScope.lookup(r.jobScope.resolveJobSpec(operand)); !ok {
-			fmt.Fprintf(r.streams.Stderr, "kill: %s\n", noSuchJob(operand))
+			fmt.Fprintf(r.streams.Stderr, "%skill: %s\n", r.diagnosticPrefix(), noSuchJob(operand))
 			return 2
 		}
 	}
 	failures := 0
 	for _, operand := range operands {
 		if err := r.killOne(operand, signal); err != nil {
-			fmt.Fprintf(r.streams.Stderr, "kill: %v\n", err)
+			fmt.Fprintf(r.streams.Stderr, "%skill: %v\n", r.diagnosticPrefix(), err)
 			failures++
 		}
 	}

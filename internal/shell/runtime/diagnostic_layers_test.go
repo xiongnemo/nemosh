@@ -19,7 +19,7 @@ func TestRuntime_layersALaunchDiagnostic(t *testing.T) {
 		t.Fatalf("status = %d, want 127", status)
 	}
 	lines := strings.Split(strings.TrimSuffix(stderr, "\n"), "\n")
-	if lines[0] != "definitely-not-a-program: not found" {
+	if lines[0] != "nemosh: line 1: definitely-not-a-program: not found" {
 		t.Fatalf("first line = %q, want the stable not-found line", lines[0])
 	}
 	if len(lines) < 2 || !strings.HasPrefix(lines[1], "hint: ") {
@@ -44,7 +44,7 @@ func TestRuntime_addsDebugDetail_whenTheChannelIsAskedFor(t *testing.T) {
 		t.Fatalf("stderr = %q, want the search to be described", stderr)
 	}
 	// The first line still comes first and still says the same thing.
-	if !strings.HasPrefix(stderr, "definitely-not-a-program: not found\n") {
+	if !strings.HasPrefix(stderr, "nemosh: line 2: definitely-not-a-program: not found\n") {
 		t.Fatalf("stderr = %q, want the first line unchanged by the channel", stderr)
 	}
 }

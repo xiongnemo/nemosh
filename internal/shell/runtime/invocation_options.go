@@ -97,7 +97,7 @@ func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, e
 func (r Runtime) CheckSyntax(script string) int {
 	prepared, err := ParseScript(script)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", r.diagnosticName(), err)
 		return 2
 	}
 	r.sayParseWarnings(prepared)

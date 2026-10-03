@@ -125,7 +125,7 @@ func (r Runtime) executeTypedPipelineStages(ctx context.Context, value pipeline,
 	}
 	prepared, err := r.preparePipeline(ctx, stages)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
 	}
 	return r.executeTokenPipeline(ctx, prepared, savedStatus)

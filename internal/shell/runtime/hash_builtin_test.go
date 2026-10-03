@@ -18,11 +18,11 @@ func TestHash(t *testing.T) {
 		{
 			name:   "a name that is not is 1",
 			script: "hash ls nosuch-zz\necho \"st=$?\"\n",
-			stdout: "st=1\n", stderr: "hash: nosuch-zz: not found\n",
+			stdout: "st=1\n", stderr: "nemosh: line 1: hash: nosuch-zz: not found\n",
 		},
-		{name: "an alias is not a command", script: "alias ll=ls\nhash ll\necho \"st=$?\"\n", stdout: "st=1\n", stderr: "hash: ll: not found\n"},
+		{name: "an alias is not a command", script: "alias ll=ls\nhash ll\necho \"st=$?\"\n", stdout: "st=1\n", stderr: "nemosh: line 2: hash: ll: not found\n"},
 		{name: "a path is passed over", script: "hash ./nosuch\necho \"st=$?\"\n", stdout: "st=0\n"},
-		{name: "an option it has not got", script: "hash -x\necho \"st=$?\"\n", stdout: "st=2\n", stderr: "hash: illegal option -x\n"},
+		{name: "an option it has not got", script: "hash -x\necho \"st=$?\"\n", stdout: "st=2\n", stderr: "nemosh: line 1: hash: illegal option -x\n"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

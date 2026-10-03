@@ -115,12 +115,12 @@ func TestShopt_answersAsBashDoes(t *testing.T) {
 		{
 			name:   "-o with an unknown name",
 			script: "shopt -o nosuch 2>&1; echo \"st=$?\"\n",
-			stdout: "shopt: nosuch: invalid option name\nst=1\n",
+			stdout: "nemosh: line 1: shopt: nosuch: invalid option name\nst=1\n",
 		},
 		{
 			name:   "an unknown flag",
 			script: "shopt -x 2>&1; echo \"st=$?\"\n",
-			stdout: "shopt: -x: invalid option\nshopt: usage: shopt [-pqsu] [-o] [optname ...]\nst=2\n",
+			stdout: "nemosh: line 1: shopt: -x: invalid option\nshopt: usage: shopt [-pqsu] [-o] [optname ...]\nst=2\n",
 		},
 	}
 	for _, test := range tests {

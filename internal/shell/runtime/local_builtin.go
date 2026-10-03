@@ -23,7 +23,7 @@ import (
 // with 2, local being special there; it was 1, and the script went on.
 func (r Runtime) local(ctx context.Context, args []string) int {
 	if r.functionDepth == 0 || r.locals == nil {
-		fmt.Fprintln(r.streams.Stderr, "local: not in a function")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"local: not in a function")
 		r.raiseShellError()
 		return 2
 	}
@@ -33,7 +33,7 @@ func (r Runtime) local(ctx context.Context, args []string) int {
 	}
 	if err != nil {
 		// It ends a script, as busybox's local ends it: local is special there.
-		fmt.Fprintf(r.streams.Stderr, "local: %v\n", err)
+		fmt.Fprintf(r.streams.Stderr, "%slocal: %v\n", r.diagnosticPrefix(), err)
 		r.raiseShellError()
 		return 2
 	}

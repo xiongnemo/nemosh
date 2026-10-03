@@ -48,7 +48,7 @@ func TestDirectory_logicalAndPhysical(t *testing.T) {
 			script: "set -P\ncd link\nwhere \"$(pwd)\"\ncd ..\ncd -L link\nwhere \"$PWD\"\nwhere \"$(pwd)\"\n",
 			stdout: "real\nlink\nreal\n",
 		},
-		{name: "an option neither has", script: "cd -x link 2>&1\necho \"st=$?\"\npwd -x 2>&1\necho \"st=$?\"\n", stdout: "cd: illegal option -x\nst=2\npwd: illegal option -x\nst=2\n"},
+		{name: "an option neither has", script: "cd -x link 2>&1\necho \"st=$?\"\npwd -x 2>&1\necho \"st=$?\"\n", stdout: "nemosh: line 3: cd: illegal option -x\nst=2\nnemosh: line 5: pwd: illegal option -x\nst=2\n"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

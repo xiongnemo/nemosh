@@ -51,7 +51,7 @@ func (r Runtime) alias(args []string) int {
 		if !defines {
 			if _, ok := r.aliases[name]; !ok {
 				// busybox's wording, with no colon after the name.
-				fmt.Fprintf(r.streams.Stderr, "alias: %s not found\n", name)
+				fmt.Fprintf(r.streams.Stderr, "%salias: %s not found\n", r.diagnosticPrefix(), name)
 				status = 1
 				continue
 			}
@@ -59,7 +59,7 @@ func (r Runtime) alias(args []string) int {
 			continue
 		}
 		if !isAliasName(name) {
-			fmt.Fprintf(r.streams.Stderr, "alias: %s: invalid alias name\n", name)
+			fmt.Fprintf(r.streams.Stderr, "%salias: %s: invalid alias name\n", r.diagnosticPrefix(), name)
 			status = 1
 			continue
 		}
@@ -101,20 +101,20 @@ func (r Runtime) unalias(args []string) int {
 			break
 		}
 		if option[1] != 'a' {
-			fmt.Fprintf(r.streams.Stderr, "unalias: illegal option -%c\n", option[1])
+			fmt.Fprintf(r.streams.Stderr, "%sunalias: illegal option -%c\n", r.diagnosticPrefix(), option[1])
 			return 2
 		}
 		clear(r.aliases)
 		return 0
 	}
 	if len(args) == 0 {
-		fmt.Fprintln(r.streams.Stderr, "unalias: missing name")
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"unalias: missing name")
 		return 2
 	}
 	status := 0
 	for _, name := range args {
 		if _, ok := r.aliases[name]; !ok {
-			fmt.Fprintf(r.streams.Stderr, "unalias: %s not found\n", name)
+			fmt.Fprintf(r.streams.Stderr, "%sunalias: %s not found\n", r.diagnosticPrefix(), name)
 			status = 1
 			continue
 		}

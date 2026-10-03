@@ -11,10 +11,10 @@ func (r Runtime) declareArrayKind(name string, options declareOptions) bool {
 	isScalar = isScalar && !r.isArrayName(name)
 	switch {
 	case options.associative && r.arrays.has(name):
-		fmt.Fprintf(r.streams.Stderr, "declare: %s: cannot convert indexed to associative array\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%sdeclare: %s: cannot convert indexed to associative array\n", r.diagnosticPrefix(), name)
 		return false
 	case options.indexed && r.arrays.isAssociative(name):
-		fmt.Fprintf(r.streams.Stderr, "declare: %s: cannot convert associative to indexed array\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%sdeclare: %s: cannot convert associative to indexed array\n", r.diagnosticPrefix(), name)
 		return false
 	case options.associative:
 		r.arrays.declareAssociative(name)

@@ -68,6 +68,17 @@ func newExpansionState() *expansionState {
 	return &expansionState{warnedDebugChannels: map[string]bool{}}
 }
 
+// snapshotExpansionState is a snapshot's own, on the line its shell is running: what a
+// subshell or a substitution says before a command of its own has run, `$(< missing)`'s
+// failure, names that line. It named line 1.
+func (r Runtime) snapshotExpansionState() *expansionState {
+	state := newExpansionState()
+	if r.expansion != nil {
+		state.line = r.expansion.line
+	}
+	return state
+}
+
 // reportExpansionError is the path for a substitution that cannot be carried
 // out at all -- an operator this shell does not implement, or a `${x:?message}`
 // whose parameter is unset. POSIX makes both fatal to a non-interactive shell,
@@ -78,7 +89,7 @@ func (r Runtime) reportExpansionError(err error) {
 		return
 	}
 	r.expansion.shellError = true
-	fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
+	fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 }
 
 // reportUnsetParameter is the `set -u` path. POSIX says expanding an unset
@@ -93,7 +104,7 @@ func (r Runtime) reportUnsetParameter(name string) {
 		return
 	}
 	r.expansion.shellError = true
-	fmt.Fprintf(r.streams.Stderr, "nemosh: %s: parameter not set\n", name)
+	fmt.Fprintf(r.streams.Stderr, "%s%s: parameter not set\n", r.diagnosticPrefix(), name)
 }
 
 // shellErrorRaised reports whether anything since the last checkpoint raised a

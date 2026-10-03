@@ -46,7 +46,7 @@ func parseCommandArgs(args []string) (commandRequest, []string, error) {
 func (r Runtime) commandVerbose(name string) int {
 	kinds := r.commandKinds(name)
 	if len(kinds) == 0 {
-		fmt.Fprintf(r.streams.Stderr, "command: %s: not found\n", name)
+		fmt.Fprintf(r.streams.Stderr, "%scommand: %s: not found\n", r.diagnosticPrefix(), name)
 		return 1
 	}
 	fmt.Fprintln(r.streams.Stdout, kinds[0].description)
