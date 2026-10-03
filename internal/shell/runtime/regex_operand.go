@@ -20,8 +20,10 @@ func (r Runtime) regexOperandTerm(ctx context.Context, item word, savedStatus in
 	// Tilde-prefixes first, over the whole word: each part below is expanded on its own,
 	// as a word that has lost the mark saying where a tilde may begin, so `=~ ~` was left
 	// a tilde. The directory comes back quoted, and is matched as the characters it is.
+	// Each part unsplit, as the left side is: a $re holding two blanks keeps both.
+	expander := r.expandingAssignment()
 	for _, part := range r.tildeParts(item) {
-		value := strings.Join(r.expandWord(ctx, word{parts: []wordPart{part}}, savedStatus), " ")
+		value := strings.Join(expander.expandWord(ctx, word{parts: []wordPart{part}}, savedStatus), " ")
 		text.WriteString(value)
 		if part.quote != quoteUnquoted || part.kind == wordPartEscaped {
 			quoted = true

@@ -16,7 +16,7 @@ import (
 //	[[ abc =~ ^a.c$ ]]              true   -- a regular expression
 //	[[ 3 -lt 5 ]]                   true
 //	[[ 1 -eq 1 && 2 -eq 2 ]]        true
-//	[[ $empty -n ]] with empty unset does not become a syntax error
+//	[[ -z $x || $(f) ]]             f runs only when x is not empty
 //
 // **The reason it exists is the first and the last of those.** Inside `[[ ]]` a
 // word is not split and not globbed, so `[ $x = "a b" ]` -- which becomes
@@ -24,53 +24,52 @@ import (
 // it is also why this cannot be an applet: an applet receives words that have
 // already been split, and by then the information is gone.
 //
-// So it is intercepted before expansion, with the word AST still in hand. That
-// also supplies the other thing an applet could not know: whether the right-hand
-// side of `==` was quoted, which decides pattern against literal.
-//
-// One limitation, stated rather than hidden: the expression continues onto the next
-// line only after `&&`, `||` or `(`, where a script actually breaks one. A newline
-// anywhere else ends it, as it does not in bash, because there `[[` is a reserved
-// word the parser knows; here it is recognised at execution time, and the line has
-// already been divided into commands by then.
+// So the expression is read with the script, the words still unexpanded (see
+// double_bracket_parse.go), and each operand is expanded when the expression gets to
+// it. That also supplies the other thing an applet could not know: whether the
+// right-hand side of `==` was quoted, which decides pattern against literal.
 
-// isDoubleBracket reports whether this command is a `[[ ]]` conditional.
+// isDoubleBracket reports whether this command is a `[[ ]]` conditional: `[[` written
+// plainly where the command begins, as the reserved word has to be.
 func isDoubleBracket(command []word) bool {
-	if len(command) < 2 {
-		return false
-	}
-	return isUnquotedLiteralWord(command[0]) && soleLiteralText(command[0]) == "[["
+	return len(command) > 0 && isUnquotedLiteralWord(command[0]) && soleLiteralText(command[0]) == "[["
 }
 
-// runDoubleBracket evaluates the conditional and returns its status: 0 for true,
-// 1 for false, 2 for a malformed expression -- which is bash's, and keeps "the
-// answer is no" distinguishable from "that was not an expression".
-func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStatus int) lineResult {
-	if soleLiteralText(command[len(command)-1]) != "]]" {
-		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"[[: missing ]]")
+// runDoubleBracket runs a conditional whose expression was not read with the script -- one a
+// command built from words -- by reading it now. A syntax error is 2, as the parse's is.
+func (r Runtime) runDoubleBracket(ctx context.Context, command []word, operations []redirectOperation, savedStatus int) lineResult {
+	condition, err := parseDoubleBracket(command)
+	if err != nil {
+		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 2}
 	}
-	terms := make([]conditionTerm, 0, len(command)-2)
-	for _, item := range command[1 : len(command)-1] {
-		if last := len(terms) - 1; last >= 0 && terms[last].text == "=~" && !terms[last].quoted {
-			terms = append(terms, r.regexOperandTerm(ctx, item, savedStatus))
-			continue
-		}
-		if last := len(terms) - 1; last >= 0 && isPatternOperator(terms[last]) && wordHasQuotedPart(item) {
-			terms = append(terms, r.patternOperandTerm(ctx, item, savedStatus))
-			continue
-		}
-		text, quoted := r.expandConditionWord(ctx, item, savedStatus)
-		terms = append(terms, conditionTerm{text: text, quoted: quoted})
-	}
+	return r.runConditionCommand(ctx, condition, operations, savedStatus)
+}
+
+// runConditionCommand runs a `[[ ]]` command: its redirections, made as any command's are --
+// `[[ -r $f ]] 2>/dev/null` and `[[ $x ]] > log` create their files in both references --
+// and then its expression.
+func (r Runtime) runConditionCommand(ctx context.Context, condition *conditionNode, operations []redirectOperation, savedStatus int) lineResult {
+	// A `<(command)` in an operand keeps its file until the test is done; see runParsedWords.
+	defer r.cleanUpProcessSubstitutions()
+	expanded, ok := r.expandRedirectOperations(ctx, operations, savedStatus)
 	if r.shellErrorRaised() {
 		return r.shellErrorResult()
 	}
-	r.traceCondition(ctx, terms, savedStatus)
-	parser := &conditionParser{terms: terms, runtime: r}
-	value, err := parser.parseOr()
-	if err == nil && !parser.done() {
-		err = fmt.Errorf("unexpected %s", parser.peek().text)
+	if !ok {
+		return lineResult{status: 1}
+	}
+	return r.withAppliedRedirectsFor(false, expanded, func(redirected Runtime) lineResult {
+		return redirected.runCondition(ctx, condition, savedStatus)
+	})
+}
+
+// runCondition answers the expression: 0 for true, 1 for false, and 2 when a test cannot be
+// made -- which is bash's, and keeps "the answer is no" apart from "that was no answer".
+func (r Runtime) runCondition(ctx context.Context, condition *conditionNode, savedStatus int) lineResult {
+	value, err := r.evaluateCondition(ctx, condition, savedStatus)
+	if r.shellErrorRaised() {
+		return r.shellErrorResult()
 	}
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s[[: %v\n", r.diagnosticPrefix(), err)
@@ -80,6 +79,25 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, savedStat
 		return lineResult{}
 	}
 	return lineResult{status: 1}
+}
+
+// evaluateCondition is execute_cond_node: `&&` and `||` take their right side only when the
+// left has not decided the answer, so an operand there is expanded only when it is wanted.
+func (r Runtime) evaluateCondition(ctx context.Context, node *conditionNode, savedStatus int) (bool, error) {
+	var value bool
+	var err error
+	switch node.kind {
+	case conditionAnd, conditionOr:
+		value, err = r.evaluateCondition(ctx, node.left, savedStatus)
+		if err == nil && !r.shellErrorRaised() && value == (node.kind == conditionAnd) {
+			value, err = r.evaluateCondition(ctx, node.right, savedStatus)
+		}
+	case conditionGroup:
+		value, err = r.evaluateCondition(ctx, node.left, savedStatus)
+	default:
+		value, err = r.evaluateConditionTest(ctx, node, savedStatus)
+	}
+	return value != node.negated, err
 }
 
 // conditionTerm is one word of the expression, and whether any of it was quoted.
@@ -96,9 +114,9 @@ type conditionTerm struct {
 	hasPattern bool
 }
 
-// isPatternOperator reports an unquoted `==`, `=` or `!=`, whose right side is a pattern.
-func isPatternOperator(term conditionTerm) bool {
-	return !term.quoted && (term.text == "==" || term.text == "=" || term.text == "!=")
+// isPatternOperator reports `==`, `=` or `!=`, whose right side is a pattern.
+func isPatternOperator(operator string) bool {
+	return operator == "==" || operator == "=" || operator == "!="
 }
 
 // patternOperandTerm is the right side of `==` or `!=` when some of it is quoted: a
@@ -126,92 +144,10 @@ func (r Runtime) patternOperandTerm(ctx context.Context, item word, savedStatus 
 // a* ]]` is a pattern match and `[[ abc == "a*" ]]` is a string comparison.
 // Measured -- the second is false in bash.
 func (r Runtime) expandConditionWord(ctx context.Context, item word, savedStatus int) (string, bool) {
-	quoted := false
-	for _, part := range item.parts {
-		if part.quote != quoteUnquoted || part.kind == wordPartEscaped {
-			quoted = true
-			break
-		}
-	}
-	// A single field, joined: expandWord splits on IFS, and inside `[[ ]]` it
-	// must not. Joining what it produced restores the word -- the split is the
-	// only thing being undone, so a value containing blanks comes back whole.
-	fields := r.expandWord(ctx, item, savedStatus)
-	return strings.Join(fields, " "), quoted
-}
-
-// conditionParser reads the expression: `||` lowest, then `&&`, then `!`, then a
-// primary. Same shape as expr's parser and for the same reason -- precedence has
-// to come from the grammar, not from a table.
-type conditionParser struct {
-	terms   []conditionTerm
-	at      int
-	runtime Runtime
-}
-
-func (p *conditionParser) done() bool { return p.at >= len(p.terms) }
-
-func (p *conditionParser) peek() conditionTerm {
-	if p.done() {
-		return conditionTerm{}
-	}
-	return p.terms[p.at]
-}
-
-func (p *conditionParser) take() conditionTerm {
-	term := p.peek()
-	p.at++
-	return term
-}
-
-func (p *conditionParser) parseOr() (bool, error) {
-	left, err := p.parseAnd()
-	if err != nil {
-		return false, err
-	}
-	for !p.done() && p.peek().text == "||" {
-		p.take()
-		right, err := p.parseAnd()
-		if err != nil {
-			return false, err
-		}
-		left = left || right
-	}
-	return left, nil
-}
-
-func (p *conditionParser) parseAnd() (bool, error) {
-	left, err := p.parseNegation()
-	if err != nil {
-		return false, err
-	}
-	for !p.done() && p.peek().text == "&&" {
-		p.take()
-		right, err := p.parseNegation()
-		if err != nil {
-			return false, err
-		}
-		left = left && right
-	}
-	return left, nil
-}
-
-func (p *conditionParser) parseNegation() (bool, error) {
-	if !p.done() && p.peek().text == "!" && !p.peek().quoted && !p.binaryFollows() {
-		p.take()
-		value, err := p.parseNegation()
-		return !value, err
-	}
-	return p.parsePrimary()
-}
-
-// binaryFollows reports a binary operator after the current term, with a term after it.
-func (p *conditionParser) binaryFollows() bool {
-	if p.at+2 >= len(p.terms) {
-		return false
-	}
-	operator := p.terms[p.at+1]
-	return doubleBracketBinaryOperators[operator.text] && !operator.quoted
+	// Not split, so a value keeps its blanks: with x="a  b", `[[ $x == "a  b" ]]` is true. It
+	// was split and joined again with one blank, and false. "$@" is its fields, joined.
+	fields := r.expandingAssignment().expandWord(ctx, item, savedStatus)
+	return strings.Join(fields, " "), wordHasQuotedPart(item)
 }
 
 // soleLiteralText is a word's text when it is one plain literal part, and "" for

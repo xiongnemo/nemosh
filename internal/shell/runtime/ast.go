@@ -123,6 +123,9 @@ type simpleCommand struct {
 	// line is the source line the command starts on, which is what $LINENO reports while
 	// it runs; see line_numbers.go.
 	line int
+	// condition is a `[[ ]]` command's expression, read with the script; see
+	// double_bracket_parse.go. Its words stay in words, as written, for what prints them.
+	condition *conditionNode
 }
 
 func (simpleCommand) commandNode() {}

@@ -24,62 +24,48 @@ var doubleBracketBinaryOperators = map[string]bool{
 	"-nt": true, "-ot": true, "-ef": true,
 }
 
-func (p *conditionParser) parsePrimary() (bool, error) {
-	if p.done() {
-		return false, fmt.Errorf("expression ended early")
-	}
-	// A binary operator after this term makes it a comparison, whatever the term looks like:
-	// with x=-f, `[[ $x == $x ]]` compares two strings rather than asking whether a file named
-	// `==` exists, and `[[ $p == "(" ]]` with p='(' compares two parentheses rather than
-	// opening a group. It did both, and the leftover term was a syntax error. busybox and bash
-	// agree; POSIX settles test's three-argument form the same way, on its middle word first.
-	if p.binaryFollows() {
-		left, operator, right := p.take(), p.take(), p.take()
-		return p.runtime.evaluateBinaryCondition(operator.text, left, right)
-	}
-	if term := p.peek(); term.text == "(" && !term.quoted {
-		p.take()
-		value, err := p.parseOr()
-		if err != nil {
-			return false, err
+// evaluateConditionTest is one test: its operands expanded, traced as bash traces a test, and
+// answered. The unary tests and the numeric comparisons are `[`'s own code; -v and -o ask of
+// the shell, and -a is -e, as it is inside `[[ ]]` in bash, where it cannot mean "and".
+func (r Runtime) evaluateConditionTest(ctx context.Context, node *conditionNode, savedStatus int) (bool, error) {
+	if node.kind == conditionUnary {
+		operand, _ := r.expandConditionWord(ctx, node.operands[0], savedStatus)
+		if r.shellErrorRaised() {
+			return false, nil
 		}
-		if p.done() || p.peek().text != ")" {
-			return false, fmt.Errorf("missing )")
+		r.traceConditionTest(ctx, node, []string{operand}, savedStatus)
+		switch node.operator {
+		case "-v":
+			return r.variableIsSet(ctx, operand), nil
+		case "-o":
+			return r.ShellOptionIsOn(operand), nil
+		case "-a":
+			return applets.EvaluateConditionPrimary(r, "-e", operand, "")
 		}
-		p.take()
-		return value, nil
+		return applets.EvaluateConditionPrimary(r, node.operator, operand, "")
 	}
-	// A unary operator is only a unary operator when something follows it, so
-	// `[[ -n ]]` is a test of the string "-n" rather than a syntax error. bash
-	// does the same, and it is why `[[ -n $x ]]` is safe when x is unset.
-	if term := p.peek(); term.text == "-v" && !term.quoted && p.at+1 < len(p.terms) {
-		p.take()
-		return p.runtime.variableIsSet(context.Background(), p.take().text), nil
+	left := conditionTerm{}
+	left.text, left.quoted = r.expandConditionWord(ctx, node.operands[0], savedStatus)
+	right := r.conditionOperandTerm(ctx, node.operator, node.operands[1], savedStatus)
+	if r.shellErrorRaised() {
+		return false, nil
 	}
-	if term := p.peek(); term.text == "-o" && !term.quoted && p.at+1 < len(p.terms) {
-		p.take()
-		return p.runtime.ShellOptionIsOn(p.take().text), nil
+	r.traceConditionTest(ctx, node, []string{left.text, right.text}, savedStatus)
+	return r.evaluateBinaryCondition(node.operator, left, right)
+}
+
+// conditionOperandTerm is a binary test's right side: a regular expression after `=~`, a
+// pattern with literal parts after `==` or `!=` when some of it is quoted, and otherwise a
+// word expanded whole.
+func (r Runtime) conditionOperandTerm(ctx context.Context, operator string, item word, savedStatus int) conditionTerm {
+	switch {
+	case operator == "=~":
+		return r.regexOperandTerm(ctx, item, savedStatus)
+	case isPatternOperator(operator) && wordHasQuotedPart(item):
+		return r.patternOperandTerm(ctx, item, savedStatus)
 	}
-	if term := p.peek(); applets.IsUnaryConditionOperator(term.text) && !term.quoted && p.at+1 < len(p.terms) {
-		operator := p.take().text
-		operand := p.take()
-		return applets.EvaluateConditionPrimary(p.runtime, operator, operand.text, "")
-	}
-	left := p.take()
-	if p.done() {
-		// A bare word is true when it is not empty, which is `[[ $x ]]`.
-		return left.text != "", nil
-	}
-	operator := p.peek()
-	if !doubleBracketBinaryOperators[operator.text] || operator.quoted {
-		return left.text != "", nil
-	}
-	p.take()
-	if p.done() {
-		return false, fmt.Errorf("%s needs a right-hand side", operator.text)
-	}
-	right := p.take()
-	return p.runtime.evaluateBinaryCondition(operator.text, left, right)
+	text, quoted := r.expandConditionWord(ctx, item, savedStatus)
+	return conditionTerm{text: text, quoted: quoted}
 }
 
 // matchesOperand is `==`'s answer: a pattern match against a right side that is unquoted,

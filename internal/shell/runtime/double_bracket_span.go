@@ -50,7 +50,7 @@ func conditionSpanEnd(line string, index int) (int, bool) {
 		case quote != 0:
 		case char == '"' || char == '\'':
 			quote = char
-		case strings.HasPrefix(line[at:], "]]") && (isShellBlank(line[at-1]) || line[at-1] == ')') && endsConditionWord(line, at+2):
+		case strings.HasPrefix(line[at:], "]]") && strings.IndexByte(" \t\n)", line[at-1]) >= 0 && endsConditionWord(line, at+2):
 			return at + 2, true
 		}
 	}
@@ -58,16 +58,17 @@ func conditionSpanEnd(line string, index int) (int, bool) {
 }
 
 // opensCondition reports whether the `[[` at index begins a command word: at the start of the
-// text or after a blank or a separator, and followed by a blank.
+// text or after a blank or a separator, and followed by a blank, a newline or the end, as
+// `[[` alone on its line is the start of one that goes on to the next.
 func opensCondition(line string, index int) bool {
-	if !strings.HasPrefix(line[index:], "[[ ") && !strings.HasPrefix(line[index:], "[[\t") {
+	if !strings.HasPrefix(line[index:], "[[") || index+2 < len(line) && strings.IndexByte(" \t\n", line[index+2]) < 0 {
 		return false
 	}
 	return index == 0 || isShellBlank(line[index-1]) || strings.IndexByte(";&|(){}!\n", line[index-1]) >= 0
 }
 
 // endsConditionWord reports whether a word can end at index: at the end of the text, or before
-// a blank or a separator.
+// a blank, a separator or a redirection, as `[[ $x ]]>log` has one.
 func endsConditionWord(line string, index int) bool {
-	return index == len(line) || isShellBlank(line[index]) || strings.IndexByte(";&|)\n", line[index]) >= 0
+	return index == len(line) || isShellBlank(line[index]) || strings.IndexByte(";&|)<>\n", line[index]) >= 0
 }

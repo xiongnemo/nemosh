@@ -8,17 +8,26 @@ import (
 // lexedOperator is the operator at the start of input, and its width, or a width of 0 when
 // there is none there.
 //
-// Inside `[[ ]]` none of the command operators are one, and its own parentheses are, as
-// words of their own: `[[ (a == a) ]]` is five words between the brackets, which is how the
-// condition parser reads a group. The parentheses of a regular expression never reach here:
-// the lexer reads them as a group of the word, as it does an extended pattern's, so a `)`
-// that does reach here after `=~` is one the expression did not open, and closes a group of
-// the condition. See regexWordOpens.
+// Inside `[[ ]]` the command operators are the condition's own, as bash's lexer reads them
+// there: `&&`, `||`, `<`, `>` and the parentheses end the word before them and are words of
+// their own, which the condition's parser takes for operators when they are written plainly
+// -- `[[ x||! (1 == 2)&&(2 == 2)]]`, `[[ b>a ]]`. `<` and `>` there are no redirections, and
+// `&&` and `||` end no command. A `;`, a `&` and a `|` alone are not read here: the first
+// ends the command before the lexer sees it, and the others are a regular expression's. The
+// parentheses of a regular expression never reach here: the lexer reads them as a group of
+// the word, as it does an extended pattern's, so a `)` that does reach here after `=~` is one
+// the expression did not open, and closes a group of the condition. See regexWordOpens.
+//
+// The caller passes inCondition false for the operator after a word `]]`, which closes the
+// conditional: `[[ a ]]||`, `[[ a ]]>/dev/null`.
 func lexedOperator(input string, inCondition bool) (tokenKind, int) {
 	if !inCondition {
 		return activeOperator(input)
 	}
-	if input[0] == '(' || input[0] == ')' {
+	switch {
+	case strings.HasPrefix(input, "&&"), strings.HasPrefix(input, "||"):
+		return tokenWord, 2
+	case strings.IndexByte("()<>", input[0]) >= 0:
 		return tokenWord, 1
 	}
 	return tokenWord, 0
@@ -124,7 +133,8 @@ func redirectTokenWidth(input string) int {
 //
 // `[[` counts only at the start of a command, because `echo [[` is two ordinary words.
 func conditionAfterToken(inCondition bool, token shellToken, tokens []shellToken) bool {
-	if token.kind != tokenWord {
+	// Written plainly, as a reserved word is: `[[ x == "]]" ]]` is not over at its quotes.
+	if token.kind != tokenWord || token.parsed == nil || !isUnquotedLiteralWord(*token.parsed) {
 		return inCondition
 	}
 	switch token.value {

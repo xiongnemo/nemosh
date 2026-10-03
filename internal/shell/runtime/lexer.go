@@ -235,13 +235,13 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 				}
 				continue
 			}
-			// Inside `[[ ]]` none of these are operators. bash makes `[[` a
+			// Inside `[[ ]]` none of these are the shell's operators. bash makes `[[` a
 			// reserved word for exactly this reason: `&&`, `||`, `<` and `>` are
 			// part of the conditional's own grammar there, so splitting the line
 			// on them would tear the expression apart -- and `[[ a < b ]]`, which
 			// is a lexical comparison, would create a file called `b`. Measured
-			// before this: it did. Its parentheses are, as words; see lexedOperator.
-			if kind, width := lexedOperator(line[index:], inCondition); width > 0 {
+			// before this: it did. They are words of their own; see lexedOperator.
+			if kind, width := lexedOperator(line[index:], inCondition && line[wordStart:index] != "]]"); width > 0 {
 				if kind == tokenRedirect && (isDigits(line[wordStart:index]) || isDescriptorName(line[wordStart:index])) {
 					buffer.WriteString(line[index : index+width])
 					if err := appendToken(shellToken{kind: tokenRedirect, value: buffer.String()}); err != nil {

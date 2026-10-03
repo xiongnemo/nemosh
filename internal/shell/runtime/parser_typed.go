@@ -143,7 +143,13 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 			if err := refuseMisplacedArrayLiteral(words); err != nil {
 				return andOr{}, err
 			}
-			parsed.commands = append(parsed.commands, simpleCommand{words: words, redirects: redirects, line: budget.commandLine(commandTokens)})
+			simple := simpleCommand{words: words, redirects: redirects, line: budget.commandLine(commandTokens)}
+			if isDoubleBracket(words) {
+				if simple.condition, err = parseDoubleBracket(words); err != nil {
+					return andOr{}, err
+				}
+			}
+			parsed.commands = append(parsed.commands, simple)
 		}
 		result.pipelines = append(result.pipelines, parsed)
 		if len(result.pipelines) > 1 {

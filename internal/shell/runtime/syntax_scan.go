@@ -18,10 +18,12 @@ type syntaxScanner struct {
 	quotes        []byte
 	substitutions []openSubstitution
 	groupClosers  []byte
-	syntaxErr     error
-	escaped       bool
-	continued     bool
-	joined        bool
+	// condition is a `[[` whose `]]` has not come; see followCondition.
+	condition bool
+	syntaxErr error
+	escaped   bool
+	continued bool
+	joined    bool
 }
 
 // Line endings are normalized exactly once, on the way into parsing. ReplaceAll
@@ -215,27 +217,8 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteString("! ")
 			continue
 		}
+		scanner.followCondition(line, index)
 		scanner.logical.WriteByte(char)
-	}
-}
-
-// substitutionParenthesis follows an unquoted parenthesis inside a `$(`. One of the body's
-// own opens a level and closes it -- a subshell's, a function's, an array's, a `<(`'s -- and a
-// case pattern's opens and closes nothing, as commandSubstitutionEnd reads them. Every `)`
-// was taken for the substitution's, so a subshell or a pattern ended it early: `{ x=$( (a) );
-// }` was `unexpected ), expected }`, and `x=$(case x in` then `x) echo hit;;` then `esac)`
-// an unterminated command substitution, where busybox-w32 and bash run both.
-func (scanner *syntaxScanner) substitutionParenthesis(char byte) {
-	open := &scanner.substitutions[len(scanner.substitutions)-1]
-	switch {
-	case insideCase(scanner.logical.String()[open.body:]):
-	case char == '(':
-		open.depth++
-	case open.depth > 0:
-		open.depth--
-	default:
-		scanner.substitutions = scanner.substitutions[:len(scanner.substitutions)-1]
-		scanner.popQuote()
 	}
 }
 
@@ -243,7 +226,7 @@ func (scanner *syntaxScanner) finishPhysicalLine(line string) {
 	if scanner.continued {
 		return
 	}
-	if scanner.quote() != 0 || len(scanner.substitutions) != 0 || len(scanner.groupClosers) != 0 {
+	if scanner.quote() != 0 || len(scanner.substitutions) != 0 || len(scanner.groupClosers) != 0 || scanner.condition {
 		scanner.logical.WriteByte('\n')
 		return
 	}
@@ -264,28 +247,6 @@ func (scanner *syntaxScanner) finishPhysicalLine(line string) {
 // gone by this point. Whatever \r survives is data, and trimming it would edit
 // the user's word (docs/design/windows-execution-model.md).
 const logicalLineCutset = " \t\n"
-
-func (scanner *syntaxScanner) incompleteError() error {
-	if scanner.syntaxErr != nil {
-		return scanner.syntaxErr
-	}
-	if scanner.continued {
-		return fmt.Errorf("%w: trailing line continuation", ErrIncompleteScript)
-	}
-	if scanner.quote() == braceParameterMarker {
-		return fmt.Errorf("%w: missing '}'", ErrIncompleteScript)
-	}
-	if scanner.quote() != 0 {
-		return fmt.Errorf("%w: unterminated quote", ErrIncompleteScript)
-	}
-	if len(scanner.substitutions) != 0 {
-		return fmt.Errorf("%w: unterminated command substitution", ErrIncompleteScript)
-	}
-	if len(scanner.groupClosers) != 0 {
-		return fmt.Errorf("%w: missing %c", ErrIncompleteScript, scanner.groupClosers[len(scanner.groupClosers)-1])
-	}
-	return nil
-}
 
 // ansiQuoteMarker stands for `$'...'` on the quote stack. Not a quote character,
 // because it is not one: it is a state whose closing quote is `'` and in which a

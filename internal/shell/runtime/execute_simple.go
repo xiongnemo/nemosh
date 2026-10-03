@@ -13,6 +13,9 @@ func (r Runtime) executeSimpleCommand(ctx context.Context, command simpleCommand
 // runSimpleCommand runs a command whose DEBUG trap has run: a pipeline's stage, whose trap ran
 // before the pipeline started; see debugTrapStages.
 func (r Runtime) runSimpleCommand(ctx context.Context, command simpleCommand, savedStatus int) lineResult {
+	if command.condition != nil {
+		return r.runConditionCommand(ctx, command.condition, cloneRedirects(command.redirects), savedStatus)
+	}
 	return r.runParsedWords(ctx, command.words, cloneRedirects(command.redirects), savedStatus)
 }
 

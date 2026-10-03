@@ -68,6 +68,17 @@ func splitSequentialSegments(line string) ([]string, error) {
 		if (char == '(' || char == ')') && casePatternPosition(line[:index]) {
 			continue
 		}
+		// A conditional is stepped over whole, its parentheses its expression's, and its `]]`
+		// ends a command as a group's close does, so a reserved word may follow it with no
+		// separator, as both references read `if [[ -n $x ]] then`. The `then` was an argument.
+		if end, ok := conditionSpanEnd(line, index); ok {
+			index = end - 1
+			if len(openers) == 0 && reservedWordAfterGroup(line, index) {
+				segments = append(segments, line[start:end])
+				start = end
+			}
+			continue
+		}
 		if char == '(' {
 			if wordGroupOpensAt(line, index) {
 				index = skipBalancedParens(line, index) - 1

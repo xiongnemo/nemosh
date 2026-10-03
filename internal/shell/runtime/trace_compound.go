@@ -16,17 +16,29 @@ func (r Runtime) traceArithmetic(ctx context.Context, expression string, savedSt
 	r.traceLine(ctx, "(( "+expression+" ))", savedStatus)
 }
 
-// traceCondition is `[[ ]]` as busybox traces it, the command it runs it as: `[[`, the
-// words once expanded, and `]]`, each quoted as any traced word is.
-func (r Runtime) traceCondition(ctx context.Context, terms []conditionTerm, savedStatus int) {
+// traceConditionTest is one test of a `[[ ]]` as bash traces it, as the expression comes to
+// it: `+ [[ 5 == 5 ]]`, then `+ [[ -n 'a b' ]]`, a lone word with its `-n`, and `!` before a
+// test it negates. The whole command was traced once, as busybox's builtin is, its words
+// expanded first; they are expanded as they are wanted now, so a test that is never made is
+// not traced either. Each operand is quoted as any traced word is.
+func (r Runtime) traceConditionTest(ctx context.Context, node *conditionNode, operands []string, savedStatus int) {
 	if !r.options.xtrace {
 		return
 	}
-	words := []string{"[["}
-	for _, term := range terms {
-		words = append(words, term.text)
+	traced := []string{"[["}
+	if node.negated {
+		traced = append(traced, "!")
 	}
-	r.traceCommand(ctx, append(words, "]]"), savedStatus)
+	quoted := make([]string, len(operands))
+	for index, operand := range operands {
+		quoted[index] = traceWord(operand)
+	}
+	if node.kind == conditionUnary {
+		traced = append(traced, node.operator, quoted[0])
+	} else {
+		traced = append(traced, quoted[0], node.operator, quoted[1])
+	}
+	r.traceLine(ctx, strings.Join(append(traced, "]]"), " "), savedStatus)
 }
 
 // traceArrayAssignment is an array assignment as bash traces it, busybox having no arrays: a

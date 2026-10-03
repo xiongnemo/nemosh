@@ -420,19 +420,8 @@
       "-eq coercion produces weird results": "fail",
       "-eq does dynamic arithmetic parsing (not supported in OSH)": "fail",
       "-eq on strings": "fail",
-      "\u003e on strings": "fail",
-      "Argument that looks like a real operator": "fail",
       "Hex literals with -eq": "fail",
       "Octal literals with -eq": "fail",
-      "[[ \u0026\u0026 ]] is syntax error": "fail",
-      "[[ '(' foo ]] is syntax error": "fail",
-      "[[ -z '\u003e' a ]] is syntax error": "fail",
-      "[[ -z ]] is syntax error": "fail",
-      "[[ ]] is syntax error": "fail",
-      "[[ a 3\u003c b ]] doesn't work (bug regression)": "fail",
-      "[[ compound expressions": "fail",
-      "[[ over multiple lines is OK": "fail",
-      "[[ with op variable (compare with test-builtin.test.sh)": "fail",
       "negative numbers - zero, decimal, octal, hex, base N": "fail"
     },
     "dparen.test.sh": {
@@ -589,9 +578,7 @@
       "Parsing of x={myvar} and related cases": "fail"
     },
     "regex.test.sh": {
-      "Fatal error inside [[ =~ ]]": "fail",
       "Operator chars ; \u0026 but not |": "fail",
-      "Parse error with 2 words": "fail",
       "Quotes '' \"\" $'' $\"\" in pattern": "fail"
     },
     "serialize.test.sh": {
@@ -739,7 +726,6 @@
     "xtrace.test.sh": {
       "Assignments and assign builtins": "fail",
       "Regression: xtrace for \"declare -a a+=(v)\"": "fail",
-      "[[ ]]": "fail",
       "set -o verbose prints unevaluated code": "fail",
       "xtrace with unprintable chars": "fail",
       "xtrace with whitespace, quotes, and backslash": "fail"

@@ -111,20 +111,9 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// `[[ ]]` is handled here, before expansion, because that is the whole of
 	// what makes it different: inside it a word is not split and not globbed, and
 	// whether the right-hand side was quoted still matters. See double_bracket.go.
+	// One the parse read has its expression already, and does not come this way.
 	if isDoubleBracket(command) {
-		expanded, ok := r.expandRedirectOperations(ctx, operations, savedStatus)
-		if r.shellErrorRaised() {
-			return r.shellErrorResult()
-		}
-		if !ok {
-			return lineResult{status: 1}
-		}
-		// Its redirections are made, as any command's are: `[[ -r $f ]] 2>/dev/null` and
-		// `[[ $x ]] > log` create their files in both references. They were expanded here and
-		// then dropped.
-		return r.withAppliedRedirectsFor(false, expanded, func(redirected Runtime) lineResult {
-			return redirected.runDoubleBracket(ctx, command, savedStatus)
-		})
+		return r.runDoubleBracket(ctx, command, operations, savedStatus)
 	}
 	// Array assignments are also settled before expansion, and for the same
 	// reason: `a=(one "two words" three)` is three elements, and after expansion

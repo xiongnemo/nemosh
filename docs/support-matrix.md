@@ -343,9 +343,11 @@ The reason it exists is the reason it cannot be an applet: inside `[[ ]]` a word
 is neither split nor globbed, so `[[ $x == "a b" ]]` works where
 `[ $x = "a b" ]` becomes `[ a b = a b ]` and is a usage error. An applet receives
 words that have already been split; by then the information is gone. So `[[` is
-intercepted before expansion, with the word AST still in hand -- which also
-supplies the other thing an applet could not know: whether the right-hand side
-was quoted, and therefore whether `==` compares a pattern or a literal.
+a reserved word, and its expression is read with the script, as bash's parser
+reads it, its words still unexpanded -- which also supplies the other thing an
+applet could not know: whether the right-hand side was quoted, and therefore
+whether `==` compares a pattern or a literal. Each operand is expanded when its
+test is made: `[[ -z $x || $(f) ]]` runs `f` only when `x` is not empty.
 
 | | |
 | --- | --- |
@@ -354,16 +356,19 @@ was quoted, and therefore whether `==` compares a pattern or a literal.
 | `<`, `>` | lexical comparison, **not redirection** -- which is a lexer question, and the reason `[[` had to become known to the lexer |
 | `-eq -ne -lt -le -gt -ge` | numeric |
 | unary tests, `-nt -ot -ef` | `test`'s own, through one exported entry point, because two copies of `-f` would drift |
-| `&&`, `||`, `!`, `( )` | the conditional's own grammar, not the shell's |
-| a malformed expression | **status 2**, so "that was not an expression" stays distinguishable from "the answer is no" |
+| `&&`, `||`, `!`, `( )` | the conditional's own grammar, not the shell's, and operators only as written: `op='=='; [[ a $op a ]]` is a syntax error, as in bash |
+| a malformed expression | a **syntax error** before anything runs, status 2, as bash's parser has it: `[[ -z ]]`, `[[ a b ]]`, `[[ ]]` |
+| a test that cannot be made | **status 2**, so "that was not an answer" stays distinguishable from "the answer is no": `[[ a -lt 1 ]]` |
 
-Two limitations, stated rather than hidden. The expression can continue onto the
-next line **only after `&&`, `||` or `(`** -- which are where a script breaks a
-long one -- and a newline anywhere else ends it: `[[ a == a` with `]]` on the
-next line is `missing ]]`, where bash accepts it, because there `[[` is a
-reserved word its parser knows and here it is recognised at execution time. And
+The expression goes on past the end of a line, as bash's does, and `[[` alone on
+its line begins one. Its operators end the word before them -- `[[ b>a ]]` --
+and a `]]` before the shell's own ends it: `[[ $x ]]|| echo empty`,
+`[[ $x ]]>log`. A reserved word may follow `]]` with no separator,
+`if [[ $x ]] then`.
 `[[` is only a conditional at the **start of a command** -- `echo [[` prints two
-ordinary words.
+ordinary words. Where busybox reads a binary test that bash's parser refuses,
+`[[ -f == -f ]]` and `[[ ! == x ]]`, the strings are compared, as busybox has it.
+`set -x` traces each test as it is made, as bash does: `+ [[ 5 == 5 ]]`.
 
 **Indexed arrays.** `a=(one two three)`, `${a[0]}`, `${a[@]}`, `${a[*]}`,
 `${#a[@]}`, `${#a[0]}`, `${!a[@]}`, `a[1]=x`, `a+=(four)`, `a=()`. Neither dash

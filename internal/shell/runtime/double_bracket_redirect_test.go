@@ -7,14 +7,15 @@ import (
 )
 
 // [[ ]] makes its redirections, as any command does: `[[ a == a ]] 2>x1.txt` creates x1.txt
-// in busybox-w32 and bash, and a diagnostic of its own goes where 2> sends it. They were
-// expanded and then dropped, so no file was made and `2>/dev/null` hid nothing.
+// in busybox-w32 and bash, and a diagnostic of its own -- a test it cannot make, `a` being no
+// number -- goes where 2> sends it. They were expanded and then dropped, so no file was made
+// and `2>/dev/null` hid nothing.
 func TestDoubleBracket_makesItsRedirections(t *testing.T) {
 	dir := filepath.ToSlash(t.TempDir())
 	script := "cd '" + dir + "'\n" +
 		"[[ a == a ]] 2>x1.txt; echo st=$?\n" +
 		"[[ a == b ]] > x2.txt; echo st=$?\n" +
-		"[[ a -eq ]] 2>x3.txt; echo st=$?\n"
+		"[[ a -lt 1 ]] 2>x3.txt; echo st=$?\n"
 	if stdout, status := runScriptCapturing(script); stdout != "st=0\nst=1\nst=2\n" || status != 0 {
 		t.Fatalf("got %q/%d", stdout, status)
 	}
