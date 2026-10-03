@@ -12,14 +12,14 @@ unterminated
 '''
 
 [expect]
-status = 2
-stdout = ""
-stderr = "nemosh: incomplete script: missing heredoc delimiter \"EOF\"\n"
+status = 0
+stdout = "must-not-run\nunterminated\n"
+stderr = "nemosh: line 3: warning: here-document at line 2 delimited by end-of-file (wanted `EOF')\n"
 
 [notes]
-standard = "POSIX.1 shell command language, incomplete here-documents"
-why = "The complete script is parsed and all heredoc bodies are collected before any prefix executes."
+standard = "POSIX.1 shell command language, here-documents"
+why = "A heredoc the end of a script reaches before its delimiter ends there, as both references end it, and the script runs. The whole script is still parsed before any of it runs, so bash's warning comes first."
 
 [differential]
-diverges = ["dash", "bash-posix", "posix", "busybox-ash"]
-why = "The references run the prefix and treat the unterminated heredoc as ending at end of input. Nemosh refuses the whole script, which is the no-prefix-effects guarantee."
+diverges = ["busybox-ash", "dash"]
+why = "The output and status are every reference's. The warning is bash's; busybox and dash end the body without a word. The user chose bash's warning on 2026-10-04; until then the whole script was refused."

@@ -26,6 +26,9 @@ type parseBudget struct {
 	// session is input a session is still reading, whose last line a `\` continues onto the
 	// next it reads; anything else ends where its text does. See numberedLogicalLines.
 	session bool
+	// warnings are what the parse has to say of a text it accepts, the heredoc the end of a
+	// script closed; see collectHeredocs.
+	warnings []string
 }
 
 func (budget *parseBudget) heredoc(marker string) (pendingHeredoc, bool) {

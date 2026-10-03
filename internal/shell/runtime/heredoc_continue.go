@@ -84,3 +84,24 @@ func heredocLine(lines []string, index int, expand bool) (int, string) {
 func continuesLine(line string) bool {
 	return (len(line)-len(strings.TrimRight(line, `\`)))%2 == 1
 }
+
+// heredocAtEnd is a heredoc the end of the text closed: the line the text ends on, the
+// line the heredoc began on, both counted from the text's first, and its delimiter, which
+// bash's warning names.
+type heredocAtEnd struct {
+	lastLine, line int
+	delimiter      string
+}
+
+// endedByEOF is a body the end of the text closed, its last line ended as every body line
+// is, and the record of it.
+func endedByEOF(body string, declaration pendingHeredoc, lines []string, ended []heredocAtEnd) (string, []heredocAtEnd) {
+	if body != "" && !strings.HasSuffix(body, "\n") {
+		body += "\n"
+	}
+	lastLine := len(lines)
+	if lastLine > 1 && lines[lastLine-1] == "" {
+		lastLine--
+	}
+	return body, append(ended, heredocAtEnd{lastLine: lastLine, line: declaration.line, delimiter: declaration.delimiter})
+}

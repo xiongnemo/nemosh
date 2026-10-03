@@ -25,22 +25,28 @@ type pendingHeredoc struct {
 // for each line left in the output, the index of the source line it was, so $LINENO can
 // count past the bodies taken out (line_numbers.go).
 //
+// atEnd is whether the source is all there is, a script's or eval's rather than what a
+// prompt has read so far. There a body the end reaches before its delimiter ends with it,
+// as both references end it, and the fourth answer says so in bash's warning; at a prompt
+// the body goes on at the next line read. It was refused, the whole script with it.
+//
 // A body begins after the line its command is on has ended, and a line left inside a quote
 // or ending in a backslash goes on into the next: `cat <<EOF \` then `; echo two`, or `cat
 // <<EOF; echo "two` then `three"`, as busybox and bash both read them, at the next newline
 // token. The body was taken from the very next line, which refused both as incomplete, and
 // each line was scanned as if no quote were open, so one left open hid the next line's `<<`.
-func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
+func collectHeredocs(source string, atEnd bool) (string, []pendingHeredoc, []int, []heredocAtEnd, error) {
 	lines := strings.Split(source, "\n")
 	var output strings.Builder
 	var records, pending []pendingHeredoc
 	var origins []int
+	var ended []heredocAtEnd
 	var scan heredocScan
 	for index := 0; index < len(lines); index++ {
 		start := index
 		line, declarations, next, err := continuedHeredocDeclarations(lines, &index, len(records)+len(pending), scan)
 		if err != nil {
-			return "", nil, nil, err
+			return "", nil, nil, nil, err
 		}
 		origins = append(origins, start)
 		output.WriteString(markHeredocOperands(line, declarations))
@@ -60,17 +66,24 @@ func collectHeredocs(source string) (string, []pendingHeredoc, []int, error) {
 			}
 			body, terminated := heredocBody(lines, &index, *declaration)
 			if !terminated {
-				return "", nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, declaration.delimiter)
+				if !atEnd {
+					return "", nil, nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, declaration.delimiter)
+				}
+				body, ended = endedByEOF(body, *declaration, lines, ended)
 			}
 			declaration.body = body
 			records = append(records, *declaration)
 		}
 		pending = waiting
 	}
-	if len(pending) > 0 {
-		return "", nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, pending[0].delimiter)
+	if len(pending) > 0 && !atEnd {
+		return "", nil, nil, nil, fmt.Errorf("%w: missing heredoc delimiter %q", ErrIncompleteScript, pending[0].delimiter)
 	}
-	return output.String(), records, origins, nil
+	for _, declaration := range pending {
+		declaration.body, ended = endedByEOF("", declaration, lines, ended)
+		records = append(records, declaration)
+	}
+	return output.String(), records, origins, ended, nil
 }
 
 // heredocScan is where a line leaves the scan for heredocs: the quoting it ends inside,

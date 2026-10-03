@@ -31,6 +31,7 @@ func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool)
 // It was 0, so `false; eval 'echo $?'` said 0. Text that runs nothing answers 0, as there.
 func (r Runtime) runScriptResult(ctx context.Context, script string, first int, runExitTrap bool, savedStatus int) (int, flowControl) {
 	prepared, parseErr := parseScriptAt(script, first)
+	r.sayParseWarnings(prepared)
 	status := 0
 	control := flowNone
 	switch {
@@ -134,4 +135,12 @@ func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) li
 	r.trapStatus = &entered
 	status, control := r.executeRead(ctx, prepared.program, savedStatus)
 	return lineResult{status: status, control: control}
+}
+
+// sayParseWarnings says what the parse of a script it accepted had to say of it, before any
+// of it runs, as bash says it while reading: a heredoc the end of the script closed.
+func (r Runtime) sayParseWarnings(script Script) {
+	for _, warning := range script.warnings {
+		fmt.Fprintln(r.streams.Stderr, "nemosh: "+warning)
+	}
 }

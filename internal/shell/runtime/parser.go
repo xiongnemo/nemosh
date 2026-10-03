@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 )
 
 var ErrIncompleteScript = errors.New("incomplete script")
@@ -17,9 +18,14 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 		return Script{}, fmt.Errorf("command substitution depth: %w", errParseLimit)
 	}
 	if !budget.heredocsScanned {
-		cleaned, heredocs, origins, err := collectHeredocs(normalizeLineEndings(source))
+		cleaned, heredocs, origins, ended, err := collectHeredocs(normalizeLineEndings(source), !budget.session)
 		if err != nil {
 			return Script{}, err
+		}
+		for _, heredoc := range ended {
+			offset := budget.numbering.first - 1
+			budget.warnings = append(budget.warnings, fmt.Sprintf("line %d: warning: here-document at line %d delimited by end-of-file (wanted `%s')",
+				heredoc.lastLine+offset, heredoc.line+offset, visibleDelimiter(heredoc.delimiter)))
 		}
 		source = cleaned
 		budget.numbering.origins = origins
@@ -42,7 +48,11 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 	}
 	budget.numberLines(starts)
 	budget.numbering.lines, budget.numbering.breaks = lines, breaks
-	return prepareScript(lines, budget, depth)
+	script, err := prepareScript(lines, budget, depth)
+	if err == nil && depth == 0 {
+		script.warnings = budget.warnings
+	}
+	return script, err
 }
 
 // prepareScript runs the passes that reshape lines, carrying where each one started
@@ -260,4 +270,11 @@ func closeCompound(stack []compoundFrame, word string, end int) (compoundSpan, e
 func orderSpans(spans []compoundSpan) []compoundSpan {
 	slices.SortFunc(spans, func(left, right compoundSpan) int { return left.start - right.start })
 	return spans
+}
+
+// visibleDelimiter is a delimiter as a diagnostic shows it, a control byte in it written as
+// an escape, so that a script cannot reach the terminal through the warning about it.
+func visibleDelimiter(delimiter string) string {
+	quoted := strconv.Quote(delimiter)
+	return quoted[1 : len(quoted)-1]
 }

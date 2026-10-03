@@ -74,6 +74,7 @@ func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, e
 	if err != nil {
 		return 2, false, err
 	}
+	r.sayParseWarnings(prepared)
 	control := flowNone
 	status := r.guardedStatus("running a startup file", func() int {
 		status, flow := r.executeRead(ctx, prepared.program, 0)
@@ -94,9 +95,11 @@ func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, e
 // and 2 with the parser's diagnostic when it does not -- the status and the words a run
 // would have stopped with, because a run parses the whole script before starting it.
 func (r Runtime) CheckSyntax(script string) int {
-	if _, err := ParseScript(script); err != nil {
+	prepared, err := ParseScript(script)
+	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "nemosh: %v\n", err)
 		return 2
 	}
+	r.sayParseWarnings(prepared)
 	return 0
 }

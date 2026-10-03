@@ -602,7 +602,11 @@ loops record the whole command now, as the edited one always did.
 
 - **Parse before effects.** A syntax error anywhere in a script means none of it
   runs. bash and dash execute up to the error. `{echo bad;}` produces no output
-  here; both references print nothing either but reach the command first.
+  here; both references print nothing either but reach the command first. A heredoc
+  the end of a script reaches before its delimiter is no error: it ends there, as in
+  both references, and bash's warning, `here-document at line N delimited by
+  end-of-file`, is said before the script runs. At a prompt the body goes on at the
+  next line read.
 - `~user` is left as written. `~` and `~/path` work.
 - An alias is substituted as its command runs, not as its line is read: its value is
   read as shell text there, with the rest of the command after it, as both references

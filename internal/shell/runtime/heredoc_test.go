@@ -98,7 +98,11 @@ func TestRuntime_RunScript_appliesHeredocsInLexicalOrderAcrossCommands(t *testin
 	}
 }
 
-func TestRuntime_RunScript_missingHeredocTerminatorIsIncompleteAndExecutesNoPrefix(t *testing.T) {
+// A heredoc the end of a script reaches before its delimiter ends there, and the script runs,
+// as both references run it, with bash's warning said before it does. It refused the whole
+// script; the user chose this on 2026-10-04. What a prompt has read so far is still waiting
+// for more: the body goes on at the next line typed.
+func TestRuntime_RunScript_aHeredocTheEndOfTheScriptClosesEndsThere(t *testing.T) {
 	// Given
 	var stdout, stderr bytes.Buffer
 	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
@@ -107,11 +111,23 @@ func TestRuntime_RunScript_missingHeredocTerminatorIsIncompleteAndExecutesNoPref
 	status := rt.RunScript(context.Background(), "echo before\ncat <<EOF\nbody\n")
 
 	// Then
-	if status != 2 || stdout.Len() != 0 || !errors.Is(parseScriptError(t, "cat <<EOF\nbody\n"), ErrIncompleteScript) {
+	if status != 0 || stdout.String() != "before\nbody\n" {
 		t.Fatalf("status = %d stdout = %q stderr = %q", status, stdout.String(), stderr.String())
 	}
-	if strings.Count(stderr.String(), "nemosh:") != 1 {
-		t.Fatalf("stderr = %q, want one diagnostic", stderr.String())
+	if want := "nemosh: line 3: warning: here-document at line 2 delimited by end-of-file (wanted `EOF')\n"; stderr.String() != want {
+		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
+	}
+	if _, err := parseSessionAt("cat <<EOF\nbody\n", 1); !errors.Is(err, ErrIncompleteScript) {
+		t.Fatalf("a prompt's input parsed with %v, want it incomplete", err)
+	}
+}
+
+func TestRuntime_RunScript_aScriptWithEveryHeredocClosedSaysNothing(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
+	status := rt.RunScript(context.Background(), "cat <<EOF\nab\nEOF\n")
+	if status != 0 || stdout.String() != "ab\n" || stderr.Len() != 0 {
+		t.Fatalf("status %d, stdout %q, stderr %q; want ab and nothing said", status, stdout.String(), stderr.String())
 	}
 }
 
@@ -195,8 +211,8 @@ func TestRuntime_RunScript_escapesControlBytesInMissingDelimiterDiagnostic(t *te
 	// When
 	status := rt.RunScript(context.Background(), "cat <<'BAD\x1b'\nbody\n")
 
-	// Then
-	if status != 2 || strings.ContainsRune(stderr.String(), '\x1b') || !strings.Contains(stderr.String(), `BAD\x1b`) {
+	// Then: the warning about the heredoc the end closed names the delimiter escaped.
+	if status != 0 || strings.ContainsRune(stderr.String(), '\x1b') || !strings.Contains(stderr.String(), `BAD\x1b`) {
 		t.Fatalf("RunScript() = status %d stderr %q", status, stderr.String())
 	}
 }

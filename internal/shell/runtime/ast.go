@@ -2,6 +2,8 @@ package runtime
 
 type Script struct {
 	program []programNode
+	// warnings are said on standard error before the script runs; see collectHeredocs.
+	warnings []string
 }
 
 type programNode interface{ programNode() }
