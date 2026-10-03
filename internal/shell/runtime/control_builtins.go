@@ -61,7 +61,10 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 		if temporary := r.withLocalAssignments(assignments); temporary != nil {
 			runner = *temporary
 		}
-		return lineResult{status: runner.execBuiltin(ctx, command), control: flowExec}, true
+		status := runner.execBuiltin(ctx, command)
+		// An exec that failed leaves the shell running, with its arrays as they were.
+		r.restoreShadowed(runner)
+		return lineResult{status: status, control: flowExec}, true
 	default:
 		return lineResult{control: flowContinue}, true
 	}

@@ -127,9 +127,13 @@ func (r Runtime) withLocalAssignments(assignments []assignment) *Runtime {
 	commandRuntime := r
 	commandRuntime.vars = make(map[string]string, len(r.vars)+len(assignments))
 	commandRuntime.env = r.env.clone()
+	commandRuntime.shadowed = nil
 	maps.Copy(commandRuntime.vars, r.vars)
 	for _, assignment := range assignments {
+		// See array_shadow.go: an array's name is a string for the command.
+		commandRuntime.shadowArray(assignment.name)
 		if status := commandRuntime.assignVar(assignment.name, commandRuntime.assignedValue(assignment)); status != 0 {
+			r.restoreShadowed(commandRuntime)
 			return nil
 		}
 		// What was stored, which `+=` and an attribute can make differ from what was
@@ -141,6 +145,7 @@ func (r Runtime) withLocalAssignments(assignments []assignment) *Runtime {
 }
 
 func (r Runtime) mergeBuiltinMutations(commandRuntime Runtime) {
+	r.restoreShadowed(commandRuntime)
 	for name := range commandRuntime.mutatedVars {
 		value, exists := commandRuntime.vars[name]
 		if exists {

@@ -57,6 +57,8 @@ type Runtime struct {
 	// elements into one string cannot represent an element containing the
 	// separator -- which is the case arrays exist for. See array.go.
 	arrays *shellArrays
+	// shadowed is what a command's temporary assignments took out of arrays; see array_shadow.go.
+	shadowed []shadowedArray
 	// loops carries the pending `break n` / `continue n` level. Shared by pointer
 	// for the reason loop_levels.go gives: only loops read it, and threading it
 	// through every flowControl signature would touch everything that does not.
