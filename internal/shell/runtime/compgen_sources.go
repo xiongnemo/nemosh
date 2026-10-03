@@ -8,8 +8,6 @@ import (
 	goruntime "runtime"
 	"slices"
 	"strings"
-
-	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // compgenPaths is -f, and -d with dirsOnly: the names in word's directory that begin with the
@@ -128,63 +126,6 @@ func (r Runtime) compgenWords(ctx context.Context, list string, savedStatus int)
 // compgen fails, and the rest of the line with it, and the script goes on.
 func (r Runtime) discardLine() {
 	r.expansion.shellError, r.expansion.discard = true, true
-}
-
-// compgenFunction is -F: the function called as bash calls it from compgen, with the command
-// `compgen`, the word and an empty previous word, and COMP_WORDS, COMP_CWORD, COMP_LINE and
-// COMP_POINT saying there is no line; COMPREPLY is what it answers, and is unset again after,
-// as they are. A function that fails with a shell error answers nothing.
-func (r Runtime) compgenFunction(ctx context.Context, name, word string, savedStatus int) ([]string, bool) {
-	fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"compgen: warning: -F option may not work as you expect")
-	definition, found := r.calledFunction(name)
-	if !found {
-		fmt.Fprintf(r.streams.Stderr, "%scompgen: function `%s' not found\n", r.diagnosticPrefix(), name)
-		return nil, false
-	}
-	r.arrays.set("COMP_WORDS", nil)
-	r.vars["COMP_CWORD"], r.vars["COMP_LINE"], r.vars["COMP_POINT"] = "-1", "", "0"
-	r.arrays.unset("COMPREPLY")
-	delete(r.vars, "COMPREPLY")
-	defer func() {
-		r.arrays.unset("COMP_WORDS")
-		r.arrays.unset("COMPREPLY")
-		for _, variable := range []string{"COMP_WORDS", "COMP_CWORD", "COMP_LINE", "COMP_POINT", "COMPREPLY"} {
-			delete(r.vars, variable)
-		}
-	}()
-	result := r.callFunctionResult(ctx, definition, []string{"compgen", word, ""}, savedStatus)
-	if r.expansion.shellError || result.control == flowAbort {
-		r.discardLine()
-		return nil, false
-	}
-	if r.arrays.has("COMPREPLY") {
-		var replies []string
-		for _, index := range r.arrays.liveIndices("COMPREPLY") {
-			value, _ := r.arrays.valueAt("COMPREPLY", index)
-			replies = append(replies, value)
-		}
-		return replies, true
-	}
-	if value, set := r.vars["COMPREPLY"]; set {
-		return []string{value}, true
-	}
-	return nil, true
-}
-
-// compgenCommand is -C: the command run with the command `compgen`, the word and an empty
-// previous word, as bash runs it, and each line of its output a completion.
-func (r Runtime) compgenCommand(ctx context.Context, command, word string, savedStatus int) []string {
-	fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"compgen: warning: -C option may not work as you expect")
-	script, err := r.parseHere(command + " compgen " + shellquote.Single(word) + " ''")
-	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%scompgen: %v\n", r.diagnosticPrefix(), err)
-		return nil
-	}
-	output := r.commandSubstitutionScript(ctx, script, savedStatus)
-	if output == "" {
-		return nil
-	}
-	return strings.Split(output, "\n")
 }
 
 // compgenFilter is -X: each completion the pattern matches removed, or with a leading ! each

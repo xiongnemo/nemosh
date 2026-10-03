@@ -35,6 +35,12 @@ func (r Runtime) SetInvocationMode(letters string) {
 	r.options.invocation = letters
 	if strings.ContainsRune(letters, 'i') {
 		r.options.histExpand, r.options.history, r.options.emacs = true, true, true
+		// The characters Tab's word ends at, bash's, which a completion script reads to know
+		// what the word it is given lacks; see complete_line.go. A session's alone: a script
+		// completes nothing.
+		if _, set := r.vars["COMP_WORDBREAKS"]; !set {
+			r.vars["COMP_WORDBREAKS"] = defaultCompletionWordBreaks
+		}
 	}
 }
 

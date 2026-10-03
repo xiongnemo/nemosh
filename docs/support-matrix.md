@@ -508,6 +508,21 @@ bash`, rustup's, npm's, git's -- runs to its end; each stopped at its first
 `complete`, which was not found. Unlike bash, a `complete` in a subshell is the
 session's too.
 
+**Tab asks them first.** For an operand of a command with a specification -- its
+own, its last path component's, or `-D`'s; `-E`'s on an empty line -- the line
+editor runs it as bash's programmable completion does: its actions, `-G`, `-W`,
+`-F` and `-C`, then `-X`, `-P` and `-S`. The function is called with the command,
+the word and the word before it, and `COMP_WORDS`, `COMP_CWORD`, `COMP_LINE`,
+`COMP_POINT`, `COMP_TYPE` and `COMP_KEY` set as bash sets them: the line split at
+`COMP_WORDBREAKS`, which a session starts with bash's value, so `--opt=va` is three
+words and the word is `va`. A function answering 124 has loaded a specification,
+and it is looked up again. What `COMPREPLY` holds is put in as readline puts it:
+one candidate whole, as it is unless `-o filenames` says it is a name, then followed
+by a blank, or not under `-o nospace`; several as far as they agree, and listed,
+unsorted under `-o nosort`. When it answers nothing, `-o default` and `-o
+bashdefault` complete as the editor does without a specification, which is what
+happens for a command with none.
+
 ### History, and `$!`
 
 `HISTCONTROL` honours `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups`, and

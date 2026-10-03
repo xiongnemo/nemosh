@@ -29,6 +29,11 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	if err := c.startSession(ctx, rt); err != nil {
 		return err
 	}
+	// Tab asks the session's `complete` specifications first; rt is read when Tab is pressed,
+	// so the one in use then answers.
+	editor.programmable = func(line string, point int) (runtime.ProgrammableCompletion, bool) {
+		return rt.CompleteLine(ctx, line, point)
+	}
 	// After the rc file, so a `HISTFILE=...` in it is honoured, exported or not, as
 	// both references honour it, and before the first prompt, so the first thing
 	// typed already has yesterday to suggest from. Only an exported one was.

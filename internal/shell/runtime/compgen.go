@@ -32,39 +32,17 @@ func (r Runtime) compgen(ctx context.Context, args []string, savedStatus int) in
 	if index < len(args) {
 		word = args[index]
 	}
-	matches := r.compgenActions(spec.actions, word)
-	if spec.glob != "" {
-		matches = append(matches, r.compgenGlob(ctx, spec.glob, savedStatus)...)
-	}
-	if spec.hasWords {
-		words, ok := r.compgenWords(ctx, spec.words, savedStatus)
-		if !ok {
-			return 1
-		}
-		matches = append(matches, withPrefix(words, word)...)
-	}
 	if spec.function != "" {
-		replies, ok := r.compgenFunction(ctx, spec.function, word, savedStatus)
-		if !ok {
-			return 1
-		}
-		matches = append(matches, replies...)
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"compgen: warning: -F option may not work as you expect")
 	}
 	if spec.command != "" {
-		matches = append(matches, r.compgenCommand(ctx, spec.command, word, savedStatus)...)
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"compgen: warning: -C option may not work as you expect")
 	}
-	if spec.filter != "" {
-		matches = r.compgenFilter(matches, spec.filter, word)
+	matches, _, ok := r.generateCompletions(ctx, spec, completionRequest{command: "compgen", word: word, cword: -1}, savedStatus)
+	if !ok {
+		return 1
 	}
-	for index, match := range matches {
-		matches[index] = spec.prefix + match + spec.suffix
-	}
-	switch {
-	case spec.options["plusdirs"]:
-		matches = append(matches, r.compgenPaths(word, true)...)
-	case len(matches) == 0 && spec.options["dirnames"]:
-		matches = r.compgenPaths(word, true)
-	case len(matches) == 0 && (spec.options["default"] || spec.options["bashdefault"]):
+	if len(matches) == 0 && (spec.options["default"] || spec.options["bashdefault"]) {
 		matches = r.compgenPaths(word, false)
 	}
 	if spec.array != "" {

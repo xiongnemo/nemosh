@@ -80,6 +80,14 @@ func lastPromptLine(prompt string) string {
 // only what they share, and are listed: taking the user as far as the choice
 // actually is, without choosing for them.
 func (e *lineEditor) complete(prompt string) {
+	// A `complete` specification for the command answers first, as bash's does; see
+	// complete_programmable.go.
+	if e.programmable != nil {
+		answer, found := e.programmable(e.buffer.String(), len(string(e.buffer.runes[:e.buffer.cursor])))
+		if found && e.completeProgrammatically(answer, prompt) {
+			return
+		}
+	}
 	// The word as typed and the word as a filename are not the same string once
 	// a blank has been escaped: on screen `My\ Do`, on disk `My Do`. Matching
 	// uses the second, and replacing uses the first, because that is what is
@@ -161,6 +169,11 @@ func (e *lineEditor) replaceWord(word, replacement string) {
 // does neither.
 func (e *lineEditor) listCandidates(matches []string, prompt string) {
 	sortCandidates(matches)
+	e.listCandidatesAsGiven(matches, prompt)
+}
+
+// listCandidatesAsGiven lists the choices in the order they come in, which -o nosort asks for.
+func (e *lineEditor) listCandidatesAsGiven(matches []string, prompt string) {
 	listing, rows := layoutCandidates(matches, e.columnsOrDefault())
 	fmt.Fprintln(e.screen)
 	if rows > listedRowLimit && !e.confirmLongListing(len(matches)) {

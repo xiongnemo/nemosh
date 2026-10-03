@@ -88,6 +88,9 @@ type lineEditor struct {
 	// completions/ on first use. Held here rather than looked up globally so a
 	// test can hand the editor its own directory.
 	specs *completionspec.Registry
+	// programmable is the shell's `complete` specifications, asked before anything else on a
+	// Tab; nil without a shell behind the editor. See complete_programmable.go.
+	programmable programmableCompletion
 	// search is the incremental history search, non-nil only while Ctrl-R has
 	// the line. It owns the prompt and most of the keys while it lives; see
 	// lineedit_search.go.
