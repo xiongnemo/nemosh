@@ -32,9 +32,8 @@ import (
 //	busybox false --help   prints nothing
 //
 // Everything else in busybox prints usage, including `printf --help` and
-// `expr --help`, so those two follow it rather than GNU. It costs the ability to
-// print or evaluate the literal string `--help`, which is the trade busybox
-// already made.
+// `expr --help`, so those two follow it rather than GNU -- but only alone; see
+// helpAloneApplets.
 var helpAsDataApplets = map[string]bool{
 	"echo":  true,
 	"test":  true,
@@ -42,6 +41,13 @@ var helpAsDataApplets = map[string]bool{
 	"true":  true,
 	"false": true,
 }
+
+// helpAloneApplets are the applets that answer `--help` only as their one argument, as
+// busybox's appletlib answers it for every applet that does not parse it as an option itself
+// (`argc == 2`): after printf's format, and in expr's expression, it is data. `printf -v comp
+// "%q" --help`, which cobra's completion scripts run on every option they offer, printed
+// printf's usage into comp.
+var helpAloneApplets = map[string]bool{"printf": true, "expr": true}
 
 // helpRequested reports whether these arguments ask for usage.
 //
@@ -51,6 +57,9 @@ var helpAsDataApplets = map[string]bool{
 func helpRequested(name string, args []string) bool {
 	if helpAsDataApplets[name] {
 		return false
+	}
+	if helpAloneApplets[name] {
+		return len(args) == 1 && args[0] == "--help"
 	}
 	for _, arg := range args {
 		if arg == "--" {

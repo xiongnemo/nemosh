@@ -91,6 +91,18 @@ func TestHelpOption_isDataForTheAppletsThatTakeArgumentsAsData(t *testing.T) {
 	})
 }
 
+// printf and expr answer `--help` only as their one argument, as busybox's appletlib does
+// (`argc == 2`): after printf's format it is an argument to print. `printf "%q" --help`
+// printed the usage.
+func TestHelpOption_isDataAfterPrintfsFormat(t *testing.T) {
+	if stdout, err := runAppletHelp(t, "printf", "%s|", "--help"); err != nil || stdout != "--help|" {
+		t.Fatalf("printf %%s --help = (%q, %v), want --help printed", stdout, err)
+	}
+	if stdout, _ := runAppletHelp(t, "printf", "--help"); !strings.HasPrefix(stdout, "Usage:") {
+		t.Fatalf("printf --help alone printed %q, want usage", stdout)
+	}
+}
+
 // `--` ends the options, so what follows is an operand even when it is spelled like
 // a request for help. `grep -- --help file` is a search for that string.
 func TestHelpOption_isAnOperandAfterADoubleDash(t *testing.T) {
