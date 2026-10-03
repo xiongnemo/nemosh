@@ -523,6 +523,18 @@ unsorted under `-o nosort`. When it answers nothing, `-o default` and `-o
 bashdefault` complete as the editor does without a specification, which is what
 happens for a command with none.
 
+**The bash-completion helpers the generated scripts call are builtins.** cobra's
+scripts -- `gh`, `kubectl`, `docker`, `helm` -- read the line with
+`_get_comp_words_by_ref` when the bash-completion package's `_init_completion` is
+not there, and complete files with `_filedir`; neither is bash's, and on Windows the
+package is seldom installed. `_get_comp_words_by_ref`, `_init_completion`,
+`_filedir` and `__ltrim_colon_completions` are the package's 2.12 `_comp_get_words`,
+`_comp_initialize`, `_comp_compgen_filedir` and `_comp_ltrim_colon_completions` under
+the names the scripts call, setting `cur`, `prev`, `words` and `cword` in the calling
+function's own variables. A function of the same name, as the package defines one,
+is called in their place. `source <(gh completion -s bash)` completes `gh`'s
+subcommands, flags and flag values.
+
 ### History, and `$!`
 
 `HISTCONTROL` honours `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups`, and

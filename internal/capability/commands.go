@@ -189,6 +189,11 @@ var commands = []Command{
 	{Name: "compgen", Operand: AnyPath, Builtin: true},
 	{Name: "complete", Short: "abcdefgjksuvprDEIoAGWFCXPS", ValueShort: "oAGWFCXPS", Operand: AnyPath, Builtin: true},
 	{Name: "compopt", Short: "DEIo", ValueShort: "o", Operand: AnyPath, Builtin: true},
+	// bash-completion's helpers, which completion scripts call.
+	{Name: "_get_comp_words_by_ref", Short: "cnpwi", ValueShort: "cnpwi", Operand: AnyPath, Builtin: true},
+	{Name: "_init_completion", Short: "neois", ValueShort: "neoi", Operand: AnyPath, Builtin: true},
+	{Name: "_filedir", Short: "d", Operand: AnyPath, Builtin: true},
+	{Name: "__ltrim_colon_completions", Operand: AnyPath, Builtin: true},
 	{Name: "declare", Operand: AnyPath, Builtin: true},
 	{Name: "continue", Operand: AnyPath, Builtin: true},
 	{Name: "eval", Operand: AnyPath, Builtin: true},

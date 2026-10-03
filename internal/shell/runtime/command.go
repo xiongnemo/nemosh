@@ -89,6 +89,8 @@ var builtinNames = []string{
 	"pwd", "read",
 	"readonly", "return", "set", "shift", "shopt", "source", "time", "timeout", "times", "trap", "type", "typeset",
 	"kill", "umask", "unalias", "unset", "wait", "which",
+	// bash-completion's helpers, which completion scripts call; see completion_helpers.go.
+	"_get_comp_words_by_ref", "_init_completion", "_filedir", "__ltrim_colon_completions",
 }
 
 func isRuntimeBuiltin(name string) bool {
