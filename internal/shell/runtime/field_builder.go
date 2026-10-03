@@ -93,7 +93,13 @@ func (b *fieldBuilder) split(value string) {
 			end++
 		}
 		if end > index {
-			b.text(value[index:end], true)
+			next := byte(0)
+			if end < len(value) {
+				next = value[end]
+			}
+			if text := beforeNewline(value[index:end], next); text != "" {
+				b.text(text, true)
+			}
 			index = end - 1
 			continue
 		}

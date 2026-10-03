@@ -936,6 +936,13 @@ Three of these diverge from GNU on purpose, and say so where it matters:
 
 ### Line endings, and which applets keep them
 
+**The shell reads a Windows program's CRLF as a newline**, as busybox-w32 does: a
+command substitution's trailing newlines go with the CR of each CRLF among them --
+bash on Windows does that too -- so `v=$(cmd /c ver)` ends where its text does, and
+a field split from an unquoted expansion ends before a CRLF's CR, so `set -- $(where
+git)` has no CR on its words. A CR anywhere else is a character, and on Linux and
+macOS every CR is one, as busybox and bash have it there.
+
 Settled on 2026-08-23, after seven applets were found wrong at once. Every
 expectation below was measured against busybox **and** GNU, which agree with each
 other.

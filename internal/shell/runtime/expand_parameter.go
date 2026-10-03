@@ -128,8 +128,9 @@ func (r Runtime) commandSubstitutionScript(ctx context.Context, script Script, s
 		return ""
 	}
 	// Without its NUL bytes, as both references take it -- a shell string holds none -- and
-	// then without its trailing newlines. bash warns of it; busybox does not.
-	return strings.TrimRight(strings.ReplaceAll(stdout.String(), "\x00", ""), "\n")
+	// then without its trailing newlines, a CRLF's with them on Windows; see crlf_lines.go.
+	// bash warns of the NULs; busybox does not.
+	return trimSubstitutionNewlines(strings.ReplaceAll(stdout.String(), "\x00", ""))
 }
 
 func isAssignment(arg string) bool {
