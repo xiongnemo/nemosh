@@ -496,6 +496,18 @@ read with the next byte only when that is `[` or `O`, and one that nothing follo
 letter arrives as Escape and the letter, so in vi mode it is the two keys. No counts, no
 `u`, and `.` repeats nothing, as in busybox.
 
+### Programmable completion
+
+**`complete`, `compopt` and `compgen` are bash's**, busybox having no programmable
+completion. `complete` keeps a specification per command -- its actions, `-W`, `-G`,
+`-F`, `-C`, `-X`, `-P`, `-S` and `-o` options, and `-D`, `-E` and `-I` -- and
+`complete -p` prints them back as bash does, so the output reads in again; `-r`
+removes them. `compopt` turns a specification's `-o` options on and off, the running
+completion's when it names none. A tool's completion script -- `gh completion -s
+bash`, rustup's, npm's, git's -- runs to its end; each stopped at its first
+`complete`, which was not found. Unlike bash, a `complete` in a subshell is the
+session's too.
+
 ### History, and `$!`
 
 `HISTCONTROL` honours `ignorespace`, `ignoredups`, `ignoreboth` and `erasedups`, and

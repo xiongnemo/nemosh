@@ -216,17 +216,8 @@
       "pwd": "fail"
     },
     "builtin-completion.test.sh": {
-      "Parse errors for compgen -W and complete -W": "fail",
       "compgen -k shows the same keywords as bash": "fail",
-      "compgen with action and suffix: helptopic": "fail",
-      "complete -C vs. compgen -C": "fail",
-      "complete -F f is usage error": "fail",
-      "complete -o -F (git)": "fail",
-      "complete with no action": "fail",
-      "complete with no args and complete -p both print completion spec": "fail",
-      "complete with nonexistent function": "fail",
-      "compopt fails when not in completion function": "fail",
-      "compopt with invalid syntax": "fail"
+      "compgen with action and suffix: helptopic": "fail"
     },
     "builtin-dirs.test.sh": {
       "cd replaces the lowest entry on the directory stack!": "fail",

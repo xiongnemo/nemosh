@@ -41,9 +41,12 @@ func TestRunInteractive_returnsRequestedExitStatus(t *testing.T) {
 	}
 }
 
+// `wait` and not `wait %1`: a job that ends before the next prompt is reported done there and
+// gone from the table, as in both references, so `wait %1` after it is "no such job" -- a
+// second diagnostic whenever the runner was slow to read the next line.
 func TestRunInteractive_trailingBackgroundCompletesAndMalformedEntryRecovers(t *testing.T) {
 	// Given / When
-	got := runInteractiveTest(strings.NewReader("echo first &\nwait %1\necho bad & & echo nope\necho recovered\nexit 0\n"))
+	got := runInteractiveTest(strings.NewReader("echo first &\nwait\necho bad & & echo nope\necho recovered\nexit 0\n"))
 
 	// Then
 	if status := interactiveStatus(t, got.err); status != 0 {

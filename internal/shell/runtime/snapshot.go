@@ -94,6 +94,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		aliasView:   r.aliasView, // the line's, as its other commands have; see alias_view.go
 		childCPU:    r.childCPU,
 		history:     r.history,
+		completions: r.completions,
 		// A subshell starts with no pending break: `(break)` inside a loop does
 		// not break the loop outside it, because the loop is not in the subshell.
 		// It knows it is inside one, though, as busybox's forked subshell does: a

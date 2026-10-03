@@ -34,6 +34,7 @@ var jobStateCoverage = map[string]string{
 	"trapStatus":        "not inherited: a job begins in no trap's action",
 	"childCPU":          "not inherited: a process counts its own children",
 	"history":           "not inherited: a job does not read a prompt",
+	"completions":       "not inherited: a job completes no line",
 	"dirStack":          "encoded: DirStack",
 	"arrays":            "encoded: Indexed, Associative",
 	"loops":             "not inherited: a job does not break its parent's loop",

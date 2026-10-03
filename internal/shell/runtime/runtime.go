@@ -47,6 +47,8 @@ type Runtime struct {
 	// history is shared by pointer across snapshots, so a command recorded in a
 	// pipeline stage is still there when the parent's `history` asks.
 	history *shellHistory
+	// completions is what complete was told; see complete_builtin.go. Shared as history is.
+	completions *completionTable
 	// dirStack is what lies beneath the current directory, for pushd/popd/dirs.
 	// Position zero is not stored -- it is read from the shell, so it cannot go
 	// stale when `cd` moves. See builtin_dirs.go.
@@ -206,8 +208,8 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 		return r.alias(args[1:])
 	case "unalias":
 		return r.unalias(args[1:])
-	case "compgen":
-		return r.compgen(ctx, args[1:], 0)
+	case "compgen", "complete", "compopt":
+		return r.completionBuiltin(ctx, args)
 	case "local":
 		return r.local(ctx, args[1:])
 	case "type":
@@ -312,36 +314,4 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 	err := applet.Run(applets.WithProcessView(ctx, r), args[1:], r.streams.Stdin,
 		interruptible(r.streams.Stdout, ctx), r.streams.Stderr)
 	return r.appletStatus(ctx, args[0], err)
-}
-
-// AppletFailure turns an applet's error into the status and the one-line
-// diagnostic that go with it. Exported because `nemosh cat missing` has to fail
-// exactly the way `cat missing` inside the shell does, and the CLI cannot reach
-// the shell's copy of this. It used to have no copy at all: direct dispatch
-// dropped the applet-name prefix, and printed nothing whatever when the failure
-// carried its own status, so `nemosh env python3` exited 127 in silence.
-//
-// An empty message means there is nothing to print: a bare applets.ExitStatus
-// carries a status without a diagnostic, and so does ErrExitFalse.
-func AppletFailure(name string, err error) (int, string) {
-	if err == nil {
-		return 0, ""
-	}
-	// A reader that went away ends the output, quietly and with SIGPIPE's status, as busybox's
-	// applets end: 141, which is what `busybox seq 1 1000000 | head -1` leaves. Here rather than
-	// at the two call sites, because the whole point of this function is that a direct
-	// invocation and the same command inside the shell answer identically.
-	if isClosedPipeError(err) {
-		return brokenPipeStatus, ""
-	}
-	if status, ok := applets.StatusCode(err); ok {
-		if message, ok := applets.StatusMessage(err); ok {
-			return status, name + ": " + message
-		}
-		return status, ""
-	}
-	if errors.Is(err, applets.ErrExitFalse) {
-		return 1, ""
-	}
-	return 1, fmt.Sprintf("%s: %v", name, err)
 }
