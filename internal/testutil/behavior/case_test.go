@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/testutil/behavior"
@@ -145,7 +144,7 @@ func TestBehaviorCommandCases_executeAgainstAppletRegistry(t *testing.T) {
 func TestBehaviorShellCases_executeAgainstFreshNemosh(t *testing.T) {
 	// Given
 	absoluteBinary := buildFreshNemosh(t)
-	executor := newShellExecutor(absoluteBinary, 10*time.Second)
+	executor := newShellExecutor(absoluteBinary, freshNemoshTimeout)
 	runner := behavior.NewRunnerWithScriptExecutor(applets.DefaultRegistry, executor)
 	root := filepath.Join("..", "..", "..", "tests", "behavior", "shell")
 
@@ -187,7 +186,7 @@ func TestBehaviorShellCases_executeAgainstFreshNemosh(t *testing.T) {
 func TestBehaviorAppletScriptCases_executeAgainstFreshNemosh(t *testing.T) {
 	// Given
 	absoluteBinary := buildFreshNemosh(t)
-	executor := newShellExecutor(absoluteBinary, 10*time.Second)
+	executor := newShellExecutor(absoluteBinary, freshNemoshTimeout)
 	runner := behavior.NewRunnerWithScriptExecutor(applets.DefaultRegistry, executor)
 	root := filepath.Join("..", "..", "..", "tests", "behavior", "applets")
 

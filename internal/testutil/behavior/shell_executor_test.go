@@ -12,6 +12,13 @@ import (
 	"github.com/xiongnemo/nemosh/internal/testutil/behavior"
 )
 
+// freshNemoshTimeout is how long one case may take in a fresh process. A case is a line or
+// two and ends in milliseconds; the limit is for a shell that hangs. It was ten seconds, and
+// on 2026-10-03 the Windows runner, running the applet and runtime packages' tests beside
+// these, took longer than that to start nemosh for `basename` with no operand, and the run
+// went red over a case that passes. Thirty still ends a real hang.
+const freshNemoshTimeout = 30 * time.Second
+
 func newShellExecutor(binary string, timeout time.Duration) behavior.ScriptExecutor {
 	return func(ctx context.Context, request behavior.ScriptRequest) (behavior.ProcessResult, error) {
 		ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -55,7 +62,7 @@ func TestShellExecutor_returnsHarnessErrorWhenDeadlineExpires(t *testing.T) {
 func TestShellExecutor_returnsStatusWhenShellExitsNonzero(t *testing.T) {
 	// Given
 	binary := buildFreshNemosh(t)
-	executor := newShellExecutor(binary, 10*time.Second)
+	executor := newShellExecutor(binary, freshNemoshTimeout)
 
 	// When
 	result, err := executor(t.Context(), behavior.ScriptRequest{Script: "exit 7"})
