@@ -108,6 +108,9 @@ func (c *sedCycle) writeFile(target *sedWriteFile) error {
 	if target == nil {
 		return nil
 	}
+	if err := c.output.flush(); err != nil {
+		return err
+	}
 	return target.output.writeLine(c.line, c.ended)
 }
 

@@ -32,6 +32,15 @@ type sedOutput struct {
 
 func newSedOutput(out io.Writer) *sedOutput { return &sedOutput{out: out} }
 
+// flush hands on what a buffered output holds, before a write elsewhere that may share its
+// destination: `w /dev/stdout`.
+func (o *sedOutput) flush() error {
+	if buffered, ok := o.out.(interface{ Flush() error }); ok {
+		return buffered.Flush()
+	}
+	return nil
+}
+
 // writeLine writes the newline owed, text, and a newline if ended, as one write.
 func (o *sedOutput) writeLine(text string, ended bool) error {
 	line := text

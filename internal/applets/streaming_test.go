@@ -25,8 +25,8 @@ import (
 //   - **awk and tr held their output** until the input ended. busybox's awk and tr both
 //     stream, and `tail -f log | awk '...'` is the reason it matters.
 //
-// What is deliberately *not* asserted is the opposite: `sed`, `uniq`, `sort`, `wc`, the
-// checksums and the dump tools all wait for the end, and so do busybox's. Some of them must
+// What is deliberately *not* asserted is the opposite: `uniq`, `sort`, `wc`, the checksums
+// and the dump tools all wait for the end, and so do busybox's. Some of them must
 // -- a digest has no partial answer -- and the rest match the reference. Pinning that down
 // would turn a later improvement into a failing test.
 
@@ -79,6 +79,10 @@ func TestFiltersAnswerBeforeTheInputEnds(t *testing.T) {
 		{name: "tr", args: []string{"a-z", "A-Z"}, feed: "hello there\n", want: "HELLO THERE\n"},
 		{name: "nl", feed: "hello\n", want: "hello"},
 		{name: "cut", args: []string{"-c1"}, feed: "hello\n", want: "h\n"},
+		{name: "head", args: []string{"-n5"}, feed: "hello\n", want: "hello\n"},
+		// sed reads a line ahead, to know which is `$`, so the first is out once the second
+		// is in.
+		{name: "sed", args: []string{"s/o/0/"}, feed: "one\ntwo\n", want: "0ne\n"},
 		{name: "rev", feed: "abc\n", want: "cba\n"},
 		{name: "tee", feed: "hello\n", want: "hello\n"},
 		{name: "fold", args: []string{"-w2"}, feed: "abcd\n", want: "ab\n"},
@@ -136,5 +140,43 @@ func TestAwkBuffersToAFile(t *testing.T) {
 	t.Cleanup(func() { file.Close() })
 	if !writerIsRegularFile(file) {
 		t.Fatal("a file on disk was taken for something watched, so every record would be flushed")
+	}
+}
+
+// writeCounter counts the writes made to it, which is how many system calls a pipe would be
+// asked for.
+type writeCounter struct {
+	writes int
+	bytes  strings.Builder
+}
+
+func (w *writeCounter) Write(p []byte) (int, error) {
+	w.writes++
+	return w.bytes.Write(p)
+}
+
+// TestFiltersWriteInChunks is the other half of the rule those answers keep: sed, cut, head
+// and tr flush when their input runs dry, so an input that is all there is written a chunk at
+// a time, not a line at a time. Each wrote a line per write, two thousand here.
+func TestFiltersWriteInChunks(t *testing.T) {
+	t.Parallel()
+	input := strings.Repeat("abc\n", 2000)
+	for _, testcase := range []struct {
+		name string
+		args []string
+	}{
+		{name: "sed", args: []string{"s/a/A/"}},
+		{name: "cut", args: []string{"-c1-2"}},
+		{name: "head", args: []string{"-n1500"}},
+		{name: "tr", args: []string{"a", "A"}},
+	} {
+		applet, _ := DefaultRegistry.Lookup(testcase.name)
+		out := &writeCounter{}
+		if err := applet.Run(context.Background(), testcase.args, strings.NewReader(input), out, io.Discard); err != nil {
+			t.Fatalf("%s %v: %v", testcase.name, testcase.args, err)
+		}
+		if out.writes > 10 || out.bytes.Len() < 4000 {
+			t.Errorf("%s %v: %d bytes in %d writes; want them in a few", testcase.name, testcase.args, out.bytes.Len(), out.writes)
+		}
 	}
 }

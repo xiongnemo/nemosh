@@ -48,14 +48,18 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 	if err != nil {
 		return err
 	}
+	// Buffered, and flushed when the input runs dry or something is said; see
+	// filter_output.go. It wrote each line as it was made.
+	output := newFilterOutput(stdout)
 	failed := false
 	stream := &sedStream{binary: p.binary, onOpenError: func(err error) {
+		_ = output.Flush()
 		fmt.Fprintf(stderr, "sed: %v\n", err)
 		failed = true
 	}}
 	if len(operands) == 0 {
 		stream.openers = []func() (io.ReadCloser, error){
-			func() (io.ReadCloser, error) { return io.NopCloser(stdin), nil },
+			func() (io.ReadCloser, error) { return io.NopCloser(output.input(stdin)), nil },
 		}
 	} else {
 		view := ProcessViewFromContext(ctx)
@@ -72,11 +76,14 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 				// nothing and copy it through. Printed output is UTF-8, the same rule
 				// grep follows; `-i` is the case that has to put the encoding back, and
 				// it does -- see sed_inplace.go.
-				return decodedCloser{Reader: decodeTextInput(file), closer: file}, nil
+				return decodedCloser{Reader: output.input(decodeTextInput(file)), closer: file}, nil
 			})
 		}
 	}
-	runErr := p.execute(stream, stdout)
+	runErr := p.execute(stream, output)
+	if flushErr := output.Flush(); runErr == nil {
+		runErr = flushErr
+	}
 	closeErr := errors.Join(stream.Close(), closeFiles())
 	if runErr != nil {
 		return runErr

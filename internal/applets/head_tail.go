@@ -8,10 +8,32 @@ import (
 	"io"
 )
 
+// head's output is buffered, and flushed when its input runs dry or it says something; see
+// filter_output.go. It wrote each line as it came.
 func newHeadApplet() Applet {
 	return simpleApplet{name: "head", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		return runHeadTail(ctx, "head", args, stdin, stdout, stderr, copyHeadOf)
+		output := newFilterOutput(stdout)
+		copyHead := func(out io.Writer, input io.Reader, spec countSpec) error {
+			return copyHeadOf(out, output.input(input), spec)
+		}
+		err := runHeadTail(ctx, "head", args, stdin, output, flushedFirst{stderr, output}, copyHead)
+		if flushErr := output.Flush(); err == nil {
+			err = flushErr
+		}
+		return err
 	}}
+}
+
+// flushedFirst is stderr with a filter's output flushed before each write to it, so the two
+// keep their order.
+type flushedFirst struct {
+	io.Writer
+	output filterOutput
+}
+
+func (w flushedFirst) Write(p []byte) (int, error) {
+	_ = w.output.Flush()
+	return w.Writer.Write(p)
 }
 
 // runHeadTail is head's run once its count is parsed: stdin when there are no operands, and
