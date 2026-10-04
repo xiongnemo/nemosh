@@ -113,7 +113,7 @@ var ashBuiltinApplets = map[string]bool{"echo": true, "printf": true, "test": tr
 // appletBuiltins are the other way about: builtins here, which need the shell to run a command
 // or search its PATH, and applets in busybox, which calls them builtin applets: `type which` is
 // "which is a builtin applet" there. They were "a shell builtin".
-var appletBuiltins = map[string]bool{"time": true, "timeout": true, "which": true, "flock": true}
+var appletBuiltins = map[string]bool{"time": true, "timeout": true, "which": true, "flock": true, "watch": true}
 
 // commandKind is one way the shell could read a name: the word `type -t` answers, the
 // sentence `type` does, and the path when it is a file.

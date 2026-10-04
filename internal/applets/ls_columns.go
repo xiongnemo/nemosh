@@ -121,3 +121,14 @@ func stdoutIsTerminal(stdout io.Writer) bool {
 	file := stdoutFile(stdout)
 	return file != nil && term.IsTerminal(int(file.Fd()))
 }
+
+// TerminalColumns is how many columns w draws in, or 80 when it is no terminal, as busybox's
+// get_terminal_width answers: watch's heading is that wide.
+func TerminalColumns(w io.Writer) int {
+	if file := stdoutFile(w); file != nil {
+		if width, _, err := term.GetSize(int(file.Fd())); err == nil && width > 0 {
+			return width
+		}
+	}
+	return 80
+}

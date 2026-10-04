@@ -232,6 +232,7 @@ var commands = []Command{
 	{Name: "time", Operand: AnyPath, Builtin: true},
 	{Name: "timeout", Operand: AnyPath, Builtin: true},
 	{Name: "flock", Short: "sxun", Long: []string{"shared", "exclusive", "unlock", "nonblock"}, Operand: AnyPath, Builtin: true},
+	{Name: "watch", Short: "dtnx", ValueShort: "n", Operand: AnyPath, Builtin: true},
 	{Name: "times", Operand: AnyPath, Builtin: true},
 	{Name: "trap", Operand: AnyPath, Builtin: true},
 	{Name: "type", Short: "afpPt", Operand: AnyPath, Builtin: true},

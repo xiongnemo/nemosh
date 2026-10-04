@@ -232,6 +232,8 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 		return r.timeoutBuiltin(ctx, args[1:])
 	case "flock":
 		return r.flockBuiltin(ctx, args[1:])
+	case "watch":
+		return r.watchBuiltin(ctx, args[1:])
 	case "help":
 		return r.help(args[1:])
 	case "history":
