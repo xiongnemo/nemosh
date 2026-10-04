@@ -28,9 +28,17 @@ func TestWait_answersAsBothReferencesDo(t *testing.T) {
 			want:   "st=127\n",
 		},
 		{
-			name:   "a pid that is not a child is 127",
-			script: "wait 99999 2>/dev/null\necho \"st=$?\"\n",
+			// Said nothing of, as busybox says nothing; it was bash's `pid 99999 is not a
+			// child of this shell`.
+			name:   "a pid that is not a child is 127, and unsaid",
+			script: "wait 99999 2>&1\necho \"st=$?\"\n",
 			want:   "st=127\n",
+		},
+		{
+			// It leaves the status as it was, as busybox's waitcmd leaves its retval.
+			name:   "a pid that is not a child changes nothing",
+			script: "(exit 3) & p=$!\nwait $p 99999 2>&1\necho \"st=$?\"\n",
+			want:   "st=3\n",
 		},
 		{
 			// It used to be refused, and the plain `wait` a script puts after it hid that.

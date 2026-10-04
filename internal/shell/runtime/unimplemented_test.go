@@ -89,8 +89,8 @@ func TestRuntime_answersNoFromCommandV_forAnUnimplementedBuiltin(t *testing.T) {
 	status, stdout, _ := runSetScript(t, "command -v ulimit\n")
 
 	// Then
-	if status != 1 || stdout != "" {
-		t.Fatalf("status = %d, stdout = %q, want 1 and no output", status, stdout)
+	if status != 127 || stdout != "" {
+		t.Fatalf("status = %d, stdout = %q, want busybox's 127 and no output", status, stdout)
 	}
 }
 

@@ -52,7 +52,7 @@ func (r Runtime) mapfile(ctx context.Context, name string, args []string) int {
 		return 2
 	}
 	if r.isReadonly(options.name) {
-		fmt.Fprintf(r.streams.Stderr, "%s%s: %s: readonly variable\n", r.diagnosticPrefix(), name, options.name)
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %s: is read only\n", r.diagnosticPrefix(), name, options.name)
 		return 1
 	}
 	input, err := r.fds.reader(options.descriptor)

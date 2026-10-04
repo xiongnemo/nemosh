@@ -83,7 +83,8 @@ func TestRuntime_commandVPrintsName_whenCommandIsKnown(t *testing.T) {
 	}
 }
 
-func TestRuntime_commandVReturnsOne_whenCommandIsMissing(t *testing.T) {
+// 127, busybox's answer; it was bash's 1.
+func TestRuntime_commandVReturns127_whenCommandIsMissing(t *testing.T) {
 	// Given
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -93,8 +94,8 @@ func TestRuntime_commandVReturnsOne_whenCommandIsMissing(t *testing.T) {
 	status := rt.RunScript(context.Background(), "command -v missing-name\n")
 
 	// Then
-	if status != 1 {
-		t.Fatalf("expected status 1, got %d", status)
+	if status != 127 {
+		t.Fatalf("expected status 127, got %d", status)
 	}
 	if stdout.String() != "" {
 		t.Fatalf("expected no stdout, got %q", stdout.String())

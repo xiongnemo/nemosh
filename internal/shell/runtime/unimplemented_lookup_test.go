@@ -49,7 +49,8 @@ func TestRuntime_refusesAnUnimplementedBuiltin_fromCommandVandWhich_evenWhenPath
 			if status != 0 {
 				t.Fatalf("script status = %d, stderr = %q", status, stderr.String())
 			}
-			want := "command=1\nwhich=1\n"
+			// Each in busybox's status: 127 for command -v, 1 for which.
+			want := "command=127\nwhich=1\n"
 			if stdout.String() != want {
 				t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 			}

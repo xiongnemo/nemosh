@@ -140,7 +140,7 @@ func (r Runtime) allExport() bool {
 // subshell that does it ends only the subshell. `read R` is the exception there, and here
 // -- it refuses, and the script goes on. This used to be a status of 1 and the next line.
 func (r Runtime) refuseReadonly(prefix, name string) int {
-	fmt.Fprintf(r.streams.Stderr, "%s%s%s: readonly variable\n", r.diagnosticPrefix(), prefix, name)
+	fmt.Fprintf(r.streams.Stderr, "%s%s%s: is read only\n", r.diagnosticPrefix(), prefix, name)
 	r.raiseShellError()
 	return 1
 }

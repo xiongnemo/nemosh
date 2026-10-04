@@ -7,14 +7,15 @@ import (
 )
 
 // command's -V and -p, which busybox has and which were taken for command names. The
-// answers are busybox's -- -V in type's words and for the first name only, and -p a default
-// PATH that finds the system's own programs -- except that a name not found is 1, as -v's is.
+// answers are busybox's -- -V in type's words and for the first name only, a name not found
+// `x: not found` on stdout and 127, and -p a default PATH that finds the system's own
+// programs.
 func TestCommand_verboseAndDefaultPath(t *testing.T) {
 	t.Run("-V", func(t *testing.T) {
 		status, stdout, stderr := runSetScript(t,
 			"f() { :; }\ncommand -V cd\ncommand -V ls\ncommand -V f\ncommand -v -V cd\ncommand -V nosuch\necho \"st=$?\"\n")
-		want := "cd is a shell builtin\nls is a builtin applet\nf is a function\ncd is a shell builtin\nst=1\n"
-		if stdout != want || status != 0 || stderr != "nemosh: line 6: command: nosuch: not found\n" {
+		want := "cd is a shell builtin\nls is a builtin applet\nf is a function\ncd is a shell builtin\nnosuch: not found\nst=127\n"
+		if stdout != want || status != 0 || stderr != "" {
 			t.Fatalf("got %q/%d, stderr %q; want %q/0", stdout, status, stderr, want)
 		}
 	})

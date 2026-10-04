@@ -60,13 +60,14 @@ func TestWhich_reportsWhatTheShellWouldRun(t *testing.T) {
 }
 
 // And it agrees with `command -v`, which is the same lookup asked a different
-// way. If these two ever differ, one of them is lying about what will run.
+// way. If these two ever differ, one of them is lying about what will run. Their
+// failures are each busybox's, 1 for which and 127 for command -v.
 func TestWhich_agreesWithCommandV(t *testing.T) {
 	for _, name := range []string{"cd", "echo", "ls", "zzznosuchprogram"} {
 		t.Run(name, func(t *testing.T) {
 			fromWhich, whichStatus := runWhich(t, "which "+name+"\n")
 			fromCommand, commandStatus := runWhich(t, "command -v "+name+"\n")
-			if fromWhich != fromCommand || whichStatus != commandStatus {
+			if fromWhich != fromCommand || (whichStatus == 0) != (commandStatus == 0) {
 				t.Fatalf("which says %q (%d) and command -v says %q (%d)",
 					fromWhich, whichStatus, fromCommand, commandStatus)
 			}

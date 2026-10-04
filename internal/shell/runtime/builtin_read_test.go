@@ -387,7 +387,7 @@ func TestRead_refusesAReadonlyName(t *testing.T) {
 	if status == 0 {
 		t.Fatalf("status = %d, want a failure", status)
 	}
-	if !strings.Contains(stderr, "readonly") {
-		t.Fatalf("stderr = %q, want it to name the readonly variable", stderr)
+	if !strings.Contains(stderr, "read: v: is read only") {
+		t.Fatalf("stderr = %q, want it to name the readonly variable, in busybox's words", stderr)
 	}
 }

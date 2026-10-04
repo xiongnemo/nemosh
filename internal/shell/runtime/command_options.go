@@ -11,7 +11,8 @@ import (
 // words, and -p looks the command up on a default PATH rather than the shell's. -V and -p
 // were taken for command names, so `command -V cd` was "-V: not found". As in busybox, -v
 // and -V answer only the first name, and the last of them given wins. A name that is not
-// found is 1, as it is for -v and for type, and as bash has it; busybox answers 127.
+// found is 127, as busybox answers it for both and for type, -V saying `x: not found` on
+// stdout as type does; it was bash's 1, and bash's words on stderr.
 
 // commandRequest is what command's options asked for.
 type commandRequest struct {
@@ -46,8 +47,8 @@ func parseCommandArgs(args []string) (commandRequest, []string, error) {
 func (r Runtime) commandVerbose(name string) int {
 	kinds := r.commandKinds(name)
 	if len(kinds) == 0 {
-		fmt.Fprintf(r.streams.Stderr, "%scommand: %s: not found\n", r.diagnosticPrefix(), name)
-		return 1
+		fmt.Fprintf(r.streams.Stdout, "%s: not found\n", name)
+		return 127
 	}
 	fmt.Fprintln(r.streams.Stdout, kinds[0].description)
 	return 0

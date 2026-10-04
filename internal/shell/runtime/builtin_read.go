@@ -145,7 +145,7 @@ func (r Runtime) assignReadResult(options readOptions, line readLineResult) int 
 	separators := r.fieldSeparators()
 	if options.arrayName != "" {
 		if r.isReadonly(options.arrayName) {
-			fmt.Fprintf(r.streams.Stderr, "%s%s: readonly variable\n", r.diagnosticPrefix(), options.arrayName)
+			fmt.Fprintf(r.streams.Stderr, "%s%s: is read only\n", r.diagnosticPrefix(), options.arrayName)
 			return 1
 		}
 		fields := splitReadFields(line.text, line.escaped, separators, 0)
@@ -162,7 +162,7 @@ func (r Runtime) assignReadResult(options readOptions, line readLineResult) int 
 	}
 	for _, name := range targets {
 		if r.isReadonly(name) {
-			fmt.Fprintf(r.streams.Stderr, "%sread: %s: readonly variable\n", r.diagnosticPrefix(), name)
+			fmt.Fprintf(r.streams.Stderr, "%sread: %s: is read only\n", r.diagnosticPrefix(), name)
 			return 2
 		}
 	}

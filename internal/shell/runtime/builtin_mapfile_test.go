@@ -161,7 +161,7 @@ func TestMapfile_refusals(t *testing.T) {
 		{name: "two names", script: `mapfile x y < /dev/null`, says: "too many arguments"},
 		{name: "a count that is not a number", script: `mapfile -n abc x < /dev/null`, says: "invalid number"},
 		{name: "a missing option argument", script: `mapfile -n`, says: "requires an argument"},
-		{name: "a readonly name", script: "readonly x\nmapfile x < /dev/null", says: "readonly"},
+		{name: "a readonly name", script: "readonly x\nmapfile x < /dev/null", says: "x: is read only"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			status, _, stderr := runSetScript(t, test.script+"\n")

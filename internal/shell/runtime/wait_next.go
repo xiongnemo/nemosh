@@ -48,8 +48,9 @@ func (r Runtime) waitNext(ctx context.Context, operands []string, options waitOp
 }
 
 // nextCandidates claims the jobs `wait -n` may answer with: the ones named, or every job no
-// other `wait` is holding. An operand the shell does not know is said so and passed over, so
-// that `wait -n %1 %2` still waits for whichever of the two exists.
+// other `wait` is holding. An operand the shell does not know is passed over, so that `wait
+// -n %1 %2` still waits for whichever of the two exists; a job spec is said, and a pid that is
+// no child is not, as busybox's says nothing of it.
 func (r Runtime) nextCandidates(operands []string) ([]*jobRecord, int) {
 	if len(operands) == 0 {
 		return r.jobScope.claimUnclaimed(), 0

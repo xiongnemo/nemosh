@@ -25,10 +25,16 @@ func (r Runtime) typeBuiltin(args []string) int {
 		fmt.Fprintf(r.streams.Stderr, "%stype: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
+	// A name not found is busybox's answer with no option, `x: not found` on stdout and 127,
+	// as `command -V` gives it; with one of bash's options it is bash's, 1 and on stderr. It
+	// was bash's for both.
 	status := 0
 	for _, name := range names {
 		if !r.describeFor(mode, noFunctions, name) {
 			status = 1
+			if mode == 0 && !noFunctions {
+				status = 127
+			}
 		}
 	}
 	return status
@@ -73,7 +79,11 @@ func (r Runtime) describeFor(mode byte, noFunctions bool, name string) bool {
 		kinds = slices.DeleteFunc(kinds, func(kind commandKind) bool { return kind.word == "function" })
 	}
 	if len(kinds) == 0 {
-		if mode != 't' && mode != 'p' {
+		switch {
+		case mode == 0 && !noFunctions:
+			// busybox's describe_command: on stdout, with no prefix; see typeBuiltin.
+			fmt.Fprintf(r.streams.Stdout, "%s: not found\n", name)
+		case mode == 0 || mode == 'a':
 			fmt.Fprintf(r.streams.Stderr, "%stype: %s: not found\n", r.diagnosticPrefix(), name)
 		}
 		return false

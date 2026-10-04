@@ -183,12 +183,14 @@ func TestRuntime_describesHowANameResolves(t *testing.T) {
 	}
 }
 
+// busybox's answer: `x: not found` on stdout, with no `type:` in front, and 127. It was bash's,
+// 1 and on stderr.
 func TestRuntime_reportsAnUnresolvableNameToType(t *testing.T) {
 	// When
-	status, _, stderr := runSetScript(t, "type definitely-not-a-command\n")
+	status, stdout, stderr := runSetScript(t, "type definitely-not-a-command\n")
 
 	// Then
-	if status != 1 || !strings.Contains(stderr, "not found") {
-		t.Fatalf("status = %d, stderr = %q, want 1 and a not-found diagnostic", status, stderr)
+	if status != 127 || stdout != "definitely-not-a-command: not found\n" || stderr != "" {
+		t.Fatalf("status = %d, stdout = %q, stderr = %q, want busybox's 127 and words", status, stdout, stderr)
 	}
 }

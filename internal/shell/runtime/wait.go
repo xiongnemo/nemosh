@@ -31,14 +31,22 @@ func (r Runtime) wait(ctx context.Context, args []string) int {
 	if len(args) == 0 {
 		return r.waitAll(ctx)
 	}
+	// A pid that is no child leaves the status as it was, 127 before any operand, as
+	// busybox's waitcmd leaves its retval: `wait $! 99999` is $!'s status. It was 127.
+	status = 127
 	for _, operand := range args {
-		status = r.waitOperand(ctx, operand, options)
+		if answer := r.waitOperand(ctx, operand, options); answer != waitNoChild {
+			status = answer
+		}
 		if ctx.Err() != nil {
 			return status
 		}
 	}
 	return status
 }
+
+// waitNoChild is waitOperand's answer for a pid that names no child of this shell.
+const waitNoChild = -1
 
 func (r Runtime) waitAll(ctx context.Context) int {
 	records, ok := r.jobScope.claimAll()
@@ -89,10 +97,9 @@ func (r Runtime) waitTarget(operand string) (jobID, int) {
 			if id, found := r.jobScope.lookupPID(pid); found {
 				return id, 0
 			}
-			// Otherwise no number names a child of this shell. bash's words, and its
-			// status.
-			fmt.Fprintf(r.streams.Stderr, "%swait: pid %s is not a child of this shell\n", r.diagnosticPrefix(), operand)
-			return 0, 127
+			// Otherwise no number names a child of this shell, and busybox says nothing of
+			// it; see wait. It said bash's `pid N is not a child of this shell`.
+			return 0, waitNoChild
 		}
 		// As the ash family says it, and as exit and shift do here; it was bash's "`abc': not a
 		// pid or valid job spec".

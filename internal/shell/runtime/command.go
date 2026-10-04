@@ -51,12 +51,13 @@ func (r Runtime) commandV(args []string) int {
 	// A name this shell refuses is refused here too. Dispatch never reaches PATH
 	// for one, so reporting a PATH hit would promise something that cannot run.
 	if isUnimplementedBuiltin(name) {
-		return 1
+		return 127
 	}
-	// The same lookup dispatch uses, so the two cannot drift apart again.
+	// The same lookup dispatch uses, so the two cannot drift apart again. Not found is
+	// busybox's 127; see command_options.go.
 	resolved, err := r.externalCommandPath(name)
 	if err != nil {
-		return 1
+		return 127
 	}
 	fmt.Fprintln(r.streams.Stdout, filepath.ToSlash(resolved))
 	return 0

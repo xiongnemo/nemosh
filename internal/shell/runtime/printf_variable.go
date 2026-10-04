@@ -69,7 +69,7 @@ func (r Runtime) printfToVariable(ctx context.Context, args []string) int {
 	if r.isReadonly(base) {
 		// printf is an ordinary utility, so this refuses and the script goes on --
 		// the same as `read` into a readonly name, and as bash answers.
-		fmt.Fprintf(r.streams.Stderr, "%sprintf: %s: readonly variable\n", r.diagnosticPrefix(), base)
+		fmt.Fprintf(r.streams.Stderr, "%sprintf: %s: is read only\n", r.diagnosticPrefix(), base)
 		return 1
 	}
 	applet, ok := r.lookupApplet("printf")

@@ -130,8 +130,8 @@ func TestDeclare_readonlyIsEnforced(t *testing.T) {
 	if status == 0 {
 		t.Fatalf("status = 0, want a failure; stderr = %q", stderr)
 	}
-	if !strings.Contains(stderr, "readonly") {
-		t.Fatalf("stderr = %q, want it to name the readonly variable", stderr)
+	if !strings.Contains(stderr, "ro: is read only") {
+		t.Fatalf("stderr = %q, want it to name the readonly variable, in busybox's words", stderr)
 	}
 }
 

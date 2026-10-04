@@ -270,7 +270,9 @@
     "builtin-meta.test.sh": {
       "builtin": "fail",
       "builtin ls not found": "fail",
-      "command -V": "fail",
+      "command -V": "ash-only",
+      "command -V nonexistent": "ash-only",
+      "command -v": "ash-only",
       "command -v doesn't find executable dir": "fail",
       "command -v executable, builtin": "fail",
       "command -v with multiple names": "ash-only"
@@ -361,7 +363,8 @@
       "type prints function source code": "fail"
     },
     "builtin-type.test.sh": {
-      "special builtins are called out": "ash-only"
+      "special builtins are called out": "ash-only",
+      "type -\u003e not found": "ash-only"
     },
     "builtin-umask.test.sh": {
       "'umask 0002' sets the umask": "fail",

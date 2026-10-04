@@ -26,8 +26,8 @@ func TestType_answersAsDispatchWould(t *testing.T) {
 		{name: "-f leaves a function out", script: "cd() { :; }\nf() { :; }\ntype -f cd; type -ft f\necho \"st=$?\"\n", want: "cd is a shell builtin\nst=1\n"},
 		// A name with a slash is a path to dispatch, busybox's rule and POSIX's, so a function
 		// defined with one is not what runs, and type and command -v say so; they called it a
-		// function. busybox's answer, in this shell's status.
-		{name: "a slash makes a path", script: "f/g() { :; }\ntype -t f/g; command -v f/g\necho \"st=$?\"\n", want: "st=1\n"},
+		// function. busybox's answer, and its status.
+		{name: "a slash makes a path", script: "f/g() { :; }\ntype -t f/g; command -v f/g\necho \"st=$?\"\n", want: "st=127\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if stdout, _ := runScriptCapturing(test.script); stdout != test.want {

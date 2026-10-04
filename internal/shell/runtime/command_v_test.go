@@ -78,8 +78,8 @@ func TestRuntime_reportsFailure_whenCommandVNamesNothingReachable(t *testing.T) 
 	status, stdout, _ := runSetScript(t, "command -v definitely-not-a-command-anywhere\n")
 
 	// Then
-	if status != 1 || stdout != "" {
-		t.Fatalf("status = %d, stdout = %q, want 1 and no output", status, stdout)
+	if status != 127 || stdout != "" {
+		t.Fatalf("status = %d, stdout = %q, want busybox's 127 and no output", status, stdout)
 	}
 }
 
