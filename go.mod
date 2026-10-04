@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/dsnet/compress v0.0.1
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/rivo/tview v0.42.0
 	github.com/rivo/uniseg v0.4.7

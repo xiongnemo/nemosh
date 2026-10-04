@@ -834,7 +834,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
 | `basename` | `-a -s`, and the `basename PATH [SUFFIX]` form, a third operand refused | refused by name |
-| `bunzip2`, `bzcat` | `-c -d -f -k -t`, and `-` for standard input; **decompress only** | refused by name |
+| `bzip2`, `bunzip2`, `bzcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input; bzip2 compresses at 9 unless a level says otherwise, as busybox's does, through dsnet/compress, the standard library having only a reader | refused by name |
 | `cat` | `-n -b -v -e -t -A`, `-u` taken and ignored | refused by name |
 | `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
 | `clear` | none; it writes `ESC[H ESC[J`, as busybox-w32's does, and Ctrl-L at the prompt writes the same | refused by name |
@@ -1667,10 +1667,10 @@ consequence and the same thing every Windows unzip does.
 **Listing does not check**, deliberately: `tar -t` is how somebody inspects an
 archive they do not trust, so hiding the hostile entry would defeat the purpose.
 
-`tar` reuses this build's own gzip, so `tar -czf` needs no second program. It writes
-no other compression: `-cj`, and `-ca` with a name that ends in bz2, xz or lzma, are
-refused before the archive is opened, as Go has no bzip2 writer. Under `-a` a name
-that ends in gz is gzip, a `.tgz` as a `.tar.gz`, as busybox reads the name.
+`tar` reuses this build's own gzip and bzip2, so `tar -czf` and `tar -cjf` need no second
+program. It writes no other compression: `-ca` with a name that ends in xz or lzma is
+refused before the archive is opened. Under `-a` a name that ends in gz is gzip and one
+that ends in bz2 bzip2, a `.tgz` as a `.tar.gz`, as busybox reads the name.
 
 **What `tar` takes**, as busybox selects it. Listing and extracting take the
 FILEs named and what is under them, each a pattern matched against as many
@@ -1784,8 +1784,8 @@ documented above. `ar t`, `ar tv` and `ar p` are byte-identical.
 
 ### The compression filters
 
-`gzip`, `gunzip`, `zcat`, `bunzip2` and `bzcat`, added 2026-08-22. Round trips
-verified in both directions against busybox-made archives.
+`gzip`, `gunzip`, `zcat`, `bunzip2` and `bzcat`, added 2026-08-22, and `bzip2`,
+2026-10-05. Round trips verified in both directions against busybox-made archives.
 
 **These are stream filters, and that is why `tar.exe` does not cover them.**
 Stock Windows ships `tar.exe` and `curl.exe` and neither `gzip` nor `unzip`
@@ -1813,11 +1813,11 @@ cannot stand in for either.
 - `.tgz` and `.tbz` stand for `.tar.gz` and `.tar.bz2`, so decompressing one
   restores the `.tar` rather than losing the extension.
 
-**`bzip2` compression is absent and the name is not registered.** The standard
-library decompresses bzip2 but cannot compress it. Leaving the name unregistered
-rather than refusing it means PATH lookup still finds a real `bzip2.exe` if the
-machine has one — more useful than a refusal, and the same reasoning applies to
-`xz`, `lzma`, `lzop` and the Linux package formats, none of which are provided.
+**`bzip2` compresses through dsnet/compress**, since the standard library only
+decompresses it; until it did, the name was left unregistered, so PATH lookup could still
+find a real `bzip2.exe`. Its output is the format's and any bunzip2 reads it, busybox's
+too, though it is not byte for byte busybox's. The same reasoning leaves `lzop` and the
+Linux package formats unregistered.
 
 Two divergences from busybox that writing these tests found, both in `tar` and both
 cases of doing something quietly instead of refusing:
@@ -1837,9 +1837,9 @@ cases of doing something quietly instead of refusing:
 **`bunzip2` and `bzcat` had no test at all until 2026-08-23** -- registered,
 documented here, and run by nothing, with `tar -j` untested alongside them. They
 worked when finally tried by hand, which is the bad kind of luck: a silent
-regression had nowhere to be caught. Their fixtures have to be *literals*, because
-Go has no bzip2 writer -- the same fact that keeps the `bzip2` name unregistered --
-so the input cannot come from the code under test and comes from busybox instead.
+regression had nowhere to be caught. Their fixtures are *literals* from busybox, so the
+reader is tried on what another bzip2 wrote and not only on what this build's own writer
+makes.
 
 One divergence where the reference is broken: **busybox's `zcat` cannot read a
 pipe.** `cat x.gz | busybox zcat` answers `lseek(...): Invalid seek` while

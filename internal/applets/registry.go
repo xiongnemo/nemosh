@@ -194,6 +194,7 @@ func portableApplets() []Applet {
 		newGzipApplet(),
 		newGunzipApplet(),
 		newZcatApplet(),
+		newBzip2Applet(),
 		newBunzip2Applet(),
 		newBzcatApplet(),
 		newTarApplet(),

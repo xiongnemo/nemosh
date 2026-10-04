@@ -11,20 +11,17 @@ import (
 	"time"
 )
 
-// gzip, gunzip, zcat, bunzip2 and bzcat.
+// gzip, gunzip, zcat, bzip2, bunzip2 and bzcat.
 //
 // These are *stream filters*, which is why Windows shipping `tar.exe` does not
 // cover them: `... | gzip > x.gz` and `zcat log.gz | grep` are pipelines, and
 // bsdtar cannot stand in for either. Stock Windows has no gzip at all -- measured,
 // `System32` holds `tar.exe` and `curl.exe` and neither `gzip` nor `unzip`.
 //
-// One implementation, five names, the mode chosen by the name -- the same shape
-// the checksums and dos2unix use.
-//
-// `bzip2` compression is deliberately absent and unregistered: the standard
-// library decompresses bzip2 but cannot compress it. Leaving the name
-// unregistered rather than refusing it means PATH lookup still finds a real
-// `bzip2.exe` if the machine has one, which is more useful than a refusal.
+// One implementation, six names, the mode chosen by the name -- the same shape
+// the checksums and dos2unix use. bzip2 compresses through dsnet/compress, since the
+// standard library only decompresses it; see compress_write.go. The name was left
+// unregistered for want of a writer.
 
 // compressMode is what a name does by default.
 type compressMode struct {
@@ -49,6 +46,10 @@ func newGunzipApplet() Applet {
 
 func newZcatApplet() Applet {
 	return newCompressApplet("zcat", compressMode{decompress: true, alwaysStdout: true, suffixes: []string{".gz", ".tgz", ".z"}})
+}
+
+func newBzip2Applet() Applet {
+	return newCompressApplet("bzip2", compressMode{codec: "bzip2", suffixes: []string{".bz2", ".tbz2", ".tbz"}})
 }
 
 func newBunzip2Applet() Applet {
@@ -241,7 +242,7 @@ func (r compressRequest) copyThrough(source io.Reader, destination io.Writer) (t
 		}
 		return time.Time{}, err
 	}
-	writer, err := gzip.NewWriterLevel(destination, r.level)
+	writer, err := compressor(destination, r.mode.codec, r.level)
 	if err != nil {
 		return time.Time{}, err
 	}

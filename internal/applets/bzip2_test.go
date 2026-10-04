@@ -15,12 +15,9 @@ import (
 // was unexercised. It worked when finally tried by hand, which is the bad kind of
 // luck -- a silent regression had nowhere to be caught.
 //
-// The fixture is a literal because **Go cannot compress bzip2**. The standard
-// library decompresses it and has no writer, which is also why this build has no
-// `bzip2` applet and leaves that name unregistered for a real one on PATH. So the
-// input cannot be produced by the code under test, and a hand-made archive from
-// the reference is the only honest way to test the reader: this one came from
-// busybox-w32 v1.38.0 `bzip2 -c`.
+// The fixture is a literal from the reference, busybox-w32 v1.38.0 `bzip2 -c`, so the
+// reader is tried on what another bzip2 wrote and not only on what this build's own
+// writer makes; see TestBzip2_compressesWhatBunzip2Reads for that one.
 var bzip2Fixture = []byte{
 	// 62 bytes holding exactly "bzip2 through nemosh\n"
 	0x42, 0x5a, 0x68, 0x39, 0x31, 0x41, 0x59, 0x26, 0x53, 0x59, 0x97, 0x2b,
@@ -171,9 +168,8 @@ func TestBunzip2_refusesAFileThatIsNotBzip2(t *testing.T) {
 // worth having at all on a machine whose own tar.exe cannot do it.
 func TestTar_readsABzip2Archive(t *testing.T) {
 	dir := t.TempDir()
-	// A .tar holding one file, then bzip2 of that -- which cannot be built here,
-	// so it is another literal from busybox: `tar -cjf` of a directory `src`
-	// holding `a.txt` whose contents are "in tar\n".
+	// A .tar holding one file, then bzip2 of that, another literal from busybox:
+	// `tar -cjf` of a directory `src` holding `a.txt` whose contents are "in tar\n".
 	if err := os.WriteFile(filepath.Join(dir, "ref.tbz"), tarBzip2Fixture, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -200,8 +196,7 @@ func TestTar_readsABzip2Archive(t *testing.T) {
 
 // tarBzip2Fixture is 153 bytes: busybox-w32 `tar -cjf` of a directory `src`
 // holding `a.txt` with one line of text in it. A literal for the same reason
-// as bzip2Fixture -- Go has no bzip2 writer, so the input cannot come from the
-// code under test.
+// as bzip2Fixture: what another tar wrote.
 var tarBzip2Fixture = []byte{
 	0x42, 0x5a, 0x68, 0x39, 0x31, 0x41, 0x59, 0x26, 0x53, 0x59, 0x34, 0x43,
 	0x0a, 0xad, 0x00, 0x00, 0x69, 0xfb, 0x84, 0xc1, 0x90, 0x00, 0x40, 0x40,
@@ -216,4 +211,34 @@ var tarBzip2Fixture = []byte{
 	0x69, 0x23, 0xc6, 0x50, 0xc5, 0x89, 0xb7, 0xb3, 0x5a, 0xde, 0x9f, 0x0c,
 	0xe1, 0xf5, 0xbd, 0x9b, 0x37, 0xca, 0x8d, 0xb7, 0x61, 0x70, 0xfe, 0x2e,
 	0xe4, 0x8a, 0x70, 0xa1, 0x20, 0x68, 0x86, 0x15, 0x5a,
+}
+
+// bzip2 compresses, through dsnet/compress, at 9 unless a level says otherwise, as busybox's
+// does, and replaces the FILE as gzip does. It was unregistered for want of a writer. What it
+// writes, bunzip2 here reads back, and busybox-w32's bzcat read it the same, measured.
+func TestBzip2_compressesWhatBunzip2Reads(t *testing.T) {
+	text := strings.Repeat("bzip2 through nemosh\n", 500)
+	dir := writeSmallFixture(t, map[string]string{"a.txt": text})
+	if _, stderr, err := runSmall(t, dir, "", "bzip2", "a.txt"); err != nil {
+		t.Fatalf("bzip2 a.txt: %v (%s)", err, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "a.txt")); !os.IsNotExist(err) {
+		t.Fatalf("a.txt is still there: %v", err)
+	}
+	packed, err := os.ReadFile(filepath.Join(dir, "a.txt.bz2"))
+	if err != nil || !strings.HasPrefix(string(packed), "BZh9") || len(packed) >= len(text) {
+		t.Fatalf("a.txt.bz2 = %d bytes starting %q, %v", len(packed), packed[:min(len(packed), 4)], err)
+	}
+	if got, stderr, err := runSmall(t, dir, "", "bunzip2", "-c", "a.txt.bz2"); got != text || err != nil {
+		t.Fatalf("bunzip2 -c gave %d bytes, %v (%s)", len(got), err, stderr)
+	}
+	if got, _, _ := runSmall(t, dir, "", "bzip2", "-1", "-c", "a.txt.bz2"); !strings.HasPrefix(got, "BZh1") {
+		t.Fatalf("bzip2 -1 -c starts %q", got[:min(len(got), 4)])
+	}
+	if got, _, err := runSmall(t, dir, "", "tar", "-cjf", "t.tbz", "a.txt.bz2"); err != nil {
+		t.Fatalf("tar -cjf: %q, %v", got, err)
+	}
+	if listed, _, err := runSmall(t, dir, "", "tar", "-tjf", "t.tbz"); listed != "a.txt.bz2\n" || err != nil {
+		t.Fatalf("tar -tjf = %q, %v", listed, err)
+	}
 }

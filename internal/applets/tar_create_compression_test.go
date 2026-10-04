@@ -7,9 +7,10 @@ import (
 	"testing"
 )
 
-// tar -c writes gzip for -z, and under -a for a name that ends in gz, a .tgz as a .tar.gz, as
-// busybox's tar reads the name. bzip2, xz and lzma it cannot write, and it says so before the
-// archive is opened. -j wrote a plain tar under the name and exited 0, and -a wrote a .tgz plain.
+// tar -c writes gzip for -z and bzip2 for -j, and under -a what a name that ends in gz or bz2
+// asks for, a .tgz as a .tar.gz, as busybox's tar reads the name. xz and lzma it cannot write,
+// and it says so before the archive is opened. -j wrote a plain tar under the name and exited 0,
+// and -a wrote a .tgz plain; then -j was refused, until bzip2 had a writer.
 func TestTar_createCompressesOnlyWhatItCan(t *testing.T) {
 	dir := writeSmallFixture(t, map[string]string{"a.txt": "hi\n"})
 	gzipped := func(name string) bool {
@@ -32,7 +33,15 @@ func TestTar_createCompressesOnlyWhatItCan(t *testing.T) {
 			t.Errorf("tar %q: gzip %v, want %v", test.args, got, test.gzip)
 		}
 	}
-	for _, args := range [][]string{{"-cjf", "t.tbz", "a.txt"}, {"-caf", "t.tar.bz2", "a.txt"}, {"-caf", "t.txz", "a.txt"}} {
+	for _, name := range []string{"t.tbz", "t.tar.bz2"} {
+		flags := map[string]string{"t.tbz": "-cjf", "t.tar.bz2": "-caf"}[name]
+		if _, stderr, err := runSmall(t, dir, "", "tar", flags, name, "a.txt"); err != nil {
+			t.Errorf("tar %s %s: %q, %v", flags, name, stderr, err)
+		} else if data, _ := os.ReadFile(filepath.Join(dir, name)); !strings.HasPrefix(string(data), "BZh") {
+			t.Errorf("tar %s %s wrote no bzip2", flags, name)
+		}
+	}
+	for _, args := range [][]string{{"-caf", "t.txz", "a.txt"}, {"-caf", "t.tar.lzma", "a.txt"}} {
 		_, stderr, err := runSmall(t, dir, "", "tar", args...)
 		if err == nil || !strings.Contains(stderr+err.Error(), "cannot compress with") {
 			t.Errorf("tar %q = %q, %v; want a refusal", args, stderr, err)

@@ -2,7 +2,6 @@ package applets
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -48,8 +47,8 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 	// Refused before the archive is opened, so no file is made. A plain tar under a .tbz2 or
 	// -j, which is what was written, is a wrong answer that says nothing.
 	method := r.creationCompression()
-	if method != "" && method != "gzip" {
-		return fmt.Errorf("cannot compress with %s: gzip is the one compressor here", method)
+	if method != "" && method != "gzip" && method != "bzip2" {
+		return fmt.Errorf("cannot compress with %s: gzip and bzip2 are the compressors here", method)
 	}
 	out, release, err := r.createArchiveOutput(ctx, stdout)
 	if err != nil {
@@ -65,8 +64,11 @@ func (r tarRequest) create(ctx context.Context, stdout, stderr io.Writer) error 
 	}
 	stream := out
 	var closer io.Closer
-	if method == "gzip" {
-		writer := gzip.NewWriter(out)
+	if method != "" {
+		writer, err := compressor(out, method, -1)
+		if err != nil {
+			return err
+		}
 		stream, closer = writer, writer
 	}
 	creation.archive = tar.NewWriter(stream)
