@@ -835,6 +835,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
 | `basename` | `-a -s`, and the `basename PATH [SUFFIX]` form, a third operand refused | refused by name |
 | `bzip2`, `bunzip2`, `bzcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input; bzip2 compresses at 9 unless a level says otherwise, as busybox's does, through dsnet/compress, the standard library having only a reader | refused by name |
+| `xz`, `unxz`, `xzcat`, `lzma`, `unlzma`, `lzcat` | `-c -d -f -k -t`, and `-` for standard input; **decompress only**, as busybox's: `xz` and `lzma` without `-d` say so and exit 1. A stream cut short is `corrupted data` and an lzma header that will not read `bad lzma header`, busybox's words; data that is not xz at all is `invalid magic`, where busybox's xzcat writes nothing and exits 0. Through ulikunitz/xz | refused by name |
 | `cat` | `-n -b -v -e -t -A`, `-u` taken and ignored | refused by name |
 | `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
 | `clear` | none; it writes `ESC[H ESC[J`, as busybox-w32's does, and Ctrl-L at the prompt writes the same | refused by name |
@@ -859,7 +860,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
-| `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input. A FILE that is not compressed is said and the next one read, status 1 at the end, as GNU's gzip does; busybox's stops at it | refused by name |
+| `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input; zcat's data chooses gzip, bzip2 or xz by its first bytes, as busybox's does. A FILE that is not compressed is said and the next one read, status 1 at the end, as GNU's gzip does; busybox's stops at it | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's | refused by name |
@@ -911,7 +912,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `chattr` | `-R`, and `-` or `+` with `r h s a t n`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `tac` | none | refused by name |
 | `tsort` | none; its words are paired across lines and an odd one out refused, and a cycle is said, `cycle at NAME`, and broken, the rest written with status 1, as busybox's does; one FILE. Items with no order between them come out in the order they were first read, an order of its own: busybox and GNU each have theirs | refused by name |
-| `tar` | `-c -t -x -v -z -j -a -O -f -C -k -m -o -h -T -X`, busybox's long options, `--exclude`, `--strip-components`, `--no-recursion` and `--overwrite` among them, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too; the FILEs name what is listed or extracted, see **The archivers** | refused by name |
+| `tar` | `-c -t -x -v -z -j -J -a -O -f -C -k -m -o -h -T -X`, busybox's long options, `--lzma`, `--exclude`, `--strip-components`, `--no-recursion` and `--overwrite` among them, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too; the FILEs name what is listed or extracted, see **The archivers** | refused by name |
 | `tail` | `-n -c -q -v -f -F -s`, the `-N` form, `+N` as the first argument, and an attached value (`-n2`, `-n+2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's; every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
 | `test`, `[` | POSIX expressions; on Windows `-x` is busybox-w32's execute bit: a directory, a name ending `.com .exe .sh .bat .cmd`, or a file that begins `#!` or is a program image, and not a DLL whatever it is called | an operand, per the POSIX one-argument rule |
 | `tee` | `-a -i`; `-` is stdout, and a file that cannot be opened is named while the rest are written | refused by name |
@@ -1667,10 +1668,11 @@ consequence and the same thing every Windows unzip does.
 **Listing does not check**, deliberately: `tar -t` is how somebody inspects an
 archive they do not trust, so hiding the hostile entry would defeat the purpose.
 
-`tar` reuses this build's own gzip and bzip2, so `tar -czf` and `tar -cjf` need no second
-program. It writes no other compression: `-ca` with a name that ends in xz or lzma is
-refused before the archive is opened. Under `-a` a name that ends in gz is gzip and one
-that ends in bz2 bzip2, a `.tgz` as a `.tar.gz`, as busybox reads the name.
+`tar` reuses this build's own gzip, bzip2, xz and lzma, so `-z`, `-j`, `-J` and `--lzma`
+need no second program, to write an archive or to read one. busybox's tar writes xz and lzma
+through an `xz` it finds on PATH, which a Windows machine has not got, and its own `xz`
+only reads. Under `-a` the name says which, gz, bz2, xz or lzma at its end, a `.tgz` as a
+`.tar.gz`, as busybox reads the name.
 
 **What `tar` takes**, as busybox selects it. Listing and extracting take the
 FILEs named and what is under them, each a pattern matched against as many

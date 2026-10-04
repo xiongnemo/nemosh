@@ -12,6 +12,10 @@ import (
 // bzip2 is dsnet/compress's, the standard library having only a reader; its output is the
 // format's, and any bunzip2 reads it, though not byte for byte busybox's.
 func compressor(out io.Writer, codec string, level int) (io.WriteCloser, error) {
+	switch codec {
+	case "xz", "lzma":
+		return xzCompressor(out, codec)
+	}
 	if codec == "bzip2" {
 		if level < 1 {
 			level = 9

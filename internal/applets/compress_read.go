@@ -33,7 +33,7 @@ var (
 )
 
 // decompressor reads input as codec's data. zcat's codec is "", and the data's first
-// bytes choose it, as busybox's "clever zcat" has them: gzip's or bzip2's. A FILE is
+// bytes choose it, as busybox's "clever zcat" has them: gzip's, bzip2's or xz's. A FILE is
 // read whole with its name ignored, so `zcat a.bz2` is bzcat's answer.
 func decompressor(codec string, input io.Reader) (io.Reader, error) {
 	buffered := bufio.NewReader(input)
@@ -47,10 +47,16 @@ func decompressor(codec string, input io.Reader) (io.Reader, error) {
 		case bytes.HasPrefix(head, bzip2Magic):
 			codec = "bzip2"
 		case bytes.HasPrefix(head, xzMagic):
-			return nil, compressFault("cannot decompress xz: gzip and bzip2 are the ones here")
+			codec = "xz"
 		default:
 			return nil, compressFault("no gzip/bzip2/xz magic")
 		}
+	}
+	switch codec {
+	case "xz":
+		return xzDecompressor(buffered)
+	case "lzma":
+		return lzmaDecompressor(buffered)
 	}
 	magic := gzipMagic
 	if codec == "bzip2" {

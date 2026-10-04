@@ -11,14 +11,15 @@ import (
 	"time"
 )
 
-// gzip, gunzip, zcat, bzip2, bunzip2 and bzcat.
+// gzip, gunzip, zcat, bzip2, bunzip2 and bzcat, and xz, unxz, xzcat, lzma, unlzma and
+// lzcat, which only read; see compress_xz.go.
 //
 // These are *stream filters*, which is why Windows shipping `tar.exe` does not
 // cover them: `... | gzip > x.gz` and `zcat log.gz | grep` are pipelines, and
 // bsdtar cannot stand in for either. Stock Windows has no gzip at all -- measured,
 // `System32` holds `tar.exe` and `curl.exe` and neither `gzip` nor `unzip`.
 //
-// One implementation, six names, the mode chosen by the name -- the same shape
+// One implementation, twelve names, the mode chosen by the name -- the same shape
 // the checksums and dos2unix use. bzip2 compresses through dsnet/compress, since the
 // standard library only decompresses it; see compress_write.go. The name was left
 // unregistered for want of a writer.
@@ -31,6 +32,8 @@ type compressMode struct {
 	decompress bool
 	// alwaysStdout is zcat and bzcat: they never touch the file on disk.
 	alwaysStdout bool
+	// readOnly is xz and lzma, which decompress or do nothing, as busybox's do.
+	readOnly bool
 	// suffixes are the extensions this codec's files carry, longest first, and
 	// the first is what compression appends.
 	suffixes []string
@@ -50,6 +53,30 @@ func newZcatApplet() Applet {
 
 func newBzip2Applet() Applet {
 	return newCompressApplet("bzip2", compressMode{codec: "bzip2", suffixes: []string{".bz2", ".tbz2", ".tbz"}})
+}
+
+func newXzApplet() Applet {
+	return newCompressApplet("xz", compressMode{codec: "xz", readOnly: true, suffixes: []string{".xz"}})
+}
+
+func newUnxzApplet() Applet {
+	return newCompressApplet("unxz", compressMode{codec: "xz", decompress: true, suffixes: []string{".xz"}})
+}
+
+func newXzcatApplet() Applet {
+	return newCompressApplet("xzcat", compressMode{codec: "xz", decompress: true, alwaysStdout: true, suffixes: []string{".xz"}})
+}
+
+func newLzmaApplet() Applet {
+	return newCompressApplet("lzma", compressMode{codec: "lzma", readOnly: true, suffixes: []string{".lzma"}})
+}
+
+func newUnlzmaApplet() Applet {
+	return newCompressApplet("unlzma", compressMode{codec: "lzma", decompress: true, suffixes: []string{".lzma"}})
+}
+
+func newLzcatApplet() Applet {
+	return newCompressApplet("lzcat", compressMode{codec: "lzma", decompress: true, alwaysStdout: true, suffixes: []string{".lzma"}})
 }
 
 func newBunzip2Applet() Applet {
@@ -75,6 +102,10 @@ func newCompressApplet(name string, mode compressMode) Applet {
 			force:      options.has('f'),
 			test:       options.has('t'),
 			level:      compressionLevel(options),
+		}
+		if mode.readOnly && !request.decompress && !request.test {
+			// busybox's answers with its usage, `xz -d [-cfk] [FILE]...`.
+			return fmt.Errorf("only -d is here: busybox's %s does not compress either", name)
 		}
 		if request.test {
 			// -t reads and discards, so it never writes and never removes.

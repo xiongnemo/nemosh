@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-// tar's options, busybox's: the letters `ctxvzjaOfCkmohTX`, and its long forms, each of a
-// letter but for four of its own -- --exclude PATTERN, --strip-components N, --no-recursion and
-// --overwrite. --numeric-owner and --no-same-permissions are taken: nothing extracted here has
+// tar's options, busybox's: the letters `ctxvzjJaOfCkmohTX`, and its long forms, each of a
+// letter but for five of its own -- --exclude PATTERN, --strip-components N, --no-recursion,
+// --overwrite and --lzma. --numeric-owner and --no-same-permissions are taken: nothing extracted here has
 // an owner or a mode restored to forget.
 
 // tarLongOptions are the long forms that stand for a letter.
@@ -18,6 +18,7 @@ var tarLongOptions = map[string]string{
 	"list": "t", "extract": "x", "create": "c", "directory": "C", "file": "f", "to-stdout": "O",
 	"no-same-owner": "o", "verbose": "v", "keep-old": "k", "dereference": "h", "bzip2": "j",
 	"files-from": "T", "exclude-from": "X", "gzip": "z", "auto-compress": "a", "touch": "m",
+	"xz": "J",
 }
 
 // tarLongValued are the long forms of a letter that takes a value.
@@ -57,6 +58,8 @@ func tarArguments(args []string, request *tarRequest) ([]string, error) {
 				return nil, fmt.Errorf("invalid number '%s'", value)
 			}
 			request.selection.strip = strip
+		case !valued && name == "lzma":
+			request.lzma = true
 		case !valued && (name == "no-recursion" || name == "overwrite"):
 			request.noRecursion = request.noRecursion || name == "no-recursion"
 			request.overwrite = request.overwrite || name == "overwrite"
@@ -77,7 +80,7 @@ func newTarRequest(ctx context.Context, args []string, stdin io.Reader) (tarRequ
 	if err != nil {
 		return request, appletOptions{}, err
 	}
-	options, operands, err := parseAppletOptions(ctx, words, "ctxvzjaOkmoh", "fCTX")
+	options, operands, err := parseAppletOptions(ctx, words, "ctxvzjJaOkmoh", "fCTX")
 	if err != nil {
 		return request, options, err
 	}
@@ -88,6 +91,7 @@ func newTarRequest(ctx context.Context, args []string, stdin io.Reader) (tarRequ
 		}
 	}
 	request.gzip, request.bzip2, request.autoDetect = options.has('z'), options.has('j'), options.has('a')
+	request.xz = options.has('J')
 	request.file, request.directory = options.value('f'), options.value('C')
 	request.keepOld, request.keepTime, request.dereference = options.has('k'), !options.has('m'), options.has('h')
 	for _, list := range options.all('T') {

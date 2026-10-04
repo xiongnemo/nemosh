@@ -13,6 +13,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/rivo/tview v0.42.0
 	github.com/rivo/uniseg v0.4.7
+	github.com/ulikunitz/xz v0.5.17
 	golang.org/x/sys v0.47.0
 )
 

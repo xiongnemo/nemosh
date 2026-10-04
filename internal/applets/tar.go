@@ -2,6 +2,7 @@ package applets
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
 	"context"
@@ -81,6 +82,8 @@ type tarRequest struct {
 	toStdout   bool
 	gzip       bool
 	bzip2      bool
+	xz         bool
+	lzma       bool
 	autoDetect bool
 	file       string
 	directory  string
@@ -107,20 +110,27 @@ func (r tarRequest) openArchiveInput(ctx context.Context, stdin io.Reader) (io.R
 	return file, func() { file.Close() }, nil
 }
 
-// decompressed wraps the archive stream in whatever -z, -j or -a asked for.
+// decompressed wraps the archive stream in whatever -z, -j, -J, --lzma or -a asked for.
 func (r tarRequest) decompressed(input io.Reader) (io.Reader, error) {
 	compressed := r.gzip
 	bunzip := r.bzip2
+	unxz, unlzma := r.xz, r.lzma
 	if r.autoDetect {
 		// -a decides from the name, which is the only information available
 		// before the first byte is read.
 		lowered := strings.ToLower(r.file)
 		compressed = compressed || strings.HasSuffix(lowered, ".gz") || strings.HasSuffix(lowered, ".tgz")
 		bunzip = bunzip || strings.HasSuffix(lowered, ".bz2") || strings.HasSuffix(lowered, ".tbz2")
+		unxz = unxz || strings.HasSuffix(lowered, "xz")
+		unlzma = unlzma || strings.HasSuffix(lowered, "lzma")
 	}
 	switch {
 	case bunzip:
 		return bzip2.NewReader(input), nil
+	case unxz:
+		return xzDecompressor(bufio.NewReader(input))
+	case unlzma:
+		return lzmaDecompressor(bufio.NewReader(input))
 	case compressed:
 		reader, err := gzip.NewReader(input)
 		if err != nil {
