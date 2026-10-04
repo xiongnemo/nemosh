@@ -543,9 +543,6 @@
       "default PS1": "fail",
       "hostname": "fail"
     },
-    "quote.test.sh": {
-      "$\"\" is a synonym for \"\"": "ash-only"
-    },
     "redirect-command.test.sh": {
       "Redirect in assignment": "ash-only",
       "redirect bash extensions:   [[  ((  for ((": "fail"
@@ -569,8 +566,7 @@
       "Parsing of x={myvar} and related cases": "fail"
     },
     "regex.test.sh": {
-      "Operator chars ; \u0026 but not |": "fail",
-      "Quotes '' \"\" $'' $\"\" in pattern": "fail"
+      "Operator chars ; \u0026 but not |": "fail"
     },
     "serialize.test.sh": {
       "set": "ash-only"

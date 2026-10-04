@@ -663,8 +663,9 @@ loops record the whole command now, as the edited one always did.
 - A command name with a slash is a path, as busybox and POSIX have it, so a function
   defined with one -- ble.sh's `ble/is-array` -- is never what runs, and `type` and
   `command -v` say so. bash looks the name up among the functions first and calls it.
-- `$"..."` is a `$` and a double-quoted string, as busybox reads it. bash reads it as a
-  string to translate, which with no translation is the string itself.
+- `$"..."` is the double-quoted string, as bash reads it with no message catalog to
+  translate it from: the `$` goes, in an operator's word too. busybox has no such string,
+  and reads a `$` and a double-quoted string.
 - A `$((` that no `))` closes is a syntax error, busybox's `missing '))'`; bash reads it
   again as a command substitution holding a subshell, so `$((cmd) 2>&1)` runs cmd.
 

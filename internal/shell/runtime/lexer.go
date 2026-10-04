@@ -96,10 +96,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 		}
 		if escaped {
 			if char == '$' {
-				if literalDollarAt == nil {
-					literalDollarAt = make(map[int]struct{})
-				}
-				literalDollarAt[buffer.Len()] = struct{}{}
+				markLiteralDollar(&literalDollarAt, buffer.Len())
 			}
 			buffer.WriteByte(char)
 			parts = append(parts, wordPart{kind: wordPartEscaped, text: line[index : index+1], quote: quoteFor(inSingle, inDouble)})
@@ -208,6 +205,11 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 					continue
 				}
 			}
+			// `$"..."` is bash's string for translating, which with no message catalog is the
+			// double-quoted string itself, so the `$` goes, as bash drops it. It stayed: `$hello`.
+			if char == '$' && strings.HasPrefix(line[index+1:], `"`) {
+				continue
+			}
 			// `a=(one two three)` is an array assignment, not a subshell. The `(
 			// belongs to the word only when it comes directly after `name=` or
 			// `name+=`, which is the test bash applies too -- everywhere else a
@@ -266,10 +268,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			}
 		}
 		if char == '$' && inSingle {
-			if literalDollarAt == nil {
-				literalDollarAt = make(map[int]struct{})
-			}
-			literalDollarAt[buffer.Len()] = struct{}{}
+			markLiteralDollar(&literalDollarAt, buffer.Len())
 		}
 		// A `${` with no `}` after it used to fall through to the literal
 		// branch, so `echo ${x` printed `${x` and exited 0 -- a typo the shell

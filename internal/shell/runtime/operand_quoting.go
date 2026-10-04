@@ -86,6 +86,10 @@ func (r Runtime) expandOperand(ctx context.Context, word string, role operandRol
 			text, width, _ := decodeAnsiQuote(word[index:])
 			out.WriteString(literalIn(role, text))
 			index += width
+		// `$"..."` is its double-quoted string here too, in double quotes or not, as bash
+		// reads it; see the lexer.
+		case char == '$' && strings.HasPrefix(word[index+1:], `"`):
+			index++
 		case char == '$':
 			end := expansionEndAt(word, index)
 			out.WriteString(r.expandEmbeddedParameters(ctx, word[index:end], savedStatus))

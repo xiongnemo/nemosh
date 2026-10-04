@@ -165,6 +165,9 @@ func (r Runtime) buildOperand(ctx context.Context, build *fieldBuilder, word str
 			text, width, _ := decodeAnsiQuote(word[index:])
 			build.text(text, false)
 			index += width
+		// `$"..."` is its double-quoted string, as bash reads it; see the lexer.
+		case char == '$' && strings.HasPrefix(word[index+1:], `"`):
+			index++
 		case char == '$':
 			index = r.buildEmbedded(ctx, build, word, index, quoted, savedStatus)
 		case quoted:

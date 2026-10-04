@@ -28,6 +28,15 @@ func escapesInsideDoubleQuotes(line string, index int, inDouble bool) bool {
 	return false
 }
 
+// markLiteralDollar notes that the `$` about to be written at offset is quoted or escaped,
+// and so expands nothing.
+func markLiteralDollar(marks *map[int]struct{}, offset int) {
+	if *marks == nil {
+		*marks = make(map[int]struct{})
+	}
+	(*marks)[offset] = struct{}{}
+}
+
 func quoteFor(inSingle, inDouble bool) quoteContext {
 	if inSingle {
 		return quoteSingle
