@@ -21,6 +21,8 @@ type associativeArray struct {
 	// table is where the keys sit, and so the order they come out in. A key overwritten
 	// keeps its place, as in bash.
 	table bashHashTable
+	// unassigned is an array declared and never given anything; see declareUnassigned.
+	unassigned bool
 }
 
 func newAssociativeArray() *associativeArray {
@@ -32,6 +34,7 @@ func (a *associativeArray) set(key, value string) {
 		a.table.insert(key)
 	}
 	a.entries[key] = value
+	a.unassigned = false
 }
 
 // remove takes a key out, keeping the order of the ones that remain.
@@ -54,6 +57,7 @@ func (a *associativeArray) clone() *associativeArray {
 		copied.entries[key] = value
 	}
 	copied.table.rebuild(a.table.size, a.keys())
+	copied.unassigned = a.unassigned
 	return copied
 }
 

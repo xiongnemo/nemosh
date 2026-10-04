@@ -260,6 +260,10 @@ func (r Runtime) printOneDeclaration(name string) bool {
 // was left to expand when the line was read back, and a key with a blank came out bare.
 func (r Runtime) declarationText(name string) (string, bool) {
 	flags := r.declareFlags(name)
+	if r.arrays.unassigned(name) {
+		// Declared and never assigned, as a scalar is; see declareUnassigned.
+		return fmt.Sprintf("declare -%s %s", flags, name), true
+	}
 	if list, ok := r.arrayLiteralText(name); ok {
 		return fmt.Sprintf("declare -%s %s=%s", flags, name, list), true
 	}

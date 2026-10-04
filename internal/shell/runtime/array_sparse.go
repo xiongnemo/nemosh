@@ -19,6 +19,8 @@ type indexedArray struct {
 	elements map[int]string
 	// sorted is the indices in order, and nil once a change has made it stale.
 	sorted []int
+	// unassigned is an array declared and never given anything; see declareUnassigned.
+	unassigned bool
 }
 
 func newIndexedArray() *indexedArray { return &indexedArray{elements: map[int]string{}} }
@@ -28,6 +30,7 @@ func (array *indexedArray) clone() *indexedArray {
 	for index, value := range array.elements {
 		copied.elements[index] = value
 	}
+	copied.unassigned = array.unassigned
 	return copied
 }
 
@@ -48,6 +51,7 @@ func (array *indexedArray) store(index int, value string) {
 		array.sorted = nil
 	}
 	array.elements[index] = value
+	array.unassigned = false
 }
 
 // has reports an indexed array of this name, empty or not.

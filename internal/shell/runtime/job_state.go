@@ -68,6 +68,8 @@ type jobState struct {
 type jobIndexedArray struct {
 	Values []string `json:"values"`
 	Live   []int    `json:"live"`
+	// Unassigned is an array declared and never assigned; see declareUnassigned.
+	Unassigned bool `json:"unassigned,omitempty"`
 }
 
 type jobAssociativeArray struct {
@@ -75,7 +77,8 @@ type jobAssociativeArray struct {
 	Values []string `json:"values"`
 	// Buckets is the size of its hash table, which with the keys' order is where they sit;
 	// see bashHashTable.
-	Buckets uint32 `json:"buckets"`
+	Buckets    uint32 `json:"buckets"`
+	Unassigned bool   `json:"unassigned,omitempty"`
 }
 
 type jobAttributes struct {
@@ -111,10 +114,10 @@ func (r Runtime) captureJobState(program programNode) jobState {
 	}
 	state.Functions = functions.String()
 	for _, name := range r.arrays.indexedNames() {
-		state.Indexed[name] = jobIndexedArray{Values: r.arrays.liveValues(name), Live: r.arrays.liveIndices(name)}
+		state.Indexed[name] = jobIndexedArray{Values: r.arrays.liveValues(name), Live: r.arrays.liveIndices(name), Unassigned: r.arrays.unassigned(name)}
 	}
 	for name, array := range r.arrays.associative {
-		entry := jobAssociativeArray{Keys: append([]string(nil), array.keys()...), Buckets: array.table.size}
+		entry := jobAssociativeArray{Keys: append([]string(nil), array.keys()...), Buckets: array.table.size, Unassigned: array.unassigned}
 		for _, key := range entry.Keys {
 			entry.Values = append(entry.Values, array.entries[key])
 		}
@@ -166,6 +169,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		for position, index := range array.Live {
 			r.arrays.setElement(name, index, array.Values[position])
 		}
+		r.arrays.indexed[name].unassigned = array.Unassigned
 	}
 	for name, array := range state.Associative {
 		r.arrays.declareAssociative(name)
@@ -175,6 +179,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		}
 		// Rebuilt as it walks, so the job's keys come out as the shell's do.
 		restored.table.rebuild(array.Buckets, array.Keys)
+		restored.unassigned = array.Unassigned
 	}
 	for name, attributes := range state.Attributes {
 		r.attributes[name] = variableAttributes{integer: attributes.Integer, lower: attributes.Lower, upper: attributes.Upper, exported: attributes.Exported, nameref: attributes.Nameref, declared: attributes.Declared}

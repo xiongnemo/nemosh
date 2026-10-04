@@ -400,6 +400,13 @@ All of `declare -A`, slices (`${a[@]:1}`), negative indices and `unset a[i]` wor
 paragraph said none of them did, which had been wrong for some time -- the first three
 landed without it being updated, and the fourth landed on 2026-09-12.
 
+`declare -a a`, `declare -A m` and `local -a a` with no value leave the array declared
+and unset, as bash leaves it: `declare -p` writes `declare -a a`, where `a=()` is
+`declare -a a=()`, and anything stored in it makes it set. Under `set -u` an element that
+is not there is unset, `${a[5]}` or `${m[k]}`, and so is the count of a name never set or
+only declared, `${#a[@]}`, in busybox's words for any unset parameter; `${a[@]}`, an
+operator's word and `${#a[5]}` of an array that has values stay quiet, as in bash.
+
 `unset a[i]` **leaves a gap** rather than compacting, which is bash's behaviour and the
 only safe one: compacting would shift every later index and silently change what every
 subsequent read means. Until it was implemented it returned 0 and did nothing at all, so

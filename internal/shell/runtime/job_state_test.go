@@ -139,6 +139,7 @@ func TestJobState_roundTripsEveryKindOfState(t *testing.T) {
 declare -i n=5; declare -l low=ABC; declare -x pending
 a=(p "q r"); a[5]=s; unset 'a[1]'
 declare -A m=([k]=v [j]=w)
+declare -a da; declare -A dm
 alias ll='ls -l'
 set -o pipefail -u
 shopt -s nullglob
@@ -154,7 +155,7 @@ END
 }
 set -- one "two words"
 `
-	probe := `echo "$x $E $R $n $low"; declare -p a m n low pending 2>&1; alias; set -o | grep -E 'pipefail|nounset'; shopt nullglob; umask; trap -p INT; declare -f f; echo "$# $1 $2"; (R=changed) 2>/dev/null || echo "R held"`
+	probe := `echo "$x $E $R $n $low"; declare -p a m da dm n low pending 2>&1; alias; set -o | grep -E 'pipefail|nounset'; shopt nullglob; umask; trap -p INT; declare -f f; echo "$# $1 $2"; (R=changed) 2>/dev/null || echo "R held"`
 	ctx := context.Background()
 	original := New(applets.DefaultRegistry, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
 	if status := original.RunScript(ctx, setup); status != 0 {

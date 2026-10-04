@@ -22,6 +22,15 @@ func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]strin
 			return nil, false
 		}
 		elements, exists := r.elementsFor(ctx, reference)
+		// Under `set -u` a name with no value is an error here, as bash has it, one never set
+		// or only declared: `z`, or `z[0]` for an element. An element an array lacks is 0.
+		if !exists || r.arrays.unassigned(reference.name) {
+			unset := count
+			if reference.subscript == "@" || reference.subscript == "*" {
+				unset = reference.name
+			}
+			r.reportUnsetParameter(unset)
+		}
 		if reference.subscript == "@" || reference.subscript == "*" {
 			return []string{strconv.Itoa(len(elements))}, true
 		}
@@ -51,6 +60,12 @@ func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]strin
 		return nil, false
 	}
 	elements, _ := r.elementsFor(ctx, reference)
+	// An element that is not there is unset, which `set -u` makes an error, as bash does:
+	// `${a[5]}` of one element, `${m[k]}` with no k, any element of a name with none. It was
+	// the empty string. `${a[@]}` never is.
+	if len(elements) == 0 && reference.subscript != "@" && reference.subscript != "*" {
+		r.reportUnsetParameter(body)
+	}
 	if reference.subscript == "*" && !r.starFields {
 		// Joined into one field, which is why `"${a[*]}"` is the form that yields a single
 		// word. Unquoted it is a field per element instead; see buildParameter.
