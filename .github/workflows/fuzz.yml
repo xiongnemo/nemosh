@@ -1,0 +1,92 @@
+name: Fuzz
+
+# The fuzz targets run here and nowhere else. A fuzzer takes every core it is given for as long
+# as it is let run, which on a developer's machine is the machine; `go test` there runs each
+# target's seeds and saved inputs only, which is what keeps a finding fixed.
+#
+# Weekly, and on demand, every Fuzz function in the module is found and run on a runner of its
+# own, five minutes unless asked otherwise, so a target that finds something stops none of the
+# others. One that fails keeps the input Go saved under testdata/fuzz as an artifact. Checked in
+# beside its target, that input is a seed every `go test` runs from then on: it fails until the
+# fault is fixed, and holds the fix after. The saved input, not this run, decides whether a
+# finding was real -- reproduce it with `go test -run 'FuzzName/HASH'` before believing it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: How long each target runs, as go test's -fuzztime reads it
+        default: 5m
+  schedule:
+    # Sundays, out of the way of the pushes Product runs for.
+    - cron: '41 3 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    name: find the targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Every Fuzz function in every package, so a target added is fuzzed without anyone
+      # remembering to list it here. go test -list prints a package's names before its `ok`.
+      - id: list
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -list '^Fuzz' ./... | awk '
+            /^Fuzz/ { names[++count] = $1; next }
+            /^ok/ { for (i = 1; i <= count; i++) printf "{\"package\":\"%s\",\"target\":\"%s\"}\n", $2, names[i]; count = 0 }
+          ' | jq -s -c '{include: .}' > matrix.json
+          cat matrix.json
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+
+  fuzz:
+    name: ${{ matrix.target }}
+    needs: targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.targets.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Fuzz
+        shell: bash
+        env:
+          FUZZTIME: ${{ inputs.fuzztime || '5m' }}
+          PACKAGE: ${{ matrix.package }}
+          TARGET: ${{ matrix.target }}
+        run: go test "$PACKAGE" -run '^$' -fuzz "^${TARGET}\$" -fuzztime "$FUZZTIME"
+
+      # Only what this run saved: the seeds already checked in are not news.
+      - name: Gather what it found
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p found
+          git ls-files --others --exclude-standard | grep '/testdata/fuzz/' | xargs -r cp --parents -t found
+
+      - name: Keep what it found
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.target }}
+          path: found/
+          if-no-files-found: ignore
