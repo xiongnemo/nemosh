@@ -22,6 +22,9 @@ type expansionState struct {
 	// discard is set with shellError by a failed glob under failglob, which abandons the
 	// command rather than the shell; see failglob.go.
 	discard bool
+	// skipLine is set with discard by an error `set -e` does not end the script for; see
+	// flowSkipLine.
+	skipLine bool
 	// warnedDebugChannels remembers which unknown NEMOSH_DEBUG names have
 	// already been complained about, so the complaint does not bury the
 	// diagnostics it is attached to.
@@ -92,6 +95,16 @@ func (r Runtime) reportExpansionError(err error) {
 	fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 }
 
+// skipLineFor says an expansion error bash recovers from, and abandons the rest of the line
+// with status 1, `set -e` or not; see flowSkipLine.
+func (r Runtime) skipLineFor(err error) {
+	if r.expansion.shellError {
+		return
+	}
+	r.expansion.shellError, r.expansion.discard, r.expansion.skipLine = true, true, true
+	fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
+}
+
 // reportUnsetParameter is the `set -u` path. POSIX says expanding an unset
 // parameter writes a message and exits a non-interactive shell. busybox ash
 // words it `NAME: parameter not set` (varunset, shell/ash.c:8269) and leaves
@@ -135,8 +148,12 @@ func (r Runtime) raiseShellErrorWith(status int) {
 // See flowAbort. A failed glob under failglob is status 1 and flowDiscard instead.
 func (r Runtime) shellErrorResult() lineResult {
 	if r.expansion.discard {
-		r.expansion.discard = false
-		return lineResult{status: 1, control: flowDiscard}
+		control := flowDiscard
+		if r.expansion.skipLine {
+			control = flowSkipLine
+		}
+		r.expansion.discard, r.expansion.skipLine = false, false
+		return lineResult{status: 1, control: control}
 	}
 	status := 2
 	if r.expansion.shellErrorStatus != 0 {

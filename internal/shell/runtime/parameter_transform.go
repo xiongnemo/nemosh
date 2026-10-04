@@ -52,8 +52,13 @@ func (r Runtime) parameterSubstring(ctx context.Context, value, spec string, sav
 		}
 		if length < 0 {
 			// A negative length is an offset from the end rather than a count:
-			// `${x:1:-1}` over abcdef is bcde, so it means "stop one short".
+			// `${x:1:-1}` over abcdef is bcde, so it means "stop one short". One that ends
+			// before the offset is bash's error, which abandons the line; it was nothing.
 			end = len(runes) + length
+			if end < offset {
+				r.skipLineFor(fmt.Errorf("%s: substring expression < 0", lengthText))
+				return "", nil
+			}
 		} else {
 			end = offset + length
 		}

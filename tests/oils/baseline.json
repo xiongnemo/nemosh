@@ -82,7 +82,6 @@
     "array.test.sh": {
       "Length op, index op, then transform op is not allowed": "ash-only",
       "Multiple subscripts not allowed": "ash-only",
-      "Negative slice length": "fail",
       "Regression: Assigning with out-of-range negative index": "fail",
       "Regression: Negative out-of-range index in [[ -v a[index] ]]": "fail",
       "Regression: silent out-of-bound negative index in ${a[-2]} and $((a[-2]))": "fail",

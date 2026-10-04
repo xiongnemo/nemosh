@@ -156,29 +156,38 @@ func (r Runtime) sliceElements(ctx context.Context, elements []string, indices [
 	if len(indices) > 0 {
 		span = indices[len(indices)-1] + 1
 	}
+	// Before the start or past the end is nothing before the length is read, as bash's
+	// verify_substring_values has it, and only then can the length be wrong. An indexed
+	// array's end is its highest index for an offset from the front; a list's is one past
+	// its last entry.
+	limit := span
+	if indices != nil && offset >= 0 {
+		limit = span - 1
+	}
 	if offset < 0 {
 		offset += span
+	}
+	if offset < 0 || offset > limit {
+		return nil
 	}
 	first := offset
 	if indices != nil {
 		first, _ = slices.BinarySearch(indices, offset)
 	}
-	if offset < 0 || first >= len(elements) {
-		return nil
-	}
 	end := len(elements)
 	if hasLength {
 		length, err := r.substringNumber(ctx, lengthText, "length", savedStatus)
-		if err == nil && length < 0 {
-			err = fmt.Errorf("%s: substring expression < 0", strings.TrimSpace(lengthText))
-		}
 		if err != nil {
 			r.reportExpansionError(err)
 			return nil
 		}
+		if length < 0 {
+			r.skipLineFor(fmt.Errorf("%s: substring expression < 0", lengthText))
+			return nil
+		}
 		end = min(first+length, end)
 	}
-	if end <= first {
+	if first >= len(elements) || end <= first {
 		return nil
 	}
 	return append([]string(nil), elements[first:end]...)

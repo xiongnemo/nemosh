@@ -27,4 +27,8 @@ const (
 	// as flowAbort does, with status 1, and a script goes on with its next command, as a
 	// session does, unless `set -e` ends it; see failglob.go.
 	flowDiscard
+	// flowSkipLine is flowDiscard for an error bash recovers from whatever `set -e` says,
+	// one it reports with internal_error rather than report_error: an expansion's
+	// `substring expression < 0`. The script goes on with its next line, status 1.
+	flowSkipLine
 )

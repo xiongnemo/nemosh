@@ -31,19 +31,29 @@ func TestRuntime_arraySliceCountsBySubscript(t *testing.T) {
 	}
 }
 
-// A negative length is an error for a list, where for a string it counts from the end. It
-// counted from the end for a list too, so the command ran on a slice bash would not have
-// made. bash runs nothing and reports `substring expression < 0`; here it is an expansion
-// error like any other, and ends the script.
-func TestRuntime_listSliceRefusesANegativeLength(t *testing.T) {
+// A negative length is an error for a list, where for a string it counts from the end, and for
+// a string one that ends before the offset is the same error. bash says `substring expression
+// < 0`, runs nothing more of the line and goes on with the next, status 1, under `set -e` too:
+// it is not one of the errors -e ends a script for. The list's ended the script, as an
+// expansion error does, and the string's was the empty string. Past the end is nothing before
+// the length is read, as in bash: an indexed array's end is its highest index.
+func TestRuntime_sliceRefusesALengthBeforeItsOffset(t *testing.T) {
 	for _, script := range []string{
-		"a=(1 2 3 4 5)\nprintf '[%s]' \"${a[@]: 1: -3}\"\necho after",
-		"set -- 1 2 3 4 5\nprintf '[%s]' \"${@: 1: -3}\"\necho after",
+		"a=(1 2 3 4 5)\nprintf '[%s]' \"${a[@]: 1: -3}\"; echo same\necho \"after $?\"",
+		"set -e\nset -- 1 2 3 4 5\nprintf '[%s]' \"${@: 1: -3}\"; echo same\necho \"after $?\"",
+		"x=abc\necho \"${x:1:-10}\"; echo same\necho \"after $?\"",
+		"set -e; x=abc\nfor i in 1; do echo \"${x:1:-3}\"; done; echo same\necho \"after $?\"",
+		"x=abc\ny=$(echo \"${x:1:-10}\"; echo same)\necho \"after $? [$y]\" | sed 's/ \\[\\]//'",
 	} {
 		t.Run(script, func(t *testing.T) {
-			if stdout, status := runScriptCapturing(script); stdout != "" || status == 0 {
-				t.Errorf("got %q/%d, want nothing run and a failing status", stdout, status)
+			if stdout, status := runScriptCapturing(script); stdout != "after 1\n" || status != 0 {
+				t.Errorf("got %q/%d, want %q/0", stdout, status, "after 1\n")
 			}
 		})
+	}
+	quiet := "a=(1 2 3); b=(); x=abc; set -- p q\n" +
+		"echo \"[${a[@]:3:-1}] [${a[@]:5:-1}] [${b[@]:0:-1}] [${@:4:-1}] [${x:4:-1}] [${x:1:-2}] [${x: -1:-1}]\"\n"
+	if stdout, status := runScriptCapturing(quiet); stdout != "[] [] [] [] [] [] []\n" || status != 0 {
+		t.Errorf("got %q/%d, want every slice empty and quiet", stdout, status)
 	}
 }

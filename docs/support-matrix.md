@@ -400,6 +400,11 @@ All of `declare -A`, slices (`${a[@]:1}`), negative indices and `unset a[i]` wor
 paragraph said none of them did, which had been wrong for some time -- the first three
 landed without it being updated, and the fourth landed on 2026-09-12.
 
+A slice's negative length counts back from the end of a string, and one that ends before
+the offset is bash's `substring expression < 0`, as a negative length of a list always is:
+the rest of the line is not run and the script goes on with the next, status 1, under
+`set -e` too, as bash goes on. The list's ended the script, and the string's was empty.
+
 `declare -a a`, `declare -A m` and `local -a a` with no value leave the array declared
 and unset, as bash leaves it: `declare -p` writes `declare -a a`, where `a=()` is
 `declare -a a=()`, and anything stored in it makes it set. Under `set -u` an element that
