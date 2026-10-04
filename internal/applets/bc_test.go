@@ -1,7 +1,9 @@
 package applets
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -179,10 +181,6 @@ func TestBcRefusals(t *testing.T) {
 			}
 		})
 	}
-	// -l would be a series expansion, and a wrong one is wrong in the digits that matter.
-	if _, stderr, status := runApplet(t, "bc", []string{"-l"}, ""); status == 0 || !strings.Contains(stderr, "-l is not supported") {
-		t.Fatalf("bc -l: stderr %q status %d", stderr, status)
-	}
 	// The options that ask for what it already does are accepted.
 	for _, option := range []string{"-q", "-s", "-w"} {
 		if got, _, status := runApplet(t, "bc", []string{option}, "1+1\n"); status != 0 || got != "2\n" {
@@ -201,5 +199,50 @@ func TestBcHalt(t *testing.T) {
 	inLoop, _, _ := runBc(t, "for(i=0;i<9;i++){i;if(i==1)halt}")
 	if inLoop != "0\n1\n" {
 		t.Fatalf("halt in a loop gave %q", inLoop)
+	}
+}
+
+// -l loads upstream's maths library and sets scale to 20, and every answer is busybox-w32's
+// bc -l's to the last digit, measured: the same series on the same exact arithmetic. It was
+// refused. A number of one digit is that digit whatever ibase is, so the library's `ibase=A`
+// is ten; it was nine, and every constant in the library was read in base nine.
+func TestBcMathLibrary(t *testing.T) {
+	t.Parallel()
+	program := strings.Join([]string{
+		"scale", "s(1)", "c(1)", "a(1)", "l(2)", "e(1)", "j(0,1)", "j(1,2.5)", "j(-3,1)",
+		"e(-1)", "e(10)", "l(10)", "l(.001)", "a(-3)", "s(100)", "e(0)", "l(1)",
+		"scale=50", "4*a(1)", "l(3)", "scale=5", "c(.1)", "ibase=16", "s(A)",
+	}, "\n") + "\n"
+	want := strings.Join([]string{
+		"20", ".84147098480789650665", ".54030230586813971740", ".78539816339744830961",
+		".69314718055994530941", "2.71828182845904523536", ".76519768655796655144",
+		".49709410246427403801", "-.01956335398266840591", ".36787944117144232159",
+		"22026.46579480671651695790", "2.30258509299404568401", "-6.90775527898213705205",
+		"-1.24904577239825442582", "-.50636564110975879365", "1.00000000000000000000", "0",
+		"3.14159265358979323846264338327950288419716939937508",
+		"1.09861228866810969139524523692252570464749055782274", ".99500", "-.54402",
+	}, "\n") + "\n"
+	if got, stderr, status := runApplet(t, "bc", []string{"-l"}, program); got != want || stderr != "" || status != 0 {
+		t.Fatalf("bc -l = %q, %q, %d\nwant %q", got, stderr, status, want)
+	}
+	if got, _, _ := runApplet(t, "bc", nil, "A\nF\n1A\nibase=A\nibase\n"); got != "10\n15\n19\n10\n" {
+		t.Fatalf("one-digit numbers = %q", got)
+	}
+}
+
+// The library is upstream's unmodified, its notice in it and in THIRD-PARTY-NOTICES.md, which
+// names the commit it came from.
+func TestBcMathLibraryKeepsItsNotice(t *testing.T) {
+	t.Parallel()
+	if !strings.Contains(bcMathLibrary, "SPDX-License-Identifier: BSD-2-Clause") ||
+		!strings.Contains(bcMathLibrary, "Copyright (c) 2018-2026 Gavin D. Howard and contributors.") {
+		t.Fatal("bc_lib.bc lost its notice")
+	}
+	notices, err := os.ReadFile(filepath.Join("..", "..", "THIRD-PARTY-NOTICES.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := string(notices); !strings.Contains(text, "`gavinhoward/bc` math library") || !strings.Contains(text, "commit `5c6a41b`") {
+		t.Fatal("THIRD-PARTY-NOTICES.md has no entry for the bc maths library and its commit")
 	}
 }

@@ -15,12 +15,11 @@ import (
 // recursion, `print`, and arithmetic at whatever precision `scale` asks for. The numbers are
 // exact -- see decimal.go for what that means and why it is not a float.
 //
+// `-l` loads the maths library, `s`, `c`, `a`, `l`, `e` and `j`, which is upstream's own,
+// written in bc and run on these exact numbers; see bc_lib.go.
+//
 // What is **not** here, and is refused by name rather than approximated:
 //
-//   - **`-l`, the maths library** (`s`, `c`, `a`, `l`, `e`, `j`). Those are series
-//     expansions, and a wrong one is wrong in the last digits of an answer that still looks
-//     right -- the worst shape an error can take in a calculator. Better absent than
-//     approximate.
 //   - **`read()`**, which would make bc's own input and the program's input the same stream.
 //   - **An output base above 16.** POSIX prints digits above that as space-separated decimal
 //     groups, which is a different output format rather than a longer alphabet.
@@ -29,18 +28,24 @@ import (
 // `bc prelude.bc` still takes a session at the keyboard, which is how bc is used.
 func newBcApplet() Applet {
 	return simpleApplet{name: "bc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		files, err := parseBcArguments(args)
+		files, mathlib, err := parseBcArguments(args)
 		if err != nil {
 			return err
 		}
 		interp := newBcInterp(stdout, stderr)
+		if mathlib {
+			if err := interp.loadMathLibrary(); err != nil {
+				return err
+			}
+		}
 		return interp.run(ProcessViewFromContext(ctx), files, stdin)
 	}}
 }
 
-// parseBcArguments reads the options, of which only one changes anything.
-func parseBcArguments(args []string) ([]string, error) {
+// parseBcArguments reads the options, of which only -l changes anything.
+func parseBcArguments(args []string) ([]string, bool, error) {
 	var files []string
+	mathlib := false
 	for index := 0; index < len(args); index++ {
 		argument := args[index]
 		switch {
@@ -55,15 +60,14 @@ func parseBcArguments(args []string) ([]string, error) {
 		case argument == "-w" || argument == "--warn":
 			// Warnings about non-POSIX constructs, of which this accepts almost none.
 		case argument == "-l" || argument == "--mathlib":
-			return nil, fmt.Errorf("-l is not supported: the maths library would be a series expansion, " +
-				"and a wrong one is wrong in the last digits of an answer that still looks right")
+			mathlib = true
 		case len(argument) > 1 && argument[0] == '-':
-			return nil, unknownOption(argument)
+			return nil, false, unknownOption(argument)
 		default:
 			files = append(files, argument)
 		}
 	}
-	return files, nil
+	return files, mathlib, nil
 }
 
 // run works through the files and then standard input.

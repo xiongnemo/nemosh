@@ -79,8 +79,15 @@ func (in *bcInterp) obase() int { return in.setting("obase") }
 func (in *bcInterp) eval(expr bcExpr) (bigDecimal, error) {
 	switch node := expr.(type) {
 	case bcNumberExpr:
-		// Converted here rather than at lex time, with whatever ibase is now in force.
-		return parseDecimalDigits(node.digits, in.ibase())
+		// Converted here rather than at lex time, with whatever ibase is now in force. A
+		// number of one digit is that digit whatever ibase is, as both references read it:
+		// `ibase=A` is ten, which is how the maths library sets it. It was the base's highest
+		// digit, so `ibase=A` made ibase nine.
+		base := in.ibase()
+		if len(node.digits) == 1 {
+			base = 16
+		}
+		return parseDecimalDigits(node.digits, base)
 	case bcNameExpr:
 		return in.variables[node.name], nil
 	case bcIndexExpr:

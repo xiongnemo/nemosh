@@ -6,7 +6,8 @@ copyright notice and license text that redistribution of that component
 requires.
 
 The **binary** ships the Go standard library, `golang.org/x/term`,
-`golang.org/x/sys/windows`, and `golang.org/x/text/width`, all 3-Clause BSD; and
+`golang.org/x/sys/windows`, and `golang.org/x/text/width`, all 3-Clause BSD; the
+maths library `bc -l` loads, from `gavinhoward/bc`, 2-Clause BSD; and
 the terminal user interface behind `top` -- `github.com/rivo/tview`,
 `github.com/gdamore/tcell/v2`, `github.com/gdamore/encoding`,
 `github.com/lucasb-eyer/go-colorful` and `github.com/rivo/uniseg` -- which are MIT
@@ -85,6 +86,41 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+
+---
+
+## Gavin D. Howard and contributors — `gavinhoward/bc` math library
+
+BSD 2-Clause License. `bc -l` loads upstream's math library, `gen/lib.bc` from
+commit `5c6a41b`, 2026-02-11, embedded in the binary unmodified as
+`internal/applets/bc_lib.bc`, its notice with it, and run by this bc's own
+interpreter. No other code from the project is included. busybox's bc is a port of
+the same project, which is why the two answer alike to the last digit.
+
+```text
+Copyright (c) 2018-2026 Gavin D. Howard and contributors.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 ---
