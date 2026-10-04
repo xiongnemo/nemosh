@@ -203,6 +203,7 @@ func portableApplets() []Applet {
 		newLzmaApplet(),
 		newUnlzmaApplet(),
 		newLzcatApplet(),
+		newUptimeApplet(),
 		newTarApplet(),
 		newUnzipApplet(),
 		newCpioApplet(),

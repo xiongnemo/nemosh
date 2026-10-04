@@ -127,6 +127,7 @@ var commands = []Command{
 	{Name: "lzma", Short: "cdfkt123456789", Operand: AnyPath},
 	{Name: "unlzma", Short: "cdfkt123456789", Operand: AnyPath},
 	{Name: "lzcat", Short: "cdfkt123456789", Operand: AnyPath},
+	{Name: "uptime", Short: "s"},
 	{Name: "tar", Short: "ctxvzjJaOfCkmohTX", ValueShort: "fCTX", FileShort: "fCTX", Long: []string{"list", "extract", "create", "directory", "file", "to-stdout", "no-same-owner", "verbose", "keep-old", "dereference", "bzip2", "files-from", "exclude-from", "gzip", "xz", "lzma", "auto-compress", "touch", "exclude", "strip-components", "no-recursion", "overwrite", "numeric-owner", "no-same-permissions"}, ValueLong: []string{"directory", "file", "files-from", "exclude-from", "exclude", "strip-components"}, Operand: AnyPath},
 	{Name: "unzip", Short: "lnojptqvKdx", ValueShort: "d", Operand: AnyPath},
 	{Name: "nano", Short: "HRl", Operand: AnyPath},

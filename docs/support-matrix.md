@@ -830,6 +830,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `unlink` | none; a directory is refused | refused by name |
 | `usleep` | none; a microsecond count | read as a number, so a bad one is refused |
 | `uuidgen` | none; a version 4 identifier from a cryptographic source | refused by name |
+| `uptime` | `-s`, the time the machine started; the line is busybox's, ` 06:26:42 up 23 days,  7:15,  load average: 0.00, 0.00, 0.00`. Windows keeps no load average, and busybox-w32 says 0.00 for each, as this does there | refused by name |
 | `base32` | `-d -i -w`; wraps at 76 like `base64` | refused by name |
 | `cksum` | none; `<crc> <size> <name>`, the POSIX CRC | refused by name |
 | `crc32` | none; eight hex digits, the IEEE CRC | refused by name |
