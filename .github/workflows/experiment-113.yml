@@ -1,8 +1,10 @@
 name: Experiment 113
 
-# A throwaway branch's workflow: loops the output-substitution tests until one hangs, then
-# lists who holds the FIFO open and dumps the goroutines. See task #113: on macOS a `>(cat)`
-# whose path the command never opened left cat blocked in a read on the FIFO.
+# A throwaway branch's workflow: runs the whole runtime package's tests over and over, as CI's
+# goroutine-jobs step runs them, until one run hangs, then lists who holds the FIFO open and
+# dumps the goroutines. See task #113: on macOS a `>(cat)` whose path the command never opened
+# left cat blocked in a read on the FIFO. The substitution tests alone did not hang in 1500
+# runs, so the load of the rest of the package is part of it.
 
 on:
   push:
@@ -14,50 +16,55 @@ permissions:
 
 jobs:
   loop:
-    name: ${{ matrix.os }} / ${{ matrix.jobs }}
+    name: ${{ matrix.os }} / ${{ matrix.jobs }} / ${{ matrix.shard }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 75
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
-        jobs: [process, goroutine]
+        os: [macos-latest]
+        jobs: [goroutine, process]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: go.mod
           cache: true
-      - name: Loop until a hang
+      - name: Loop the package until a run hangs
         shell: bash
         env:
           JOBS_MODE: ${{ matrix.jobs }}
         run: |
           if [ "$JOBS_MODE" = goroutine ]; then export NEMOSH_JOBS=goroutine; fi
-          go test -c -race -o rt.test ./internal/shell/runtime
-          for i in $(seq 1 60); do
-            ./rt.test -test.run 'TestOutputSubstitution_' -test.count=25 -test.shuffle=on -test.timeout 300s > out.txt 2>&1 &
+          go test -c -race -o "$PWD/rt.test" ./internal/shell/runtime
+          cd internal/shell/runtime
+          end=$((SECONDS + 3900))
+          round=0
+          while [ "$SECONDS" -lt "$end" ]; do
+            round=$((round + 1))
+            "$GITHUB_WORKSPACE/rt.test" -test.shuffle=on -test.count=1 -test.timeout 12m > "$RUNNER_TEMP/out.txt" 2>&1 &
             pid=$!
-            for t in $(seq 1 90); do
+            for t in $(seq 1 600); do
               kill -0 "$pid" 2>/dev/null || break
               sleep 1
             done
             if kill -0 "$pid" 2>/dev/null; then
-              echo "::error::hang in round $i"
-              echo "--- the test process's FIFOs"
-              lsof -p "$pid" 2>/dev/null | grep -iE 'fifo|pipe|nemosh' || true
+              echo "::error::hang in round $round"
+              echo "--- the test process's open FIFOs and pipes"
+              lsof -p "$pid" 2>/dev/null | grep -iE 'fifo|pipe' || true
               echo "--- every process holding a nemosh FIFO"
-              lsof 2>/dev/null | grep nemosh-fifo || true
-              ps -ax -o pid,ppid,stat,command | grep -v grep | grep -E "rt.test|cat" || true
+              lsof 2>/dev/null | grep -i nemosh-fifo || true
+              ps -ax -o pid,ppid,stat,command | grep -v grep | grep -E "rt.test" || true
               kill -QUIT "$pid"
-              sleep 3
-              tail -400 out.txt
+              sleep 5
+              grep -a -n "running tests" -A20 "$RUNNER_TEMP/out.txt" | head -40 || true
+              tail -1500 "$RUNNER_TEMP/out.txt"
               exit 1
             fi
             if ! wait "$pid"; then
-              echo "::error::round $i failed"
-              tail -100 out.txt
-              exit 1
+              echo "::warning::round $round failed without hanging"
+              grep -a -E -- "--- FAIL|panic" "$RUNNER_TEMP/out.txt" | head -20 || true
             fi
           done
-          echo "no hang in 60 rounds of 25"
+          echo "no hang in $round rounds"
