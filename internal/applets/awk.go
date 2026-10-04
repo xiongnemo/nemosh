@@ -36,7 +36,8 @@ func (awkApplet) Name() string { return "awk" }
 // Run parses the command line, then the program, then runs it.
 //
 // A failure exits **2**, which is gawk's status and what lets a script tell a broken
-// program from one that chose to `exit 1`.
+// program from one that chose to `exit 1`. An input file that will not open is not a broken
+// program, and exits 1, as busybox's awk does; it was 2.
 func (awkApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	invocation, err := parseAwkArguments(ProcessViewFromContext(ctx), args, stdin, stderr)
 	if err != nil {
@@ -51,7 +52,7 @@ func (awkApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 	// list of files never does.
 	status, err := runAwkProgram(ctx, program, invocation, &lazyTextInput{source: stdin}, stdout, stderr)
 	if err != nil {
-		return ExitStatusMessage(2, err)
+		return ExitStatusMessage(status, err)
 	}
 	if status != 0 {
 		// An `exit n` chose this, so it carries no diagnostic: the program already said

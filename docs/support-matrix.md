@@ -834,7 +834,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `bunzip2`, `bzcat` | `-c -d -f -k -t`, and `-` for standard input; **decompress only** | refused by name |
 | `cat` | `-n -b -v -e -t -A`, `-u` taken and ignored | refused by name |
 | `chmod` | `-R -c -v -f`; octal and symbolic modes, `u+x,go-w`, and options after the operands unless `POSIXLY_CORRECT` is set. On Windows only the owner's write bit is kept, as the read-only attribute | read as the MODE, as busybox reads `-w`, so `-Z` is an invalid mode |
-| `clear` | none | refused by name |
+| `clear` | none; it writes `ESC[H ESC[J`, as busybox-w32's does, and Ctrl-L at the prompt writes the same | refused by name |
 | `cmp` | `-s -l -n`, `--bytes --quiet --silent --verbose`, FILE2 stdin when it is not given, and SKIP1 SKIP2 with K M G; `a b differ: byte 5, line 2` on stdout, and `cmp: EOF on FILE` on stderr, as busybox's editors/cmp.c has them; 0 the same, 1 different, 2 trouble | refused by name |
 | `comm` | `-1 -2 -3` | refused by name |
 | `expand` | `-t -i`, `--tabs --initial`, columns counted in the cells a terminal draws | refused by name |
@@ -2204,7 +2204,7 @@ Where the references disagree and one was chosen:
 | `"0x1A" + 0` | 0 | 26 | gawk — awk has no hex literal |
 | `substr("hello", 2, 1e20)` | `ello` | empty | gawk |
 | `print -2^2` | `-4` | `-4` (1.38.0) | `-4` — `^` binds tighter than unary minus |
-| a missing input file | exit 2 | exit 1 | gawk, matching this awk's other failures |
+| a missing input file | exit 2 | exit 1 | busybox: no program is broken, which this awk's other failures, gawk's 2, say |
 
 `substr`'s out-of-range rule is the one worth stating outright, because it is not
 what it looks like: **a start before the string moves to 1 and the length is
@@ -2502,7 +2502,7 @@ shell's words: no letter to change, one both set and cleared, a letter it has no
 got.
 
 A junction is a link to both, so neither goes down through one, though Go calls a
-junction a directory. Both answer 1 when something failed, where busybox-w32
-answers 0 whatever happened; e2fsprogs, whose options these are, says 1. A path under
+junction a directory. Both answer 0 when a FILE failed, as busybox-w32 answers whatever
+happened; e2fsprogs, whose options these are, says 1, and so did these. A path under
 a FILE is joined with one slash, as `cp` and `rm` join them, so `lsattr 'C:\'` lists
 `C:/Windows` where busybox lists `C:\/Windows`.

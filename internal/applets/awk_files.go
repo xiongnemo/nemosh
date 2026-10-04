@@ -2,6 +2,7 @@ package applets
 
 import (
 	"bufio"
+	"errors"
 	"io"
 )
 
@@ -98,6 +99,17 @@ func (in *awkInterp) runOneFile(name string) error {
 	return in.runRecordsFrom(reader)
 }
 
+// awkInputFailure is an input file that would not open, which ends the run with 1, as
+// busybox's next_input_file ends it; gawk's 2 was the status.
+type awkInputFailure struct{ error }
+
+func (f awkInputFailure) Unwrap() error { return f.error }
+
+func isAwkInputFailure(err error) bool {
+	_, ok := errors.AsType[awkInputFailure](err)
+	return ok
+}
+
 // openRecordSource opens a named input, with `-` meaning standard input.
 func (in *awkInterp) openRecordSource(name string) (*bufio.Reader, io.Closer, error) {
 	if name == "-" || name == "/dev/stdin" {
@@ -106,7 +118,7 @@ func (in *awkInterp) openRecordSource(name string) (*bufio.Reader, io.Closer, er
 	file, err := openProcessInput(ProcessViewFromContext(in.ctx), name)
 	if err != nil {
 		// busybox's fopen_or_warn: the name bare, as a -f FILE's is quoted, xfopen's.
-		return nil, nil, operandFailure(name, err)
+		return nil, nil, awkInputFailure{operandFailure(name, err)}
 	}
 	// Through the same UTF-16 decoding every text applet uses.
 	return bufio.NewReader(decodeTextInput(file)), file, nil

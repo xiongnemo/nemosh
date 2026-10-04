@@ -38,6 +38,9 @@ func runAwkProgram(ctx context.Context, program *awkProgram, invocation *awkInvo
 	// on a terminal.
 	if !interp.exiting && interp.readsInput() {
 		if err := interp.runInputs(); err != nil {
+			if isAwkInputFailure(err) {
+				return 1, err
+			}
 			return 2, err
 		}
 	}

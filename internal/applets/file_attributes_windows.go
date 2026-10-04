@@ -157,7 +157,6 @@ func directoryNames(native string) ([]string, error) {
 type lsattrRequest struct {
 	all, itself, long, recurse bool
 	stdout, stderr             io.Writer
-	failed                     bool
 }
 
 func newLsattrApplet() Applet {
@@ -181,7 +180,8 @@ func newLsattrApplet() Applet {
 				request.report(cannotStat(operand, err))
 			}
 		}
-		return request.status()
+		// 0 whatever was said, as busybox's lsattr_main answers; it was 1.
+		return nil
 	}}
 }
 
@@ -238,13 +238,5 @@ func (r *lsattrRequest) list(shown string, entry fileEntry) {
 // report says what could not be read and goes on, as busybox does. The status is 1 after one,
 // where busybox's is 0 whatever happened: e2fsprogs' lsattr, whose options these are, says 1.
 func (r *lsattrRequest) report(err error) {
-	r.failed = true
 	fmt.Fprintf(r.stderr, "lsattr: %v\n", err)
-}
-
-func (r *lsattrRequest) status() error {
-	if r.failed {
-		return ExitStatus(1)
-	}
-	return nil
 }

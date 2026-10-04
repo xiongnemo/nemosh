@@ -82,13 +82,13 @@ func TestLsattr_listsAsBusyboxW32Does(t *testing.T) {
 }
 
 // A FILE that is not there is named, quoted as busybox quotes it, and the rest are still listed.
-// The status is 1, where busybox-w32 answers 0 whatever happened.
+// The status is 0, as busybox-w32 answers whatever happened; it was 1.
 func TestLsattr_namesAFileThatIsNotThere(t *testing.T) {
 	attributeFixture(t)
 
 	stdout, stderr, status := runApplet(t, "lsattr", []string{"nosuch", "f.txt"}, "")
 
-	if stdout != "--------a-- f.txt\n" || stderr != "lsattr: cannot stat 'nosuch': No such file or directory\n" || status != 1 {
+	if stdout != "--------a-- f.txt\n" || stderr != "lsattr: cannot stat 'nosuch': No such file or directory\n" || status != 0 {
 		t.Fatalf("stdout %q, stderr %q, status %d", stdout, stderr, status)
 	}
 }
@@ -124,7 +124,7 @@ func TestChattr_setsAndClearsAsBusyboxW32Does(t *testing.T) {
 		{args: []string{"-h", "+s", "f.txt"}, list: "f.txt", want: "-------sa-- f.txt\n"},
 		{args: []string{"-sa", "f.txt"}, list: "f.txt", want: "----------- f.txt\n"},
 		{args: []string{"-R", "+n", "sub"}, list: "-R", want: "------h-a-- ./B.txt\n----------- ./f.txt\n----------n ./sub\n\n./sub:\n-----r--a-n ./sub/s.txt\n\n"},
-		{args: []string{"-Rn", "+t", "sub"}, stderr: "chattr: cannot set the attributes of sub: Invalid argument\n", status: 1, list: "sub", want: "-----r--at- sub/s.txt\n"},
+		{args: []string{"-Rn", "+t", "sub"}, stderr: "chattr: cannot set the attributes of sub: Invalid argument\n", status: 0, list: "sub", want: "-----r--at- sub/s.txt\n"},
 	} {
 		_, stderr, status := runApplet(t, "chattr", step.args, "")
 		if stderr != step.stderr || status != step.status {

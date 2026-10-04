@@ -153,11 +153,12 @@ func TestClear(t *testing.T) {
 	// When
 	stdout, _, err := runAppletWithInput(t, "", "clear")
 
-	// Then: home, then erase the display -- the same pair Ctrl-L emits.
+	// Then: home, then erase below it, as busybox-w32's clear writes them -- the same pair
+	// Ctrl-L emits.
 	if err != nil {
 		t.Fatalf("clear = %v", err)
 	}
-	if stdout != "\033[H\033[2J" {
+	if stdout != "\033[H\033[J" {
 		t.Fatalf("stdout = %q, want the clear sequence", stdout)
 	}
 }

@@ -20,7 +20,7 @@ import (
 // command is what a script -- or an alias, which is how most people reach it --
 // can call.
 //
-// The sequence is the one the editor emits: home, then erase the display.
+// The sequence is the one the editor emits: home, then erase from there down.
 func newClearApplet() Applet {
 	return simpleApplet{name: "clear", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
 		if _, operands, err := parseAppletOptionsInOrder(args, "", ""); err != nil {
@@ -28,7 +28,9 @@ func newClearApplet() Applet {
 		} else if len(operands) > 0 {
 			return fmt.Errorf("extra operand '%s'", operands[0])
 		}
-		_, err := io.WriteString(stdout, "\033[H\033[2J")
+		// Erase below the cursor, at home the whole screen, as busybox-w32's clear writes it;
+		// it was `ESC[2J`, which erases the screen wherever the cursor is.
+		_, err := io.WriteString(stdout, "\033[H\033[J")
 		return err
 	}}
 }

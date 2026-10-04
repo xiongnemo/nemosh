@@ -22,7 +22,6 @@ type chattrRequest struct {
 	add, remove uint32
 	recurse     bool
 	stderr      io.Writer
-	failed      bool
 }
 
 func newChattrApplet() Applet {
@@ -41,9 +40,7 @@ func newChattrApplet() Applet {
 			}
 			request.change(ctx, native, file)
 		}
-		if request.failed {
-			return ExitStatus(1)
-		}
+		// 0 whatever was said, as busybox's chattr answers; see report.
 		return nil
 	}}
 }
@@ -137,9 +134,8 @@ func (r *chattrRequest) change(ctx context.Context, native, shown string) {
 	}
 }
 
-// report says what could not be changed and goes on. The status is 1 after one, as in
-// e2fsprogs, where busybox's is 0 whatever happened.
+// report says what could not be changed and goes on. The status stays 0, as busybox's is
+// whatever happened; it was 1, as in e2fsprogs.
 func (r *chattrRequest) report(err error) {
-	r.failed = true
 	fmt.Fprintf(r.stderr, "chattr: %v\n", err)
 }

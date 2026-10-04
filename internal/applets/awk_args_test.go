@@ -208,7 +208,8 @@ func TestAwkCommandRefusals(t *testing.T) {
 		{name: "-v without an equals", args: []string{"-v", "x", "BEGIN{}"}, says: "var=value", status: 2},
 		{name: "-F with nothing after it", args: []string{"-F"}, says: "option requires an argument -- F", status: 2},
 		{name: "a program that will not parse", args: []string{"BEGIN{"}, says: "", status: 2},
-		{name: "a missing input file", args: []string{"{print}", "no-such-file-here"}, says: "no-such-file-here", status: 2},
+		// busybox's 1: no program is broken. Every other refusal is gawk's 2.
+		{name: "a missing input file", args: []string{"{print}", "no-such-file-here"}, says: "no-such-file-here", status: 1},
 		{name: "a missing program file", args: []string{"-f", "no-such-program-here"}, says: "no-such-program-here", status: 2},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

@@ -293,7 +293,7 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		case keyTab:
 			e.complete(prompt)
 		case keyClearScreen:
-			fmt.Fprint(e.screen, "\033[H\033[2J")
+			fmt.Fprint(e.screen, "\033[H\033[J")
 			e.resetDrawState()
 			fmt.Fprint(e.screen, prompt)
 		case keyReverseSearch:
