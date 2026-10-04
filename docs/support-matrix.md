@@ -799,7 +799,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 
 | Applet | Options implemented | Unknown option is |
 | --- | --- | --- |
-| `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all | refused by name |
+| `base64` | `-d -i -w`; wraps at 76 like GNU, `-w0` not at all. `-d` refuses a character outside the alphabet, `invalid input` and 1, as GNU's does, unless `-i`; busybox's skips it and decodes the rest | refused by name |
 | `ar` | verbs `x p t r`, plus `-o -v`, and `c`, taken and ignored as busybox takes it; the long-name table is read, never written | refused by name |
 | `ascii` | none; the character table, read down in eight columns | refused by name |
 | `arch` | none; the same name `uname -m` gives | refused by name |
@@ -846,7 +846,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `factor` | none; numbers from operands or stdin | refused by name |
 | `fold` | `-w -s -b`, `-w` from 1 to 10000 as busybox's reads it; columns counted as busybox's adjust_column counts them, a tab to the next multiple of eight, a backspace back one, a carriage return to the start, and `-b` every byte one; a UTF-8 character is one column, where busybox-w32's build counts its bytes | refused by name |
 | `free` | `-b -k -m -g -h`, read from the first argument alone as busybox reads it, values rounded to the nearest and `-h` in busybox's `63.7G`; busybox's columns | refused by name |
-| `cpio` | `-t -i -o -d -m -v -u -0 -F -H`, and busybox's long options, `--quiet` and `--to-stdout` among them; only `newc` is read or written, and `-o` needs `-H newc` to write it; `-o` wins over `-t`, and `-t` over `-i`, as in busybox | refused by name |
+| `cpio` | `-t -i -o -d -m -v -u -0 -F -H`, and busybox's long options, `--quiet` and `--to-stdout` among them; only `newc` is read or written, and `-o` needs `-H newc` to write it; `-o` wins over `-t`, and `-t` over `-i`, as in busybox. `-H` takes `newc` spelled out, as GNU's does; busybox's takes its first letter, `-H n` | refused by name |
 | `cp` | `-a -d -P -L -H -p -f -i -n -l -s -T -t -u -v -r -R`, and busybox's long forms; a file is never copied onto itself, and a destination that is there is replaced, read-only or not, as busybox-w32 replaces it. `-r` follows symbolic links, where busybox copies them | refused by name |
 | `cut` | `-b -c -f -F -d -O -s -D -n` and `--output-delimiter`; `-c` counts bytes, as busybox's does, `-F` splits where an extended regular expression matches, and a `-d` of a newline cuts lines | refused by name |
 | `date` | `-d -D -I -r -R -u` and busybox's long forms; TIME in every form busybox's parse_datestr reads, and `%N` in FORMAT, with glibc's flags and widths, `%-d %_H %^a %10Y`, and `%q`. Setting the clock, `-s` or a TIME operand, is refused | refused by name |
@@ -859,7 +859,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
-| `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input | refused by name |
+| `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input. A FILE that is not compressed is said and the next one read, status 1 at the end, as GNU's gzip does; busybox's stops at it | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
 | `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's | refused by name |
@@ -898,7 +898,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `shuf` | `-n -e -i -z -o`; `-o FILE` is opened once the input is read, so it may be the input, as busybox's is | refused by name |
 | `strings` | `-n -t -o -a -f` | refused by name |
 | `awk` | the POSIX language; `-F -v -f --`, and busybox's `-e PROGRAM` (read with any `-f` in the order given, as one program), `-E FILE` (`-f` that ends the options) and `-W` (said to be ignored); operands mixing files and `VAR=VALUE` | refused by name |
-| `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {} r w l`, s's flags `g p N i w`, addresses (`N`, `$`, `/re/`, ranges, busybox's `addr,+N`, GNU's `0,/re/`, a range the first line can end, `!`), `-n -e -E -r -f -i[SUFFIX]`, and busybox-w32's `-b`, which keeps a line's carriage return as part of it, so `sed -b -i` writes a CRLF file back as CRLF | refused by name |
+| `sed` | `s/// p d q y = a i c h H g G x n N P D b t T : {} r w l`, s's flags `g p N i w` (`Ng` is the Nth match and every one after it, as GNU's is, where busybox's replaces them all), addresses (`N`, `$`, `/re/`, ranges, busybox's `addr,+N`, GNU's `0,/re/`, a range the first line can end, `!`), `-n -e -E -r -f -i[SUFFIX]`, and busybox-w32's `-b`, which keeps a line's carriage return as part of it, so `sed -b -i` writes a CRLF file back as CRLF | refused by name |
 | `seq` | `-w -s`, and `LAST`, `FIRST LAST`, `FIRST INCREMENT LAST` as strtod reads them, fractions included; a zero increment refused | refused by name |
 | `sleep` | duration operand | reported as an invalid duration |
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
@@ -910,13 +910,13 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `lsattr` | `-R -a -d -l`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `chattr` | `-R`, and `-` or `+` with `r h s a t n`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `tac` | none | refused by name |
-| `tsort` | none; its words are paired across lines and an odd one out refused, and a cycle is said, `cycle at NAME`, and broken, the rest written with status 1, as busybox's does; one FILE | refused by name |
+| `tsort` | none; its words are paired across lines and an odd one out refused, and a cycle is said, `cycle at NAME`, and broken, the rest written with status 1, as busybox's does; one FILE. Items with no order between them come out in the order they were first read, an order of its own: busybox and GNU each have theirs | refused by name |
 | `tar` | `-c -t -x -v -z -j -a -O -f -C -k -m -o -h -T -X`, busybox's long options, `--exclude`, `--strip-components`, `--no-recursion` and `--overwrite` among them, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too; the FILEs name what is listed or extracted, see **The archivers** | refused by name |
 | `tail` | `-n -c -q -v -f -F -s`, the `-N` form, `+N` as the first argument, and an attached value (`-n2`, `-n+2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's; every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
 | `test`, `[` | POSIX expressions; on Windows `-x` is busybox-w32's execute bit: a directory, a name ending `.com .exe .sh .bat .cmd`, or a file that begins `#!` or is a program image, and not a DLL whatever it is called | an operand, per the POSIX one-argument rule |
 | `tee` | `-a -i`; `-` is stdout, and a file that cannot be opened is named while the rest are written | refused by name |
 | `touch` | `-a -c -d -f -h -m -r -t` and busybox's long forms; DATE is read as `date -d` reads it | refused by name |
-| `tr` | `-d -s -c`, ranges, backslash escapes and the POSIX classes (`[:upper:]` and the rest, in code order) | `[=c=]` and `[c*n]` read as the characters written, as busybox reads them; a class name it does not know is refused by name |
+| `tr` | `-d -s -c`, ranges, backslash escapes and the POSIX classes (`[:upper:]` and the rest, in code order). One operand without `-d` or `-s` is `missing operand`, 1, as GNU's is; busybox's copies its input as it is | `[=c=]` and `[c*n]` read as the characters written, as busybox reads them; a class name it does not know is refused by name |
 | `true`, `false` | none, by definition | ignored, which POSIX requires |
 | `uname` | `-a -i -m -n -o -p -r -s -v` | refused by name |
 | `uniq` | `-c -d -u -i -z -f -s -w`, and an OUTPUT operand | refused by name |
