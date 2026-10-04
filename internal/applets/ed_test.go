@@ -209,3 +209,26 @@ func TestEdRefuses(t *testing.T) {
 		t.Fatalf("H gave %q", explained)
 	}
 }
+
+// A CRLF file keeps its carriage returns through ed, as busybox-w32's ed keeps them: they are
+// part of each line, `w` writes them back, and the size counts them. ed wrote such a file back
+// with LF endings. `l` shows them, and every other byte that prints nothing, as POSIX has it.
+func TestEdKeepsACRLFFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "c.txt")
+	if err := os.WriteFile(path, []byte("one\r\ntwo\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, stderr, status := runApplet(t, "ed", []string{path}, "1s/one/ONE/\n,l\nw\nq\n")
+	if want := "10\n" + `ONE\r$` + "\n" + `two\r$` + "\n10\n"; out != want || stderr != "" || status != 0 {
+		t.Fatalf("ed = %q, %q, %d; want %q", out, stderr, status, want)
+	}
+	if written, _ := os.ReadFile(path); string(written) != "ONE\r\ntwo\r\n" {
+		t.Fatalf("written back as %q", written)
+	}
+	listed, _, _ := runEd(t, ",l\n", "a\tb\x01c\\d\x7f\xe9 中\n")
+	if want := `a\tb\001c\\d\177\351 ` + "中$\n"; listed != want {
+		t.Fatalf("l = %q, want %q", listed, want)
+	}
+}

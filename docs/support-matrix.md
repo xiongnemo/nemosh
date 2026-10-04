@@ -805,7 +805,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `arch` | none; the same name `uname -m` gives | refused by name |
 | `cal` | `-m -y`, and `[[MONTH] YEAR]`; September 1752 is short, as in every cal. `-j` is refused | read as a number, so a bad one is refused |
 | `dd` | `if= of= bs= ibs= obs= count= skip= seek= conv= status=`; an unknown operand is refused | refused by name |
-| `ed` | `-s -p`; addresses including `/re/` and marks, and `a i c d p n l = s g v m t j k r w e f q Q h H`. Follows GNU, not busybox | refused by name |
+| `ed` | `-s -p`; addresses including `/re/` and marks, and `a i c d p n l = s g v m t j k r w e f q Q h H`. Follows GNU, not busybox, but for a CRLF file, whose carriage returns stay in its lines and go back out with `w`, as busybox-w32's do; `l` shows them `\r`, as POSIX writes every byte that prints nothing | refused by name |
 | `dc` | `-e -f -x`; the stack machine, registers as stacks, `[strings]` and the conditionals. `!` refused | refused by name |
 | `bc` | the POSIX language; `-s -q -w`. `-l`, `read()` and an obase above 16 refused by name | refused by name |
 | `df` | `-h -H -k -m -B SIZE -P -T -t TYPE`, `-a` taken; the last of `-k -m -B` counts, `POSIXLY_CORRECT` counts 512-byte blocks, and blocks round to nearest, all as busybox has them. A drive letter is a filesystem, mounted at its root, and `-T` names what Windows calls it, NTFS or FAT32; a FILE that is not there has no mount point, status 1, as busybox says | refused by name |

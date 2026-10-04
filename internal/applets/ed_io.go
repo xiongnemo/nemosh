@@ -54,15 +54,20 @@ func (b *edBuffer) readInto(view ProcessView, name string, at int, replacing boo
 	return nil
 }
 
+// readEdLines splits a file at its newlines alone, so a CRLF file's carriage returns stay in
+// its lines and go back out with them, as busybox-w32's ed keeps them: `w` wrote such a file
+// back with LF endings, and its size two short. bufio's lines dropped them.
 func readEdLines(file *os.File) ([]string, int, error) {
 	reader := bufio.NewScanner(decodeTextInput(file))
 	reader.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	reader.Split(scanLineWithEnding)
 	var lines []string
 	size := 0
 	for reader.Scan() {
-		lines = append(lines, reader.Text())
+		line := strings.TrimSuffix(reader.Text(), "\n")
+		lines = append(lines, line)
 		// The newline counts, which is what makes the reported size match the file.
-		size += len(reader.Text()) + 1
+		size += len(line) + 1
 	}
 	return lines, size, reader.Err()
 }

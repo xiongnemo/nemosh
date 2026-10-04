@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // ed, the line editor.
@@ -185,11 +187,32 @@ func (b *edBuffer) writeLine(index int, numbered, visible bool) {
 	}
 	text := b.lines[index-1]
 	if visible {
-		// `l` makes the invisible visible: a `$` marks the end of the line, and a tab is
-		// written as the two characters that produced it.
-		text = strings.ReplaceAll(text, "\\", "\\\\")
-		text = strings.ReplaceAll(text, "\t", "\\t")
-		text += "$"
+		text = edVisible(text)
 	}
 	fmt.Fprintln(b.out, text)
+}
+
+// edVisible is a line as `l` writes it, POSIX's: the C escapes for a backslash, \a \b \f \r \t
+// and \v, three octal digits for every other byte that prints nothing, and a `$` at the end.
+// Only the tab and the backslash were escaped, so a CRLF file's carriage return, which its
+// lines keep, went out raw and sent the cursor back over the line.
+func edVisible(text string) string {
+	var out strings.Builder
+	for index := 0; index < len(text); {
+		r, size := utf8.DecodeRuneInString(text[index:])
+		switch at := strings.IndexByte("\\\a\b\f\r\t\v", text[index]); {
+		case at >= 0:
+			out.WriteByte('\\')
+			out.WriteByte("\\abfrtv"[at])
+		case r == utf8.RuneError && size <= 1 || !unicode.IsPrint(r):
+			for _, raw := range []byte(text[index : index+size]) {
+				fmt.Fprintf(&out, "\\%03o", raw)
+			}
+		default:
+			out.WriteString(text[index : index+size])
+		}
+		index += size
+	}
+	out.WriteByte('$')
+	return out.String()
 }
