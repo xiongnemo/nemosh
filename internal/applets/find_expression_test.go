@@ -143,12 +143,11 @@ func TestFind_refusesAnUnsupportedExpression_beforeWritingAnything(t *testing.T)
 		wantWord string
 	}{
 		{name: "an unknown predicate", args: []string{".", "-nosuchpred"}, wantWord: "-nosuchpred"},
-		// -mtime held this slot until 2026-08-22, when it was implemented, and -perm
-		// until 2026-10-02, when stat's modes, busybox-w32's made-up ones, gave it the
-		// bits busybox-w32's -perm compares. -ok replaces it: it goes with -exec,
-		// which waits on a decision. The case is about the refusal, not about which
-		// operand carries it.
-		{name: "a predicate busybox has but this does not", args: []string{".", "-ok", "echo", "{}", ";"}, wantWord: "-ok"},
+		// -mtime held this slot until 2026-08-22, when it was implemented, -perm until
+		// 2026-10-02, and -ok until 2026-10-05, when -exec came with it. -fstype is one
+		// neither find has. The case is about the refusal, not about which operand
+		// carries it.
+		{name: "a predicate busybox has but this does not", args: []string{".", "-fstype", "ntfs"}, wantWord: "-fstype"},
 		{name: "name without its pattern", args: []string{".", "-name"}, wantWord: "-name"},
 		{name: "type without its letter", args: []string{".", "-type"}, wantWord: "-type"},
 		{name: "a type letter that is not supported", args: []string{".", "-type", "s"}, wantWord: "type"},

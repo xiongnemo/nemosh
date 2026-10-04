@@ -364,8 +364,8 @@ func TestFind_refusesAMalformedExpression(t *testing.T) {
 		{name: "newer without an operand", args: []string{".", "-newer"}, wantWord: "-newer"},
 		{name: "newer naming a missing file", args: []string{".", "-newer", "nosuch"}, wantWord: "nosuch"},
 		{name: "iname without a pattern", args: []string{".", "-iname"}, wantWord: "-iname"},
-		{name: "an action this build does not have", args: []string{".", "-exec", "echo", "{}", ";"}, wantWord: "-exec"},
-		{name: "delete, which is refused deliberately", args: []string{".", "-delete"}, wantWord: "-delete"},
+		{name: "exec with no end", args: []string{".", "-exec", "echo", "{}"}, wantWord: "-exec"},
+		{name: "exec plus with two {}", args: []string{".", "-exec", "echo", "{}", "{}", "+"}, wantWord: "{}"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// Given

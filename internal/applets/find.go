@@ -10,7 +10,7 @@ import (
 )
 
 func newFindApplet() Applet {
-	return simpleApplet{name: "find", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "find", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		// The whole expression is validated before the first directory is read.
 		// Walking first and reporting an unusable operand afterwards, which is
 		// what this did, means the caller has already been handed every path in
@@ -20,7 +20,7 @@ func newFindApplet() Applet {
 		if err != nil {
 			return err
 		}
-		run := &findRun{stdout: stdout}
+		run := findRunFor(ctx, stdin, stdout, stderr)
 		if expression.oneVolume {
 			run.volumes = findVolumes(view, paths)
 		}
@@ -54,6 +54,10 @@ func newFindApplet() Applet {
 			} else if err != nil {
 				return err
 			}
+		}
+		run.finish(expression)
+		if run.err == nil && run.failed {
+			return ExitStatus(1)
 		}
 		return run.err
 	}}

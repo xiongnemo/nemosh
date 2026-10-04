@@ -1112,11 +1112,6 @@ All five are implemented, measured against GNU. What is still absent:
   as absent and was simply stale: all of them landed on 2026-08-22 along with `{}`
   blocks, the multiline commands and branching. Measured against the built binary
   rather than trusted.
-- **`find -exec` and `-delete`.** The operators, `-size`, `-mtime`, `-newer`,
-  `-empty`, `-maxdepth` and `-print0` landed on 2026-08-22; these two did not,
-  because one needs the execution model and quoting rules and the other needs a
-  deliberate decision about a destructive default. `| xargs -0` covers most of
-  what `-exec` is reached for, and now has `-print0` to pair with.
 - **`grep --include`, `--exclude` and `-z`.** The first two need a name filter
   threaded through the `-r` walk; `-z` is a NUL-terminated-line mode. `-A -B -C
   -e -f -L` landed on 2026-08-22.
@@ -1170,8 +1165,18 @@ the same reason in reverse — which is why `-name` uses Go's `path.Match` and
 `p`, refused by name here rather than answered as though a block device could
 never match.
 
-**Actions.** `-print` and `-print0`. An action anywhere suppresses the implicit
-`-print`, which is what stops `find . -name x -print` printing twice.
+**Actions.** `-print`, `-print0`, `-quit`, `-exec`, `-ok` and `-delete`. An action
+anywhere suppresses the implicit `-print`, which is what stops `find . -name x
+-print` printing twice. `-exec CMD ARGS ;` runs CMD once for each entry, every `{}`
+in ARGS that entry's path, and is true when CMD ends 0; `-exec CMD ARGS {} +` runs
+it with the entries gathered, as many as a 30720-byte command line holds, the word
+with the `{}` once for each, and a failure of the last run is find's status 1. `-ok`
+asks first, the command line and `?` on stderr, an answer beginning `y` on stdin.
+CMD is an applet, as `xargs`'s and `env`'s is: nothing outside the shell is run, and
+a name no applet has is `find: CMD: No such file or directory` and false. `-delete`
+removes an entry -- a directory only when it is empty, and never `.` -- and walks a
+directory's entries before it, as `-depth` does; a failure is said and find goes on,
+status 0, as busybox's does.
 
 **Global options.** `-maxdepth` and `-mindepth`, which bound the traversal rather
 than filter it: `-maxdepth 1` stops the walk from *reading* a subdirectory
@@ -1185,12 +1190,12 @@ the path is too long.
 `-prune` is true and keeps the walk out of a directory it is true of, and `-regex`
 matches the whole path against a basic regular expression, both as busybox's.
 
-Still **refused before the first directory is read**: `-exec`, `-ok`, `-delete`,
-`-user`, `-group`, and the rest.
+Still **refused before the first directory is read**: `-user`, `-group`, `-fstype`,
+and the rest busybox's find has not got either.
 
 ```console
-$ find . -exec rm {} \;
-find: unsupported expression: -exec
+$ find . -fstype ntfs
+find: unrecognized: -fstype
 $ echo $?
 1
 ```

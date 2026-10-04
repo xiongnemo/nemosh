@@ -25,12 +25,11 @@ func TestFind_saysWhatItCannotReadInBusyboxsWords(t *testing.T) {
 		{args: []string{".", "-size", "2x"}, want: "invalid number '2x'"},
 		{args: []string{".", "-newer", "nofile"}, want: "cannot stat 'nofile': No such file or directory"},
 		{args: []string{".", "(", "-name", "a.txt"}, want: "unpaired '('"},
-		// What neither find takes is unrecognized, and what busybox's takes and this one
-		// refuses is said as a refusal.
+		// What neither find takes is unrecognized.
 		{args: []string{".", "-fstype", "x"}, want: "unrecognized: -fstype"},
 		{args: []string{".", "-user", "x"}, want: "unrecognized: -user"},
-		{args: []string{".", "-exec", "rm", "{}", ";"}, want: "unsupported expression: -exec"},
-		{args: []string{".", "-delete"}, want: "unsupported expression: -delete"},
+		{args: []string{".", "-exec", "rm", "{}"}, want: "-exec requires an argument"},
+		{args: []string{".", "-exec", "echo", "{}", "{}", "+"}, want: "only one '{}' allowed for -exec +"},
 	} {
 		_, _, err := runSmall(t, dir, "", "find", test.args...)
 		if err == nil || err.Error() != test.want {

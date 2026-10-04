@@ -82,16 +82,16 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		// A global option, as -maxdepth is, true wherever it stands.
 		p.expression.depthFirst = true
 		return findTrue{}, nil
-	}
-	if findRefused[operand] {
-		return nil, fmt.Errorf("unsupported expression: %s", operand)
+	case "-exec", "-ok":
+		return p.execPredicate(operand)
+	case "-delete":
+		// An action, and -depth with it, as busybox's: a directory is reached after what is
+		// in it, so `find d -delete` empties it before removing it. See find_exec.go.
+		p.hasAction, p.expression.depthFirst = true, true
+		return findDelete{}, nil
 	}
 	return nil, fmt.Errorf("unrecognized: %s", operand)
 }
-
-// findRefused are the predicates busybox-w32's find takes and this one refuses, which say so
-// as a refusal. One neither takes, -user and -fstype among them, is busybox's `unrecognized:`.
-var findRefused = map[string]bool{"-exec": true, "-ok": true, "-delete": true}
 
 // regexPredicate is busybox's -regex: a basic regular expression, as regcomp without
 // REG_EXTENDED reads one, that must match the whole path as find prints it.

@@ -1,6 +1,8 @@
 package applets
 
 import (
+	"bufio"
+	"context"
 	"io"
 	"io/fs"
 )
@@ -27,6 +29,8 @@ type findExpression struct {
 	follow byte
 	// oneVolume is -xdev: no directory on another volume is gone into; see find_xdev.go.
 	oneVolume bool
+	// batches are the `-exec ... {} +` forms, whose last command runs after the walk.
+	batches []*findExec
 }
 
 // findNode is one node of the expression tree. It reports whether the candidate
@@ -60,8 +64,14 @@ func (c findCandidate) info() (fs.FileInfo, error) {
 // caller once per entry -- an expression is a predicate tree, and threading an
 // error return through AND and OR would make short-circuiting mean two things.
 type findRun struct {
-	stdout io.Writer
-	err    error
+	ctx            context.Context
+	stdin          io.Reader
+	stdout, stderr io.Writer
+	// lines is stdin as -ok reads its answers, a line at a time.
+	lines *bufio.Reader
+	err   error
+	// failed is that a `+` command's last run ended other than 0, which is find's status 1.
+	failed bool
 	// pruned is that -prune was true of the entry just evaluated.
 	pruned bool
 	// volumes are the PATHs' volumes, which -xdev keeps the walk on.
