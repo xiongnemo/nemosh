@@ -367,6 +367,8 @@
       "type -\u003e not found": "ash-only"
     },
     "builtin-umask.test.sh": {
+      "'umask -S' prints symbolic umask": "fail",
+      "'umask -p' prints a form that can be eval'd": "fail",
       "'umask 0002' sets the umask": "fail",
       "'umask' without args prints the umask": "fail",
       "set umask with symbolic mode: g-w,o-w": "fail",

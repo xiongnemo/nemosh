@@ -27,7 +27,7 @@ func OwnProcessUmask() {
 }
 
 // newFileModeMask is a new shell's umask: on Linux and macOS the process's own, which it was
-// given, as every shell starts from; on Windows, which gives none, 0022. It was 0022
+// given, as every shell starts from; on Windows, which gives none, 0002. It was 0022
 // everywhere, so on Linux `umask` said 0022 whatever the process had.
 func newFileModeMask() *fileModeMask {
 	return &fileModeMask{value: initialFileModeMask, process: processUmaskOwned.Load()}

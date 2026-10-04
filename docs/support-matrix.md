@@ -665,6 +665,9 @@ loops record the whole command now, as the edited one always did.
   end-of-file`, is said before the script runs. At a prompt the body goes on at the
   next line read.
 - `~user` is left as written. `~` and `~/path` work.
+- On Windows, which gives a process no umask, a shell's starts at 0002, busybox-w32's
+  DEFAULT_UMASK, so `ls -l` and `stat` show a file 0664 and a directory 0775 as busybox's
+  do; Git for Windows's bash starts at 0022. Elsewhere it is the process's own.
 - A name `type` or `command -V` does not find is `x: not found` on stdout and 127, and
   `command -v`'s is 127, as busybox answers them; bash says `type: x: not found` on
   stderr, with 1, and its options to type keep its answer. A read-only variable refused is
