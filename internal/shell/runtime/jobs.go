@@ -55,12 +55,13 @@ func padJobLine(text string) string {
 
 // reportSignalled says, on stderr, how each of these jobs ended if kill ended it: the word
 // busybox's `wait %N` prints, `Terminated` or `Killed`. Not for INT, which neither reference
-// reports -- an interrupt is something the person just did, not news to them.
+// reports -- an interrupt is something the person just did, not news to them -- nor for PIPE,
+// which both leave unsaid, as a program's own SIGPIPE is (programStatus).
 //
 // Only for jobs that have ended, so the signal can be read without the scope's lock.
 func (r Runtime) reportSignalled(records []*jobRecord) {
 	for _, record := range records {
-		if record.signal != 0 && record.signal != 2 {
+		if record.signal != 0 && record.signal != 2 && record.signal != 13 {
 			fmt.Fprintln(r.streams.Stderr, proc.SignalWord(record.signal))
 		}
 	}

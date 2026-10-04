@@ -9,6 +9,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// AbortSignal is ABRT's number: 22 on Windows, as MinGW's signal.h has it and busybox-w32
+// lists it, where Go's syscall package says 6.
+const AbortSignal = 22
+
 // stillActive is STILL_ACTIVE, what GetExitCodeProcess reports for a process that
 // has not exited.
 const stillActive = 259

@@ -7,6 +7,9 @@ import (
 	"syscall"
 )
 
+// AbortSignal is ABRT's number, which is 6 off Windows.
+const AbortSignal = 6
+
 // Terminate sends the signal, which off Windows is what kill means.
 //
 // A negative or zero pid addresses a process group, and that is passed through

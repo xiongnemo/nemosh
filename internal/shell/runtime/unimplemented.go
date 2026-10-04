@@ -35,6 +35,10 @@ var unimplementedBuiltins = map[string]unimplementedBuiltin{
 	},
 	"fg": {reason: noSuspensionReason, permanent: true},
 	"bg": {reason: noSuspensionReason, permanent: true},
+	// readline's, which a bashrc calls to set keys and inputrc variables: `not found` read as
+	// a program to install.
+	"bind": {reason: "the line editor's keys are its own: it reads no inputrc, and nothing rebinds them. " +
+		"busybox-w32 has no bind either"},
 }
 
 // noSuspensionReason is why fg and bg are refused.

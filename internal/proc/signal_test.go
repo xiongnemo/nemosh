@@ -2,6 +2,7 @@ package proc
 
 import (
 	"errors"
+	"strconv"
 	"testing"
 )
 
@@ -16,6 +17,12 @@ func TestParseSignal(t *testing.T) {
 		{spec: "KILL", want: 9},
 		{spec: "sigkill", want: 9},
 		{spec: "TERM", want: 15},
+		// busybox-w32's table has these besides, and ABRT where MinGW numbers it.
+		{spec: "SEGV", want: 11},
+		{spec: "sigpipe", want: 13},
+		{spec: "4", want: 4},
+		{spec: "ABRT", want: AbortSignal},
+		{spec: strconv.Itoa(AbortSignal), want: AbortSignal},
 		// Zero is a question, not a signal, and it is accepted so it can be asked.
 		{spec: "0", want: 0},
 		// The stop-and-continue family is refused by name and by number, never delivered:

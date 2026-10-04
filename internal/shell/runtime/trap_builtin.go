@@ -7,13 +7,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/xiongnemo/nemosh/internal/proc"
 	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 // trap implements the POSIX `trap` builtin over the conditions this shell
-// promises: EXIT and INT (docs/design/v0-readiness.md, P0.4); HUP, QUIT and TERM,
-// which `kill` can send a background job (signal_inbox.go); PIPE, which a write into a
-// pipe no one reads raises (pipe_trap.go); and ERR, which is
+// promises: EXIT and INT (docs/design/v0-readiness.md, P0.4); the rest of busybox-w32's
+// signals, HUP, QUIT, ILL, FPE, SEGV, PIPE, TERM and ABRT, which `kill` can send a
+// background job or the shell (signal_inbox.go), PIPE also raised by a write into a pipe
+// no one reads (pipe_trap.go); and ERR, which is
 // not a signal at all and so needs nothing Windows lacks -- busybox and bash both
 // have it, and they agree on every case measured (errTrapTriggers).
 //
@@ -96,11 +98,28 @@ func (r Runtime) printTraps(conditions []string) int {
 	return 0
 }
 
+// listTraps lists the armed handlers as both references order them: EXIT, the signals by
+// number, then bash's DEBUG, ERR and RETURN, of which busybox has ERR, last. They were in
+// the order of their names, ERR before EXIT.
 func (r Runtime) listTraps() int {
-	for _, name := range slices.Sorted(maps.Keys(r.traps)) {
+	names := slices.SortedFunc(maps.Keys(r.traps), func(a, b trapName) int { return trapRank(a) - trapRank(b) })
+	for _, name := range names {
 		fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", shellquote.Ash(r.traps[name]), name)
 	}
 	return 0
+}
+
+// trapRank is where a trap comes in the listing.
+func trapRank(name trapName) int {
+	switch name {
+	case trapDEBUG:
+		return 1000
+	case trapERR:
+		return 1001
+	case trapRETURN:
+		return 1002
+	}
+	return signalNumber(name)
 }
 
 // trapConditionName maps an operand to the condition it names. The second
@@ -121,23 +140,17 @@ func trapConditionName(operand string) (trapName, bool) {
 	if strings.EqualFold(operand, "DEBUG") {
 		return trapDEBUG, true
 	}
-	switch name := strings.TrimPrefix(strings.ToUpper(operand), "SIG"); name {
-	case "EXIT", "0":
+	name := strings.TrimPrefix(strings.ToUpper(operand), "SIG")
+	if name == "EXIT" || name == "0" {
 		return trapExit, true
-	case "INT", "2":
-		return trapINT, true
-	case "HUP", "1":
-		return trapHUP, true
-	case "QUIT", "3":
-		return trapQUIT, true
-	case "TERM", "15":
-		return trapTERM, true
-	case "PIPE", "13":
-		return trapPIPE, true
-	default:
-		if _, err := strconv.Atoi(operand); err == nil || slices.Contains(portableSignalNames, name) {
-			return "", true
+	}
+	if number, err := proc.ParseSignal(name); err == nil {
+		if trap, ok := signalTraps[number]; ok {
+			return trap, true
 		}
+	}
+	if _, err := strconv.Atoi(operand); err == nil || slices.Contains(portableSignalNames, name) {
+		return "", true
 	}
 	return "", false
 }

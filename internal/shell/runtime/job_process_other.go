@@ -79,9 +79,21 @@ func processOutcome(state *os.ProcessState) (int, int) {
 
 // endBySignal is a job ending by a signal it did not catch: the signal raised on itself
 // with its default action back, so the parent sees what processOutcome reads.
+//
+// Go gives the default action back for HUP, INT and TERM only. For QUIT, ILL, FPE, SEGV and
+// ABRT its runtime keeps a handler of its own, which answers one sent by kill with a stack
+// dump and status 2, and a PIPE no write caused it ignores. For those the process becomes
+// a shell that sends the signal to itself: exec keeps the pid, and gives every handled
+// signal its default action. 128+n is what is left if neither ends it.
 func endBySignal(number int) {
 	signal.Reset(syscall.Signal(number))
-	_ = syscall.Kill(os.Getpid(), syscall.Signal(number))
-	time.Sleep(time.Second)
+	switch number {
+	case 1, 2, 9, 15:
+		_ = syscall.Kill(os.Getpid(), syscall.Signal(number))
+		time.Sleep(time.Second)
+	default:
+		status := strconv.Itoa(128 + number)
+		_ = syscall.Exec("/bin/sh", []string{"sh", "-c", "kill -" + strconv.Itoa(number) + " $$; exit " + status}, nil)
+	}
 	os.Exit(128 + number)
 }

@@ -18,11 +18,20 @@ import (
 //
 // Short, deliberately. Windows has no signals, so each of these is a behaviour Terminate
 // reproduces rather than a number a kernel understands, and a name listed here is a promise.
-var signalNumbers = map[string]int{"HUP": 1, "INT": 2, "QUIT": 3, "KILL": 9, "TERM": 15}
+// It is busybox-w32's table, which has ILL, FPE, SEGV, PIPE and ABRT besides: they were an
+// invalid signal to `kill` and one `trap` did not support. ABRT is AbortSignal, 22 on Windows.
+var signalNumbers = map[string]int{
+	"HUP": 1, "INT": 2, "QUIT": 3, "ILL": 4, "FPE": 8, "KILL": 9, "SEGV": 11, "PIPE": 13, "TERM": 15,
+	"ABRT": AbortSignal,
+}
 
 // signalWords are what a job ended by each signal is reported as -- `Terminated`, not
-// `Done(143)` -- in the words bash and busybox both use.
-var signalWords = map[int]string{1: "Hangup", 2: "Interrupt", 3: "Quit", 9: "Killed", 15: "Terminated"}
+// `Done(143)` -- in the words bash and busybox on Linux both use, libc's. busybox-w32 has its
+// own table, which names all but KILL and TERM bare, `SEGV`.
+var signalWords = map[int]string{
+	1: "Hangup", 2: "Interrupt", 3: "Quit", 4: "Illegal instruction", 8: "Floating point exception",
+	9: "Killed", 11: "Segmentation fault", 13: "Broken pipe", 15: "Terminated", AbortSignal: "Aborted",
+}
 
 // suspendSignals are the stop-and-continue family, by name and by the Linux number a script
 // written there would use.
@@ -50,6 +59,10 @@ func ParseSignal(spec string) (int, error) {
 		if number < 0 {
 			return 0, fmt.Errorf("%w: %s", ErrUnknownSignal, spec)
 		}
+		// The table first, since 22 is ABRT on Windows and TTOU only where ABRT is 6.
+		if number == 0 || isSignalNumber(number) {
+			return number, nil
+		}
 		for name, suspend := range suspendSignals {
 			if number == suspend {
 				return 0, fmt.Errorf("%d is SIG%s: %w", number, name, ErrCannotSuspend)
@@ -58,10 +71,7 @@ func ParseSignal(spec string) (int, error) {
 		// A number is a signal only if the table has it, as busybox-w32 has it: `kill -9999`
 		// was accepted, and ended its target as though by a signal of that number, status
 		// 10127.
-		if number != 0 && !isSignalNumber(number) {
-			return 0, fmt.Errorf("%w: %s", ErrUnknownSignal, spec)
-		}
-		return number, nil
+		return 0, fmt.Errorf("%w: %s", ErrUnknownSignal, spec)
 	}
 	name := strings.TrimPrefix(strings.ToUpper(spec), "SIG")
 	if number, ok := signalNumbers[name]; ok {

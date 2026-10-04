@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/proc"
 )
 
 // A signal `kill` sends a background job, step three of docs/design/background-processes.md.
@@ -24,8 +25,11 @@ import (
 // default action is the sender's to take.
 
 // signalTraps are the signals a trap can be set for, by number: the ones `kill` sends, less
-// KILL, which nothing can catch.
-var signalTraps = map[int]trapName{1: trapHUP, 2: trapINT, 3: trapQUIT, 15: trapTERM}
+// KILL, which nothing can catch. PIPE's trap runs for a write into a pipe too; see pipe_trap.go.
+var signalTraps = map[int]trapName{
+	1: trapHUP, 2: trapINT, 3: trapQUIT, 4: trapILL, 8: trapFPE, 11: trapSEGV, 13: trapPIPE,
+	15: trapTERM, proc.AbortSignal: trapABRT,
+}
 
 // signalNumber is the number of the signal a trap name is for, or 0.
 func signalNumber(name trapName) int {

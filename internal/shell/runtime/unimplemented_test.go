@@ -41,6 +41,13 @@ func TestRuntime_refusesABuiltinItDoesNotImplement(t *testing.T) {
 			script:    "bg\n",
 			fragments: []string{"bg: not implemented, and will not be", "suspend", "kill %N", "support-matrix"},
 		},
+		// What a bashrc calls to set its keys. It was `bind: not found`, 127, which reads as a
+		// program to install.
+		{
+			name:      "bind",
+			script:    "bind 'set completion-ignore-case on'\n",
+			fragments: []string{"bind: not implemented: ", "inputrc", "busybox-w32 has no bind either"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

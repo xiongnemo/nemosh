@@ -140,10 +140,14 @@ const (
 	trapRETURN trapName = "RETURN"
 	// trapDEBUG runs before each command; see debug_trap.go.
 	trapDEBUG trapName = "DEBUG"
-	// The signals a trap can catch besides INT; see signal_inbox.go.
+	// The signals a trap can catch besides INT and PIPE; see signal_inbox.go.
 	trapHUP  trapName = "HUP"
 	trapQUIT trapName = "QUIT"
+	trapILL  trapName = "ILL"
+	trapFPE  trapName = "FPE"
+	trapSEGV trapName = "SEGV"
 	trapTERM trapName = "TERM"
+	trapABRT trapName = "ABRT"
 )
 
 func New(registry applets.Registry, streams Streams) Runtime {

@@ -18,6 +18,8 @@ func TestSignalledJobs_runTheirTrapsAsBashDoes(t *testing.T) {
 	const ready = "until [ -e \"$d/ready\" ]; do sleep 0.02; done\n"
 	for _, test := range []struct {
 		name, script, stdout, stderr string
+		// unsaid is what stderr must not hold.
+		unsaid string
 	}{
 		{
 			name:   "a trapped TERM runs the trap, and the job carries on",
@@ -51,6 +53,25 @@ func TestSignalledJobs_runTheirTrapsAsBashDoes(t *testing.T) {
 			stdout: "st=137\n",
 			stderr: "Killed",
 		},
+		// busybox-w32's table has SEGV, ABRT and the rest besides, which were an invalid signal
+		// to kill and one trap did not support.
+		{
+			name:   "a trapped SEGV and ABRT run their traps, in the order sent",
+			script: "( trap 'echo got-segv' SEGV; trap 'echo got-abrt' ABRT; : > \"$d/ready\"; sleep 1; echo after ) &\n" + ready + "kill -SEGV $!; kill -ABRT $!; wait $!; echo \"st=$?\"\n",
+			stdout: "got-segv\ngot-abrt\nafter\nst=0\n",
+		},
+		{
+			name:   "an untrapped SEGV ends the job, and is said",
+			script: "( : > \"$d/ready\"; sleep 5; echo after ) &\n" + ready + "kill -SEGV $!; wait $!; echo \"st=$?\"\n",
+			stdout: "st=139\n",
+			stderr: "Segmentation fault",
+		},
+		{
+			name:   "an untrapped PIPE ends the job, and is not said",
+			script: "( : > \"$d/ready\"; sleep 5; echo after ) &\n" + ready + "kill -PIPE $!; wait $!; echo \"st=$?\"\n",
+			stdout: "st=141\n",
+			unsaid: "Broken pipe",
+		},
 	} {
 		for _, launcher := range []string{"goroutine", "process"} {
 			t.Run(launcher+": "+test.name, func(t *testing.T) {
@@ -62,6 +83,9 @@ func TestSignalledJobs_runTheirTrapsAsBashDoes(t *testing.T) {
 				rt.CloseBatch(status)
 				if stdout.String() != test.stdout || !strings.Contains(stderr.String(), test.stderr) {
 					t.Fatalf("stdout %q, want %q\nstderr %q, want it to contain %q", stdout.String(), test.stdout, stderr.String(), test.stderr)
+				}
+				if test.unsaid != "" && strings.Contains(stderr.String(), test.unsaid) {
+					t.Fatalf("stderr %q, want it not to say %q", stderr.String(), test.unsaid)
 				}
 			})
 		}
@@ -75,6 +99,20 @@ func TestSignalTraps_areListedAndReset(t *testing.T) {
 	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout})
 	status := rt.RunScript(context.Background(), "trap 'echo t' TERM HUP QUIT\ntrap -p TERM\ntrap - TERM\ntrap\n")
 	want := "trap -- 'echo t' TERM\ntrap -- 'echo t' HUP\ntrap -- 'echo t' QUIT\n"
+	if status != 0 || stdout.String() != want {
+		t.Fatalf("status %d, stdout %q, want %q", status, stdout.String(), want)
+	}
+}
+
+// `trap` lists EXIT first, then the signals by number, then ERR, as busybox's does, with
+// bash's DEBUG and RETURN either side of ERR, as bash's has them. They were in the order of
+// their names, ERR before EXIT.
+func TestTraps_areListedInNumberOrder(t *testing.T) {
+	var stdout bytes.Buffer
+	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout})
+	status := rt.RunScript(context.Background(), "trap : RETURN ERR DEBUG EXIT\ntrap 'echo s' TERM 13 SEGV sigill\ntrap\n")
+	want := "trap -- ':' EXIT\ntrap -- 'echo s' ILL\ntrap -- 'echo s' SEGV\ntrap -- 'echo s' PIPE\ntrap -- 'echo s' TERM\n" +
+		"trap -- ':' DEBUG\ntrap -- ':' ERR\ntrap -- ':' RETURN\n"
 	if status != 0 || stdout.String() != want {
 		t.Fatalf("status %d, stdout %q, want %q", status, stdout.String(), want)
 	}
