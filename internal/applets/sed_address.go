@@ -45,9 +45,11 @@ type sedEndpoint struct {
 	line    int
 	last    bool
 	pattern *regexp.Regexp
+	// zero is the 0 of GNU's `0,/re/`, before the first line, which no line matches.
+	zero bool
 }
 
-func (e sedEndpoint) empty() bool { return e.line == 0 && !e.last && e.pattern == nil }
+func (e sedEndpoint) empty() bool { return e.line == 0 && !e.last && e.pattern == nil && !e.zero }
 
 // matches reports whether an endpoint selects this line.
 func (e sedEndpoint) matches(line string, number int, isLast bool) bool {
@@ -81,6 +83,10 @@ func (a *sedAddress) selectsBeforeNegation(line string, number int, isLast bool)
 	}
 	if !a.ranged {
 		return a.start.matches(line, number, isLast)
+	}
+	if a.start.zero && number == 1 {
+		// Open before the first line, so the first can close it.
+		a.active = true
 	}
 	if a.active && a.relative {
 		a.active = number < a.until
@@ -130,6 +136,9 @@ func (a *sedAddress) atRangeEnd() bool { return !a.ranged || !a.active }
 func parseSedAddress(script string, extended bool) (sedAddress, string, error) {
 	var address sedAddress
 	rest := script
+	if strings.HasPrefix(rest, "0,") {
+		return parseSedZeroRange(rest[2:], extended)
+	}
 	start, rest, found, err := parseSedEndpoint(rest, extended)
 	if err != nil {
 		return address, "", err
@@ -171,6 +180,26 @@ func parseSedAddress(script string, extended bool) (sedAddress, string, error) {
 	return address, rest, nil
 }
 
+// parseSedZeroRange is GNU's `0,/re/`: a range open before the first line, so that line can
+// end it, where `1,/re/` opens on it and looks for the next match. The end has to be a
+// pattern, as in GNU's; 0 is no line anywhere else. It was refused, and busybox reads it as
+// no range at all.
+func parseSedZeroRange(script string, extended bool) (sedAddress, string, error) {
+	end, rest, found, err := parseSedEndpoint(script, extended)
+	if err != nil {
+		return sedAddress{}, "", err
+	}
+	if !found || end.pattern == nil {
+		return sedAddress{}, "", fmt.Errorf("invalid usage of line address 0")
+	}
+	address := sedAddress{start: sedEndpoint{zero: true}, end: end, ranged: true}
+	for strings.HasPrefix(rest, "!") {
+		address.negated = !address.negated
+		rest = rest[1:]
+	}
+	return address, rest, nil
+}
+
 // parseSedEndpoint reads one line number, `$`, or `/pattern/`.
 func parseSedEndpoint(script string, extended bool) (sedEndpoint, string, bool, error) {
 	var endpoint sedEndpoint
@@ -186,7 +215,8 @@ func parseSedEndpoint(script string, extended bool) (sedEndpoint, string, bool, 
 		// parse as no address at all, so `sed -n '0p'` prints *every* line --
 		// measured, and a quirk rather than a rule worth copying. The refusal
 		// here names the address, where falling through to the command check
-		// reported `unsupported command 0` and blamed the wrong thing.
+		// reported `unsupported command 0` and blamed the wrong thing. GNU's one
+		// use of it, `0,/re/`, is read before this; see parseSedZeroRange.
 		return endpoint, "", false, fmt.Errorf("invalid usage of line address 0")
 	case script[0] >= '1' && script[0] <= '9':
 		end := 0

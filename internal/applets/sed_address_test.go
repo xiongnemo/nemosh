@@ -259,6 +259,30 @@ func TestSed_refusesLineAddressZero(t *testing.T) {
 	}
 }
 
+// `0,/re/` is GNU's one use of address 0: a range open before the first line, so the first
+// line can end it, where `1,/re/` opens on it and runs to the next match. Its end has to be a
+// pattern. It was refused, and busybox reads it as no range at all. Each answer is GNU sed
+// 4.9's, measured.
+func TestSed_zeroRangeEndsOnTheFirstLine(t *testing.T) {
+	for _, test := range []struct {
+		script, want string
+		fails        bool
+	}{
+		{script: "0,/l/d", want: "l2\nl3\n"},
+		{script: "1,/l/d", want: "l3\n"},
+		{script: "0,/2/d", want: "l3\n"},
+		{script: "0,/l/!d", want: "l1\n"},
+		{script: "0,/x/s/l/L/", want: "L1\nL2\nL3\n"},
+		{script: "0,3d", fails: true},
+		{script: "0,$d", fails: true},
+	} {
+		stdout, _, err := runSedIn(t, t.TempDir(), "l1\nl2\nl3\n", test.script)
+		if stdout != test.want || (err != nil) != test.fails {
+			t.Errorf("sed %q = %q, %v; want %q, failing %v", test.script, stdout, err, test.want, test.fails)
+		}
+	}
+}
+
 // `{}` groups commands under one address, which is what makes `/x/{p;q}` apply
 // both to the matching line and neither to any other. It also turns the walk over
 // the commands into a recursive one, so `d` and `q` inside a block have to end the
