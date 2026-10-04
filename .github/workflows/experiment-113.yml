@@ -1,0 +1,63 @@
+name: Experiment 113
+
+# A throwaway branch's workflow: loops the output-substitution tests until one hangs, then
+# lists who holds the FIFO open and dumps the goroutines. See task #113: on macOS a `>(cat)`
+# whose path the command never opened left cat blocked in a read on the FIFO.
+
+on:
+  push:
+    branches:
+      - experiment/113-fifo
+
+permissions:
+  contents: read
+
+jobs:
+  loop:
+    name: ${{ matrix.os }} / ${{ matrix.jobs }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        jobs: [process, goroutine]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Loop until a hang
+        shell: bash
+        env:
+          JOBS_MODE: ${{ matrix.jobs }}
+        run: |
+          if [ "$JOBS_MODE" = goroutine ]; then export NEMOSH_JOBS=goroutine; fi
+          go test -c -race -o rt.test ./internal/shell/runtime
+          for i in $(seq 1 60); do
+            ./rt.test -test.run 'TestOutputSubstitution_' -test.count=25 -test.shuffle=on -test.timeout 300s > out.txt 2>&1 &
+            pid=$!
+            for t in $(seq 1 90); do
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 1
+            done
+            if kill -0 "$pid" 2>/dev/null; then
+              echo "::error::hang in round $i"
+              echo "--- the test process's FIFOs"
+              lsof -p "$pid" 2>/dev/null | grep -iE 'fifo|pipe|nemosh' || true
+              echo "--- every process holding a nemosh FIFO"
+              lsof 2>/dev/null | grep nemosh-fifo || true
+              ps -ax -o pid,ppid,stat,command | grep -v grep | grep -E "rt.test|cat" || true
+              kill -QUIT "$pid"
+              sleep 3
+              tail -400 out.txt
+              exit 1
+            fi
+            if ! wait "$pid"; then
+              echo "::error::round $i failed"
+              tail -100 out.txt
+              exit 1
+            fi
+          done
+          echo "no hang in 60 rounds of 25"
