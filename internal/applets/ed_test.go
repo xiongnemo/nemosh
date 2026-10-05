@@ -210,9 +210,12 @@ func TestEdRefuses(t *testing.T) {
 	}
 }
 
-// A CRLF file keeps its carriage returns through ed, as busybox-w32's ed keeps them: they are
-// part of each line, `w` writes them back, and the size counts them. ed wrote such a file back
-// with LF endings. `l` shows them, and every other byte that prints nothing, as POSIX has it.
+// A file whose every line ends in CRLF is read without its carriage returns and written back
+// with them, the size counting them: so an edit at a line's end lands before the ending, and a
+// line added is ended as the rest are. ed wrote such a file back with LF endings; then, with
+// the carriage returns kept in the lines as busybox-w32's ed keeps them, `s/$/!/` went in
+// after the CR and a line added was LF. A mixed file goes back byte for byte. `l` writes every
+// byte that prints nothing as POSIX has it.
 func TestEdKeepsACRLFFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -220,12 +223,20 @@ func TestEdKeepsACRLFFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte("one\r\ntwo\r\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out, stderr, status := runApplet(t, "ed", []string{path}, "1s/one/ONE/\n,l\nw\nq\n")
-	if want := "10\n" + `ONE\r$` + "\n" + `two\r$` + "\n10\n"; out != want || stderr != "" || status != 0 {
+	out, stderr, status := runApplet(t, "ed", []string{path}, "1s/$/!/\n$a\nnew\n.\n,l\nw\nq\n")
+	if want := "10\none!$\ntwo$\nnew$\n16\n"; out != want || stderr != "" || status != 0 {
 		t.Fatalf("ed = %q, %q, %d; want %q", out, stderr, status, want)
 	}
-	if written, _ := os.ReadFile(path); string(written) != "ONE\r\ntwo\r\n" {
+	if written, _ := os.ReadFile(path); string(written) != "one!\r\ntwo\r\nnew\r\n" {
 		t.Fatalf("written back as %q", written)
+	}
+	mixed := filepath.Join(dir, "m.txt")
+	if err := os.WriteFile(mixed, []byte("one\r\ntwo\nthree\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runApplet(t, "ed", []string{"-s", mixed}, "w\nq\n")
+	if written, _ := os.ReadFile(mixed); string(written) != "one\r\ntwo\nthree\r\n" {
+		t.Fatalf("a mixed file was written back as %q", written)
 	}
 	listed, _, _ := runEd(t, ",l\n", "a\tb\x01c\\d\x7f\xe9 中\n")
 	if want := `a\tb\001c\\d\177\351 ` + "中$\n"; listed != want {

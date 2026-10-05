@@ -48,6 +48,9 @@ type edBuffer struct {
 	quit        bool
 	// warned records that `q` has already refused once.
 	warned bool
+	// crlf is that the file the buffer was read from ended every line with CRLF, as `w`
+	// ends them again; see readEdLines.
+	crlf bool
 }
 
 func newEdApplet() Applet {

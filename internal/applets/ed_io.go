@@ -16,8 +16,8 @@ import (
 // moved, which is what a person at the keyboard wants.
 //
 // A file is read through the same UTF-16 decoding every text applet uses, and written back
-// as UTF-8 with the line ending this shell writes -- so editing a file Notepad made does not
-// leave interleaved NULs behind.
+// as UTF-8 -- so editing a file Notepad made does not leave interleaved NULs behind -- with the
+// line ending it was read with: CRLF for a file whose every line had one, LF otherwise.
 
 // readInto loads a file after line `at`, reporting its size unless `-s` said not to.
 func (b *edBuffer) readInto(view ProcessView, name string, at int, replacing bool) error {
@@ -38,12 +38,14 @@ func (b *edBuffer) readInto(view ProcessView, name string, at int, replacing boo
 		return err
 	}
 	defer file.Close()
-	lines, size, err := readEdLines(file)
+	lines, size, crlf, err := readEdLines(file)
 	if err != nil {
 		return err
 	}
 	if replacing {
-		b.lines = lines
+		// The buffer is written back as the file it now holds was ended; lines `r` adds take
+		// the buffer's ending, whatever theirs was.
+		b.lines, b.crlf = lines, crlf
 		b.setCurrent(b.lineCount())
 		b.dirty = false
 		b.warned = false
@@ -54,22 +56,41 @@ func (b *edBuffer) readInto(view ProcessView, name string, at int, replacing boo
 	return nil
 }
 
-// readEdLines splits a file at its newlines alone, so a CRLF file's carriage returns stay in
-// its lines and go back out with them, as busybox-w32's ed keeps them: `w` wrote such a file
-// back with LF endings, and its size two short. bufio's lines dropped them.
-func readEdLines(file *os.File) ([]string, int, error) {
+// readEdLines splits a file into its lines, and reports whether it is a CRLF file: one whose
+// every line ends in CRLF. Such a file's lines are read without the carriage return and
+// written back with it (writeEdLines), so `s/$/!/` lands before the ending and a line added
+// is ended as the rest are. Any other file is read as it is, a carriage return that does not
+// end every line kept as a character, so a mixed file goes back out byte for byte. bufio's
+// lines dropped every carriage return, and `w` wrote a CRLF file back with LF endings; kept
+// in the lines, as busybox-w32's ed keeps them, an edit at a line's end went in after the CR.
+func readEdLines(file *os.File) ([]string, int, bool, error) {
 	reader := bufio.NewScanner(decodeTextInput(file))
 	reader.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	reader.Split(scanLineWithEnding)
 	var lines []string
-	size := 0
+	size, ended, crlf := 0, 0, 0
 	for reader.Scan() {
-		line := strings.TrimSuffix(reader.Text(), "\n")
+		line, terminated := strings.CutSuffix(reader.Text(), "\n")
+		if terminated {
+			ended++
+			if strings.HasSuffix(line, "\r") {
+				crlf++
+			}
+		}
 		lines = append(lines, line)
 		// The newline counts, which is what makes the reported size match the file.
 		size += len(line) + 1
 	}
-	return lines, size, reader.Err()
+	if err := reader.Err(); err != nil {
+		return nil, 0, false, err
+	}
+	isCRLF := ended > 0 && crlf == ended
+	if isCRLF {
+		for index, line := range lines {
+			lines[index] = strings.TrimSuffix(line, "\r")
+		}
+	}
+	return lines, size, isCRLF, nil
 }
 
 // report prints a byte count, unless -s asked for silence.
@@ -106,7 +127,7 @@ func (b *edBuffer) writeCommand(ctx context.Context, addresses edAddresses, name
 	if err != nil {
 		return err
 	}
-	size, err := writeEdLines(native, b.lines[first-1:last], appending, createMode(view, 0o666))
+	size, err := writeEdLines(native, b.lines[first-1:last], appending, b.crlf, createMode(view, 0o666))
 	if err != nil {
 		return err
 	}
@@ -120,9 +141,9 @@ func (b *edBuffer) writeCommand(ctx context.Context, addresses edAddresses, name
 	return nil
 }
 
-// writeEdLines writes lines to native, a new file made with perm: 0666 through the umask, as
-// busybox's ed creates it.
-func writeEdLines(native string, lines []string, appending bool, perm os.FileMode) (int, error) {
+// writeEdLines writes lines to native, each ended with CRLF or LF, a new file made with perm:
+// 0666 through the umask, as busybox's ed creates it.
+func writeEdLines(native string, lines []string, appending, crlf bool, perm os.FileMode) (int, error) {
 	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 	if appending {
 		flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
@@ -132,13 +153,17 @@ func writeEdLines(native string, lines []string, appending bool, perm os.FileMod
 		return 0, err
 	}
 	defer file.Close()
+	ending := "\n"
+	if crlf {
+		ending = "\r\n"
+	}
 	writer := bufio.NewWriter(file)
 	size := 0
 	for _, line := range lines {
-		if _, err := writer.WriteString(line + "\n"); err != nil {
+		if _, err := writer.WriteString(line + ending); err != nil {
 			return 0, err
 		}
-		size += len(line) + 1
+		size += len(line) + len(ending)
 	}
 	return size, writer.Flush()
 }
