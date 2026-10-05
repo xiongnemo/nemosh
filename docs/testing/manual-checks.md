@@ -34,8 +34,10 @@ Measured, not assumed:
 
 ## A. Applets that read from the terminal
 
-The class that broke. `bc` is confirmed working as of 2026-09-13; the rest share the
-shape and each has its own input loop.
+The class that broke. `bc` is confirmed working as of 2026-09-13 and `bc -l` as of
+2026-10-06; the rest share the shape and each has its own input loop. The four
+filters and `find -ok` are v1.4's -- a filter now flushes when its input runs dry
+rather than at every line -- and have not been checked by hand yet.
 
 For each: start it at the prompt, type the input, confirm the answer comes back
 **before** you send end-of-input.
@@ -48,6 +50,12 @@ For each: start it at the prompt, type the input, confirm the answer comes back
 | `grep hello` (no file) | `hello there` and Enter | the line back at once |
 | `sort` (no file) | two lines, then Ctrl-Z Enter | both lines, sorted |
 | `wc` (no file) | a line, then Ctrl-Z Enter | the counts |
+| `bc -l` | `s(1)` and Enter, then `scale` | `.84147098480789650665` at once, then `20` |
+| `tr a-z A-Z` (no file) | `hello` and Enter | `HELLO` at once |
+| `cut -c1-3` (no file) | `hello` and Enter | `hel` at once |
+| `head -n 2` (no file) | two lines | each back at once, and the prompt after the second |
+| `sed s/o/0/` (no file) | two lines, then Ctrl-Z Enter | the first answer as the second line goes in: sed reads a line ahead to know the last, as busybox's does |
+| `find . -name '*.txt' -ok echo {} \;` among a few `.txt` files | `y` or `n` and Enter at each `echo ./a.txt ?` | `y` runs it, `n` skips it |
 
 **Broken looks like:** nothing echoes as you type; Enter does nothing; the answer
 only appears after Ctrl-Z; or the applet ignores Ctrl-C.
@@ -70,10 +78,17 @@ Terminal delivers them as expected is exactly what cannot be tested from here.
 - **Delete** and **Backspace**.
 - **Tab** completion: a command name, a path, a path containing a space, and a path
   with CJK characters in it. Twice in a row should list rather than beep forever.
+- **Programmable completion**, confirmed 2026-10-06. After `source <(gh completion -s
+  bash)`, `gh pr ` and Tab twice lists checkout, checks, close and the rest, and
+  `gh pr ch` and Tab completes `check`, a second Tab listing checkout and checks. With
+  git's `git-completion.bash` sourced, `git che` and Tab lists cherry, cherry-pick and
+  checkout, and `git checkout ma` completes `master`.
 - **Ctrl-R** reverse search, then Enter to accept and Ctrl-G to abort.
 - **The kill ring**: Ctrl-W (word), Ctrl-U (line), Ctrl-K (to end), then **Ctrl-Y**
   to yank it back.
-- **Ctrl-L** clears and redraws with the line intact.
+- **Ctrl-L** clears and redraws with the line intact, and `clear` clears. Both write
+  `ESC[H ESC[J` since v1.4, so look at each in Windows Terminal and in a conhost
+  window; confirmed 2026-10-06.
 - **Ctrl-A / Ctrl-E** to line start and end.
 
 **Worth watching for specifically, because the fix changed it:** raw mode is now
@@ -126,6 +141,19 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 - **resizing the window** redraws instead of corrupting,
 - and on exit **the terminal is given back**: the prompt echoes normally and Ctrl-C
   still works. That last one is the same bug class as A.
+
+`watch -n 1 date`, confirmed 2026-10-06: the screen clears every second under
+`Every 1.0s: date`, the date at its right edge. Widen or narrow the window and the
+date moves to the new edge at the next run; one that stays near column 60 means the
+width was not read. Ctrl-C gives the prompt back at once, and `$?` is 130.
+
+## G. Two windows at once
+
+- **`flock`**, confirmed 2026-10-06. In one window `flock "$TEMP/demo.lock" sleep 20`;
+  in another, `flock -n "$TEMP/demo.lock" echo got; echo $?` prints `1` alone, and
+  `flock "$TEMP/demo.lock" echo got` waits until the first is done, Ctrl-C ending the
+  wait at once with 130. A busybox-w32 flock is no test of it: the two lock different
+  bytes of the file, and do not keep each other out.
 
 ## F. Windows entry points
 

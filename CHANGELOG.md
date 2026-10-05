@@ -8,6 +8,134 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## v1.4.0 - 2026-10-06
+
+Bash compatibility, measured case by case. The Oils project's spec suite is vendored and
+runs in CI, and nemosh passes **2140 of the 2548 cases bash 5.3 passes, 84.0%**, where it
+passed 1488 of 2551, 58.3%, the day the suite went in. The order of authority is the
+project's: where busybox-w32 has the construct, busybox decides, and of the other 408
+cases 117 are answered the way the files record of ash. The bash corpus grew from 113
+cases to 318 and the parser corpus to 182; one bash gap is left, `$BASHPID` inside a
+subshell, and no parser gap.
+
+### Changed
+
+- **The shell's messages name the script and the line**, as bash's do:
+  `script.sh: line 4: cd: cannot cd to nope: No such file or directory`. At a prompt they
+  say `nemosh:` alone.
+- **A command abandoned for an error takes the rest of its line with it**, status 1, and
+  the script goes on with the next, as bash's does: a pattern that matches nothing under
+  `shopt -s failglob`, an assignment that cannot be made, an indirection that cannot be
+  followed, and `${x:1:-10}`, whose length ends before its offset,
+  `substring expression < 0`.
+- **More of what POSIX makes fatal ends a script**, as busybox ends it: a special
+  builtin's usage error and its failed redirection, a syntax error in what `eval` or `.`
+  reads, a `.` FILE that cannot be read, `unset` of a name no variable can have, `local`
+  outside a function, and an arithmetic error in an array's subscript. An error in a
+  builtin that is not special ends only the builtin.
+- **busybox's words and statuses.** A name `type` or `command -V` does not find is
+  `x: not found` on stdout and 127, and `command -v`'s is 127; a read-only variable
+  refused is `x: is read only`; `wait` for a pid that is no child says nothing; `cd` that
+  fails is `cannot cd to DIR` and 2; a count that is no number is `Illegal number`. The
+  phrasing is nemosh's own throughout, `cannot` where busybox says `can't`.
+- **On Windows a shell's umask starts at 0002**, busybox-w32's, so `ls -l` and `stat` show
+  a file 0664 as busybox's do; it was 0022. On Linux and macOS it is the process's own,
+  and it reaches the files the shell, its applets and its children make.
+- **On Windows `PATH` takes a colon between its directories** as well as a semicolon, as
+  busybox-w32's does, and a `/bin/NAME` that is not there runs NAME.
+- **A Windows program's CRLF is a newline** to command substitution and field splitting:
+  `x=$(where git)` has no carriage return in it.
+- **sed, cut, head and tr flush their output when their input runs dry**, not at every
+  line: a file is written a chunk at a time, and `tail -f log | sed ...` still shows a
+  line as it comes.
+- **ed writes a CRLF file back as CRLF**, every line of it, a line added included; a file
+  of mixed endings goes back byte for byte.
+- **lsattr and chattr end 0** when a FILE fails, as busybox-w32's do; **clear** writes
+  `ESC[H ESC[J`, and Ctrl-L the same; **awk** ends 1 for an input file that will not open.
+- **`set -e` does not reach into a command substitution**, unless
+  `shopt -s inherit_errexit` asks, as in both references.
+
+### Added
+
+- **Measurement.** The Oils spec suite, vendored under `tests/oils` with its licence, and
+  a harness that runs it on nemosh, bash and busybox; CI holds nemosh to its baseline,
+  strict on Windows. `docs/testing/oils-spec.md` has the numbers, file by file.
+- **The language.** Namerefs, `declare -n`; `$"..."`; `${x~}` and `${x~~}`; `${var@P}`,
+  `@K` and `@k`; `$(< file)`; `n>&m-` and `<>`; `[[ -o name ]]`, `[[ -R name ]]` and
+  `test -v`; `$SRANDOM`, `$BASH_COMMAND`, `$BASH_SUBSHELL`, `SHELLOPTS` and `BASHOPTS`; a
+  new shell's `SHLVL`, `OPTIND`, `PS4` and `HOSTNAME`; `trap ... DEBUG`; the `time`
+  keyword and `timeout`; a function's name nearly any word, and its body any compound
+  command; sparse indexed arrays, and associative arrays in bash's hash order; `globstar`,
+  `GLOBIGNORE`, and extended patterns that expand what is inside their groups.
+- **Options.** `shopt` knows every name bash 5.3 has, and does `lastpipe`,
+  `expand_aliases`, `xpg_echo`, `localvar_inherit`, `shift_verbose`, `failglob` and
+  `inherit_errexit`; `set` takes bash's option names, `+H` and `posix` among them;
+  `set -o vi` is busybox's vi editing mode.
+- **Builtins.** `.` searches PATH and takes arguments; `cd` and `pwd` take `-L` and `-P`;
+  `command -V` and `-p`; `hash`; `builtin`; `export -n`; `readonly -p` and `-a`; `kill -s`
+  and busybox-w32's whole signal table, ILL, FPE, SEGV, PIPE and ABRT added, for `trap`
+  too; `umask -S`; `read -t 0`; `wait -p`; `trap -P`; `getopts` as busybox's; `pushd`,
+  `popd` and `dirs` as bash's. `bind` is a builtin this shell does not implement, 126,
+  with the reason.
+- **The interactive shell.** History expansion is bash's, with word designators and
+  modifiers; `history` takes bash's options, and `fc` lists, edits and runs again;
+  `HISTCONTROL`, `HISTSIZE` and `HISTFILE`. Prompts know bash's escapes, and
+  `PROMPT_COMMAND` and `PS0` run. `--rcfile`, `--norc`, `--noprofile` and `--login`. The
+  line editor binds `^B ^F ^P ^N` as busybox's does, and readline's `^T`, `M-.`,
+  `M-u M-l M-c`, its kill ring with `M-y`, undo with `C-_`, `C-x C-u` and `M-r`, and
+  `C-x C-e`.
+- **Programmable completion.** `complete`, `compopt` and `compgen`, bash's, and Tab asks a
+  command's specification first, as readline does, `COMP_WORDS` and the rest set as bash
+  sets them. The bash-completion helpers that generated scripts call are builtins, so
+  `source <(gh completion -s bash)` completes gh, and git's own script completes git.
+- **Applets.** `bzip2` compresses, and `tar -cj` writes bzip2; `unxz`, `xzcat`, `unlzma`
+  and `lzcat`, and `xz` and `lzma` with `-d`, read, as busybox's do, `zcat` reads xz, and
+  `tar -J` and `--lzma` read and write; `bc -l` loads upstream's maths library, the one
+  busybox's bc ports, and answers as busybox's does to the last digit; `uptime`; `flock`
+  and `watch`, builtins since they run a command, a flock here and one of busybox-w32's
+  locking different bytes, so that neither keeps the other out; `find` with `-exec`,
+  `-ok`, `-delete`, `-prune`, `-regex`, `-quit`, `-depth`, the `-mmin` family, `-perm`,
+  `-inum`, `-samefile`, `-links`, `-executable`, `-xdev`, `-H`, `-L` and `-wholename`;
+  `install`, `sync`, `fsync`, `shred`, `ttysize`, `reset`, `egrep`, `fgrep` and
+  `pipe_progress`; and `lsattr` and `chattr` for Windows' file attributes, as busybox-w32
+  has them.
+- **busybox's options**, applet by applet, measured against busybox-w32: sort, seq, cat,
+  uniq, env, du, nl, cut, split, od, hexdump and hd, xargs (its quoting, `-I`, real `-P`),
+  tail `-f -F`, stat, xxd, cmp, expand and unexpand, ls, cp, rm, mv, ln, chmod's symbolic
+  modes, date, touch, readlink `-f`, tee, diff (`-w -b -B -L -T -t`, and directories),
+  free, fold, paste, join, the md5sum family's `-c`, patch, uuencode `-m`, dd, grep
+  `-m -o -w -s`, sed's `addr,+N`, GNU's `0,/re/` and `-b`, awk `-e -E -W` and `ENVIRON`,
+  gzip and gunzip keeping a FILE's mode and time, unzip, iconv's code pages, cpio, df,
+  pgrep and pkill `-v -e -P`, and `id -r`. An option may follow the operands, and a long
+  option is taken by any prefix that names it alone, as getopt reads them.
+- **CI.** The fuzz targets, fifteen of them, run every Sunday for five minutes each.
+
+### Fixed
+
+- **Two hangs**: `0**72**7` in arithmetic, and nested extended patterns.
+- **`rm -rf ""` emptied the working directory.** An empty operand names nothing now.
+- **A pipeline stage, a subshell and the shell itself end as SIGPIPE ends them** when
+  their reader has gone, instead of writing on for ever.
+- **`2>&1` keeps an external command's stdout and stderr in order.**
+- **A function may recurse 10000 deep**; it stopped at 128.
+- **An unclosed `[` in a word is looked up, not matched**: `[` no longer read its
+  directory.
+- **Silent wrong answers in the language**, each measured against bash: `IFS` starting
+  empty, `x="$@"`, `"${a[@]}"` of an empty array, an operator on one array element, a
+  partly quoted pattern in `[[ ]]`, `$(< file)`, a failed `=~` leaving `BASH_REMATCH`, an
+  array literal over several lines, and the arithmetic of bases up to 64 and shift counts.
+- **Constructs that stopped a whole script at the parse**: `lib::fn()` and `my-fn()`, a
+  heredoc's delimiter beside a `;`, `(( x << 2 ))`, `${x:(-1)}`, `${s:$i:2}`, a function
+  body that is a bare `if`, and many smaller ones, each now read as busybox and bash read
+  it.
+
+### Tested
+
+- About 600 tests more, 2976 in all; the bash corpus at 318 cases and the parser corpus at
+  182; the Oils suite gating CI on Windows, and its numbers checked in.
+- Applets' outputs compared with busybox-w32's, line for line, for each option above, and
+  `bc -l` on 300 random calls.
+
 ## v1.3.0 - 2026-09-25
 
 Bash compatibility, measured rather than assumed. Every change below was checked against

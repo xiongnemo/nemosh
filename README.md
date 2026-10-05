@@ -16,16 +16,16 @@ sits in between.
 
 ## Status
 
-**Pre-release.** v0 is complete and audited; v1.0 is release hardening. See
-`docs/design/v1-scope.md` for what that covers and
+**Released.** An exact `vMAJOR.MINOR.PATCH` tag is a release, each one in
+[`CHANGELOG.md`](CHANGELOG.md), and every push to `master` publishes a nightly
+prerelease. See `docs/design/v1-scope.md` for what v1 covers and
 `docs/design/v0-readiness.md` for the evidence ledger behind the v0 claim.
 
 Read [`docs/support-matrix.md`](docs/support-matrix.md) before depending on
-anything. It is measured, not aspirational, and it names the gaps. `find`
-implements the operators `-a -o !` and parentheses, the tests `-name -iname -path
--type -size -mtime -newer -empty`, and `-maxdepth`; `-exec` and `-delete` are
-refused before the walk begins, so a pipeline never receives paths the expression
-did not select.
+anything. It is measured, not aspirational, and it names the gaps. `find` takes
+most of busybox's tests and actions, `-exec` and `-delete` among them, and
+refuses the rest -- `-user`, `-group`, `-type b` -- before the walk begins, so a
+pipeline never receives paths the expression did not select.
 
 ## Platforms
 
@@ -161,10 +161,10 @@ pointing at the same binary. It will not, and the reason is not effort.
 
 Scoop's shims share one flat directory, so a name belongs to whichever package
 wrote it last. BusyBox's own manifest shims every applet its `--list` reports; on
-the machine this was written on that is **173 shims** already pointing at
-`busybox.exe`, `cat`, `grep`, `find`, `sort` and `ls` among them. Nemosh has 48
-applets and **46 of those names overlap**. Installing it with per-applet shims
-would silently repoint 46 commands at a different implementation, and
+the machine this was written on that is **171 shims** already pointing at
+`busybox.exe`, `cat`, `grep`, `find`, `sort` and `ls` among them. Nemosh has 153
+applets and **148 of those names are busybox-w32's too**. Installing it with
+per-applet shims would silently repoint them at a different implementation, and
 uninstalling either package afterwards would take the other's names with it.
 Anyone installing a Unix toolbox on Windows is likely to have BusyBox already,
 which makes this the expected case rather than an edge one.
@@ -175,11 +175,13 @@ file -- so shadowing them breaks scripts that never asked for this shell. An
 install that changes what a name means is worse than one that makes you type
 `nemosh find`; `scoop shim add` covers the case where someone wants one anyway.
 
-**Applet parity with BusyBox.** 136 applets against busybox-w32's 179. The
-archivers, the compression filters, the text tools, `awk`, `bc` and the whole
-networking group busybox-w32 keeps are all in now; what stays out includes `vi` and
-`make`, and the formats with no Go support -- `xz`, `lzma`, and bzip2
-*compression*, whose names are left unregistered so PATH still finds a real one.
+**Applet parity with BusyBox.** 153 applets on Windows against busybox-w32's
+179, 148 of them by the same name, and `flock`, `watch`, `which`, `time`,
+`timeout` and `kill` are builtins. The archivers, the compression formats but
+`lzop` and `compress`'s `.Z`, the text tools, `awk`, `bc` and the whole networking
+group busybox-w32 keeps are all in now; what stays out includes `vi`, `make`,
+`man`, `crond` and `crontab`, `dpkg` and `rpm`, `inotifyd`, and busybox-w32's
+`jn` and `drop`, whose names are left unregistered so PATH still finds a real one.
 What matters more than the count is that an option this shell does not implement is
 refused by name rather than doing something else, which `docs/support-matrix.md`
 records applet by applet.

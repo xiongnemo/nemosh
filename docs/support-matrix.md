@@ -691,7 +691,7 @@ loops record the whole command now, as the edited one always did.
 
 ## Applets
 
-All 63 registered applets ship, plus `su`, `lsattr` and `chattr` on Windows. **Name presence is not option parity**, and the
+All 150 registered applets ship, and on Windows `su`, `lsattr` and `chattr` too, 153. **Name presence is not option parity**, and the
 column that matters is the third one.
 
 ### Devices
@@ -847,7 +847,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `ftpput` | `-u -p -P -v -c` | refused by name |
 | `factor` | none; numbers from operands or stdin | refused by name |
 | `fold` | `-w -s -b`, `-w` from 1 to 10000 as busybox's reads it; columns counted as busybox's adjust_column counts them, a tab to the next multiple of eight, a backspace back one, a carriage return to the start, and `-b` every byte one; a UTF-8 character is one column, where busybox-w32's build counts its bytes | refused by name |
-| `flock` | `-s -x -u -n`, and their long forms; `flock FD`, a descriptor the shell holds, `exec 9>lock; flock -n 9`, and `flock FILE [-c] PROG ARGS`, which runs a command, a function or builtin too, or with `-c` a line of shell text, while FILE is locked. A builtin, since both forms need the shell. `-n` and a lock held elsewhere is 1, said nothing of. On Windows the lock is LockFileEx's on one byte far past any data: a Windows lock is mandatory, and busybox-w32 locks the file's bytes, so under `flock f cat f` the command cannot read f, and an empty lock file it locks not at all, so two flocks of one both go ahead | refused by name |
+| `flock` | `-s -x -u -n`, and their long forms; `flock FD`, a descriptor the shell holds, `exec 9>lock; flock -n 9`, and `flock FILE [-c] PROG ARGS`, which runs a command, a function or builtin too, or with `-c` a line of shell text, while FILE is locked. A builtin, since both forms need the shell. `-n` and a lock held elsewhere is 1, said nothing of. On Windows the lock is LockFileEx's on one byte far past any data: a Windows lock is mandatory, and busybox-w32 locks the file's bytes, so under `flock f cat f` the command cannot read f, and an empty lock file it locks not at all, so two flocks of one both go ahead. So this flock and busybox-w32's, holding one file, do not keep each other out | refused by name |
 | `free` | `-b -k -m -g -h`, read from the first argument alone as busybox reads it, values rounded to the nearest and `-h` in busybox's `63.7G`; busybox's columns | refused by name |
 | `cpio` | `-t -i -o -d -m -v -u -0 -F -H`, and busybox's long options, `--quiet` and `--to-stdout` among them; only `newc` is read or written, and `-o` needs `-H newc` to write it; `-o` wins over `-t`, and `-t` over `-i`, as in busybox. `-H` takes `newc` spelled out, as GNU's does; busybox's takes its first letter, `-H n` | refused by name |
 | `cp` | `-a -d -P -L -H -p -f -i -n -l -s -T -t -u -v -r -R`, and busybox's long forms; a file is never copied onto itself, and a destination that is there is replaced, read-only or not, as busybox-w32 replaces it. `-r` follows symbolic links, where busybox copies them | refused by name |
@@ -860,7 +860,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command` (an applet) | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
-| `find` | `-name -iname -path -ipath -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
+| `find` | `-name -iname -path -ipath -wholename -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -exec -ok -delete -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input; zcat's data chooses gzip, bzip2 or xz by its first bytes, as busybox's does. A FILE that is not compressed is said and the next one read, status 1 at the end, as GNU's gzip does; busybox's stops at it | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
@@ -1175,7 +1175,7 @@ path collection took it as a *path operand* and `find . ! -name x` answered
 failure shape `stream_options.go` exists to prevent for `cat -n f.txt`. Path
 collection now stops at `!`, `(` and `)`.
 
-**Tests.** `-name`, `-iname`, `-path`, `-ipath`, `-type`, `-size`, `-mtime`,
+**Tests.** `-name`, `-iname`, `-path` and its other name `-wholename`, `-ipath`, `-type`, `-size`, `-mtime`,
 `-atime`, `-ctime`, `-mmin`, `-amin`, `-cmin`, `-newer`, `-empty`, `-perm`, `-inum`,
 `-samefile`, `-links`, `-executable`. The time tests hold the age in whole seconds
 against N days or minutes, as busybox's time_cmp does; the change time is the
