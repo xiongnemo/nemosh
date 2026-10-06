@@ -79,13 +79,14 @@ func TestPipeTrap_aCaughtSIGPIPERunsTheTrapAfterTheFailedWrite(t *testing.T) {
 	}
 }
 
-// The trap is listed, by name, as any other is, and `13` is its number.
+// The trap is listed, by name, as any other is, SIGPIPE to bash's `trap -p`, and `13` is its
+// number.
 func TestPipeTrap_isListed(t *testing.T) {
 	// When
 	status, stdout, stderr := runSetScript(t, "trap '' PIPE\ntrap\ntrap -p PIPE\ntrap - 13\ntrap\necho end\n")
 
 	// Then
-	if want := "trap -- '' PIPE\ntrap -- '' PIPE\nend\n"; status != 0 || stdout != want || stderr != "" {
+	if want := "trap -- '' PIPE\ntrap -- '' SIGPIPE\nend\n"; status != 0 || stdout != want || stderr != "" {
 		t.Fatalf("status %d, stdout %q, stderr %q, want 0 and %q", status, stdout, stderr, want)
 	}
 }

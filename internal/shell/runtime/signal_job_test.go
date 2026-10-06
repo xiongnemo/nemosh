@@ -93,12 +93,12 @@ func TestSignalledJobs_runTheirTrapsAsBashDoes(t *testing.T) {
 }
 
 // `trap -p` shows a TERM trap as it shows any other, so saving and restoring the table
-// keeps it.
+// keeps it: with bash's SIG in front, since -p is bash's, and plain `trap` with busybox's name.
 func TestSignalTraps_areListedAndReset(t *testing.T) {
 	var stdout bytes.Buffer
 	rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout})
 	status := rt.RunScript(context.Background(), "trap 'echo t' TERM HUP QUIT\ntrap -p TERM\ntrap - TERM\ntrap\n")
-	want := "trap -- 'echo t' TERM\ntrap -- 'echo t' HUP\ntrap -- 'echo t' QUIT\n"
+	want := "trap -- 'echo t' SIGTERM\ntrap -- 'echo t' HUP\ntrap -- 'echo t' QUIT\n"
 	if status != 0 || stdout.String() != want {
 		t.Fatalf("status %d, stdout %q, want %q", status, stdout.String(), want)
 	}

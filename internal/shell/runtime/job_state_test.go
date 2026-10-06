@@ -188,7 +188,7 @@ set -- one "two words"
 		return stdout.String()
 	}
 	want, got := run(original, probe), run(restored, probe)
-	if !strings.Contains(want, "trap -- 'echo int' INT") || !strings.Contains(want, "R held") {
+	if !strings.Contains(want, "trap -- 'echo int' SIGINT") || !strings.Contains(want, "R held") {
 		t.Fatalf("the probe did not see the state it was written to check: %q", want)
 	}
 	if want != got {

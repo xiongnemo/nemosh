@@ -343,7 +343,6 @@
       "trap '' sets handler to empty string (SIG_IGN)": "fail",
       "trap '' with multiple signals": "fail",
       "trap 'echo hi' KILL (regression test, caught by smoosh suite)": "fail",
-      "trap -p is like trap: it prints the handlers and full signal names": "fail",
       "trap 0 is equivalent to trap EXIT": "ash-only",
       "trap EXIT clears the EXIT trap": "ash-only",
       "trap EXIT with PARSE error": "fail",

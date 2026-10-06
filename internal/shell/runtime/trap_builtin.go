@@ -87,12 +87,12 @@ func (r Runtime) trap(args []string) int {
 // `trap -p RETURN` armed RETURN with a command named -p.
 func (r Runtime) printTraps(conditions []string) int {
 	if len(conditions) == 0 {
-		return r.listTraps()
+		return r.writeTraps(true)
 	}
 	for _, condition := range conditions {
 		if name, ok := trapConditionName(condition); ok && name != "" {
-			if action, set := r.traps[name]; set {
-				fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", shellquote.Ash(action), name)
+			if _, set := r.traps[name]; set {
+				r.writeTrap(name, true)
 			}
 		}
 	}
@@ -102,12 +102,30 @@ func (r Runtime) printTraps(conditions []string) int {
 // listTraps lists the armed handlers as both references order them: EXIT, the signals by
 // number, then bash's DEBUG, ERR and RETURN, of which busybox has ERR, last. They were in
 // the order of their names, ERR before EXIT.
-func (r Runtime) listTraps() int {
+func (r Runtime) listTraps() int { return r.writeTraps(false) }
+
+func (r Runtime) writeTraps(bash bool) int {
 	names := slices.SortedFunc(maps.Keys(r.traps), func(a, b trapName) int { return trapRank(a) - trapRank(b) })
 	for _, name := range names {
-		fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", shellquote.Ash(r.traps[name]), name)
+		r.writeTrap(name, bash)
 	}
 	return 0
+}
+
+// writeTrap writes one handler as busybox's `trap` lists it, or with bash set as bash's `trap
+// -p` does: a signal with SIG in front, `trap -- 'echo INT' SIGINT`, and the action quoted as
+// `${x@Q}` quotes it. -p wrote busybox's bare names, which neither reference does for it.
+func (r Runtime) writeTrap(name trapName, bash bool) {
+	action, label := shellquote.Ash(r.traps[name]), string(name)
+	if bash {
+		action = shellquote.Single(r.traps[name])
+		switch name {
+		case trapExit, trapERR, trapDEBUG, trapRETURN:
+		default:
+			label = "SIG" + label
+		}
+	}
+	fmt.Fprintf(r.streams.Stdout, "trap -- %s %s\n", action, label)
 }
 
 // trapRank is where a trap comes in the listing.
