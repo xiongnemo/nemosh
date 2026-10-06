@@ -147,14 +147,6 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 date moves to the new edge at the next run; one that stays near column 60 means the
 width was not read. Ctrl-C gives the prompt back at once, and `$?` is 130.
 
-## G. Two windows at once
-
-- **`flock`**, confirmed 2026-10-06. In one window `flock "$TEMP/demo.lock" sleep 20`;
-  in another, `flock -n "$TEMP/demo.lock" echo got; echo $?` prints `1` alone, and
-  `flock "$TEMP/demo.lock" echo got` waits until the first is done, Ctrl-C ending the
-  wait at once with 130. A busybox-w32 flock is no test of it: the two lock different
-  bytes of the file, and do not keep each other out.
-
 ## F. Windows entry points
 
 These only exist off a GUI launch or a real clipboard, so no test reaches them.
@@ -174,9 +166,23 @@ These only exist off a GUI launch or a real clipboard, so no test reaches them.
   a pipe cannot stand in for. The rest of this was measured on 2026-09-15 and needs no
   hand: a `.bat` through ComSpec, a path with spaces in it, and a 522-character path
   all worked through `-c`, which uses the same launching and the same path handling.
+- **A `#!/usr/bin/env` script**, not yet checked by hand. A file `t.py` holding
+  `#!/usr/bin/env python` and `print("hi")`, run as `./t.py`, runs the Python PATH
+  finds -- and a Python that is only Windows' Store alias may open the Store instead,
+  which is the thing to look for. With Git installed, a `#!/usr/bin/env bash` script
+  runs Git's bash, and `echo $BASH_VERSION` in it says so. Until 2026-10-07 both were
+  `env: NAME: not found`.
 - **CJK input** typed at the prompt, and a CJK filename completed with Tab. The
   editor decodes multi-byte runes incrementally, so a character split across two
   reads is the interesting case.
+
+## G. Two windows at once
+
+- **`flock`**, confirmed 2026-10-06. In one window `flock "$TEMP/demo.lock" sleep 20`;
+  in another, `flock -n "$TEMP/demo.lock" echo got; echo $?` prints `1` alone, and
+  `flock "$TEMP/demo.lock" echo got` waits until the first is done, Ctrl-C ending the
+  wait at once with 130. A busybox-w32 flock is no test of it: the two lock different
+  bytes of the file, and do not keep each other out.
 
 ## If something fails
 

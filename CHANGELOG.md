@@ -63,10 +63,10 @@ subshell, and no parser gap.
 - **The language.** Namerefs, `declare -n`; `$"..."`; `${x~}` and `${x~~}`; `${var@P}`,
   `@K` and `@k`; `$(< file)`; `n>&m-` and `<>`; `[[ -o name ]]`, `[[ -R name ]]` and
   `test -v`; `$SRANDOM`, `$BASH_COMMAND`, `$BASH_SUBSHELL`, `SHELLOPTS` and `BASHOPTS`; a
-  new shell's `SHLVL`, `OPTIND`, `PS4` and `HOSTNAME`; `trap ... DEBUG`; the `time`
-  keyword and `timeout`; a function's name nearly any word, and its body any compound
-  command; sparse indexed arrays, and associative arrays in bash's hash order; `globstar`,
-  `GLOBIGNORE`, and extended patterns that expand what is inside their groups.
+  new shell's `SHLVL`, `OPTIND`, `PS4` and `HOSTNAME`; `trap ... DEBUG`; `time` and
+  `timeout`, busybox's commands; a function's name nearly any word, and its body any
+  compound command; sparse indexed arrays, and associative arrays in bash's hash order;
+  `globstar`, `GLOBIGNORE`, and extended patterns that expand what is inside their groups.
 - **Options.** `shopt` knows every name bash 5.3 has, and does `lastpipe`,
   `expand_aliases`, `xpg_echo`, `localvar_inherit`, `shift_verbose`, `failglob` and
   `inherit_errexit`; `set` takes bash's option names, `+H` and `posix` among them;
