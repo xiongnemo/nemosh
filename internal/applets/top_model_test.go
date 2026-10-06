@@ -16,6 +16,14 @@ import (
 
 var modelEpoch = time.Date(2026, time.August, 21, 12, 0, 0, 0, time.UTC)
 
+// noDetails is the detailSource of a test, which knows nothing of any process. The cache top uses
+// opens the process the pid names, and a pid made up here is a real one's: Windows opens 11 as 8,
+// its low two bits ignored. On a CI runner the filter for nemosh took chrome.exe, pid 11, as well,
+// for the command line of whatever was running there.
+type noDetails struct{}
+
+func (noDetails) Lookup(proc.Process) proc.Details { return proc.Details{} }
+
 func testProcess(pid, ppid int, name string, working uint64) proc.Process {
 	return proc.Process{
 		PID: pid, PPID: ppid, Name: name, WorkingSet: working,
@@ -70,7 +78,7 @@ func TestTopModel_sortsByCPUDescendingByDefault(t *testing.T) {
 	)
 
 	// When
-	rows := model.rows(snapshot, rates, proc.NewDetailCache())
+	rows := model.rows(snapshot, rates, noDetails{})
 
 	// Then -- busiest first, which is the only default that makes a monitor useful at a glance
 	assertNames(t, rows, "first", "second", "third")
@@ -107,7 +115,7 @@ func TestTopModel_sortsByTheChosenColumn(t *testing.T) {
 	)
 
 	// When
-	rows := model.rows(snapshot, rates, proc.NewDetailCache())
+	rows := model.rows(snapshot, rates, noDetails{})
 
 	// Then
 	assertNames(t, rows, "large", "middle", "small")
@@ -136,7 +144,7 @@ func TestTopModel_filterMatchesNameAndPID(t *testing.T) {
 			model.Filter = test.filter
 
 			// When
-			rows := model.rows(snapshot, rates, proc.NewDetailCache())
+			rows := model.rows(snapshot, rates, noDetails{})
 
 			// Then
 			assertNames(t, rows, test.want...)
@@ -154,7 +162,7 @@ func TestTopModel_treeShowsParentage(t *testing.T) {
 	)
 
 	// When
-	rows := model.rows(snapshot, rates, proc.NewDetailCache())
+	rows := model.rows(snapshot, rates, noDetails{})
 
 	// Then
 	assertNames(t, rows, "root", "child", "grandchild")
@@ -180,7 +188,7 @@ func TestTopModel_foldingABranchHidesItsChildren(t *testing.T) {
 	}
 
 	// Then
-	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "root", "folded")
+	assertNames(t, model.rows(snapshot, rates, noDetails{}), "root", "folded")
 }
 
 func TestTopModel_kernelProcessesCanBeHidden(t *testing.T) {
@@ -196,7 +204,7 @@ func TestTopModel_kernelProcessesCanBeHidden(t *testing.T) {
 
 	// Then -- Idle and System are the two worth a toggle: Idle holds the machine's spare
 	// capacity, and on an idle machine it is the top row for ever.
-	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "svchost.exe")
+	assertNames(t, model.rows(snapshot, rates, noDetails{}), "svchost.exe")
 }
 
 func TestTopModel_keysThatAskTheCallerForSomething(t *testing.T) {
@@ -409,11 +417,11 @@ func TestTopModel_sortsByPIDInReadingOrder(t *testing.T) {
 	model.applyKey("N")
 
 	// Then
-	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "first", "middle", "last")
+	assertNames(t, model.rows(snapshot, rates, noDetails{}), "first", "middle", "last")
 
 	// And a second press reverses it, as it does for any column.
 	model.applyKey("N")
-	assertNames(t, model.rows(snapshot, rates, proc.NewDetailCache()), "last", "middle", "first")
+	assertNames(t, model.rows(snapshot, rates, noDetails{}), "last", "middle", "first")
 }
 
 // `-s pid` gets pid's direction too, which is why setSort exists apart from sortBy.

@@ -37,11 +37,11 @@ func TestTopModel_dashHAddsARowPerThread(t *testing.T) {
 	model := newTopModel(mustColumns(t))
 
 	// When -- off
-	without := model.rows(snapshot, rates, proc.NewDetailCache())
+	without := model.rows(snapshot, rates, noDetails{})
 
 	// And on
 	model.applyKey("H")
-	with := model.rows(snapshot, rates, proc.NewDetailCache())
+	with := model.rows(snapshot, rates, noDetails{})
 
 	// Then -- two processes, then two processes and their three threads
 	if len(without) != 2 {

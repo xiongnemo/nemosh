@@ -72,11 +72,18 @@ func newTopModel(columns []topColumn) topModel {
 	}
 }
 
+// detailSource is what rows asks for a process's details. top's is the cache of what each
+// process's handle would say; a test's says nothing, because a pid a test makes up is some real
+// process's on the machine running it.
+type detailSource interface {
+	Lookup(process proc.Process) proc.Details
+}
+
 // rows turns a snapshot and its rates into the list to draw.
 //
 // One function for every arrangement the view can be in, because the alternative is four
 // functions that each get the filter subtly differently.
-func (m topModel) rows(snapshot proc.Snapshot, rates proc.Rates, details *proc.DetailCache) []topRow {
+func (m topModel) rows(snapshot proc.Snapshot, rates proc.Rates, details detailSource) []topRow {
 	rows := make([]topRow, 0, len(snapshot.Processes))
 	for _, process := range snapshot.Processes {
 		if !m.KernelProcesses && (process.PID == 0 || process.PID == 4) {
