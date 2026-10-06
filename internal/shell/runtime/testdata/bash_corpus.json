@@ -1919,5 +1919,11 @@
     "stdout": "<q><r><r>\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "set -e; trap 'echo bye' EXIT INT TERM KILL; echo after; trap; trap - 9; trap",
+    "stdout": "after\ntrap -- 'echo bye' EXIT\ntrap -- 'echo bye' INT\ntrap -- 'echo bye' KILL\ntrap -- 'echo bye' TERM\ntrap -- 'echo bye' EXIT\ntrap -- 'echo bye' INT\ntrap -- 'echo bye' TERM\nbye\n",
+    "status": 0,
+    "reference": "busybox-w32"
   }
 ]

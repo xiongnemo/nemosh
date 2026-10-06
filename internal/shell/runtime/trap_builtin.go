@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/xiongnemo/nemosh/internal/proc"
 	"github.com/xiongnemo/nemosh/internal/shellquote"
@@ -118,9 +119,18 @@ func trapRank(name trapName) int {
 		return 1001
 	case trapRETURN:
 		return 1002
+	case trapKILL:
+		return int(syscall.SIGKILL)
 	}
 	return signalNumber(name)
 }
+
+// trapKILL is a trap for KILL, which busybox-w32's table has: `trap ACTION KILL` is taken there,
+// and listed, and can never run, since nothing catches KILL, and bash takes it too. It was
+// refused as a signal this shell does not deliver, status 1, so under `set -e` a script's
+// `trap cleanup EXIT INT TERM KILL` ended it before its first command. Setting it leaves the
+// signal inbox alone (signalNumber has no number for it), so `kill -9` still ends the shell.
+const trapKILL trapName = "KILL"
 
 // trapConditionName maps an operand to the condition it names. The second
 // result distinguishes an operand that is not a signal at all from one that is
@@ -147,6 +157,9 @@ func trapConditionName(operand string) (trapName, bool) {
 	if number, err := proc.ParseSignal(name); err == nil {
 		if trap, ok := signalTraps[number]; ok {
 			return trap, true
+		}
+		if number == int(syscall.SIGKILL) {
+			return trapKILL, true
 		}
 	}
 	if _, err := strconv.Atoi(operand); err == nil || slices.Contains(portableSignalNames, name) {
