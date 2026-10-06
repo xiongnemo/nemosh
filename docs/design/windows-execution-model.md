@@ -236,11 +236,14 @@ for a Unix path, a `PATH` search by basename. argv is rebuilt busybox-style as
 and a chain of interpreters gives up at the fifth (busybox's `++level > 4` ELOOP
 guard), reported as status 126. An interpreter that cannot be found is 127.
 
-Known limitation: `#!/usr/bin/env python3` resolves to the `env` applet, because
-`/usr/bin` is a Unix path and `env` is registered. Nemosh's `env` runs applets
-only (`internal/applets/env.go`), so that shebang reports `python3: not found`.
-This is busybox-faithful in its dispatch and simply inherits `env`'s current
-scope; widening `env` to external programs is separate work.
+`#!/usr/bin/env NAME` is read as `#!/usr/bin/NAME`: `sh` is this shell, an applet
+is the applet, and anything else is NAME on `PATH`, so `#!/usr/bin/env python3`
+runs python3 and `#!/usr/bin/env bash` Git's bash where Git is installed. That is
+where busybox-w32's `env` finds the program it runs. Nemosh's `env` runs applets
+only (`internal/applets/env.go`), so this shebang was handed to it and reported
+`python3: not found` whatever `PATH` held. An option to `env`, or a NAME with more
+words after it, still goes to `env`, and so does a NAME found nowhere, which `env`
+reports as before; widening `env` itself to external programs is separate work.
 
 As implemented: `internal/shell/runtime/external_script.go`, with end-to-end
 coverage in `tests/behavior/shell/windows/script-sh-dispatch.toml` and

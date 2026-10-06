@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -190,6 +191,27 @@ func TestPlanScriptLaunch_handsTheScriptToItsInterpreter(t *testing.T) {
 			executable: self,
 			args:       []string{"sed", "-n", "quiet", "x"},
 		},
+		{
+			label:      "#!/usr/bin/env sh is this shell, as #!/bin/sh is",
+			name:       "viaenv",
+			content:    "#!/usr/bin/env sh\necho hi\n",
+			executable: self,
+			args:       []string{"viaenv", "x"},
+		},
+		{
+			label:      "#!/usr/bin/env NAME names an applet as a Unix directory does",
+			name:       "envcat",
+			content:    "#!/usr/bin/env cat\nhello\n",
+			executable: self,
+			args:       []string{"cat", "envcat", "x"},
+		},
+		{
+			label:      "an option to env is still env's",
+			name:       "envopt",
+			content:    "#!/usr/bin/env -i sh\necho hi\n",
+			executable: self,
+			args:       []string{"env", "-i sh", "envopt", "x"},
+		},
 	} {
 		t.Run(testCase.label, func(t *testing.T) {
 			path := filepath.Join(dir, testCase.name)
@@ -264,6 +286,34 @@ func TestPlanScriptLaunch_stopsAfterFourInterpreters(t *testing.T) {
 			t.Fatalf("planScriptLaunch(a.sh) error = %v, want %v", err, errInterpreterLoop)
 		}
 	})
+}
+
+// #!/usr/bin/env NAME finds a NAME no applet has on PATH, as busybox-w32's env does: python3,
+// node, or bash, Git's where Git is installed. It was `env: NAME: not found`.
+func TestPlanScriptLaunch_findsAnEnvInterpreterOnPath(t *testing.T) {
+	dir := t.TempDir()
+	program := filepath.Join(dir, "nemosh-test-interpreter")
+	if goruntime.GOOS == "windows" {
+		program += ".exe"
+	}
+	if err := os.WriteFile(program, []byte("not run\n"), 0o755); err != nil {
+		t.Fatalf("write interpreter: %v", err)
+	}
+	path := filepath.Join(dir, "script")
+	if err := os.WriteFile(path, []byte("#!/usr/bin/env nemosh-test-interpreter\n"), 0o700); err != nil {
+		t.Fatalf("write script: %v", err)
+	}
+	t.Setenv("PATH", dir)
+	rt := New(applets.DefaultRegistry, Streams{})
+
+	executable, args, err := rt.planScriptLaunch(path, []string{"x"}, `C:\nemosh\nemosh.exe`)
+
+	if err != nil {
+		t.Fatalf("planScriptLaunch: %v", err)
+	}
+	if !strings.EqualFold(filepath.ToSlash(executable), filepath.ToSlash(program)) || !slices.Equal(args, []string{path, "x"}) {
+		t.Fatalf("planScriptLaunch = %q %q, want %q %q", executable, args, program, []string{path, "x"})
+	}
 }
 
 func TestPlanScriptLaunch_reportsAnInterpreterThatIsNotThere(t *testing.T) {

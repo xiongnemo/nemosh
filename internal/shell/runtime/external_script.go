@@ -162,10 +162,17 @@ func (r Runtime) planScriptLaunch(executable string, args []string, self string)
 		if depth >= maxInterpreterDepth {
 			return "", nil, fmt.Errorf("%s: %w", executable, errInterpreterLoop)
 		}
-		next, applet, err := r.interpreterExecutable(interp)
+		resolved := envInterpreter(interp)
+		next, applet, err := r.interpreterExecutable(resolved)
+		if err != nil && resolved != interp {
+			// A NAME that is nowhere is env's to report, `env: NAME: not found`, as it was.
+			resolved = interp
+			next, applet, err = r.interpreterExecutable(interp)
+		}
 		if err != nil {
 			return "", nil, err
 		}
+		interp = resolved
 		if next == "" {
 			next = self
 		}
@@ -184,6 +191,21 @@ func (r Runtime) planScriptLaunch(executable string, args []string, self string)
 			return executable, args, nil
 		}
 	}
+}
+
+// envInterpreter is the interpreter `#!/usr/bin/env NAME` names: NAME, looked up as though the
+// line were `#!/usr/bin/NAME` -- this shell for sh, an applet, then PATH -- which is where
+// busybox-w32's env finds it. env here runs only applets, so `#!/usr/bin/env bash` and
+// `#!/usr/bin/env python3` were `env: bash: not found` whatever PATH held, and so was
+// `#!/usr/bin/env sh`, where `#!/bin/sh` is this shell. An option to env, or a NAME with more
+// after it, is still env's.
+func envInterpreter(interp interpreter) interpreter {
+	name := interp.opts
+	if interp.name != "env" || !unixInterpreterPath(interp.path) || name == "" || name[0] == '-' ||
+		strings.ContainsAny(name, " \t=/\\") {
+		return interp
+	}
+	return interpreter{path: "/usr/bin/" + name, name: name}
 }
 
 // interpreterExecutable answers with the program to run and, when the

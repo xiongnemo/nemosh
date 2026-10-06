@@ -858,7 +858,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
 | `du` | `-a -s -d -c -h -k -m -b -l -x -H -L`; what the filesystem allocated, in kilobytes, each directory printed after what it holds and in the order it lists them. A directory and a file with several links are counted once unless `-l`, and a junction is a link as a symbolic link is. Of `-h -k -m`, `-H -L` and `-s -d` the last wins | refused by name |
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
-| `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command` (an applet) | refused by name |
+| `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command` (an applet). A script's `#!/usr/bin/env NAME` does not come here: NAME is found as `#!/usr/bin/NAME` is, this shell for `sh`, an applet, then a program on PATH | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -wholename -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -exec -ok -delete -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |

@@ -469,7 +469,6 @@
       "Glob ordering respects LC_COLLATE (zsh respects this too)": "ash-only",
       "\\ in unquoted substitutions does not match a backslash": "fail",
       "\\ in unquoted substitutions escapes globchars": "fail",
-      "glob can expand to command and arg": "fail",
       "glob double quotes": "fail",
       "shopt -u globskipdots shows . and ..": "fail"
     },
