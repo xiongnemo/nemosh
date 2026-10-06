@@ -262,6 +262,16 @@ the Product and Release workflows both run the suite. Pin whatever the assertion
 on (here, `HOME=` to somewhere that cannot be a prefix) rather than assuming the layout
 this machine happens to have.
 
+**A pid a test makes up is a real process's.** top's filter test built three processes,
+pids 11, 12 and 13, and looked their details up through the cache top uses, which opens
+the process a pid names. Windows ignores a pid's low two bits -- `OpenProcess` of 11
+opens 8, of 13 opens 12 -- so the test read the command lines of whatever held those
+numbers. It had passed since August; then on a runner the process at 8 had `nemosh` in
+its command line, the filter for nemosh took `chrome.exe` with it, and the commit about
+to be tagged v1.4.0 went red. Code that asks the system about a process takes the asking
+as a parameter, and a test that makes processes up passes one that knows nothing, as
+`noDetails` in `top_model_test.go` does.
+
 **A test that synthesises its own input can agree with itself and be wrong.**
 The editor bound `^_` as `tcell.KeyCtrlUnderscore` and the test pressed
 `tcell.KeyCtrlUnderscore`. Both agreed, and the key did nothing on Windows —
