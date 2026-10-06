@@ -17,7 +17,7 @@ import (
 //	${!a[@]}   the subscripts
 func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]string, bool) {
 	if count, ok := strings.CutPrefix(body, "#"); ok {
-		reference, ok := parseArrayReference(count)
+		reference, ok := parseBodyReference(count)
 		if !ok {
 			return nil, false
 		}
@@ -43,7 +43,7 @@ func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]strin
 		if names, ok := r.namesWithPrefix(indices); ok {
 			return names, true
 		}
-		reference, ok := parseArrayReference(indices)
+		reference, ok := parseBodyReference(indices)
 		if !ok || (reference.subscript != "@" && reference.subscript != "*") {
 			return nil, false
 		}
@@ -55,7 +55,7 @@ func (r Runtime) expandArrayParameter(ctx context.Context, body string) ([]strin
 		}
 		return keys, true
 	}
-	reference, ok := parseArrayReference(body)
+	reference, ok := parseBodyReference(body)
 	if !ok {
 		return nil, false
 	}

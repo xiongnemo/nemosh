@@ -66,7 +66,6 @@
     },
     "array-sparse.test.sh": {
       "${@:offset:length}": "fail",
-      "${a[@]#...}": "fail",
       "${sp[i]} with negative invalid index": "fail",
       "((sp[i])) and ((sp[i]++)) with invalid negative index": "fail",
       "(YSH) $[bool(a)]": "fail",
@@ -671,7 +670,6 @@
     },
     "var-ref.test.sh": {
       "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
-      "Array indirect expansion with replacements": "fail",
       "Array indirect expansion with suffix operators": "fail",
       "Bizarre tilde expansion in array index": "fail",
       "Var ref, then error with ${ ? }": "fail"

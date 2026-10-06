@@ -118,7 +118,9 @@ type arrayReference struct {
 	subscript string
 }
 
-// parseArrayReference reads `name[subscript]`, reporting whether the text is one.
+// parseArrayReference reads `name[subscript]`, reporting whether the text is one. Any `]` at the
+// end closes it, since an assignment's target comes here expanded: `m[$k]=v` with k=`x]y` is
+// `m[x]y]`. A `${...}` body is read by parseBodyReference instead.
 func parseArrayReference(text string) (arrayReference, bool) {
 	open := strings.IndexByte(text, '[')
 	if open <= 0 || !strings.HasSuffix(text, "]") {
@@ -130,6 +132,17 @@ func parseArrayReference(text string) (arrayReference, bool) {
 		return arrayReference{}, false
 	}
 	return arrayReference{name: name, subscript: subscript}, true
+}
+
+// parseBodyReference is parseArrayReference for a `${...}` body, the text as written, where the
+// `]` that closes the name's `[` must be the last byte. Any `]` at the end was taken, so
+// `${a[0]%[0-5]}`, an element with an operator whose word has brackets of its own, was the
+// subscript `0]%[0-5` and an arithmetic error, and `${m[k]%[0-9]}` the value of no key at all.
+func parseBodyReference(body string) (arrayReference, bool) {
+	if open := strings.IndexByte(body, '['); open > 0 && subscriptClose(body, open) != len(body)-1 {
+		return arrayReference{}, false
+	}
+	return parseArrayReference(body)
 }
 
 // elementsFor resolves a reference to the fields it produces, and reports whether

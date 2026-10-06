@@ -29,12 +29,27 @@ func assignedName(target string) string {
 	return target
 }
 
-// subscriptClose finds the `]` that closes the `[` at open, counting the brackets inside it,
-// or -1 when none does.
+// subscriptClose finds the `]` that closes the `[` at open, counting the brackets inside it and
+// passing over what is quoted or escaped, so `m["a]b"]` closes at its last byte; -1 when none
+// does.
 func subscriptClose(text string, open int) int {
 	depth := 0
 	for index := open; index < len(text); index++ {
 		switch text[index] {
+		case '\\':
+			index++
+		case '\'':
+			end := strings.IndexByte(text[index+1:], '\'')
+			if end < 0 {
+				return -1
+			}
+			index += end + 1
+		case '"':
+			for index++; index < len(text) && text[index] != '"'; index++ {
+				if text[index] == '\\' {
+					index++
+				}
+			}
 		case '[':
 			depth++
 		case ']':

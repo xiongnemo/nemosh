@@ -1907,5 +1907,17 @@
     "stdout": "a b a b\nx\n[]\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "a=(v1 v6); declare -A m=([k]=v1); printf \"<%s>\" \"${a[0]%[0-5]}\" \"${a[*]#[a-z]}\" \"${a[@]%]}\" \"${m[k]%[0-9]}\" \"${a[@]%%[[:digit:]]}\"; echo",
+    "stdout": "<v><1 6><v1><v6><v><v><v>\n",
+    "status": 0,
+    "reference": "bash-5.3"
+  },
+  {
+    "script": "declare -A m; m[\"a]b\"]=q; k=\"x]y\"; m[$k]=r; printf \"<%s>\" \"${m[\"a]b\"]}\" \"${m[$k]}\" \"${m[\"x]y\"]}\"; echo",
+    "stdout": "<q><r><r>\n",
+    "status": 0,
+    "reference": "bash-5.3"
   }
 ]

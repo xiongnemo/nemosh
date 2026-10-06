@@ -25,7 +25,7 @@ func isArrayAtReference(text string) bool {
 		return true
 	}
 	body = strings.TrimPrefix(body, "!")
-	if reference, ok := parseArrayReference(body); ok {
+	if reference, ok := parseBodyReference(body); ok {
 		return reference.subscript == "@"
 	}
 	// A list with an operator on it produces fields too: `${@:2:2}` is two
@@ -47,7 +47,7 @@ func isArrayStarReference(text string) bool {
 	if !ok {
 		return false
 	}
-	if reference, ok := parseArrayReference(strings.TrimPrefix(body, "!")); ok {
+	if reference, ok := parseBodyReference(strings.TrimPrefix(body, "!")); ok {
 		return reference.subscript == "*"
 	}
 	name, _, _, ok := splitParameterOperator(body)
