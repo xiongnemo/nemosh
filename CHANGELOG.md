@@ -8,7 +8,7 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
-## v1.4.0 - 2026-10-06
+## v1.4.0 - 2026-10-07
 
 Bash compatibility, measured case by case. The Oils project's spec suite is vendored and
 runs in CI, and nemosh passes **2140 of the 2548 cases bash 5.3 passes, 84.0%**, where it
