@@ -418,6 +418,13 @@ subsequent read means. Until it was implemented it returned 0 and did nothing at
 a script that removed an element and carried on was quietly wrong -- the failure mode
 AGENTS.md singles out.
 
+**`UID`, `EUID` and `OSTYPE`** are bash's, which busybox does not set. `UID` and `EUID` are
+read-only integers, the uid `id -u` answers: on Windows 0 only when the shell is elevated,
+and busybox-w32's 4095 otherwise, so `[ "$EUID" -ne 0 ]` asks there what it asks on Linux.
+`OSTYPE` is `msys` on Windows, the value scripts test to know Git Bash (whose bash 2.55 says
+`cygwin`), `linux-gnu` on Linux and `darwin` on macOS; one already set is kept. None is
+exported.
+
 ### The line editor's history keys
 
 Three ways to reach history, answering three questions, which is why there are three:
