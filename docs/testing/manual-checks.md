@@ -96,6 +96,11 @@ entered and left around *every single line read* rather than once per session. T
 fast, and type *while a command is still running* (start `sleep 5`, keep typing).
 Keystrokes should not be lost, duplicated, or echoed strangely at the mode switch.
 
+**`time {` over lines**, not yet checked by hand: type `time {` and Enter, and the
+prompt is a continuation one; `sleep 1`, Enter, `}`, Enter, and the report comes,
+`real 0m 1.0...`. The keyword over a compound is new since v1.4.0, and the prompt's
+reading of where a group ends is a layer of its own.
+
 ## C. Interrupts and end of input
 
 `os.Interrupt` on Windows is only delivered while `ENABLE_PROCESSED_INPUT` is set,
@@ -166,6 +171,11 @@ These only exist off a GUI launch or a real clipboard, so no test reaches them.
   a pipe cannot stand in for. The rest of this was measured on 2026-09-15 and needs no
   hand: a `.bat` through ComSpec, a path with spaces in it, and a 522-character path
   all worked through `-c`, which uses the same launching and the same path handling.
+- **A program an applet runs**, not yet checked by hand. `git ls-files | head -3 |
+  xargs git log -1 --oneline --` and `find . -maxdepth 1 -name '*.md' -exec git log -1
+  --oneline -- {} \;` print in git's colours, as git run at the prompt does, since the
+  program is handed the console; and Ctrl-C during `echo 127.0.0.1 | xargs ping -n 30`
+  gives the prompt back at once. Until 2026-10-08 each of these was `not found`.
 - **A `#!/usr/bin/env` script**, not yet checked by hand. A file `t.py` holding
   `#!/usr/bin/env python` and `print("hi")`, run as `./t.py`, runs the Python PATH
   finds -- and a Python that is only Windows' Store alias may open the Store instead,
