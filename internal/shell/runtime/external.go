@@ -156,7 +156,7 @@ func (r Runtime) externalCommandPath(name string) (string, error) {
 		pathValue, present = r.searchPath, true
 	}
 	if !present || pathValue == "" {
-		return "", errExternalNotFound
+		return notOnPath(name)
 	}
 	var firstCandidateErr error
 	for _, dir := range filepath.SplitList(pathValue) {
@@ -187,7 +187,7 @@ func (r Runtime) externalCommandPath(name string) (string, error) {
 	if firstCandidateErr != nil {
 		return "", firstCandidateErr
 	}
-	return "", errExternalNotFound
+	return notOnPath(name)
 }
 
 func executableCandidate(candidate string) (string, error) {

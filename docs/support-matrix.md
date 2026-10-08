@@ -425,6 +425,11 @@ and busybox-w32's 4095 otherwise, so `[ "$EUID" -ne 0 ]` asks there what it asks
 `cygwin`), `linux-gnu` on Linux and `darwin` on macOS; one already set is kept. None is
 exported.
 
+**`sh` and `bash` that `PATH` has no program for are this shell**, as both are busybox-w32's
+names for its own: `sh -c ...`, `bash build.sh`, and a script that begins `#!/bin/bash` or
+`#!/usr/bin/env bash`. They were `not found`. One `PATH` holds still wins, so where Git is
+installed `bash` is Git's.
+
 ### The line editor's history keys
 
 Three ways to reach history, answering three questions, which is why there are three:

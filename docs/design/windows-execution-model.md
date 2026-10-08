@@ -245,6 +245,13 @@ only (`internal/applets/env.go`), so this shebang was handed to it and reported
 words after it, still goes to `env`, and so does a NAME found nowhere, which `env`
 reports as before; widening `env` itself to external programs is separate work.
 
+A bare `sh` or `bash` that nothing on `PATH` answers to is this shell, whether it is a
+command, `sh -c ...` or `bash build.sh`, or the interpreter `#!/bin/bash` and
+`#!/usr/bin/env bash` name: busybox-w32 has both names for its own shell. One `PATH`
+holds still wins, so where Git is installed `bash` is Git's bash, as it was, and only what
+was `not found` changes. `command -v bash` names this binary then, since it is what runs
+(`internal/shell/runtime/shell_fallback.go`).
+
 As implemented: `internal/shell/runtime/external_script.go`, with end-to-end
 coverage in `tests/behavior/shell/windows/script-sh-dispatch.toml` and
 `shebang-applet-interpreter.toml`.

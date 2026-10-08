@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2146 of the 2548 cases bash passes: 84.2%.**
+**nemosh passes 2149 of the 2548 cases bash passes: 84.3%.**
 
-Of the other 402, it does 117 the way the files record of ash, which may be busybox's
-way, and 285 neither way.
+Of the other 399, it does 117 the way the files record of ash, which may be busybox's
+way, and 282 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 285 neither way.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2146 |
+| that nemosh passes of those | 2149 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -88,7 +88,7 @@ of ash.
 | builtin-process.test.sh | 10 | 9 | 7 | 77.8% | 0 | 6 |
 | builtin-read.test.sh | 64 | 63 | 57 | 90.5% | 4 | 60 |
 | builtin-set.test.sh | 24 | 24 | 20 | 83.3% | 0 | 20 |
-| builtin-special.test.sh | 12 | 11 | 7 | 63.6% | 2 | 10 |
+| builtin-special.test.sh | 12 | 11 | 8 | 72.7% | 2 | 10 |
 | builtin-times.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 21 | 91.3% | 0 | 4 |
 | builtin-trap-err.test.sh | 22 | 22 | 19 | 86.4% | 2 | 22 |
@@ -167,10 +167,10 @@ of ash.
 | var-sub-quote.test.sh | 41 | 41 | 40 | 97.6% | 0 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
 | vars-bash.test.sh | 1 | 1 | 1 | 100.0% | 0 | 0 |
-| vars-special.test.sh | 41 | 39 | 31 | 79.5% | 0 | 19 |
+| vars-special.test.sh | 41 | 39 | 33 | 84.6% | 0 | 19 |
 | whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
 | word-eval.test.sh | 8 | 7 | 7 | 100.0% | 0 | 6 |
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2665 | 2548 | 2146 | 84.2% | 117 | 1447 |
+| all | 2665 | 2548 | 2149 | 84.3% | 117 | 1447 |

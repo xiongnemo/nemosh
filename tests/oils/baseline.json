@@ -321,7 +321,6 @@
     },
     "builtin-special.test.sh": {
       "Prefix assignments persist after readonly, but NOT exported (set -o posix)": "ash-only",
-      "Prefix binding for exec is a special case (versus e.g. readonly)": "fail",
       "Special builtins can't be redefined as shell functions (set -o posix)": "fail",
       "bash 'type' gets confused - says 'function', but runs builtin": "fail",
       "exec without args is a special case of the special case in some shells": "ash-only"
@@ -680,11 +679,9 @@
       "Braced block inside ${}": "fail"
     },
     "vars-special.test.sh": {
-      "$?": "fail",
       "$BASHPID DOES change with subshell and command sub": "fail",
       "$HOSTNAME": "fail",
       "$PATH is set if unset at startup": "fail",
-      "$PIPESTATUS": "fail",
       "$_ is not undefined on first use": "fail",
       "$_ with pipeline and subshell": "fail",
       "BASH_VERSION / OILS_VERSION": "fail",
