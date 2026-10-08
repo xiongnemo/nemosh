@@ -86,9 +86,10 @@ func (e operandError) Unwrap() error { return e.err }
 // env and xargs both launch a COMMAND, and both follow the SUSv3 table busybox
 // cites: BB_EXECVP_or_die raises xfunc_error_retval to 127 for ENOENT and 126
 // otherwise before it dies (libbb/executable.c:117-122), and xargs names the
-// same two statuses (findutils/xargs.c:385-390). Nemosh dispatches registered
-// applets only, so only the not-found branch is reachable, and the wording says
-// "not found" rather than busybox's "cannot execute '%s'" because no execvp ran.
+// same two statuses (findutils/xargs.c:385-390). Nemosh looks the name up as an
+// applet and then as a program on PATH (program_runner.go), and a name neither has
+// is this, worded "not found" rather than busybox's "cannot execute '%s'" because
+// nothing was executed to fail.
 func commandNotFound(name string) error {
 	return ExitStatusMessage(127, operandFailure(name, errors.New("not found")))
 }

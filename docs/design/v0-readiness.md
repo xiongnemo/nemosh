@@ -217,12 +217,13 @@ the corpus for full parity:
   `head`/`wc` agree, but `mingw_open` skips the conversion for `O_RDONLY`
   (`win32/mingw.c:265`) so its `cat` says `Permission denied`. Nemosh uses one
   wording for every reader.
-- `env` and `xargs` dispatch registered applets only. BusyBox falls back to
-  `execvp`, so `env python3 …` works there and reports `not found` here. Two
-  consequences: the wording stays `not found` rather than BusyBox's `cannot execute
-  'NAME': No such file or directory`, because no `execvp` ran and claiming `ENOENT`
-  would misdescribe the mechanism; and the 126 half of the SUSv3 table — a command
-  found but not runnable — is unreachable, so only the 127 half is implemented.
+- `env` and `xargs` dispatched registered applets only until 2026-10-08; since then
+  a name no applet has is a program found on `PATH` and launched by the shell, as
+  BusyBox's `execvp` would find it (`internal/applets/program_runner.go`). The
+  wording for a name found nowhere stays `not found` rather than BusyBox's `cannot
+  execute 'NAME': No such file or directory`, because nothing was executed to fail
+  with `ENOENT`; a program found and refused is 126, the other half of the SUSv3
+  table.
 - `test`'s `-O` and `-G` ask whether the effective user owns a file. busybox-w32
   answers them from a stat that reports one fixed owner for everything
   (`win32/mingw.c:749`), so on Windows the question degrades to "does it exist".

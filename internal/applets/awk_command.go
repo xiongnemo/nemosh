@@ -52,7 +52,7 @@ func awkCommandWords(text string) ([]string, error) {
 			continue
 		}
 		if strings.IndexByte(awkShellMetacharacters, character) >= 0 {
-			return nil, fmt.Errorf("%q needs a shell for the %q in it, and awk runs applets directly", text, string(character))
+			return nil, fmt.Errorf("%q needs a shell for the %q in it, and awk runs a command without one", text, string(character))
 		}
 		current.WriteByte(character)
 		started = true
@@ -68,7 +68,7 @@ func awkCommandWords(text string) ([]string, error) {
 
 // runOutputPipe hands a pipe's applet everything the program wrote to it.
 func (in *awkInterp) runOutputPipe(stream *awkOutput) error {
-	applet, found := DefaultRegistry.Lookup(stream.command[0])
+	applet, found := commandFor(in.ctx, stream.command[0])
 	if !found {
 		return commandNotFound(stream.command[0])
 	}
@@ -87,7 +87,7 @@ func (in *awkInterp) runCommandOutput(command string) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	applet, found := DefaultRegistry.Lookup(words[0])
+	applet, found := commandFor(in.ctx, words[0])
 	if !found {
 		return nil, commandNotFound(words[0])
 	}
@@ -115,7 +115,7 @@ func (in *awkInterp) builtinSystem(node awkBuiltinExpr) (awkValue, error) {
 	if err != nil {
 		return awkValue{}, err
 	}
-	applet, found := DefaultRegistry.Lookup(words[0])
+	applet, found := commandFor(in.ctx, words[0])
 	if !found {
 		return awkValue{}, commandNotFound(words[0])
 	}

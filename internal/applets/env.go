@@ -45,7 +45,7 @@ func (envApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdout
 		}
 		return printEnvironment(stdout, view.Environ())
 	}
-	applet, ok := DefaultRegistry.Lookup(invocation.command[0])
+	applet, ok := commandFor(ctx, invocation.command[0])
 	if !ok {
 		return commandNotFound(invocation.command[0])
 	}

@@ -238,7 +238,7 @@ func (x *xargsRun) next() ([]string, bool, error) {
 // exec runs one command line, and says as busybox's xargs_exec does whether to stop: at a PROG
 // there is no applet for, 127, and at one that ends 255, 124.
 func (x *xargsRun) exec(line []string) error {
-	applet, ok := DefaultRegistry.Lookup(line[0])
+	applet, ok := commandFor(x.ctx, line[0])
 	if !ok {
 		return ExitStatusMessage(127, fmt.Errorf("%s: No such file or directory", line[0]))
 	}

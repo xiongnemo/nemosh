@@ -870,7 +870,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
 | `du` | `-a -s -d -c -h -k -m -b -l -x -H -L`; what the filesystem allocated, in kilobytes, each directory printed after what it holds and in the order it lists them. A directory and a file with several links are counted once unless `-l`, and a junction is a link as a symbolic link is. Of `-h -k -m`, `-H -L` and `-s -d` the last wins | refused by name |
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
-| `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command` (an applet). A script's `#!/usr/bin/env NAME` does not come here: NAME is found as `#!/usr/bin/NAME` is, this shell for `sh`, an applet, then a program on PATH | refused by name |
+| `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command`: an applet, or else a program, looked for on the PATH env gives it and launched by the shell, as a command is. A script's `#!/usr/bin/env NAME` does not come here: NAME is found as `#!/usr/bin/NAME` is, this shell for `sh`, an applet, then a program on PATH | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -wholename -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -exec -ok -delete -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
@@ -946,7 +946,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `whois` | `-h -p`; `-i` accepted | refused by name |
 | `whoami` | none | refused by name |
 | `winpath` | none | treated as a path operand |
-| `xargs` | `-0 -a -E -e -I -i -n -P -p -r -s -t -x` and `--no-run-if-empty`, busybox's quoting of words, `-I` reading lines, `-P` running applets side by side, and busybox's statuses: 123, 124, 127 | refused by name |
+| `xargs` | `-0 -a -E -e -I -i -n -P -p -r -s -t -x` and `--no-run-if-empty`, busybox's quoting of words, `-I` reading lines, `-P` running commands side by side, an applet or else a program on PATH, and busybox's statuses: 123, 124, 127 | refused by name |
 | `xxd` | `-a -c -g -i -l -o -p -r -s`, busybox's formats over libbb's dump, `-i`'s C array, and `-r` with and without `-p`, seeking where stdout is a file and writing zeros up to an address elsewhere, as busybox does (busybox-w32's seek on a pipe succeeds without moving, and loses the gap) | refused by name |
 | `yes` | none | treated as the string to repeat |
 
@@ -1210,8 +1210,9 @@ in ARGS that entry's path, and is true when CMD ends 0; `-exec CMD ARGS {} +` ru
 it with the entries gathered, as many as a 30720-byte command line holds, the word
 with the `{}` once for each, and a failure of the last run is find's status 1. `-ok`
 asks first, the command line and `?` on stderr, an answer beginning `y` on stdin.
-CMD is an applet, as `xargs`'s and `env`'s is: nothing outside the shell is run, and
-a name no applet has is `find: CMD: No such file or directory` and false. `-delete`
+CMD is an applet or else a program on PATH, as `xargs`'s and `env`'s is, the program
+launched by the shell as a command is; a name neither has is `find: CMD: No such file
+or directory` and false. `-delete`
 removes an entry -- a directory only when it is empty, and never `.` -- and walks a
 directory's entries before it, as `-depth` does; a failure is said and find goes on,
 status 0, as busybox's does.
@@ -2193,11 +2194,12 @@ would let `substr` cut a UTF-8 sequence in half and emit invalid output.
 `toupper`/`tolower` and `printf "%c"` follow the same rule, so `printf "%c", 233`
 writes `é` rather than the lone byte `0xE9`.
 
-**A command is an applet of this shell, and nothing else.** `system()`,
-`print | cmd` and `cmd | getline` look their command up in the applet registry and
-refuse anything else by name, because `internal/applets` never spawns an OS
-process — the boundary `docs/design/windows-execution-model.md` sets and `xargs`
-already draws. So `"sort" | getline` works and `system("c:/tool.exe")` does not.
+**A command is an applet of this shell, or else a program on PATH.** `system()`,
+`print | cmd` and `cmd | getline` look their command up in the applet registry, and
+then on PATH, the program launched by the shell as a command is, since
+`internal/applets` never spawns an OS process itself -- the boundary
+`docs/design/windows-execution-model.md` sets. So `"sort" | getline` runs the applet,
+and `system("git status")` runs git, which was refused by name until 2026-10-08.
 Shell syntax inside such a command is **refused rather than approximated**: an
 unquoted `;`, `|`, `&`, `<`, `>`, `$` or backtick is an error, since treating
 `echo a; echo b` as `echo` with three arguments would be a wrong answer wearing

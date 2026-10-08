@@ -32,7 +32,12 @@ var launchPathVariables = map[string]bool{
 
 // childEnvironment is what a launched program receives.
 func (r Runtime) childEnvironment() []string {
-	items := r.withoutArrays(r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform())))
+	return r.withNativePaths(r.withoutArrays(r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform()))))
+}
+
+// withNativePaths is items with the shell's own path variables in the platform's spelling, as a
+// launched program has to have them.
+func (r Runtime) withNativePaths(items []string) []string {
 	if hostEnvironmentPlatform() != windowsEnvironment {
 		return items
 	}

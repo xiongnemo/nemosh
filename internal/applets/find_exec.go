@@ -146,6 +146,9 @@ func (run *findRun) execute(argv []string, ask bool) int {
 	}
 	applet, found := findApplets(argv[0])
 	if !found {
+		applet, found = programFor(run.ctx, argv[0])
+	}
+	if !found {
 		fmt.Fprintf(run.stderr, "find: %s: No such file or directory\n", argv[0])
 		return 127
 	}

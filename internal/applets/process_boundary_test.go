@@ -26,7 +26,9 @@ import (
 // every hard case.
 //
 // So the rule is a test rather than a comment. An applet that needs to run something
-// looks it up in the registry and refuses otherwise, which is what `awk` does.
+// looks it up in the registry, and otherwise asks the shell for a program through the
+// ProgramRunner in its context (program_runner.go): the shell launches it, as it launches
+// a command, and the applet is handed an Applet to run.
 //
 // Tests are exempt, and pgrep_test.go uses that exemption for a good reason: it starts a
 // process so that `pgrep` has something real to find.
@@ -42,7 +44,7 @@ func TestApplets_doNotSpawnProcesses(t *testing.T) {
 	// thing and taught the next person to work around the guard. The calls that actually
 	// start a process are named separately below.
 	forbidden := map[string]string{
-		"os/exec": "launching a process belongs to internal/shell/runtime; look the command up in DefaultRegistry and refuse otherwise, as xargs.go does",
+		"os/exec": "launching a process belongs to internal/shell/runtime; look the command up with commandFor, which asks the shell's ProgramRunner, as xargs.go does",
 	}
 	// And the routes that do not need that import. Matched as text against the source,
 	// because an applet reaching for one of these is crossing the same boundary by a

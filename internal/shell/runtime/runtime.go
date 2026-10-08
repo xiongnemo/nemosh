@@ -323,7 +323,9 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 	// Stdout is wrapped so that Ctrl-C reaches an applet that is not watching the
 	// context -- which is almost all of them. See interrupt_writer.go. Stderr is left
 	// alone: a diagnostic written on the way out is still worth seeing.
-	err := applet.Run(applets.WithProcessView(ctx, r), args[1:], r.streams.Stdin,
+	// The runner is how env, xargs, find and awk run a program no applet has; see
+	// external_program.go.
+	err := applet.Run(applets.WithProgramRunner(applets.WithProcessView(ctx, r), r), args[1:], r.streams.Stdin,
 		interruptible(r.streams.Stdout, ctx), r.streams.Stderr)
 	return r.appletStatus(ctx, args[0], err)
 }

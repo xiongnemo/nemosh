@@ -195,10 +195,10 @@ func (r Runtime) planScriptLaunch(executable string, args []string, self string)
 
 // envInterpreter is the interpreter `#!/usr/bin/env NAME` names: NAME, looked up as though the
 // line were `#!/usr/bin/NAME` -- this shell for sh, an applet, then PATH -- which is where
-// busybox-w32's env finds it. env here runs only applets, so `#!/usr/bin/env bash` and
-// `#!/usr/bin/env python3` were `env: bash: not found` whatever PATH held, and so was
-// `#!/usr/bin/env sh`, where `#!/bin/sh` is this shell. An option to env, or a NAME with more
-// after it, is still env's.
+// busybox-w32's env finds it. env here ran only applets, so `#!/usr/bin/env bash` and
+// `#!/usr/bin/env python3` were `env: bash: not found` whatever PATH held, and `#!/usr/bin/env
+// sh` was too, where `#!/bin/sh` is this shell. An option to env, or a NAME with more after it,
+// is still env's, which runs a program as well now.
 func envInterpreter(interp interpreter) interpreter {
 	name := interp.opts
 	if interp.name != "env" || !unixInterpreterPath(interp.path) || name == "" || name[0] == '-' ||

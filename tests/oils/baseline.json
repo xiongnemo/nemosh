@@ -576,7 +576,6 @@
       "return \"\" (a lot of disagreement)": "fail"
     },
     "sh-options-bash.test.sh": {
-      "OSH calling bash with SHELLOPTS does not change braceexpand": "fail",
       "SHELLOPTS is readonly": "fail"
     },
     "sh-options.test.sh": {

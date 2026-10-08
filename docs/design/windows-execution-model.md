@@ -239,11 +239,12 @@ guard), reported as status 126. An interpreter that cannot be found is 127.
 `#!/usr/bin/env NAME` is read as `#!/usr/bin/NAME`: `sh` is this shell, an applet
 is the applet, and anything else is NAME on `PATH`, so `#!/usr/bin/env python3`
 runs python3 and `#!/usr/bin/env bash` Git's bash where Git is installed. That is
-where busybox-w32's `env` finds the program it runs. Nemosh's `env` runs applets
+where busybox-w32's `env` finds the program it runs. Nemosh's `env` ran applets
 only (`internal/applets/env.go`), so this shebang was handed to it and reported
 `python3: not found` whatever `PATH` held. An option to `env`, or a NAME with more
-words after it, still goes to `env`, and so does a NAME found nowhere, which `env`
-reports as before; widening `env` itself to external programs is separate work.
+words after it, still goes to `env`, which now runs a program too (see
+`internal/applets/program_runner.go`), and so does a NAME found nowhere, which `env`
+reports as before.
 
 A bare `sh` or `bash` that nothing on `PATH` answers to is this shell, whether it is a
 command, `sh -c ...` or `bash build.sh`, or the interpreter `#!/bin/bash` and
