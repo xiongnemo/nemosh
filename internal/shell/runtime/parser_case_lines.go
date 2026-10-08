@@ -43,6 +43,10 @@ func nextCaseLine(stack *[]bool, line string) (string, string) {
 	if name, body, isFunction := functionHeaderBeforeCompound(line); isFunction {
 		prefix, operator, compound, ok = name, "()", body, true
 	}
+	// `time case ...`: the time keyword over the case.
+	if form, body, timed := timedCompoundHeader(line); timed {
+		prefix, operator, compound, ok = "", form, body, true
+	}
 	if ok {
 		if header, isCase := compoundHeader(compound, "case"); isCase {
 			through, rest := splitAfterCaseIn(header)

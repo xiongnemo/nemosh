@@ -113,6 +113,8 @@ type andOr struct {
 type pipeline struct {
 	commands []commandNode
 	negated  bool
+	// timed is bash's time keyword over the pipeline, "time" or "time -p"; see time_keyword.go.
+	timed string
 }
 
 type commandNode interface{ commandNode() }

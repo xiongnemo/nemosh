@@ -6,6 +6,9 @@ import (
 )
 
 func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, savedStatus int) lineResult {
+	if value.timed != "" {
+		return r.executeTimedPipeline(ctx, value, savedStatus)
+	}
 	// Everything inside `!` is exempt from `set -e` and the ERR trap, not only the pipeline's
 	// own status, as in both references: `set -e; ! { false; }` ended the script at the false.
 	stages := r

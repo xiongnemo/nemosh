@@ -26,10 +26,7 @@ import (
 // that fails is reported above the times, `Command exited with non-zero status N`, its status
 // being time's.
 func (r Runtime) timeBuiltin(ctx context.Context, args []string) int {
-	format, _ := r.env.LookupEnv("TIME")
-	if format == "" {
-		format = "real\t%E\nuser\t%u\nsys\t%T"
-	}
+	format := r.timeFormat(false)
 	output, appending := "", false
 	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
 		option := args[0]
@@ -39,7 +36,7 @@ func (r Runtime) timeBuiltin(ctx context.Context, args []string) int {
 		}
 		switch option {
 		case "-p":
-			format = "real %e\nuser %U\nsys %S"
+			format = r.timeFormat(true)
 		case "-a":
 			appending = true
 		case "-f", "-o":
@@ -81,6 +78,17 @@ func (r Runtime) timeBuiltin(ctx context.Context, args []string) int {
 	usage := r.measure(func() int { return r.runCommandResolved(ctx, args, true) })
 	writeTimeReport(report, format, args, usage)
 	return usage.status
+}
+
+// timeFormat is the report's form: -p's POSIX one, or else $TIME, or busybox's.
+func (r Runtime) timeFormat(posix bool) string {
+	if posix {
+		return "real %e\nuser %U\nsys %S"
+	}
+	if format, _ := r.env.LookupEnv("TIME"); format != "" {
+		return format
+	}
+	return "real\t%E\nuser\t%u\nsys\t%T"
 }
 
 // timeUsage is what one timed command used: its status, and the wall clock, user and system

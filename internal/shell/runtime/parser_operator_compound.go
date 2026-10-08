@@ -156,6 +156,8 @@ func joinCompoundPrefix(prefix, operator, text string) string {
 		return "! " + text
 	case "()":
 		return prefix + "() " + text
+	case timeKeyword, timeKeywordPOSIX:
+		return operator + " " + text
 	}
 	return prefix + " " + operator + " " + text
 }
@@ -185,6 +187,8 @@ func wrapCompoundAfterOperator(node programNode, prefix, operator string, budget
 		return wrapCompoundIntoPipeline(node, prefix+" 2>&1", budget, depth)
 	case "!":
 		return negateCompound(node), nil
+	case timeKeyword, timeKeywordPOSIX:
+		return timedCompound(node, operator), nil
 	}
 	prior, err := parseTypedLineWithBudget(prefix, budget, depth)
 	if err != nil {

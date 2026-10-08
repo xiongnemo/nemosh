@@ -94,6 +94,9 @@ func splitCompoundAfterPrefix(line string) (string, string, string, bool) {
 			return name, "coproc", rest, true
 		}
 	}
+	if form, rest, ok := timedCompoundHeader(line); ok {
+		return "", form, rest, true
+	}
 	return splitCompoundAfterOperator(line)
 }
 

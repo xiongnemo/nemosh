@@ -47,7 +47,8 @@ func parseFunctionDefinition(line string, budget *parseBudget, depth int) (funct
 		// `@(a|b)` and `!(cmd)` where a command begins: a name ending in a pattern character
 		// is a function's only when its parentheses are empty, and otherwise its `(` begins
 		// an extended pattern or a negated subshell.
-		if endsInPatternCharacter(rawName) {
+		// And `time (...)` is the time keyword over a subshell, not a function named time.
+		if endsInPatternCharacter(rawName) || rawName == "time" {
 			return functionDefinition{}, false, nil
 		}
 		return functionDefinition{}, true, fmt.Errorf("%w: missing ) in function definition", ErrIncompleteScript)

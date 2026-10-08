@@ -430,6 +430,13 @@ names for its own: `sh -c ...`, `bash build.sh`, and a script that begins `#!/bi
 `#!/usr/bin/env bash`. They were `not found`. One `PATH` holds still wins, so where Git is
 installed `bash` is Git's.
 
+**`time` is busybox's command and, before a compound command, bash's keyword.** `time
+[-pa] [-f FMT] [-o FILE] PROG ARGS` times one command, as busybox-w32's does; `time {
+make; make test; }`, `time ( ... )`, `time for ...`, `time if ...`, `time case ...` and
+`time -p while ...` time the compound and the rest of its pipeline, as bash's keyword does,
+where busybox, whose time is a command only, gives a syntax error. Both report in the
+command's form, `$TIME`'s or busybox's, `-p` POSIX's.
+
 ### The line editor's history keys
 
 Three ways to reach history, answering three questions, which is why there are three:

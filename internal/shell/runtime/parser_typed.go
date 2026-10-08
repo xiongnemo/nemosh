@@ -103,6 +103,7 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 			continue
 		}
 		segmentTokens, negated := stripPipelineNegation(segment.tokens)
+		segmentTokens, timed := stripPipelineTime(segmentTokens)
 		if len(segmentTokens) == 0 {
 			return andOr{}, fmt.Errorf("syntax error: missing command after !")
 		}
@@ -113,7 +114,7 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 			}
 			return andOr{}, err
 		}
-		parsed := pipeline{negated: negated}
+		parsed := pipeline{negated: negated, timed: timed}
 		for _, commandTokens := range commands {
 			// The one `!` is the pipeline's, at its front. A second, `! ! true`, and one at the
 			// front of a later stage, `: | ! true`, are syntax errors in busybox, as in POSIX's

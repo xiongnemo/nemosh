@@ -43,7 +43,8 @@ func braceDelimiterAt(line string, index int, delimiter byte) bool {
 	// group. Everywhere else a brace after a word is data, which is what keeps
 	// `echo {` printing a brace. Sixth layer to need telling about a construct, and
 	// the reason the count is worth stating: see array.go.
-	return delimiter == '{' && (afterFunctionKeyword(line, index) || afterCoprocKeyword(line, index))
+	return delimiter == '{' && (afterFunctionKeyword(line, index) || afterCoprocKeyword(line, index) ||
+		afterTimeKeyword(line, index))
 }
 
 // isCommandSeparator reports whether a character ends one command and so leaves
