@@ -1931,5 +1931,11 @@
     "stdout": "trap -- 'echo it'\\''s' SIGINT\ntrap -- 'x' SIGKILL\ntrap -- 'echo e' ERR\ntrap -- 'echo it'\\''s' SIGINT\n",
     "status": 0,
     "reference": "bash-5.3"
+  },
+  {
+    "script": "x='x[x]'\n: $((x))\necho after $?",
+    "stdout": "",
+    "status": 2,
+    "reference": "busybox-w32"
   }
 ]

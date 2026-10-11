@@ -47,10 +47,27 @@ func (p *arithmeticParser) lookup(name string) (int64, error) {
 	if value, ok := parseArithmeticBase(text); ok {
 		return value, nil
 	}
-	if p.depth >= maxArithmeticNesting {
+	if p.depth >= maxArithmeticNesting || p.nesting >= maxArithmeticNesting {
 		return 0, fmt.Errorf("%s: expression recursion level exceeded", name)
 	}
-	return p.runtime.evaluateArithmeticAt(text, p.depth+1)
+	return p.runtime.evaluateArithmeticAt(text, p.depth+1, p.nesting+1)
+}
+
+// arithmeticNestingKey carries into an element's subscript how deep the arithmetic it is read
+// for already is. A subscript is evaluated as an expression of its own, and it started the
+// count afresh, so `x='x[x]'; $(( x ))` went x, x[x], x, x[x] until the stack ran out: a fatal
+// error that ends the process, which the fuzzer found on 2026-10-11 in `${x:x}`. bash says
+// `expression recursion level exceeded`.
+type arithmeticNestingKey struct{}
+
+func withArithmeticNesting(ctx context.Context, nesting int) context.Context {
+	return context.WithValue(ctx, arithmeticNestingKey{}, nesting)
+}
+
+// arithmeticNestingOf is the nesting ctx carries, 0 for an expression as written.
+func arithmeticNestingOf(ctx context.Context) int {
+	nesting, _ := ctx.Value(arithmeticNestingKey{}).(int)
+	return nesting
 }
 
 // once is a name whose indexed subscript has been evaluated to the number it names, so that an
@@ -64,7 +81,7 @@ func (p *arithmeticParser) once(name string) (string, error) {
 	if err := checkArithmeticSubscript(name, p.depth); err != nil {
 		return "", err
 	}
-	reference, err := p.runtime.subscriptOnce(context.Background(), reference)
+	reference, err := p.runtime.subscriptOnce(withArithmeticNesting(context.Background(), p.nesting+1), reference)
 	if err != nil {
 		return "", err
 	}
@@ -74,7 +91,7 @@ func (p *arithmeticParser) once(name string) (string, error) {
 // valueText is the text a name holds: an element for `a[i]`, the name's own value -- a
 // computed one included -- otherwise.
 func (p *arithmeticParser) valueText(name string) string {
-	ctx := context.Background()
+	ctx := withArithmeticNesting(context.Background(), p.nesting+1)
 	if reference, ok := parseArrayReference(name); ok {
 		elements, _ := p.runtime.elementsFor(ctx, reference)
 		return strings.Join(elements, " ")

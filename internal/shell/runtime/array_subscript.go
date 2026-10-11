@@ -45,7 +45,7 @@ func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, e
 	if text == "" {
 		return 0, nil
 	}
-	value, err := r.evaluateArithmetic(text)
+	value, err := r.evaluateArithmeticAt(text, 0, arithmeticNestingOf(ctx))
 	if err != nil {
 		// An arithmetic error, which ends the script as one in `$((...))` does, bash's answer
 		// with busybox having no arrays; see reportExpansionError. It was said and passed

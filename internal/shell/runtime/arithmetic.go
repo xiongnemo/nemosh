@@ -17,16 +17,17 @@ import (
 // second form -- an arithmetic on an optional setting -- failed only when the
 // setting was absent. `let ""` is status 1 as a result, as both give it.
 func (r Runtime) evaluateArithmetic(expression string) (int64, error) {
-	return r.evaluateArithmeticAt(expression, 0)
+	return r.evaluateArithmeticAt(expression, 0, 0)
 }
 
 // evaluateArithmeticAt evaluates at a nesting depth: 0 for an expression as written, more
-// for a variable's value evaluated in turn. See arithmetic_names.go.
-func (r Runtime) evaluateArithmeticAt(expression string, depth int) (int64, error) {
+// for a variable's value evaluated in turn; nesting counts a subscript's evaluation too. See
+// arithmetic_names.go.
+func (r Runtime) evaluateArithmeticAt(expression string, depth, nesting int) (int64, error) {
 	if strings.TrimSpace(expression) == "" {
 		return 0, nil
 	}
-	parser := &arithmeticParser{tokens: tokenizeArithmetic(expression), runtime: r, depth: depth}
+	parser := &arithmeticParser{tokens: tokenizeArithmetic(expression), runtime: r, depth: depth, nesting: nesting}
 	value, err := parser.comma()
 	if err != nil {
 		return 0, err
@@ -115,8 +116,9 @@ type arithmeticParser struct {
 	tokens  []string
 	index   int
 	runtime Runtime
-	// depth is how many variable values deep this evaluation is; see lookup.
-	depth int
+	// depth is how many variable values deep this evaluation is, and nesting how many values
+	// and subscripts; see lookup.
+	depth, nesting int
 	// skipping is set while an arm of `?:` that the condition did not pick is read: its
 	// shape is checked, and nothing in it is stored, looked up or refused. See branch.
 	skipping int
