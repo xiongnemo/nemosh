@@ -37,8 +37,13 @@ func FuzzExpansionOperators(f *testing.F) {
 		f.Add(seed[0], seed[1], seed[2], seed[3])
 	}
 	// Nothing here should touch a file; if something does, it touches a directory of its own.
-	f.Chdir(f.TempDir())
+	// Each input runs in a directory of its own, not the fuzz test: the coordinator writes a
+	// failing input to testdata/fuzz relative to its working directory, and under f.Chdir that was
+	// the temporary directory, removed when the test ended. The input that crashed
+	// FuzzExpansionOperators in CI on 2026-10-11 was lost that way.
+	dir := f.TempDir()
 	f.Fuzz(func(t *testing.T, x, p, offset, length string) {
+		t.Chdir(dir)
 		for _, value := range []string{x, p, offset, length} {
 			// A NUL ends a C string in both references and is dropped here; it says nothing new.
 			if !utf8.ValidString(value) || len(value) > 64 || strings.ContainsRune(value, 0) {

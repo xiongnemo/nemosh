@@ -21,8 +21,13 @@ func FuzzSed(f *testing.F) {
 	} {
 		f.Add(seed[0], seed[1])
 	}
-	f.Chdir(f.TempDir())
+	// Each input runs in a directory of its own, not the fuzz test: the coordinator writes a
+	// failing input to testdata/fuzz relative to its working directory, and under f.Chdir that was
+	// the temporary directory, removed when the test ended. The input that crashed
+	// FuzzExpansionOperators in CI on 2026-10-11 was lost that way.
+	dir := f.TempDir()
 	f.Fuzz(func(t *testing.T, script, input string) {
+		t.Chdir(dir)
 		if !utf8.ValidString(script) || !utf8.ValidString(input) || len(script) > 128 || len(input) > 256 || fuzzLongNumber.MatchString(script) {
 			t.Skip()
 		}

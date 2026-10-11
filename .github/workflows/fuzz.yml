@@ -6,7 +6,7 @@ name: Fuzz
 #
 # Weekly, and on demand, every Fuzz function in the module is found and run on a runner of its
 # own, five minutes unless asked otherwise, so a target that finds something stops none of the
-# others. One that fails keeps the input Go saved under testdata/fuzz as an artifact. Checked in
+# others; on demand one target can be named and run alone, to chase what it found. One that fails keeps the input Go saved under testdata/fuzz as an artifact. Checked in
 # beside its target, that input is a seed every `go test` runs from then on: it fails until the
 # fault is fixed, and holds the fix after. The saved input, not this run, decides whether a
 # finding was real -- reproduce it with `go test -run 'FuzzName/HASH'` before believing it.
@@ -17,6 +17,9 @@ on:
       fuzztime:
         description: How long each target runs, as go test's -fuzztime reads it
         default: 5m
+      target:
+        description: One target to run alone, by name, as when chasing a finding; every target when empty
+        default: ''
   schedule:
     # Sundays, out of the way of the pushes Product runs for.
     - cron: '41 3 * * 0'
@@ -42,10 +45,12 @@ jobs:
       # remembering to list it here. go test -list prints a package's names before its `ok`.
       - id: list
         shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
         run: |
           set -euo pipefail
-          go test -list '^Fuzz' ./... | awk '
-            /^Fuzz/ { names[++count] = $1; next }
+          go test -list '^Fuzz' ./... | awk -v target="$TARGET" '
+            /^Fuzz/ { if (target == "" || $1 == target) names[++count] = $1; next }
             /^ok/ { for (i = 1; i <= count; i++) printf "{\"package\":\"%s\",\"target\":\"%s\"}\n", $2, names[i]; count = 0 }
           ' | jq -s -c '{include: .}' > matrix.json
           cat matrix.json

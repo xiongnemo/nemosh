@@ -107,8 +107,13 @@ func FuzzReadOnlyApplets(f *testing.F) {
 	} {
 		f.Add(uint8(index), seed[0], seed[1], seed[2])
 	}
-	f.Chdir(f.TempDir())
+	// Each input runs in a directory of its own, not the fuzz test: the coordinator writes a
+	// failing input to testdata/fuzz relative to its working directory, and under f.Chdir that was
+	// the temporary directory, removed when the test ended. The input that crashed
+	// FuzzExpansionOperators in CI on 2026-10-11 was lost that way.
+	dir := f.TempDir()
 	f.Fuzz(func(t *testing.T, pick uint8, first, second, input string) {
+		t.Chdir(dir)
 		if !fuzzable(first, second, input) {
 			t.Skip()
 		}
