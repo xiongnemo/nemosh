@@ -49,14 +49,11 @@ func TestRuntime_fillsInTheLoginVariablesWindowsDoesNotSet(t *testing.T) {
 	}
 	// This shell's own spelling, like every other path it reports, so that
 	// `echo $HOME`, `echo ~` and `pwd` all say the same thing about the same
-	// directory.
-	//
-	// It briefly was not. Storing it natively made those three agree with a
-	// launched program and disagree with each other; the fix belongs at the one
-	// place the two worlds meet, not in the value. See environment_launch.go and
-	// TestRuntime_translatesItsOwnPathVariablesForALaunchedProgram.
-	if !strings.HasPrefix(home, "/") {
-		t.Fatalf("HOME = %q, want the shell's own spelling", home)
+	// directory. That is busybox-w32's C:/Users/..., which a native program handed
+	// `~/x` as an argument can open; TestRuntime_spellsPathsAsMsysDoes_whenAsked has
+	// the /c/Users/... spelling NEMOSH_PATHS=msys keeps.
+	if !driveSpelled(home) {
+		t.Fatalf("HOME = %q, want the shell's own spelling, C:/...", home)
 	}
 	if lines[1] == "" || lines[1] != lines[2] {
 		t.Fatalf("USER = %q, LOGNAME = %q, want both set and equal", lines[1], lines[2])
@@ -117,7 +114,7 @@ func TestRuntime_exportsTheFilledInHome(t *testing.T) {
 	}
 
 	// Then
-	if exported := strings.TrimSpace(stdout.String()); !strings.HasPrefix(exported, "HOME=/") {
+	if exported := strings.TrimSpace(stdout.String()); !strings.HasPrefix(exported, "HOME=") || !driveSpelled(strings.TrimPrefix(exported, "HOME=")) {
 		t.Fatalf("env showed %q, want an exported HOME in the shell's spelling", exported)
 	}
 }
@@ -132,12 +129,15 @@ func TestRuntime_exportsTheFilledInHome(t *testing.T) {
 // Before this, the environment handed out both forms at once: PWD as /c/... and
 // OLDPWD as C:/..., in the same block. That is not a rule, it is the absence of
 // one.
+//
+// In busybox-w32's spelling there is nothing left to translate, so this is the spelling
+// NEMOSH_PATHS=msys keeps, where there is.
 func TestRuntime_translatesItsOwnPathVariablesForALaunchedProgram(t *testing.T) {
 	// Given
 	var stdout, stderr strings.Builder
 	rt, err := shellruntime.NewRuntimeWithState(applets.DefaultRegistry,
 		shellruntime.Streams{Stdout: &stdout, Stderr: &stderr},
-		shellruntime.State{Cwd: shellruntime.WorkingDirectory(t.TempDir()), Env: shellruntime.NewEnvironment(nil)})
+		shellruntime.State{Cwd: shellruntime.WorkingDirectory(t.TempDir()), Env: shellruntime.NewEnvironment([]string{"NEMOSH_PATHS=msys"})})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,6 +191,56 @@ func TestRuntime_doesNotRewriteVariablesItDidNotSet(t *testing.T) {
 	if got := strings.TrimSpace(stdout.String()); got != "/c/Users/nemo" {
 		t.Fatalf("the child was handed %q, want it untouched", got)
 	}
+}
+
+// The spelling busybox-w32 uses is the default, and NEMOSH_PATHS=msys is the way back to the
+// one nemosh used until 2026-10-19: every path it reports -- HOME, ~, pwd, PWD, OLDPWD,
+// realpath -- in one spelling or the other, never a mixture.
+func TestRuntime_spellsPathsAsMsysDoes_whenAsked(t *testing.T) {
+	for _, testCase := range []struct {
+		name    string
+		env     []string
+		spelled func(string) bool
+	}{
+		{"default", nil, driveSpelled},
+		{"msys", []string{"NEMOSH_PATHS=msys"}, aliasSpelled},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Given
+			var stdout strings.Builder
+			rt, err := shellruntime.NewRuntimeWithState(applets.DefaultRegistry,
+				shellruntime.Streams{Stdout: &stdout},
+				shellruntime.State{Cwd: shellruntime.WorkingDirectory(t.TempDir()), Env: shellruntime.NewEnvironment(testCase.env)})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// When
+			if status := rt.RunScript(t.Context(), "echo $HOME\necho ~\nmkdir sub\ncd sub\npwd\necho $PWD\necho $OLDPWD\ntouch f\nrealpath f\n"); status != 0 {
+				t.Fatalf("status = %d, output %q", status, stdout.String())
+			}
+
+			// Then
+			lines := strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n")
+			if len(lines) != 6 || lines[0] != lines[1] || lines[2] != lines[3] || lines[2] != lines[4]+"/sub" || lines[5] != lines[2]+"/f" {
+				t.Fatalf("output = %q, want HOME twice, the directory three ways, then realpath's", stdout.String())
+			}
+			for _, line := range lines {
+				if !testCase.spelled(line) {
+					t.Fatalf("output = %q: %q is in the other spelling", stdout.String(), line)
+				}
+			}
+		})
+	}
+}
+
+// driveSpelled is busybox-w32's C:/..., and aliasSpelled MSYS's /c/....
+func driveSpelled(path string) bool {
+	return len(path) >= 3 && 'A' <= path[0] && path[0] <= 'Z' && path[1:3] == ":/"
+}
+
+func aliasSpelled(path string) bool {
+	return len(path) >= 3 && path[0] == '/' && 'a' <= path[1] && path[1] <= 'z' && path[2] == '/'
 }
 
 // commandProcessor is cmd.exe by absolute path, because these runtimes are built

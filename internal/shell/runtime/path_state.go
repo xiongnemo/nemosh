@@ -14,7 +14,17 @@ var ErrResolvedNativePathNotAbsolute = errors.New("resolved native path is not a
 type PathSettings struct {
 	Config  pathmodel.Config
 	TmpRoot WorkingDirectory
+	// AliasSpelling reports a Windows path the way MSYS does, `/c/Users/nemo`, rather than
+	// busybox-w32's `C:/Users/nemo`. That was the only spelling until 2026-10-19, when
+	// `nvim ~/.ssh/config` opened `\c\Users\nemo\.ssh\config` on the current drive: a native
+	// program is handed the words it is given, and only a shell that is MSYS can read the alias.
+	// NEMOSH_PATHS=msys is the way back to it. Either spelling resolves the same in both.
+	AliasSpelling bool
 }
+
+// pathSpellingVariable names the spelling: "msys" for the drive alias, and busybox-w32's
+// otherwise, unset included.
+const pathSpellingVariable = "NEMOSH_PATHS"
 
 func DefaultPathSettings() PathSettings {
 	return PathSettings{Config: pathmodel.DefaultConfig(), TmpRoot: WorkingDirectory(os.TempDir())}
@@ -48,6 +58,9 @@ func (r Runtime) nativeWorkingDirectory() (string, error) {
 	}
 	return r.paths.nativeWorkingDirectory()
 }
+
+// SpellPath is a canonical path as this shell reports it, for an applet printing one.
+func (r Runtime) SpellPath(path pathmodel.Path) string { return r.paths.spell(path) }
 
 func (r Runtime) CanonicalizeNativePath(origin pathmodel.Path, native string) (pathmodel.Path, error) {
 	if r.initErr != nil {

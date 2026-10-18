@@ -3,8 +3,13 @@
 package runtime_test
 
 import (
+	"bytes"
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // windows-path-model.md asks shell-generated display paths to carry the real
@@ -36,21 +41,28 @@ func TestRuntime_correctsEveryComponent_notOnlyTheLast(t *testing.T) {
 	}
 }
 
-func TestRuntime_keepsTheDriveAliasLowercase_whenCaseIsResolved(t *testing.T) {
-	// The alias is Nemosh's own spelling rather than the filesystem's, so it
-	// stays lowercase however the drive letter was typed.
-	// When
-	status, stdout, _, _ := runCdScript(t, "mkdir Sub\ncd Sub\npwd\n")
+// The drive is Nemosh's own spelling rather than the filesystem's, so it is C: however the
+// letter was typed, as busybox-w32 writes it, and under NEMOSH_PATHS=msys the alias stays /c.
+func TestRuntime_keepsTheDriveLetterCase_whenCaseIsResolved(t *testing.T) {
+	for _, testCase := range []struct {
+		env     string
+		spelled func(string) bool
+	}{
+		{"NEMOSH_PATHS=", driveSpelled},
+		{"NEMOSH_PATHS=msys", aliasSpelled},
+	} {
+		// When the drive is typed in the other case
+		dir := t.TempDir()
+		typed := strings.ToLower(dir[:1]) + dir[1:]
+		var stdout bytes.Buffer
+		rt := runtime.NewWithState(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout},
+			runtime.State{Cwd: runtime.WorkingDirectory(dir), Env: runtime.NewEnvironment([]string{testCase.env})})
+		status := rt.RunScript(context.Background(), "mkdir Sub\ncd '"+typed+"/sub'\npwd\n")
 
-	// Then
-	if status != 0 {
-		t.Fatalf("status = %d, want 0", status)
-	}
-	if !strings.HasPrefix(stdout, "/") {
-		t.Fatalf("pwd = %q, want the posix-drive display form", stdout)
-	}
-	if head := strings.SplitN(strings.TrimPrefix(stdout, "/"), "/", 2)[0]; head != strings.ToLower(head) {
-		t.Fatalf("pwd = %q, want the drive alias lowercase", stdout)
+		// Then
+		if status != 0 || !testCase.spelled(stdout.String()) || !strings.HasSuffix(stdout.String(), "/Sub\n") {
+			t.Fatalf("%s: status = %d, pwd = %q", testCase.env, status, stdout.String())
+		}
 	}
 }
 

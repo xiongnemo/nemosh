@@ -88,9 +88,9 @@ func (r Runtime) promptUser() string {
 }
 
 // promptDirectory is \w, $PWD with $HOME at its start written ~, and with last \W, its last
-// component, or ~ when it is $HOME. HOME is read as a path, since on Windows it is spelled
-// C:/Users/... where PWD is /c/Users/..., and compared as busybox-w32 compares it there,
-// whatever the case.
+// component, or ~ when it is $HOME. HOME is read as a path, since on Windows an inherited one
+// can be spelled C:\Users\... or /c/Users/... where PWD is C:/Users/..., and compared as
+// busybox-w32 compares it there, whatever the case.
 func (r Runtime) promptDirectory(last bool) string {
 	directory := r.vars["PWD"]
 	if directory == "" {
@@ -98,7 +98,7 @@ func (r Runtime) promptDirectory(last bool) string {
 	}
 	home := r.vars["HOME"]
 	if resolved, err := r.ResolveNemoshPath(home); err == nil && home != "" && !resolved.Device {
-		home = string(resolved.Canonical)
+		home = r.paths.spell(resolved.Canonical)
 	}
 	rest, inHome := "", false
 	if len(home) > 1 && len(directory) >= len(home) && samePromptPath(directory[:len(home)], home) {

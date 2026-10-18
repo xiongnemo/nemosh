@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/pathmodel"
 )
 
 // The alias and virtual-root knobs in docs/design/windows-path-model.md are
@@ -41,8 +42,8 @@ func TestP05WaveA_WindowsPathPolicy_acceptsConfiguredCygdrivePathsEndToEnd(t *te
 	if status != 0 {
 		t.Fatalf("expected status 0, got %d: %s", status, stderr.String())
 	}
-	// The alias is an input spelling only: `pwd` reports the drive form.
-	if got, want := stdout.String(), canonical+"\n"; got != want {
+	// The alias is an input spelling only: `pwd` reports the drive, C:/.
+	if got, want := stdout.String(), pathmodel.DriveSpelling(pathmodel.Path(canonical))+"\n"; got != want {
 		t.Fatalf("expected pwd %q, got %q", want, got)
 	}
 	assertPathFileText(t, filepath.Join(native, "reached.txt"), "reached\n")
@@ -71,7 +72,7 @@ func TestP05WaveA_WindowsPathPolicy_honoursAConfiguredMountPrefix(t *testing.T) 
 	if status != 0 {
 		t.Fatalf("expected status 0, got %d: %s", status, stderr.String())
 	}
-	if got, want := stdout.String(), canonical+"\n"; got != want {
+	if got, want := stdout.String(), pathmodel.DriveSpelling(pathmodel.Path(canonical))+"\n"; got != want {
 		t.Fatalf("expected pwd %q, got %q", want, got)
 	}
 	assertPathFileText(t, filepath.Join(native, "reached.txt"), "reached\n")

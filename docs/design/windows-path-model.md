@@ -12,11 +12,31 @@ draft, not final implementation code.
 - Treat MSYS2 and Cygwin as non-target references only: useful for studying
   edge cases, not compatibility targets for Nemosh behavior.
 
+## The spelling the shell reports
+
+Every path the shell reports -- `pwd`, `$PWD`, `$OLDPWD`, `echo ~`, `$HOME`, `dirs`,
+`cd -`, the prompt, `realpath` -- is spelled busybox-w32's way, `C:/Users/nemo`.
+`NEMOSH_PATHS=msys` is the way back to the spelling nemosh used until 2026-10-19,
+`/c/Users/nemo`. Either one is *read* in both modes, as are `C:\Users\nemo`,
+`/mnt/c/...` and `//host/share`; only what is reported changes.
+
+The alias spelling was the default, and it broke the one thing a shell is for:
+
+```console
+$ nvim ~/.ssh/config          # NEMOSH_PATHS=msys
+```
+
+opened an empty `\c\Users\nemo\.ssh\config`. `~` is expanded before nvim runs, so nvim
+was handed `/c/Users/nemo/.ssh/config` as an argument and read the leading slash as
+the root of the current drive. Arguments are not translated on the way out (below),
+and cannot be without guessing, so the only fix is a spelling every native program
+reads. busybox-w32 had already chosen it.
+
 ## The launch boundary
 
-Inside this shell every path is spelled its way: `pwd`, `$PWD`, `echo ~` and
-`$HOME` all say `/c/Users/nemo`. Outside is a native program that has never heard
-of it. Measured, with the shell's spelling exported unchanged:
+Under `NEMOSH_PATHS=msys` every path inside this shell is spelled `/c/Users/nemo`.
+Outside is a native program that has never heard of it. Measured, with the
+shell's spelling exported unchanged:
 
 ```console
 $ HOME=/c/Users/nemo busybox ash -c 'cd $HOME; pwd'
@@ -28,7 +48,8 @@ drive on in front, which is what any native program does with it.
 
 **So the two spellings meet when a program is launched, and nowhere else.** The
 environment handed to a child has the shell's own path variables converted to
-native form; everything inside keeps one spelling.
+native form; everything inside keeps one spelling. In the default spelling the
+conversion has nothing left to do, and it stays for the alias one.
 
 Before this the environment handed out both at once — `PWD` as `/c/...` and
 `OLDPWD` as `C:/...`, in the same block. That was not a rule, it was the absence
@@ -54,12 +75,12 @@ asks for the native spelling explicitly rather than reusing the string, because
 | Primary native reference | Use busybox-w32 as the main native Windows reference. |
 | Drive mapping | Support `/c/foo` as Nemosh's short drive alias. This is not an MSYS2 compatibility promise. |
 | Mount-prefix mapping | Support `/mnt/c/foo` by default as a configurable mount-prefix alias. It is semantically distinct from `/c/foo` and is not a WSL compatibility promise. |
-| Default display | Use `posix-drive`: shell-generated paths such as `pwd`, diagnostics, and completion candidates should prefer `/c/foo`. |
+| Default display | busybox-w32's: shell-generated paths such as `pwd`, `$HOME` and `realpath` are `C:/foo`. `NEMOSH_PATHS=msys` reports `/c/foo` instead. This was `/c/foo` until 2026-10-19; see "The spelling the shell reports". |
 | `/tmp` | Map `/tmp` to `%TEMP%` or `%TMP%`. |
 | UNC | Follow busybox-w32/Cygwin-compatible forward-slash UNC form: `//host/share/path`. |
 | Sample config | Final sample config and docs must comment each path scheme separately; do not collapse `/c` and `/mnt/c` into one generic alias knob. |
 | Current root | Follow busybox-w32: `/foo` is relative to the current root, where the root can be a drive such as `D:/` or a UNC share such as `//host/share`. |
-| Path case | Follow busybox-w32's pragmatic approach for shell-generated display paths: try to resolve real filesystem case, silently preserve spelling on failure. Keep virtual drive aliases lowercase, e.g. `/c`. |
+| Path case | Follow busybox-w32's pragmatic approach for shell-generated display paths: try to resolve real filesystem case, silently preserve spelling on failure. The drive letter is the shell's, not the filesystem's: `C:` upper case, as busybox-w32 writes it, and `/c` lower case under `NEMOSH_PATHS=msys`. |
 | Virtual roots | `/tmp`, `/dev`, and similar Nemosh virtual roots are enabled by default and resolved before current-root expansion. They must be configurable. |
 | Mount table | Do not implement a Nemosh-owned mount table in v0. Follow busybox-w32 by using Windows-provided roots, drive letters, UNC shares, volume mount points, junctions, mapped/subst drives, and configured path aliases. |
 | Links/reparse points | Mimic busybox-w32 where practical: recognize and use Windows-native symlinks, junctions, and reparse points; do not invent a POSIX symlink facade or treat `.lnk` shortcuts as shell symlinks in v0. |
@@ -77,10 +98,11 @@ C:\Users\nemo\file.txt        accepted Windows path input
 //server/share/dir/file.txt   UNC path, forward-slash form
 ```
 
-The shell should prefer POSIX-like display and script-visible paths:
+The shell reports paths with forward slashes and the drive letter, as busybox-w32
+does, and as the alias under `NEMOSH_PATHS=msys`:
 
 ```text
-pwd -> /c/Users/nemo/project
+pwd -> C:/Users/nemo/project          # NEMOSH_PATHS=msys: /c/Users/nemo/project
 ```
 
 Like busybox-w32, Nemosh should model Windows roots explicitly. A root can be a

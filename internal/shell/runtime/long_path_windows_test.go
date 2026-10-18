@@ -24,10 +24,10 @@ func runFrom(t *testing.T, cwd, script string) (int, string, string) {
 	return status, stdout.String(), stderr.String()
 }
 
-// nemoshSpelling is the drive-letter path a native path is written as inside
-// Nemosh: C:\dir becomes /c/dir.
+// nemoshSpelling is the path a native path is written as inside Nemosh, busybox-w32's:
+// C:\dir becomes C:/dir.
 func nemoshSpelling(native string) string {
-	return "/" + strings.ToLower(native[:1]) + filepath.ToSlash(native[2:])
+	return strings.ToUpper(native[:1]) + filepath.ToSlash(native[1:])
 }
 
 // Nemosh's cwd is a value in pathState rather than the process's, so it is not

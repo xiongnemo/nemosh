@@ -48,7 +48,7 @@ func TestP05WaveA_ExternalLookup_acceptsMountAliasForExplicitExecutable(t *testi
 	// Given
 	executable := filepath.Join(t.TempDir(), "mount-probe.exe")
 	copyRuntimeHelper(t, executable)
-	mountExecutable := "/mnt" + displayPath(executable)
+	mountExecutable := "/mnt" + aliasPath(executable)
 	var stdout bytes.Buffer
 	rt := shellruntime.NewWithState(applets.DefaultRegistry, shellruntime.Streams{Stdout: &stdout}, shellruntime.State{
 		Cwd: shellruntime.WorkingDirectory(t.TempDir()),

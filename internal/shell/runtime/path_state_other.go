@@ -145,6 +145,9 @@ func (s pathState) workingDirectory() string {
 	return string(s.cwd)
 }
 
+// spell is a canonical path as this shell reports it, which here is the path itself.
+func (pathState) spell(path pathmodel.Path) string { return string(path) }
+
 func (s pathState) nativeWorkingDirectory() (string, error) {
 	if s.nativeCwd == "" {
 		return "", fmt.Errorf("working directory is empty")

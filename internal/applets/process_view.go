@@ -111,17 +111,6 @@ func (r *contextReadCloser) Close() error {
 	return r.closeErr
 }
 
-func canonicalizeGeneratedPath(view ProcessView, origin pathmodel.Path, native string) string {
-	if resolver, ok := view.(interface {
-		CanonicalizeNativePath(pathmodel.Path, string) (pathmodel.Path, error)
-	}); ok {
-		if canonical, err := resolver.CanonicalizeNativePath(origin, native); err == nil {
-			return string(canonical)
-		}
-	}
-	return filepath.ToSlash(native)
-}
-
 type processViewKey struct{}
 
 func WithProcessView(ctx context.Context, view ProcessView) context.Context {
@@ -190,6 +179,7 @@ func (v staticProcessView) CanonicalizeNativePath(origin pathmodel.Path, path st
 	}
 	return pathmodel.Path(filepath.ToSlash(path)), nil
 }
+func (v staticProcessView) SpellPath(path pathmodel.Path) string { return spellPath(v.parent, path) }
 func (v staticProcessView) Environ() []string {
 	items := make([]string, 0, len(v.values))
 	for _, entry := range v.values {
