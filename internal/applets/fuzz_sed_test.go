@@ -42,6 +42,10 @@ func FuzzSed(f *testing.F) {
 				return
 			}
 		}
+		// And no space growing past a megabyte: `GGxGHGxGHGxGx` over six lines doubles the
+		// pattern and hold spaces over and over, to some 60 GB, which ran a CI worker out of
+		// memory on 2026-10-18. Every sed does that, so it is a limit of the run, not a defect.
+		program.spaceLimit = 1 << 20
 		var stdout, stderr bytes.Buffer
 		_ = program.run(context.Background(), nil, strings.NewReader(input), &stdout, &stderr)
 	})

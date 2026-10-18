@@ -27,6 +27,10 @@ type sedProgram struct {
 	binary bool
 	// view is the process the run is in, which resolves a file command's FILE.
 	view ProcessView
+	// spaceLimit, when set, is how large the pattern or hold space may grow before the run
+	// stops with an error. sed has none, busybox's included; FuzzSed sets one, since `G;H`
+	// doubles both spaces a line and runs the process out of memory in every sed.
+	spaceLimit int
 }
 
 type sedCommand struct {
