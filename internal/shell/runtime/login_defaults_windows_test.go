@@ -210,7 +210,8 @@ func TestRuntime_spellsPathsAsMsysDoes_whenAsked(t *testing.T) {
 			var stdout strings.Builder
 			rt, err := shellruntime.NewRuntimeWithState(applets.DefaultRegistry,
 				shellruntime.Streams{Stdout: &stdout},
-				shellruntime.State{Cwd: shellruntime.WorkingDirectory(t.TempDir()), Env: shellruntime.NewEnvironment(testCase.env)})
+				// The long name: a runner's TEMP is the 8.3 RUNNER~1, which realpath expands.
+				shellruntime.State{Cwd: shellruntime.WorkingDirectory(canonicalTempDir(t)), Env: shellruntime.NewEnvironment(testCase.env)})
 			if err != nil {
 				t.Fatal(err)
 			}
