@@ -8,8 +8,10 @@ PowerShell, or cmd compatibility, and it makes no POSIX certification claim.
 
 What makes it different from running BusyBox under an emulation layer: Nemosh
 gives POSIX semantics over **native** Windows path, launch, device, and
-interrupt boundaries. `/c/Users`, `/mnt/c`, UNC shares, and drive-relative
-current roots resolve through one model; `.bat` and `.cmd` cross an explicit
+interrupt boundaries. `C:/Users`, `/c/Users`, `/mnt/c`, UNC shares, and drive-relative
+current roots resolve through one model, and paths are reported as busybox-w32 reports
+them, `C:/Users/nemo`, which any native program can open (`NEMOSH_PATHS=msys` reports
+`/c/Users/nemo` instead); `.bat` and `.cmd` cross an explicit
 `ComSpec` boundary with arguments that survive; `/dev/clipboard` is real; `cd`
 answers with the case the filesystem actually reports. No argv translation layer
 sits in between.

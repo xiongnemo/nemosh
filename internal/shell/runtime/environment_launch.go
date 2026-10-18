@@ -4,19 +4,24 @@ import "strings"
 
 // The launch boundary speaks the platform's own path language.
 //
-// Inside, this shell has one spelling for a path -- `/c/Users/nemo` -- and
-// everything it says about a directory uses it: `pwd`, `$PWD`, `echo ~`. Outside
-// is a native program that has never heard of it. Measured, with HOME exported
-// in the shell's spelling:
+// Inside, this shell has one spelling for a path, and everything it says about a
+// directory uses it: `pwd`, `$PWD`, `echo ~`. Under NEMOSH_PATHS=msys that is
+// `/c/Users/nemo`, and outside is a native program that has never heard of it.
+// Measured, with HOME exported in that spelling:
 //
 //	busybox ash -c 'cd $HOME; pwd'  ->  C:/c/Users/nemo
 //
 // busybox read the leading slash as "absolute on the current drive" and glued
 // the drive on in front, which is what any native program does with it.
 //
-// So the two spellings meet here and nowhere else. Before this the environment
-// handed out both at once -- PWD as `/c/...` and OLDPWD as `C:/...`, in the same
-// block -- which is not a rule, it is the absence of one.
+// So the two spellings meet here and nowhere else. busybox-w32's `C:/Users/nemo`, the
+// default since 2026-10-19, is already native and passes through unchanged; the alias
+// had to stop being the default because arguments do not pass through here at all, so
+// `nvim ~/.ssh/config` was handed `/c/...` whatever this did with the variables.
+//
+// Before this the environment handed out both at once -- PWD as `/c/...` and
+// OLDPWD as `C:/...`, in the same block -- which is not a rule, it is the absence
+// of one.
 //
 // Only the variables this shell sets itself are rewritten. A value the user
 // exported travels verbatim, whatever it looks like. That is the whole

@@ -92,6 +92,16 @@ func WindowsPath(path Path) (string, error) {
 	return strings.ToUpper(drive) + ":" + rest, nil
 }
 
+// DriveSpelling is path as busybox-w32 writes one, `C:/Users/nemo` for `/c/Users/nemo`: a
+// native program reads it, where it reads `/c/...` as `\c\...` on the current drive. A UNC
+// path is written as it is, and so is a root with no Windows spelling, /dev or /tmp.
+func DriveSpelling(path Path) string {
+	if native, err := WindowsPath(path); err == nil {
+		return native
+	}
+	return string(path)
+}
+
 func (m Model) Resolve(input string) (Path, error) {
 	path := strings.ReplaceAll(input, "\\", "/")
 	if path == "" {

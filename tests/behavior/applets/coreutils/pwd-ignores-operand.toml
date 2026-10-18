@@ -9,7 +9,7 @@ cwd = "work"
 
 [expect]
 status = 0
-stdout = "/c/Windows\n"
+stdout = "C:/Windows\n"
 stderr = ""
 
 [notes]

@@ -139,10 +139,14 @@ func NewRuntimeWithState(registry applets.Registry, streams Streams, state State
 }
 
 func pathSettings(state State) PathSettings {
+	settings := DefaultPathSettings()
 	if state.Paths != nil {
-		return *state.Paths
+		settings = *state.Paths
 	}
-	return DefaultPathSettings()
+	if spelling, _ := state.Env.LookupEnv(pathSpellingVariable); spelling == "msys" {
+		settings.AliasSpelling = true
+	}
+	return settings
 }
 
 func validateTmpRoot(settings PathSettings) error {

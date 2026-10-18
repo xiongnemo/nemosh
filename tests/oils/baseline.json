@@ -209,7 +209,6 @@
       "cd to nonexistent dir": "ash-only",
       "cd with 2 or more args - with strict_arg_parse": "ash-only",
       "cd with 2 or more args is allowed (strict_arg_parse disabled)": "ash-only",
-      "cd with no arguments": "fail",
       "lie about PWD; pwd before any cd": "fail",
       "pwd": "fail"
     },

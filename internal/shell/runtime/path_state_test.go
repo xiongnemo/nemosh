@@ -70,8 +70,8 @@ func TestP05WaveA_RuntimePathState_resolvesWindowsAliasesAndVirtualRoots(t *test
 	if !errors.Is(cygdriveErr, pathmodel.ErrCygdriveDisabled) {
 		t.Fatalf("expected disabled cygdrive error, got %v", cygdriveErr)
 	}
-	if got := rt.WorkingDirectory(); got != string(canonicalCWD) {
-		t.Fatalf("expected canonical working directory %q, got %q", canonicalCWD, got)
+	if got := rt.WorkingDirectory(); got != pathmodel.DriveSpelling(canonicalCWD) {
+		t.Fatalf("expected the working directory %q, got %q", pathmodel.DriveSpelling(canonicalCWD), got)
 	}
 	if got := rt.ResolvePath(mountInput); !sameWindowsPath(got, cwd) {
 		t.Fatalf("expected compatibility resolver path %q, got %q", cwd, got)
@@ -86,6 +86,16 @@ func canonicalWindowsPath(t *testing.T, native string) pathmodel.Path {
 		t.Fatalf("canonicalize Windows fixture %q: %v", native, err)
 	}
 	return canonical
+}
+
+// filepathDisplay is a native path as the shell reports it: forward slashes, and on Windows
+// busybox-w32's C:/Users/... with the drive letter upper case.
+func filepathDisplay(path string) string {
+	path = strings.ReplaceAll(path, "\\", "/")
+	if len(path) >= 2 && path[1] == ':' && isDriveLetter(rune(path[0])) {
+		return strings.ToUpper(path[:1]) + path[1:]
+	}
+	return path
 }
 
 func sameWindowsPath(left, right string) bool {

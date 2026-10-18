@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/pathmodel"
 )
 
 func TestP05WaveA_CD_preservesVirtualTmpSpellingAndBacking(t *testing.T) {
@@ -82,7 +83,7 @@ func TestP05WaveA_ShellIO_acceptsMountAliasAndDriveCurrentRoot(t *testing.T) {
 		t.Fatalf("expected status 0, got %d: %s", status, stderr.String())
 	}
 	assertPathFileText(t, filepath.Join(nativeDir, "mounted.txt"), "mounted\n")
-	if got, want := stdout.String(), string(canonicalWindowsPath(t, nativeRoot))+"\n"; got != want {
+	if got, want := stdout.String(), pathmodel.DriveSpelling(canonicalWindowsPath(t, nativeRoot))+"\n"; got != want {
 		t.Fatalf("expected current-root pwd %q, got %q", want, got)
 	}
 }

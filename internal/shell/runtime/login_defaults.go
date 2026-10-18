@@ -29,7 +29,7 @@ package runtime
 // carries `HOME=` is far more likely to have inherited an accident than to be
 // asking for one.
 func (r Runtime) applyLoginDefaults() {
-	for name, value := range loginDefaults(r.paths.model) {
+	for name, value := range loginDefaults(*r.paths) {
 		if value == "" || r.vars[name] != "" {
 			continue
 		}

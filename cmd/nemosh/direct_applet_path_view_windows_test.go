@@ -19,17 +19,19 @@ func TestDirectApplet_pwdUsesCanonicalWindowsCWD_whenSelectedExplicitlyOrByInvoc
 	if err != nil {
 		t.Fatalf("get cwd: %v", err)
 	}
-	want, err := pathmodel.New(pathmodel.DefaultConfig(), "/c").Resolve(filepath.ToSlash(cwd))
+	canonical, err := pathmodel.New(pathmodel.DefaultConfig(), "/c").Resolve(filepath.ToSlash(cwd))
 	if err != nil {
 		t.Fatalf("canonicalize cwd: %v", err)
 	}
+	// As busybox-w32's pwd.exe writes it, C:/...
+	want := pathmodel.DriveSpelling(canonical)
 
 	for _, args := range [][]string{{"nemosh", "pwd"}, {"pwd.exe"}} {
 		// When
 		stdout, _, runErr := runDirectAppletTest(args)
 
 		// Then
-		if runErr != nil || stdout != string(want)+"\n" {
+		if runErr != nil || stdout != want+"\n" {
 			t.Fatalf("run(%v): stdout=%q error=%v, want %q", args, stdout, runErr, want)
 		}
 	}
@@ -92,7 +94,8 @@ func TestDirectApplet_realpathDisplaysCanonicalWindowsPath_whenSelectedExplicitl
 		t.Fatalf("write fixture: %v", err)
 	}
 	alias := windowsAliasPath(t, "/mnt", path)
-	want := strings.TrimPrefix(alias, "/mnt") + "\n"
+	// Typed as /mnt/c/..., and printed as busybox-w32's realpath prints it, C:/...
+	want := pathmodel.DriveSpelling(pathmodel.Path(strings.TrimPrefix(alias, "/mnt"))) + "\n"
 
 	for _, args := range [][]string{{"nemosh", "realpath", alias}, {"realpath.exe", alias}} {
 		// When

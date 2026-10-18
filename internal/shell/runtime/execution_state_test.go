@@ -84,10 +84,21 @@ func TestCommandSubstitution_isolatesCwdAndEnvironment_andPreservesHost(t *testi
 	}
 }
 
-func displayPath(path string) string {
+// aliasPath is a native path as MSYS spells it, /c/Users/..., which the shell reads and,
+// under NEMOSH_PATHS=msys, reports.
+func aliasPath(path string) string {
 	path = filepath.ToSlash(path)
 	if len(path) >= 2 && path[1] == ':' {
 		return "/" + strings.ToLower(path[:1]) + path[2:]
+	}
+	return path
+}
+
+// displayPath is a native path as the shell reports it: busybox-w32's C:/Users/... on Windows.
+func displayPath(path string) string {
+	path = filepath.ToSlash(path)
+	if len(path) >= 2 && path[1] == ':' {
+		return strings.ToUpper(path[:1]) + path[1:]
 	}
 	return path
 }

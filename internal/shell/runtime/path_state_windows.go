@@ -14,6 +14,7 @@ type pathState struct {
 	model   pathmodel.Model
 	tmpRoot string
 	err     error
+	alias   bool
 }
 
 func validateInitialCwd(cwd WorkingDirectory, settings PathSettings) error {
@@ -57,9 +58,18 @@ func newPathState(cwd WorkingDirectory, settings PathSettings) pathState {
 	seed := pathmodel.New(settings.Config, "/c")
 	canonical, err := seed.Resolve(filepath.ToSlash(string(cwd)))
 	if err != nil {
-		return pathState{model: seed, tmpRoot: string(settings.TmpRoot), err: fmt.Errorf("resolve cwd %q: %w", cwd, err)}
+		return pathState{model: seed, tmpRoot: string(settings.TmpRoot), err: fmt.Errorf("resolve cwd %q: %w", cwd, err), alias: settings.AliasSpelling}
 	}
-	return pathState{model: seed.WithCWD(canonical), tmpRoot: string(settings.TmpRoot)}
+	return pathState{model: seed.WithCWD(canonical), tmpRoot: string(settings.TmpRoot), alias: settings.AliasSpelling}
+}
+
+// spell is a canonical path as this shell reports it: `C:/Users/nemo`, or `/c/Users/nemo`
+// under NEMOSH_PATHS=msys. See PathSettings.AliasSpelling.
+func (s pathState) spell(path pathmodel.Path) string {
+	if s.alias {
+		return string(path)
+	}
+	return pathmodel.DriveSpelling(path)
 }
 
 func (s pathState) resolve(input string) (pathmodel.ResolvedPath, error) {
@@ -90,7 +100,7 @@ func (s pathState) resolve(input string) (pathmodel.ResolvedPath, error) {
 }
 
 func (s pathState) workingDirectory() string {
-	return string(s.model.CWD())
+	return s.spell(s.model.CWD())
 }
 
 func (s pathState) nativeWorkingDirectory() (string, error) {

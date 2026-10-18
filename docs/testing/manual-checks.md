@@ -182,6 +182,13 @@ These only exist off a GUI launch or a real clipboard, so no test reaches them.
   which is the thing to look for. With Git installed, a `#!/usr/bin/env bash` script
   runs Git's bash, and `echo $BASH_VERSION` in it says so. Until 2026-10-07 both were
   `env: NAME: not found`.
+- **A path handed to a native editor**, not yet checked by hand at a prompt.
+  `nvim ~/.ssh/config`, `code ~/.gitconfig` and `notepad "$(realpath README.md)"` open
+  the file, and the prompt's `\w` still shortens home to `~`. Until 2026-10-19 the
+  shell reported `/c/Users/...`, and nvim opened an empty `\c\Users\...` on the
+  current drive; `NEMOSH_PATHS=msys` still does that, which is the thing to compare.
+  Measured through a script with the built binary on 2026-10-19: `readable=1` for
+  `~/.ssh/config` and for `$(realpath ...)`, `readable=0` under `NEMOSH_PATHS=msys`.
 - **CJK input** typed at the prompt, and a CJK filename completed with Tab. The
   editor decodes multi-byte runes incrementally, so a character split across two
   reads is the interesting case.
