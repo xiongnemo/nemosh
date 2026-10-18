@@ -112,6 +112,11 @@ func runSedProgram(program *sedProgram, cycle *sedCycle) (sedControl, error) {
 		if err != nil {
 			return control, err
 		}
+		// One command grows a space by a bounded factor, so a check after each holds both near
+		// the limit.
+		if cycle.limit > 0 && (len(cycle.line) > cycle.limit || len(cycle.hold) > cycle.limit) {
+			return sedQuit, fmt.Errorf("the pattern or hold space outgrew %d bytes", cycle.limit)
+		}
 		switch control {
 		case sedNext:
 			counter++

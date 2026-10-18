@@ -55,6 +55,8 @@ type sedCycle struct {
 	stream *sedStream
 	// view resolves r's FILE.
 	view ProcessView
+	// limit is the program's spaceLimit, 0 for none.
+	limit int
 }
 
 // readNext takes another input line, for `n` and `N`.

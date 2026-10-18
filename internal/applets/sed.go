@@ -128,6 +128,7 @@ func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 			hold:   hold,
 			stream: stream,
 			view:   p.view,
+			limit:  p.spaceLimit,
 		}
 		control, err := runSedProgram(p, cycle)
 		if err != nil {
