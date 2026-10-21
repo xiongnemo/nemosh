@@ -383,3 +383,32 @@ jobs:
             echo "::warning title=The Scoop bucket will lag this release::GitHub's releases list does not show ${asset} yet, though the upload finished. The bucket's checkver reads that list and requires the asset in it, so it will package this release on the hourly sweep after the list catches up, not now. Nothing is broken; this is a delay, and this line is why."
           fi
           gh workflow run excavator.yml --repo xiongnemo/windows-binaries-scoop-bucket
+
+      # The package repository is the one place every project announces a release
+      # to; it is meant to take over the Scoop dispatch above as well, and until it
+      # does, both run. It is told which release and nothing else -- the same rule
+      # as the bucket: it fetches the release by tag, never by the list that lagged
+      # on 2026-09-23, and hashes the published assets itself.
+      #
+      # Like the Scoop step, a missing token is not a failed release: the step says
+      # so and succeeds, and the repository's own sweep is the backstop. A failed
+      # dispatch is a warning for the same reason.
+      - name: Tell the package repository
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGES_DISPATCH_TOKEN }}
+          PACKAGES_REPO: ${{ vars.PACKAGES_REPO || 'xiongnemo/packages' }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          CHANNEL: ${{ steps.meta.outputs.prerelease == 'true' && 'nightly' || 'stable' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "PACKAGES_DISPATCH_TOKEN is not set, so ${PACKAGES_REPO} will pick this up on its own schedule."
+            exit 0
+          fi
+          gh api "repos/${PACKAGES_REPO}/dispatches" \
+            -f event_type=release-published \
+            -f "client_payload[repository]=${GITHUB_REPOSITORY}" \
+            -f "client_payload[tag]=${TAG}" \
+            -f "client_payload[channel]=${CHANNEL}" \
+            -f "client_payload[sha]=${GITHUB_SHA}" \
+            || echo "::warning title=Package repository not notified::dispatch to ${PACKAGES_REPO} failed; its scheduled sweep is the backstop."
