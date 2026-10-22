@@ -67,6 +67,20 @@ The download is verified against a published SHA-256. Artifacts are not
 code-signed, so a browser download will raise SmartScreen; Scoop checks the
 checksum instead.
 
+The Linux builds -- a convenience, per the matrix above -- are also packaged as
+`.deb`, `.rpm` and `.apk`, attached to each release and installable from
+[package.anzupop.com](https://package.anzupop.com):
+
+```sh
+sudo curl -fsSLo /usr/share/keyrings/xiongnemo.gpg https://package.anzupop.com/keys/xiongnemo-packages.gpg
+echo "deb [signed-by=/usr/share/keyrings/xiongnemo.gpg] https://package.anzupop.com/apt nightly main" | sudo tee /etc/apt/sources.list.d/xiongnemo.list
+sudo apt update && sudo apt install nemosh
+```
+
+The page there has the dnf and apk equivalents. A build that is not exactly a
+tag is packaged as a prerelease of its base -- `1.4.3~pre-1`, or `1.4.3_pre-r1`
+for apk -- because a package version has no room for a branch and a commit.
+
 ## Build
 
 ```bash
