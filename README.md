@@ -72,8 +72,8 @@ The Linux builds -- a convenience, per the matrix above -- are also packaged as
 [package.anzupop.com](https://package.anzupop.com):
 
 ```sh
-sudo curl -fsSLo /usr/share/keyrings/xiongnemo.gpg https://package.anzupop.com/keys/xiongnemo-packages.gpg
-echo "deb [signed-by=/usr/share/keyrings/xiongnemo.gpg] https://package.anzupop.com/apt nightly main" | sudo tee /etc/apt/sources.list.d/xiongnemo.list
+sudo curl -fsSLo /usr/share/keyrings/nemo.gpg https://package.anzupop.com/keys/nemo-packages.gpg
+echo "deb [signed-by=/usr/share/keyrings/nemo.gpg] https://package.anzupop.com/apt nightly main" | sudo tee /etc/apt/sources.list.d/nemo.list
 sudo apt update && sudo apt install nemosh
 ```
 
