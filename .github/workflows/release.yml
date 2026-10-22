@@ -423,80 +423,27 @@ jobs:
 
             Commit: `${{ github.sha }}`
 
-      # The Scoop bucket finds out about a release through its own Excavator,
-      # which runs on an hourly cron. That is both slow and lossy: GitHub delays
-      # scheduled runs (measured on this bucket at 32, 39 and 52 minutes past the
-      # hour) and drops them under load, and a sweep only ever packages whichever
-      # release is newest when it fires. Measured on 2026-08-09, eight
-      # prereleases were published and the bucket recorded four -- v0.1.11,
-      # v0.1.14 and v0.1.16 were never packaged at all.
+      # Every channel this release reaches is told through one dispatch, to the
+      # package repository. It indexes the Linux packages for apt, dnf and apk,
+      # and passes the release on to the Scoop bucket's Excavator -- which this
+      # job used to dispatch itself, until 2026-10-22, when the package repository
+      # took it over so that a release does not trigger the bucket twice.
       #
-      # So the release tells the bucket rather than waiting to be found. The
-      # Excavator still does the work: it downloads the published archive and
-      # computes the hash itself, which is what keeps the manifest honest and is
-      # why this dispatches the existing workflow instead of writing a manifest
-      # from here. All this removes is the waiting.
+      # What that step learned still holds, and now lives in xiongnemo/packages'
+      # publish.yml. The bucket's hourly cron alone is slow and lossy: on
+      # 2026-08-09 eight prereleases were published and the bucket recorded four,
+      # because a sweep packages only whichever release is newest when it fires.
+      # So a release is announced rather than left to be found. And the bucket's
+      # checkver reads GitHub's releases *list*, which on 2026-09-23 lagged a
+      # finished upload by hours -- a dispatch sent then packaged nothing and
+      # reported success -- so the dispatch to the bucket waits until the list
+      # shows the Windows asset. The Excavator still downloads the archive and
+      # hashes it itself, and so does the package repository.
       #
-      # A release is not held up by this. The default GITHUB_TOKEN deliberately
-      # cannot start a workflow in another repository, so without the secret the
-      # step says so and succeeds, leaving the hourly cron exactly as it was.
-      # The bucket packages a release only once its checkver sees the Windows asset
-      # inside that release in GitHub's releases *list*. That is a deliberate rule, in the
-      # bucket's AGENTS.md: it keeps a prerelease from being picked up before its assets
-      # have finished uploading.
-      #
-      # On 2026-09-23 the list lagged the upload by hours. v1.2.8 was published with all
-      # ten assets -- /releases/{id}/assets returned them and the zip downloaded -- while
-      # the embedded list said zero. The dispatch below fired six seconds after publish,
-      # the bucket's excavator found no asset, packaged nothing and reported success, and
-      # so did this run. `scoop update` did nothing for hours and nothing said why.
-      #
-      # So this waits until the list shows the asset before dispatching, which is what
-      # makes the dispatch worth sending. If the list still has not caught up it dispatches
-      # anyway -- one more chance costs nothing -- and says so, because the next person to
-      # wonder why the bucket did not move should find the answer in this run rather than
-      # in three repositories' API responses. The hourly sweep is still the backstop.
-      - name: Tell the Scoop bucket to update
-        env:
-          GH_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
-          RELEASE_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.meta.outputs.tag }}
-        run: |
-          set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "SCOOP_BUCKET_TOKEN is not set, so the bucket will pick this up on its own schedule."
-            echo "To make it immediate, add a fine-grained token with Actions: read and write on"
-            echo "xiongnemo/windows-binaries-scoop-bucket as the SCOOP_BUCKET_TOKEN secret here."
-            exit 0
-          fi
-
-          asset="nemosh-${TAG}-windows-amd64.zip"
-          visible=false
-          # Twenty checks fifteen seconds apart: five minutes at most, and nothing at all
-          # when the list is consistent, which is nearly always.
-          for attempt in $(seq 1 20); do
-            if GH_TOKEN="$RELEASE_TOKEN" gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=10" \
-                --jq ".[] | select(.tag_name == \"${TAG}\") | .assets[].name" | grep -qxF "$asset"; then
-              visible=true
-              echo "the releases list shows ${asset} (check ${attempt}); dispatching the bucket."
-              break
-            fi
-            sleep 15
-          done
-          if [ "$visible" != true ]; then
-            echo "::warning title=The Scoop bucket will lag this release::GitHub's releases list does not show ${asset} yet, though the upload finished. The bucket's checkver reads that list and requires the asset in it, so it will package this release on the hourly sweep after the list catches up, not now. Nothing is broken; this is a delay, and this line is why."
-          fi
-          gh workflow run excavator.yml --repo xiongnemo/windows-binaries-scoop-bucket
-
-      # The package repository is the one place every project announces a release
-      # to; it is meant to take over the Scoop dispatch above as well, and until it
-      # does, both run. It is told which release and nothing else -- the same rule
-      # as the bucket: it fetches the release by tag, never by the list that lagged
-      # on 2026-09-23, and hashes the published assets itself.
-      #
-      # Like the Scoop step, a missing token is not a failed release: the step says
-      # so and succeeds, and the repository's own sweep is the backstop. A failed
-      # dispatch is a warning for the same reason.
+      # The package repository fetches the release by tag, never by that list. A
+      # missing token is not a failed release: the step says so and succeeds, and
+      # both repositories' own schedules are the backstop. A failed dispatch is a
+      # warning for the same reason.
       - name: Tell the package repository
         env:
           GH_TOKEN: ${{ secrets.PACKAGES_DISPATCH_TOKEN }}
