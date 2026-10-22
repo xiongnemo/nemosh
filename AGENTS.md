@@ -82,6 +82,15 @@ tags and a shallow clone silently yields the fallback.
   declares its hash agrees with itself no matter what went wrong in between.
   Anything that replaces the Excavator has to keep hashing the published
   artifact.
+- The Linux binaries are also packaged as `.deb`, `.rpm` and `.apk` from
+  `packaging/nfpm.yaml`, from the same static binary, and smoke-installed on
+  Debian, Ubuntu, Fedora, Rocky and Alpine before anything publishes. The publish
+  job then tells [`xiongnemo/packages`](https://github.com/xiongnemo/packages),
+  which indexes the assets for apt/dnf/apk at https://package.anzupop.com --
+  under the same rule as the bucket: it fetches the release by tag and hashes
+  the published files itself. A build that is not exactly a tag is a `pre`
+  prerelease of its base (`1.4.3~pre-1`, apk `1.4.3_pre-r1`); nFPM's default apk
+  spelling, `1.4.3_master-<commit>`, is one apk-tools rejects.
 
 ## Tests And Gates
 

@@ -166,18 +166,114 @@ jobs:
           sha256sum "$archive" > "$archive.sha256"
           cat "$archive.sha256"
 
+      # The same static binary, packaged for apt, dnf and apk -- and for the
+      # package repository at https://package.anzupop.com, which indexes these
+      # assets where they are published. Linux is still a convenience platform,
+      # and the package description says so.
+      #
+      # A package version has no room for a branch and a commit, so a build that
+      # is not exactly a tag is a prerelease of its base: 1.4.3~pre-1 for deb and
+      # rpm, 1.4.3_pre-r1 for apk, ordered below a later v1.4.3 tag. `pre` is not
+      # a choice of taste: nFPM writes the semver prerelease after an underscore
+      # for apk unchecked, and apk-tools calls 1.4.3_master-<commit> invalid. A
+      # tagged build renders bare, so its packages are the plain 1.4.0-1.
+      - name: Package for Linux
+        if: matrix.goos == 'linux'
+        shell: bash
+        env:
+          NFPM_ARCH: ${{ matrix.goarch }}
+          NFPM_RELEASE: v2.48.0
+          VERSION: ${{ steps.meta.outputs.version }}
+          ARTIFACT: ${{ steps.meta.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@${NFPM_RELEASE}"
+          base=$(printf '%s' "$VERSION" | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          if [ "$VERSION" = "v${base}" ]; then package_version="$base"; else package_version="${base}-pre"; fi
+          sed -e "s|@NFPM_ARCH@|${NFPM_ARCH}|g" \
+              -e "s|@NFPM_VERSION@|${package_version}|g" \
+              -e "s|@NFPM_BINARY@|${PWD}/dist/${ARTIFACT}/nemosh|g" \
+              -e "s|@NFPM_DOCS@|${PWD}|g" \
+              -e "s|@NEMOSH_VERSION@|${VERSION}|g" \
+              packaging/nfpm.yaml > dist/nfpm.yaml
+          for packager in deb rpm apk; do
+            target="dist/${ARTIFACT}.${packager}"
+            nfpm package --config dist/nfpm.yaml --packager "$packager" --target "$target"
+            (cd dist && sha256sum "$(basename "$target")" > "$(basename "$target").sha256")
+          done
+          rm dist/nfpm.yaml
+          dpkg-deb -f "dist/${ARTIFACT}.deb" Package Version Architecture
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ steps.meta.outputs.artifact }}
           path: |
             dist/*.zip
             dist/*.tar.gz
+            dist/*.deb
+            dist/*.rpm
+            dist/*.apk
             dist/*.sha256
           if-no-files-found: error
 
+  # Installs each package where it is meant to go and runs it, before anything
+  # is published. The apk is the static binary on musl, so Alpine is where a
+  # wrong assumption about linking would show; apk-tools 2 (3.21) and 3 (3.24)
+  # parse versions differently, so both are checked.
+  package-smoke:
+    name: Smoke ${{ matrix.format }} on ${{ matrix.image }} (${{ matrix.goarch }})
+    needs: build
+    runs-on: ${{ matrix.goarch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { format: deb, image: "debian:stable", goarch: amd64 }
+          - { format: deb, image: "debian:stable", goarch: arm64 }
+          - { format: deb, image: "ubuntu:24.04", goarch: amd64 }
+          - { format: rpm, image: "fedora:latest", goarch: amd64 }
+          - { format: rpm, image: "fedora:latest", goarch: arm64 }
+          - { format: rpm, image: "rockylinux:9", goarch: amd64 }
+          - { format: apk, image: "alpine:3.21", goarch: amd64 }
+          - { format: apk, image: "alpine:3.24", goarch: amd64 }
+          - { format: apk, image: "alpine:3.24", goarch: arm64 }
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: nemosh-*-linux-${{ matrix.goarch }}
+          path: dist
+          merge-multiple: true
+
+      - name: Install and run
+        shell: bash
+        env:
+          FORMAT: ${{ matrix.format }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          ls -l dist
+          docker run --rm -e FORMAT -e VERSION -v "$PWD/dist:/dist:ro" "${{ matrix.image }}" sh -euc '
+            case "$FORMAT" in
+              deb) apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq /dist/*.deb ;;
+              rpm) dnf install -y -q /dist/*.rpm ;;
+              apk)
+                apk add --no-cache --allow-untrusted /dist/*.apk
+                version=$(awk "/^P:nemosh\$/ { found = 1 } found && /^V:/ { print substr(\$0, 3); exit }" /lib/apk/db/installed)
+                invalid=$(apk version -c "$version")
+                [ -z "$invalid" ] || { echo "apk calls $version invalid"; exit 1; }
+                ;;
+            esac
+            reported=$(nemosh --version)
+            echo "$reported"
+            case "$reported" in
+              "nemosh $VERSION "*) ;;
+              *) echo "installed nemosh reports a version the build did not compute"; exit 1 ;;
+            esac
+          '
+
   publish:
     name: Publish
-    needs: build
+    needs: [build, package-smoke]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     permissions:
@@ -281,6 +377,9 @@ jobs:
           subject-path: |
             dist/*.zip
             dist/*.tar.gz
+            dist/*.deb
+            dist/*.rpm
+            dist/*.apk
 
       - name: Publish
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
@@ -292,6 +391,9 @@ jobs:
           files: |
             dist/*.zip
             dist/*.tar.gz
+            dist/*.deb
+            dist/*.rpm
+            dist/*.apk
             dist/*.sha256
           body: |
             Nemosh ${{ steps.meta.outputs.version }}
@@ -308,7 +410,9 @@ jobs:
             supported**. Linux is compiled and tested in CI; darwin is compiled
             only and never executed. Bugs there are welcome as reports and are
             not release blockers. Windows archives are `.zip`; the rest are
-            `.tar.gz`, because a zip does not carry the executable bit.
+            `.tar.gz`, because a zip does not carry the executable bit. The
+            Linux builds are also packaged as `.deb`, `.rpm` and `.apk`, and
+            are installable from https://package.anzupop.com.
 
             Verify the download against the `.sha256` beside it, and its origin
             with:
