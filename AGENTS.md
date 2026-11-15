@@ -261,9 +261,9 @@ about *spawning*: `syscall` and `x/sys/windows` are used freely here for file me
 process inspection, and the first draft of that guard banned them and was wrong.
 See `docs/design/windows-execution-model.md`.
 
-**A capability that is absent must fail loudly.** `hash`, `ulimit`, `fg`, `bg`,
-and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather than
-approximating. Anything landing partially refuses the part it cannot do.
+**A capability that is absent must fail loudly.** `ulimit`, `fg`, `bg`, `suspend`,
+`bind`, `enable -n`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero status
+rather than approximating. Anything landing partially refuses the part it cannot do.
 
 **A fixture must not depend on where the machine puts things.** `dirs` abbreviates the
 home directory to `~`, and the directory-stack tests hid a temporary path by substituting

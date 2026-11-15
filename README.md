@@ -148,9 +148,9 @@ project.
 
 Two rules govern the implementation:
 
-- **A capability that is absent must fail loudly.** `hash`, `ulimit`, `fg`,
-  `bg`, and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather
-  than approximating. An applet option that is not implemented is refused, not
+- **A capability that is absent must fail loudly.** `ulimit`, `fg`, `bg`,
+  `suspend`, `bind`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero
+  status rather than approximating. An applet option that is not implemented is refused, not
   swallowed.
 - **Parse before effects.** A script is parsed in full before any of it runs, so
   a syntax error late in a file produces no output from the lines before it.

@@ -8,6 +8,52 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## Unreleased
+
+Day-to-day use: Tab, the prompt, startup, and what the shell says when a name is not
+found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
+
+### Changed
+
+- **Paths are reported as busybox-w32 reports them**, `C:/Users/nemo`: `~`, `$HOME`,
+  `pwd`, `$PWD`, `$OLDPWD`, `dirs`, the prompt and `realpath`. A native program handed
+  `~/x` can now open it; `nvim ~/.ssh/config` opened `\c\Users\...`. `NEMOSH_PATHS=msys`
+  keeps `/c/Users/nemo`. Every spelling is still read.
+- **Ctrl-Z at the prompt turns the line's backslashes into slashes**, as busybox-w32's
+  editor does, so a pasted `C:\Users\nemo` becomes a path. `NEMOSH_CTRL_Z=eof` makes it
+  end input on an empty line, as before.
+- **awk's `sub` and `gsub` read backslashes in a replacement as busybox-w32 does from
+  FRP-6354**, which follows gawk's actual behaviour: `\\` is two backslashes.
+- **A session reads `~/.nemoshrc` where `ENV` is not set.** `ENV`, where it is set, is
+  still what is read; `docs/examples/nemoshrc` is one to start from.
+
+### Added
+
+- **Tab completion**: paths in every spelling `cd` reads (`/c/...`, `/mnt/c/...`,
+  `/tmp/...`); a program typed by its path (`./deploy<TAB>`); inside a quote already
+  opened (`"My Do<TAB>`); `$VAR` and `${VAR`; the command after `sudo`, `env`, `xargs`,
+  `time` and the other wrappers; and PATH programs by the launcher's own suffixes, `.sh`
+  among them.
+- **Bracketed paste**: what is pasted goes into the line as it is, newlines and tabs
+  too, and runs when Enter is pressed. A line holding a newline is drawn on its rows.
+- **`disown`, `logout` and `enable`** as bash has them; `suspend` is refused with a
+  reason. **`help NAME`** and **`NAME --help`** describe a builtin.
+- **`command_not_found_handle`**; at a prompt, "did you mean" for a name one or two
+  edits from one this shell can run; and a hint for a PowerShell script.
+- **`HISTIGNORE`** and **`HISTTIMEFORMAT`**; history files in bash's format, with
+  `#epoch` lines, read and written, and a command of several lines kept whole under
+  HISTTIMEFORMAT.
+- `UID`, `EUID` and `OSTYPE`; `sh` and `bash` fall back to this shell when PATH has none;
+  `env`, `xargs`, `find -exec` and awk run programs; `time` before a compound command;
+  `#!/usr/bin/env NAME` scripts; `trap ... KILL` and bash's `trap -p` listing.
+- Linux builds are packaged as `.deb`, `.rpm` and `.apk`; see README.
+
+### Fixed
+
+- `${a[0]%[0-5]}` and other element operators with brackets in their word.
+- A subscript that leads back to its own name is reported as recursion rather than
+  overflowing the stack; sed's pattern and hold spaces are bounded under fuzzing.
+
 ## v1.4.0 - 2026-10-07
 
 Bash compatibility, measured case by case. The Oils project's spec suite is vendored and

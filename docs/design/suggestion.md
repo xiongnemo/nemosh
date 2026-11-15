@@ -114,7 +114,6 @@ see position.
 
 ## Not done
 
-- **Persistent history**, which would make the strongest source much stronger.
 - **A configurable palette at runtime.** The struct is ready for it; nothing
   reads a setting into it yet.
 - **Suggesting an operand**, which needs a bounded, cached view of a directory

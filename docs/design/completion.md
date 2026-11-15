@@ -205,22 +205,31 @@ the user started**. If the word already opens with a quote, complete inside it
 and close it; otherwise escape. That keeps one rule -- follow the user -- rather
 than two competing ones. It is listed below rather than done.
 
-## Not done, in the order it is worth doing
+## Done since this list was written
 
-- **Option completion** (`ls -<TAB>`). The obvious idea -- derive it from the
-  applet manifest -- does not work: `internal/appletmanifest` compares name
-  lists and carries no option data, and only nine of the forty applets use the
-  shared `parseAppletOptions`, so there is no single place the truth lives. Doing
-  this honestly means either declaring options per applet and binding the
-  declaration to behaviour with a test that fails when they drift, or moving
-  every applet onto the shared parser first. The second is the better order.
-- **`~` and `$VAR` expansion**, which busybox has for `~` and which v1.1 already
-  lists.
+Each of these was listed here as not done, and each is now:
 
-- **Quote-preserving completion.** If the word already opens with a quote,
-  complete inside it and close it, instead of escaping. zsh's rule, and the only
-  version of "support quotes" that does not end up with two competing schemes.
-- **Persistent history**, which is what would make inline suggestion strong.
+- **Option completion** (`ls -<TAB>`), from `internal/capability`, whose option
+  letters a test binds to the applets' behaviour.
+- **`~/`**, and **`$VAR` and `${VAR`** to a variable's name (2026-11-15), with
+  `$HOME/` when it holds a directory.
+- **Completion inside an opened quote** (2026-11-15): `"My Do<TAB>` is completed
+  inside the quote and closed after a file, zsh's rule and bash's.
+- **Persistent history** (`HISTFILE`, `~/.nemosh_history`), which the inline
+  suggestion draws on first.
+- **Programmable completion**: bash's `complete`, `compgen` and `compopt`, so
+  `source <(gh completion -s bash)` and git's script work (v1.4.0).
+- **Every spelling the shell reads** (2026-11-15): `/c/...`, `/mnt/c/...` and
+  `/tmp/...` complete as `cd` reads them; a command typed by its path
+  (`./dep<TAB>`) completes to what could run; and the word after `sudo`, `env`,
+  `xargs` and the other wrappers is completed as a command.
+
+## Not done
+
+- **A menu**, cycling through the candidates with Tab or Shift-Tab rather than
+  listing them.
+- **Descriptions** beside candidates, which the TOML specs could carry.
+- **Dynamic candidates from a spec**: adb serials, package names.
 
 ## Listing on the first Tab
 

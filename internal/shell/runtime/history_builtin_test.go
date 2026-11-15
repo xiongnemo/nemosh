@@ -77,9 +77,10 @@ func TestHistory_clearsWithDashC(t *testing.T) {
 	}
 }
 
-// An option this build does not implement is refused by name rather than
-// ignored, which is the rule the rest of the shell follows.
-func TestHistory_refusesAnUnknownOption(t *testing.T) {
+// `history -w` with no HISTFILE and no FILE has nowhere to write, and fails, writing
+// nothing. This was named for an option the build did not implement; -w is implemented,
+// and fails here only for want of a file.
+func TestHistory_writeFailsWithNoHistoryFile(t *testing.T) {
 	// Given
 	rt, stdout := newHistoryRuntime(t)
 
@@ -88,10 +89,10 @@ func TestHistory_refusesAnUnknownOption(t *testing.T) {
 
 	// Then
 	if status == 0 {
-		t.Fatal("history -w succeeded, want a refusal")
+		t.Fatal("history -w succeeded with no file to write")
 	}
 	if stdout.String() != "" {
-		t.Fatalf("history -w wrote %q before refusing", stdout.String())
+		t.Fatalf("history -w wrote %q", stdout.String())
 	}
 }
 

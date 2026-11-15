@@ -78,6 +78,12 @@ Terminal delivers them as expected is exactly what cannot be tested from here.
 - **Delete** and **Backspace**.
 - **Tab** completion: a command name, a path, a path containing a space, and a path
   with CJK characters in it. Twice in a row should list rather than beep forever.
+- **Tab in the spellings added on 2026-11-15**, not yet checked by hand: `cd /c/Users/`
+  and `ls /mnt/c/` list; `./` and Tab offers the scripts and programs beside you and not
+  the text files; `ls "My Do` and Tab completes inside the quote and closes it after a
+  file; `echo $HO` and Tab gives `$HOME/`; `sudo gi` and Tab gives `sudo git`.
+- **A name not found**, not yet checked by hand: `gti status` at the prompt answers
+  "did you mean `git`?"; with a `deploy.ps1` on PATH, `deploy` says how to run it.
 - **Programmable completion**, confirmed 2026-10-06. After `source <(gh completion -s
   bash)`, `gh pr ` and Tab twice lists checkout, checks, close and the rest, and
   `gh pr ch` and Tab completes `check`, a second Tab listing checkout and checks. With

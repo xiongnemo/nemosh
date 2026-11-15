@@ -87,9 +87,11 @@ Load-bearing properties, not achievements to restate. Each constrains how v1
 work may be written.
 
 - **A capability that is absent must fail loudly.** This is the rule the v0
-  readiness audit was corrected under, and it is why `hash`, `ulimit`, `fg`,
-  `bg`, and `set -b`/`-n`/`-v` refuse with a reason and a non-zero status rather
-  than approximating. A release does not get to soften this into silence.
+  readiness audit was corrected under, and it is why `ulimit`, `fg`, `bg`,
+  `suspend`, `bind`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero
+  status rather than approximating. A release does not get to soften this into
+  silence. (`hash` and `set -n` were on this list and have since been
+  implemented.)
 - **Parse before effects.** A script is parsed in full before any of it runs.
 - **busybox-w32 is the primary behavior reference**, then BusyBox ash, then dash
   and POSIX, verified against `references/windows-compat/busybox-w32`.
