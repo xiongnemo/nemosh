@@ -45,6 +45,9 @@ func TestLineEditor_drawsALineThatHoldsANewline(t *testing.T) {
 	screen := newScreenModel(t, 40)
 	editor := newLineEditor(strings.NewReader(""), screen, t.TempDir())
 	editor.width = func() int { return 40 }
+	// An empty PATH, settled, so no program on this machine is suggested after the text: the
+	// Windows runner has an lsattr, and `ls` was drawn as `ls` and the rest of it.
+	editor.commands = newShellCommands(settledIndex(t, ""))
 	screen.Write([]byte("$ "))
 	editor.buffer.replace("echo a\necho bc")
 	editor.buffer.moveLeft()
@@ -67,10 +70,10 @@ func TestLineEditor_drawsALineThatHoldsANewline(t *testing.T) {
 		t.Fatalf("cursor at %d,%d, want 1,9: after the b at the first tab stop", row, col)
 	}
 
-	// And when it is drawn as one line again
-	editor.buffer.replace("ls")
+	// And when it is drawn as one line again, of text no command begins with
+	editor.buffer.replace("zq")
 	editor.redraw("$ ")
-	if got := screenText(screen); got != "$ ls\n" {
+	if got := screenText(screen); got != "$ zq\n" {
 		t.Fatalf("screen after shrinking = %q", got)
 	}
 }
