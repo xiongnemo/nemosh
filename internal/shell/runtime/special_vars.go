@@ -182,9 +182,31 @@ func (r Runtime) recordPipeStatus(statuses ...int) {
 	if r.arrays == nil {
 		return
 	}
+	// Written over where it holds as many, which is nearly every command after the first:
+	// a new array and a map for it, every command, was most of what a loop's bookkeeping
+	// allocated. The indices stay, so the order kept of them does.
+	if array, ok := r.arrays.indexed["PIPESTATUS"]; ok && !array.unassigned && holdsIndicesUpTo(array, len(statuses)) {
+		for index, status := range statuses {
+			array.elements[index] = strconv.Itoa(status)
+		}
+		return
+	}
 	elements := make([]string, 0, len(statuses))
 	for _, status := range statuses {
 		elements = append(elements, strconv.Itoa(status))
 	}
 	r.arrays.set("PIPESTATUS", elements)
+}
+
+// holdsIndicesUpTo reports whether array is exactly the indices 0 to count-1.
+func holdsIndicesUpTo(array *indexedArray, count int) bool {
+	if len(array.elements) != count {
+		return false
+	}
+	for index := range count {
+		if _, ok := array.elements[index]; !ok {
+			return false
+		}
+	}
+	return true
 }

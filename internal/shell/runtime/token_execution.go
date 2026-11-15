@@ -283,11 +283,10 @@ func (r Runtime) runCommandWithTokenAssignments(ctx context.Context, assignments
 	if len(commandTokens) == 0 {
 		return r.assignVars(assignments)
 	}
-	commandArgs := tokenValues(commandTokens)
 	if len(assignments) == 0 {
 		return r.runCommandWithRedirectOperations(ctx, commandTokens, operations)
 	}
-	if isSpecialBuiltin(commandArgs[0]) {
+	if isSpecialBuiltin(commandTokens[0].value) {
 		if status := r.assignVars(assignments); status != 0 {
 			return status
 		}

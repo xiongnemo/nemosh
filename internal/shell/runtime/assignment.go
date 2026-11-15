@@ -32,6 +32,10 @@ func leadingAssignments(args []string) ([]assignment, []string) {
 // one and one with its `=` escaped -- `v='a=b'; $v`, `"c=d"` and `e\=f` each run a command of
 // that name in busybox-w32 and bash, where every one of them was taken for an assignment.
 func splitAssignments(args []string, count int) ([]assignment, []string) {
+	// No assignments is the arguments as they are; copied, it was an allocation per command.
+	if count == 0 {
+		return nil, args
+	}
 	counted := make([]string, count)
 	for index, arg := range args[:count] {
 		counted[index] = keepEmptySubscript(arg)

@@ -62,6 +62,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   pattern's. A case of 1000 arms in a function took 593 ms to parse and takes 22;
   `git-completion.bash` takes 40 ms rather than 54, which an rc that sources it pays at
   every start.
+- **A command in a loop did work it did not need**: a plain word went through brace
+  expansion and the field builder to come back as itself, every command made a new
+  `$PIPESTATUS`, and every variable read in arithmetic made a context and an error. A loop
+  iteration of `[ $i -lt N ]; true; i=$((i+1))` allocates 36 times rather than 108, and ten
+  thousand of them take 72 ms rather than 103.
 - **Every start was 14 ms slower than it needed to be on Windows**: `$PPID` was found by
   walking a snapshot of every process on the machine. It is asked of the process itself
   now, and `nemosh -c true` takes 11 ms rather than 25; applet shims gain the same.

@@ -16,16 +16,23 @@ type scenario struct {
 // runtime, every package's init. The second adds building a shell and running one
 // applet in it. The third is two thousand commands, which is where a cost paid
 // per command rather than per start shows: the applet dispatch, the lookup, an
-// allocation on the way in.
+// allocation on the way in. The fourth is two thousand arithmetic commands, the
+// other loop a script writes, which goes through the arithmetic and no applet.
 func scenarios() []scenario {
 	start := threshold{ratio: 1.10, floor: time.Millisecond}
+	loop := threshold{ratio: 1.10, floor: 5 * time.Millisecond}
 	return []scenario{
 		{name: "--version", args: []string{"--version"}, limit: start},
 		{name: "-c true", args: []string{"-c", "true"}, limit: start},
 		{
 			name:  "2000 commands",
 			args:  []string{"-c", "i=0; while [ $i -lt 2000 ]; do true; i=$((i+1)); done"},
-			limit: threshold{ratio: 1.10, floor: 5 * time.Millisecond},
+			limit: loop,
+		},
+		{
+			name:  "2000 (( ))",
+			args:  []string{"-c", "i=0; while (( i < 2000 )); do (( i++ )); done"},
+			limit: loop,
 		},
 	}
 }

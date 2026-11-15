@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // A name in arithmetic, and what it stands for.
@@ -64,6 +65,26 @@ func withArithmeticNesting(ctx context.Context, nesting int) context.Context {
 	return context.WithValue(ctx, arithmeticNestingKey{}, nesting)
 }
 
+// arithmeticNestingContexts are the contexts that carry the shallow nestings and nothing else,
+// made once on the first arithmetic that reads a name: each name read made one, which was an
+// allocation per variable in every `$(( ))`. Deeper ones, which only a recursive value reaches,
+// are made as they are needed.
+var arithmeticNestingContexts = sync.OnceValue(func() []context.Context {
+	contexts := make([]context.Context, 16)
+	for nesting := range contexts {
+		contexts[nesting] = withArithmeticNesting(context.Background(), nesting)
+	}
+	return contexts
+})
+
+// arithmeticNesting is a context that carries nesting and nothing else.
+func arithmeticNesting(nesting int) context.Context {
+	if contexts := arithmeticNestingContexts(); nesting >= 0 && nesting < len(contexts) {
+		return contexts[nesting]
+	}
+	return withArithmeticNesting(context.Background(), nesting)
+}
+
 // arithmeticNestingOf is the nesting ctx carries, 0 for an expression as written.
 func arithmeticNestingOf(ctx context.Context) int {
 	nesting, _ := ctx.Value(arithmeticNestingKey{}).(int)
@@ -81,7 +102,7 @@ func (p *arithmeticParser) once(name string) (string, error) {
 	if err := checkArithmeticSubscript(name, p.depth); err != nil {
 		return "", err
 	}
-	reference, err := p.runtime.subscriptOnce(withArithmeticNesting(context.Background(), p.nesting+1), reference)
+	reference, err := p.runtime.subscriptOnce(arithmeticNesting(p.nesting+1), reference)
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +112,7 @@ func (p *arithmeticParser) once(name string) (string, error) {
 // valueText is the text a name holds: an element for `a[i]`, the name's own value -- a
 // computed one included -- otherwise.
 func (p *arithmeticParser) valueText(name string) string {
-	ctx := withArithmeticNesting(context.Background(), p.nesting+1)
+	ctx := arithmeticNesting(p.nesting + 1)
 	if reference, ok := parseArrayReference(name); ok {
 		elements, _ := p.runtime.elementsFor(ctx, reference)
 		return strings.Join(elements, " ")

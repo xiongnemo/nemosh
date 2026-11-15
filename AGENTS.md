@@ -192,7 +192,7 @@ go run ./tools/startbench -head dist/nemosh.exe -base dist/nemosh-base.exe -self
 ```
 
 `tools/startbench` is what CI runs in its "package init and startup time" step: the
-package init allocations against a ceiling, and the time of three command lines against
+package init allocations against a ceiling, and the time of four command lines against
 a base binary -- build `HEAD` into `dist/nemosh-base.exe` from a worktree to compare a
 working tree with what it started from. Both binaries must be named `nemosh-*`; one
 called `head.exe` answers to its name and runs the `head` applet. Locally the init count

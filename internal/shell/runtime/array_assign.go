@@ -128,29 +128,44 @@ func commandFollowsAssignments(command []word) bool {
 
 // refusePrefixElements drops the element assignments in front of a command, each said to be
 // no valid identifier as bash says it, and answers whether it dropped any.
+//
+// The words are copied only once one is dropped: until then the command is answered as it
+// is, which the caller ignores, and copying it was an allocation for every command run.
 func (r Runtime) refusePrefixElements(command []word) ([]word, bool) {
-	kept := make([]word, 0, len(command))
-	dropped := false
+	var kept []word
+	drop := func(index int) {
+		if kept == nil {
+			kept = append(make([]word, 0, len(command)), command[:index]...)
+		}
+	}
 	for index, item := range command {
 		assignment, ok := parseArrayAssignmentWord(item)
 		if !ok && !isAssignmentWord(item) {
-			return append(kept, command[index:]...), dropped
+			if kept == nil {
+				return command, false
+			}
+			return append(kept, command[index:]...), true
 		}
 		if ok && !assignment.list {
 			fmt.Fprintf(r.streams.Stderr, "%s`%s[%s]': not a valid identifier\n", r.diagnosticPrefix(), assignment.name, assignment.subscript)
-			dropped = true
+			drop(index)
 			continue
 		}
 		// So is one whose subscript or value is computed, as in `a[$i]=x f` and `a[0]=$v f`, and
 		// `a[1 + 1]=x f`, whose subscript is quoted by now. Each was made, and for good.
 		if target, element := writtenElementTarget(item); !ok && element {
 			fmt.Fprintf(r.streams.Stderr, "%s`%s': not a valid identifier\n", r.diagnosticPrefix(), target)
-			dropped = true
+			drop(index)
 			continue
 		}
-		kept = append(kept, item)
+		if kept != nil {
+			kept = append(kept, item)
+		}
 	}
-	return kept, dropped
+	if kept == nil {
+		return command, false
+	}
+	return kept, true
 }
 
 // writtenElementTarget is an element assignment's `name[subscript]` as written, and whether the

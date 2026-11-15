@@ -35,6 +35,12 @@ func TestAllocations_aLoopsAppletsAreHandedTheirFramesAgain(t *testing.T) {
 	// Then: two frames an iteration fewer. Within half an allocation of two, since a slice
 	// that grows now and then shows up as a hundredth here: 53.01 against 55.00 is two frames.
 	t.Logf("%.2f allocations an iteration, %.2f with a frame per call", reused, fresh)
+	// And the iteration as a whole, which was 142 before the frames, 108 after them and 36
+	// on 2026-11-16, once a plain word, a word with no brace, $PIPESTATUS, a variable read in
+	// arithmetic and an assignment with no tilde stopped allocating. About a fifth over.
+	if reused > 44 {
+		t.Fatalf("the loop allocated %.2f an iteration, over the ceiling of 44", reused)
+	}
 	if fresh-reused < 1.5 {
 		t.Fatalf("the loop allocated %.2f an iteration against %.2f with a frame per call; its applets were not handed their frames again", reused, fresh)
 	}

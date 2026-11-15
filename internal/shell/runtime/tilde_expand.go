@@ -22,7 +22,7 @@ import "strings"
 
 // tildeParts is the word's parts with each tilde-prefix replaced by the directory it names.
 func (r Runtime) tildeParts(item word) []wordPart {
-	if !item.expandTilde && !item.assignmentTilde && !item.valueTilde {
+	if !item.expandTilde && !item.assignmentTilde && !item.valueTilde || !mayHoldTilde(item) {
 		return item.parts
 	}
 	colons := item.assignmentTilde || item.valueTilde
@@ -47,6 +47,18 @@ func (r Runtime) tildeParts(item word) []wordPart {
 		parts = append(parts, r.tildeLiteral(part.text, leading, equals, partColons, last)...)
 	}
 	return parts
+}
+
+// mayHoldTilde reports whether the rebuilding below could change the word: an unquoted literal
+// with a `~` in it, or an empty one, which the rebuild leaves out. Every assignment is marked for
+// tildes, so `i=$((i+1))` was rebuilt a part at a time, three allocations, to come out as it was.
+func mayHoldTilde(item word) bool {
+	for _, part := range item.parts {
+		if part.kind == wordPartLiteral && part.quote == quoteUnquoted && (part.text == "" || strings.IndexByte(part.text, '~') >= 0) {
+			return true
+		}
+	}
+	return false
 }
 
 // assignmentEquals finds an assignment word's own `=`: which part it is in, and where. The

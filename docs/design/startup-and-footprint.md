@@ -325,9 +325,11 @@ start nearly doubled from one run to another, 7.45 to 14.24 ms, while two builds
 by side never differed by more than 2.5% where the commit had not set out to change the
 time, and the self-check never by more than 2.4%.
 
-The three scenarios are `--version` (the start alone), `-c true` (that, plus a shell
-built and one applet run in it), and two thousand commands in a loop, which is where a
-cost paid per command rather than per start shows.
+The scenarios are `--version` (the start alone), `-c true` (that, plus a shell built and
+one applet run in it), and two thousand commands in a loop, which is where a cost paid per
+command rather than per start shows. A fourth, two thousand `(( ))` commands, was added on
+2026-11-16 with the change that made a variable read in arithmetic allocate nothing: the
+other loop a script writes, through the arithmetic and no applet.
 
 Two copies of one build on this machine, which is the noise and nothing else:
 

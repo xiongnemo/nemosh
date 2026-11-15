@@ -86,9 +86,13 @@ func TestAllocations_runningACommand(t *testing.T) {
 		script  string
 		ceiling int
 	}{
-		{name: "a builtin", script: "true\n", ceiling: 120},                                        // measured 58
-		{name: "an applet", script: "echo hello > /dev/null\n", ceiling: 240},                      // measured 110
-		{name: "a pipeline of applets", script: "echo hi | cat | cat > /dev/null\n", ceiling: 700}, // measured 335
+		// Each includes parsing the line, which RunScript does every time and which is most of
+		// it: what a loop allocates an iteration is loop_frame_test.go's to measure.
+		{name: "a builtin", script: "true\n", ceiling: 120},                                        // measured 58, 64 on 2026-11-16
+		{name: "an applet", script: "echo hello > /dev/null\n", ceiling: 240},                      // measured 110, 126
+		{name: "a pipeline of applets", script: "echo hi | cat | cat > /dev/null\n", ceiling: 700}, // measured 335, 412
+		{name: "an arithmetic command", script: "(( i = i + 1 ))\n", ceiling: 190},                 // measured 95
+		{name: "an arithmetic expansion", script: ": $(( i + 1 ))\n", ceiling: 160},                // measured 79
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// Given: one runtime for every iteration, so what is measured is
