@@ -80,6 +80,7 @@ asks for the native spelling explicitly rather than reusing the string, because
 | UNC | Follow busybox-w32/Cygwin-compatible forward-slash UNC form: `//host/share/path`. |
 | Sample config | Final sample config and docs must comment each path scheme separately; do not collapse `/c` and `/mnt/c` into one generic alias knob. |
 | Current root | Follow busybox-w32: `/foo` is relative to the current root, where the root can be a drive such as `D:/` or a UNC share such as `//host/share`. |
+| Drive-relative | Follow busybox-w32: `D:` and `D:foo` are relative to the directory D: was last at, the current one for the drive the shell is on, and the root for a drive not yet been to; a launched program is handed those directories as Windows's `=D:` variables. They were refused until 2026-11-16, `cd D:` included. See `internal/pathmodel/drive_directories.go`. |
 | Path case | Follow busybox-w32's pragmatic approach for shell-generated display paths: try to resolve real filesystem case, silently preserve spelling on failure. The drive letter is the shell's, not the filesystem's: `C:` upper case, as busybox-w32 writes it, and `/c` lower case under `NEMOSH_PATHS=msys`. |
 | Virtual roots | `/tmp`, `/dev`, and similar Nemosh virtual roots are enabled by default and resolved before current-root expansion. They must be configurable. |
 | Mount table | Do not implement a Nemosh-owned mount table in v0. Follow busybox-w32 by using Windows-provided roots, drive letters, UNC shares, volume mount points, junctions, mapped/subst drives, and configured path aliases. |
@@ -95,8 +96,14 @@ Nemosh should recognize these Windows-local paths:
 /mnt/c/Users/nemo/file.txt    mount-prefix alias
 C:/Users/nemo/file.txt        accepted Windows path input
 C:\Users\nemo\file.txt        accepted Windows path input
+D: and D:dir/file.txt         drive-relative: where D: was left, as busybox-w32 reads it
 //server/share/dir/file.txt   UNC path, forward-slash form
 ```
+
+The drive-relative form is how a Windows user changes drive, and busybox-w32 keeps a
+directory for each drive. Measured with FRP-6354, after `cd D:/BT; cd C:/Windows`: `cd D:`
+is `D:/BT`, `cd C:` stays, `cd D:..` is `D:/`, and a `cmd /c "cd D:"` it starts prints
+`D:\BT`. This shell answers each the same.
 
 The shell reports paths with forward slashes and the drive letter, as busybox-w32
 does, and as the alias under `NEMOSH_PATHS=msys`:

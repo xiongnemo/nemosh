@@ -37,7 +37,29 @@ var launchPathVariables = map[string]bool{
 
 // childEnvironment is what a launched program receives.
 func (r Runtime) childEnvironment() []string {
-	return r.withNativePaths(r.withoutArrays(r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform()))))
+	return r.withDriveDirectories(r.withNativePaths(r.withoutArrays(r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform())))))
+}
+
+// withDriveDirectories is items with where each drive was left in front, as Windows's `=D:`
+// variables, in place of any the environment brought for the same drives; see
+// pathState.driveEnvironment. They come first because a block is in order and `=` sorts first.
+func (r Runtime) withDriveDirectories(items []string) []string {
+	drives := r.paths.driveEnvironment()
+	if len(drives) == 0 {
+		return items
+	}
+	given := map[string]bool{}
+	for _, drive := range drives {
+		given[drive[:4]] = true
+	}
+	combined := append(make([]string, 0, len(drives)+len(items)), drives...)
+	for _, item := range items {
+		if len(item) >= 4 && item[0] == '=' && item[2] == ':' && item[3] == '=' && given[strings.ToUpper(item[:4])] {
+			continue
+		}
+		combined = append(combined, item)
+	}
+	return combined
 }
 
 // withNativePaths is items with the shell's own path variables in the platform's spelling, as a

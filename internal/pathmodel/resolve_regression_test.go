@@ -1,7 +1,6 @@
 package pathmodel_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
@@ -30,33 +29,56 @@ func TestP05WaveA_ModelResolve_preservesDriveCurrentRootWhenTraversingAboveVirtu
 	}
 }
 
-func TestP05WaveA_ModelResolve_rejectsWindowsDriveRelativePaths(t *testing.T) {
-	// Given
-	model := pathmodel.New(pathmodel.DefaultConfig(), "/d/work")
-	tests := []string{
-		"C:",
-		"c:",
-		"C:foo",
-		"C:foo/bar",
-		"C:.",
-		"C:..",
-		`C:.\child`,
-		`C:..\child`,
-	}
-
-	for _, input := range tests {
-		t.Run(input, func(t *testing.T) {
+// A drive-relative path is relative to the directory its drive was last at, as busybox-w32 has
+// it, measured with FRP-6354: after `cd D:/BT; cd C:/Windows`, `cd D:` is D:/BT, `cd C:` stays,
+// and `D:..` is D:/. The drive the shell is on is at its current directory, and a drive the
+// shell has not been to is at its root. They were refused: `cd D:` said "drive-relative Windows
+// paths are not supported".
+func TestModelResolve_aDriveRelativePathIsRelativeToWhereItsDriveWasLeft(t *testing.T) {
+	// Given: at D:/work, having been at C:/Windows before it
+	model := pathmodel.New(pathmodel.DefaultConfig(), "/c/Windows").WithCWD("/c/Users").WithCWD("/c/Windows").WithCWD("/d/work")
+	for _, test := range []struct{ input, want string }{
+		{"D:", "/d/work"},
+		{"d:", "/d/work"},
+		{"D:sub", "/d/work/sub"},
+		{`D:sub\deeper`, "/d/work/sub/deeper"},
+		{"D:..", "/d"},
+		{"D:.", "/d/work"},
+		{"C:", "/c/Windows"},
+		{"C:System32", "/c/Windows/System32"},
+		{`C:..\Users`, "/c/Users"},
+		{"E:", "/e"},
+		{"E:x", "/e/x"},
+	} {
+		t.Run(test.input, func(t *testing.T) {
 			// When
-			_, err := model.Resolve(input)
+			got, err := model.Resolve(test.input)
 
 			// Then
-			if err == nil {
-				t.Fatalf("expected drive-relative path %q to be rejected", input)
-			}
-			if !errors.Is(err, pathmodel.ErrDriveRelativePath) {
-				t.Fatalf("expected ErrDriveRelativePath for %q, got %v", input, err)
+			if err != nil || string(got) != test.want {
+				t.Fatalf("Resolve(%q) = %q, %v; want %q", test.input, got, err, test.want)
 			}
 		})
+	}
+}
+
+// Where each drive was left belongs to the model it was recorded in: a copy that goes on
+// elsewhere does not move the drives of the one it was copied from.
+func TestModelResolve_eachCopyKeepsItsOwnDrives(t *testing.T) {
+	// Given
+	original := pathmodel.New(pathmodel.DefaultConfig(), "/c/one").WithCWD("/d/x")
+	copied := original.WithCWD("/c/two").WithCWD("/d/x")
+
+	// When
+	fromOriginal, _ := original.Resolve("C:")
+	fromCopy, _ := copied.Resolve("C:")
+
+	// Then
+	if fromOriginal != "/c/one" || fromCopy != "/c/two" {
+		t.Fatalf("C: is %q in the original and %q in the copy; want /c/one and /c/two", fromOriginal, fromCopy)
+	}
+	if drives := copied.DriveDirectories(); len(drives) != 2 || drives["c"] != "/c/two" || drives["d"] != "/d/x" {
+		t.Fatalf("the copy's drives are %v", drives)
 	}
 }
 

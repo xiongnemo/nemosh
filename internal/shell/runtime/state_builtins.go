@@ -263,7 +263,21 @@ func (r Runtime) cdFailure(as, target, reason string, quiet bool) int {
 		return 1
 	}
 	reportCD(r, quiet, "%scd: cannot cd to %s: %s\n", r.diagnosticPrefix(), target, reason)
+	// `cd C:\Users` unquoted reaches cd as C:Users, the backslash taken as an escape, which is a
+	// drive-relative path and goes somewhere else or nowhere. It was refused outright before
+	// drive-relative paths worked, which at least said something was odd. At a prompt only, as
+	// the other hints are: busybox-w32 says nothing, and a script's diagnostics stay its own.
+	if r.interactive.session && !quiet && looksLikeEatenBackslash(target) {
+		reportCD(r, quiet, "hint: a backslash outside quotes is an escape, so %s may have been typed %s:\\%s; quote it, or write %s:/%s\n",
+			target, target[:1], target[2:], target[:1], target[2:])
+	}
 	return 2
+}
+
+// looksLikeEatenBackslash reports a drive-relative path with something after the drive, which is
+// what an unquoted `C:\Users` becomes.
+func looksLikeEatenBackslash(target string) bool {
+	return len(target) > 2 && isDriveLetter(rune(target[0])) && target[1] == ':' && target[2] != '/' && target[2] != '\\'
 }
 
 // tryChangeDirectory is one attempt. quiet suppresses the diagnostics, which is what lets

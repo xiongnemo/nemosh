@@ -24,6 +24,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   end input on an empty line, as before.
 - **awk's `sub` and `gsub` read backslashes in a replacement as busybox-w32 does from
   FRP-6354**, which follows gawk's actual behaviour: `\\` is two backslashes.
+- **`cd D:` changes drive**, to where D: was left, as busybox-w32 has it: `D:`, `D:foo` and
+  `D:..` are relative to the directory each drive was last at, its root if it has not been
+  visited, and a program the shell starts is handed those directories, so `cmd /c "cd D:"`
+  agrees. They were refused, "drive-relative Windows paths are not supported". At a prompt,
+  a `cd` that fails on `C:Users` says that `C:\Users` unquoted loses its backslash.
 - **nano's `^X` asks "Save modified buffer?"**, as nano does: `Y` writes the buffer under
   the name it offers, Enter accepting it, and leaves; `N` leaves without; `^C` goes back.
   `^O` asks for the name the same way, so `^O` and Enter writes, and another name writes a

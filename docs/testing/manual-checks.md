@@ -175,6 +175,11 @@ streams. Ctrl-C during `seq 1 100000000 > /dev/null` still has to stop it at onc
 130, and `xargs -n1 echo < file` and `find . -exec echo {} \;` still run, since those reach
 the shell through the frame.
 
+`cd D:` changes drive since 2026-11-16, on a machine with a second drive: `cd D:/somewhere`,
+`cd C:/Windows`, then `cd D:` is back at D:/somewhere, `cd C:` stays, and `cmd /c "cd D:"`
+prints `D:\somewhere`. `cd C:\Users` unquoted fails with a hint that the backslash was an
+escape; `cd 'C:\Users'` works.
+
 `nano` leaves as nano does since 2026-11-16. Next to the nano Scoop installs, press the
 same keys in both on a file with a change: `^X` asks "Save modified buffer?", `Y` offers
 the file's name, Enter writes it and leaves; `N` leaves without writing; `^C` at the

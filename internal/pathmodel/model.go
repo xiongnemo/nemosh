@@ -20,13 +20,15 @@ type Model struct {
 	config Config
 	cwd    Path
 	root   Path
+	// drives is the directory each drive was last at, which a drive-relative path is relative
+	// to; see drive_directories.go. Shared between copies and never written once made: a
+	// change makes a new one, so a copy that goes on elsewhere moves only its own.
+	drives *driveDirectories
 }
 
 var ErrCygdriveDisabled = errors.New("cygdrive paths are disabled")
 
 var ErrNoWindowsPath = errors.New("path has no Windows spelling")
-
-var ErrDriveRelativePath = errors.New("drive-relative Windows paths are not supported")
 
 type HostOnlyUNCError struct {
 	Host string
@@ -43,7 +45,9 @@ func DefaultConfig() Config {
 func New(config Config, cwd Path) Model {
 	canonical := clean(cwd)
 	root, _ := currentRoot(canonical)
-	return Model{config: config, cwd: canonical, root: root}
+	model := Model{config: config, cwd: canonical, root: root}
+	model.drives = model.drives.with(canonical)
+	return model
 }
 
 func (m Model) CWD() Path {
@@ -55,6 +59,7 @@ func (m Model) WithCWD(cwd Path) Model {
 	if root, err := currentRoot(m.cwd); err == nil {
 		m.root = root
 	}
+	m.drives = m.drives.with(m.cwd)
 	return m
 }
 
@@ -108,7 +113,8 @@ func (m Model) Resolve(input string) (Path, error) {
 		return m.cwd, nil
 	}
 	if isWindowsDriveRelativePath(path) {
-		return "", ErrDriveRelativePath
+		drive := strings.ToLower(path[:1])
+		return clean(Path(string(m.driveDirectory(drive)) + "/" + path[2:])), nil
 	}
 	if isWindowsDrivePath(path) {
 		return clean(Path("/" + strings.ToLower(path[:1]) + path[2:])), nil

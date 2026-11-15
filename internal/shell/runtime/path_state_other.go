@@ -148,6 +148,9 @@ func (s pathState) workingDirectory() string {
 // spell is a canonical path as this shell reports it, which here is the path itself.
 func (pathState) spell(path pathmodel.Path) string { return string(path) }
 
+// driveEnvironment is nothing here: a drive's directory is Windows's to keep.
+func (pathState) driveEnvironment() []string { return nil }
+
 func (s pathState) nativeWorkingDirectory() (string, error) {
 	if s.nativeCwd == "" {
 		return "", fmt.Errorf("working directory is empty")

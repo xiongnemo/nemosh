@@ -118,6 +118,26 @@ func (s *pathState) setWorkingDirectory(resolved pathmodel.ResolvedPath) {
 	s.model = s.model.WithCWD(resolved.Canonical)
 }
 
+// driveEnvironment is where each drive was left, as the `=D:=D:\BT` variables Windows keeps
+// them in, in drive order, for a launched program: cmd started after `cd D:/BT; cd C:/Windows`
+// answers `cd D:` with D:\BT, as one busybox-w32 starts does, where it said D:\.
+func (s pathState) driveEnvironment() []string {
+	drives := s.model.DriveDirectories()
+	items := make([]string, 0, len(drives))
+	for letter := 'a'; letter <= 'z'; letter++ {
+		path, ok := drives[string(letter)]
+		if !ok {
+			continue
+		}
+		native, err := pathmodel.WindowsPath(path)
+		if err != nil {
+			continue
+		}
+		items = append(items, "="+strings.ToUpper(string(letter))+":="+filepath.FromSlash(native))
+	}
+	return items
+}
+
 func (s pathState) canonicalizeNativePath(origin pathmodel.Path, native string) (pathmodel.Path, error) {
 	if origin == "/tmp" || strings.HasPrefix(string(origin), "/tmp/") {
 		relative, err := filepath.Rel(s.tmpRoot, native)
