@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/capability"
 )
 
@@ -141,7 +142,25 @@ func completePathsIn(where completionPaths, prefix string, directoriesOnly bool)
 	if names, ok := completeDevicePath(where, prefix, directoriesOnly); ok {
 		return names
 	}
-	return completePathsWith(where.workingDirectory, where.home, where.resolve, prefix, directoriesOnly)
+	return completePathsWith(where.workingDirectory, where.home, where.resolve, prefix, directoriesOnly, nil)
+}
+
+// namesAProgramByPath reports whether a command name is a path rather than a name to look up:
+// one with a slash, as the launcher reads it, or a tilde, which expands into one.
+func namesAProgramByPath(stem string) bool {
+	return strings.ContainsRune(stem, '/') || strings.HasPrefix(stem, "~")
+}
+
+// completeProgramPath offers what a command name typed as a path could run: the programs in
+// the directory, and the directories, which lead to one. busybox's lineedit does the same
+// for a command word with a slash in it (FIND_EXE_ONLY in libbb/lineedit.c).
+func completeProgramPath(where completionPaths, stem string) []string {
+	return completePathsWith(where.workingDirectory, where.home, where.resolve, stem, false, runsAsAProgram)
+}
+
+func runsAsAProgram(native string, entry os.DirEntry) bool {
+	info, err := entry.Info()
+	return err == nil && applets.IsExecutable(native, info)
 }
 
 // completeDevicePath offers the devices when the word being typed is under /dev.
@@ -172,10 +191,12 @@ func completeDevicePath(where completionPaths, prefix string, directoriesOnly bo
 }
 
 func completePathsFrom(workingDirectory, home, prefix string, directoriesOnly bool) []string {
-	return completePathsWith(workingDirectory, home, nil, prefix, directoriesOnly)
+	return completePathsWith(workingDirectory, home, nil, prefix, directoriesOnly, nil)
 }
 
-func completePathsWith(workingDirectory, home string, resolve func(string) (string, bool), prefix string, directoriesOnly bool) []string {
+// completePathsWith is the reading itself. keep, when there is one, decides which files are
+// offered; a directory always is, since another Tab descends into it.
+func completePathsWith(workingDirectory, home string, resolve func(string) (string, bool), prefix string, directoriesOnly bool, keep func(native string, entry os.DirEntry) bool) []string {
 	if prefix == "~" && home != "" {
 		// The one candidate is the home directory itself, which is what bash offers: `~`
 		// names a directory unambiguously, so Tab adds the separator and a second Tab
@@ -216,7 +237,7 @@ func completePathsWith(workingDirectory, home string, resolve func(string) (stri
 		}
 		if entry.IsDir() {
 			name += "/"
-		} else if directoriesOnly {
+		} else if directoriesOnly || keep != nil && !keep(filepath.Join(searchIn, name), entry) {
 			continue
 		}
 		matches = append(matches, spelling+name)

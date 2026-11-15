@@ -99,9 +99,12 @@ func (e *lineEditor) complete(prompt string) {
 	var matches []string
 	var areOptions bool
 	operand := !completesCommand(prefix)
-	if operand {
+	switch {
+	case operand:
 		matches, areOptions = e.completeOperandWord(prefix, stem)
-	} else {
+	case namesAProgramByPath(stem):
+		matches = completeProgramPath(e.paths(), stem)
+	default:
 		matches = completeCommand(stem, e.commands.candidates())
 	}
 	// Only a path is rewritten, and only on the way in. An option begins with a
