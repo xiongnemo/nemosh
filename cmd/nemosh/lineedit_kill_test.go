@@ -197,8 +197,8 @@ func TestDecodeKey_killAndYank(t *testing.T) {
 		{name: "^W still deletes a word", bytes: []byte{0x17}, want: keyDeleteWord},
 		// 0x0c is next to 0x0b and must stay clear-screen.
 		{name: "^L still clears the screen", bytes: []byte{0x0c}, want: keyClearScreen},
-		// 0x1a is next to 0x19 and must stay end-of-input.
-		{name: "^Z still ends input", bytes: []byte{0x1a}, want: keyEndOfInput},
+		// 0x1a is next to 0x19 and must stay its own key; see lineedit_ctrlz_test.go.
+		{name: "^Z is still Ctrl-Z", bytes: []byte{0x1a}, want: keyCtrlZ},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got, size := decodeKey(test.bytes)

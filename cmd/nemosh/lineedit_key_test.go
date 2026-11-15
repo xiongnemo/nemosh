@@ -22,7 +22,7 @@ func TestDecodeKey(t *testing.T) {
 		{name: "tab", input: "\t", want: keyTab, consumed: 1},
 		{name: "ctrl-c", input: "\x03", want: keyInterrupt, consumed: 1},
 		{name: "ctrl-d", input: "\x04", want: keyEndOfInput, consumed: 1},
-		{name: "ctrl-z", input: "\x1a", want: keyEndOfInput, consumed: 1},
+		{name: "ctrl-z", input: "\x1a", want: keyCtrlZ, consumed: 1},
 		{name: "ctrl-a", input: "\x01", want: keyHome, consumed: 1},
 		{name: "ctrl-e", input: "\x05", want: keyEnd, consumed: 1},
 		{name: "ctrl-u", input: "\x15", want: keyClearLine, consumed: 1},

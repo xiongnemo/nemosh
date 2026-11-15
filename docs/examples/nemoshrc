@@ -4,6 +4,11 @@
 # History: skip lines that begin with a blank, and a line that repeats the one before.
 HISTCONTROL=ignoreboth
 
+# Ctrl-Z at the prompt turns backslashes into slashes, as busybox-w32's does, so a pasted
+# C:\Users\nemo becomes C:/Users/nemo. Uncomment this to have it end input instead, as
+# cmd's Ctrl-Z does.
+# NEMOSH_CTRL_Z=eof
+
 # The prompt: who and where, the git branch, and the last status when it was not 0,
 # then the prompt sign on a line of its own.
 #

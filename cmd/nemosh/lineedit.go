@@ -40,8 +40,10 @@ type lineEditor struct {
 	// completing `$HOME` into `$HOME/`. Asked of the runtime on each Tab; see complete_variable.go.
 	variables     func() []string
 	variableValue func(string) (string, bool)
-	buffer        *lineBuffer
-	pending       []byte
+	// setting reads a variable that configures the editor, such as NEMOSH_CTRL_Z.
+	setting func(string) (string, bool)
+	buffer  *lineBuffer
+	pending []byte
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
 	// feed arriving in the next read is that Enter finishing rather than another one.
 	afterCarriageReturn bool
@@ -166,7 +168,8 @@ func (e *lineEditor) resetDrawState() {
 }
 
 // readLine draws prompt and returns when the user submits a line. io.EOF means
-// end of input -- Ctrl-D on an empty line, Ctrl-Z, or the stream running out.
+// end of input -- Ctrl-D on an empty line, Ctrl-Z under NEMOSH_CTRL_Z=eof, or the
+// stream running out.
 func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error) {
 	e.buffer = newLineBuffer()
 	e.recall = 0
@@ -233,6 +236,10 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		case keyEnter:
 			fmt.Fprintln(e.screen)
 			return e.buffer.String(), nil
+		case keyCtrlZ:
+			if e.ctrlZ() {
+				return "", io.EOF
+			}
 		case keyEndOfInput:
 			// Only on an empty line. With text in the buffer this is a forward
 			// delete, because ending input there would throw the line away.

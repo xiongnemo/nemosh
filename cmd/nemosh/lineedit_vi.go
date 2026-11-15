@@ -77,7 +77,7 @@ func (e *lineEditor) viKey(k key) bool {
 		return false
 	}
 	switch k.kind {
-	case keyEnter, keyInterrupt, keyEndOfInput, keyLeft, keyRight, keyHome, keyEnd, keyDelete,
+	case keyEnter, keyInterrupt, keyEndOfInput, keyCtrlZ, keyLeft, keyRight, keyHome, keyEnd, keyDelete,
 		keyWordLeft, keyWordRight, keyClearLine, keyDeleteWord, keyClearScreen,
 		keyHistoryPrefixBackward, keyHistoryPrefixForward:
 		return false

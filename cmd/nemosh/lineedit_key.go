@@ -62,6 +62,9 @@ const (
 	// keyEditAndExecute is C-x C-e, readline's edit-and-execute-command: the line goes to an
 	// editor, and what it leaves runs. See edit_and_execute.go.
 	keyEditAndExecute
+	// keyCtrlZ turns the line's backslashes into slashes, as busybox-w32's editor does, or
+	// is end of input under NEMOSH_CTRL_Z=eof; see lineedit_ctrlz.go.
+	keyCtrlZ
 )
 
 type key struct {
@@ -72,10 +75,9 @@ type key struct {
 // decodeKey reads one key from the front of buffer, returning how many bytes it
 // consumed. A zero count with keyIncomplete means "read more first".
 //
-// Ctrl-D and Ctrl-Z both report end of input. Ctrl-D is the Unix spelling and
-// Ctrl-Z the Windows one; a shell that runs on Windows but is used by people
-// with Unix habits should answer to either, and neither reaches a cooked-mode
-// reader as anything but a stray byte to run as a command.
+// Ctrl-D reports end of input. Ctrl-Z, the Windows spelling of it, is a key of its own,
+// which the editor reads as busybox-w32's does, or as end of input when asked to; see
+// lineedit_ctrlz.go.
 func decodeKey(buffer []byte) (key, int) {
 	if len(buffer) == 0 {
 		return key{kind: keyIncomplete}, 0
@@ -101,8 +103,10 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyTab}, 1
 	case 0x03:
 		return key{kind: keyInterrupt}, 1
-	case 0x04, 0x1a:
+	case 0x04:
 		return key{kind: keyEndOfInput}, 1
+	case 0x1a:
+		return key{kind: keyCtrlZ}, 1
 	case 0x01:
 		return key{kind: keyHome}, 1
 	// C-b, C-f, C-p and C-n are the arrows, as busybox's editor and readline bind them.

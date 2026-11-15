@@ -86,13 +86,6 @@ func TestLineEditor_ctrlDEndsInputOnlyWhenTheLineIsEmpty(t *testing.T) {
 	}
 }
 
-// Ctrl-Z is the Windows spelling of the same thing.
-func TestLineEditor_ctrlZEndsInput(t *testing.T) {
-	if _, err, _ := editLine(t, "\x1a"); !errors.Is(err, io.EOF) {
-		t.Fatalf("readLine on Ctrl-Z = %v, want io.EOF", err)
-	}
-}
-
 func TestLineEditor_ctrlCAbandonsTheLine(t *testing.T) {
 	// When
 	line, err, _ := editLine(t, "half typed\x03")

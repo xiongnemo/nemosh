@@ -66,6 +66,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		editor.resolve = completionResolver(rt)
 		editor.variables = rt.VariableNames
 		editor.variableValue = rt.LookupVariable
+		editor.setting = rt.LookupVariable
 		// What this session can run changes while it runs: an rc file defines
 		// aliases, a script defines functions, and PATH can be exported to. All
 		// three decide the colour a command is drawn in and what a suggestion may

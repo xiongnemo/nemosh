@@ -111,6 +111,11 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 - **Ctrl-C during `sleep 30`**: returns to the prompt promptly.
 - **Ctrl-C inside `bc`**: behaves, and does not kill the shell with it.
 - **Ctrl-D on an empty prompt**: the shell exits.
+- **Ctrl-Z at the prompt**, not yet checked by hand: paste `cd C:\Users\nemo`, press
+  Ctrl-Z, and the line reads `cd C:/Users/nemo` with the cursor where it was; on an empty
+  line nothing happens. With `NEMOSH_CTRL_Z=eof` set in `~/.nemoshrc`, Ctrl-Z on an empty
+  line exits, as it did until 2026-11-15. Check the key arrives at all in a classic conhost
+  window as well as in Windows Terminal.
 - **Ctrl-Z then Enter** as end-of-input to an applet reading stdin (the Windows
   spelling of Ctrl-D).
 - **Closing the console window under a script**: run a script with

@@ -124,7 +124,7 @@ it is easier to see them together.
 | `kill PID`, `kill -l` | yes | `TerminateProcess` on Windows, a real signal elsewhere |
 | `pgrep`, `pkill` | yes | `CreateToolhelp32Snapshot` lists, the above terminates |
 | **`fg`, `bg`** | **no, and not planned** | they resume a *suspended* job, and nothing here can suspend one |
-| **Ctrl-Z as suspend** | **no** | same primitive; Ctrl-Z exits the shell on an empty line instead |
+| **Ctrl-Z as suspend** | **no** | same primitive. At the prompt Ctrl-Z turns the line's backslashes into slashes, as busybox-w32's editor does, so a pasted `C:\Users\nemo` becomes `C:/Users/nemo`; `NEMOSH_CTRL_Z=eof` makes it end input on an empty line instead, as it did until 2026-11-15 |
 
 **The distinction is direction, not difficulty.** Ending something and cancelling
 a context are both one-way doors, so `kill %N` is an honest implementation of the
