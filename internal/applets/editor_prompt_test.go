@@ -138,7 +138,7 @@ func TestEditor_escapeCancelsThePromptAndRestoresEditing(t *testing.T) {
 
 	// Typing now reaches the buffer again.
 	harness.type_(t, "TYPED")
-	harness.press(t, tcell.KeyCtrlO, 0)
+	harness.writeOut(t)
 	saved := waitForFile(t, path, func(content string) bool { return strings.Contains(content, "TYPED") })
 	// And the abandoned search term is not in the file.
 	if strings.Contains(saved, "abandoned") {

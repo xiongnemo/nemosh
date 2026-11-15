@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -97,21 +98,39 @@ func openEditorSession(ctx context.Context, applet string, operands []string, re
 // rule `sed -i` follows and the reason neither needs the encoding policy `iconv`
 // settles.
 func (s *editorSession) save(text string) error {
-	if s.readOnly {
-		return fmt.Errorf("the file is open read-only")
-	}
-	if s.native == "" {
+	if s.native == "" && !s.readOnly {
 		return fmt.Errorf("no file name; start it with a name to write to")
+	}
+	return s.saveAs(s.path, text)
+}
+
+// errEditorReadOnly is what writing a buffer opened with -R answers.
+var errEditorReadOnly = errors.New("the file is open read-only")
+
+// saveAs writes the buffer to name, which is the file's own or another; written, the buffer is
+// that file from then on, as it is in nano after a write under a new name. A write that fails
+// changes nothing.
+func (s *editorSession) saveAs(name, text string) error {
+	if s.readOnly {
+		return errEditorReadOnly
+	}
+	native := s.native
+	if name != s.path || native == "" {
+		resolved, err := resolveHostPath(s.view, name)
+		if err != nil {
+			return operandFailure(name, err)
+		}
+		native = resolved
 	}
 	// A new file is 0666 through the umask, as busybox's vi opens one.
 	mode := createMode(s.view, 0o666)
-	if info, err := os.Stat(s.native); err == nil {
+	if info, err := os.Stat(native); err == nil {
 		mode = info.Mode().Perm()
 	}
-	if err := os.WriteFile(s.native, []byte(text), mode); err != nil {
+	if err := os.WriteFile(native, []byte(text), mode); err != nil {
 		return err
 	}
-	s.isNew = false
+	s.path, s.native, s.isNew = name, native, false
 	return nil
 }
 
@@ -150,6 +169,17 @@ func runEditorApplication(ctx context.Context, session *editorSession, keys edit
 	application := tview.NewApplication().SetScreen(screen)
 	view := newEditorView(session, keys, application)
 	application.SetRoot(view.layout, true).SetFocus(view.area)
+	// tview stops an application on Ctrl-C unless something before it takes the key, and
+	// tcell makes the Windows console's Ctrl and c the same KeyCtrlC: ^C left the editor at
+	// once and the buffer with it, unasked. The view has it instead, where it cancels a
+	// prompt and otherwise says where the cursor is, as nano's ^C does.
+	application.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlC {
+			view.handleKey(event)
+			return nil
+		}
+		return event
+	})
 	go func() {
 		<-ctx.Done()
 		application.Stop()

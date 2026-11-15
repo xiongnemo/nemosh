@@ -24,6 +24,10 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   end input on an empty line, as before.
 - **awk's `sub` and `gsub` read backslashes in a replacement as busybox-w32 does from
   FRP-6354**, which follows gawk's actual behaviour: `\\` is two backslashes.
+- **nano's `^X` asks "Save modified buffer?"**, as nano does: `Y` writes the buffer under
+  the name it offers, Enter accepting it, and leaves; `N` leaves without; `^C` goes back.
+  `^O` asks for the name the same way, so `^O` and Enter writes, and another name writes a
+  copy. micro's `^Q` asks micro's question. A second `^X` used to discard the buffer.
 - **A session reads `~/.nemoshrc` where `ENV` is not set.** `ENV`, where it is set, is
   still what is read; `docs/examples/nemoshrc` is one to start from.
 
@@ -50,6 +54,9 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 
 ### Fixed
 
+- **Ctrl-C in nano or micro left the editor at once, and the buffer with it**, unasked:
+  tview stops an application on Ctrl-C by itself. It cancels a question now, and at the
+  buffer says where the cursor is, as nano's `^C` does.
 - **Every start was 14 ms slower than it needed to be on Windows**: `$PPID` was found by
   walking a snapshot of every process on the machine. It is asked of the process itself
   now, and `nemosh -c true` takes 11 ms rather than 25; applet shims gain the same.

@@ -177,6 +177,10 @@ func (v *editorView) handleKey(event *tcell.EventKey) *tcell.EventKey {
 		v.runAction(action)
 		return nil
 	}
+	if isControlKey(event, 'c', tcell.KeyCtrlC) {
+		v.showLocation()
+		return nil
+	}
 	if v.session.readOnly && isEditingKey(event) {
 		v.setMessage("[red]Read-only: the buffer cannot be changed[-]")
 		return nil
@@ -217,29 +221,6 @@ func isEditingKey(event *tcell.EventKey) bool {
 		return true
 	}
 	return false
-}
-
-func (v *editorView) save() {
-	if err := v.session.save(v.area.GetText()); err != nil {
-		v.setMessage("[red]%v[-]", err)
-		return
-	}
-	v.modified = false
-	v.refreshTitle()
-	v.setMessage("Wrote %s", v.session.path)
-}
-
-// quit refuses to lose unsaved work on the first press and accepts on the second,
-// which is the compromise nano makes: a prompt needs a yes/no reader, and losing
-// a buffer to one keystroke is the outcome worth preventing.
-func (v *editorView) quit() {
-	if v.modified {
-		v.modified = false
-		v.refreshTitle()
-		v.setMessage("[yellow]Unsaved changes. Press the exit key again to discard them.[-]")
-		return
-	}
-	v.application.Stop()
 }
 
 // cutLine takes the line the cursor is on, in the manner of nano's ^K.
@@ -315,20 +296,35 @@ func (m editorKeyMap) helpLines() []string {
 // ask collects a line of input on the message row, which is where nano puts its
 // prompts.
 func (v *editorView) ask(label string, answer func(string)) {
+	v.askWith(label, "", answer)
+}
+
+// askWith is ask with an answer already typed, which Backspace edits: the file's name, for
+// the name to write to.
+func (v *editorView) askWith(label, initial string, answer func(string)) {
 	v.prompt = answer
-	v.promptLabel, v.promptText = label, ""
-	v.setMessage("%s", label)
+	v.promptLabel, v.promptText = label, initial
+	v.setMessage("%s%s", label, initial)
 }
 
 func (v *editorView) handlePromptKey(event *tcell.EventKey) *tcell.EventKey {
+	// ^C cancels as Escape does, nano's key for it, by either spelling.
+	if event.Key() == tcell.KeyEscape || isControlKey(event, 'c', tcell.KeyCtrlC) {
+		v.prompt, v.promptText = nil, ""
+		v.setMessage("Cancelled")
+		return nil
+	}
+	// Another Ctrl and a letter is a binding, not text: on Windows it arrives as the letter
+	// with Ctrl held, and went into the answer as the letter. Ctrl with Alt is AltGr, which
+	// types characters, and is kept.
+	if event.Key() == tcell.KeyRune && event.Modifiers()&^tcell.ModShift == tcell.ModCtrl {
+		return nil
+	}
 	switch event.Key() {
 	case tcell.KeyEnter:
 		answer, handler := v.promptText, v.prompt
 		v.prompt, v.promptText = nil, ""
 		handler(answer)
-	case tcell.KeyEscape:
-		v.prompt, v.promptText = nil, ""
-		v.setMessage("Cancelled")
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if v.promptText != "" {
 			runes := []rune(v.promptText)

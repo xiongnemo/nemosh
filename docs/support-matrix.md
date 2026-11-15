@@ -1523,9 +1523,19 @@ Other behaviours worth knowing:
 - **Bytes are saved as they arrived.** The editor does not decode, so it cannot
   re-encode, and a UTF-16 or Latin-1 file keeps its encoding -- the same rule
   `sed -i` follows.
-- **`^X`/`^Q` with unsaved changes warns once and leaves on the second press.** A
-  yes/no prompt needs a reader this does not have, and losing a buffer to one
-  keystroke is the outcome worth preventing.
+- **`^X` with unsaved changes asks, as nano asks**: "Save modified buffer?", `Y` to
+  write it under the name `File Name to Write:` offers and leave once Enter accepts it, `N`
+  to leave without, `^C` or Escape to go back; a key that answers nothing asks again, and a
+  write that fails stays. `^O` asks for the name the same way, so nano's `^O` and Enter
+  writes the file, and another name writes a copy, asking first before writing over a file
+  that exists. micro's `^Q` asks "Save changes to NAME before closing? (y,n,esc)" and its
+  `^S` writes without a question, as micro's do. Until 2026-11-16 the exit key warned once
+  and discarded on the second press, and `^O` wrote at once, so the Enter of nano's `^O`
+  went into the buffer as a new line.
+- **`^C` never leaves.** It cancels a question or a prompt, and at the buffer says where the
+  cursor is, as nano's does. tview stops an application on Ctrl-C by itself, and tcell
+  makes the Windows console's Ctrl and c the same key, so until 2026-11-16 `^C` left the
+  editor at once and the buffer with it.
 - **The editor uses the width it is given**, which it did not until 2026-08-24 and which
 was reported from a real terminal rather than found by a test. Two things were wrong and
 neither was visible at 80 columns -- the one width the harness runs at.

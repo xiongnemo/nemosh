@@ -100,7 +100,7 @@ func (v *editorView) answerReplacement(answer rune) {
 			v.applyReplacement()
 		}
 		v.finishReplace()
-	case 'q':
+	case 'q', confirmCancelled:
 		v.finishReplace()
 	default:
 		// An unrecognised key asks again rather than guessing. Guessing `n` would be
@@ -171,15 +171,15 @@ func findEditorMatch(lines []string, needle string, fromLine, fromColumn int) (i
 
 // handleConfirmKey answers a single-key prompt.
 //
-// Escape is `q`: leaving by the key that cancels everything else here should stop the run
-// rather than do nothing, and stopping keeps whatever has already been replaced -- which
-// is what `q` means in the reference too.
+// Escape and ^C are confirmCancelled, which goes back: for a replace that stops the run, as
+// `q` does, and stopping keeps whatever has already been replaced -- which is what `q` means
+// in the reference too.
 func (v *editorView) handleConfirmKey(event *tcell.EventKey) *tcell.EventKey {
 	handler := v.confirm
 	v.confirm = nil
 	switch {
-	case event.Key() == tcell.KeyEscape:
-		handler('q')
+	case event.Key() == tcell.KeyEscape, isControlKey(event, 'c', tcell.KeyCtrlC):
+		handler(confirmCancelled)
 	case event.Key() == tcell.KeyRune:
 		// Lower-cased, so a stray Caps Lock does not turn every answer into an
 		// unrecognised key.

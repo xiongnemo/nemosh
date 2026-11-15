@@ -175,6 +175,13 @@ streams. Ctrl-C during `seq 1 100000000 > /dev/null` still has to stop it at onc
 130, and `xargs -n1 echo < file` and `find . -exec echo {} \;` still run, since those reach
 the shell through the frame.
 
+`nano` leaves as nano does since 2026-11-16. Next to the nano Scoop installs, press the
+same keys in both on a file with a change: `^X` asks "Save modified buffer?", `Y` offers
+the file's name, Enter writes it and leaves; `N` leaves without writing; `^C` at the
+question goes back to the buffer. `^O` then Enter writes and adds no blank line. `^C` at
+the buffer must **not** leave -- it shows the cursor's line and column. The tests drive
+both spellings of Ctrl-C tcell can deliver; only a real console says which one it sends.
+
 `watch -n 1 date`, confirmed 2026-10-06: the screen clears every second under
 `Every 1.0s: date`, the date at its right edge. Widen or narrow the window and the
 date moves to the new edge at the next run; one that stays near column 60 means the

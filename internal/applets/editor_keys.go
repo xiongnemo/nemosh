@@ -75,8 +75,8 @@ type editorBinding struct {
 // nanoBindings are nano's, which is the muscle memory people bring from Linux --
 // nano is the default git editor on many distributions.
 var nanoBindings = []editorBinding{
-	{key: tcell.KeyCtrlO, chords: ctrl('o'), label: "^O Write Out", action: editorSave, describes: "Write the file out with ^O"},
-	{key: tcell.KeyCtrlX, chords: ctrl('x'), label: "^X Exit", action: editorQuit, describes: "Exit with ^X"},
+	{key: tcell.KeyCtrlO, chords: ctrl('o'), label: "^O Write Out", action: editorSave, describes: "Write the file out with ^O, to the name it offers or another"},
+	{key: tcell.KeyCtrlX, chords: ctrl('x'), label: "^X Exit", action: editorQuit, describes: "Exit with ^X, which asks whether to save a modified buffer"},
 	{key: tcell.KeyCtrlW, chords: ctrl('w'), label: "^W Where Is", action: editorSearch, describes: "Search with ^W"},
 	{key: tcell.KeyCtrlK, chords: ctrl('k'), label: "^K Cut", action: editorCutLine, describes: "Cut the current line with ^K"},
 	{key: tcell.KeyCtrlU, chords: ctrl('u'), label: "^U Paste", action: editorPasteLine, describes: "Paste it back with ^U"},
@@ -124,7 +124,7 @@ var nanoBindings = []editorBinding{
 // need no learning on this platform.
 var microBindings = []editorBinding{
 	{key: tcell.KeyCtrlS, chords: ctrl('s'), label: "^S Save", action: editorSave, describes: "Save with ^S"},
-	{key: tcell.KeyCtrlQ, chords: ctrl('q'), label: "^Q Quit", action: editorQuit, describes: "Quit with ^Q"},
+	{key: tcell.KeyCtrlQ, chords: ctrl('q'), label: "^Q Quit", action: editorQuit, describes: "Quit with ^Q, which asks whether to save a modified buffer"},
 	{key: tcell.KeyCtrlF, chords: ctrl('f'), label: "^F Find", action: editorSearch, describes: "Find with ^F"},
 	{key: tcell.KeyCtrlK, chords: ctrl('k'), label: "^K Cut Line", action: editorCutLine, describes: "Cut the current line with ^K"},
 	{key: tcell.KeyCtrlV, chords: ctrl('v'), label: "^V Paste", action: editorPasteLine, describes: "Paste with ^V"},

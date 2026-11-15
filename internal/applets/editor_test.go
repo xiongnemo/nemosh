@@ -58,10 +58,17 @@ func startEditor(t *testing.T, name, path string) *editorHarness {
 func (h *editorHarness) text(t *testing.T) string {
 	t.Helper()
 	reply := make(chan string, 1)
-	h.application.QueueUpdate(func() { reply <- simulationText(h.screen) })
+	// Asked from a goroutine, because QueueUpdate blocks once the application has stopped:
+	// an editor that left when it should not have hung the test rather than failing it.
+	go h.application.QueueUpdate(func() { reply <- simulationText(h.screen) })
 	select {
 	case text := <-reply:
 		return text
+	case err := <-h.finished:
+		// Put back for stop and exited, which wait on it too.
+		h.finished <- err
+		t.Fatalf("the editor exited (%v)", err)
+		return ""
 	case <-time.After(10 * time.Second):
 		t.Fatal("the editor stopped answering")
 		return ""
@@ -154,7 +161,7 @@ func TestEditor_typesAndSaves(t *testing.T) {
 	// kind and this is the one piece of state a user cannot otherwise see.
 	harness.waitForScreen(t, "Modified")
 
-	harness.press(t, tcell.KeyCtrlO, 0)
+	harness.writeOut(t)
 	harness.waitForScreen(t, "Wrote")
 	waitForFile(t, path, func(text string) bool { return strings.Contains(text, "XY") })
 	// And the modified flag clears once it is saved.
@@ -194,12 +201,19 @@ func TestEditor_eachNameHasItsOwnKeys(t *testing.T) {
 				t.Fatalf("%s saved on the other name's key", test.name)
 			}
 			harness.press(t, test.save, 0)
+			if test.name == "nano" {
+				// nano's asks for the name to write to; micro's writes.
+				harness.waitForScreen(t, "File Name to Write: ")
+				harness.press(t, tcell.KeyEnter, 0)
+			}
 			waitForFile(t, path, func(text string) bool { return strings.Contains(text, "Z") })
 		})
 	}
 }
 
-// Quitting with unsaved changes must not lose them on one keystroke.
+// Quitting with unsaved changes must not lose them to the exit key, pressed once or
+// twice: a second ^X answers nothing at nano's question, which is asked again. A second
+// press used to discard the buffer.
 func TestEditor_guardsUnsavedChanges(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "guard.txt")
@@ -207,30 +221,19 @@ func TestEditor_guardsUnsavedChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	harness := startEditor(t, "nano", path)
+	defer harness.stop(t)
 	harness.type_(t, "!")
 	harness.press(t, tcell.KeyCtrlX, 0)
-	harness.waitForScreen(t, "Unsaved")
-	// Still running, so the buffer was not lost.
+	harness.waitForScreen(t, "Save modified buffer?")
+	harness.press(t, tcell.KeyCtrlX, 0)
+	harness.waitForScreen(t, "Save modified buffer?")
 	select {
 	case err := <-harness.finished:
-		t.Fatalf("the editor exited on the first ^X, discarding the buffer (%v)", err)
+		t.Fatalf("the editor exited on ^X, discarding the buffer (%v)", err)
 	case <-time.After(200 * time.Millisecond):
 	}
-	// The second press leaves.
-	harness.press(t, tcell.KeyCtrlX, 0)
-	select {
-	case <-harness.finished:
-	case <-time.After(10 * time.Second):
-		t.Fatal("the editor did not exit on the second ^X")
-	}
-	// And the file on disk is untouched, because the changes were discarded
-	// rather than written.
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != "keep\n" {
-		t.Fatalf("the file changed without being saved: %q", data)
+	if data, err := os.ReadFile(path); err != nil || string(data) != "keep\n" {
+		t.Fatalf("the file changed without being saved: %q (%v)", data, err)
 	}
 }
 
@@ -245,12 +248,12 @@ func TestEditor_cutAndPasteALine(t *testing.T) {
 
 	harness.press(t, tcell.KeyCtrlK, 0)
 	harness.waitForScreen(t, "Cut one line")
-	harness.press(t, tcell.KeyCtrlO, 0)
+	harness.writeOut(t)
 	waitForFile(t, path, func(text string) bool { return !strings.Contains(text, "one") })
 
 	harness.press(t, tcell.KeyCtrlU, 0)
 	harness.waitForScreen(t, "Pasted one line")
-	harness.press(t, tcell.KeyCtrlO, 0)
+	harness.writeOut(t)
 	waitForFile(t, path, func(text string) bool { return strings.Contains(text, "one") })
 }
 
