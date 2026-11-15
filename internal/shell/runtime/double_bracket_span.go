@@ -61,10 +61,20 @@ func conditionSpanEnd(line string, index int) (int, bool) {
 // text or after a blank or a separator, and followed by a blank, a newline or the end, as
 // `[[` alone on its line is the start of one that goes on to the next.
 func opensCondition(line string, index int) bool {
-	if !strings.HasPrefix(line[index:], "[[") || index+2 < len(line) && strings.IndexByte(" \t\n", line[index+2]) < 0 {
+	return opensConditionAfter(line[:index], line[index:])
+}
+
+// opensConditionAfter is opensCondition for a `[[` at the start of rest with before ahead of
+// it, two strings rather than one, so a scanner holding its line in pieces need not join them.
+func opensConditionAfter(before, rest string) bool {
+	if !strings.HasPrefix(rest, "[[") || len(rest) > 2 && strings.IndexByte(" \t\n", rest[2]) < 0 {
 		return false
 	}
-	return index == 0 || isShellBlank(line[index-1]) || strings.IndexByte(";&|(){}!\n", line[index-1]) >= 0
+	if before == "" {
+		return true
+	}
+	previous := before[len(before)-1]
+	return isShellBlank(previous) || strings.IndexByte(";&|(){}!\n", previous) >= 0
 }
 
 // endsConditionWord reports whether a word can end at index: at the end of the text, or before

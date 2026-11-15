@@ -7,6 +7,8 @@ package runtime
 type openSubstitution struct {
 	body, depth int
 	arithmetic  bool
+	// words is insideCase asked along the body, which keeps what it has counted of it.
+	words caseWords
 }
 
 // stepArithmeticExpansion steps over a `$((` that closes on this line, whole, before the

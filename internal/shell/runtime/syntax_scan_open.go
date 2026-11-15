@@ -16,8 +16,10 @@ import (
 // an unterminated command substitution, where busybox-w32 and bash run both.
 func (scanner *syntaxScanner) substitutionParenthesis(char byte) {
 	open := &scanner.substitutions[len(scanner.substitutions)-1]
+	body := scanner.logical.String()[open.body:]
+	open.words.extend(body)
 	switch {
-	case insideCase(scanner.logical.String()[open.body:]):
+	case open.words.openAt(len(body)):
 	case char == '(':
 		open.depth++
 	case open.depth > 0:
@@ -40,22 +42,25 @@ func (scanner *syntaxScanner) followCondition(line string, index int) {
 	}
 	before := scanner.logical.String()
 	switch {
+	// Asked of the line so far and the rest of this one as two strings: joined, every `[[` in
+	// a function's body copied the body up to it.
 	case !scanner.condition && strings.HasPrefix(line[index:], "[["):
-		scanner.condition = opensCondition(before+line[index:], len(before)) && commandBeginsAt(before, len(before))
+		scanner.condition = opensConditionAfter(before, line[index:]) && scanner.commandBegins(before)
 	case scanner.condition && strings.HasPrefix(line[index:], "]]") && endsConditionWord(line, index+2):
 		scanner.condition = before != "" && strings.IndexByte(" \t\n)", before[len(before)-1]) < 0
 	}
 }
 
-// commandBeginsAt reports whether a command begins at index: at the start of the text, after a
-// separator, an opening bracket or `!`, after a reserved word that a command follows, or after
-// the `)` of a function's `()` or of a case pattern.
-func commandBeginsAt(text string, index int) bool {
-	previous, found := previousNonBlank(text, index)
+// commandBegins reports whether a command begins at the end of the logical line so far, before:
+// at its start, after a separator, an opening bracket or `!`, after a reserved word that a
+// command follows, or after the `)` of a function's `()` or of a case pattern -- which is the
+// scanner's own question of the line, kept as it goes (syntax_scan_case.go).
+func (scanner *syntaxScanner) commandBegins(before string) bool {
+	previous, found := previousNonBlank(before, len(before))
 	if previous == ')' {
-		return strings.HasSuffix(strings.TrimRight(text[:index], " \t"), "()") || insideCase(text[:index])
+		return strings.HasSuffix(strings.TrimRight(before, " \t"), "()") || scanner.caseOpen()
 	}
-	return !found || strings.IndexByte(";&|({!\n", previous) >= 0 || afterCommandIntroducer(text, index)
+	return !found || strings.IndexByte(";&|({!\n", previous) >= 0 || afterCommandIntroducer(before, len(before))
 }
 
 func (scanner *syntaxScanner) incompleteError() error {

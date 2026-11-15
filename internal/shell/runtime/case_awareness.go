@@ -1,7 +1,5 @@
 package runtime
 
-import "strings"
-
 // Whether a `)` is a case pattern or a bracket.
 //
 // Three scans have to answer this, and none of them can do it from the bracket alone:
@@ -24,24 +22,12 @@ import "strings"
 // The word after `case` is its subject and no keyword, whatever it says, as in both references:
 // `{ case esac in "esac") x;; esac; }` closed its case at the subject, and the pattern's `)`
 // was a bracket that closed nothing.
+//
+// Read once over the whole text; a scan that asks along one text holds a caseWords
+// (case_scan.go), which keeps what it has counted.
 func insideCase(text string) bool {
-	depth := 0
-	subject := false
-	for _, field := range strings.Fields(text) {
-		word := strings.Trim(field, ";&|(){}")
-		switch {
-		case subject:
-			subject = false
-		case word == "case":
-			depth++
-			subject = true
-		case word == "esac":
-			if depth > 0 {
-				depth--
-			}
-		}
-	}
-	return depth > 0
+	words := caseWords{text: text}
+	return words.openAt(len(text))
 }
 
 // An unquoted parenthesis inside `[[ ]]` is *not* handled here, and the attempt is worth

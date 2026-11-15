@@ -20,6 +20,10 @@ type syntaxScanner struct {
 	groupClosers  []byte
 	// condition is a `[[` whose `]]` has not come; see followCondition.
 	condition bool
+	// cases and words are the case questions asked along the logical line in progress,
+	// which keep what they have read of it; flushLogicalLine starts them again.
+	cases     caseScan
+	words     caseWords
 	syntaxErr error
 	escaped   bool
 	continued bool
@@ -196,7 +200,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 				// which knows about case arms, so passing it through is all that is
 				// needed. The reverse -- a `}` while a `(` is open -- stays an error,
 				// because a brace inside a subshell has no second meaning.
-				if char == ')' && expected == '}' && insideCase(scanner.logical.String()) {
+				if char == ')' && expected == '}' && scanner.caseOpen() {
 					scanner.logical.WriteByte(char)
 					continue
 				}

@@ -74,6 +74,8 @@ func (scanner *syntaxScanner) flushLogicalLine() {
 	text := scanner.logical.String()
 	segments, err := splitSequentialSegments(text)
 	scanner.logical.Reset()
+	// What the case questions had read was this line; the next one starts again.
+	scanner.cases, scanner.words = caseScan{}, caseWords{}
 	if err != nil {
 		scanner.syntaxErr = err
 		return

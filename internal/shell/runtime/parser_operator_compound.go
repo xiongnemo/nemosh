@@ -32,6 +32,7 @@ func topLevelOperators(line string) []operatorAt {
 	quote := byte(0)
 	depth := 0
 	escaped := false
+	cases := caseScan{text: line}
 	for index := 0; index < len(line); index++ {
 		char := line[index]
 		switch {
@@ -56,7 +57,7 @@ func topLevelOperators(line string) []operatorAt {
 		// depth to zero inside a function whose body held a case, so an `||` further down
 		// the body read as the definition's own: `f() { case ...; *) ...;; esac; (x) ||
 		// y; }` was cut there and reported `missing }`.
-		case (char == '(' || char == ')') && casePatternPosition(line[:index]):
+		case (char == '(' || char == ')') && cases.patternAt(index):
 		case char == '(' || char == '{' || char == '[':
 			depth++
 		case char == ')' || char == '}' || char == ']':

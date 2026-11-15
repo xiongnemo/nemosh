@@ -57,6 +57,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 - **Ctrl-C in nano or micro left the editor at once, and the buffer with it**, unasked:
   tview stops an application on Ctrl-C by itself. It cancels a question now, and at the
   buffer says where the cursor is, as nano's `^C` does.
+- **A case or a function definition inside a group, a subshell or a function made parsing
+  quadratic**: every bracket read the group from its start to ask whether it was a case
+  pattern's. A case of 1000 arms in a function took 593 ms to parse and takes 22;
+  `git-completion.bash` takes 40 ms rather than 54, which an rc that sources it pays at
+  every start.
 - **Every start was 14 ms slower than it needed to be on Windows**: `$PPID` was found by
   walking a snapshot of every process on the machine. It is asked of the process itself
   now, and `nemosh -c true` takes 11 ms rather than 25; applet shims gain the same.

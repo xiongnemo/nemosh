@@ -29,6 +29,7 @@ func splitSequentialSegments(line string) ([]string, error) {
 	// end must not read as `a &; b`.
 	backgrounded := map[int]bool{}
 	start := 0
+	cases := caseScan{text: line}
 	for index := 0; index < len(line); index++ {
 		char := line[index]
 		if escaped {
@@ -65,7 +66,7 @@ func splitSequentialSegments(line string) ([]string, error) {
 		// esac` working -- it and its `)` cancel out rather than one of them counting.
 		// This is the guard the comment below says could not be insideCase: a position
 		// rather than a depth. See case_pattern_position.go.
-		if (char == '(' || char == ')') && casePatternPosition(line[:index]) {
+		if (char == '(' || char == ')') && cases.patternAt(index) {
 			continue
 		}
 		// A conditional is stepped over whole, its parentheses its expression's, and its `]]`

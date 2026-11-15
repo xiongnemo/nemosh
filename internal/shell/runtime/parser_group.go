@@ -218,6 +218,8 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 	closers := []byte{closerFor(opener)}
 	quote := byte(0)
 	escaped := false
+	// Asked along the group's text from its opener, as the prefix from there was.
+	cases, words := caseScan{text: line[start:]}, caseWords{text: line[start:]}
 	for index := start + 1; index < len(line); index++ {
 		char := line[index]
 		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' && !escaped {
@@ -267,7 +269,7 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 		// A bracket sitting where a case pattern goes is the pattern's own: `(a)` around
 		// one cancels itself out, and a bare `a)` closes nothing. Asked before either
 		// half below, so the two answers cannot disagree about the same character.
-		if (char == '(' || char == ')') && casePatternPosition(line[start:index]) {
+		if (char == '(' || char == ')') && cases.patternAt(index-start) {
 			continue
 		}
 		if char == '(' || braceDelimiterAt(line, index, '{') {
@@ -287,7 +289,7 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 			// separator decides where a `;` splits, and this one finds the group's own
 			// extent. The body it hands back goes through parseScript, which knows about
 			// case arms, so stepping over the pattern is all any of them has to do.
-			if char == ')' && expected == '}' && insideCase(line[start:index]) {
+			if char == ')' && expected == '}' && words.openAt(index-start) {
 				continue
 			}
 			return 0, fmt.Errorf("syntax error: unexpected %c, expected %c", char, expected)
