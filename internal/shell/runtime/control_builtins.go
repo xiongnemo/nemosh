@@ -19,7 +19,7 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	plain := slices.Contains(args[:len(args)-len(named)], "command")
 	args = named
 	switch args[0] {
-	case "exit", "exec", "return", "break", "continue", "eval", ".", "source":
+	case "exit", "logout", "exec", "return", "break", "continue", "eval", ".", "source":
 	case "fc":
 		return r.fcCommand(ctx, args[1:], assignments, operations, savedStatus), true
 	default:
@@ -37,7 +37,7 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 		return r.plainResult(plain, r.withAppliedRedirectsFor(!plain, operations, func(redirected Runtime) lineResult {
 			return redirected.dotResult(ctx, args, savedStatus, !prefixed)
 		})), true
-	case "exit", "return", "break", "continue":
+	case "exit", "logout", "return", "break", "continue":
 		// Their redirections are made as any command's are, though nothing is written through
 		// them but a diagnostic: `break > log` creates log in both references. They were not
 		// made at all.
@@ -72,6 +72,15 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 
 // transferControl is exit, return, break or continue, once their redirections are made.
 func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
+	// logout is exit in a login shell, and elsewhere bash's error, which leaves the shell
+	// running; busybox has no logout.
+	if args[0] == "logout" {
+		if !r.options.login {
+			fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"logout: not login shell: use `exit'")
+			return lineResult{status: 1}
+		}
+		args = append([]string{"exit"}, args[1:]...)
+	}
 	switch args[0] {
 	case "exit":
 		if len(args) == 1 && r.trapStatus != nil {
@@ -113,7 +122,7 @@ func throughCommandPrefix(args []string) []string {
 		rest = rest[1:]
 	}
 	switch rest[0] {
-	case "exit", "exec", "return", "break", "continue", "eval", ".", "source":
+	case "exit", "logout", "exec", "return", "break", "continue", "eval", ".", "source":
 		return rest
 	}
 	return args

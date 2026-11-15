@@ -34,7 +34,9 @@ var unimplementedBuiltins = map[string]unimplementedBuiltin{
 			"the #else of `#if !ENABLE_PLATFORM_MINGW32`)",
 	},
 	"fg": {reason: noSuspensionReason, permanent: true},
-	"bg": {reason: noSuspensionReason, permanent: true},
+	// bash's, which stops the shell itself; it was `suspend: not found`, 127.
+	"suspend": {reason: "nothing here can suspend a process, this shell included", permanent: true},
+	"bg":      {reason: noSuspensionReason, permanent: true},
 	// readline's, which a bashrc calls to set keys and inputrc variables: `not found` read as
 	// a program to install.
 	"bind": {reason: "the line editor's keys are its own: it reads no inputrc, and nothing rebinds them. " +

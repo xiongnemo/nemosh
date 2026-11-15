@@ -41,6 +41,12 @@ func TestRuntime_refusesABuiltinItDoesNotImplement(t *testing.T) {
 			script:    "bg\n",
 			fragments: []string{"bg: not implemented, and will not be", "suspend", "kill %N", "support-matrix"},
 		},
+		// bash's, which stops the shell itself; it was `suspend: not found`, 127.
+		{
+			name:      "suspend",
+			script:    "suspend\n",
+			fragments: []string{"suspend: not implemented, and will not be", "suspend", "this shell included"},
+		},
 		// What a bashrc calls to set its keys. It was `bind: not found`, 127, which reads as a
 		// program to install.
 		{
