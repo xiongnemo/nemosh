@@ -70,6 +70,12 @@ func completionHome(rt runtime.Runtime) string {
 	return native
 }
 
+// completionResolver reads a typed directory as the shell reads it. Unlike the snapshots beside
+// it, this asks the runtime on every Tab, so it answers for the directory the shell is in now.
+func completionResolver(rt runtime.Runtime) func(string) (string, bool) {
+	return func(directory string) (string, bool) { return nativePath(rt, directory) }
+}
+
 // completionDevices are the names under /dev, or none when the path model has it switched off.
 //
 // Asked of the runtime rather than listed here, so completion cannot offer a device the shell would

@@ -93,6 +93,10 @@ type completionPaths struct {
 	// from the runtime rather than from a list here, so completion cannot offer a device the
 	// shell would then refuse to open.
 	devices []string
+	// resolve turns a directory as typed into the native one to read, through the shell's path
+	// model, so `/c/Users/` and `/mnt/c/` complete as `cd` reads them. Nil in tests that need
+	// no model, where a typed directory is joined onto the working directory as Go reads it.
+	resolve func(string) (string, bool)
 }
 
 // completeOption offers the options the command accepts, from the capability
@@ -137,7 +141,7 @@ func completePathsIn(where completionPaths, prefix string, directoriesOnly bool)
 	if names, ok := completeDevicePath(where, prefix, directoriesOnly); ok {
 		return names
 	}
-	return completePathsFrom(where.workingDirectory, where.home, prefix, directoriesOnly)
+	return completePathsWith(where.workingDirectory, where.home, where.resolve, prefix, directoriesOnly)
 }
 
 // completeDevicePath offers the devices when the word being typed is under /dev.
@@ -168,6 +172,10 @@ func completeDevicePath(where completionPaths, prefix string, directoriesOnly bo
 }
 
 func completePathsFrom(workingDirectory, home, prefix string, directoriesOnly bool) []string {
+	return completePathsWith(workingDirectory, home, nil, prefix, directoriesOnly)
+}
+
+func completePathsWith(workingDirectory, home string, resolve func(string) (string, bool), prefix string, directoriesOnly bool) []string {
 	if prefix == "~" && home != "" {
 		// The one candidate is the home directory itself, which is what bash offers: `~`
 		// names a directory unambiguously, so Tab adds the separator and a second Tab
@@ -188,6 +196,13 @@ func completePathsFrom(workingDirectory, home, prefix string, directoriesOnly bo
 		// An expanded `~/` is absolute, and joining an absolute path onto the working
 		// directory would bury the home directory inside it.
 		searchIn = filepath.FromSlash(directory)
+	}
+	if resolve != nil && directory != "" {
+		native, ok := resolve(directory)
+		if !ok {
+			return nil
+		}
+		searchIn = native
 	}
 	entries, err := os.ReadDir(searchIn)
 	if err != nil {

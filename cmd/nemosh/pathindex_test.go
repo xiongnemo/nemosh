@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"slices"
 	"testing"
 	"time"
@@ -19,6 +20,15 @@ func seedPathDirectory(t *testing.T, names ...string) string {
 	return directory
 }
 
+// program is a program's file name as this platform runs it by name: wsl.exe for `wsl` on
+// Windows, and wsl elsewhere, where a name runs only as it is spelled.
+func program(name string) string {
+	if goruntime.GOOS == "windows" {
+		return name + ".exe"
+	}
+	return name
+}
+
 func settledIndex(t *testing.T, pathValue string) *pathIndex {
 	t.Helper()
 	index := newPathIndex()
@@ -32,14 +42,14 @@ func settledIndex(t *testing.T, pathValue string) *pathIndex {
 // would leave the complaint that started this exactly where it was.
 func TestPathIndex_findsAProgramByTheNameYouType(t *testing.T) {
 	// Given
-	index := settledIndex(t, seedPathDirectory(t, "wsl.exe", "git.exe", "notes.txt"))
+	index := settledIndex(t, seedPathDirectory(t, program("wsl"), program("git"), "notes.txt"))
 
 	for _, test := range []struct {
 		name string
 		want bool
 	}{
 		{name: "wsl", want: true},
-		{name: "wsl.exe", want: true},
+		{name: program("wsl"), want: true},
 		{name: "git", want: true},
 		{name: "nosuchprogram", want: false},
 	} {
@@ -102,8 +112,8 @@ func TestPathIndex_saysUndeterminedBeforeItHasRead(t *testing.T) {
 // for one.
 func TestPathIndex_rebuildsOnlyWhenPathChanges(t *testing.T) {
 	// Given
-	first := seedPathDirectory(t, "alpha.exe")
-	second := seedPathDirectory(t, "beta.exe")
+	first := seedPathDirectory(t, program("alpha"))
+	second := seedPathDirectory(t, program("beta"))
 	index := settledIndex(t, first)
 	if found, _ := index.has("alpha"); !found {
 		t.Fatal("the first PATH was not indexed")
@@ -164,7 +174,7 @@ func TestShellCommands_saysNothingAboutAPath(t *testing.T) {
 // And PATH feeds the suggestion engine, which is the other half of the request.
 func TestShellCommands_offerPathProgramsAsCandidates(t *testing.T) {
 	// Given
-	commands := newShellCommands(settledIndex(t, seedPathDirectory(t, "wsl.exe")))
+	commands := newShellCommands(settledIndex(t, seedPathDirectory(t, program("wsl"))))
 	commands.set([]string{"ll"})
 
 	// When

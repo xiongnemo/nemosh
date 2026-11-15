@@ -16,7 +16,7 @@ import (
 // it could not before.
 func TestCompleteCommand_reachesPath(t *testing.T) {
 	// Given
-	commands := newShellCommands(settledIndex(t, seedPathDirectory(t, "wsl.exe", "where.exe", "git.exe")))
+	commands := newShellCommands(settledIndex(t, seedPathDirectory(t, program("wsl"), program("where"), program("git"))))
 	commands.set([]string{"ll"})
 	candidates := commands.candidates()
 
@@ -48,7 +48,7 @@ func TestCompleteCommand_reachesPath(t *testing.T) {
 func TestCompleteCommand_offersEachNameOnce(t *testing.T) {
 	// Given: a PATH entry that collides with an applet, and an alias that
 	// collides with a builtin
-	commands := newShellCommands(settledIndex(t, seedPathDirectory(t, "wc.exe")))
+	commands := newShellCommands(settledIndex(t, seedPathDirectory(t, program("wc"))))
 	commands.set([]string{"cd"})
 
 	// When
@@ -69,7 +69,7 @@ func TestCompleteCommand_offersEachNameOnce(t *testing.T) {
 func TestCompleteCommand_listsTheChoiceAfterOneLetter(t *testing.T) {
 	// Given
 	screen, editor := newStyledEditor(t, 80, "", nil)
-	programs := seedPathDirectory(t, "wsl.exe", "where.exe")
+	programs := seedPathDirectory(t, program("wsl"), program("where"))
 	editor.commands.path.refresh(programs)
 	waitForPathBuiltFrom(t, editor.commands.path, programs)
 

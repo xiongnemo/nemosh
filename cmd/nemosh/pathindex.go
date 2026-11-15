@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // pathIndex is every program on PATH, by name.
@@ -45,6 +47,11 @@ func newPathIndex() *pathIndex {
 // effect is ordinary. Rebuilding costs 16ms and only happens when the variable
 // actually moves.
 func (p *pathIndex) refresh(pathValue string) {
+	p.refreshWith(pathValue, nil)
+}
+
+// refreshWith is refresh with the directories read through resolve.
+func (p *pathIndex) refreshWith(pathValue string, resolve func(string) (string, bool)) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.ready && p.builtOn == pathValue {
@@ -56,7 +63,7 @@ func (p *pathIndex) refresh(pathValue string) {
 	p.inFlight, p.building = true, pathValue
 
 	go func() {
-		names, sorted := scanPath(pathValue)
+		names, sorted := scanPath(pathValue, resolve)
 		p.mu.Lock()
 		defer p.mu.Unlock()
 		p.names, p.sorted = names, sorted
@@ -100,7 +107,10 @@ func (p *pathIndex) candidates() []string {
 // *recognised* under both spellings, because either can be typed -- but only
 // `wsl` should be *offered*, because completing `w` into a column containing
 // both `wsl` and `wsl.exe` reads as though there were two programs.
-func scanPath(pathValue string) (map[string]bool, []string) {
+//
+// A directory is read through resolve when there is one, as the launcher reads it through the
+// path model: an entry written /c/tools is a directory the shell runs programs from.
+func scanPath(pathValue string, resolve func(string) (string, bool)) (map[string]bool, []string) {
 	names := map[string]bool{}
 	var sorted []string
 	seen := map[string]bool{}
@@ -118,6 +128,13 @@ func scanPath(pathValue string) (map[string]bool, []string) {
 	for _, directory := range filepath.SplitList(pathValue) {
 		if directory == "" {
 			continue
+		}
+		if resolve != nil {
+			native, ok := resolve(directory)
+			if !ok {
+				continue
+			}
+			directory = native
 		}
 		entries, err := os.ReadDir(directory)
 		if err != nil {
@@ -146,7 +163,7 @@ func scanPath(pathValue string) (map[string]bool, []string) {
 	return names, sorted
 }
 
-// executableStem strips a Windows executable suffix, reporting whether the name
+// executableStem strips an executable suffix, reporting whether the name
 // had one.
 func executableStem(name string) (string, bool) {
 	for _, suffix := range executableSuffixes {
@@ -157,6 +174,6 @@ func executableStem(name string) (string, bool) {
 	return name, false
 }
 
-// The suffixes this shell will launch, matching the lookup order in
-// internal/shell/runtime/external.go.
-var executableSuffixes = []string{".com", ".exe", ".bat", ".cmd"}
+// The suffixes this shell will launch, which are the launcher's own: a name is offered by
+// exactly the suffixes it runs by, and none off Windows, where a name runs as it is spelled.
+var executableSuffixes = runtime.ExecutableSuffixes()

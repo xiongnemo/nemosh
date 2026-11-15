@@ -61,6 +61,8 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		editor.home = completionHome(rt)
 		// And the devices, which the path model can switch off entirely.
 		editor.devices = completionDevices(rt)
+		// And how a typed directory is read, which needs the runtime itself.
+		editor.resolve = completionResolver(rt)
 		// What this session can run changes while it runs: an rc file defines
 		// aliases, a script defines functions, and PATH can be exported to. All
 		// three decide the colour a command is drawn in and what a suggestion may
@@ -68,7 +70,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// index rebuilds only when the variable actually moves.
 		editor.commands.set(rt.RunnableNames())
 		if value, ok := rt.LookupEnv("PATH"); ok {
-			editor.commands.path.refresh(value)
+			editor.commands.path.refreshWith(value, editor.resolve)
 		}
 		// And the host list, which changes when ~/.ssh/config is edited. Its
 		// invalidation is a stat of one file per prompt, which is why it can sit

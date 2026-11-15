@@ -34,6 +34,8 @@ type lineEditor struct {
 	home string
 	// devices are the names under /dev, for the same reason and refreshed at the same time.
 	devices []string
+	// resolve reads a typed directory through the shell's path model; see completionPaths.
+	resolve func(string) (string, bool)
 	buffer  *lineBuffer
 	pending []byte
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
@@ -364,5 +366,6 @@ func (e *lineEditor) paths() completionPaths {
 		workingDirectory: e.workingDirectory,
 		home:             e.home,
 		devices:          e.devices,
+		resolve:          e.resolve,
 	}
 }
