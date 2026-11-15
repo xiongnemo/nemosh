@@ -30,12 +30,20 @@ func assignmentPrefix(command []word) int {
 // expandCommandArguments expands the command name and its arguments, the words after the
 // assignments in front of them: a declaration utility's assignment operands unsplit.
 func (r Runtime) expandCommandArguments(ctx context.Context, words []word, savedStatus int) []shellToken {
-	var rest []shellToken
+	// A word to a token, as nearly every word is, so the list is made once.
+	rest := make([]shellToken, 0, len(words))
 	declaration := false
 	for index, item := range words {
+		assignment := declaration && isAssignmentWord(item)
+		// A plain word is its own token, with no list of one field made to carry it there.
+		if text, ok := plainWord(item); ok && !assignment {
+			declaration = declaration || index == 0 && isDeclarationUtility(item)
+			rest = append(rest, shellToken{kind: tokenWord, value: text})
+			continue
+		}
 		var values []string
 		literal := false
-		if declaration && isAssignmentWord(item) {
+		if assignment {
 			values = r.expandAssignmentWord(ctx, item, true, savedStatus)
 			literal = assignsArrayLiteral(item)
 		} else {

@@ -100,6 +100,11 @@ func isDeclarationUtility(item word) bool {
 	if !isUnquotedLiteralWord(item) {
 		return false
 	}
+	// A name in one piece, which is every command name but a quoted or escaped one, is asked
+	// as it is: joined, it was a copy for every command run.
+	if len(item.parts) == 1 {
+		return isDeclarationName(item.parts[0].text)
+	}
 	var text strings.Builder
 	for _, part := range item.parts {
 		text.WriteString(part.text)

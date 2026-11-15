@@ -32,9 +32,10 @@ func TestAllocations_aLoopsAppletsAreHandedTheirFramesAgain(t *testing.T) {
 	reused := perIteration(t, "")
 	fresh := perIteration(t, "fresh")
 
-	// Then: two frames an iteration fewer
+	// Then: two frames an iteration fewer. Within half an allocation of two, since a slice
+	// that grows now and then shows up as a hundredth here: 53.01 against 55.00 is two frames.
 	t.Logf("%.2f allocations an iteration, %.2f with a frame per call", reused, fresh)
-	if fresh-reused < 2 {
+	if fresh-reused < 1.5 {
 		t.Fatalf("the loop allocated %.2f an iteration against %.2f with a frame per call; its applets were not handed their frames again", reused, fresh)
 	}
 }

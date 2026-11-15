@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"strconv"
+	"strings"
 )
 
 // expandCommandWord is expandWord followed by the pathname expansion of POSIX
@@ -11,15 +12,51 @@ import (
 // there the pattern is the whole point, and globbing `*)` against the
 // filesystem would take the default arm away.
 func (r Runtime) expandCommandWord(ctx context.Context, item word, savedStatus int) []string {
+	if text, ok := plainWord(item); ok {
+		return []string{text}
+	}
 	// Brace expansion first, and it is the only expansion that turns one word
 	// into several *before* anything is looked up. See brace.go: with `x=1`,
 	// `echo {$x,2}` prints `1 2`, so the split has to happen while the parameter
 	// is still unexpanded.
+	//
+	// Only where a brace could be: in an unquoted literal, the one place brace.go looks. Every
+	// word went through it, split into an atom per character to find none.
+	if !r.options.braceExpand || !mayHoldBrace(item) {
+		return r.expandOneCommandWord(ctx, item, savedStatus)
+	}
 	var expanded []string
 	for _, braced := range r.braceWords(item) {
 		expanded = append(expanded, r.expandOneCommandWord(ctx, braced, savedStatus)...)
 	}
 	return expanded
+}
+
+// plainWord is the text of a word that expands to exactly itself: one unquoted literal, with no
+// tilde to expand, no brace, and no pattern character, so that no step of the expansion would
+// change it. Most of the words a script runs are such words -- `[`, `-lt`, `true`, a path --
+// and each was copied through a field builder twice to arrive back where it started.
+func plainWord(item word) (string, bool) {
+	if len(item.parts) != 1 || item.expandTilde || item.assignmentTilde || item.valueTilde {
+		return "", false
+	}
+	part := item.parts[0]
+	if part.kind != wordPartLiteral || part.quote != quoteUnquoted || part.text == "" ||
+		strings.IndexByte(part.text, '{') >= 0 || containsGlobMeta(part.text) {
+		return "", false
+	}
+	return part.text, true
+}
+
+// mayHoldBrace reports whether brace expansion could find a group in the word: a brace in one of
+// its unquoted literals, which is the only text brace.go reads.
+func mayHoldBrace(item word) bool {
+	for _, part := range item.parts {
+		if part.kind == wordPartLiteral && part.quote == quoteUnquoted && strings.IndexByte(part.text, '{') >= 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (r Runtime) expandOneCommandWord(ctx context.Context, item word, savedStatus int) []string {
