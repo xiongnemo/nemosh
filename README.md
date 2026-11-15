@@ -132,6 +132,11 @@ nosuchcommand: not found
 hint: no directory on PATH holds nosuchcommand; `command -v nosuchcommand` answers the same question
 ```
 
+At a prompt a name that is nearly one this shell can run is answered with it
+(``hint: did you mean `git`?``), a `NAME.ps1` on PATH is named as a PowerShell
+script with how to run it, and a `command_not_found_handle` function, as in bash,
+takes over the answer altogether.
+
 `NEMOSH_DEBUG=path,exec,fd` adds resolution traces on the channel you name.
 
 ## Design

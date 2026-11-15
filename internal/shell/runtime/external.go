@@ -48,6 +48,10 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		if status, handled := r.autoChangeDirectory(args, err); handled {
 			return status
 		}
+		// bash's command_not_found_handle, when one is defined; see command_not_found.go.
+		if status, handled := r.commandNotFoundHandle(ctx, args, err); handled {
+			return status
+		}
 		return r.reportLookupFailure(args[0], err)
 	}
 	executable, err = requireAbsoluteNativePath("executable", executable)

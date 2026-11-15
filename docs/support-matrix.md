@@ -692,6 +692,13 @@ loops record the whole command now, as the edited one always did.
   end-of-file`, is said before the script runs. At a prompt the body goes on at the
   next line read.
 - `~user` is left as written. `~` and `~/path` work.
+- `command_not_found_handle`, as in bash, runs in a subshell in place of `not found`,
+  given the name and its arguments, and answers the command's status. A command the
+  handler itself cannot find is reported, not handed back to the handler: bash hands it
+  back, a subshell deeper each time, and measured on 2026-11-15 printed about a thousand
+  lines before it stopped. At a prompt, though not in a script, `not found` names up to
+  three commands one or two edits away (``hint: did you mean `git`?``), and a `NAME.ps1` on
+  PATH, or a `.ps1` run by its path, is named as a PowerShell script with how to run it.
 - On Windows, which gives a process no umask, a shell's starts at 0002, busybox-w32's
   DEFAULT_UMASK, so `ls -l` and `stat` show a file 0664 and a directory 0775 as busybox's
   do; Git for Windows's bash starts at 0022. Elsewhere it is the process's own.

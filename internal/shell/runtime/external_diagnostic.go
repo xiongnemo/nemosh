@@ -32,7 +32,7 @@ func (r Runtime) reportLookupFailure(name string, err error) int {
 		// busybox's words, EACCES's, for a file or a directory alike; the hint says which.
 		r.report(name, shellDiagnostic{
 			message: "Permission denied",
-			hint:    notExecutableHint(name, err),
+			hint:    r.notExecutableHint(name, err),
 			channel: debugExec,
 			details: r.debugDetails(debugExec, func() []string { return r.lookupDetails(name) }),
 		})
@@ -64,16 +64,28 @@ func (r Runtime) notFoundHint(name string) string {
 	if isRuntimeBuiltin(name) {
 		return name + " is a shell builtin here, so this was a lookup for an external program of the same name"
 	}
+	if hint := r.powerShellHint(name); hint != "" {
+		return hint
+	}
+	// At a prompt only: a script's diagnostics say the same on every machine, and what is
+	// near a name depends on what that machine has on PATH.
+	if r.interactive.session {
+		if near := r.nearNames(name); len(near) > 0 {
+			return fmt.Sprintf("%s No directory on PATH holds %s.", didYouMean(near), name)
+		}
+	}
 	return fmt.Sprintf("no directory on PATH holds %s; `command -v %s` answers the same question", name, name)
 }
 
 // notExecutableHint says what a name that is there is, that it will not run.
-func notExecutableHint(name string, err error) string {
+func (r Runtime) notExecutableHint(name string, err error) string {
 	switch {
 	case errors.Is(err, errExternalIsDirectory):
 		return name + " is a directory, which is not executable"
 	case errors.Is(err, errExternalIsDevice):
 		return name + " is a device, which is not executable"
+	case r.powerShellHint(name) != "":
+		return r.powerShellHint(name)
 	case strings.HasSuffix(strings.ToLower(name), ".dll"):
 		return "a DLL is loaded by a program, not launched as one"
 	case goruntime.GOOS != "windows":
