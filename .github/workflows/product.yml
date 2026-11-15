@@ -53,10 +53,15 @@ jobs:
 
       # Windows is the first-class target, so its own reference shell is what
       # the differential runner should have. Ubuntu already ships dash and bash.
+      #
+      # Pinned, because the reference is what the suite measures against and it
+      # moved under it: unpinned, choco installed FRP-6354 on 2026-11-15, whose awk
+      # changed two answers, and a commit that touched no awk went red. Moving the
+      # pin is a change of its own, measured with that build on PATH locally.
       - name: Install busybox (Windows)
         if: runner.os == 'Windows'
         shell: bash
-        run: choco install busybox --no-progress -y || echo "busybox unavailable; the differential runner will skip it"
+        run: choco install busybox --version=6354.0.0 --no-progress -y || echo "busybox unavailable; the differential runner will skip it"
 
       - name: Install dash (Ubuntu)
         if: runner.os == 'Linux'

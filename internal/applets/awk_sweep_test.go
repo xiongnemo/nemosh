@@ -115,6 +115,14 @@ func TestAwkDifferentialSweep(t *testing.T) {
 		`BEGIN{OFMT="%.3f"} {print $1 / 7}`,
 		`BEGIN{ORS="|"} {print $1}`,
 	}
+	// A reference that is known to be wrong about a case, named with the reason, so the other
+	// reference goes on checking it. Remove an entry when the reference it names is fixed.
+	divergences := map[string][]string{
+		// FRP-6354 prints -0 for minus a non-numeric field. busybox fixed it eight days after
+		// that build ("awk: print negative zero as '0'", 17bdeae, 2026-11-02), and FRP-6075 and
+		// gawk print 0, as this awk does. Remove when CI's busybox is a build after the fix.
+		`{print $1 + 0, $1 "", -$1}`: {"busybox awk"},
+	}
 	// Not parallel, deliberately: each case starts two reference processes, and seventy
 	// cases racing to spawn them is enough to make Windows refuse some of the launches.
 	for _, program := range corpus {
@@ -123,7 +131,7 @@ func TestAwkDifferentialSweep(t *testing.T) {
 			if stderr != "" || status != 0 {
 				t.Fatalf("%s failed: stderr %q status %d", program, stderr, status)
 			}
-			checkAgainstReferences(t, program, awkSweepInput, got)
+			checkAgainstReferences(t, program, awkSweepInput, got, divergences[program]...)
 		})
 	}
 	t.Logf("swept %d one-liners against the installed references", len(corpus))

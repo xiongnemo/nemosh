@@ -135,29 +135,38 @@ func awkSubstitute(compiled *regexp.Regexp, text, replacement string, global boo
 // The escapes were already decoded when the string was lexed, so what arrives here is the
 // characters themselves: a source `"[\\&]"` is the three-character replacement `[\&]`, and
 // this is where that becomes a literal `&`.
+//
+// The backslashes are counted a run at a time, as busybox-w32 counts them from FRP-6354,
+// which follows gawk's actual behaviour rather than POSIX's or gawk's own manual (awk_sub,
+// f0e5be9). Before an `&` an even run is half as many backslashes and then the matched text,
+// and an odd one half as many and a literal `&`. Before anything else, gawk keeps a lone
+// `\` with the character after it and doubles every second pair: `\\` is two backslashes,
+// not the one POSIX describes, and `\\\q` is three and a `q`. A trailing backslash stands
+// for itself.
 func awkExpandReplacement(replacement, matched string) string {
 	var out strings.Builder
-	for index := 0; index < len(replacement); index++ {
+	for index := 0; index < len(replacement); {
+		backslashes := 0
 		character := replacement[index]
-		if character == '&' {
+		index++
+		for character == '\\' && index < len(replacement) {
+			backslashes++
+			character = replacement[index]
+			index++
+		}
+		if character == '&' && backslashes%2 == 0 {
+			out.WriteString(strings.Repeat("\\", backslashes/2))
 			out.WriteString(matched)
 			continue
 		}
-		if character != '\\' || index+1 >= len(replacement) {
-			// A trailing backslash stands for itself, which both references agree on.
-			out.WriteByte(character)
-			continue
+		if character != '&' {
+			if backslashes&2 != 0 {
+				backslashes += 2
+			}
+			backslashes++
 		}
-		switch replacement[index+1] {
-		case '&':
-			out.WriteByte('&')
-			index++
-		case '\\':
-			out.WriteByte('\\')
-			index++
-		default:
-			out.WriteByte('\\')
-		}
+		out.WriteString(strings.Repeat("\\", backslashes/2))
+		out.WriteByte(character)
 	}
 	return out.String()
 }

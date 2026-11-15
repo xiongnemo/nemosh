@@ -59,7 +59,13 @@ func TestAwkStringBuiltins(t *testing.T) {
 			// A single character is a literal, which is the FS rule: `/./` would answer 6.
 			name: "split on a single character is literal", program: `BEGIN{n=split("a.b.c",A,".");print n,A[1]}`, want: "3 a\n",
 		},
-		{name: "split on a regex literal is not", program: `BEGIN{n=split("a.b.c",A,/./);print n"["A[1]"]"}`, want: "6[]\n"},
+		{
+			// busybox-w32 and gawk 5.4.1 answer 6. The gawk on GitHub's ubuntu-26.04 runner
+			// answered 3[a] on 2026-11-15, reading the one-character regex as the literal ".",
+			// and busybox decides.
+			name: "split on a regex literal is not", program: `BEGIN{n=split("a.b.c",A,/./);print n"["A[1]"]"}`, want: "6[]\n",
+			diverges: []string{"gawk"},
+		},
 		{name: "split with no separator uses FS", program: `BEGIN{n=split("  a  b  ",A);print n"["A[1]"]["A[2]"]"}`, want: "2[a][b]\n"},
 		{name: "split keeps empty fields", program: `BEGIN{n=split("a::b",A,":");print n"["A[2]"]"}`, want: "3[]\n"},
 		{name: "split of nothing is nothing", program: `BEGIN{print split("",A)}`, want: "0\n"},
@@ -130,8 +136,9 @@ func TestAwkBuiltinsCountRunes(t *testing.T) {
 //
 // The escapes were already decoded by the lexer, so a source `"[\\&]"` is the three
 // characters `[\&]` by the time the replacement is expanded, and *that* is what makes it a
-// literal ampersand. gawk alone turns a `\\` that no `&` follows into two backslashes;
-// POSIX and busybox make it one.
+// literal ampersand. A `\\` that no `&` follows is two backslashes, not the one POSIX
+// describes: gawk has always done that, and busybox-w32 does it from FRP-6354, whose awk
+// follows gawk's actual behaviour rather than its manual (f0e5be9, 2026-10-11).
 func TestAwkReplacementEscapes(t *testing.T) {
 	t.Parallel()
 	for _, testcase := range []struct {
@@ -144,10 +151,10 @@ func TestAwkReplacementEscapes(t *testing.T) {
 		{name: "escaped ampersand is a literal one", program: `BEGIN{s="hello";gsub(/l/,"[\\&]",s);print s}`, want: "he[&][&]o\n"},
 		{name: "a backslash before the ampersand", program: `BEGIN{s="hello";gsub(/l/,"[\\\\&]",s);print s}`, want: `he[\l][\l]o` + "\n"},
 		{name: "a lone backslash stands for itself", program: `BEGIN{s="hello";gsub(/l/,"\\",s);print s}`, want: `he\\o` + "\n"},
-		{
-			name: "a doubled backslash is one", program: `BEGIN{s="hello";gsub(/l/,"\\\\",s);print s}`,
-			want: `he\\o` + "\n", diverges: []string{"gawk"},
-		},
+		{name: "a doubled backslash is two", program: `BEGIN{s="hello";gsub(/l/,"\\\\",s);print s}`, want: `he\\\\o` + "\n"},
+		{name: "a backslash before a letter stays", program: `BEGIN{s="hello";gsub(/l/,"\\q",s);print s}`, want: `he\q\qo` + "\n"},
+		{name: "three backslashes before a letter", program: `BEGIN{s="hello";gsub(/l/,"\\\\\\q",s);print s}`, want: `he\\\q\\\qo` + "\n"},
+		{name: "four backslashes before an ampersand", program: `BEGIN{s="hello";gsub(/l/,"\\\\\\\\&",s);print s}`, want: `he\\l\\lo` + "\n"},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
