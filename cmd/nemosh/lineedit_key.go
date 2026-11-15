@@ -65,11 +65,19 @@ const (
 	// keyCtrlZ turns the line's backslashes into slashes, as busybox-w32's editor does, or
 	// is end of input under NEMOSH_CTRL_Z=eof; see lineedit_ctrlz.go.
 	keyCtrlZ
+	// keyPasteStart and keyPasteEnd are the marks a terminal in bracketed-paste mode puts
+	// around what is pasted; see lineedit_paste.go.
+	keyPasteStart
+	keyPasteEnd
+	// keyPaste is what came between them, gathered into text by readPaste.
+	keyPaste
 )
 
 type key struct {
 	kind  keyKind
 	value rune
+	// text is what keyPaste carries.
+	text string
 }
 
 // decodeKey reads one key from the front of buffer, returning how many bytes it
@@ -272,6 +280,10 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 		return key{kind: keyHistoryPrefixBackward}, end + 1
 	case "6":
 		return key{kind: keyHistoryPrefixForward}, end + 1
+	case "200":
+		return key{kind: keyPasteStart}, end + 1
+	case "201":
+		return key{kind: keyPasteEnd}, end + 1
 	}
 	return key{kind: keyUnknown}, end + 1
 }

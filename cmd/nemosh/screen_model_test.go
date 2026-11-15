@@ -53,6 +53,10 @@ func (s *screenModel) Write(p []byte) (int, error) {
 			s.col = 0
 			s.ensureRow(s.row)
 			index++
+		case text[index] == '\t':
+			// To the next tab stop, without writing anything, as a terminal does.
+			s.col = (s.col/tabStop + 1) * tabStop
+			index++
 		case text[index] == 0x1b:
 			index += s.applyEscape(text[index:])
 		default:

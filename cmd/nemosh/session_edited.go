@@ -232,5 +232,12 @@ func readLineInRawMode(ctx context.Context, terminal *os.File, editor *lineEdito
 	raw := enterRawMode(terminal)
 	// Nil-safe, and deferred so a panic in the editor cannot leave the terminal raw.
 	defer raw.restore()
+	// Bracketed paste for the same span, on a terminal only: what is pasted then arrives
+	// marked, and goes into the line as it is (readPaste). A terminal without the mode ignores
+	// the request, and a paste arrives as it always did.
+	if raw != nil {
+		fmt.Fprint(editor.screen, "\033[?2004h")
+		defer fmt.Fprint(editor.screen, "\033[?2004l")
+	}
 	return editor.readLine(ctx, prompt)
 }

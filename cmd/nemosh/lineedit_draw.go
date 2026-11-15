@@ -34,15 +34,20 @@ func (e *lineEditor) redraw(prompt string) {
 	if promptWidth > 0 {
 		fmt.Fprintf(&out, "\033[%dC", promptWidth)
 	}
-	out.WriteString(e.styling.paint(e.buffer.String(), e.buffer.cursor, e.suggestion, e.commandStanding))
 	// Erase to the end of the display rather than padding with spaces: a
 	// shrinking line can leave a tail on the rows below, and spaces would have
-	// to be counted across the wrap to reach it.
+	// to be counted across the wrap to reach it. Before the line rather than
+	// after it, because a tab in the line moves the cursor over what an earlier
+	// drawing left there without erasing it.
 	out.WriteString("\033[J")
+	// A newline in the line -- a paste, a recalled multi-line command -- starts the next row
+	// at the left edge.
+	painted := e.styling.paint(e.buffer.String(), e.buffer.cursor, e.suggestion, e.commandStanding)
+	out.WriteString(strings.ReplaceAll(painted, "\n", "\r\n"))
 
 	// The cursor is now at the end of what was written. Move it to where it
 	// belongs, by row first and then by column.
-	endRow := (promptWidth + columns) / width
+	endRow, _ := layoutPosition(promptWidth, e.buffer.runes, width)
 	targetRow, targetColumn := e.cursorPosition(prompt)
 	if up := endRow - targetRow; up > 0 {
 		fmt.Fprintf(&out, "\033[%dA", up)
@@ -60,10 +65,30 @@ func (e *lineEditor) redraw(prompt string) {
 // cursorPosition is where the terminal cursor belongs: how many rows below the
 // prompt's row, and how many columns across.
 func (e *lineEditor) cursorPosition(prompt string) (int, int) {
-	width := e.columnsOrDefault()
-	total := promptColumns(lastPromptLine(prompt)) + e.buffer.cursorColumns()
-	return total / width, total % width
+	return layoutPosition(promptColumns(lastPromptLine(prompt)), e.buffer.runes[:e.buffer.cursor], e.columnsOrDefault())
 }
+
+// layoutPosition is the row and column after text, drawn from column start of the first row
+// on a screen width cells wide: the text wraps at the edge, a newline in it starts the next
+// row at the left edge, and a tab goes on to the next tab stop, every eighth column.
+func layoutPosition(start int, text []rune, width int) (int, int) {
+	row, total := 0, start
+	for _, r := range text {
+		switch r {
+		case '\n':
+			row += total/width + 1
+			total = 0
+		case '\t':
+			total += tabStop - total%width%tabStop
+		default:
+			total += runeColumns(r)
+		}
+	}
+	return row + total/width, total % width
+}
+
+// tabStop is how far apart a terminal's tab stops are, unless something has set them.
+const tabStop = 8
 
 // lastPromptLine is the part of the prompt the edited line shares a row with. A
 // multi-line prompt -- the default ends with a newline before the symbol -- only

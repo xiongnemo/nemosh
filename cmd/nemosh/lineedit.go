@@ -255,6 +255,8 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 			return e.buffer.String(), errEditAndExecute
 		case keyRune:
 			e.buffer.insert(key.value)
+		case keyPaste:
+			e.buffer.insertText(key.text)
 		case keyBackspace:
 			e.buffer.backspace()
 		case keyDelete:
@@ -326,47 +328,5 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		}
 		e.afterKey(key, killing, before)
 		e.redraw(prompt)
-	}
-}
-
-// nextKey decodes one key, reading more bytes when the buffer holds only part
-// of a sequence.
-func (e *lineEditor) nextKey() (key, error) {
-	for {
-		// The line feed of a CRLF that was split across two reads. decodeKey joins the
-		// pair when it has both, which is the usual case, but a read boundary can fall
-		// between them -- and a bare line feed has to stay an Enter, so the two cannot be
-		// told apart without remembering that the last key was a carriage return.
-		if e.afterCarriageReturn && len(e.pending) > 0 {
-			if e.pending[0] == '\n' {
-				e.pending = e.pending[1:]
-			}
-			e.afterCarriageReturn = false
-		}
-		decode := decodeKey
-		if e.vi.on {
-			decode = decodeViKey
-		}
-		// An Escape nothing follows soon is the key itself, in vi mode.
-		if e.vi.on && len(e.pending) == 1 && e.pending[0] == 0x1b && (e.inputWaiting == nil || !e.inputWaiting(escapeWait)) {
-			e.pending = e.pending[:0]
-			return key{kind: keyEscape}, nil
-		}
-		if decoded, consumed := decode(e.pending); decoded.kind != keyIncomplete {
-			e.afterCarriageReturn = decoded.kind == keyEnter && consumed == 1 && e.pending[0] == '\r'
-			e.enterFromPair = decoded.kind == keyEnter && consumed == 2
-			e.pending = e.pending[consumed:]
-			return decoded, nil
-		}
-		chunk := make([]byte, 64)
-		count, err := e.input.Read(chunk)
-		if count > 0 {
-			e.pending = append(e.pending, chunk[:count]...)
-			continue
-		}
-		if err == nil {
-			err = io.EOF
-		}
-		return key{}, err
 	}
 }
