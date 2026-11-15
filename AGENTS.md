@@ -63,6 +63,12 @@ tags and a shallow clone silently yields the fallback.
 - The release target is one executable, `CGO_ENABLED=0`, no runtime sidecars.
 - Release builds use `-trimpath` and `-ldflags="-s -w ${VERSION_LDFLAGS}"`.
 - Generated artifacts go under `dist/`, with checksums.
+- `third_party/gdamore-encoding` is a fork of the module tcell imports, which go.mod's
+  `replace` links in place of upstream: its character sets are generated data rather
+  than 1,103 allocations in `init` on every start. Its README says what changed and how
+  to follow upstream. The price of a `replace` is that
+  `go install github.com/xiongnemo/nemosh/cmd/nemosh@latest` refuses to build; nothing
+  here documents that way of installing, and the release artifacts are unaffected.
 - The published artifact must be the same binary CI verified. No rebuild at
   release time.
 - Keep cross-build matrices opt-in. Do not build every target
@@ -109,10 +115,19 @@ NEMOSH_DIFFERENTIAL=strict go test -race -shuffle=on -count=1 ./...
 plus the 250 pure-LOC ceiling per production `.go` file:
 
 ```bash
-for f in $(git ls-files '*.go' | grep -v _test.go); do
+for f in $(git ls-files '*.go' | grep -v _test.go | grep -v '^third_party/'); do
   n=$(grep -v '^\s*$' "$f" | grep -v '^\s*//' | wc -l)
   [ "$n" -gt 250 ] && echo "OVER: $f $n"
 done
+```
+
+`third_party/` is excluded because it is upstream's code and a generated table, not this
+project's. It is a module of its own, which `./...` does not reach, so it has its own two
+lines in the gate:
+
+```bash
+go -C third_party/gdamore-encoding vet ./...
+go -C third_party/gdamore-encoding test ./...
 ```
 
 Strict TDD: one failing test first, captured, then the minimum production

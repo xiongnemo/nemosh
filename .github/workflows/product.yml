@@ -92,6 +92,16 @@ jobs:
           GOOS=darwin go build ./...
           GOOS=windows go build ./...
 
+      # third_party/ is a fork linked in place of an upstream module (go.mod's replace;
+      # see its README). It is a module of its own, which ./... does not reach, so it is
+      # vetted and tested by name. Its tests are what hold its generated tables to
+      # upstream's algorithm.
+      - name: third_party modules
+        shell: bash
+        run: |
+          go -C third_party/gdamore-encoding vet ./...
+          go -C third_party/gdamore-encoding test -race -count=1 ./...
+
       - name: go test
         run: go test -race -shuffle=on -count=1 ./...
 
@@ -389,6 +399,20 @@ jobs:
       # it have shown the threshold sits outside the noise, a slowdown is reported
       # as WOULD FAIL rather than failing. The timing is Windows only, the platform
       # supported; the allocation ceiling holds on all three, as before.
+      #
+      # Lowered from 2750 to 1200 on 2026-11-16, at 2741 on windows-latest before and
+      # about 1070 after, by three commits that took work out of init rather than
+      # moving it -- each measured with startbench here, 2773 -> 1101:
+      #
+      #   applet usage text     -417   built on the first --help instead; only help
+      #                                reads it, unlike the tables rejected above
+      #   applet registry       -152   one list of wrappers rather than one
+      #                                allocation per applet; lookups allocate nothing
+      #   gdamore/encoding     -1103   forked into third_party/, its four character
+      #                                sets generated as data the linker lays down
+      #
+      # 1200 leaves about 12% over the runner's figure, so a new table of any size
+      # trips it, which was the point of the ceiling before tcell made it 2750.
       - name: package init and startup time
         shell: bash
         run: |
@@ -405,13 +429,14 @@ jobs:
               -ldflags "-s -w $(bash scripts/version.sh --ldflags)" -o "$base" ./cmd/nemosh)
             compare=(-base "$base" -self-check)
           fi
-          go run ./tools/startbench -head "$binary" -init-ceiling 2750 "${compare[@]}"
+          go run ./tools/startbench -head "$binary" -init-ceiling 1200 "${compare[@]}"
 
       - name: production file size ceiling
         shell: bash
         run: |
           status=0
-          for file in $(git ls-files '*.go' | grep -v _test.go); do
+          # third_party/ is upstream's code and a generated table, not this project's.
+          for file in $(git ls-files '*.go' | grep -v _test.go | grep -v '^third_party/'); do
             lines=$(grep -v '^[[:space:]]*$' "$file" | grep -v '^[[:space:]]*//' | wc -l)
             if [ "$lines" -gt 250 ]; then
               echo "$file has $lines pure lines, over the 250 ceiling"

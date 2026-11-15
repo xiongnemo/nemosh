@@ -280,6 +280,9 @@ allocating a table quickly. It is kept on allocations because a clock threshold
 flaps on a shared runner, and the ceiling was raised with this note rather than the
 number being changed quietly.
 
+The `gdamore/encoding` tables were taken out of init on 2026-11-16 by forking the module;
+see "Package init, 2,773 allocations to 1,101" below.
+
 ## Timing a start without a number to hold it to, 2026-11-15
 
 Every gate in this file was on allocations, because a clock threshold on a shared runner
@@ -345,6 +348,29 @@ The snapshot reads the parent from the process's own basic information, and
 
 The allocation gate could never have seen this: the call allocates almost nothing, and it
 runs after `main` begins.
+
+### Package init, 2,773 allocations to 1,101
+
+With the ceiling nine allocations from tripping, the three largest contributors were
+looked at again, and each turned out to be work that could be taken out of init rather
+than moved behind a lock -- which is what the ceiling's comment had rightly refused for the
+registry and the capability rows, since nearly every run needs those.
+
+| | allocations | what |
+| --- | --- | --- |
+| applet usage text | −417 | 153 entries with an option map each, read only by `--help` and `help NAME`; built on first use now, as the builtins' text already was |
+| applet registry | −152 | one wrapper per applet, each an allocation as it went into the map's interface; one list now, and a lookup hands out a pointer into it, so it allocates nothing |
+| `gdamore/encoding` | −1,103 | the tview section's 48%: four legacy character sets built in `init`. Forked into `third_party/`, the tables generated as data the linker lays down, and tested against upstream's algorithm for every byte and every rune |
+
+Measured here with `tools/startbench`, each against the commit before it. The time barely
+moved -- `--version` about 0.4 ms faster after the fork, which is about what the trace's
+1.0 ms of clock for `gdamore/encoding` rounded from -- because these were tables built
+quickly; the ceiling is back to catching a table getting longer, at 1200 on the runner.
+The binary is 6 KB larger for the tables.
+
+Wrapping each applet at lookup instead of at registration was the first idea, and it cuts
+the same 152 from init. It would have charged one allocation to every command run instead,
+which is the wrong trade for a shell, and why the list.
 
 ## What a background job that is a process costs, measured 2026-09-24
 

@@ -21,3 +21,5 @@ require (
 	github.com/gdamore/encoding v1.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 )
+
+replace github.com/gdamore/encoding => ./third_party/gdamore-encoding

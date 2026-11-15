@@ -62,6 +62,10 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 - **The start is timed in CI**, against the commit before, interleaved on one runner;
   `tools/startbench` reports it beside the package init allocations it holds to a
   ceiling.
+- **Package init does 40% of the work it did**: 1,101 allocations rather than 2,773. The
+  applets' help text is built when asked for, the registry allocates once rather than per
+  applet, and tcell's `gdamore/encoding` is forked into `third_party/` with its character
+  sets generated as data. The ceiling CI holds it to is 1200, down from 2750.
 
 ## v1.4.0 - 2026-10-07
 
