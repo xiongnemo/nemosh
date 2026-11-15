@@ -280,9 +280,11 @@ real command that does not die on cancel does.
 **An applet never spawns an OS process.** Launching belongs to
 `internal/shell/runtime`, which owns the suffix search, `ComSpec` batch launch, argument
 quoting, long-path fallback, cancellation and job scope that go with it; every production
-`os/exec` import in the tree is there. An applet that must run something looks the name up
-in `DefaultRegistry` and refuses otherwise — `xargs.go:139` is the example, and `awk`'s
-`system()` and pipes follow it. `TestApplets_doNotSpawnProcesses` enforces this. It is
+`os/exec` import in the tree is there. An applet that must run something asks `commandFor`
+(`program_runner.go`): an applet of that name first, as busybox-w32 prefers one, and
+otherwise the `ProgramRunner` the shell put in the context, which launches it with all of the
+above -- env, xargs, `find -exec` and awk's `system()` and pipes all go that way.
+`TestApplets_doNotSpawnProcesses` enforces this. It is
 about *spawning*: `syscall` and `x/sys/windows` are used freely here for file metadata and
 process inspection, and the first draft of that guard banned them and was wrong.
 See `docs/design/windows-execution-model.md`.

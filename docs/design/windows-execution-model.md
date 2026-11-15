@@ -77,11 +77,18 @@ argument quoting, the long-path fallback, context cancellation, and the job scop
 background child is registered in. None of it is duplicated in `internal/applets`, and
 none of it should be.
 
-An applet that needs to run something **looks the name up in the registry and refuses
-otherwise**. `xargs` is the existing example (`xargs.go:139`: `DefaultRegistry.Lookup`,
-then `commandNotFound`), and `awk`'s `system()`, `print | cmd` and `cmd | getline` follow
-the same rule -- so `"sort" | getline` works, because sort is an applet here, and an
-external program refuses by name rather than half-working.
+An applet that needs to run something **asks the shell for it**. `commandFor`
+(`internal/applets/program_runner.go`) looks the name up in the registry first, as busybox-w32
+prefers an applet, and otherwise asks the `applets.ProgramRunner` the runtime puts in the
+context, which hands back an Applet whose Run launches the program through the machinery
+above. env, xargs, `find -exec` and `-ok`, and awk's `system()`, `print | cmd` and `cmd |
+getline` all go that way, so `xargs git add` and `"git log -1" | getline` run git.
+
+That was a refusal until 2026-10-08 (e6bdf090): the name was looked up in the registry
+alone and anything else was `not found`, whatever PATH held. The boundary held either way --
+what changed is that the applet now asks the one launcher there is instead of having none.
+What awk still refuses is shell syntax in a command, `"a; b"` or `"x | y"`, which would
+need a shell to mean what it says.
 
 This was true long before it was written down, which is how it nearly got crossed: the
 obvious way to give `awk` a `system()` is an `exec.Command` in the applet, and it would

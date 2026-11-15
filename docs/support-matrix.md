@@ -1181,10 +1181,11 @@ than a divergence from it.
 The list used to be `xargs -0`, `xargs -n`, `sort -k`, `grep -r` and `tail -c`.
 All five are implemented, measured against GNU. What is still absent:
 
-- **`ls -i -n -u -c`.** `-i` wants an inode number Windows does not keep, `-n` a
-  numeric owner this build does not resolve, and `-u`/`-c` the access and change
-  times, which NTFS records but which no sort here reads yet. `-t -S -r -R -d -F
-  -A` landed on 2026-08-22, so `ls -ltr` works.
+- **Nothing of `ls`.** This bullet listed `-i -n -u -c` as absent and was stale from
+  2026-10-01 (958ce8c3), when ls took busybox-w32's options: `-i` prints the file ID
+  NTFS keeps, `-n` the numeric owner and group, and `-u` and `-c` show and sort by the
+  access and change times. Each line is byte for byte busybox-w32 FRP-6354's, measured
+  on 2026-11-16.
 - **Nothing of `sed`.** This bullet listed `-i`, `-f`, `a i c y` and the hold space
   as absent and was simply stale: all of them landed on 2026-08-22 along with `{}`
   blocks, the multiline commands and branching. Measured against the built binary
@@ -1434,9 +1435,10 @@ something `nano` and then binding `^S` to save would be a name that lies.
 **`-H` lists exactly what is implemented, and what is not**, in the manner of
 `busybox vi -H`. The list is generated from the binding table, so it cannot claim
 a key the editor does not bind -- a test walks both to check. It also names the
-absences (no multiple buffers, no replace, no mouse, no configuration file, no soft
-wrap), because an editor that silently lacks replace is worse than one that says so,
-and it names the languages it highlights for the same reason.
+absences (no multiple buffers, no mouse, no configuration file, no soft wrap),
+because an editor that silently lacks one is worse than one that says so, and it
+names the languages it highlights for the same reason. Replace was in that list and
+is bound now, `^\` in nano and `^R` in micro (`editor_replace.go`).
 
 ### Syntax highlighting, and why it is written here
 
@@ -2536,10 +2538,10 @@ execute bit, so the executable test is the same suffix list the shell uses for
 command lookup. The indicator sits outside the colour escapes, where busybox puts
 it, so a filter stripping the colour does not keep a stray marker.
 
-`ls -d -l` on a directory prints exactly the line a directory listing prints for
-it, including the same two pre-existing Windows differences from busybox: the
-mode reads `drwxrwxrwx` where busybox says `drwxrwxr-x`, and the link count is 1.
-Neither is `-d`'s doing.
+`ls -d -l` on a directory prints the line busybox-w32 prints for it, mode, link
+count and size: `drwxrwxr-x    6 nemo nemo 4096 ... docs`. This paragraph named two
+differences, a mode of `drwxrwxrwx` and a link count of 1, and both went with the umask
+and with ls taking busybox's links; measured again on 2026-11-16.
 
 ### `lsattr` and `chattr`
 

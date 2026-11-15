@@ -10,13 +10,13 @@ import (
 //
 // **internal/applets never spawns an OS process.** That rule is written down in
 // docs/design/windows-execution-model.md and enforced by a test, and awk does not get an
-// exception: a command in `print | cmd`, `cmd | getline` or `system(cmd)` is looked up in
-// the applet registry and refused by name otherwise. `xargs` already draws exactly this
-// line (xargs.go:139), and awk uses the same wording so that a program which asks for
-// something unavailable hears the same answer from both.
+// exception: a command in `print | cmd`, `cmd | getline` or `system(cmd)` is what commandFor
+// finds, an applet of that name or else a program the shell launches for it. xargs asks the
+// same question, so a program that names something unavailable hears the same answer from
+// both.
 //
-// So `"sort" | getline` works, because sort is an applet here, and
-// `"c:\\tool.exe" | getline` is refused loudly rather than half-working.
+// So `"sort" | getline` runs the applet and `"git log -1" | getline` runs git. Until
+// 2026-10-08 the second was refused by name, whatever PATH held.
 //
 // **Shell syntax is refused rather than approximated.** `"echo a; echo b"` needs a shell to
 // mean what it says, and treating it as `echo` with the three arguments `a;`, `echo` and `b`

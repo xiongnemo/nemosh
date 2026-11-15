@@ -22,9 +22,10 @@ import (
 // writes each command line to stderr first and -p asks at the console first; -a FILE reads
 // FILE rather than stdin; -P N runs up to N PROGs at once. -x is taken, and does nothing, as
 // in busybox. A PROG that ends 1 to 254 makes xargs end 123 when the input is done, one that
-// ends 255 stops it, 124, and one there is no applet for stops it, 127.
+// ends 255 stops it, 124, and one that names neither an applet nor a program stops it, 127.
 //
-// PROG is an applet: this runs no program of the operating system's, as no applet does.
+// PROG is an applet if there is one of that name, and otherwise a program the shell finds on
+// PATH and launches; see commandFor. This starts no process itself, as no applet does.
 //
 // It split at blanks alone, read the whole input before running anything, took -0 -r -t -n
 // and -I and no others, and ended at a PROG's first failure with its status.

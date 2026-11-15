@@ -163,7 +163,7 @@ func appletUsageTextMore() map[string]Usage {
 			Notes: []string{
 				"The POSIX language: patterns and actions, BEGIN and END, fields, arrays, user functions, getline and printf.",
 				"length, substr, index, match and split count runes rather than bytes, so length(\"héllo\") is 5.",
-				"A command in `print | cmd`, `cmd | getline` or system() must be an applet of this shell: no OS process is started, and shell syntax in one is refused rather than guessed at.",
+				"A command in `print | cmd`, `cmd | getline` or system() is an applet of this shell, or else a program on PATH, which the shell launches; shell syntax in one is refused rather than guessed at.",
 				"RS is a single character or empty for paragraph mode; a regular expression RS is a gawk extension and is not accepted.",
 				"gensub, asort, switch, @include and BEGINFILE/ENDFILE are gawk extensions and are refused by name.",
 			}},
