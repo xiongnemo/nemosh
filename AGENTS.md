@@ -173,8 +173,17 @@ tree had before, measure it:
 ```bash
 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w $(bash scripts/version.sh --ldflags)"   -o dist/nemosh.exe ./cmd/nemosh
 wc -c < dist/nemosh.exe                                  # against product.yml's ceiling
-GODEBUG=inittrace=1 dist/nemosh.exe --version 2>&1 | grep '^init '
+go run ./tools/startbench -head dist/nemosh.exe -base dist/nemosh-base.exe -self-check
 ```
+
+`tools/startbench` is what CI runs in its "package init and startup time" step: the
+package init allocations against a ceiling, and the time of three command lines against
+a base binary -- build `HEAD` into `dist/nemosh-base.exe` from a worktree to compare a
+working tree with what it started from. Both binaries must be named `nemosh-*`; one
+called `head.exe` answers to its name and runs the `head` applet. Locally the init count
+reads about 32 higher than on the runner, so compare it against a base built here rather
+than against the ceiling. Time is never compared against a number, only against the
+base, interleaved, in rounds; see `docs/design/startup-and-footprint.md`.
 
 **The specific trap, a third time, on 2026-08-23: a test that samples the machine.**
 `internal/proc` implements listing on Windows only and answers

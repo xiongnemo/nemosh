@@ -245,8 +245,10 @@ jobs:
 
       # Binary size is the one performance number that is deterministic enough to
       # gate on. Wall-clock time is not -- five consecutive startups on an idle
-      # machine measured 43, 45, 42, 26 and 43 ms -- so the timing side of the
-      # baseline lives in allocation ceilings in the Go tests instead.
+      # machine measured 43, 45, 42, 26 and 43 ms -- so time is never held to a
+      # number: the startup step below times this build against the commit before
+      # it, on the same runner, and allocation ceilings in the Go tests hold the
+      # per-command side.
       #
       # Re-measured 2026-08-17 at **4.52 MiB stripped** and 6.62 MiB unstripped,
       # after fifteen applets, brace expansion, `[[ ]]`, arrays, Ctrl-R and the
@@ -376,32 +378,34 @@ jobs:
       # Making either lazy was considered and rejected: both are needed by almost
       # every invocation -- running an applet, `--list`, completion -- so laziness
       # moves the cost behind a mutex on a hot path rather than removing it.
-      - name: package init ceiling
+      #
+      # Moved into tools/startbench on 2026-11-15, which also times the start: the
+      # half this step never had, for want of a way to time a shared runner that
+      # does not flap. The way is not to compare against a number at all. HEAD^ is
+      # built here the same way, the two binaries run interleaved in pairs on the
+      # same runner in the same minute, and a scenario counts as slower only past
+      # both 10% and a floor, in three rounds out of three. The self-check times this
+      # build against itself, which can differ only by noise; until enough runs of
+      # it have shown the threshold sits outside the noise, a slowdown is reported
+      # as WOULD FAIL rather than failing. The timing is Windows only, the platform
+      # supported; the allocation ceiling holds on all three, as before.
+      - name: package init and startup time
         shell: bash
         run: |
           binary="dist/nemosh"
           [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
-          trace=$(GODEBUG=inittrace=1 "$binary" --version 2>&1 | grep '^init ' || true)
-          if [ -z "$trace" ]; then
-            echo "inittrace printed nothing; the check cannot report and is not passing silently"
-            exit 1
+          compare=()
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            # Named nemosh-*: a binary answers to the name it was started by, and one
+            # called base.exe would be looked up as an applet.
+            base_tree="$RUNNER_TEMP/startbench-base"
+            base="$RUNNER_TEMP/nemosh-base.exe"
+            git worktree add --detach "$base_tree" HEAD^
+            (cd "$base_tree" && CGO_ENABLED=0 go build -trimpath \
+              -ldflags "-s -w $(bash scripts/version.sh --ldflags)" -o "$base" ./cmd/nemosh)
+            compare=(-base "$base" -self-check)
           fi
-          allocs=$(printf '%s\n' "$trace" | awk '{for (i = 1; i <= NF; i++) if ($i == "allocs") s += $(i - 1)} END {print s + 0}')
-          ceiling=2750
-          echo "package init makes $allocs allocations, ceiling $ceiling"
-          # Sorted into a variable and then printed, rather than piped into `head`. This
-          # step runs under `set -o pipefail`, so `sort | head -5` fails the whole job
-          # whenever head closes the pipe before sort has finished writing -- a race that
-          # says `sort: fflush failed: 'standard output': Broken pipe` and exits 2 with
-          # the ceiling comfortably met. It did exactly that on 297c58b, reporting 2308
-          # allocations against a ceiling of 2750 and failing anyway.
-          biggest=$(printf '%s\n' "$trace" | sort -t, -k4 -rn)
-          head -5 <<< "$biggest"
-          if [ "$allocs" -gt "$ceiling" ]; then
-            echo "package init grew past the ceiling: something new is doing work before main"
-            echo "run GODEBUG=inittrace=1 against the binary to see which package"
-            exit 1
-          fi
+          go run ./tools/startbench -head "$binary" -init-ceiling 2750 "${compare[@]}"
 
       - name: production file size ceiling
         shell: bash

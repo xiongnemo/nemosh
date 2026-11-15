@@ -280,6 +280,47 @@ allocating a table quickly. It is kept on allocations because a clock threshold
 flaps on a shared runner, and the ceiling was raised with this note rather than the
 number being changed quietly.
 
+## Timing a start without a number to hold it to, 2026-11-15
+
+Every gate in this file was on allocations, because a clock threshold on a shared runner
+flaps. That left the start's actual time watched by nothing, and the proxy had already
+parted from the property once (the tview section above). `tools/startbench` times it
+anyway, by never comparing a time against a number:
+
+- **Against a base, not a ceiling.** CI builds `HEAD^` the same way and times both
+  binaries on the same runner in the same minute. Whatever the machine is doing lands on
+  both.
+- **Interleaved.** Base and head run in pairs, five pairs discarded first (the first run
+  of a new file on Windows waits for Defender) and forty kept, and which goes first is
+  chosen afresh for each pair. Forty of one and then forty of the other would charge a
+  runner's slow minute to whichever went second.
+- **Medians, past a ratio and a floor, three times.** A scenario is slower only when
+  head's median is past both 10% and 1 ms (5 ms for the long one) over base's, and only
+  if the two rounds run after that say so too -- the rule the Oils suite has for a case
+  that differs.
+- **Checked against itself.** The self-check times head against head, which can only
+  differ by noise; a slowdown there is reported as a false alarm. The timing reports and
+  does not fail until enough CI runs of the self-check have shown the threshold sits
+  outside the noise.
+
+The three scenarios are `--version` (the start alone), `-c true` (that, plus a shell
+built and one applet run in it), and two thousand commands in a loop, which is where a
+cost paid per command rather than per start shows.
+
+Two copies of one build on this machine, which is the noise and nothing else:
+
+| | base | head | |
+| --- | --- | --- | --- |
+| `--version` | 7.75 ms | 8.00 ms | +3.2% |
+| `-c true` | 25.54 ms | 25.75 ms | +0.8% |
+| 2000 commands | 53.23 ms | 53.69 ms | +0.9% |
+| self-check, `--version` | 7.79 ms | 7.44 ms | −4.4% |
+| self-check, 2000 commands | 53.02 ms | 54.06 ms | +1.9% |
+
+The init count is close to deterministic and not quite: the same binary run twice once
+moved one allocation each into `net/http` and `net/netip`. Hence a ceiling with room
+rather than an exact figure, and growth listed by package rather than asserted.
+
 ## What a background job that is a process costs, measured 2026-09-24
 
 Under `NEMOSH_JOBS=process` (background-processes.md) every `&` starts this binary again.

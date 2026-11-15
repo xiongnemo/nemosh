@@ -54,6 +54,12 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 - A subscript that leads back to its own name is reported as recursion rather than
   overflowing the stack; sed's pattern and hold spaces are bounded under fuzzing.
 
+### Tested
+
+- **The start is timed in CI**, against the commit before, interleaved on one runner;
+  `tools/startbench` reports it beside the package init allocations it holds to a
+  ceiling.
+
 ## v1.4.0 - 2026-10-07
 
 Bash compatibility, measured case by case. The Oils project's spec suite is vendored and
