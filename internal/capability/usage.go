@@ -45,7 +45,7 @@ func UsageFor(name string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	usage, ok := usageText[name]
+	usage, ok := usageText()[name]
 	if !ok {
 		usage, ok = builtinUsage()[name]
 	}

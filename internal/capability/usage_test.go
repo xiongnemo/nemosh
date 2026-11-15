@@ -22,7 +22,7 @@ func TestUsage_coversEveryApplet(t *testing.T) {
 			continue
 		}
 		t.Run(command.Name, func(t *testing.T) {
-			usage, ok := usageText[command.Name]
+			usage, ok := usageText()[command.Name]
 			if !ok {
 				t.Fatalf("%s has no usage entry, so `%s --help` would say nothing",
 					command.Name, command.Name)
@@ -48,7 +48,7 @@ func TestUsage_glossesEveryOptionAndNoOthers(t *testing.T) {
 		if command.Builtin {
 			continue
 		}
-		usage := usageText[command.Name]
+		usage := usageText()[command.Name]
 		t.Run(command.Name, func(t *testing.T) {
 			for _, letter := range command.Short {
 				gloss, ok := usage.Options[string(letter)]
