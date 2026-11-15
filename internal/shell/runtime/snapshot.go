@@ -124,6 +124,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		substitutions:     r.substitutions,
 		traceTurn:         r.traceTurn,
 		pipeStage:         r.pipeStage,
+		appletFrames:      r.appletFrames,
 		scriptFile:        r.scriptFile,
 		readonly:          cloneMap(r.readonly),
 		attributes:        cloneMap(r.attributes),

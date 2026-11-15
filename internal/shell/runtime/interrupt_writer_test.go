@@ -27,7 +27,7 @@ func TestInterruptibleWriter_stillNamesTheFileItEndsAt(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	wrapped := interruptibleWriter{writer: file, done: ctx.Done(), cause: ctx.Err}
+	wrapped := &interruptibleWriter{writer: file, done: ctx.Done(), ctx: ctx}
 
 	if got := terminalFileOf(wrapped); got != file {
 		t.Errorf("terminalFileOf answered %v, not the file the chain ends at", got)
@@ -37,7 +37,7 @@ func TestInterruptibleWriter_stillNamesTheFileItEndsAt(t *testing.T) {
 func TestInterruptibleWriter_writesUntilCancelledAndThenFails(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var sink countingSink
-	wrapped := interruptibleWriter{writer: &sink, done: ctx.Done(), cause: ctx.Err}
+	wrapped := &interruptibleWriter{writer: &sink, done: ctx.Done(), ctx: ctx}
 
 	if _, err := wrapped.Write([]byte("before")); err != nil {
 		t.Fatalf("a live context refused a write: %v", err)

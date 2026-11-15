@@ -83,6 +83,9 @@ type Runtime struct {
 	// pipeStage is the pipeline stage whose pipe this runtime's output goes into, which a
 	// write that finds its reader gone ends; see pipe_stage.go. Shared as traceTurn is.
 	pipeStage *pipeStage
+	// appletFrames are the frames applet calls were handed recently, which a call the same
+	// as one of them is handed again; see applet_frame.go. Shared by every snapshot.
+	appletFrames *appletFrames
 	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options
@@ -324,13 +327,5 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 	if !ok {
 		return r.runExternal(ctx, args)
 	}
-	args = r.xpgEchoArgs(args)
-	// Stdout is wrapped so that Ctrl-C reaches an applet that is not watching the
-	// context -- which is almost all of them. See interrupt_writer.go. Stderr is left
-	// alone: a diagnostic written on the way out is still worth seeing.
-	// The runner is how env, xargs, find and awk run a program no applet has; see
-	// external_program.go.
-	err := applet.Run(applets.WithProgramRunner(applets.WithProcessView(ctx, r), r), args[1:], r.streams.Stdin,
-		interruptible(r.streams.Stdout, ctx), r.streams.Stderr)
-	return r.appletStatus(ctx, args[0], err)
+	return r.runApplet(ctx, applet, r.xpgEchoArgs(args))
 }

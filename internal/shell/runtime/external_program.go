@@ -30,7 +30,7 @@ func (r Runtime) Program(ctx context.Context, name string) (applets.Applet, bool
 // programFinder is the shell as it looks a program up for view: on view's PATH, where the view is
 // env's and has one.
 func (r Runtime) programFinder(view applets.ProcessView) Runtime {
-	if _, shells := view.(Runtime); !shells && view != nil {
+	if !isShellView(view) && view != nil {
 		if path, set := view.LookupEnv("PATH"); set && path != "" {
 			r.searchPath = path
 		}
@@ -116,7 +116,7 @@ func (r Runtime) runProgram(ctx context.Context, name string, args []string, vie
 // or the one env made of it, with the shell's path variables in the platform's spelling either
 // way, so `env FOO=1 git` passes FOO on.
 func (r Runtime) programEnvironment(view applets.ProcessView) []string {
-	if _, shells := view.(Runtime); shells || view == nil {
+	if isShellView(view) || view == nil {
 		return r.childEnvironment()
 	}
 	return r.withNativePaths(view.Environ())
@@ -127,7 +127,7 @@ func (r Runtime) programEnvironment(view applets.ProcessView) []string {
 // copies: git colours, and a pager knows the terminal. The interrupt wrapper is passed over; the
 // program is ended by the context it runs under instead.
 func programStream(writer io.Writer) io.Writer {
-	if wrapped, ok := writer.(interruptibleWriter); ok {
+	if wrapped, ok := writer.(*interruptibleWriter); ok {
 		writer = wrapped.writer
 	}
 	if native := nativeWriter(writer); native != nil {

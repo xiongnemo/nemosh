@@ -190,6 +190,7 @@ func newRuntimeWithState(registry applets.Registry, streams Streams, state State
 	// references, which POSIX allows (2.5.3). An inherited one is not believed -- it would
 	// let a caller change how every script it runs splits words -- but stays exported,
 	// with the default value, as the references pass it on.
+	created.appletFrames = newAppletFrames()
 	created.vars["IFS"] = defaultFieldSeparators
 	if _, inherited := created.env.LookupEnv("IFS"); inherited {
 		created.env.Set("IFS", defaultFieldSeparators)

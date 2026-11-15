@@ -372,6 +372,36 @@ Wrapping each applet at lookup instead of at registration was the first idea, an
 the same 152 from init. It would have charged one allocation to every command run instead,
 which is the wrong trade for a shell, and why the list.
 
+### The applet dispatch, seven allocations to one or none
+
+Running an applet allocated seven times before the applet did anything: the two context
+values that carry the shell to it as ProcessView and ProgramRunner, a copy of the whole
+`Runtime` into each of their interfaces, the stdin and stdout wrappers, and a method value
+inside the stdout one. `applet_frame.go` puts all of it in one object, the frame, which is
+the context, and whose reader and writer are pointers into it. A frame is never changed once
+made; the shell keeps its last four and hands one out again for a call that is the same --
+the same context, and a `Runtime` equal to the byte.
+
+| | allocations |
+| --- | --- |
+| dispatching `true`, before | 8, one of them the test's own argv |
+| dispatching `true`, the same call again | **0** |
+| a call unlike the last four | 1, the frame |
+| a loop iteration, `while [ $i -lt N ]; do true; i=$((i+1)); done` | 142 → 130 |
+
+The loop does not hit the remembered frames yet: every command clones the descriptor table
+(`withAppliedRedirectsFor`), redirections or none, so no two calls have the same streams.
+The loop's two applet calls went from seven allocations to one each, which is the twelve.
+
+Reusing one mutable frame per call was the first design, and the audit for it is why the
+frames are immutable instead. An applet's context and streams outlive it more often than one
+would guess: the editor and `less` leave a goroutine waiting on `ctx.Done()`, `nc` returns
+with its copy goroutines still reading, and `net/http`'s transport holds a request's context
+a moment after the body is read. Each of those would have read a frame while the next call
+was rewriting it -- and an interface read half-way through being rewritten is not stale
+data, it is a type paired with the wrong pointer. A frame that is never changed can be held
+for as long as anything likes.
+
 ## What a background job that is a process costs, measured 2026-09-24
 
 Under `NEMOSH_JOBS=process` (background-processes.md) every `&` starts this binary again.

@@ -53,7 +53,7 @@ func (a contextApplet) Run(ctx context.Context, args []string, stdin io.Reader, 
 	if helpRequested(a.Applet.Name(), args) && writeUsage(a.Applet.Name(), stdout) {
 		return nil
 	}
-	return a.Applet.Run(ctx, args, contextReader{ctx: ctx, reader: stdin}, stdout, stderr)
+	return a.Applet.Run(ctx, args, readerFor(ctx, stdin), stdout, stderr)
 }
 
 func (r Registry) Lookup(name string) (Applet, bool) {

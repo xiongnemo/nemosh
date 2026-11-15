@@ -23,27 +23,20 @@ import (
 // back is ctx.Err(). Anything else would be reported, and `bc: context canceled` reaching
 // a terminal is what that looks like: a Go error string shown to someone who pressed
 // Ctrl-C.
+//
+// It holds the context rather than ctx.Err, which as a method value was an allocation of
+// its own. The shell's call frame keeps one and hands out a pointer to it (applet_frame.go);
+// a context that can never be cancelled gets no wrapper at all, and costs nothing per write.
 type interruptibleWriter struct {
 	writer io.Writer
 	done   <-chan struct{}
-	cause  func() error
+	ctx    context.Context
 }
 
-// interruptible wraps a stream when there is a cancellation to watch, and leaves it alone
-// when there is not -- a context that can never be cancelled should cost nothing per
-// write.
-func interruptible(writer io.Writer, ctx context.Context) io.Writer {
-	done := ctx.Done()
-	if done == nil {
-		return writer
-	}
-	return interruptibleWriter{writer: writer, done: done, cause: ctx.Err}
-}
-
-func (w interruptibleWriter) Write(p []byte) (int, error) {
+func (w *interruptibleWriter) Write(p []byte) (int, error) {
 	select {
 	case <-w.done:
-		return 0, w.cause()
+		return 0, w.ctx.Err()
 	default:
 	}
 	return w.writer.Write(p)
@@ -55,4 +48,4 @@ func (w interruptibleWriter) Write(p []byte) (int, error) {
 // would stop laying out columns on a terminal and `--color=auto` would stop colouring,
 // because both ask the stream to name its file and a wrapper that does not answer looks
 // exactly like a pipe.
-func (w interruptibleWriter) TerminalFile() *os.File { return terminalFileOf(w.writer) }
+func (w *interruptibleWriter) TerminalFile() *os.File { return terminalFileOf(w.writer) }
