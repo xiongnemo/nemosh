@@ -47,6 +47,9 @@ func UsageFor(name string) (string, bool) {
 	}
 	usage, ok := usageText[name]
 	if !ok {
+		usage, ok = builtinUsage()[name]
+	}
+	if !ok {
 		return "", false
 	}
 	var out strings.Builder

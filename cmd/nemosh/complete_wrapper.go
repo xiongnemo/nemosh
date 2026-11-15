@@ -2,12 +2,16 @@ package main
 
 import "strings"
 
-// commandWrappers are the commands whose first operand is a command name: they run it, or say
+// isCommandWrapper reports a command whose first operand is a command name: it runs it, or says
 // what it is. timeout and su are not among them, though both run commands, because the word
-// after their options is a duration and a user.
-var commandWrappers = map[string]bool{
-	"builtin": true, "command": true, "env": true, "exec": true, "nohup": true, "sudo": true,
-	"time": true, "type": true, "watch": true, "which": true, "xargs": true,
+// after their options is a duration and a user. A switch rather than a map, which would be
+// built before main runs; see the init ceiling in product.yml.
+func isCommandWrapper(name string) bool {
+	switch name {
+	case "builtin", "command", "env", "exec", "nohup", "sudo", "time", "type", "watch", "which", "xargs":
+		return true
+	}
+	return false
 }
 
 // completesCommandName reports whether the word being typed is a command name: at the start of
@@ -28,7 +32,7 @@ func (e *lineEditor) completesCommandName(prefix string) bool {
 	}
 	for index < len(words) {
 		wrapper := words[index]
-		if !commandWrappers[wrapper] {
+		if !isCommandWrapper(wrapper) {
 			return false
 		}
 		surface, _ := surfaceFor(e.specs, words[index:index+1])

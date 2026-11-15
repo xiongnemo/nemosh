@@ -108,12 +108,18 @@ func (record *jobRecord) finished() bool {
 
 const enableUsage = "enable: usage: enable [-a] [-dnps] [-f filename] [name ...]"
 
-// enableRefusals are the options enable refuses, with why: a builtin here is part of the shell,
-// so there is nothing to switch off and nothing to load.
-var enableRefusals = map[rune]string{
-	'n': "a builtin here cannot be switched off; a program of the same name runs when it is named by its path",
-	'f': "this shell loads no builtins from a file",
-	'd': "this shell loads no builtins from a file, so there are none to remove",
+// enableRefusal is why enable refuses an option, or nothing for one it does not: a builtin here
+// is part of the shell, so there is nothing to switch off and nothing to load.
+func enableRefusal(letter rune) string {
+	switch letter {
+	case 'n':
+		return "a builtin here cannot be switched off; a program of the same name runs when it is named by its path"
+	case 'f':
+		return "this shell loads no builtins from a file"
+	case 'd':
+		return "this shell loads no builtins from a file, so there are none to remove"
+	}
+	return ""
 }
 
 // enable lists the builtins as bash lists them, `enable NAME` a line each, or with -s only the
@@ -130,8 +136,8 @@ func (r Runtime) enable(args []string) int {
 			case letter == 'a' || letter == 'p':
 			case letter == 's':
 				special = true
-			case enableRefusals[letter] != "":
-				fmt.Fprintf(r.streams.Stderr, "%senable: -%c: not implemented: %s\n", r.diagnosticPrefix(), letter, enableRefusals[letter])
+			case enableRefusal(letter) != "":
+				fmt.Fprintf(r.streams.Stderr, "%senable: -%c: not implemented: %s\n", r.diagnosticPrefix(), letter, enableRefusal(letter))
 				return 2
 			default:
 				fmt.Fprintf(r.streams.Stderr, "%senable: -%c: invalid option\n%s\n", r.diagnosticPrefix(), letter, enableUsage)
