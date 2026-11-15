@@ -95,8 +95,8 @@ func commandNotFound(name string) error {
 }
 
 // busybox prints usage and exits 1 when a required operand is missing
-// (bb_show_usage). Nemosh has no usage text -- the divergence recorded in
-// docs/design/v0-readiness.md -- so it says what is missing in one line. The
+// (bb_show_usage). Nemosh keeps its usage text for --help and says what is missing
+// in one line -- the divergence recorded in docs/design/v0-readiness.md. The
 // applets that need this used to print nothing at all, which left the reader
 // with a bare non-zero status and no idea which operand was wanted.
 func missingOperand() error {

@@ -9,6 +9,7 @@ package capability
 // valuePlaceholders name what an option's argument is, keyed by command and letter.
 // Without these the synopsis would read `-k VALUE`, which says nothing.
 var valuePlaceholders = map[string]string{
+	"fce": "EDITOR", "historyd": "OFFSET", "watchn": "SECONDS",
 	"dfB":                     "SIZE",
 	"dft":                     "TYPE",
 	"pgrepP":                  "PPID",

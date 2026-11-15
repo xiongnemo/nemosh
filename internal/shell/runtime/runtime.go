@@ -209,6 +209,9 @@ func (r Runtime) runCommandResolved(ctx context.Context, args []string, allowFun
 }
 
 func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
+	if status, answered := r.builtinHelp(args); answered {
+		return status
+	}
 	switch args[0] {
 	case "alias":
 		return r.alias(args[1:])
@@ -256,10 +259,8 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 		return r.getopts(args[1:])
 	case "jobs":
 		return r.jobs(args[1:])
-	case "disown":
-		return r.disown(args[1:])
-	case "enable":
-		return r.enable(args[1:])
+	case "disown", "enable":
+		return r.bashOnlyBuiltin(args)
 	case "which":
 		return r.whichBuiltin(args[1:])
 	case "kill":

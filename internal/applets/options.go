@@ -49,9 +49,9 @@ func (o appletOptions) last(letters string) byte {
 // An unrecognised letter is an error rather than an operand. Swallowing it, as
 // `wc -z FILE` and `touch -z` used to, makes the applet quietly do something
 // other than what it was asked, and `wc -z` even exited 0 while counting
-// nothing. busybox reaches bb_show_usage here; Nemosh has no usage text and
-// says so in one line instead, which is the divergence recorded in
-// docs/design/v0-readiness.md.
+// nothing. busybox reaches bb_show_usage here; Nemosh keeps its usage text for
+// --help and says what was wrong in one line instead, which is the divergence
+// recorded in docs/design/v0-readiness.md.
 func parseAppletOptions(ctx context.Context, args []string, flags, valued string) (appletOptions, []string, error) {
 	return readAppletOptions(args, flags, valued, nil, optionsPermute(ProcessViewFromContext(ctx)))
 }

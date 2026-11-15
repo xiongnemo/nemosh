@@ -91,10 +91,9 @@ func TestHelpFlag_reportsTheRealAppletCount(t *testing.T) {
 	}
 }
 
-// Applets carry no usage text, which is a divergence from busybox rather than
-// an omission. The help says so instead of leaving the reader to discover it
-// from `nemosh cat --help`.
-func TestHelpFlag_saysAppletsCarryNoUsageText(t *testing.T) {
+// The help says where usage text is: `NAME --help` for an applet, `help NAME` for a builtin.
+// It said applets carried none, long after they did.
+func TestHelpFlag_saysWhereTheUsageTextIs(t *testing.T) {
 	// When
 	stdout, _, err := runHelp(t, "--help")
 	if err != nil {
@@ -105,8 +104,11 @@ func TestHelpFlag_saysAppletsCarryNoUsageText(t *testing.T) {
 	if !strings.Contains(stdout, "support-matrix") {
 		t.Error("help does not point at the support matrix")
 	}
-	if !strings.Contains(strings.ToLower(stdout), "usage text") {
-		t.Error("help does not say applets carry no usage text")
+	if !strings.Contains(stdout, "NAME --help") || !strings.Contains(stdout, "help NAME") {
+		t.Error("help does not say where the usage text is")
+	}
+	if strings.Contains(stdout, "carry no usage text") {
+		t.Error("help still says applets carry no usage text")
 	}
 }
 

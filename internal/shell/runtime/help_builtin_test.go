@@ -72,17 +72,32 @@ func TestHelp_isABuiltin_notAnExternalCommand(t *testing.T) {
 	}
 }
 
-// Operands are refused rather than ignored: busybox's help takes none either,
-// and silently discarding one would hide a typo.
-func TestHelp_refusesOperands(t *testing.T) {
-	// When
-	status, stdout, stderr := runSetScript(t, "help cd\n")
-
-	// Then
-	if status == 0 {
-		t.Fatalf("help cd succeeded, want a refusal; stdout = %q", stdout)
+// `help NAME` describes a builtin, as bash's does, and an applet as its --help does; and
+// `NAME --help` says the same of a builtin. busybox's help takes no operand, and this one
+// refused them, so `help cd` -- the first thing anyone types -- was an error. A name there is
+// no help for is still one, so a typo is not hidden.
+func TestHelp_describesTheNamesItIsGiven(t *testing.T) {
+	for _, test := range []struct {
+		script string
+		want   []string
+	}{
+		{"help cd\n", []string{"Usage: cd [-L|-P] [DIRECTORY|-]\n", "Change the working directory."}},
+		{"help cd jobs\n", []string{"Usage: cd ", "Usage: jobs "}},
+		{"help ls\n", []string{"Usage: ls "}},
+		{"help history\n", []string{"Usage: history [-acnprsw] [-d OFFSET] [N]\n"}},
+		{"cd --help\n", []string{"Usage: cd ", "Change the working directory."}},
+		{"jobs --help | head -1\n", []string{"Usage: jobs "}},
+		{"help complete\n", []string{"complete is a shell builtin", "support-matrix"}},
+	} {
+		status, stdout, stderr := runSetScript(t, test.script)
+		for _, want := range test.want {
+			if status != 0 || !strings.Contains(stdout, want) {
+				t.Errorf("%q = %d, %q, %q; want 0 and %q", test.script, status, stdout, stderr, want)
+			}
+		}
 	}
-	if !strings.Contains(stderr, "help") {
-		t.Fatalf("stderr = %q, want it to name help", stderr)
+	status, stdout, stderr := runSetScript(t, "help nosuch\n")
+	if status != 1 || stdout != "" || !strings.Contains(stderr, "help: no help topics match `nosuch'") {
+		t.Fatalf("help nosuch = %d, %q, %q", status, stdout, stderr)
 	}
 }

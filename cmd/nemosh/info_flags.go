@@ -78,7 +78,8 @@ Nemosh is a multicall binary: invoked under an applet's name, directly or
 through a shim, it runs that applet instead of the shell. %d applets are
 bundled; "nemosh --list" names them.
 
-Applets carry no usage text. An option one does not implement is refused by
+"NAME --help" describes an applet, and "help NAME" a builtin. An option an
+applet does not implement is refused by
 name rather than ignored, so a script asking for it fails instead of quietly
 getting something else. docs/support-matrix.md records what each applet
 accepts, measured against a built binary rather than claimed.

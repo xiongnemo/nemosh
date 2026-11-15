@@ -173,7 +173,6 @@
       "unset readonly -- one line": "ash-only"
     },
     "builtin-bash.test.sh": {
-      "bad help topic": "fail",
       "help": "fail"
     },
     "builtin-bind.test.sh": {

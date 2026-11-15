@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/capability"
 )
 
 // help lists what this shell can run without going to PATH.
@@ -15,13 +17,12 @@ import (
 // terminal. Measured on 2026-08-08: busybox produces byte-identical CP936 output
 // when forced to run `help.exe`, so the difference was never encoding handling.
 //
-// Operands are refused rather than ignored. busybox's help takes none either,
-// and swallowing one would hide a typo -- `help cd` looks like a request for
-// something this cannot answer.
+// With operands it describes them, as bash's help does: busybox's takes none, and this one
+// refused them, so `help cd`, the first thing anyone types, was an error. A name there is no
+// help for is still an error, so a typo is not hidden.
 func (r Runtime) help(args []string) int {
 	if len(args) > 0 {
-		fmt.Fprintf(r.streams.Stderr, "%shelp: takes no operands; `type %s` describes one command\n", r.diagnosticPrefix(), args[0])
-		return 2
+		return r.helpTopics(args)
 	}
 
 	fmt.Fprintln(r.streams.Stdout, "Built-in commands:")
@@ -35,7 +36,7 @@ func (r Runtime) help(args []string) int {
 
 	fmt.Fprintln(r.streams.Stdout)
 	fmt.Fprintln(r.streams.Stdout, "`nemosh --help` describes the command line; `type NAME` describes one name.")
-	fmt.Fprintln(r.streams.Stdout, "`NAME --help` describes one applet; docs/support-matrix.md records them all.")
+	fmt.Fprintln(r.streams.Stdout, "`help NAME` describes a builtin or an applet; docs/support-matrix.md records them all.")
 	return 0
 }
 
@@ -66,4 +67,33 @@ func runtimeBuiltinNames() []string {
 	names = append(names, builtinNames...)
 	sort.Strings(names)
 	return names
+}
+
+// helpTopics prints the usage of each name, a builtin's or an applet's, from the text the
+// capability table keeps for both; and says of a builtin with none where it is described.
+func (r Runtime) helpTopics(names []string) int {
+	status := 0
+	for _, name := range names {
+		if text, ok := capability.UsageFor(name); ok {
+			fmt.Fprintln(r.streams.Stdout, strings.TrimRight(text, "\n"))
+			continue
+		}
+		if isRuntimeBuiltin(name) {
+			fmt.Fprintf(r.streams.Stdout, "%s is a shell builtin; docs/support-matrix.md records what it takes\n", name)
+			continue
+		}
+		fmt.Fprintf(r.streams.Stderr, "%shelp: no help topics match `%s'\n", r.diagnosticPrefix(), name)
+		status = 1
+	}
+	return status
+}
+
+// builtinHelp answers `NAME --help` for a builtin, as bash's builtins answer it: as the one
+// argument, so `NAME -- --help` and an operand that happens to be --help are left alone. `:`
+// takes its arguments as data.
+func (r Runtime) builtinHelp(args []string) (int, bool) {
+	if len(args) != 2 || args[1] != "--help" || args[0] == ":" || !isRuntimeBuiltin(args[0]) {
+		return 0, false
+	}
+	return r.helpTopics(args[:1]), true
 }

@@ -10,6 +10,14 @@ import (
 // disown and enable are bash's, which busybox has not got; they were `not found`, 127, and a
 // bashrc calls both. Each answer is bash 5.3's, measured.
 
+// bashOnlyBuiltin runs disown or enable.
+func (r Runtime) bashOnlyBuiltin(args []string) int {
+	if args[0] == "enable" {
+		return r.enable(args[1:])
+	}
+	return r.disown(args[1:])
+}
+
 const disownUsage = "disown: usage: disown [-h] [-ar] [jobspec ... | pid ...]"
 
 // disown takes jobs out of the table, so `jobs`, `wait` and %N no longer see them: the

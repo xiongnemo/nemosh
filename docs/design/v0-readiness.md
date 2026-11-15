@@ -201,8 +201,9 @@ to the next (`editors/sed.c:1061-1063`).
 Known divergences that are **deliberate and unfixed**, so a reader does not mistake
 the corpus for full parity:
 
-- Nemosh has no usage text. Where BusyBox reaches `bb_show_usage`, Nemosh prints a
-  one-line diagnostic instead. The status matches; the output does not.
+- Where BusyBox reaches `bb_show_usage`, Nemosh prints a one-line diagnostic
+  instead, and keeps its usage text for `--help` and `help NAME` (it had none before
+  v1.0.0). The status matches; the output does not.
 - `cut`'s range diagnostics differ beyond wording. BusyBox routes `-c -`, `-c ''`
   and `-c 1,,2` to usage output and `-c a` to `invalid number`, and spells a bad
   range as a pair (`invalid range 0-0`, `coreutils/cut.c:386`). Nemosh reports all
