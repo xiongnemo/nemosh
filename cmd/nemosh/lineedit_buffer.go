@@ -141,18 +141,31 @@ func (b *lineBuffer) deleteWord() {
 // blank the user had already said was part of the name. busybox has the same
 // problem and solves it the same way round, marking every `\c` before it looks
 // for boundaries (libbb/lineedit.c:1155).
+//
+// A blank inside quotes is part of the word too, for the same reason: `"My Do` is one word,
+// and cutting it at the blank completed one called `Do`.
 func (b *lineBuffer) completionStart() int {
 	start := 0
 	escaped := false
+	var quote rune
 	for index := 0; index < b.cursor; index++ {
-		if escaped {
+		r := b.runes[index]
+		switch {
+		case escaped:
 			escaped = false
-			continue
-		}
-		switch b.runes[index] {
-		case '\\':
+		case quote == '\'':
+			if r == '\'' {
+				quote = 0
+			}
+		case r == '\\':
 			escaped = true
-		case ' ':
+		case quote == '"':
+			if r == '"' {
+				quote = 0
+			}
+		case r == '"' || r == '\'':
+			quote = r
+		case r == ' ':
 			start = index + 1
 		}
 	}

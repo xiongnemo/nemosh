@@ -166,8 +166,8 @@ func TestEscapeForInsertion(t *testing.T) {
 			if got != test.want {
 				t.Fatalf("escapeForInsertion(%q) = %q, want %q", test.in, got, test.want)
 			}
-			if round := unescapeTypedWord(got); round != test.in {
-				t.Fatalf("unescapeTypedWord(%q) = %q, want %q", got, round, test.in)
+			if round, open := typedWordValue(got); round != test.in || open != 0 {
+				t.Fatalf("typedWordValue(%q) = %q, %q, want %q and no quote left open", got, round, open, test.in)
 			}
 		})
 	}

@@ -36,8 +36,12 @@ type lineEditor struct {
 	devices []string
 	// resolve reads a typed directory through the shell's path model; see completionPaths.
 	resolve func(string) (string, bool)
-	buffer  *lineBuffer
-	pending []byte
+	// variables are the names `$` can complete to, and variableValue what one holds, for
+	// completing `$HOME` into `$HOME/`. Asked of the runtime on each Tab; see complete_variable.go.
+	variables     func() []string
+	variableValue func(string) (string, bool)
+	buffer        *lineBuffer
+	pending       []byte
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
 	// feed arriving in the next read is that Enter finishing rather than another one.
 	afterCarriageReturn bool
@@ -357,15 +361,5 @@ func (e *lineEditor) nextKey() (key, error) {
 			err = io.EOF
 		}
 		return key{}, err
-	}
-}
-
-// paths is the editor's snapshot of the shell's path view, as the completion wants it.
-func (e *lineEditor) paths() completionPaths {
-	return completionPaths{
-		workingDirectory: e.workingDirectory,
-		home:             e.home,
-		devices:          e.devices,
-		resolve:          e.resolve,
 	}
 }

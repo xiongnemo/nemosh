@@ -92,3 +92,13 @@ func completionDevices(rt runtime.Runtime) []string {
 	}
 	return names
 }
+
+// paths is the editor's snapshot of the shell's path view, as the completion wants it.
+func (e *lineEditor) paths() completionPaths {
+	return completionPaths{
+		workingDirectory: e.workingDirectory,
+		home:             e.home,
+		devices:          e.devices,
+		resolve:          e.resolve,
+	}
+}

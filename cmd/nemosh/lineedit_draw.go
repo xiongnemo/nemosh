@@ -88,17 +88,22 @@ func (e *lineEditor) complete(prompt string) {
 			return
 		}
 	}
+	// A `$` asks for a variable's name, which is no path; see complete_variable.go.
+	if e.completeVariable(prompt) {
+		return
+	}
 	// The word as typed and the word as a filename are not the same string once
 	// a blank has been escaped: on screen `My\ Do`, on disk `My Do`. Matching
 	// uses the second, and replacing uses the first, because that is what is
 	// actually on screen to be deleted.
 	typed := e.buffer.currentWord()
-	stem := unescapeTypedWord(typed)
+	// And a word with a quote still open is read inside it; see complete_quote.go.
+	stem, quote := typedWordValue(typed)
 	prefix := e.buffer.currentWordPrefix()
 
 	var matches []string
 	var areOptions bool
-	operand := !completesCommand(prefix)
+	operand := !e.completesCommandName(prefix)
 	switch {
 	case operand:
 		matches, areOptions = e.completeOperandWord(prefix, stem)
@@ -115,6 +120,9 @@ func (e *lineEditor) complete(prompt string) {
 	insert := func(text string) string {
 		if operand && !areOptions {
 			text = disambiguateOperand(text)
+		}
+		if quote != 0 {
+			return quoteForInsertion(text, quote)
 		}
 		return escapeForInsertion(text)
 	}
@@ -134,6 +142,11 @@ func (e *lineEditor) complete(prompt string) {
 	if len(matches) == 1 {
 		e.replaceWord(typed, insert(matches[0]))
 		if !strings.HasSuffix(matches[0], "/") {
+			// A finished name closes the quote it was typed in, as bash closes it; a
+			// directory leaves it open, so the next Tab goes on inside it.
+			if quote != 0 {
+				e.buffer.insert(quote)
+			}
 			e.buffer.insert(' ')
 		}
 		return

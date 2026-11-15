@@ -61,8 +61,11 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		editor.home = completionHome(rt)
 		// And the devices, which the path model can switch off entirely.
 		editor.devices = completionDevices(rt)
-		// And how a typed directory is read, which needs the runtime itself.
+		// And how a typed directory is read, which needs the runtime itself, and the
+		// variables `$` completes to.
 		editor.resolve = completionResolver(rt)
+		editor.variables = rt.VariableNames
+		editor.variableValue = rt.LookupVariable
 		// What this session can run changes while it runs: an rc file defines
 		// aliases, a script defines functions, and PATH can be exported to. All
 		// three decide the colour a command is drawn in and what a suggestion may

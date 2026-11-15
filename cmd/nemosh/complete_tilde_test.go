@@ -171,12 +171,12 @@ func TestEscapeForInsertion_keepsALeadingTildeUsable(t *testing.T) {
 }
 
 // And what was typed is matched against real names, so the unescaping has to agree.
-func TestUnescapeTypedWord_leavesAnUnescapedTildeAlone(t *testing.T) {
+func TestTypedWordValue_leavesAnUnescapedTildeAlone(t *testing.T) {
 	for _, text := range []string{"~/", "~/Doc", `~/My\ Doc`} {
-		got := unescapeTypedWord(text)
+		got, _ := typedWordValue(text)
 		want := strings.ReplaceAll(text, `\ `, " ")
 		if got != want {
-			t.Fatalf("unescapeTypedWord(%q) = %q, want %q", text, got, want)
+			t.Fatalf("typedWordValue(%q) = %q, want %q", text, got, want)
 		}
 	}
 }

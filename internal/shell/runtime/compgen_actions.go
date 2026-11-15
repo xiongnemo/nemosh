@@ -149,3 +149,9 @@ func (r Runtime) functionNames() []string {
 	slices.Sort(names)
 	return names
 }
+
+// VariableNames are this session's variable and array names, sorted, which is what `compgen
+// -v` lists and what the line editor completes `$` to.
+func (r Runtime) VariableNames() []string {
+	return r.compgenAction("variable", "")
+}

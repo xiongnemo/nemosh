@@ -104,20 +104,3 @@ func escapeForInsertion(text string) string {
 	}
 	return escaped.String()
 }
-
-// unescapeTypedWord undoes the above, so that what the user typed is matched
-// against real filenames. Without it, completing `My\ Do` would look for a file
-// whose name begins with a backslash.
-func unescapeTypedWord(text string) string {
-	var plain strings.Builder
-	escaped := false
-	for _, r := range text {
-		if !escaped && r == '\\' {
-			escaped = true
-			continue
-		}
-		escaped = false
-		plain.WriteRune(r)
-	}
-	return plain.String()
-}
