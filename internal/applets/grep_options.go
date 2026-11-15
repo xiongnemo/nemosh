@@ -65,6 +65,11 @@ type grepFlags struct {
 	// operand become one.
 	patterns      []string
 	patternsGiven bool
+	// color is --color's, names the globs that choose what -r reads, and binary what a binary
+	// file is read as; see grep_long.go and grep_binary.go.
+	color  colorWhen
+	names  grepNameFilters
+	binary grepBinaryMode
 }
 
 // compile turns the patterns into one regular expression, honouring -F, -w and
@@ -169,6 +174,10 @@ func parseGrepFlags(flags string, into *grepFlags) error {
 			into.extended = true
 		case 'G':
 			into.extended = false
+		case 'a':
+			into.binary = grepBinaryText
+		case 'I':
+			into.binary = grepBinarySkip
 		default:
 			return invalidOption(flag)
 		}
@@ -248,6 +257,14 @@ func walkGrepTargets(ctx context.Context, flags grepFlags, shown, native string,
 			return nil
 		}
 		if entry.IsDir() {
+			// --exclude-dir names directories the walk does not go into; the operand itself
+			// was asked for by name and is always gone into, as GNU has it.
+			if current != native && !flags.names.takesDirectory(entry.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !flags.names.takesFile(entry.Name()) {
 			return nil
 		}
 		// Named the way the operand was, so the output reads as a path relative to

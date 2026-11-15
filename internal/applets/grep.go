@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"regexp"
+	"strings"
 )
 
 func newGrepApplet() Applet {
@@ -57,7 +57,7 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 	}
 	// One printer for the whole run, because the group separator spans files: a
 	// `--` belongs between the last group of one file and the first of the next.
-	printer := &grepPrinter{stdout: stdout, flags: flags}
+	printer := newGrepPrinter(stdout, stderr, flags, expr)
 	if len(paths) == 0 {
 		matched, err := grepOne(grepTarget{opener: readerTarget(stdin)}, expr, flags, false, printer)
 		if err != nil {
@@ -144,6 +144,12 @@ func grepOne(target grepTarget, expr *regexp.Regexp, flags grepFlags, withNames 
 }
 
 func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames bool, name string, printer *grepPrinter) (bool, error) {
+	// A binary file is said to match rather than printed, or under -I read as holding no
+	// match; see grep_binary.go.
+	input, binary := probeBinary(input, flags.binary)
+	if binary && flags.binary == grepBinarySkip {
+		return false, nil
+	}
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	matched, count, lineNumber := false, 0, 0
@@ -161,9 +167,17 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 	for scanner.Scan() {
 		lineNumber++
 		line := scanner.Text()
+		if !binary && flags.binary != grepBinaryText && strings.IndexByte(line, 0) >= 0 {
+			if binary = true; flags.binary == grepBinarySkip {
+				break
+			}
+		}
 		hit := expr.MatchString(line)
 		if flags.invert {
 			hit = !hit
+		}
+		if hit && binary && flags.binary != grepBinaryText && flags.reportsPerLine() {
+			return true, printer.binaryMatches(name)
 		}
 		if !hit {
 			if !flags.reportsPerLine() {
@@ -218,69 +232,6 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 	return matched, grepReportFile(printer, flags, name, matched, count, withNames)
 }
 
-// grepEmitMatch writes a matching line, whole or in pieces under -o.
-func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, name string, lineNumber int, line string, withNames bool) error {
-	if !flags.onlyMatching {
-		return printer.emit(name, lineNumber, line, true, withNames)
-	}
-	// Each match on its own line, which is what makes -o useful for pulling
-	// values out.
-	//
-	// With -v there is nothing to print: the line was selected for *not*
-	// matching, so it has no matched text. Measured -- GNU prints nothing and
-	// exits 0, where falling through to the whole line would have printed it.
-	if flags.invert {
-		return nil
-	}
-	matches := expr.FindAllString(line, -1)
-	if flags.wordMatch {
-		matches = grepWords(expr, line)
-	}
-	for _, found := range matches {
-		// An empty match is not printed, as busybox's grep does not print one: `grep -o
-		// '[0-9]*'` is the numbers, where it was an empty line before each.
-		if found == "" {
-			continue
-		}
-		if err := printer.emit(name, lineNumber, found, true, withNames); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// grepWord names the group -w's pattern holds the word in, between the characters around it.
-const grepWord = "word"
-
-// grepWords is -w -o's matches: the words alone, where the characters on either side of each
-// were printed with it, `apple ` and ` foo`. A search goes on from the end of a word rather
-// than from past the character after it, so a word one space after another is found too; it
-// was not. A word cannot begin where the last ended, since that is no boundary.
-func grepWords(expr *regexp.Regexp, line string) []string {
-	var words []string
-	names := expr.SubexpNames()
-	for start := 0; start <= len(line); {
-		found := expr.FindStringSubmatchIndex(line[start:])
-		if found == nil {
-			break
-		}
-		from, to := -1, -1
-		for group, name := range names {
-			if name == grepWord && found[2*group] >= 0 {
-				from, to = start+found[2*group], start+found[2*group+1]
-				break
-			}
-		}
-		if from < 0 || from == start && start > 0 {
-			start += max(found[0], 1)
-			continue
-		}
-		words = append(words, line[from:to])
-		start = max(to, from+1)
-	}
-	return words
-}
-
 // grepDrainAfter writes the trailing context still owed when -m stopped the scan.
 // It ends at a line that would have been selected, as busybox's and GNU's grep end it there:
 // `grep -A2 -m1 a` over banana, apple and cherry is banana alone. It went on through apple.
@@ -293,35 +244,6 @@ func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, expr *regexp.R
 		if err := printer.emit(name, *lineNumber, scanner.Text(), false, withNames); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// grepReportFile writes the per-file answer that -l, -L and -c give instead of
-// lines.
-func grepReportFile(printer *grepPrinter, flags grepFlags, name string, matched bool, count int, withNames bool) error {
-	switch {
-	case flags.filesOnly:
-		if matched {
-			_, err := fmt.Fprintln(printer.stdout, name)
-			printer.wrote = true
-			return err
-		}
-	case flags.withoutMatch:
-		// -L is -l inverted: the files that did not match.
-		if !matched {
-			_, err := fmt.Fprintln(printer.stdout, name)
-			printer.wrote = true
-			return err
-		}
-	case flags.countOnly:
-		prefix := ""
-		if withNames {
-			prefix = name + ":"
-		}
-		_, err := fmt.Fprintf(printer.stdout, "%s%d\n", prefix, count)
-		printer.wrote = true
-		return err
 	}
 	return nil
 }

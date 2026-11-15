@@ -3,6 +3,8 @@ package applets
 import (
 	"fmt"
 	"io"
+	"regexp"
+	"strconv"
 )
 
 // Context lines: -A, -B and -C.
@@ -48,6 +50,11 @@ func (r *grepRing) drain() []grepPending {
 // to a single file could not produce it.
 type grepPrinter struct {
 	stdout io.Writer
+	// stderr is where a binary file's match is said, expr what a selected line's matches are
+	// coloured by, and color whether they are; see grep_binary.go and grep_color.go.
+	stderr io.Writer
+	expr   *regexp.Regexp
+	color  bool
 	flags  grepFlags
 	// wrote is whether anything has been written at all, so the first group is
 	// not preceded by a separator.
@@ -85,7 +92,7 @@ func (p *grepPrinter) needsSeparator(name string, number int) bool {
 // references do.
 func (p *grepPrinter) emit(name string, number int, text string, isMatch, withNames bool) error {
 	if p.needsSeparator(name, number) {
-		if _, err := fmt.Fprintln(p.stdout, "--"); err != nil {
+		if _, err := fmt.Fprintln(p.stdout, p.paint(grepColorSeparator, "--")); err != nil {
 			return err
 		}
 	}
@@ -95,10 +102,13 @@ func (p *grepPrinter) emit(name string, number int, text string, isMatch, withNa
 	}
 	prefix := ""
 	if withNames {
-		prefix = name + separator
+		prefix = p.paint(grepColorName, name) + p.paint(grepColorSeparator, separator)
 	}
 	if p.flags.lineNumber {
-		prefix += fmt.Sprintf("%d%s", number, separator)
+		prefix += p.paint(grepColorLine, strconv.Itoa(number)) + p.paint(grepColorSeparator, separator)
+	}
+	if isMatch {
+		text = p.highlight(text)
 	}
 	if _, err := fmt.Fprintf(p.stdout, "%s%s\n", prefix, text); err != nil {
 		return err

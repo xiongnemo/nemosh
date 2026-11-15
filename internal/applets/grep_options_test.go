@@ -30,26 +30,33 @@ func runAppletWithInput(t *testing.T, input, name string, args ...string) (strin
 // which is a confusing way to fail.
 //
 // busybox accepts the option and ignores it: its table maps --color to a
-// pseudo-flag with a NULL sink (findutils/grep.c:728) and nothing reads it. No
-// colour is produced there, so none is produced here.
+// pseudo-flag with a NULL sink (findutils/grep.c:728) and nothing reads it. This
+// did the same until 2026-11-16 and colours now, as GNU's does (grep_color.go);
+// what is held here is that every spelling an alias carries is accepted, and that
+// `auto` and `never` into a pipe stay plain. `always`, and the bare option, colour.
 func TestGrep_acceptsTheColorOption_thatEveryAliasCarries(t *testing.T) {
-	for _, args := range [][]string{
-		{"--color=auto", "beta"},
-		{"--color=always", "beta"},
-		{"--color=never", "beta"},
-		{"--color", "beta"},
-		{"--color=auto", "-i", "BETA"},
+	coloured := "\x1b[01;31m\x1b[Kbeta\x1b[m\x1b[K xml\n"
+	for _, test := range []struct {
+		args []string
+		want string
+	}{
+		{args: []string{"--color=auto", "beta"}, want: "beta xml\n"},
+		{args: []string{"--color=always", "beta"}, want: coloured},
+		{args: []string{"--color=never", "beta"}, want: "beta xml\n"},
+		{args: []string{"--color", "beta"}, want: coloured},
+		{args: []string{"--colour=auto", "beta"}, want: "beta xml\n"},
+		{args: []string{"--color=auto", "-i", "BETA"}, want: "beta xml\n"},
 	} {
-		t.Run(strings.Join(args, " "), func(t *testing.T) {
+		t.Run(strings.Join(test.args, " "), func(t *testing.T) {
 			// When
-			stdout, _, err := runAppletWithInput(t, "alpha\nbeta xml\n", "grep", args...)
+			stdout, _, err := runAppletWithInput(t, "alpha\nbeta xml\n", "grep", test.args...)
 
 			// Then
 			if err != nil {
-				t.Fatalf("grep %v = %v, want it accepted", args, err)
+				t.Fatalf("grep %v = %v, want it accepted", test.args, err)
 			}
-			if stdout != "beta xml\n" {
-				t.Fatalf("stdout = %q, want the matching line and no escapes", stdout)
+			if stdout != test.want {
+				t.Fatalf("stdout = %q, want %q", stdout, test.want)
 			}
 		})
 	}
@@ -65,7 +72,7 @@ func TestGrep_namesTheOptionItRefuses(t *testing.T) {
 		want string
 	}{
 		{args: []string{"--nonsense", "x"}, want: "unknown option -- nonsense"},
-		{args: []string{"--colour=auto", "x"}, want: "unknown option -- colour=auto"},
+		{args: []string{"--colours=auto", "x"}, want: "unknown option -- colours=auto"},
 		{args: []string{"-z", "x"}, want: "unknown option -- z"},
 		{args: []string{"--color=purple", "x"}, want: "unsupported --color value: purple"},
 	} {

@@ -46,10 +46,11 @@ func grepArgs(ctx context.Context, args []string, stdin io.Reader) (grepFlags, [
 		// and refused as the bare `-` it began with, so the diagnostic said
 		// `unsupported grep option: --` and named nothing the user had typed.
 		if strings.HasPrefix(arg, "--") {
-			if err := parseGrepLongOption(arg); err != nil {
+			used, err := parseGrepLongOption(args, index, &flags)
+			if err != nil {
 				return grepFlags{}, nil, err
 			}
-			index++
+			index += used
 			continue
 		}
 		consumed, err := readGrepLetters(ctx, arg, args, index, &flags, stdin)
@@ -71,23 +72,6 @@ func grepArgs(ctx context.Context, args []string, stdin io.Reader) (grepFlags, [
 		operands = operands[1:]
 	}
 	return flags, operands, nil
-}
-
-// parseGrepLongOption accepts --color and refuses the rest.
-//
-// Accepted and ignored, which is exactly what busybox does: its option table
-// maps --color to a pseudo-flag with a NULL sink (findutils/grep.c:728) and
-// nothing reads it. The option exists so that `alias grep='grep --color=auto'`,
-// which everyone copies from a GNU system, does not break the shell it is pasted
-// into. The value is still checked, unlike busybox, so a typo is refused rather
-// than silently swallowed by an option that does nothing.
-func parseGrepLongOption(arg string) error {
-	name, value, present := strings.Cut(arg[2:], "=")
-	if name != "color" {
-		return unknownLongOption(arg)
-	}
-	_, err := parseColorWhen(value, present)
-	return err
 }
 
 // readGrepLetters reads one argument's worth of clustered letters, reporting how

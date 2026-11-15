@@ -912,7 +912,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command`: an applet, or else a program, looked for on the PATH env gives it and launched by the shell, as a command is. A script's `#!/usr/bin/env NAME` does not come here: NAME is found as `#!/usr/bin/NAME` is, this shell for `sh`, an applet, then a program on PATH | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
 | `find` | `-name -iname -path -ipath -wholename -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -executable -prune -quit -print -print0 -exec -ok -delete -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
-| `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f`, `--color[=WHEN]` accepted and ignored. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
+| `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f -a -I`, and GNU's `--include`, `--exclude` and `--exclude-dir` for what `-r` reads, `--text`, and `--color[=WHEN]`, which colours as GNU's does, `auto` at a terminal only. A binary file -- a NUL in it -- that matches is said to on stderr, `grep: FILE: binary file matches`, as GNU 3.5 and later say it, rather than printed; `-a` prints it and `-I` reads it as holding no match. busybox has none of these. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input; zcat's data chooses gzip, bzip2 or xz by its first bytes, as busybox's does. A FILE that is not compressed is said and the next one read, status 1 at the end, as GNU's gzip does; busybox's stops at it | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
@@ -1190,9 +1190,9 @@ All five are implemented, measured against GNU. What is still absent:
   as absent and was simply stale: all of them landed on 2026-08-22 along with `{}`
   blocks, the multiline commands and branching. Measured against the built binary
   rather than trusted.
-- **`grep --include`, `--exclude` and `-z`.** The first two need a name filter
-  threaded through the `-r` walk; `-z` is a NUL-terminated-line mode. `-A -B -C
-  -e -f -L` landed on 2026-08-22.
+- **`grep -z`**, a NUL-terminated-line mode. `--include` and `--exclude` were here with it
+  and landed on 2026-11-16, with `--exclude-dir`, `-a` and `-I`; `-A -B -C -e -f -L` on
+  2026-08-22.
 
 Every one of them is refused by name, so a script asking for it fails rather than
 quietly getting something else.

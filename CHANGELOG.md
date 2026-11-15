@@ -29,6 +29,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   visited, and a program the shell starts is handed those directories, so `cmd /c "cd D:"`
   agrees. They were refused, "drive-relative Windows paths are not supported". At a prompt,
   a `cd` that fails on `C:Users` says that `C:\Users` unquoted loses its backslash.
+- **grep takes GNU's `--include`, `--exclude` and `--exclude-dir`** for what `-r` reads, and
+  `-a`, `-I` and `--text`. A binary file that matches is said to on stderr, `grep: FILE:
+  binary file matches`, as GNU's is, where its bytes were printed at the terminal. And
+  `--color` colours, GNU's colours, where it was accepted and ignored: `alias grep='grep
+  --color=auto'`, nemoshrc's example among them, does what it says.
 - **less draws what has arrived while more is coming**, as busybox's does, so `make | less`
   and `tail -f log | less` show the first page at once; with no terminal it writes a line as
   it comes. `-R` takes colour sequences out, as busybox's does, where they were drawn as they
