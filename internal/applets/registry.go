@@ -15,14 +15,29 @@ type Applet interface {
 	Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error
 }
 
+// Registry is the applets by name.
+//
+// applets holds each one wrapped, made once with the registry, and index finds one by
+// name. Lookup hands out a pointer into applets, which an interface holds without an
+// allocation, so neither building a registry nor looking an applet up allocates per
+// applet. It was a map of wrapped applets, and putting each wrapper into the map's
+// interface type was an allocation apiece -- 153 before main on every start, since
+// DefaultRegistry is built then, for the one or two applets a run uses.
 type Registry struct {
-	applets map[string]Applet
+	applets []contextApplet
+	index   map[string]int
 }
 
 func NewRegistry(items ...Applet) Registry {
-	r := Registry{applets: make(map[string]Applet, len(items))}
+	r := Registry{applets: make([]contextApplet, 0, len(items)), index: make(map[string]int, len(items))}
 	for _, item := range items {
-		r.applets[item.Name()] = contextApplet{Applet: item}
+		// A later applet of a name replaces an earlier one, as it did in the map.
+		if at, ok := r.index[item.Name()]; ok {
+			r.applets[at] = contextApplet{Applet: item}
+			continue
+		}
+		r.index[item.Name()] = len(r.applets)
+		r.applets = append(r.applets, contextApplet{Applet: item})
 	}
 	return r
 }
@@ -42,16 +57,19 @@ func (a contextApplet) Run(ctx context.Context, args []string, stdin io.Reader, 
 }
 
 func (r Registry) Lookup(name string) (Applet, bool) {
-	applet, ok := r.applets[name]
-	return applet, ok
+	at, ok := r.index[name]
+	if !ok {
+		return nil, false
+	}
+	return &r.applets[at], true
 }
 
 // Names lists every registered applet, sorted, as a fresh slice. It backs
 // `nemosh --list`, whose output generates Scoop shims, so the order has to be
 // stable across runs rather than a map's.
 func (r Registry) Names() []string {
-	names := make([]string, 0, len(r.applets))
-	for name := range r.applets {
+	names := make([]string, 0, len(r.index))
+	for name := range r.index {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -84,7 +102,7 @@ var DefaultRegistry = NewRegistry(append(portableApplets(), platformApplets()...
 // process of this binary would have. A background job that is a process can only be one
 // where the shell's applets are those (docs/design/background-processes.md).
 func (r Registry) IsDefault() bool {
-	return reflect.ValueOf(r.applets).UnsafePointer() == reflect.ValueOf(DefaultRegistry.applets).UnsafePointer()
+	return reflect.ValueOf(r.index).UnsafePointer() == reflect.ValueOf(DefaultRegistry.index).UnsafePointer()
 }
 
 func portableApplets() []Applet {
