@@ -588,6 +588,11 @@ decides for all three. An unknown `HISTCONTROL` word and an unusable `HISTSIZE` 
 ignored rather than refused, so an rc file shared with bash cannot stop this shell
 starting.
 
+`HISTIGNORE` is bash's too, from 2026-11-15: a colon-separated list of shell patterns,
+each matched against the whole line, leading blanks and all, `&` in one standing for the
+line kept before and `\:` for a colon. A line one matches is kept out of all three places,
+as HISTCONTROL keeps one out. It had been settable with no effect, as HISTCONTROL had.
+
 **`$!` is the job's pid**, as in both references: a background job is a process
 (docs/design/background-processes.md), and `wait $!`, `kill $!`, `tasklist` and `taskkill`
 all take the pid. The pid variables answer as bash's do. `$$` and `$PPID` inside a job are

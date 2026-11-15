@@ -78,6 +78,9 @@ func (r Runtime) addHistoryLine(raw string, saved bool) bool {
 	if strings.TrimSpace(line) == "" {
 		return false
 	}
+	if r.historyIgnored(line) {
+		return false
+	}
 	if control.ignoreDups {
 		if entries := r.history.list(); len(entries) > 0 && entries[len(entries)-1] == line {
 			return false
@@ -103,4 +106,61 @@ func (r Runtime) RecordInteractiveLine(raw string, saved bool) bool {
 	added := r.addHistoryLine(raw, saved)
 	r.history.noteLine(added, saved && added)
 	return added
+}
+
+// historyIgnored reports whether HISTIGNORE keeps line out: a colon-separated list of shell
+// patterns, each matched against the whole line, leading blanks and all, with & in one the
+// line before and \: a colon, as bash reads it. The line before is the last one kept, so a
+// line repeated around an ignored one is still a repeat.
+func (r Runtime) historyIgnored(line string) bool {
+	value := r.vars["HISTIGNORE"]
+	if value == "" {
+		return false
+	}
+	previous := ""
+	if entries := r.history.list(); len(entries) > 0 {
+		previous = entries[len(entries)-1]
+	}
+	for _, pattern := range splitHistoryIgnore(value) {
+		if pattern != "" && matchShellPattern(historyIgnorePattern(pattern, previous), line) {
+			return true
+		}
+	}
+	return false
+}
+
+// splitHistoryIgnore splits HISTIGNORE at each colon a backslash does not escape.
+func splitHistoryIgnore(value string) []string {
+	var patterns []string
+	var current strings.Builder
+	for index := 0; index < len(value); index++ {
+		switch {
+		case value[index] == '\\' && index+1 < len(value) && value[index+1] == ':':
+			current.WriteByte(':')
+			index++
+		case value[index] == ':':
+			patterns = append(patterns, current.String())
+			current.Reset()
+		default:
+			current.WriteByte(value[index])
+		}
+	}
+	return append(patterns, current.String())
+}
+
+// historyIgnorePattern is a pattern with each & the line before, taken literally, and \& an &.
+func historyIgnorePattern(pattern, previous string) string {
+	var expanded strings.Builder
+	for index := 0; index < len(pattern); index++ {
+		switch {
+		case pattern[index] == '\\' && index+1 < len(pattern) && pattern[index+1] == '&':
+			expanded.WriteString(`\&`)
+			index++
+		case pattern[index] == '&':
+			expanded.WriteString(escapeGlob(previous))
+		default:
+			expanded.WriteByte(pattern[index])
+		}
+	}
+	return expanded.String()
 }
