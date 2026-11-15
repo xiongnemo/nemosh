@@ -186,6 +186,10 @@ Chinese in it lines up, the character after a wide one in its own column.
 prints `D:\somewhere`. `cd C:\Users` unquoted fails with a hint that the backslash was an
 escape; `cd 'C:\Users'` works.
 
+`nano +5 file` opens with the cursor on line 5, and `^K` there cuts line 5. With
+`docs/examples/nemoshrc` as `~/.nemoshrc`, a new window opens without the pause gh's and git's
+completion cost, and the first `git che` and Tab offers checkout and cherry-pick.
+
 `nano` leaves as nano does since 2026-11-16. Next to the nano Scoop installs, press the
 same keys in both on a file with a change: `^X` asks "Save modified buffer?", `Y` offers
 the file's name, Enter writes it and leaves; `N` leaves without writing; `^C` at the

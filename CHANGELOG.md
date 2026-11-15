@@ -24,6 +24,8 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   end input on an empty line, as before.
 - **awk's `sub` and `gsub` read backslashes in a replacement as busybox-w32 does from
   FRP-6354**, which follows gawk's actual behaviour: `\\` is two backslashes.
+- **`nano +42 file` opens at line 42**, and `+LINE,COLUMN` at a column of it, as nano does;
+  it was taken for a second file and refused.
 - **`cd D:` changes drive**, to where D: was left, as busybox-w32 has it: `D:`, `D:foo` and
   `D:..` are relative to the directory each drive was last at, its root if it has not been
   visited, and a program the shell starts is handed those directories, so `cmd /c "cd D:"`
@@ -43,6 +45,9 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   the name it offers, Enter accepting it, and leaves; `N` leaves without; `^C` goes back.
   `^O` asks for the name the same way, so `^O` and Enter writes, and another name writes a
   copy. micro's `^Q` asks micro's question. A second `^X` used to discard the buffer.
+- **The example rc loads gh's and git's completion the first time Tab is pressed** after
+  either, not at every start: sourced eagerly they cost a shell about 117 ms to open, and
+  now about 1. `docs/examples/nemoshrc` shows the `complete -D` loader.
 - **A session reads `~/.nemoshrc` where `ENV` is not set.** `ENV`, where it is set, is
   still what is read; `docs/examples/nemoshrc` is one to start from.
 

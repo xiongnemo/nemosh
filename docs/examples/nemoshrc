@@ -41,18 +41,31 @@ alias grep='grep --color=auto'
 # from Git for Windows, wherever it was installed from. Git for Windows keeps it under
 # ucrt64 since it moved to that runtime, and under mingw64 before.
 #
-# Each costs something at every start, measured on 2026-11-15: about 80 ms for gh's,
-# which runs gh to print it, and 50 ms for git's, which is a long script. Writing gh's
-# to a file once and sourcing that saves the first.
-if command -v gh >/dev/null 2>&1; then
-	. <(gh completion -s bash)
-fi
-for __f in "$HOME"/scoop/apps/git/current/ucrt64 "$HOME"/scoop/apps/git/current/mingw64 \
-	"C:/Program Files/Git/ucrt64" "C:/Program Files/Git/mingw64"; do
-	__f=$__f/share/git/completion/git-completion.bash
-	if [ -r "$__f" ]; then
-		. "$__f"
-		break
-	fi
-done
-unset __f
+# Each is loaded the first time Tab is pressed after its command, not at every start:
+# sourced here, they cost about 80 ms for gh's, which runs gh to print it, and 50 ms for
+# git's, a long script, on every shell opened (measured 2026-11-15). The function is the
+# default specification, `complete -D`, which bash-completion's loader is too: it sources
+# the script for the command it is asked about and answers 124, which has the shell look
+# the command's specification up again, now that there is one. For any other command it
+# answers nothing, and -o bashdefault hands the word to the shell's own completion.
+__nemosh_load_completion() {
+	case $1 in
+	gh)
+		command -v gh >/dev/null 2>&1 && . <(gh completion -s bash) && return 124
+		;;
+	git | gitk)
+		for __f in "$HOME"/scoop/apps/git/current/ucrt64 "$HOME"/scoop/apps/git/current/mingw64 \
+			"C:/Program Files/Git/ucrt64" "C:/Program Files/Git/mingw64"; do
+			__f=$__f/share/git/completion/git-completion.bash
+			if [ -r "$__f" ]; then
+				. "$__f"
+				unset __f
+				return 124
+			fi
+		done
+		unset __f
+		;;
+	esac
+	return 1
+}
+complete -D -o bashdefault -F __nemosh_load_completion

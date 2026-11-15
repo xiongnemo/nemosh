@@ -31,12 +31,19 @@ type editorHarness struct {
 
 func startEditor(t *testing.T, name, path string) *editorHarness {
 	t.Helper()
+	return startEditorAt(t, name, path, editorPosition{})
+}
+
+// startEditorAt is startEditor opened at a line and column, as `nano +LINE,COLUMN` opens.
+func startEditorAt(t *testing.T, name, path string, position editorPosition) *editorHarness {
+	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	view := ProcessViewFromContext(context.Background())
 	session, err := openEditorSession(WithProcessView(context.Background(), view), name, []string{path}, false)
 	if err != nil {
 		t.Fatalf("openEditorSession: %v", err)
 	}
+	session.position = position
 	harness := &editorHarness{screen: screen, session: session, finished: make(chan error, 1)}
 	ready := make(chan *tview.Application, 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

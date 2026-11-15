@@ -41,6 +41,10 @@ func newEditorApplet(name string) Applet {
 			// In the manner of `busybox vi -H`: say what subset this is.
 			return keys.writeFeatures(stdout)
 		}
+		position, operands, err := editorOperands(operands)
+		if err != nil {
+			return err
+		}
 		if len(operands) > 1 {
 			return fmt.Errorf("only one file at a time; there are no multiple buffers")
 		}
@@ -48,6 +52,7 @@ func newEditorApplet(name string) Applet {
 		if err != nil {
 			return err
 		}
+		session.position = position
 		return runEditor(ctx, session, keys, stdin, stderr)
 	}}
 }
@@ -64,6 +69,8 @@ type editorSession struct {
 	isNew bool
 	// view is the shell the editor runs in, whose umask a new file is made through.
 	view ProcessView
+	// position is where it opens, nano's +LINE,COLUMN; see editor_position.go.
+	position editorPosition
 }
 
 func openEditorSession(ctx context.Context, applet string, operands []string, readOnly bool) (*editorSession, error) {
@@ -184,6 +191,19 @@ func runEditorApplication(ctx context.Context, session *editorSession, keys edit
 		<-ctx.Done()
 		application.Stop()
 	}()
+	// Where `nano +LINE,COLUMN` opens, set once the first frame is drawn: the TextArea finds the
+	// cursor's row from the line starts a draw lays out, and before one it has none, so a
+	// cursor set sooner was put in the text but still read as row 0 -- typing went in the right
+	// place and ^K cut the first line. The frame after shows it where it is.
+	positioned := false
+	application.SetAfterDrawFunc(func(tcell.Screen) {
+		if positioned || session.position == (editorPosition{}) {
+			return
+		}
+		positioned = true
+		view.moveToPosition(session.position)
+		go application.QueueUpdateDraw(func() {})
+	})
 	if ready != nil {
 		ready <- application
 	}
