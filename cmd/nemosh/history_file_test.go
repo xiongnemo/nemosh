@@ -147,7 +147,7 @@ func TestHistoryFile_trimsOnlyOnceTheFileIsFarPastTheLimit(t *testing.T) {
 	}
 
 	// Then: still all five on disk, because 5 is not past 8
-	if got := file.readAll(); len(got) != 5 {
+	if got := recordLines(file.readAll()); len(got) != 5 {
 		t.Fatalf("file holds %q, want all five still there", got)
 	}
 
@@ -157,7 +157,7 @@ func TestHistoryFile_trimsOnlyOnceTheFileIsFarPastTheLimit(t *testing.T) {
 	}
 
 	// Then: trimmed to the limit, keeping the newest
-	if got := file.readAll(); !slices.Equal(got, []string{"h", "i"}) {
+	if got := recordLines(file.readAll()); !slices.Equal(got, []string{"h", "i"}) {
 		t.Fatalf("file holds %q, want the last two", got)
 	}
 }

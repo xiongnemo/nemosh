@@ -39,9 +39,9 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	// typed already has yesterday to suggest from. Only an exported one was.
 	saved := newHistoryFile(rt.LookupVariable, func(path string) (string, bool) { return nativePath(rt, path) })
 	loaded, held := saved.loadCounted()
-	for _, line := range loaded {
-		editor.remember(line)
-		rt.RecordHistory(line)
+	for _, record := range loaded {
+		editor.remember(record.Line)
+		rt.RecordHistoryAt(record.Line, record.When)
 	}
 	rt.NoteHistoryFile(held)
 

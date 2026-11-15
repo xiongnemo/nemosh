@@ -1,13 +1,12 @@
 package runtime
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -83,11 +82,11 @@ func (r Runtime) historyFileRequest(request historyRequest, operands []string) i
 	return 0
 }
 
-// appendHistoryFile is -a: the lines the file does not have yet. With none, a file that
-// is not there is not made.
+// appendHistoryFile is -a: the entries the file does not have yet. With none, a file that
+// is not there is not made. Under HISTTIMEFORMAT each goes with its time, as bash writes it.
 func (r Runtime) appendHistoryFile(name, path string) int {
-	lines := r.history.unsavedLines()
-	if len(lines) == 0 {
+	entries := r.history.unsavedEntries()
+	if len(entries) == 0 {
 		return 0
 	}
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, r.createMode(0o600))
@@ -97,85 +96,90 @@ func (r Runtime) appendHistoryFile(name, path string) int {
 		}
 		return 1
 	}
-	text := strings.Join(lines, "\n") + "\n"
-	_, err = file.WriteString(text)
+	_, err = file.WriteString(r.historyFileText(entries))
 	if closeErr := file.Close(); err == nil {
 		err = closeErr
 	}
 	if err != nil {
 		return 1
 	}
-	r.history.markSaved(false, strings.Count(text, "\n"))
+	r.history.markSaved(false, len(entries))
 	return 0
+}
+
+// historyFileText is entries as the history file keeps them, with their times under
+// HISTTIMEFORMAT.
+func (r Runtime) historyFileText(entries []historyEntry) string {
+	_, stamped := r.vars["HISTTIMEFORMAT"]
+	var text strings.Builder
+	for _, entry := range entries {
+		text.WriteString(FormatHistoryRecord(HistoryRecord{Line: entry.line, When: entry.when}, stamped))
+	}
+	return text.String()
 }
 
 // writeHistoryFile is -w: the whole list, in place of what the file held.
 func (r Runtime) writeHistoryFile(path string) int {
-	var text strings.Builder
-	for _, line := range r.history.list() {
-		text.WriteString(line + "\n")
-	}
+	entries := r.history.snapshotEntries()
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, r.createMode(0o600))
 	if err != nil {
 		return 1
 	}
-	_, err = file.WriteString(text.String())
+	_, err = file.WriteString(r.historyFileText(entries))
 	if closeErr := file.Close(); err == nil {
 		err = closeErr
 	}
 	if err != nil {
 		return 1
 	}
-	r.history.markSaved(true, strings.Count(text.String(), "\n"))
+	r.history.markSaved(true, len(entries))
 	return 0
 }
 
-// readHistoryFile is -r, every line of the file added to the list, and -n, only the lines
+// readHistoryFile is -r, every entry of the file added to the list, and -n, only the entries
 // past those the list has read or written. -n's count as this session's, which -a then
-// writes, as bash counts them.
+// writes, as bash counts them. The file is read in bash's format; see ParseHistoryFile.
 func (r Runtime) readHistoryFile(path string, onlyNew bool) int {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return 1
 	}
-	var lines []string
-	scan := bufio.NewScanner(bytes.NewReader(data))
-	scan.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scan.Scan() {
-		if line := scan.Text(); strings.TrimSpace(line) != "" {
-			lines = append(lines, line)
-		}
-	}
+	records := ParseHistoryFile(string(data))
+	now := time.Now()
 	r.history.mutex.Lock()
 	from := 0
 	if onlyNew {
-		from = min(r.history.inFile, len(lines))
+		from = min(r.history.inFile, len(records))
 	}
-	for _, line := range lines[from:] {
-		r.history.entries = append(r.history.entries, historyEntry{line: line, saved: !onlyNew})
+	for _, record := range records[from:] {
+		when := record.When
+		if when.IsZero() {
+			when = now
+		}
+		r.history.entries = append(r.history.entries, historyEntry{line: record.Line, saved: !onlyNew, when: when})
 	}
-	r.history.inFile = len(lines)
+	r.history.inFile = len(records)
 	r.history.mutex.Unlock()
 	r.history.truncate(r.historyLimit())
 	return 0
 }
 
-// unsavedLines is what -a writes.
-func (h *shellHistory) unsavedLines() []string {
+// unsavedEntries are what -a writes.
+func (h *shellHistory) unsavedEntries() []historyEntry {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	var lines []string
+	var entries []historyEntry
 	for _, entry := range h.entries {
 		if !entry.saved {
-			lines = append(lines, entry.line)
+			entries = append(entries, entry)
 		}
 	}
-	return lines
+	return entries
 }
 
-// markSaved records that the file has every entry now, and holds lines lines more, or
+// markSaved records that the file has every entry now, and holds count entries more, or
 // holds only them when it was written whole.
-func (h *shellHistory) markSaved(whole bool, lines int) {
+func (h *shellHistory) markSaved(whole bool, count int) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 	for index := range h.entries {
@@ -184,5 +188,5 @@ func (h *shellHistory) markSaved(whole bool, lines int) {
 	if whole {
 		h.inFile = 0
 	}
-	h.inFile += lines
+	h.inFile += count
 }

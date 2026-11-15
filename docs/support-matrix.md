@@ -593,6 +593,13 @@ each matched against the whole line, leading blanks and all, `&` in one standing
 line kept before and `\:` for a colon. A line one matches is kept out of all three places,
 as HISTCONTROL keeps one out. It had been settable with no effect, as HISTCONTROL had.
 
+`HISTTIMEFORMAT` is bash's too: set, even to nothing, it has each command written to the
+history file with its time on the line before, `#` and the seconds, and `history` print
+the time through strftime before each command. A command of several lines is written
+whole then, since the times say where it ends; without them it is still kept out of the
+file, where it would read back as several. A file is read in bash's format either way,
+so `~/.bash_history` named as `HISTFILE` loads its commands and not its timestamps.
+
 **`$!` is the job's pid**, as in both references: a background job is a process
 (docs/design/background-processes.md), and `wait $!`, `kill $!`, `tasklist` and `taskkill`
 all take the pid. The pid variables answer as bash's do. `$$` and `$PPID` inside a job are

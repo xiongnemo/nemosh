@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 // maxHistoryEntries bounds what an interactive session keeps. busybox's default
@@ -25,7 +28,7 @@ type shellHistory struct {
 	// lineAdded is whether the command line now running was recorded, which `history -s`
 	// and -p take back out, once, as bash's do: the entry is the `history -s` itself.
 	lineAdded bool
-	// inFile is how many lines of the history file the list has read or written, the
+	// inFile is how many entries of the history file the list has read or written, the
 	// place `history -n` reads on from.
 	inFile int
 }
@@ -35,6 +38,9 @@ type shellHistory struct {
 type historyEntry struct {
 	line  string
 	saved bool
+	// when is when it was run, or read back with no time of its own, which HISTTIMEFORMAT
+	// prints and the history file keeps.
+	when time.Time
 }
 
 func newShellHistory() *shellHistory { return &shellHistory{} }
@@ -43,6 +49,11 @@ func newShellHistory() *shellHistory { return &shellHistory{} }
 // is what the line editor does and what every other shell does; without it the
 // arrows fill up with the same command.
 func (h *shellHistory) record(line string, saved bool) bool {
+	return h.recordAt(line, time.Now(), saved)
+}
+
+// recordAt is record with the time the entry was run.
+func (h *shellHistory) recordAt(line string, when time.Time, saved bool) bool {
 	if h == nil || strings.TrimSpace(line) == "" {
 		return false
 	}
@@ -51,7 +62,7 @@ func (h *shellHistory) record(line string, saved bool) bool {
 	if len(h.entries) > 0 && h.entries[len(h.entries)-1].line == line {
 		return false
 	}
-	h.entries = append(h.entries, historyEntry{line: line, saved: saved})
+	h.entries = append(h.entries, historyEntry{line: line, saved: saved, when: when})
 	if len(h.entries) > maxHistoryEntries {
 		h.entries = h.entries[len(h.entries)-maxHistoryEntries:]
 	}
@@ -84,6 +95,22 @@ func (h *shellHistory) clear() {
 // which the file has already.
 func (r Runtime) RecordHistory(line string) { r.history.record(line, true) }
 
+// RecordHistoryAt is RecordHistory with the time the history file gave the line, or the zero
+// time where it gave none.
+func (r Runtime) RecordHistoryAt(line string, when time.Time) {
+	if when.IsZero() {
+		when = time.Now()
+	}
+	r.history.recordAt(line, when, true)
+}
+
+// snapshotEntries is a copy of the list, times and all.
+func (h *shellHistory) snapshotEntries() []historyEntry {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	return append([]historyEntry(nil), h.entries...)
+}
+
 // HistoryEntries is what has been recorded, oldest first.
 //
 // Exported for history expansion, which runs in the CLI: `!!` has to mean the same
@@ -102,15 +129,23 @@ func (r Runtime) RunHistoryBuiltin(args []string) int { return r.historyBuiltin(
 //
 // A non-interactive shell has recorded nothing, so this prints nothing rather
 // than failing: `history` in a script is a question with a valid answer.
+//
+// Under HISTTIMEFORMAT each entry's time comes before it, through strftime, as bash
+// prints it; set and empty, it prints nothing there and still has the file keep times.
 func (r Runtime) printHistory(count int) {
-	entries := r.history.list()
+	entries := r.history.snapshotEntries()
 	first := 0
 	if count >= 0 && count < len(entries) {
 		first = len(entries) - count
 	}
+	format, stamped := r.vars["HISTTIMEFORMAT"]
 	width := len(fmt.Sprint(len(entries)))
 	for index := first; index < len(entries); index++ {
-		fmt.Fprintf(r.streams.Stdout, "%*d  %s\n", width, index+1, entries[index])
+		when := ""
+		if stamped {
+			when = applets.Strftime(entries[index].when, format)
+		}
+		fmt.Fprintf(r.streams.Stdout, "%*d  %s%s\n", width, index+1, when, entries[index].line)
 	}
 }
 

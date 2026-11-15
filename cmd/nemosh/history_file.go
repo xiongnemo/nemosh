@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // History that survives the window closing.
@@ -40,6 +41,9 @@ const (
 type historyFile struct {
 	path  string
 	limit int
+	// lookup reads the shell's variables at the moment of writing, for HISTTIMEFORMAT, which
+	// has each command written with its time. Nil writes none.
+	lookup func(string) (string, bool)
 }
 
 // newHistoryFile reads the two variables that decide this. Both are consulted
@@ -55,7 +59,7 @@ type historyFile struct {
 // written the history to `C:\c\Users\nemo\.nemosh_history`, which is a real
 // path, in the wrong place, that nobody would ever look at.
 func newHistoryFile(lookup func(string) (string, bool), toNative func(string) (string, bool)) historyFile {
-	file := historyFile{limit: defaultHistoryEntries}
+	file := historyFile{limit: defaultHistoryEntries, lookup: lookup}
 	if value, ok := lookup("HISTFILESIZE"); ok {
 		if size, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && size >= 0 {
 			file.limit = size
@@ -75,7 +79,7 @@ func newHistoryFile(lookup func(string) (string, bool), toNative func(string) (s
 		if !ok {
 			// A HISTFILE that does not resolve saves nothing, rather than
 			// creating a file somewhere surprising and reporting success.
-			return historyFile{limit: file.limit}
+			return historyFile{limit: file.limit, lookup: lookup}
 		}
 		file.path = native
 	}
@@ -99,41 +103,50 @@ func (h historyFile) enabled() bool { return h.path != "" && h.limit > 0 }
 // An unreadable file is not an error worth a word: a first run has no file, and
 // a caller that cannot read one keeps whatever it already had.
 func (h historyFile) load() []string {
-	lines, _ := h.loadCounted()
-	return lines
+	records, _ := h.loadCounted()
+	return recordLines(records)
 }
 
-// loadCounted is load, and how many lines the file holds, the place `history -n` reads
-// on from.
-func (h historyFile) loadCounted() ([]string, int) {
+// loadCounted is load with each entry's time, and how many entries the file holds, the
+// place `history -n` reads on from. The file is read in bash's format, so a # and digits
+// is a time and not a command; see runtime.ParseHistoryFile.
+func (h historyFile) loadCounted() ([]runtime.HistoryRecord, int) {
 	if !h.enabled() {
 		return nil, 0
 	}
-	file, err := os.Open(h.path)
-	if err != nil {
-		return nil, 0
+	records := h.readAll()
+	held := len(records)
+	if len(records) > h.limit {
+		records = records[len(records)-h.limit:]
 	}
-	defer file.Close()
-	var lines []string
-	scan := bufio.NewScanner(file)
-	// A long pasted command is still a command. The default 64k token limit
-	// would drop it silently, which is the sort of loss nobody traces back.
-	scan.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scan.Scan() {
-		if line := scan.Text(); strings.TrimSpace(line) != "" {
-			lines = append(lines, line)
-		}
+	return records, held
+}
+
+func recordLines(records []runtime.HistoryRecord) []string {
+	if len(records) == 0 {
+		return nil
 	}
-	held := len(lines)
-	if len(lines) > h.limit {
-		lines = lines[len(lines)-h.limit:]
+	lines := make([]string, len(records))
+	for index, record := range records {
+		lines[index] = record.Line
 	}
-	return lines, held
+	return lines
+}
+
+// stamped is whether HISTTIMEFORMAT has commands written with their times, as bash has it:
+// set, even to nothing.
+func (h historyFile) stamped() bool {
+	if h.lookup == nil {
+		return false
+	}
+	_, set := h.lookup("HISTTIMEFORMAT")
+	return set
 }
 
 // writes is whether append would write line: a file to write to, and a line that is one.
+// A command of several lines only with times, which say where it ends.
 func (h historyFile) writes(line string) bool {
-	return h.enabled() && strings.TrimSpace(line) != "" && !strings.ContainsAny(line, "\n\r")
+	return h.enabled() && strings.TrimSpace(line) != "" && (h.stamped() || !strings.ContainsAny(line, "\n\r"))
 }
 
 // append adds one line and trims the file if it has grown far past the limit.
@@ -145,16 +158,17 @@ func (h historyFile) append(line string) {
 		return
 	}
 	// A command spanning several lines is stored as it was typed. Writing it raw
-	// would make one entry read back as several, so it is refused rather than
-	// corrupted -- recalling half a loop is worse than not recalling it.
-	if strings.ContainsAny(line, "\n\r") {
+	// with no time before it would make one entry read back as several, so then it
+	// is refused rather than corrupted -- recalling half a loop is worse than not
+	// recalling it. Under HISTTIMEFORMAT the time before it says where it ends.
+	if !h.writes(line) {
 		return
 	}
 	file, err := os.OpenFile(h.path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 	if err != nil {
 		return
 	}
-	_, _ = file.WriteString(line + "\n")
+	_, _ = file.WriteString(runtime.FormatHistoryRecord(runtime.HistoryRecord{Line: line}, h.stamped()))
 	file.Close()
 	h.trimIfLong()
 }
@@ -166,13 +180,17 @@ func (h historyFile) trimIfLong() {
 	if err != nil || info.Size() == 0 {
 		return
 	}
-	lines := h.readAll()
-	if len(lines) <= h.limit*trimAtMultiple {
+	records := h.readAll()
+	if len(records) <= h.limit*trimAtMultiple {
 		return
 	}
-	kept := lines[len(lines)-h.limit:]
+	var kept strings.Builder
+	for _, record := range records[len(records)-h.limit:] {
+		// Each with its time if it had one, so the file is read back as it was.
+		kept.WriteString(runtime.FormatHistoryRecord(record, !record.When.IsZero()))
+	}
 	temporary := h.path + ".new"
-	if err := os.WriteFile(temporary, []byte(strings.Join(kept, "\n")+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(temporary, []byte(kept.String()), 0o600); err != nil {
 		return
 	}
 	if err := os.Rename(temporary, h.path); err != nil {
@@ -181,20 +199,12 @@ func (h historyFile) trimIfLong() {
 }
 
 // readAll is load without the limit, which trimming needs: it has to see how
-// much is there before deciding what to keep.
-func (h historyFile) readAll() []string {
-	file, err := os.Open(h.path)
+// much is there before deciding what to keep. Read whole, so a long pasted command
+// is still a command; a scanner's token limit dropped one silently.
+func (h historyFile) readAll() []runtime.HistoryRecord {
+	data, err := os.ReadFile(h.path)
 	if err != nil {
 		return nil
 	}
-	defer file.Close()
-	var lines []string
-	scan := bufio.NewScanner(file)
-	scan.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scan.Scan() {
-		if line := scan.Text(); strings.TrimSpace(line) != "" {
-			lines = append(lines, line)
-		}
-	}
-	return lines
+	return runtime.ParseHistoryFile(string(data))
 }
