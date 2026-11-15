@@ -318,8 +318,33 @@ Two copies of one build on this machine, which is the noise and nothing else:
 | self-check, 2000 commands | 53.02 ms | 54.06 ms | +1.9% |
 
 The init count is close to deterministic and not quite: the same binary run twice once
-moved one allocation each into `net/http` and `net/netip`. Hence a ceiling with room
-rather than an exact figure, and growth listed by package rather than asserted.
+moved one allocation each into `net/http` and `net/netip`, and totals have read three
+apart. Hence a ceiling with room rather than an exact figure, and growth listed by
+package rather than asserted.
+
+### `$PPID` was more than half of every start
+
+The first run answered a question nobody had asked: `-c true` took 25 ms where
+`--version` took 8, and this file had recorded 9.1 ms for it in August. `-c :` cost the
+same, so it was not the applet; a short PATH and a missing HOME changed nothing. A CPU
+profile of building the shell in-process put 98% of it in one call, `os.Getppid`, for
+`$PPID`. On Windows that takes a snapshot of every process on the machine
+(`CreateToolhelp32Snapshot`) and walks it for this one's entry, so its price is the
+machine's process count -- 13.7 ms here -- and every script, every `nemosh -c` and every
+applet shim paid it, since all of them build a shell's state.
+
+The snapshot reads the parent from the process's own basic information, and
+`NtQueryInformationProcess` hands over the same field in one call
+(`parent_process_windows.go`); a test holds the two answers equal.
+
+| | before | after |
+| --- | --- | --- |
+| `--version` | 7.52 ms | 7.47 ms |
+| `-c true` | 25.36 ms | **10.68 ms** |
+| 2000 commands | 51.98 ms | 37.65 ms |
+
+The allocation gate could never have seen this: the call allocates almost nothing, and it
+runs after `main` begins.
 
 ## What a background job that is a process costs, measured 2026-09-24
 

@@ -51,7 +51,7 @@ func newSpecialState() *specialState {
 	return &specialState{
 		started: time.Now(),
 		pid:     os.Getpid(),
-		ppid:    os.Getppid(),
+		ppid:    parentProcessID(),
 		// Seeded from the clock and the pid: two shells started in the same
 		// millisecond should not agree, which is exactly the case a script using
 		// $RANDOM for a temporary name runs into.
