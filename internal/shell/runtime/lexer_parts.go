@@ -1,5 +1,7 @@
 package runtime
 
+import "unsafe"
+
 // The word-part helpers the scanner in lexer.go builds its tokens out of. Split
 // from it to stay under the 250-line ceiling when the scanner learned about
 // `$'...'`; nothing else moved with them.
@@ -63,6 +65,26 @@ func quoteBoundary(parts []wordPart, opened, length int, quote byte, closing boo
 		parts = append(parts, wordPart{kind: wordPartLiteral, quote: context})
 	}
 	return parts, opened
+}
+
+// appendLineByte adds line[index] to a word's literal text, which is how nearly every
+// character of a script arrives. When the last part is the run of line just before this byte
+// -- the same bytes, not a copy of them -- it becomes the longer run, a slice of line; anything
+// else is appended as appendLiteralPart appends. A word was built with `+=`, a copy of the word
+// so far for each byte: a third of what parsing git-completion.bash allocated.
+func appendLineByte(parts *[]wordPart, line string, index int, quote quoteContext) {
+	if count := len(*parts); count > 0 {
+		last := &(*parts)[count-1]
+		start := index - len(last.text)
+		// The same address and the same length is the same bytes of line, so the slice that
+		// replaces it holds them and the one after; both are line's own.
+		if last.kind == wordPartLiteral && last.quote == quote && last.text != "" && start >= 0 &&
+			unsafe.StringData(last.text) == unsafe.StringData(line[start:]) {
+			last.text = line[start : index+1]
+			return
+		}
+	}
+	appendLiteralPart(parts, line[index:index+1], quote)
 }
 
 func appendLiteralPart(parts *[]wordPart, text string, quote quoteContext) {

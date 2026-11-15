@@ -186,7 +186,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 				groupDepth = extendedGroupDepth(groupDepth, char)
 				if strings.IndexByte(extendedGroupLiterals, char) >= 0 {
 					buffer.WriteByte(char)
-					appendLiteralPart(&parts, line[index:index+1], quoteUnquoted)
+					appendLineByte(&parts, line, index, quoteUnquoted)
 					wordPresent = true
 					continue
 				}
@@ -294,7 +294,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 		// goes through rune, so every byte above 0x7F would come out as its own
 		// two-byte UTF-8 sequence and a multi-byte character would be shredded.
 		// Consecutive literal parts concatenate, so the sequence reassembles.
-		appendLiteralPart(&parts, line[index:index+1], quoteFor(inSingle, inDouble))
+		appendLineByte(&parts, line, index, quoteFor(inSingle, inDouble))
 		wordPresent = true
 	}
 	if escaped {

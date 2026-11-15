@@ -80,8 +80,9 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 - **A case or a function definition inside a group, a subshell or a function made parsing
   quadratic**: every bracket read the group from its start to ask whether it was a case
   pattern's. A case of 1000 arms in a function took 593 ms to parse and takes 22;
-  `git-completion.bash` takes 40 ms rather than 54, which an rc that sources it pays at
-  every start.
+  `git-completion.bash` takes 36 ms rather than 54, which an rc that sources it pays at
+  every start. A word was also built a byte at a time by copying it, which a long one paid
+  for quadratically; its run of the line is sliced now.
 - **A command in a loop did work it did not need**: a plain word went through brace
   expansion and the field builder to come back as itself, every command made a new
   `$PIPESTATUS`, and every variable read in arithmetic made a context and an error. A loop
