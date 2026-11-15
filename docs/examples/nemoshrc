@@ -1,0 +1,53 @@
+# An rc file to start from. Copy it to ~/.nemoshrc: a session reads that when ENV is not
+# set, and $ENV in its place when it is. Every line is optional.
+
+# History: skip lines that begin with a blank, and a line that repeats the one before.
+HISTCONTROL=ignoreboth
+
+# The prompt: who and where, the git branch, and the last status when it was not 0,
+# then the prompt sign on a line of its own.
+#
+# The branch is read from .git/HEAD rather than by running git, which would start a
+# process at every prompt. A worktree, whose .git is a file, shows no branch.
+__nemosh_branch() {
+	__d=$PWD
+	while [ -n "$__d" ]; do
+		if [ -f "$__d/.git/HEAD" ]; then
+			read -r __head < "$__d/.git/HEAD"
+			case $__head in
+			"ref: refs/heads/"*) printf ' (%s)' "${__head#ref: refs/heads/}" ;;
+			*) printf ' (%.7s)' "$__head" ;;
+			esac
+			return 0
+		fi
+		[ "$__d" = "${__d%/*}" ] && return 0
+		__d=${__d%/*}
+	done
+}
+PROMPT_COMMAND='__nemosh_status=$?; [ "$__nemosh_status" = 0 ] && __nemosh_status='
+PS1='\[\e[1;34m\]\u@\h\[\e[0m\] \[\e[33m\]\w\[\e[0m\]$(__nemosh_branch)${__nemosh_status:+ \[\e[31m\][$__nemosh_status]\[\e[0m\]}\n\$ '
+
+# Aliases.
+alias ll='ls -lF'
+alias la='ls -AF'
+alias grep='grep --color=auto'
+
+# Completion for programs that ship their own: gh, if it is installed, and git's script
+# from Git for Windows, wherever it was installed from. Git for Windows keeps it under
+# ucrt64 since it moved to that runtime, and under mingw64 before.
+#
+# Each costs something at every start, measured on 2026-11-15: about 80 ms for gh's,
+# which runs gh to print it, and 50 ms for git's, which is a long script. Writing gh's
+# to a file once and sourcing that saves the first.
+if command -v gh >/dev/null 2>&1; then
+	. <(gh completion -s bash)
+fi
+for __f in "$HOME"/scoop/apps/git/current/ucrt64 "$HOME"/scoop/apps/git/current/mingw64 \
+	"C:/Program Files/Git/ucrt64" "C:/Program Files/Git/mingw64"; do
+	__f=$__f/share/git/completion/git-completion.bash
+	if [ -r "$__f" ]; then
+		. "$__f"
+		break
+	fi
+done
+unset __f

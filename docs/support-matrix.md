@@ -55,7 +55,11 @@ The shell's own command line takes what busybox's does:
 The letters mean what `set` makes them mean, so `nemosh -eu -o pipefail script` works,
 and so does a script that begins `#!/bin/sh -e`, which is launched as `nemosh -e script`.
 Only `-c` and `-i` were read before, and only as the first argument; every other
-option was "invalid". `-l` reads `/etc/profile` and `$HOME/.profile` first. `-n`
+option was "invalid". `-l` reads `/etc/profile` and `$HOME/.profile` first. A
+session then reads `$ENV`, as busybox does, or `~/.nemoshrc` where `ENV` is not set
+at all, as mksh reads `~/.mkshrc`; an `ENV` set to nothing reads nothing, and
+`--rcfile FILE` and `--norc` take bash's meaning. `docs/examples/nemoshrc` is one to
+start from. `-n`
 parses the script and runs none of it. `$-` has `c` for a command string, `s` for
 commands read from standard input, and `i` and `s` for a session, among the letters
 that are on in busybox's order, from the end of its option table: `set -eu` under `-c`

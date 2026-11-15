@@ -12,11 +12,14 @@ import (
 
 // sourceStartupFile runs $ENV for an interactive shell, which is what POSIX
 // specifies and what busybox ash does (shell/ash.c:16801). A login shell, `nemosh -l`,
-// reads its profiles first (sourceLoginProfiles); nothing else is read.
+// reads its profiles first (sourceLoginProfiles).
 //
-// Using $ENV rather than inventing a `.nemoshrc` is the point. A machine that
-// already configures busybox has ENV pointing at its rc file, so the same
-// configuration reaches Nemosh with nothing to change.
+// $ENV comes first so that a machine that already configures busybox, with ENV
+// pointing at its rc file, configures Nemosh with nothing to change. Where ENV is
+// not set at all, ~/.nemoshrc is read, as mksh reads ~/.mkshrc: a shell started
+// from a Windows shortcut or a terminal profile inherits no ENV, and until
+// 2026-11-15 it could be configured only by setting one in Windows. An ENV set to
+// nothing reads nothing, which is how to ask for no rc file.
 //
 // Silence when there is nothing to source: not every user has an ENV, and a
 // shell that complained on every launch would be unusable. A file that exists
@@ -26,8 +29,11 @@ func sourceStartupFile(ctx context.Context, rt runtime.Runtime, stderr io.Writer
 	path, present := rt.LookupVariable("ENV")
 	if !present || path == "" {
 		if value, ok := rt.LookupEnv("ENV"); ok {
-			path = value
+			path, present = value, true
 		}
+	}
+	if !present {
+		return sourceHomeFile(ctx, rt, stderr, ".nemoshrc")
 	}
 	if path == "" {
 		return 0, false
@@ -43,6 +49,11 @@ func sourceLoginProfiles(ctx context.Context, rt runtime.Runtime, stderr io.Writ
 	if status, exited := sourceProfile(ctx, rt, stderr, "/etc/profile", rt.ResolvePath("/etc/profile")); exited {
 		return status, true
 	}
+	return sourceHomeFile(ctx, rt, stderr, ".profile")
+}
+
+// sourceHomeFile runs a startup file in the home directory, and nothing when there is no home.
+func sourceHomeFile(ctx context.Context, rt runtime.Runtime, stderr io.Writer, name string) (int, bool) {
 	home, present := rt.LookupVariable("HOME")
 	if !present {
 		home, present = rt.LookupEnv("HOME")
@@ -50,7 +61,7 @@ func sourceLoginProfiles(ctx context.Context, rt runtime.Runtime, stderr io.Writ
 	if !present || home == "" {
 		return 0, false
 	}
-	path := strings.TrimRight(home, `/\`) + "/.profile"
+	path := strings.TrimRight(home, `/\`) + "/" + name
 	return sourceProfile(ctx, rt, stderr, path, rt.ResolvePath(path))
 }
 

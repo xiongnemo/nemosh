@@ -458,7 +458,8 @@ Recommended layers:
 Configuration should combine a Nemosh-native config with ash-style `ENV` support:
 
 - Load system and user Nemosh config, including `~/.nemoshrc`, for Nemosh-specific
-  options such as path aliases and virtual roots.
+  options such as path aliases and virtual roots. Done for the rc file on
+  2026-11-15: a session reads `~/.nemoshrc` where `ENV` is not set at all.
 - In interactive shell mode, support POSIX/ash-style `ENV` expansion to select an
   rc file.
 - Optionally try `.profile` for login/profile behavior, but do not claim `.bashrc`
