@@ -72,7 +72,20 @@ func (r Runtime) withAppliedRedirects(operations []redirectOperation, run func(R
 // withAppliedRedirectsFor is withAppliedRedirects for a command that may be a special builtin,
 // whose failed redirection ends the script, status 1, as POSIX 2.8.1 has it and busybox does
 // -- under `||` too, and in an if. It was said and the script went on.
+//
+// A command with no redirections runs in the shell's own descriptors rather than a copy of
+// them. The copy was made for every command, closed when it ended, and two things went with
+// it: whatever `exec` did inside a function, eval or `.` -- `f() { exec 3>log; }; f` left no
+// fd 3, where busybox-w32 keeps it -- and every command's streams being the same streams, so
+// a loop's applets were never handed the frame they had last time (applet_frame.go). A
+// command with redirections still runs in a copy, which is busybox's behaviour for those
+// descriptors and not for others: `f 2>/dev/null` keeps f's own `exec 3>log` there and not
+// here, a divergence that would need busybox's save-and-restore of the redirected
+// descriptors alone.
 func (r Runtime) withAppliedRedirectsFor(special bool, operations []redirectOperation, run func(Runtime) lineResult) lineResult {
+	if len(operations) == 0 {
+		return run(r)
+	}
 	table, err := r.fds.clone()
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)

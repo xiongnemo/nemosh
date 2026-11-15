@@ -387,11 +387,15 @@ the same context, and a `Runtime` equal to the byte.
 | dispatching `true`, before | 8, one of them the test's own argv |
 | dispatching `true`, the same call again | **0** |
 | a call unlike the last four | 1, the frame |
-| a loop iteration, `while [ $i -lt N ]; do true; i=$((i+1)); done` | 142 → 130 |
+| a loop iteration, `while [ $i -lt N ]; do true; i=$((i+1)); done` | 142 → 130 → **108** |
 
-The loop does not hit the remembered frames yet: every command clones the descriptor table
-(`withAppliedRedirectsFor`), redirections or none, so no two calls have the same streams.
-The loop's two applet calls went from seven allocations to one each, which is the twelve.
+At first the loop did not hit the remembered frames: every command cloned the descriptor
+table (`withAppliedRedirectsFor`), redirections or none, so no two calls had the same
+streams, and the loop's two applet calls went from seven allocations to one each -- the
+130. A command with no redirections runs in the shell's own descriptors now, which is what
+busybox does anyway: the copy was also why `exec 3>log` inside a function was gone when the
+function returned. Without the clone and its closing, an iteration is 108, and its applet
+calls are handed the frames they had the time before; a test holds that.
 
 Reusing one mutable frame per call was the first design, and the audit for it is why the
 frames are immutable instead. An applet's context and streams outlive it more often than one

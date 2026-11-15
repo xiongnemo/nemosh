@@ -67,6 +67,11 @@ func (r Runtime) executeWithRedirects(ctx context.Context, operations []redirect
 	if !ok {
 		return lineResult{status: 1}
 	}
+	// In the shell's own descriptors when there are no redirections, as withAppliedRedirectsFor
+	// says: `{ exec 3>log; }` keeps fd 3, as busybox-w32 does.
+	if len(operations) == 0 {
+		return run(r)
+	}
 	table, err := r.fds.clone()
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)

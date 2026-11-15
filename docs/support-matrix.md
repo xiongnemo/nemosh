@@ -734,6 +734,11 @@ loops record the whole command now, as the edited one always did.
   and reads a `$` and a double-quoted string.
 - A `$((` that no `))` closes is a syntax error, busybox's `missing '))'`; bash reads it
   again as a command substitution holding a subshell, so `$((cmd) 2>&1)` runs cmd.
+- What `exec` does with only redirections, inside a function, eval, `.` or a group, is
+  still in force after it, as in both references: `f() { exec 3>log; }; f; echo x >&3`
+  writes to log. Not when the call has redirections of its own: after `f 2>/dev/null`
+  f's fd 3 is gone here, where busybox restores only the descriptors the call redirected
+  and keeps the rest.
 
 ## Applets
 

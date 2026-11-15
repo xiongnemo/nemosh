@@ -53,6 +53,8 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 - **Every start was 14 ms slower than it needed to be on Windows**: `$PPID` was found by
   walking a snapshot of every process on the machine. It is asked of the process itself
   now, and `nemosh -c true` takes 11 ms rather than 25; applet shims gain the same.
+- **`exec 3>log` inside a function, eval, `.` or a `{ }` group is still in force after
+  it**, as busybox-w32 has it; fd 3 was gone the moment the call ended.
 - `${a[0]%[0-5]}` and other element operators with brackets in their word.
 - A subscript that leads back to its own name is reported as recursion rather than
   overflowing the stack; sed's pattern and hold spaces are bounded under fuzzing.
