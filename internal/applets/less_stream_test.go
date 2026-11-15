@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	goruntime "runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -106,6 +107,12 @@ func TestLess_drawsWhatHasArrivedBeforeItsInputEnds(t *testing.T) {
 
 // Leaving with the input still open stops the reader, rather than leaving it reading the
 // shell's pipe after less has gone.
+//
+// On Windows the read is ended where it waits: ReadInterruptibly cancels it. Elsewhere a read
+// already waiting on a pipe is not interrupted -- interruptBlockedRead is nothing there, on
+// purpose, read_interrupt_other.go says why -- so the reader stops when its input does, which in
+// the shell is when the runtime closes the stage's input after less returns. That is what is
+// held there; claiming the Windows answer on Linux and macOS failed on both runners.
 func TestLess_leavingStopsTheReader(t *testing.T) {
 	screen, writer, feed, finished := pagerOnPipe(t, lessOptions{})
 	fmt.Fprintln(writer, "something")
@@ -114,6 +121,9 @@ func TestLess_leavingStopsTheReader(t *testing.T) {
 	// When
 	screen.InjectKey(tcell.KeyRune, 'q', tcell.ModNone)
 	<-finished
+	if goruntime.GOOS != "windows" {
+		writer.Close()
+	}
 
 	// Then
 	select {
