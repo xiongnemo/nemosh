@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"maps"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -15,7 +16,10 @@ import (
 // it, and in single quotes a dollar sign is only a dollar sign.
 func TestLineEditor_completesAVariableName(t *testing.T) {
 	home := t.TempDir()
-	values := map[string]string{"PATH": "/bin", "HOME": home, "HOSTNAME": "box", "PAGER": "less"}
+	// PATH names no directory on any machine: /bin was one on Linux and macOS, where $PATH
+	// then rightly completed to $PATH/, and not on Windows, where the test was written.
+	nowhere := filepath.ToSlash(filepath.Join(t.TempDir(), "absent"))
+	values := map[string]string{"PATH": nowhere, "HOME": home, "HOSTNAME": "box", "PAGER": "less"}
 
 	for _, test := range []struct{ typed, want string }{
 		{"echo $PAT", "echo $PATH "},
