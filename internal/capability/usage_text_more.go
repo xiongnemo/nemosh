@@ -49,11 +49,11 @@ func appletUsageTextMore() map[string]Usage {
 				"This is the one applet that follows GNU rather than busybox-w32, whose ed answers `unimplemented command` to n, cannot search backwards and has no g.",
 			}},
 		"less": {Summary: "Page through text.", Operands: "[FILE]...",
-			Options: map[string]string{"N": "number the lines", "S": "cut long lines instead of folding them",
+			Options: map[string]string{"N": "number the lines", "S": "accepted; a long line is cut at the screen's edge either way",
 				"I": "ignore case when searching", "E": "quit at the end rather than waiting",
 				"F": "quit at once if it all fits on one screen", "h": "list the keys",
 				"M": "accepted; there is one prompt style", "m": "accepted; there is one prompt style",
-				"R": "accepted; control characters are drawn the same either way",
+				"R": "take colour sequences out, as busybox's does; without it a control character is drawn as its letter, reversed",
 				"~": "accepted; the tildes past the end are always drawn"},
 			Notes: []string{
 				"With nowhere to page to it is `cat`, so `less f | head -3` and `less f > out` copy their input through -- which is what makes it safe to write in a script.",

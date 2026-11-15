@@ -867,7 +867,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `killall` | `-l -q`, and a leading `-SIGNAL`; the name is matched whole, not as a pattern | refused by name |
 | `link` | none; an existing LINK is refused rather than replaced | refused by name |
 | `logname` | none; the login account, which under elevation differs from `whoami` | refused by name |
-| `less` | `-N -S -I -E -F -h`; `-M -m -R -~` accepted. With no terminal it is `cat` | refused by name |
+| `less` | `-N -I -E -F -R -h`; `-M -m -S -~` accepted. It draws what has arrived while more is coming, and with no terminal it is `cat`, a line written as it comes. `-R` takes colour sequences out, as busybox's does; without it a control character is its letter reversed, ESC a `[`. A tab goes to the next stop of eight and a wide character takes two columns. A long line is cut at the screen's edge, where busybox's folds it, so `-S` changes nothing | refused by name |
 | `nproc` | `--all --ignore=N`; the answer never drops below 1 | refused by name |
 | `pidof` | `-s -o PID[,PID]`; the name is matched whole, not as a pattern | refused by name |
 | `truncate` | `-s SIZE` with `K M G` and `KB MB GB`, a leading `+` or `-`, and `-c` | refused by name |
@@ -2205,8 +2205,9 @@ which one it is decides whether `tail -f log | ...` shows anything before the lo
 growing. Measured against busybox-w32 by feeding one line down a pipe and holding it open.
 
 **These answer as the line arrives**: `cat`, `grep`, `awk`, `tr`, `nl`, `cut`, `rev`, `tee`,
-`fold`, `expand`, `unexpand`, `ts`, `head`, `factor`, `iconv`, and the interactive `bc`, `dc`
-and `ed`.
+`fold`, `expand`, `unexpand`, `ts`, `head`, `factor`, `iconv`, `less`, and the interactive `bc`,
+`dc` and `ed`. `less` gathered the whole input before it drew, until 2026-11-16, and before it
+wrote with no terminal.
 
 **These gather the whole input first**, and so do busybox's: `sed`, `uniq`, `sort`, `tac`,
 `shuf`, `wc`, `tail`, `tsort`, `split`, `strings`, `base64`, `base32`, `od`, `hexdump`,

@@ -62,24 +62,6 @@ func (p *lessPager) matchSpans(text string, offset int) [][2]int {
 	return spans
 }
 
-// drawMatched draws one row, reversing the cells inside spans.
-//
-// Falls back to the plain path when there is nothing to highlight, which is every row of a
-// pager nobody has searched in yet -- the common case, and one that should cost nothing.
-func (p *lessPager) drawMatched(row int, text string, style tcell.Style, spans [][2]int) {
-	if len(spans) == 0 {
-		p.drawText(0, row, text, style)
-		return
-	}
-	highlighted := style.Reverse(true)
-	for column, character := range []rune(text) {
-		if column >= p.width {
-			return
-		}
-		p.screen.SetContent(column, row, character, nil, styleForColumn(style, highlighted, column, spans))
-	}
-}
-
 // styleForColumn picks the style for one cell.
 func styleForColumn(plain, highlighted tcell.Style, column int, spans [][2]int) tcell.Style {
 	for _, span := range spans {

@@ -1,9 +1,7 @@
 package applets
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -19,6 +17,10 @@ type lessPager struct {
 	lines    []string
 	name     string
 	settings lessOptions
+	// feed is where the lines come from as they are read, and waiting says more may come;
+	// see less_feed.go. A pager given its lines outright has no feed and waits for nothing.
+	feed    *lessFeed
+	waiting bool
 	// top is the index of the first line on the screen.
 	top int
 	// message is the bottom line: the prompt, or what a failed search had to say.
@@ -32,39 +34,6 @@ type lessPager struct {
 	pending   string
 	searching byte
 	quit      bool
-}
-
-func runLess(ctx context.Context, screen tcell.Screen, lines []string, name string,
-	settings lessOptions, stdout io.Writer) error {
-	if err := screen.Init(); err != nil {
-		return fmt.Errorf("cannot drive this terminal: %v", err)
-	}
-	defer screen.Fini()
-	pager := &lessPager{lines: lines, name: name, settings: settings, screen: screen}
-	pager.width, pager.height = screen.Size()
-	if settings.quitIfOne && len(lines) <= pager.textRows() {
-		// -F: a file that fits needs no pager, so it is written out and left. The
-		// screen goes first, so the text lands on a terminal that has been put back.
-		screen.Fini()
-		return writeLessPlainly(stdout, lines, settings)
-	}
-	go func() {
-		<-ctx.Done()
-		// A cancelled context has to interrupt PollEvent, which only an event will do.
-		screen.PostEvent(tcell.NewEventInterrupt(nil))
-	}()
-	for !pager.quit {
-		pager.draw()
-		event := screen.PollEvent()
-		if event == nil {
-			return nil
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		pager.handle(event)
-	}
-	return nil
 }
 
 // textRows is how many rows hold text: everything but the prompt at the bottom.
@@ -109,14 +78,10 @@ func (p *lessPager) draw() {
 		if p.settings.numbers {
 			prefix = fmt.Sprintf("%6d  ", index+1)
 		}
-		text := prefix + p.lines[index]
-		if p.settings.chop && len(text) > p.width {
-			// -S: long lines are cut rather than folded, so every row is one line.
-			text = text[:p.width]
-		}
 		// The spans are found in the line itself and then shifted past the line number,
-		// so `-N` moves the highlight without changing what matched.
-		p.drawMatched(row, text, style, p.matchSpans(p.lines[index], utf8.RuneCountInString(prefix)))
+		// so `-N` moves the highlight without changing what matched. A line is cut at the
+		// screen's edge, by the columns it takes rather than its bytes; see less_render.go.
+		p.drawLine(row, prefix, p.lines[index], p.matchSpans(p.lines[index], utf8.RuneCountInString(prefix)))
 	}
 	p.drawText(0, p.height-1, p.prompt(), style.Reverse(true))
 	p.screen.Show()
@@ -139,6 +104,11 @@ func (p *lessPager) prompt() string {
 	}
 	if p.message != "" {
 		return p.message
+	}
+	if p.atEnd() && p.waiting {
+		// What has arrived is all on the screen and more may come: not the end, which it
+		// would be wrong to announce while the input is still open.
+		return fmt.Sprintf("%s lines %d -- waiting for more, q to quit", p.name, len(p.lines))
 	}
 	if p.atEnd() {
 		return fmt.Sprintf("%s (END) -- press q to quit", p.name)
@@ -163,6 +133,8 @@ func (p *lessPager) handle(event tcell.Event) {
 	case *tcell.EventResize:
 		p.width, p.height = typed.Size()
 		p.screen.Sync()
+	case *lessWake:
+		// More has arrived, which the loop takes before it draws.
 	case *tcell.EventKey:
 		if p.searching != 0 {
 			p.typeSearch(typed)
@@ -223,7 +195,7 @@ func (p *lessPager) runeCommand(key rune) {
 		p.quit = true
 	case ' ', 'f':
 		p.top += p.textRows()
-		if p.settings.quitAtEOF && p.atEnd() {
+		if p.settings.quitAtEOF && p.atEnd() && !p.waiting {
 			// -E: a page forward at the end leaves, rather than sitting on (END).
 			p.quit = true
 		}

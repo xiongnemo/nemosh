@@ -31,13 +31,15 @@ type lessOptions struct {
 	ignoreCase bool
 	quitAtEOF  bool
 	quitIfOne  bool
+	// raw is -R, which takes colour sequences out as busybox's does; see lessStripColour.
+	raw bool
 }
 
 func newLessApplet() Applet {
 	return simpleApplet{name: "less", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		// The options busybox takes. `-M`, `-m`, `-R` and `-~` are accepted and change
-		// nothing: the first two pick between two prompt styles this has one of, and the
-		// others describe drawing this does not do differently.
+		// The options busybox takes. `-M`, `-m` and `-~` are accepted and change nothing:
+		// the first two pick between two prompt styles this has one of, and the last
+		// describes drawing this does not do differently.
 		options, operands, err := parseAppletOptions(ctx, args, "EFIMmNSRh~", "")
 		if err != nil {
 			return err
@@ -51,7 +53,7 @@ func newLessApplet() Applet {
 			// had. Every less refuses here instead.
 			return fmt.Errorf("missing filename (`less -h` for help)")
 		}
-		lines, name, err := readLessInput(ctx, operands, stdin)
+		sources, name, err := openLessSources(ctx, operands, stdin)
 		if err != nil {
 			return err
 		}
@@ -61,17 +63,18 @@ func newLessApplet() Applet {
 			ignoreCase: options.has('I'),
 			quitAtEOF:  options.has('E'),
 			quitIfOne:  options.has('F'),
+			raw:        options.has('R'),
 		}
-		if !lessCanPage(stdout) {
-			return writeLessPlainly(stdout, lines, settings)
-		}
-		screen, err := tcell.NewScreen()
-		if err != nil {
+		var screen tcell.Screen
+		if lessCanPage(stdout) {
 			// A terminal that cannot be driven is not a failure worth stopping for: the
 			// text is what was asked for, and the paging was the decoration.
-			return writeLessPlainly(stdout, lines, settings)
+			screen, _ = tcell.NewScreen()
 		}
-		return runLess(ctx, screen, lines, name, settings, stdout)
+		if screen == nil {
+			return writeLessStreaming(ctx, stdout, sources, settings)
+		}
+		return runLess(ctx, screen, startLessFeed(ctx, sources, settings.raw), name, settings, stdout)
 	}}
 }
 
@@ -109,57 +112,75 @@ func lessCanPage(stdout io.Writer) bool {
 	return stdoutIsTerminal(stdout)
 }
 
-// readLessInput gathers the text, from the operands or from standard input.
-func readLessInput(ctx context.Context, operands []string, stdin io.Reader) ([]string, string, error) {
+// openLessSources opens what is to be read, the operands or standard input, before anything
+// is read: a file that cannot be opened stops less with the reason, as it did when the reading
+// came first, rather than turning up partway through the paging.
+func openLessSources(ctx context.Context, operands []string, stdin io.Reader) ([]lessSource, string, error) {
 	if len(operands) == 0 {
-		lines, err := readLessLines(decodeTextInput(stdin))
-		return lines, "(standard input)", err
+		return []lessSource{{reader: stdin}}, "(standard input)", nil
 	}
 	view := ProcessViewFromContext(ctx)
-	var all []string
+	var sources []lessSource
 	for _, operand := range operands {
 		if operand == "-" {
-			lines, err := readLessLines(decodeTextInput(stdin))
-			if err != nil {
-				return nil, "", err
-			}
-			all = append(all, lines...)
+			sources = append(sources, lessSource{reader: stdin})
 			continue
 		}
 		native, err := resolveHostPath(view, operand)
-		if err != nil {
-			return nil, "", err
+		if err == nil {
+			var file *os.File
+			if file, err = os.Open(native); err == nil {
+				sources = append(sources, lessSource{reader: file, close: func() { file.Close() }})
+				continue
+			}
+			err = cannotOpen(operand, err)
 		}
-		file, err := os.Open(native)
-		if err != nil {
-			return nil, "", cannotOpen(operand, err)
+		for _, opened := range sources {
+			if opened.close != nil {
+				opened.close()
+			}
 		}
-		lines, err := readLessLines(decodeTextInput(file))
-		file.Close()
-		if err != nil {
-			return nil, "", err
-		}
-		all = append(all, lines...)
+		return nil, "", err
 	}
 	name := operands[0]
 	if len(operands) > 1 {
 		name = fmt.Sprintf("%s (and %d more)", operands[0], len(operands)-1)
 	}
-	return all, name, nil
+	return sources, name, nil
 }
 
-func readLessLines(reader io.Reader) ([]string, error) {
-	scanner := bufio.NewScanner(reader)
-	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+// writeLessStreaming is the `cat` path, a line written when it is read and flushed when the
+// input goes quiet, as the text filters flush (filter_output.go): it read everything first, so
+// `tail -f log | less > out` wrote nothing. -N is still honoured, because a script may have
+// asked for the numbers rather than for the paging, and -R still takes the colour out.
+func writeLessStreaming(ctx context.Context, stdout io.Writer, sources []lessSource, settings lessOptions) error {
+	output := newFilterOutput(stdout)
+	number := 0
+	var failure error
+	for _, source := range sources {
+		if failure == nil {
+			failure = readLessSource(ctx, output.input(contextReader{ctx: ctx, reader: source.reader}), func(line string) {
+				number++
+				if settings.raw {
+					line = lessStripColour(line)
+				}
+				if settings.numbers {
+					fmt.Fprintf(output, "%6d  ", number)
+				}
+				output.WriteString(line + "\n")
+			})
+		}
+		if source.close != nil {
+			source.close()
+		}
 	}
-	return lines, scanner.Err()
+	if err := output.Flush(); failure == nil {
+		failure = err
+	}
+	return failure
 }
 
-// writeLessPlainly is the `cat` path, with `-N` still honoured because a script may have
-// asked for the numbers rather than for the paging.
+// writeLessPlainly writes lines already read, for -F, whose text turned out to fit.
 func writeLessPlainly(out io.Writer, lines []string, settings lessOptions) error {
 	writer := bufio.NewWriter(out)
 	defer writer.Flush()

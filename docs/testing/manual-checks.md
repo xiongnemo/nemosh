@@ -175,6 +175,12 @@ streams. Ctrl-C during `seq 1 100000000 > /dev/null` still has to stop it at onc
 130, and `xargs -n1 echo < file` and `find . -exec echo {} \;` still run, since those reach
 the shell through the frame.
 
+`less` draws as its input arrives since 2026-11-16: `ping -t localhost | less` shows the
+first replies at once and the bottom line says it is waiting rather than (END); `q` leaves
+and the prompt comes back with ping gone. `ls --color=always | less` shows a reversed `[`
+where each colour starts, and `ls --color=always | less -R` the names alone. A file with
+Chinese in it lines up, the character after a wide one in its own column.
+
 `cd D:` changes drive since 2026-11-16, on a machine with a second drive: `cd D:/somewhere`,
 `cd C:/Windows`, then `cd D:` is back at D:/somewhere, `cd C:` stays, and `cmd /c "cd D:"`
 prints `D:\somewhere`. `cd C:\Users` unquoted fails with a hint that the backslash was an

@@ -29,6 +29,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   visited, and a program the shell starts is handed those directories, so `cmd /c "cd D:"`
   agrees. They were refused, "drive-relative Windows paths are not supported". At a prompt,
   a `cd` that fails on `C:Users` says that `C:\Users` unquoted loses its backslash.
+- **less draws what has arrived while more is coming**, as busybox's does, so `make | less`
+  and `tail -f log | less` show the first page at once; with no terminal it writes a line as
+  it comes. `-R` takes colour sequences out, as busybox's does, where they were drawn as they
+  came; a control character is its letter reversed, a tab goes to the next stop of eight,
+  and a wide character takes two columns.
 - **nano's `^X` asks "Save modified buffer?"**, as nano does: `Y` writes the buffer under
   the name it offers, Enter accepting it, and leaves; `N` leaves without; `^C` goes back.
   `^O` asks for the name the same way, so `^O` and Enter writes, and another name writes a
