@@ -198,7 +198,9 @@ working tree with what it started from. Both binaries must be named `nemosh-*`; 
 called `head.exe` answers to its name and runs the `head` applet. Locally the init count
 reads about 32 higher than on the runner, so compare it against a base built here rather
 than against the ceiling. Time is never compared against a number, only against the
-base, interleaved, in rounds; see `docs/design/startup-and-footprint.md`.
+base, interleaved, in rounds; see `docs/design/startup-and-footprint.md`. A scenario 10%
+and a floor slower in every round fails the build; a commit that is slower on purpose
+says why in a `Startup-Cost-Accepted: <why>` trailer and is reported instead.
 
 **The specific trap, a third time, on 2026-08-23: a test that samples the machine.**
 `internal/proc` implements listing on Windows only and answers

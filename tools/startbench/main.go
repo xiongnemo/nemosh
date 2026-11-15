@@ -78,7 +78,7 @@ func startbench(o options, out io.Writer) int {
 				fmt.Fprintf(out, "  SLOWER: %s, in every round\n", s.name)
 				status = 1
 			default:
-				fmt.Fprintf(out, "  WOULD FAIL: %s is slower in every round (report only until calibrated)\n", s.name)
+				fmt.Fprintf(out, "  WOULD FAIL: %s is slower in every round (reported, not failed, without -enforce)\n", s.name)
 			}
 		}
 	}

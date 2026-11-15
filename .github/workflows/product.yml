@@ -412,7 +412,17 @@ jobs:
       #                                sets generated as data the linker lays down
       #
       # 1200 leaves about 12% over the runner's figure, so a new table of any size
-      # trips it, which was the point of the ceiling before tcell made it 2750.
+      # trips it, which was the point of the ceiling before tcell made it 2750. The
+      # runner read 1070 on Windows, 924 on ubuntu and 936 on macos.
+      #
+      # The timing fails the build from 2026-11-16, calibrated on the seven runs before:
+      # the self-check never read more than 2.4% apart in any scenario, and head against
+      # base never more than 2.5% where a commit had not set out to change the time --
+      # while the runner's own --version went from 7.45 to 14.24 ms between one run and
+      # another, which is the case for comparing rather than holding a number. 10% and a
+      # floor is about four times that noise. A commit that is slower on purpose says so in a
+      # `Startup-Cost-Accepted: <why>` trailer, and is reported rather than failed: the
+      # same as raising a ceiling with a reason written next to it.
       - name: package init and startup time
         shell: bash
         run: |
@@ -429,7 +439,14 @@ jobs:
               -ldflags "-s -w $(bash scripts/version.sh --ldflags)" -o "$base" ./cmd/nemosh)
             compare=(-base "$base" -self-check)
           fi
-          go run ./tools/startbench -head "$binary" -init-ceiling 1200 "${compare[@]}"
+          # A pull request's HEAD is the merge commit; the trailer is on the branch's own.
+          enforce=(-enforce)
+          messages=$(git log -1 --format=%B HEAD; if git rev-parse -q --verify HEAD^2 >/dev/null; then git log -1 --format=%B HEAD^2; fi)
+          if grep -q '^Startup-Cost-Accepted:' <<< "$messages"; then
+            echo "Startup-Cost-Accepted: a slowdown is reported, not failed"
+            enforce=()
+          fi
+          go run ./tools/startbench -head "$binary" -init-ceiling 1200 "${compare[@]}" "${enforce[@]}"
 
       - name: production file size ceiling
         shell: bash

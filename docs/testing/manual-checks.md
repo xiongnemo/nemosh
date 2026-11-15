@@ -164,6 +164,17 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 - and on exit **the terminal is given back**: the prompt echoes normally and Ctrl-C
   still works. That last one is the same bug class as A.
 
+Since 2026-11-16 tcell links `third_party/gdamore-encoding`, whose character sets are
+generated tables rather than built at start; its tests hold every byte and rune to
+upstream's, but only a terminal shows the result. `top` and `less` should draw as before,
+box lines and all. On a Unix terminal, run `top` once more under `LANG=C` and once under
+an ISO-8859-1 locale, which are where tcell consults those tables at all.
+
+An applet is handed a frame since then (`applet_frame.go`), which is its context and its
+streams. Ctrl-C during `seq 1 100000000 > /dev/null` still has to stop it at once with
+130, and `xargs -n1 echo < file` and `find . -exec echo {} \;` still run, since those reach
+the shell through the frame.
+
 `watch -n 1 date`, confirmed 2026-10-06: the screen clears every second under
 `Every 1.0s: date`, the date at its right edge. Widen or narrow the window and the
 date moves to the new edge at the next run; one that stays near column 60 means the

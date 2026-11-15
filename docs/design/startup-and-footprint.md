@@ -302,9 +302,28 @@ anyway, by never comparing a time against a number:
   if the two rounds run after that say so too -- the rule the Oils suite has for a case
   that differs.
 - **Checked against itself.** The self-check times head against head, which can only
-  differ by noise; a slowdown there is reported as a false alarm. The timing reports and
-  does not fail until enough CI runs of the self-check have shown the threshold sits
-  outside the noise.
+  differ by noise; a slowdown there is reported as a false alarm. The timing only reported
+  until seven CI runs of the self-check had shown the threshold sits outside the noise, and
+  fails the build since; a commit slower on purpose carries a `Startup-Cost-Accepted:`
+  trailer saying why, and is reported instead.
+
+The seven runs on windows-latest that calibrated it, the largest difference in any of the
+three scenarios:
+
+| commit | self-check | head against base | `--version`, base |
+| --- | --- | --- | --- |
+| c23bcbb, the tool itself | 1.7% | 0.2% | 9.37 ms |
+| 698ef82, `$PPID` | 2.4% | `-c true` −16.6% | 10.71 ms |
+| b0e5295, usage text | 0.8% | 2.5% | 11.73 ms |
+| 9d16b20, registry | 1.4% | 1.0% | 12.36 ms |
+| 594d626, encoding | 0.8% | 1.3% | 14.24 ms |
+| 854f0ef, applet frames | 1.7% | 2000 commands −2.8% | 7.45 ms |
+| 4f50767, descriptor table | 1.1% | 2000 commands −10.5% | 9.00 ms |
+
+The last column is the argument for comparing rather than thresholding: the runner's own
+start nearly doubled from one run to another, 7.45 to 14.24 ms, while two builds timed side
+by side never differed by more than 2.5% where the commit had not set out to change the
+time, and the self-check never by more than 2.4%.
 
 The three scenarios are `--version` (the start alone), `-c true` (that, plus a shell
 built and one applet run in it), and two thousand commands in a loop, which is where a
