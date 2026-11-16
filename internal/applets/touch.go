@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"strings"
 	"time"
@@ -117,33 +116,8 @@ func touchDate(options appletOptions) string {
 }
 
 // touchStamp is the times to set, a zero one left alone. explicit is whether they were given,
-// by -r, -d or -t, and so are set on a file touch creates too.
+// by -r, -d or -t. Its apply is touch_windows.go's.
 type touchStamp struct {
 	access, modified time.Time
 	explicit         bool
-}
-
-// apply sets native's times, creating it with perm if it is not there unless noCreate. With
-// noDereference a symbolic link's own times are set.
-func (s touchStamp) apply(native string, perm os.FileMode, noCreate, noDereference bool) error {
-	var err error
-	if info, statErr := os.Lstat(native); noDereference && statErr == nil && info.Mode()&os.ModeSymlink != 0 {
-		err = setLinkTimes(native, s.access, s.modified)
-	} else {
-		err = os.Chtimes(native, s.access, s.modified)
-	}
-	if err == nil || !errors.Is(err, fs.ErrNotExist) {
-		return err
-	}
-	if noCreate {
-		return nil
-	}
-	file, err := os.OpenFile(native, os.O_CREATE|os.O_RDWR, perm)
-	if err != nil {
-		return err
-	}
-	if err := file.Close(); err != nil || !s.explicit {
-		return err
-	}
-	return os.Chtimes(native, s.access, s.modified)
 }
