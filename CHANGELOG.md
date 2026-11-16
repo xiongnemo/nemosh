@@ -83,6 +83,8 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 
 ### Added
 
+- **`title`**, busybox-w32's builtin: `title TEXT` sets the console's title, a tab's in Windows
+  Terminal, and `title` prints it. Off Windows it says there is none, with status 1.
 - **Windows Terminal's shell integration**: in Windows Terminal a session marks each prompt,
   each command and how it ended (OSC 133), so the scrollbar shows them and a command and its
   output can be jumped to and selected, and says its directory (OSC 9;9), where a duplicated

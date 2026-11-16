@@ -277,12 +277,10 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 		return r.unset(ctx, args[1:])
 	case "mapfile", "readarray":
 		return r.mapfile(ctx, args[0], args[1:])
-	case "pushd":
-		return r.pushd(args[1:])
-	case "popd":
-		return r.popd(args[1:])
-	case "dirs":
-		return r.dirs(args[1:])
+	case "pushd", "popd", "dirs":
+		return r.directoryStackBuiltin(args)
+	case "title":
+		return r.titleBuiltin(args[1:])
 	case "pwd":
 		return r.pwdBuiltin(args[1:])
 	case "shopt":

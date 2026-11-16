@@ -62,6 +62,7 @@ func usageTextBuiltins() map[string]Usage {
 		"time":      {Summary: "Run a command and say how long it took.", Operands: "[-p] COMMAND [ARG]..."},
 		"timeout":   {Summary: "Run a command and end it if it runs too long.", Operands: "[-s SIGNAL] SECONDS COMMAND [ARG]..."},
 		"times":     {Summary: "Print the time this shell and its children have used."},
+		"title":     {Summary: "Set the console's title to TEXT, or print it.", Operands: "[TEXT]", Notes: []string{"Only the first operand is the title, as busybox-w32 takes it, and an option is text too. On Windows only."}},
 		"trap":      {Summary: "Run a command when a signal arrives or the shell exits.", Operands: "[-lp] [[ACTION] SIGNAL...]", Notes: []string{"An empty ACTION ignores the signal, and `-` puts it back. EXIT, ERR, DEBUG and RETURN are taken as bash takes them."}},
 		"type":      {Summary: "Say what each name is: an alias, a keyword, a function, a builtin or a file.", Operands: "NAME...", Options: map[string]string{"a": "every way the name can be read, not only the first", "f": "pass over functions", "p": "only the path of a file", "P": "the path of a file, even when the name is something else first", "t": "only the kind, as one word"}},
 		"umask":     {Summary: "Set or show the file mode mask.", Operands: "[-p] [-S] [MODE]"},

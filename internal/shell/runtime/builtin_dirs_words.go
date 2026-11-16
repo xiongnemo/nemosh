@@ -60,6 +60,17 @@ func isStackWord(word string) bool {
 	return word != "" && (word[0] == '+' || word[0] == '-')
 }
 
+// directoryStackBuiltin is pushd, popd or dirs, by the name in args[0].
+func (r Runtime) directoryStackBuiltin(args []string) int {
+	switch args[0] {
+	case "pushd":
+		return r.pushd(args[1:])
+	case "popd":
+		return r.popd(args[1:])
+	}
+	return r.dirs(args[1:])
+}
+
 // pushd puts the current directory on the stack and changes to another; `+N` turns the
 // stack instead. After `-n` nothing moves: a directory is only put on the stack, as the word
 // it was given.

@@ -112,6 +112,10 @@ after `cd` to a directory with a space in its name, Duplicate Tab opens there. C
 listing and Ctrl-R leave the prompt where it was. `NEMOSH_SHELL_INTEGRATION=never` leaves
 no mark, and in a conhost window, with `=always`, nothing is drawn of them.
 
+**`title`**, not yet checked by hand. `title 构建中` names the tab in Windows Terminal, unless
+the profile sets `suppressApplicationTitle`, and the window in a conhost one; `title` prints
+it back. Beside busybox's `title`, `title a b` takes only `a` in both.
+
 **`time {` over lines**, not yet checked by hand: type `time {` and Enter, and the
 prompt is a continuation one; `sleep 1`, Enter, `}`, Enter, and the report comes,
 `real 0m 1.0...`. The keyword over a compound is new since v1.4.0, and the prompt's

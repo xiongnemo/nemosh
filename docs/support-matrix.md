@@ -79,6 +79,12 @@ busybox-w32's other options are here too:
 
 Both glob options are off by default, as they are in busybox.
 
+busybox-w32's `title` builtin is here: `title TEXT` sets the console's title, the tab's in
+Windows Terminal, and `title` alone prints it. Only the first operand is taken, and no option
+is read, `title -x` setting the title to `-x`, as busybox has it. Where busybox answers 0 and
+says nothing when the console cannot be asked, this says why and answers 1, and off Windows,
+where a terminal's title can be set but never read back, it always does.
+
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.
 

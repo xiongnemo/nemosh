@@ -88,7 +88,7 @@ var builtinNames = []string{
 	"exit", "export", "fc", "getopts", "hash", "help", "history", "jobs", "let", "local", "logout",
 	"pushd", "popd", "dirs", "mapfile", "readarray",
 	"pwd", "read",
-	"readonly", "return", "set", "shift", "shopt", "source", "time", "timeout", "times", "trap", "type", "typeset",
+	"readonly", "return", "set", "shift", "shopt", "source", "time", "timeout", "times", "title", "trap", "type", "typeset",
 	"flock", "watch",
 	"kill", "umask", "unalias", "unset", "wait", "which",
 	// bash-completion's helpers, which completion scripts call; see completion_helpers.go.
