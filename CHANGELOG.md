@@ -69,6 +69,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   busybox-w32's listing line for line: a subdirectory's size was 0, one this account cannot
   open showed others' permissions, and a junction had one link where `ls` and `stat` both
   count its target's subdirectories and two, as busybox does.
+- **du takes a file's size from its directory's listing**, as it takes which file it is, where
+  it stat'd every entry and opened every one: `du -s` of Go's source tree takes 167 ms where it
+  took 806 (busybox 1.6 s), and of 15.5 GB of scoop's apps 0.8 s where it took 3.3 (busybox
+  6.6), every line of `du -a` the same. `rm -r` asks nothing of what its directory listed, which
+  it stat'd twice: 2,000 files in 126 ms where it took 174 (busybox 353).
 
 ### Added
 

@@ -18,6 +18,11 @@ func removeForOverwrite(native string) error {
 	if info, err := os.Lstat(native); err == nil && info.IsDir() {
 		return syscall.EISDIR
 	}
+	return removeFile(native)
+}
+
+// removeFile is removeForOverwrite for what is known to be no directory.
+func removeFile(native string) error {
 	err := os.Remove(native)
 	if err == nil || !errors.Is(err, fs.ErrPermission) {
 		return err

@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"math"
 	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -124,20 +123,23 @@ type duRun struct {
 // fileID names a file whichever of its links reaches it: its device and its index there.
 type fileID struct{ device, index uint64 }
 
+// duLstat and duIdentity are how walk asks about an entry, which a test counts through.
+var duLstat, duIdentity = os.Lstat, fileIdentity
+
 // walk is busybox's du(): what native holds, in 512-byte blocks or under -b bytes, printed when
 // it is a directory, or a file under -a or named as FILE, no deeper than -d.
 func (r *duRun) walk(native, shown string) int64 {
 	if r.ctx.Err() != nil {
 		return 0
 	}
-	info, err := os.Lstat(native)
+	info, err := duLstat(native)
 	if err != nil {
 		r.fail(operandFailure(shown, err))
 		return 0
 	}
 	if r.oneFS {
 		// The entry itself, before a link is followed, as busybox compares it.
-		id, _, _ := fileIdentity(native, info)
+		id, _, _ := duIdentity(native, info)
 		if r.depth == 0 {
 			r.device = id.device
 		} else if id.device != r.device {
@@ -160,7 +162,7 @@ func (r *duRun) walk(native, shown string) int64 {
 	}
 	sum := r.size(native, info)
 	if info.IsDir() {
-		entries, err := readDirectoryInOrder(native)
+		entries, err := readDuDirectory(native)
 		if err != nil {
 			r.fail(cannotOpen(shown, err))
 			return sum
@@ -168,11 +170,7 @@ func (r *duRun) walk(native, shown string) int64 {
 		if guard != nil {
 			r.inside = append(r.inside, *guard)
 		}
-		for _, entry := range entries {
-			r.depth++
-			sum += r.walk(filepath.Join(native, entry.Name()), duSubpath(shown, entry.Name()))
-			r.depth--
-		}
+		sum += r.children(native, shown, entries)
 		if guard != nil {
 			r.inside = r.inside[:len(r.inside)-1]
 		}
@@ -198,7 +196,7 @@ func (r *duRun) counted(native string, info os.FileInfo) (bool, *fileID) {
 	if r.countLinks && !guarded {
 		return false, nil
 	}
-	id, links, ok := fileIdentity(native, info)
+	id, links, ok := duIdentity(native, info)
 	switch {
 	case !ok || !info.IsDir() && links < 2:
 		return false, nil

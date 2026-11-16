@@ -80,7 +80,7 @@ func newRmApplet() Applet {
 func (r *rmRun) remove(native, display string) bool {
 	// Lstat, so a symbolic link is removed and never followed: `rm -rf link-to-home` removes the
 	// link.
-	info, err := os.Lstat(native)
+	info, err := rmLstat(native)
 	if err != nil {
 		if !isNotThere(err) {
 			return r.fail(cannotStat(display, err))
@@ -90,13 +90,20 @@ func (r *rmRun) remove(native, display string) bool {
 		}
 		return true
 	}
+	return r.removeEntry(native, display, info)
+}
+
+// removeEntry is remove for what info says native is: what Lstat said of an operand, or what a
+// directory's listing said of an entry, which rm stat'd again and then, to be sure a file was
+// no directory, a third time.
+func (r *rmRun) removeEntry(native, display string, info os.FileInfo) bool {
 	if !info.IsDir() {
 		if r.interactive || !r.force && r.terminal && info.Mode()&os.ModeSymlink == 0 && !canWrite(native, info) {
 			if !r.ask("remove '%s'? ", display) {
 				return true
 			}
 		}
-		if err := removeForOverwrite(native); err != nil {
+		if err := removeFile(native); err != nil {
 			return r.fail(cannotRemove(display, err))
 		}
 		if r.verbose {
@@ -120,7 +127,13 @@ func (r *rmRun) remove(native, display string) bool {
 	}
 	removed := true
 	for _, entry := range entries {
-		removed = r.remove(filepath.Join(native, entry.Name()), joinOperand(display, entry.Name())) && removed
+		path, shown := filepath.Join(native, entry.Name()), joinOperand(display, entry.Name())
+		// An entry gone or changed since it was listed is asked about as an operand is.
+		if listed, err := entry.Info(); err == nil {
+			removed = r.removeEntry(path, shown, listed) && removed
+		} else {
+			removed = r.remove(path, shown) && removed
+		}
 	}
 	if r.interactive && !r.ask("remove directory '%s'? ", display) {
 		return removed
@@ -158,3 +171,6 @@ func (r *rmRun) name() string {
 	}
 	return r.applet
 }
+
+// rmLstat is how remove asks about an operand, which a test counts through.
+var rmLstat = os.Lstat

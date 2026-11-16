@@ -60,6 +60,11 @@ func compressedSize(path string, info os.FileInfo) (int64, bool) {
 		data.FileAttributes&(windows.FILE_ATTRIBUTE_COMPRESSED|windows.FILE_ATTRIBUTE_SPARSE_FILE) == 0 {
 		return 0, false
 	}
+	return compressedFileSize(path)
+}
+
+// compressedFileSize is what GetCompressedFileSize says the file at path holds on disk.
+func compressedFileSize(path string) (int64, bool) {
 	name, err := windows.UTF16PtrFromString(path)
 	if err != nil {
 		return 0, false
