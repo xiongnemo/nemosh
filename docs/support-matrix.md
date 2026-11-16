@@ -1966,10 +1966,25 @@ needs a name resolved is a test that fails on a train.
 Windows lacks the APIs for the rest — so this is the whole networking group rather
 than a selection from it.
 
+- **The sockets are Winsock's**, from 2026-11-17, through `internal/netio`, as
+  busybox-w32's are: overlapped reads and writes, ConnectEx and AcceptEx, not
+  inherited by a child, and Winsock started only when a socket is wanted.
+  `httpd` is its own server over them and `wget` its own client, where both were
+  `net/http`'s.
 - **TLS is native, so there is no `ssl_client` helper in the pipeline.** busybox's
-  `wget` cannot speak TLS and shells out to `ssl_client` for it; Go's `net/http`
-  can. `ssl_client` is still here, for what the name actually means — `openssl
-  s_client` on a machine with no openssl — and `wget` does not use it.
+  `wget` cannot speak TLS and shells out to `ssl_client` for it; this `wget` does
+  TLS through `netio`. `ssl_client` is still here, for what the name actually means
+  — `openssl s_client` on a machine with no openssl — and `wget` does not use it.
+- **`wget` follows busybox's client**: sixteen redirects at most, a 303 as a GET,
+  credentials in the URL as Basic and not to another host a redirect names; `-T` is
+  how long the connection and each read after it may take, 900 seconds unless
+  given, where it was thirty for the whole fetch; `-S` prints the status line and
+  every header field; nothing is asked for compressed, and there is no HTTP/2.
+- **`httpd` limits what it reads**, being the one parser a network reaches: a
+  request line past 8 KiB is 414, a header past 16 KiB or 100 fields 431. One
+  request a connection, 64 connections at once, ten seconds for a header. It
+  answers a single range as 206 and one past the end as 416, an If-Modified-Since
+  not older than the file as 304, and anything but GET and HEAD as 405 with `Allow`.
 - **A name that came from the server is checked like an archive entry.** `wget`
   takes its output name from the URL's last path element, and a redirect chooses
   that; so it goes through `safeArchivePath`, the same helper `tar` and `unzip`

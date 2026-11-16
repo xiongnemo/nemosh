@@ -20,6 +20,13 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   were an unsupported convenience; v1.4.0 and the nightly `v1.4.66-master-b9608f763100` are
   the last that have them. What was written for those platforms goes, and a Windows API is
   called directly where one does the job, as busybox-w32 does.
+- **wget follows redirects, credentials and timeouts as busybox's does**: sixteen redirects,
+  Basic credentials from the URL and not to another host, `-T` for the connection and each
+  read, 900 seconds unless given -- it was thirty for the whole download, which a large one
+  outlived -- and `-S` prints every header field. **httpd answers ranges and dates** without
+  net/http, and refuses an oversized request with 414 or 431. **ipcalc's PREFIX** is the bits
+  a holed netmask has set, and `-h` for an address with no name fails, as busybox's does. The
+  sockets beneath them are Winsock's, and the binary is 1.3 MB smaller.
 - **iconv converts as busybox-w32's does, through Windows's own code pages**: every code
   page Windows has can be named, by busybox's 358 aliases or by number, and `iconv -l` lists
   those aliases. A character the target has not got is `conversion error: Illegal byte

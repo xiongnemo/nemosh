@@ -36,6 +36,8 @@ var forbiddenInRelease = []string{
 	"golang.org/x/text/encoding/simplifiedchinese",
 	"golang.org/x/text/encoding/traditionalchinese",
 	"golang.org/x/text/encoding/unicode",
+	// httpd and wget are their own server and client over internal/netio.
+	"net/http",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -13,16 +12,18 @@ import (
 
 // wget: fetch a URL.
 //
-// Over net/http, which does TLS itself -- so unlike busybox this needs no
-// `ssl_client` helper alongside it. busybox shells out to one because its own
-// HTTP client cannot speak TLS; Go's can, and `ssl_client` exists here as a
-// TLS pipe in its own right rather than as wget's plumbing.
+// Over its own client, wget_client.go, which does TLS through netio -- so unlike busybox
+// this needs no `ssl_client` helper alongside it. busybox shells out to one because its own
+// HTTP client cannot speak TLS; `ssl_client` exists here as a TLS pipe in its own right
+// rather than as wget's plumbing.
 //
 // One coupling worth naming: `completions/wget.toml` describes the *external*
 // wget and carries `meta.tool-version` precisely because "one name can be two
 // programs" (internal/completionspec/spec.go:56). This makes it three.
 
-const wgetDefaultTimeout = 30 * time.Second
+// wgetDefaultTimeout is busybox's -T: how long a connection, and each read after it, may take.
+// It was 30 seconds for the whole fetch, which a large download outlived.
+const wgetDefaultTimeout = 900 * time.Second
 
 // wgetValued is the letters whose argument may be the next word. Named because
 // wgetLongOptions has to skip such an argument without reading it: a User-Agent
@@ -133,57 +134,33 @@ func (r wgetRequest) fetch(ctx context.Context, address string, stdout, stderr i
 		// anyone typing `wget example.com/x` means.
 		address = "http://" + address
 	}
-	fetchCtx, cancel := context.WithTimeout(ctx, r.timeout)
-	defer cancel()
-	// --spider asks whether the URL is there, not for its contents, so it is a
-	// HEAD. Sending GET and discarding the body would download the thing the
-	// caller said not to download.
-	method := http.MethodGet
-	if r.spider {
-		method = http.MethodHead
-	}
-	request, err := http.NewRequestWithContext(fetchCtx, method, address, nil)
+	fetched, err := r.get(ctx, address)
 	if err != nil {
-		return fmt.Errorf("bad URL %s: %v", address, err)
+		return err
 	}
-	agent := r.agent
-	if agent == "" {
-		agent = "nemosh-wget"
-	}
-	request.Header.Set("User-Agent", agent)
-	// After the User-Agent, so `--header 'User-Agent: x'` wins over -U rather
-	// than being silently dropped: the more specific spelling is the later one.
-	for _, header := range r.headers {
-		name, value, found := strings.Cut(header, ":")
-		if !found {
-			return fmt.Errorf("bad header %q: a header is NAME: VALUE", header)
-		}
-		request.Header.Set(strings.TrimSpace(name), strings.TrimSpace(value))
-	}
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return fmt.Errorf("cannot fetch %s: %v", address, err)
-	}
-	defer response.Body.Close()
+	defer fetched.Close()
+	status := strings.TrimPrefix(fetched.line[strings.IndexByte(fetched.line, ' ')+1:], " ")
 	if r.showServer {
-		if _, err := fmt.Fprintf(stderr, "  %s\n", response.Status); err != nil {
-			return err
+		// -S is the status line and every header field, as busybox prints them.
+		fmt.Fprintf(stderr, "  %s\n", fetched.line)
+		for _, field := range fetched.fields {
+			fmt.Fprintf(stderr, "  %s\n", field)
 		}
 	}
-	if response.StatusCode >= 400 {
+	if fetched.status >= 400 {
 		// A 404 is a failed download, not a file whose contents are the error
 		// page -- writing the body would leave a file that looks like a success.
-		return fmt.Errorf("server returned %s", response.Status)
+		return fmt.Errorf("server returned %s", status)
 	}
 	if r.spider {
 		if !r.quiet {
-			if _, err := fmt.Fprintf(stderr, "%s exists (%s)\n", address, response.Status); err != nil {
+			if _, err := fmt.Fprintf(stderr, "%s exists (%s)\n", address, status); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	return r.save(ctx, response, stdout, stderr)
+	return r.save(ctx, fetched, stdout, stderr)
 }
 
 // save decides where the body goes.
@@ -193,14 +170,14 @@ func (r wgetRequest) fetch(ctx context.Context, address string, stdout, stderr i
 // check an archive entry does: a redirect to `http://host/../../evil` must not
 // write outside the working directory, and a URL ending in `/NUL` must not reach
 // the device.
-func (r wgetRequest) save(ctx context.Context, response *http.Response, stdout, stderr io.Writer) error {
+func (r wgetRequest) save(ctx context.Context, fetched *wgetFetched, stdout, stderr io.Writer) error {
 	if r.output == "-" {
-		_, err := io.Copy(stdout, response.Body)
+		_, err := io.Copy(stdout, fetched.body)
 		return err
 	}
 	name := r.output
 	if name == "" {
-		name = path.Base(response.Request.URL.Path)
+		name = path.Base(fetched.location.Path)
 		if name == "" || name == "/" || name == "." {
 			// Nothing usable in the URL, which is what index pages look like.
 			name = "index.html"
@@ -225,7 +202,7 @@ func (r wgetRequest) save(ctx context.Context, response *http.Response, stdout, 
 	if err != nil {
 		return operandFailure(safe, err)
 	}
-	written, copyErr := io.Copy(file, response.Body)
+	written, copyErr := io.Copy(file, fetched.body)
 	closeErr := file.Close()
 	if copyErr != nil {
 		// The partial file is removed: a truncated download that looks complete
@@ -243,7 +220,6 @@ func (r wgetRequest) save(ctx context.Context, response *http.Response, stdout, 
 	}
 	return nil
 }
-
 func pathDirOf(native string) string {
 	if index := strings.LastIndexAny(native, `/\`); index > 0 {
 		return native[:index]
