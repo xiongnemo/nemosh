@@ -1975,6 +1975,15 @@ than a selection from it.
   `wget` cannot speak TLS and shells out to `ssl_client` for it; this `wget` does
   TLS through `netio`. `ssl_client` is still here, for what the name actually means
   — `openssl s_client` on a machine with no openssl — and `wget` does not use it.
+- **TLS is Schannel's**, from 2026-11-17, as busybox-w32's is: the protocols and
+  cipher suites Windows has enabled, so TLS 1.3 where Windows offers it (Windows 11
+  and Server 2022) and 1.2 on Windows 10. A certificate is judged by the system's
+  chain engine against the system's roots, as `crypto/x509` asked it to be before,
+  with no revocation check, and a refusal says why: `signed by unknown authority`,
+  `not valid for NAME`, `has expired`. There is still no way to skip the check.
+  When `ssl_client`'s input ends nothing is sent, as busybox's sends nothing: TLS
+  can only end the whole session, and a server that takes close_notify for the end
+  may not answer what it was sent. It was close_notify, `crypto/tls`'s way, before.
 - **`wget` follows busybox's client**: sixteen redirects at most, a 303 as a GET,
   credentials in the URL as Basic and not to another host a redirect names; `-T` is
   how long the connection and each read after it may take, 900 seconds unless

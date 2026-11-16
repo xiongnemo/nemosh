@@ -15,7 +15,7 @@ import (
 type Conn interface {
 	io.ReadWriteCloser
 	// CloseWrite ends what this side sends, so the peer reads the end of it, and leaves what it
-	// sends back to be read.
+	// sends back to be read. Over TLS it sends nothing, which has no way to say it.
 	CloseWrite() error
 	SetReadDeadline(time.Time) error
 	SetWriteDeadline(time.Time) error

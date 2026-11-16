@@ -359,11 +359,10 @@ func TestSslClient_refusesAnUntrustedCertificate(t *testing.T) {
 	}
 }
 
-// And it does complete a handshake when the certificate *is* trusted, which the
-// test can arrange only by trusting the test server's own CA -- so the handshake
-// is driven through crypto/tls directly with the same settings the applet uses.
-// This is the half of the property the applet test above cannot reach: that the
-// address, the port and the SNI name are assembled correctly.
+// And the address, the port and the SNI name are assembled correctly, which the
+// server sees before the certificate is refused. A handshake with a certificate
+// that *is* trusted is internal/netio's schannel_test.go, which can change the
+// chain engine the applet cannot.
 func TestSslClient_sendsTheServerNameItWasGiven(t *testing.T) {
 	var seen string
 	server := httptest.NewUnstartedServer(nil)

@@ -27,6 +27,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   net/http, and refuses an oversized request with 414 or 431. **ipcalc's PREFIX** is the bits
   a holed netmask has set, and `-h` for an address with no name fails, as busybox's does. The
   sockets beneath them are Winsock's, and the binary is 1.3 MB smaller.
+- **TLS is Windows's own, Schannel**, as busybox-w32's is, for `wget` and `ssl_client`: TLS
+  1.3 where Windows has it, the system's roots as before, and a refused certificate says why
+  -- `signed by unknown authority`, `not valid for NAME`, `has expired`. When `ssl_client`'s
+  input ends it no longer sends close_notify, as busybox's does not. The binary is 1.9 MB
+  smaller again.
 - **iconv converts as busybox-w32's does, through Windows's own code pages**: every code
   page Windows has can be named, by busybox's 358 aliases or by number, and `iconv -l` lists
   those aliases. A character the target has not got is `conversion error: Illegal byte

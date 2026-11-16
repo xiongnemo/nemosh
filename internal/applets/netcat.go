@@ -197,8 +197,10 @@ func whoisServerFor(name string) string {
 // newSslClientApplet is a TLS pipe: connect, negotiate, then copy both ways.
 //
 // busybox needs this because its own wget cannot speak TLS and shells out to it.
-// Go's net/http can, so nemosh's wget does not use this at all -- it is here for
-// what the name actually means, which is `openssl s_client` without openssl.
+// nemosh's wget speaks TLS through netio, Schannel, so it does not use this at all --
+// it is here for what the name actually means, which is `openssl s_client` without
+// openssl. When stdin ends nothing is sent, as busybox's sends nothing; see
+// schannelConn.CloseWrite.
 // The name is a parameter rather than a literal here, which is what
 // newTestApplet("[") does and for the same reason: internal/appletmanifest reads
 // the registry as *source* (manifest.go:11) and lowercases the constructor's

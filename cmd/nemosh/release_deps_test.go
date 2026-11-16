@@ -38,6 +38,10 @@ var forbiddenInRelease = []string{
 	"golang.org/x/text/encoding/unicode",
 	// httpd and wget are their own server and client over internal/netio.
 	"net/http",
+	// TLS is Schannel's, and a certificate is the system's chain engine's to judge; see
+	// internal/netio/schannel_windows.go.
+	"crypto/tls",
+	"crypto/x509",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell
