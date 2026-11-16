@@ -625,6 +625,14 @@ On the shell's own stderr, where the person who pressed the key is, and not at a
 job was running. A Ctrl-C at a prompt interrupts only what is in the foreground, and the
 jobs carry on.
 
+**A program run from the prompt is left to handle Ctrl-C**, which the console sends it as it
+sends the shell, and the shell waits for it to end: ping prints its statistics, and a nested
+cmd, pwsh or python stops what it is running and stays. busybox-w32 ends the program, in a
+script and at the prompt alike, and nemosh did; a script's program is still ended so, which
+stops a script at once. `NEMOSH_CTRL_C=program` leaves the program to it in a script too, and
+`NEMOSH_CTRL_C=kill` ends it at the prompt as busybox does. A program not on the console, a GUI
+one, never had the Ctrl-C and is ended whatever is set.
+
 **Under `NEMOSH_JOBS=goroutine` a job is a goroutine** in the shell's own process, the way
 every job was before the default changed, and it has no pid to report. `$!` is then a job
 specification, `%1`, which keeps the two things `$!` is used for working, since `kill $!`

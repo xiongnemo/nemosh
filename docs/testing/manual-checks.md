@@ -225,7 +225,17 @@ These only exist off a GUI launch or a real clipboard, so no test reaches them.
   xargs git log -1 --oneline --` and `find . -maxdepth 1 -name '*.md' -exec git log -1
   --oneline -- {} \;` print in git's colours, as git run at the prompt does, since the
   program is handed the console; and Ctrl-C during `echo 127.0.0.1 | xargs ping -n 30`
-  gives the prompt back at once. Until 2026-10-08 each of these was `not found`.
+  gives the prompt back as soon as ping has printed its statistics. Until 2026-10-08
+  each of these was `not found`.
+- **Ctrl-C reaches the program at the prompt**, not yet checked by hand. `ping -t
+  localhost` and Ctrl-C prints ping's statistics, then the prompt. In a nested `cmd`,
+  `pwsh` and `python`, Ctrl-C during something long (`ping -t localhost`,
+  `Start-Sleep 30`, `import time; time.sleep(30)`) stops that and leaves you in cmd,
+  pwsh or python, where it closed them before. `notepad` is still ended by Ctrl-C,
+  which notepad never sees. `NEMOSH_CTRL_C=kill` puts back busybox's way, so the
+  nested cmd closes again; in `nemosh -c 'ping -n 30 localhost; echo after'` Ctrl-C
+  ends ping without its statistics and `after` is not printed, unless
+  `NEMOSH_CTRL_C=program`.
 - **A `#!/usr/bin/env` script**, not yet checked by hand. A file `t.py` holding
   `#!/usr/bin/env python` and `print("hi")`, run as `./t.py`, runs the Python PATH
   finds -- and a Python that is only Windows' Store alias may open the Store instead,

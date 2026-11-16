@@ -125,7 +125,8 @@ func (r Runtime) programEnvironment(view applets.ProcessView) []string {
 // programStream is the file a stream ends at, when it ends at one, so a program an applet runs
 // writes to the console itself, as a command does, rather than through a pipe this process
 // copies: git colours, and a pager knows the terminal. The interrupt wrapper is passed over; the
-// program is ended by the context it runs under instead.
+// program is stopped through the context it runs under instead, as a command is -- ended, or at
+// the prompt left to the Ctrl-C the console sent it; see external_cancel.go.
 func programStream(writer io.Writer) io.Writer {
 	if wrapped, ok := writer.(*interruptibleWriter); ok {
 		writer = wrapped.writer

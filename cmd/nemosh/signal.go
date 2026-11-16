@@ -20,6 +20,11 @@ type interruptController struct {
 	active      *interruptSlot
 	idlePending bool
 	idleWake    chan struct{}
+	// console says an interrupt is the console's Ctrl-C, which the program in the foreground
+	// had as well, so one run from the prompt may be left to handle it; see the runtime's
+	// external_cancel.go. Only main sets it, and only on Windows: a test's interrupt reached
+	// nothing else.
+	console bool
 }
 
 type interruptSlot struct {
@@ -27,8 +32,16 @@ type interruptSlot struct {
 	finish    func()
 }
 
+// begin is the context a line typed at the prompt runs in; context is a script's.
 func (c *interruptController) begin(parent context.Context) (context.Context, func(), bool) {
+	return c.start(parent, true)
+}
+
+func (c *interruptController) start(parent context.Context, prompt bool) (context.Context, func(), bool) {
 	ctx, interrupt, release := runtime.InterruptContextWithRelease(parent)
+	if c.console {
+		ctx, interrupt, release = runtime.ConsoleInterruptContextWithRelease(parent, prompt)
+	}
 	slot := &interruptSlot{interrupt: interrupt, finish: release}
 	c.mu.Lock()
 	idlePending := c.consumeIdleInterruptLocked()
@@ -50,7 +63,7 @@ func (c *interruptController) begin(parent context.Context) (context.Context, fu
 }
 
 func (c *interruptController) context(parent context.Context) (context.Context, func()) {
-	ctx, finish, _ := c.begin(parent)
+	ctx, finish, _ := c.start(parent, false)
 	return ctx, finish
 }
 

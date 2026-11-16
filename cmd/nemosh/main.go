@@ -37,11 +37,12 @@ func main() {
 	// window draws them as text.
 	defer enableVirtualTerminal(stdout, stderr)()
 	cmd := command{
-		stdin:           stdin,
-		stdout:          stdout,
-		stderr:          stderr,
-		stdinIsTerminal: term.IsTerminal(int(stdin.Fd())),
-		interrupts:      signals,
+		stdin:             stdin,
+		stdout:            stdout,
+		stderr:            stderr,
+		stdinIsTerminal:   term.IsTerminal(int(stdin.Fd())),
+		interrupts:        signals,
+		consoleInterrupts: consoleInterrupts,
 	}
 	if err := cmd.run(context.Background(), args); err != nil {
 		if signal, ok := errors.AsType[signalExit](err); ok {
@@ -71,8 +72,10 @@ type command struct {
 	stderr          io.Writer
 	stdinIsTerminal bool
 	interrupts      <-chan os.Signal
-	registry        applets.Registry
-	state           *runtime.State
+	// consoleInterrupts says interrupts are the console's; see interruptController.console.
+	consoleInterrupts bool
+	registry          applets.Registry
+	state             *runtime.State
 	// invocation is the command line as parseInvocation read it; see invocation.go.
 	invocation invocation
 }
@@ -93,7 +96,7 @@ func (c command) run(ctx context.Context, args []string) error {
 	if held {
 		defer c.holdConsole()
 	}
-	controller := &interruptController{}
+	controller := &interruptController{console: c.consoleInterrupts}
 	stop := make(chan struct{})
 	if c.interrupts != nil {
 		go func() {

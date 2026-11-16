@@ -349,9 +349,20 @@ Trap/signal support should be useful but honest on Windows:
 - Implement `trap ... EXIT`.
 - Map console Ctrl-C to shell-level `INT` for the current Nemosh foreground
   execution or `wait`, then create a fresh context for the next interactive entry.
-- Go on Windows cannot direct `os.Interrupt` to one child or process group.
-  Foreground external cancellation therefore uses `exec.CommandContext` process
-  termination after the shell context is canceled; it is not targeted Ctrl-C.
+- Go on Windows cannot direct `os.Interrupt` to one child or process group, and
+  does not need to: the console sends Ctrl-C to every process on it, the program in
+  the foreground with the shell. What the shell does with that program decides
+  whether the program's own handling of it gets to run. busybox-w32 ends it, in a
+  script and at `-ic` alike, measured on 2026-11-16 with FRP-6354
+  (`cmd/nemosh/ctrlc_console_windows_test.go` runs both shells in a console of their
+  own and presses Ctrl-C): a ping lost its statistics, and a nested cmd, pwsh or
+  python at the prompt was closed with what it was running. So nemosh leaves a
+  program run from the prompt to end by itself, as cmd and bash do, and waits for
+  it; one run by a script is ended, as busybox ends it, so that Ctrl-C stops a
+  script at once. `NEMOSH_CTRL_C=program` leaves it to the program everywhere and
+  `NEMOSH_CTRL_C=kill` ends it everywhere. A program not attached to the console --
+  a GUI one, which the Ctrl-C did not reach -- is ended whatever is set, as is one
+  the shell stops for any other reason: `timeout`, a closed pipe, `kill`.
 - Windows `CTRL_BREAK_EVENT` can target an isolated process group. On the tested
   Windows/Go toolchain it reaches Go's `os.Interrupt` notification channel.
   Automated acceptance uses this only as a production `signal.Notify` boundary

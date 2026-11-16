@@ -56,6 +56,12 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   PATH starts about 5 ms sooner. `hash` lists what was found and `hash -r` forgets it, which
   they did not do; any assignment to PATH forgets it too. As in both references, a program
   put in an earlier directory of PATH since is not what runs until `hash -r`.
+- **Ctrl-C at the prompt is the program's to handle**: the console sends it to the program
+  as it sends the shell, and the shell now waits for the program to end rather than ending
+  it, so ping prints its statistics and a nested cmd, pwsh or python stops what it runs and
+  stays open, where it was closed. busybox-w32 ends the program, and a script's still is, so
+  Ctrl-C stops a script at once. `NEMOSH_CTRL_C=kill` ends it at the prompt too, as busybox
+  does, and `NEMOSH_CTRL_C=program` leaves it to the program in a script as well.
 
 ### Added
 

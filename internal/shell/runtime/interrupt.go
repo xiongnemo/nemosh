@@ -22,6 +22,21 @@ func InterruptContextWithRelease(parent context.Context) (context.Context, func(
 	return ctx, func() { cancel(errShellInterrupt) }, func() { cancel(context.Canceled) }
 }
 
+// ConsoleInterruptContextWithRelease is InterruptContextWithRelease for an interrupt that is the
+// console's Ctrl-C, which the program in the foreground was sent as well; prompt says the
+// command was typed at the prompt. See external_cancel.go for what that changes.
+func ConsoleInterruptContextWithRelease(parent context.Context, prompt bool) (context.Context, func(), func()) {
+	ctx, cancel := context.WithCancelCause(parent)
+	return ctx, func() { cancel(consoleInterrupt{prompt: prompt}) }, func() { cancel(context.Canceled) }
+}
+
+// consoleInterrupt is the shell's interrupt as the console delivered it, to the shell and to
+// every program on the console. It is errShellInterrupt to everything that asks.
+type consoleInterrupt struct{ prompt bool }
+
+func (consoleInterrupt) Error() string { return errShellInterrupt.Error() }
+func (consoleInterrupt) Unwrap() error { return errShellInterrupt }
+
 func contextStatus(ctx context.Context) int {
 	if isShellInterrupt(ctx) {
 		return 130

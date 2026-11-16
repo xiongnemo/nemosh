@@ -108,7 +108,17 @@ const cmdQuotingTriggers = " \t\"&|<>^()"
 // which cmd does not share: an unquoted & splits the line and \" arrives
 // literally. Crossing the boundary explicitly is the only way to control that
 // quoting, and it is what docs/design/windows-execution-model.md already asks for.
+//
+// What cancelling ctx does to it is armForegroundCancel's; see external_cancel.go.
 func (r Runtime) externalCommand(ctx context.Context, executable string, args []string) (*exec.Cmd, error) {
+	cmd, err := r.externalCommandLine(ctx, executable, args)
+	if err == nil {
+		r.armForegroundCancel(ctx, cmd)
+	}
+	return cmd, err
+}
+
+func (r Runtime) externalCommandLine(ctx context.Context, executable string, args []string) (*exec.Cmd, error) {
 	if runtime.GOOS != "windows" || !hasBatchSuffix(executable) {
 		return exec.CommandContext(ctx, executable, args...), nil
 	}
