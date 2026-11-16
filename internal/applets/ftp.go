@@ -5,11 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xiongnemo/nemosh/internal/netio"
 )
 
 // ftpget and ftpput: one file each way over FTP.
@@ -42,7 +43,8 @@ func newFtpApplet(name string) Applet {
 			port = "21"
 		}
 		session := &ftpSession{
-			host:    net.JoinHostPort(operands[0], port),
+			host:    operands[0],
+			port:    port,
 			user:    valueOrDefault(options.value('u'), "anonymous"),
 			pass:    valueOrDefault(options.value('p'), "nemosh@"),
 			verbose: options.has('v'),
@@ -83,19 +85,18 @@ func valueOrDefault(value, fallback string) string {
 }
 
 type ftpSession struct {
-	host       string
+	host, port string
 	user, pass string
 	verbose    bool
 	log        io.Writer
-	control    net.Conn
+	control    netio.Conn
 	reader     *bufio.Reader
 }
 
 func (s *ftpSession) connect(ctx context.Context) error {
-	dialer := net.Dialer{Timeout: 30 * time.Second}
-	connection, err := dialer.DialContext(ctx, "tcp", s.host)
+	connection, err := netio.Dial(ctx, s.host, s.port, 30*time.Second)
 	if err != nil {
-		return fmt.Errorf("cannot connect to %s: %v", s.host, err)
+		return fmt.Errorf("cannot connect to %s: %v", netio.JoinHostPort(s.host, s.port), err)
 	}
 	s.control, s.reader = connection, bufio.NewReader(connection)
 	if _, err := s.expect(2); err != nil {
@@ -163,7 +164,7 @@ func (s *ftpSession) expect(accept ...int) (string, error) {
 }
 
 // openData asks for passive mode and connects to the address it answers with.
-func (s *ftpSession) openData(ctx context.Context) (net.Conn, error) {
+func (s *ftpSession) openData(ctx context.Context) (netio.Conn, error) {
 	reply, err := s.command("PASV", 2)
 	if err != nil {
 		return nil, err
@@ -172,8 +173,11 @@ func (s *ftpSession) openData(ctx context.Context) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	dialer := net.Dialer{Timeout: 30 * time.Second}
-	return dialer.DialContext(ctx, "tcp", address)
+	host, port, err := netio.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	return netio.Dial(ctx, host, port, 30*time.Second)
 }
 
 // parsePassiveReply reads `227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)`.
@@ -199,7 +203,7 @@ func parsePassiveReply(reply string) (string, error) {
 		numbers[index] = value
 	}
 	host := fmt.Sprintf("%d.%d.%d.%d", numbers[0], numbers[1], numbers[2], numbers[3])
-	return net.JoinHostPort(host, strconv.Itoa(numbers[4]<<8|numbers[5])), nil
+	return netio.JoinHostPort(host, strconv.Itoa(numbers[4]<<8|numbers[5])), nil
 }
 
 // retrieve downloads remote into local. The local name is checked the way an

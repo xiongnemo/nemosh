@@ -2,18 +2,18 @@ package applets
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net"
 	"strings"
 	"time"
+
+	"github.com/xiongnemo/nemosh/internal/netio"
 )
 
 // nc, whois and ssl_client: the three that speak a socket directly.
 //
 // nc connects or listens and pipes bytes; whois is one query on port 43;
-// ssl_client is a TLS pipe. All three are Go's net and crypto/tls, so none needs
+// ssl_client is a TLS pipe. All three speak through internal/netio, so none needs
 // a helper binary -- which is why nemosh's own wget does not use ssl_client the
 // way busybox's must.
 
@@ -42,15 +42,14 @@ func newNcApplet() Applet {
 		if len(operands) < 2 {
 			return fmt.Errorf("a host and a port are required")
 		}
-		return dialNetcat(ctx, net.JoinHostPort(operands[0], operands[1]), timeout, stdin, stdout)
+		return dialNetcat(ctx, operands[0], operands[1], timeout, stdin, stdout)
 	}}
 }
 
-func dialNetcat(ctx context.Context, address string, timeout time.Duration, stdin io.Reader, stdout io.Writer) error {
-	dialer := net.Dialer{Timeout: timeout}
-	connection, err := dialer.DialContext(ctx, "tcp", address)
+func dialNetcat(ctx context.Context, host, port string, timeout time.Duration, stdin io.Reader, stdout io.Writer) error {
+	connection, err := netio.Dial(ctx, host, port, timeout)
 	if err != nil {
-		return fmt.Errorf("cannot connect to %s: %v", address, err)
+		return fmt.Errorf("cannot connect to %s: %v", netio.JoinHostPort(host, port), err)
 	}
 	defer connection.Close()
 	return pipeConnection(ctx, connection, stdin, stdout)
@@ -63,18 +62,18 @@ func dialNetcat(ctx context.Context, address string, timeout time.Duration, stdi
 // server applet takes and for the same reason -- a listener reachable from the
 // network is a decision, not a default.
 func listenNetcat(ctx context.Context, port string, operands []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	address := "127.0.0.1:" + port
+	host := "127.0.0.1"
 	switch {
 	case port == "" && len(operands) >= 2:
-		address = net.JoinHostPort(operands[0], operands[1])
+		host, port = operands[0], operands[1]
 	case port == "" && len(operands) == 1:
-		address = "127.0.0.1:" + operands[0]
+		port = operands[0]
 	case port == "":
 		return fmt.Errorf("a port is required to listen")
 	}
-	listener, err := net.Listen("tcp", address)
+	listener, err := netio.Listen(host, port)
 	if err != nil {
-		return fmt.Errorf("cannot listen on %s: %v", address, err)
+		return fmt.Errorf("cannot listen on %s: %v", netio.JoinHostPort(host, port), err)
 	}
 	defer listener.Close()
 	fmt.Fprintf(stderr, "listening on %s\n", listener.Addr())
@@ -105,13 +104,11 @@ func listenNetcat(ctx context.Context, port string, operands []string, stdin io.
 // test because Go's select chooses uniformly among ready cases, so it was a coin
 // flip per run; a manual `nc 127.0.0.1 8231` against this build's own httpd is
 // what caught it.
-func pipeConnection(ctx context.Context, connection net.Conn, stdin io.Reader, stdout io.Writer) error {
+func pipeConnection(ctx context.Context, connection netio.Conn, stdin io.Reader, stdout io.Writer) error {
 	sent := make(chan error, 1)
 	go func() {
 		_, err := io.Copy(connection, stdin)
-		if closer, ok := connection.(interface{ CloseWrite() error }); ok {
-			closer.CloseWrite()
-		}
+		connection.CloseWrite()
 		sent <- err
 	}()
 	received := make(chan error, 1)
@@ -168,8 +165,7 @@ func queryWhois(ctx context.Context, name, server, port string, stdout io.Writer
 	if server == "" {
 		server = whoisServerFor(name)
 	}
-	dialer := net.Dialer{Timeout: netcatDialTimeout}
-	connection, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(server, port))
+	connection, err := netio.Dial(ctx, server, port, netcatDialTimeout)
 	if err != nil {
 		return fmt.Errorf("cannot reach %s: %v", server, err)
 	}
@@ -229,14 +225,16 @@ func newSslClientApplet(name string) Applet {
 		if serverName == "" {
 			serverName = host
 		}
-		dialer := &net.Dialer{Timeout: netcatDialTimeout}
-		connection, err := tls.DialWithDialer(dialer, "tcp", net.JoinHostPort(host, port),
-			// The certificate is verified. -e in busybox means "exit on error";
-			// there is no option here to skip verification, because a TLS pipe
-			// that does not check the certificate is a plaintext pipe wearing a
-			// costume.
-			&tls.Config{ServerName: serverName})
+		plain, err := netio.Dial(ctx, host, port, netcatDialTimeout)
 		if err != nil {
+			return fmt.Errorf("cannot establish TLS to %s: %v", host, err)
+		}
+		// The certificate is verified. -e in busybox means "exit on error"; there is no option
+		// here to skip verification, because a TLS pipe that does not check the certificate is a
+		// plaintext pipe wearing a costume.
+		connection, err := netio.Client(plain, serverName)
+		if err != nil {
+			plain.Close()
 			return fmt.Errorf("cannot establish TLS to %s: %v", host, err)
 		}
 		defer connection.Close()
