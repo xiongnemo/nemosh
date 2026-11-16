@@ -35,6 +35,16 @@ func ReadInterruptibly(ctx context.Context, file *os.File, buffer []byte) (int, 
 		// per read to watch it would be a cost with no purpose.
 		return file.Read(buffer)
 	}
+	if !readMayBlock(file) {
+		// A read of a file on disk waits on no one, so there is nothing for a watcher to end,
+		// and the goroutine and channels it takes were three allocations a read. A read that
+		// hangs on a network share ends when the share answers or the redirector gives up,
+		// as busybox-w32's does.
+		if err := ctx.Err(); err != nil {
+			return 0, err
+		}
+		return file.Read(buffer)
+	}
 	stop := make(chan struct{})
 	watching := make(chan struct{})
 	go func() {

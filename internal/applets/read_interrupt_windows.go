@@ -25,6 +25,13 @@ var (
 	errReadBadHandle = syscall.Errno(6)    // ERROR_INVALID_HANDLE: it has been closed
 )
 
+// readMayBlock is whether a read of file can wait on someone: anything but a file on disk, a
+// pipe and a console among them, and anything GetFileType cannot answer for.
+func readMayBlock(file *os.File) bool {
+	kind, err := syscall.GetFileType(syscall.Handle(file.Fd()))
+	return err != nil || kind != syscall.FILE_TYPE_DISK
+}
+
 // interruptBlockedRead ends a read that is already waiting on this file.
 //
 // Nothing pending and a closed handle are both success: the read this was meant to end has
