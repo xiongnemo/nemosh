@@ -2049,14 +2049,25 @@ can follow it:
 - **No byte-order mark is written** unless the named encoding is one of the
   explicit BOM forms. An uninvited BOM breaks `#!` lines and CSV headers.
 - **A character the target cannot represent is an error**, not a silent
-  substitution. `-c` is how a caller asks for the lossy behaviour on purpose.
-- **A name is IANA's, or busybox-w32's**: `ASCII`, and a Windows code page by its
-  number, `CP1252` for windows-1252 and `CP936` for GBK, for each code page there is
-  a codec for here.
+  substitution: `conversion error: Illegal byte sequence`, after what came before
+  it is written, as busybox-w32 says it. `-c` passes over it on purpose, and over
+  input that is no character.
+- **The conversion is Windows's own**, from 2026-11-17, as busybox-w32's is (its
+  iconv is win_iconv): MultiByteToWideChar and WideCharToMultiByte, without best fit,
+  and MLang for EUC-JP and ISO-2022-JP, so every code page Windows has can be named.
+  A name is one of busybox-w32's 358 aliases, whatever its case, `CP123` or `123` for
+  a code page by number, and `//IGNORE`, `//TRANSLIT` and `//NOCOMPAT` may follow
+  one. A name Windows has not got is `iconv_open error: Invalid argument`, busybox's
+  words. It was golang.org/x/text's forty or so encodings, a megabyte of tables.
 
-`iconv -l` lists only encodings this build can actually construct, and a test
-converts to every name it prints — a name that appeared and then failed would be
-worse than one that never appeared.
+`iconv -l` is busybox-w32's list of 358, in its order, which names some code pages
+a given Windows has not got: those are refused as busybox refuses them. busybox's
+iconv opens its first operand again for every operand after it; each is read here.
+A character split where one read ends is converted whole, which busybox's does not
+do under `-c`. A run of characters is converted in one call each way, and a run with
+something in it the calls refuse goes a character at a time, as win_iconv goes, so
+what is written and where it stops are the same; over a 27 MB file to UTF-16LE that
+is 153 ms here and 489 ms in busybox-w32.
 
 `dos2unix` and `unix2dos` are one implementation, the direction chosen by the name
 and overridable with `-u`/`-d`. Two behaviours are worth knowing:

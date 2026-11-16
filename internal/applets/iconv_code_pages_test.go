@@ -1,9 +1,6 @@
 package applets_test
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // iconv takes ASCII and a Windows code page by its number, `CP1252`, as busybox-w32's iconv
 // names them; both were "conversion from/to ... is not supported". Each answer is
@@ -24,7 +21,8 @@ func TestIconv_takesASCIIAndCodePageNumbers(t *testing.T) {
 			t.Errorf("iconv %q of %q = %q, %v; want %q", test.args, test.stdin, got, err, test.want)
 		}
 	}
-	if _, stderr, err := runSmall(t, dir, "x\n", "iconv", "-f", "CP99999"); err == nil || !strings.Contains(stderr+err.Error(), "CP99999") {
-		t.Errorf("iconv -f CP99999 = %q, %v; want it refused by name", stderr, err)
+	// A code page Windows has not got is refused as busybox-w32 refuses it, which names nothing.
+	if _, _, err := runSmall(t, dir, "x\n", "iconv", "-f", "CP99999"); err == nil || err.Error() != "iconv_open error: Invalid argument" {
+		t.Errorf("iconv -f CP99999 = %v; want busybox-w32's iconv_open error", err)
 	}
 }

@@ -28,6 +28,14 @@ var forbiddenInRelease = []string{
 	"database/sql/driver",
 	// The background jobs' state has a codec of its own; see job_state_codec.go.
 	"encoding/json",
+	// iconv converts through Windows's code pages, as busybox-w32's does; see iconv.go.
+	"golang.org/x/text/encoding/charmap",
+	"golang.org/x/text/encoding/ianaindex",
+	"golang.org/x/text/encoding/japanese",
+	"golang.org/x/text/encoding/korean",
+	"golang.org/x/text/encoding/simplifiedchinese",
+	"golang.org/x/text/encoding/traditionalchinese",
+	"golang.org/x/text/encoding/unicode",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

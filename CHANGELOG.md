@@ -20,6 +20,13 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   were an unsupported convenience; v1.4.0 and the nightly `v1.4.66-master-b9608f763100` are
   the last that have them. What was written for those platforms goes, and a Windows API is
   called directly where one does the job, as busybox-w32 does.
+- **iconv converts as busybox-w32's does, through Windows's own code pages**: every code
+  page Windows has can be named, by busybox's 358 aliases or by number, and `iconv -l` lists
+  those aliases. A character the target has not got is `conversion error: Illegal byte
+  sequence` after what came before it is written, input that is no character is too, and
+  `-c` passes over both, where it put `\x1a` in for one and U+FFFD for the other. A name
+  Windows has not got is `iconv_open error: Invalid argument`, busybox's words. The binary
+  is 760 KB smaller for the tables that went.
 - **Paths are reported as busybox-w32 reports them**, `C:/Users/nemo`: `~`, `$HOME`,
   `pwd`, `$PWD`, `$OLDPWD`, `dirs`, the prompt and `realpath`. A native program handed
   `~/x` can now open it; `nvim ~/.ssh/config` opened `\c\Users\...`. `NEMOSH_PATHS=msys`

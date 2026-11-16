@@ -196,11 +196,9 @@ func TestIconv_refusesWhatItCannotRepresentUnlessAsked(t *testing.T) {
 	if !strings.Contains(stdout, "a") || !strings.Contains(stdout, "b") {
 		t.Fatalf("iconv -c dropped too much: %q", stdout)
 	}
-	// An encoding nobody has is refused by name rather than guessed at.
-	if _, stderr, err := runSmall(t, dir, "x", "iconv", "-f", "NOSUCH-8"); err == nil {
-		t.Fatal("iconv accepted an unknown encoding")
-	} else if !strings.Contains(stderr+err.Error(), "NOSUCH-8") {
-		t.Fatalf("iconv said %q, want it to name the encoding", stderr+err.Error())
+	// An encoding nobody has is refused rather than guessed at, in busybox-w32's words.
+	if _, _, err := runSmall(t, dir, "x", "iconv", "-f", "NOSUCH-8"); err == nil || err.Error() != "iconv_open error: Invalid argument" {
+		t.Fatalf("iconv -f NOSUCH-8 = %v; want busybox-w32's iconv_open error", err)
 	}
 }
 
@@ -209,14 +207,9 @@ func TestIconv_listsWhatItKnows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Every name listed must actually work, or a name that appears and then
-	// fails would be worse than one that never appeared.
-	for _, name := range strings.Fields(stdout) {
-		if _, _, err := runSmall(t, t.TempDir(), "abc\n", "iconv", "-f", "UTF-8", "-t", name); err != nil {
-			t.Fatalf("iconv -l offers %q but converting to it failed: %v", name, err)
-		}
-	}
-	for _, want := range []string{"UTF-8", "UTF-16LE", "GBK", "Shift_JIS"} {
+	// busybox-w32's list, whether or not this Windows has every code page in it: CP367 and a
+	// dozen others are named there and refused by IsValidCodePage, as busybox-w32 refuses them.
+	for _, want := range []string{"UTF-8", "UTF-16LE", "GBK", "shift_jis"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("iconv -l is missing %q", want)
 		}
