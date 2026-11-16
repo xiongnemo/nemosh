@@ -23,8 +23,10 @@ func TestWait_answersAsBothReferencesDo(t *testing.T) {
 		{
 			// A job whose end `jobs` reported is not known any more, and a process id
 			// the shell does not know is one that exited 127. busybox answers 127 here.
+			// Waited for until it has ended, rather than for 0.2 s: a Windows runner had not
+			// started the job by then, `jobs` saw it running, and `wait` answered its 7.
 			name:   "a job already reported is 127",
-			script: "(exit 7) & p=$!\nsleep 0.2\njobs >/dev/null\nwait $p\necho \"st=$?\"\n",
+			script: "(exit 7) & p=$!\nuntil case $(jobs) in *Done*) true;; *) false;; esac; do sleep 0.05; done\njobs >/dev/null\nwait $p\necho \"st=$?\"\n",
 			want:   "st=127\n",
 		},
 		{
