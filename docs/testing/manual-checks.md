@@ -299,6 +299,25 @@ and a browser. Not yet checked by hand; `wget` became its own client on 2026-11-
   the listing links work, a video seeks (that is a Range request), and a reload
   shows the browser's 304 in its network panel.
 
+## I. Files, against real disks and code pages
+
+The tests make their files in the temporary directory, on one volume, in sizes a test can
+afford. What needs a second drive, a share or a large file is here. Not yet checked by hand;
+measured with built binaries on 2026-11-17 where it says so.
+
+- **A large copy and Ctrl-C**: `cp` of a file of a few GB (made with `fsutil file createnew
+  big.bin 4000000000`) runs at the disk's speed -- 512 MB took 160 ms here, by CopyFile2 --
+  and Ctrl-C during it gives the prompt back at once and leaves no partial copy.
+- **mv to another drive**: a file with a stream (`echo note > f.txt:side`) and the hidden bit
+  (`attrib +h f.txt`) moved from C: to D: keeps both, which `dir /r` and `attrib` show --
+  checked from C: to D: on 2026-11-17 through a script; by hand at a prompt, not yet. A large
+  one is CopyFile2's, and Ctrl-C ends it.
+- **A network share**: `cp`, `mv`, `tail -n1` and `chmod` on a path under `\\server\share`
+  behave as on a local disk; a share that goes away during a copy is an error, not a hang.
+- **iconv with real text**: `iconv -f GBK -t UTF-8` of a file saved as GBK by Notepad, and
+  `-f SHIFT_JIS`, `-f EUC-KR` and `-f BIG5` likewise, read as the text it is; `iconv -f UTF-8
+  -t GBK` of something GBK has not got says `conversion error`, and with `-c` leaves it out.
+
 ## If something fails
 
 Capture, in this order: what you typed, what appeared, and `nemosh --version`. For
