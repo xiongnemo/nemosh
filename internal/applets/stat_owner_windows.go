@@ -26,28 +26,30 @@ const (
 // owns, or that nobody does; a local or domain account's relative ID for one such an account
 // owns, when that is from 500 up to defaultWindowsUID; and 0, root, for the rest. Of a file
 // another account owns, shared is whether this one, unelevated, may read, write and run it,
-// in which case busybox gives others the owner's permissions.
-func fileOwner(handle windows.Handle) (uid uint32, shared bool) {
+// in which case busybox gives others the owner's permissions. account is the owner's name as
+// ls -l prints it, read from the same descriptor; empty when there is none to read.
+func fileOwner(handle windows.Handle) (uid uint32, shared bool, account string) {
 	self := processUserSID()
 	if self == nil {
-		return defaultWindowsUID, false
+		return defaultWindowsUID, false, ""
 	}
 	descriptor, err := windows.GetSecurityInfo(handle, windows.SE_FILE_OBJECT,
 		windows.OWNER_SECURITY_INFORMATION|windows.GROUP_SECURITY_INFORMATION|windows.DACL_SECURITY_INFORMATION)
 	if err != nil {
-		return 0, false
+		return 0, false, ""
 	}
 	owner, _, err := descriptor.Owner()
 	switch {
 	case err != nil || owner == nil:
-		return 0, false
+		return 0, false, ""
 	case owner.Equals(self) || owner.String() == "S-1-0-0":
-		return defaultWindowsUID, false
+		return defaultWindowsUID, false, ownerAccountName(owner)
 	}
+	account = ownerAccountName(owner)
 	if id, ok := accountRID(owner.String()); ok && id >= 500 && id < defaultWindowsUID {
 		uid = id
 	}
-	return uid, currentUserID() != 0 && grantsFullAccess(descriptor)
+	return uid, currentUserID() != 0 && grantsFullAccess(descriptor), account
 }
 
 // accountRID is the relative ID of a local or domain account's SID, S-1-5-21-a-b-c-RID, read from

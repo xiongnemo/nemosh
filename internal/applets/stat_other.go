@@ -28,6 +28,7 @@ func hostStatRecord(native string, follow bool, _ uint32) (statRecord, error) {
 		access: time.Unix(st.Atim.Unix()), modify: time.Unix(st.Mtim.Unix()), change: time.Unix(st.Ctim.Unix()),
 	}
 	record.owner, record.group = userName(st.Uid), groupName(st.Gid)
+	record.account = accountNameOfID(st.Uid)
 	if record.mode&statTypeMask == statLink {
 		record.target, _ = os.Readlink(native)
 	}

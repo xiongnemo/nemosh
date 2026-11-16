@@ -52,9 +52,12 @@ func executableFormat(native string, info os.FileInfo) bool {
 	if data, ok := info.Sys().(*syscall.Win32FileAttributeData); ok && data.FileAttributes&recallOnDataAccess != 0 {
 		return false
 	}
-	head, err := readHead(native)
+	head, err := readFileHead(native)
 	return err == nil && executableHeader(head)
 }
+
+// readFileHead is how executableFormat reads, which a test counts through.
+var readFileHead = readHead
 
 // readHead is a file's first 1024 bytes, read through a handle that holds its access time, as
 // busybox's does with SetFileTime and -1, so that asking what a file is does not make it look

@@ -36,7 +36,9 @@ func hostStatRecord(native string, follow bool, umask uint32) (statRecord, error
 	default:
 		record.mode = statRegular | currentPermissions(native, info, umask)
 	}
-	if statHandleFacts(native, link, &record) && info.IsDir() && !link {
+	// A link to a directory is counted as one, as busybox's count_subdirs counts whatever carries
+	// the directory attribute: scoop's `current`, a junction, has its version's links.
+	if statHandleFacts(native, link, &record) && hasDirectoryAttribute(info) {
 		record.links = subdirectoryLinks(native)
 	}
 	size := record.size
@@ -75,12 +77,19 @@ func statHandleFacts(native string, link bool, record *statRecord) bool {
 		record.inode = uint64(data.FileIndexHigh)<<32 | uint64(data.FileIndexLow)
 		record.links = uint64(data.NumberOfLinks)
 	}
-	uid, shared := fileOwner(handle)
-	record.uid, record.gid = uid, uid
+	uid, shared, account := fileOwner(handle)
+	record.uid, record.gid, record.account = uid, uid, account
 	if shared {
 		record.mode |= (record.mode & 0o700) >> 6
 	}
 	return known
+}
+
+// hasDirectoryAttribute is FILE_ATTRIBUTE_DIRECTORY, which a directory carries and so does a
+// junction or a link to one, where Go's IsDir says only the first.
+func hasDirectoryAttribute(info os.FileInfo) bool {
+	data, ok := info.Sys().(*syscall.Win32FileAttributeData)
+	return info.IsDir() || ok && data.FileAttributes&windows.FILE_ATTRIBUTE_DIRECTORY != 0
 }
 
 // subdirectoryLinks is busybox-w32's count_subdirs (win32/mingw.c:704-720), which its stat asks

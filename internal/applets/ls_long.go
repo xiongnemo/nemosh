@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -54,26 +55,23 @@ const (
 // blocks columns -i and -s put before it are lsEntryPrefix's.
 func formatLongEntry(entry lsEntry, options lsOptions) string {
 	name := lsDisplayName(entry, options)
-	mode := lsModeString(entry.path, entry.info, options.umask)
-	size := lsSizeText(entry.info.Size(), options)
+	mode, size, target, linked := entry.longFacts(options)
 	// A link says so in the first column and names its target, which is what busybox does
 	// and what this did not: the ten junctions in a home directory came out as
 	// `?rw-rw-rw-` with a size of 0 and no target at all. A link's size is the length of
 	// that target, which is POSIX and which busybox also prints, and its indicator is the
-	// target's, after it.
-	if target, ok := linkTarget(entry.path, entry.info); ok {
-		// `lrwxrwxrwx`, not the target's own bits: a link's permissions are not
-		// consulted for anything, and every ls prints them wide open.
-		mode = "lrwxrwxrwx"
-		size = lsSizeText(int64(len(target)), options)
+	// target's, after it, which is what is stat'd for: -F's and -p's.
+	if linked {
 		name = paintLsName(lsNameText(entry.name, options), entry.info, options.colored) + " -> " + target
-		if followed, err := os.Stat(entry.path); err == nil {
-			name += classifyLsSuffix(followed, options)
+		if options.classify || options.slash {
+			if followed, err := os.Stat(entry.path); err == nil {
+				name += classifyLsSuffix(followed, options)
+			}
 		}
 	}
 	var line strings.Builder
 	fmt.Fprintf(&line, "%-10s %4d ", mode, entry.links())
-	owner := longEntryOwner(entry.path, entry.info)
+	owner := entry.owner()
 	switch uid, gid := entry.ids(); {
 	case options.numeric && options.groupOnly:
 		fmt.Fprintf(&line, "%-8d ", gid)
@@ -126,15 +124,27 @@ func linkTarget(path string, info os.FileInfo) (string, bool) {
 // A directory listing usually has one or two distinct owners, and resolving one costs a
 // lookup that may go to a domain controller. Measured over 4,895 files in System32: 170µs per
 // file without this and 29µs with it, the remainder being the per-file security query that
-// cannot be cached.
-var ownerNames = map[string]string{}
+// cannot be cached. Locked, since stat's record names its owner too, and jobs run applets at
+// once; made at its first use rather than as the binary starts.
+var ownerNames struct {
+	sync.Mutex
+	names map[string]string
+}
 
 func cachedOwnerName(key string, resolve func() string) string {
-	if name, ok := ownerNames[key]; ok {
+	ownerNames.Lock()
+	name, ok := ownerNames.names[key]
+	ownerNames.Unlock()
+	if ok {
 		return name
 	}
-	name := resolve()
-	ownerNames[key] = name
+	name = resolve()
+	ownerNames.Lock()
+	if ownerNames.names == nil {
+		ownerNames.names = map[string]string{}
+	}
+	ownerNames.names[key] = name
+	ownerNames.Unlock()
 	return name
 }
 
@@ -197,5 +207,8 @@ func longEntryOwner(path string, info os.FileInfo) string {
 		}
 		return "root"
 	}
-	return fileOwnerName(path)
+	return ownerNameOf(path)
 }
+
+// ownerNameOf is how longEntryOwner asks, which a test counts through.
+var ownerNameOf = fileOwnerName

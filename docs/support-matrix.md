@@ -2571,6 +2571,14 @@ count and size: `drwxrwxr-x    6 nemo nemo 4096 ... docs`. This paragraph named 
 differences, a mode of `drwxrwxrwx` and a link count of 1, and both went with the umask
 and with ls taking busybox's links; measured again on 2026-11-16.
 
+So does a directory's listing, line for line, measured over `C:/Windows/System32` and a home
+directory on 2026-11-16. A subdirectory's size is what GetFileAttributesEx says, as
+busybox's lstat asks it, where the listing's own 0 was printed; one this account cannot
+open has no permissions for others, `drwxrwx---`; and a junction's links, as `stat`'s, are
+its target's subdirectories and two, as count_subdirs counts what carries the directory
+attribute -- scoop's `current` is 10. NTFS keeps a directory's size loosely, and two asks a
+moment apart can disagree; busybox's do too.
+
 ### `lsattr` and `chattr`
 
 The pair busybox-w32 has for Windows' file attributes rather than ext2's flags,

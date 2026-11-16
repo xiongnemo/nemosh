@@ -2,6 +2,7 @@ package applets
 
 import (
 	"fmt"
+	"path/filepath"
 )
 
 // What the long form, -i, -s and the -c and -u times show of an entry beyond its FileInfo comes
@@ -28,9 +29,42 @@ func recordLsFacts(items []lsEntry, options lsOptions) {
 		if item.recorded || item.device {
 			continue
 		}
-		record, err := hostStatRecord(item.path, item.followed, 0)
+		record, err := hostStatRecord(item.path, item.followed, options.umask)
 		item.record, item.recorded = record, err == nil
 	}
+}
+
+// longFacts are the mode, size and link target -l prints, from the entry's stat where it has
+// one, which has asked all of them: the first bytes of a file for its execute bits, its handle
+// for whether others may open it, a link for what it holds. Asked again here, a file's first
+// bytes were read twice and a link read twice. The size is the stat's too: a directory's, which
+// a listing reports as 0, where GetFileAttributesEx says what busybox-w32's stat says, 4096 or
+// 16384; and a file's, which a listing may report as it was before a write still under way.
+func (e lsEntry) longFacts(options lsOptions) (mode, size, target string, link bool) {
+	kind := e.record.mode & statTypeMask
+	if e.recorded && (kind == statRegular || kind == statDirectory || kind == statLink) {
+		size = lsSizeText(e.record.size, options)
+		if kind == statLink {
+			// `lrwxrwxrwx` whatever the target's bits: a link's are consulted for nothing, and
+			// every ls prints them wide open.
+			return "lrwxrwxrwx", size, filepath.ToSlash(e.record.target), true
+		}
+		return statModeString(e.record.mode), size, "", false
+	}
+	mode, size = lsModeString(e.path, e.info, options.umask), lsSizeText(e.info.Size(), options)
+	if target, ok := linkTarget(e.path, e.info); ok {
+		return "lrwxrwxrwx", lsSizeText(int64(len(target)), options), target, true
+	}
+	return mode, size, "", false
+}
+
+// owner is the -l owner column: the account the entry's stat read through its handle, or the one
+// longEntryOwner asks for, which opened the file again for it.
+func (e lsEntry) owner() string {
+	if e.recorded && e.record.account != "" {
+		return e.record.account
+	}
+	return longEntryOwner(e.path, e.info)
 }
 
 func (e lsEntry) links() uint64 {

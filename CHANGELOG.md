@@ -62,6 +62,13 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   stays open, where it was closed. busybox-w32 ends the program, and a script's still is, so
   Ctrl-C stops a script at once. `NEMOSH_CTRL_C=kill` ends it at the prompt too, as busybox
   does, and `NEMOSH_CTRL_C=program` leaves it to the program in a script as well.
+- **`ls` asks each file once**: `ls -l` read a file's first bytes twice and opened it a third
+  time for its owner, and a plain `ls` stat'd every entry for `-L`'s sake. Over System32,
+  `ls` takes 17 ms where it took 88, and `ls -l` 247 where it took 433 (busybox 379); `ls
+  -lR` of Go's source tree 1.5 s where it took 2.6 (busybox 1.7). And `ls -l` matches
+  busybox-w32's listing line for line: a subdirectory's size was 0, one this account cannot
+  open showed others' permissions, and a junction had one link where `ls` and `stat` both
+  count its target's subdirectories and two, as busybox does.
 
 ### Added
 

@@ -15,6 +15,9 @@ type statRecord struct {
 	access, modify, change time.Time
 	// target is what a link holds.
 	target string
+	// account is the owner's name as ls -l prints it, which on Windows is not busybox stat's
+	// owner: the account the descriptor names, read through the handle the record opened.
+	account string
 }
 
 // The file types of a mode, S_IFMT and the values under it.

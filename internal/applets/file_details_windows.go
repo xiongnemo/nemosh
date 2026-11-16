@@ -184,6 +184,12 @@ func fileOwnerName(path string) string {
 	if err != nil {
 		return "root"
 	}
+	return ownerAccountName(owner)
+}
+
+// ownerAccountName is the account an owner's SID names, as ls -l names it: root for anything
+// that is not a user's account.
+func ownerAccountName(owner *windows.SID) string {
 	return cachedOwnerName(owner.String(), func() string {
 		account, _, kind, err := owner.LookupAccount("")
 		if err != nil || kind != windows.SidTypeUser {

@@ -60,9 +60,13 @@ func listDirectory(stdout io.Writer, target, display string, options lsOptions, 
 			return err
 		}
 		item := lsEntry{name: name, info: info, path: filepath.Join(target, name)}
-		// -L follows every link, and asks about what each points at.
-		if followed, err := os.Stat(item.path); err == nil && options.follow == lsFollowAll && isSymbolicLink(info) {
-			item.info, item.followed = followed, true
+		// -L follows every link, and asks about what each points at: a link, and only under
+		// -L. Every entry was stat'd first and the answer then thrown away, a probe of each
+		// for a plain `ls`.
+		if options.follow == lsFollowAll && isSymbolicLink(info) {
+			if followed, err := os.Stat(item.path); err == nil {
+				item.info, item.followed = followed, true
+			}
 		}
 		items = append(items, item)
 	}

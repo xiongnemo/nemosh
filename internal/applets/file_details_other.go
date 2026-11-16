@@ -36,7 +36,12 @@ func fileOwnerName(path string) string {
 	if !ok {
 		return "root"
 	}
-	id := strconv.Itoa(int(stat.Uid))
+	return accountNameOfID(stat.Uid)
+}
+
+// accountNameOfID is the account a uid names, or the number when it names none.
+func accountNameOfID(uid uint32) string {
+	id := strconv.Itoa(int(uid))
 	return cachedOwnerName(id, func() string {
 		account, err := user.LookupId(id)
 		if err != nil {
