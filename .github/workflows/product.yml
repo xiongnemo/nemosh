@@ -295,12 +295,24 @@ jobs:
       # behaviour, in the shell and the applets alike, and the commits queued
       # behind this one add another 0.15 MiB, measured. 18 MiB leaves about 21%
       # over where the queue lands, the proportion every raise has kept.
+      #
+      # Lowered to 13 MiB on 2026-11-17, the first time it has come down, at
+      # 11,033,600 bytes (10.52 MiB) from 16,285,184 at the start of the round that
+      # did it, measured here with the version ldflags. What went, each its own commit
+      # with its numbers: -tags tcell_minimal; iconv through Windows's code pages
+      # rather than x/text's tables (-760 KB); httpd and wget their own over Winsock
+      # rather than net/http (-1.3 MB); TLS Schannel's rather than crypto/tls and
+      # crypto/x509 (-1.9 MB); and the rest of crypto but SHA-3 the system's. An
+      # unstripped build of the same tree is 15,800,832 bytes, above it, so dropping
+      # `-s -w` still trips it. 13 MiB leaves about 23% for growth, the proportion of
+      # every raise before it; a ceiling that stayed at 18 would have let all of that
+      # come back unremarked.
       - name: binary size ceiling
         shell: bash
         run: |
           binary="dist/nemosh.exe"
           size=$(wc -c < "$binary")
-          ceiling=18874368
+          ceiling=13631488
           echo "$binary is $size bytes, ceiling $ceiling"
           if [ "$size" -gt "$ceiling" ]; then
             echo "the binary grew past the ceiling; check the release flags and go.mod before raising it"
