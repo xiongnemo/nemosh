@@ -254,14 +254,7 @@ func TestHttpd_servesAndContains(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	server := &http.Server{Handler: &httpdHandler{root: dir, log: io.Discard}}
-	go server.Serve(listener)
-	defer server.Close()
-	base := "http://" + listener.Addr().String()
+	base := startHttpd(t, dir).URL
 	client := http.Client{Timeout: 5 * time.Second}
 
 	response, err := client.Get(base + "/page.txt")

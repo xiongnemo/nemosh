@@ -2,7 +2,6 @@ package applets
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +18,7 @@ import (
 // that decoding is where the interesting inputs come from -- `%00`, `%2e%2e%2f`,
 // and a path that is already absolute.
 
-func serveTestDirectory(t *testing.T) (*httptest.Server, string) {
+func serveTestDirectory(t *testing.T) (testHTTPServer, string) {
 	t.Helper()
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "f.txt"), []byte("served\n"), 0o600); err != nil {
@@ -31,10 +30,7 @@ func serveTestDirectory(t *testing.T) (*httptest.Server, string) {
 	if err := os.WriteFile(filepath.Join(root, "sub", "inner.txt"), []byte("inner\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	handler := &httpdHandler{root: root, log: &strings.Builder{}}
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
-	return server, root
+	return startHttpd(t, root), root
 }
 
 // A NUL smuggled in as %00 is the reachable-from-the-network form of the bug the
@@ -175,9 +171,7 @@ func TestHttpd_escapesNamesInItsListing(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "adir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	handler := &httpdHandler{root: root, log: &strings.Builder{}}
-	server := httptest.NewServer(handler)
-	defer server.Close()
+	server := startHttpdWith(t, &httpdHandler{root: root, log: &syncLog{}})
 
 	response, err := server.Client().Get(server.URL + "/")
 	if err != nil {
@@ -216,9 +210,7 @@ func TestHttpd_servesIndexHtmlExactlyOnce(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "other.txt"), []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	handler := &httpdHandler{root: root, log: &strings.Builder{}}
-	server := httptest.NewServer(handler)
-	defer server.Close()
+	server := startHttpdWith(t, &httpdHandler{root: root, log: &syncLog{}})
 
 	response, err := server.Client().Get(server.URL + "/")
 	if err != nil {
@@ -244,10 +236,8 @@ func TestHttpd_verboseLogsEachRequest(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "f.txt"), []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	log := &strings.Builder{}
-	handler := &httpdHandler{root: root, verbose: true, log: log}
-	server := httptest.NewServer(handler)
-	defer server.Close()
+	log := &syncLog{}
+	server := startHttpdWith(t, &httpdHandler{root: root, verbose: true, log: log})
 
 	for _, target := range []string{"/f.txt", "/missing"} {
 		response, err := server.Client().Get(server.URL + target)
@@ -268,10 +258,8 @@ func TestHttpd_verboseLogsEachRequest(t *testing.T) {
 // the person running the server is the one who should be told.
 func TestHttpd_logsTheReasonItRefused(t *testing.T) {
 	root := t.TempDir()
-	log := &strings.Builder{}
-	handler := &httpdHandler{root: root, log: log}
-	server := httptest.NewServer(handler)
-	defer server.Close()
+	log := &syncLog{}
+	server := startHttpdWith(t, &httpdHandler{root: root, log: log})
 
 	response, err := server.Client().Get(server.URL + "/CON")
 	if err != nil {

@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
-	"time"
+
+	"github.com/xiongnemo/nemosh/internal/netio"
 )
 
 // httpd: serve a directory over HTTP.
@@ -30,6 +30,8 @@ import (
 //     reach a `..` after normalisation. A URL is untrusted input naming a
 //     destination, exactly like an archive entry.
 //   - No authentication, so nothing is served that the caller did not point it at.
+//   - Its parser is the one here a network reaches, so its request line and header are
+//     limited; see httpd_request.go, and httpd_serve.go for the server.
 
 func newHttpdApplet() Applet {
 	return simpleApplet{name: "httpd", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
@@ -76,72 +78,29 @@ func httpdAddress(options appletOptions) (string, error) {
 		// busybox accepts `-p IP:PORT`, so that spelling still works.
 		return port, nil
 	}
-	return net.JoinHostPort(host, port), nil
+	return netio.JoinHostPort(host, port), nil
 }
 
 func serveHTTP(ctx context.Context, root, address string, verbose bool, stdout, stderr io.Writer) error {
-	listener, err := net.Listen("tcp", address)
+	host, port, err := netio.SplitHostPort(address)
+	if err != nil {
+		return err
+	}
+	listener, err := netio.Listen(host, port)
 	if err != nil {
 		return fmt.Errorf("cannot listen on %s: %v", address, err)
 	}
+	defer listener.Close()
 	if _, err := fmt.Fprintf(stdout, "serving %s on http://%s/\n", root, listener.Addr()); err != nil {
 		return err
 	}
-	server := &http.Server{
-		Handler:           &httpdHandler{root: root, verbose: verbose, log: stderr},
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-	// AfterFunc rather than a goroutine on ctx.Done(): a context that is never
-	// cancelled has a *nil* Done channel, and receiving from one blocks forever,
-	// so the goroutine shape leaked one per call. The capability drift test found
-	// this by running `httpd -h DIR` with context.Background().
-	defer context.AfterFunc(ctx, func() { server.Close() })()
-	if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
-		return err
-	}
-	return nil
+	return serveHTTPOn(ctx, listener, &httpdHandler{root: root, verbose: verbose, log: stderr})
 }
 
 type httpdHandler struct {
 	root    string
 	verbose bool
 	log     io.Writer
-}
-
-func (h *httpdHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if h.verbose {
-		fmt.Fprintf(h.log, "%s %s %s\n", request.RemoteAddr, request.Method, request.URL.Path)
-	}
-	if request.Method != http.MethodGet && request.Method != http.MethodHead {
-		// Nothing here writes, so anything but a read is refused rather than
-		// silently treated as a GET.
-		http.Error(writer, "only GET and HEAD are served", http.StatusMethodNotAllowed)
-		return
-	}
-	target, err := h.resolve(request.URL.Path)
-	if err != nil {
-		// The reason is logged and not returned: telling a caller *why* their
-		// traversal failed maps out the filesystem for them.
-		fmt.Fprintf(h.log, "httpd: refusing %q: %v\n", request.URL.Path, err)
-		http.Error(writer, "not found", http.StatusNotFound)
-		return
-	}
-	info, err := os.Stat(target)
-	if err != nil {
-		http.Error(writer, "not found", http.StatusNotFound)
-		return
-	}
-	if info.IsDir() {
-		h.writeListing(writer, request.URL.Path, target)
-		return
-	}
-	file, err := os.Open(target)
-	if err != nil {
-		http.Error(writer, "not found", http.StatusNotFound)
-		return
-	}
-	defer file.Close()
-	http.ServeContent(writer, request, info.Name(), info.ModTime(), file)
 }
 
 // resolve turns a request path into a file inside the root, or refuses.
@@ -172,40 +131,42 @@ func (h *httpdHandler) resolve(requestPath string) (string, error) {
 
 // writeListing is the directory index: an index.html if there is one, otherwise
 // the names.
-func (h *httpdHandler) writeListing(writer http.ResponseWriter, urlPath, target string) {
+func (h *httpdHandler) writeListing(out io.Writer, urlPath, target string, head bool) {
+	var body string
 	if index := filepath.Join(target, "index.html"); fileExists(index) {
-		// Read and written directly rather than through http.ServeFile: that
-		// needs the real *http.Request for range handling, and the first draft
-		// here handed it a fabricated one and then wrote the body a second time.
 		data, err := os.ReadFile(index)
 		if err != nil {
-			http.Error(writer, "not found", http.StatusNotFound)
+			writeHTTPError(out, 404, "not found", head)
 			return
 		}
-		writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-		writer.Write(data)
-		return
-	}
-	entries, err := os.ReadDir(target)
-	if err != nil {
-		http.Error(writer, "not found", http.StatusNotFound)
-		return
-	}
-	names := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() {
-			name += "/"
+		body = string(data)
+	} else {
+		entries, err := os.ReadDir(target)
+		if err != nil {
+			writeHTTPError(out, 404, "not found", head)
+			return
 		}
-		names = append(names, name)
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			name := entry.Name()
+			if entry.IsDir() {
+				name += "/"
+			}
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		var listing strings.Builder
+		fmt.Fprintf(&listing, "<html><body><h1>%s</h1>\n", htmlEscape(urlPath))
+		for _, name := range names {
+			fmt.Fprintf(&listing, "<a href=\"%s\">%s</a><br>\n", htmlEscape(name), htmlEscape(name))
+		}
+		listing.WriteString("</body></html>\n")
+		body = listing.String()
 	}
-	sort.Strings(names)
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(writer, "<html><body><h1>%s</h1>\n", htmlEscape(urlPath))
-	for _, name := range names {
-		fmt.Fprintf(writer, "<a href=\"%s\">%s</a><br>\n", htmlEscape(name), htmlEscape(name))
+	fields := []string{"Content-Type: text/html; charset=utf-8", "Content-Length: " + strconv.Itoa(len(body))}
+	if writeHTTPHead(out, 200, fields) == nil && !head {
+		_, _ = io.WriteString(out, body)
 	}
-	fmt.Fprint(writer, "</body></html>\n")
 }
 
 func fileExists(path string) bool {
