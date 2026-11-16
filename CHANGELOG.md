@@ -32,6 +32,9 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   -- `signed by unknown authority`, `not valid for NAME`, `has expired`. When `ssl_client`'s
   input ends it no longer sends close_notify, as busybox's does not. The binary is 1.9 MB
   smaller again.
+- **A session commits 13 MB, where it committed 45**: the 32 MB Go's crypto packages set
+  aside in every process, and never touched, went with them. Random bytes are RtlGenRandom's
+  and the checksums CNG's now, as busybox-w32's are; output is the same, byte for byte.
 - **iconv converts as busybox-w32's does, through Windows's own code pages**: every code
   page Windows has can be named, by busybox's 358 aliases or by number, and `iconv -l` lists
   those aliases. A character the target has not got is `conversion error: Illegal byte

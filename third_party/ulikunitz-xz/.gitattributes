@@ -1,0 +1,4 @@
+# upstream's test fixtures are kept byte for byte: a.txt and info.txt have CRLF line endings,
+# and a.lzma decompresses to exactly those bytes, so the repository's eol=lf would break the
+# tests that compare them. nemosh's; see README.md.
+lzma/examples/** -text

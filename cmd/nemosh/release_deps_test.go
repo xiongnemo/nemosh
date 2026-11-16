@@ -48,6 +48,8 @@ var forbiddenInRelease = []string{
 	"crypto/md5",
 	"crypto/sha1",
 	"crypto/sha512",
+	// And xz's SHA-256 check is CNG's too, through third_party/ulikunitz-xz.
+	"crypto/sha256",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

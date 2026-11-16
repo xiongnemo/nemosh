@@ -97,7 +97,7 @@ groups do not, and both are the wrong things to hand-roll for 1.5 ms:
 Reversible: if `x/sys/windows` ever drops the `net` import, this cost disappears
 with no work here.
 
-### A 32 MiB reservation from the crypto packages, unavoidable
+### A 32 MiB reservation from the crypto packages, gone 2026-11-17
 
 `crypto/internal/fips140/drbg.memory` is a 33,554,432-byte scratch buffer that
 the FIPS entropy source touches to expose memory-access timings. It shows up as
@@ -109,12 +109,19 @@ commit charge:
 | the same plus `crypto/md5` | 5.6 M | 44.7 M |
 | the same plus `crypto/rand` | 5.6 M | 45.1 M |
 
-Two things follow. It is **zero resident** — the pages are committed and never
-touched, so it costs no RAM, only commit charge and the alarming number Task
-Manager shows. And it arrives with `crypto/md5` alone, so it is the price of
-shipping `md5sum` and `sha256sum`, not of `/dev/urandom`: dropping
-`crypto/rand` from `device.go` would buy nothing. Confirmed by symbol
-(`go tool nm`) in a binary whose only crypto import is `crypto/md5`.
+It is **zero resident** — the pages are committed and never touched, so it cost
+no RAM, only commit charge and the alarming number Task Manager shows. And it
+arrived with `crypto/md5` alone, so it was the price of shipping `md5sum` and
+`sha256sum`, not of `/dev/urandom`: dropping `crypto/rand` alone bought nothing.
+
+This said "unavoidable", and was not: it was unavoidable for as long as the
+hashes, the random bytes and TLS were Go's. Each is the system's now, as
+busybox-w32's are -- TLS Schannel's, random bytes RtlGenRandom's
+(`internal/osrand`), MD5, SHA-1 and SHA-2 CNG's (`internal/digest`), and xz's
+SHA-256 check CNG's through `third_party/ulikunitz-xz` -- and what is left of
+crypto is `crypto/sha3`, which brings no entropy source. A session's commit,
+which `tools/startbench` reports, went from 45.4 MiB to 13.3 on 2026-11-17.
+`cmd/nemosh/release_deps_test.go` forbids every package that brought it back.
 
 ## Memory footprint
 
@@ -311,7 +318,7 @@ anyway, by never comparing a time against a number:
   what Task Manager calls the commit size. It is a number, the same from run to run, and
   a cost that neither the allocations nor the clock can see -- the 32 MiB below is
   committed and never touched. Reported, not yet held to anything: 45.4 MiB for a session
-  on 2026-11-17, of which the crypto packages' buffer is 32.
+  on 2026-11-17, of which the crypto packages' buffer was 32, and 13.3 once it was gone.
 
 The seven runs on windows-latest that calibrated it, the largest difference in any of the
 three scenarios:

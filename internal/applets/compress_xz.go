@@ -7,7 +7,14 @@ import (
 
 	"github.com/ulikunitz/xz"
 	"github.com/ulikunitz/xz/lzma"
+
+	"github.com/xiongnemo/nemosh/internal/digest"
 )
+
+// A stream checked with SHA-256 is checked with the system's, CNG's, which is what the xz nemosh
+// carries asks for in place of crypto/sha256 (third_party/ulikunitz-xz). The check is made, where
+// busybox's unxz makes none.
+func init() { xz.SHA256New = digest.SHA256 }
 
 // unxz, xzcat, unlzma and lzcat, and xz and lzma with -d: they read through
 // ulikunitz/xz, and they only read, as busybox's do, whose xz and lzma without -d answer

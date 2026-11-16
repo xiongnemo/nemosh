@@ -25,3 +25,5 @@ require (
 replace github.com/gdamore/encoding => ./third_party/gdamore-encoding
 
 replace github.com/lucasb-eyer/go-colorful => ./third_party/lucasb-eyer-go-colorful
+
+replace github.com/ulikunitz/xz => ./third_party/ulikunitz-xz
