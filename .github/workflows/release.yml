@@ -92,7 +92,9 @@ jobs:
           set -euo pipefail
           staging="dist/${{ steps.meta.outputs.artifact }}"
           mkdir -p "$staging"
-          go build -trimpath \
+          # -tags tcell_minimal, as every release build: see releaseTags in
+          # cmd/nemosh/release_deps_test.go, which holds every build to it.
+          go build -trimpath -tags tcell_minimal \
             -ldflags "-s -w ${{ steps.meta.outputs.ldflags }}" \
             -o "$staging/nemosh${{ matrix.extension }}" ./cmd/nemosh
           cp LICENSE NOTICE THIRD-PARTY-NOTICES.md README.md "$staging/"

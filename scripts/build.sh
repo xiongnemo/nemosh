@@ -62,8 +62,9 @@ if [ "$strip" = true ]; then
 fi
 
 # CGO_ENABLED=0 keeps the result a single file with no runtime sidecars, which
-# is what the release target is (AGENTS.md, Builds And Packaging).
-CGO_ENABLED="${CGO_ENABLED:-0}" go build -trimpath -ldflags "$ldflags" \
+# is what the release target is (AGENTS.md, Builds And Packaging). The tags are
+# every release build's; see releaseTags in cmd/nemosh/release_deps_test.go.
+CGO_ENABLED="${CGO_ENABLED:-0}" go build -trimpath -tags tcell_minimal -ldflags "$ldflags" \
   ${passthrough+"${passthrough[@]}"} -o "$output" ./cmd/nemosh
 
 printf '%s\n' "$output"

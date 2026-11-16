@@ -79,7 +79,9 @@ A plain `go build ./cmd/nemosh` also works, but reports
 `v0.0.1-unknown-<commit>`: Go's build info records the commit, the time, and
 whether the tree was modified, but **not the tag and not the branch**. Those are
 build-time questions, so `scripts/version.sh` asks git and injects the answers,
-and `scripts/build.sh` is the wrapper that does it for you.
+and `scripts/build.sh` is the wrapper that does it for you. It also builds with
+`-tags tcell_minimal`, as every release is, which leaves out the terminal
+descriptions tcell carries for terminals Windows does not have.
 
 A full clone is required — the version is derived from the nearest semver tag,
 and a shallow clone silently yields the fallback base.

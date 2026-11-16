@@ -201,7 +201,9 @@ jobs:
         run: |
           mkdir -p dist
           binary="dist/nemosh.exe"
-          CGO_ENABLED=0 go build -trimpath \
+          # -tags tcell_minimal, as every release build: see releaseTags in
+          # cmd/nemosh/release_deps_test.go, which holds every build to it.
+          CGO_ENABLED=0 go build -trimpath -tags tcell_minimal \
             -ldflags "-s -w $(bash scripts/version.sh --ldflags)" \
             -o "$binary" ./cmd/nemosh
           version=$("$binary" --version)
@@ -398,7 +400,7 @@ jobs:
           base_tree="$RUNNER_TEMP/startbench-base"
           base="$RUNNER_TEMP/nemosh-base.exe"
           git worktree add --detach "$base_tree" HEAD^
-          (cd "$base_tree" && CGO_ENABLED=0 go build -trimpath \
+          (cd "$base_tree" && CGO_ENABLED=0 go build -trimpath -tags tcell_minimal \
             -ldflags "-s -w $(bash scripts/version.sh --ldflags)" -o "$base" ./cmd/nemosh)
           compare=(-base "$base" -self-check)
           # A pull request's HEAD is the merge commit; the trailer is on the branch's own.

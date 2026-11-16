@@ -169,7 +169,7 @@ time and fails on every runner. After a stage that adds an import nothing in thi
 tree had before, measure it:
 
 ```bash
-CGO_ENABLED=0 go build -trimpath -ldflags "-s -w $(bash scripts/version.sh --ldflags)"   -o dist/nemosh.exe ./cmd/nemosh
+CGO_ENABLED=0 go build -trimpath -tags tcell_minimal -ldflags "-s -w $(bash scripts/version.sh --ldflags)"   -o dist/nemosh.exe ./cmd/nemosh
 wc -c < dist/nemosh.exe                                  # against product.yml's ceiling
 go run ./tools/startbench -head dist/nemosh.exe -base dist/nemosh-base.exe -self-check
 ```
