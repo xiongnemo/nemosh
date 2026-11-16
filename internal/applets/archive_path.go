@@ -22,12 +22,12 @@ import (
 // silently loses the data -- and `docs/design/device-filesystem.md` already
 // records that `test -e ./NUL` succeeds anywhere on this platform, so this is a
 // live hazard rather than a theoretical one.
-var archiveReservedNames = map[string]bool{
-	"con": true, "prn": true, "aux": true, "nul": true,
-	"com1": true, "com2": true, "com3": true, "com4": true, "com5": true,
-	"com6": true, "com7": true, "com8": true, "com9": true,
-	"lpt1": true, "lpt2": true, "lpt3": true, "lpt4": true, "lpt5": true,
-	"lpt6": true, "lpt7": true, "lpt8": true, "lpt9": true,
+func archiveReservedNames(key string) bool {
+	switch key {
+	case "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9":
+		return true
+	}
+	return false
 }
 
 // safeArchivePath checks one entry name and returns the slash-separated path it
@@ -115,7 +115,7 @@ func checkArchiveElement(element, name string) error {
 	// The reserved name applies with or without an extension: `NUL`, `nul.txt`
 	// and `NUL.tar.gz` all reach the device.
 	stem, _, _ := strings.Cut(strings.ToLower(element), ".")
-	if archiveReservedNames[stem] {
+	if archiveReservedNames(stem) {
 		return fmt.Errorf("entry name is a reserved device name: %s", name)
 	}
 	return nil

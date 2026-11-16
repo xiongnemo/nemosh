@@ -173,11 +173,8 @@ func joinOperand(directory, name string) string {
 }
 
 // cpLongOptions are the long forms busybox's cp takes that stand for a letter.
-var cpLongOptions = map[string]string{
-	"archive": "a", "force": "f", "interactive": "i", "no-clobber": "n", "link": "l",
-	"dereference": "L", "no-dereference": "P", "recursive": "R", "symbolic-link": "s",
-	"no-target-directory": "T", "verbose": "v", "update": "u",
-}
+const cpLongOptions = "archive=a force=f interactive=i no-clobber=n link=l dereference=L " +
+	"no-dereference=P recursive=R symbolic-link=s no-target-directory=T verbose=v update=u"
 
 // cpArguments reads cp's options, turning each long one into the letter it stands for.
 func cpArguments(ctx context.Context, args []string) (cpFlags, []string, error) {
@@ -194,8 +191,8 @@ func cpArguments(ctx context.Context, args []string) (cpFlags, []string, error) 
 		}
 		name, value, valued := strings.Cut(arg[2:], "=")
 		switch {
-		case cpLongOptions[name] != "" && !valued:
-			words = append(words, "-"+cpLongOptions[name])
+		case longOptionNamed(cpLongOptions, name) != 0 && !valued:
+			words = append(words, "-"+string(longOptionNamed(cpLongOptions, name)))
 		case name == "target-directory":
 			if !valued {
 				if index+1 >= len(args) {

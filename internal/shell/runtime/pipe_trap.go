@@ -81,7 +81,7 @@ func (s *pipeStage) takeCaught() bool {
 // was a builtin's, the shell's own.
 func (r Runtime) brokenPipe(name string) int {
 	disposition := r.pipeStage.current()
-	if disposition == pipeDefault || disposition == pipeCaught && !ashBuiltinApplets[name] {
+	if disposition == pipeDefault || disposition == pipeCaught && !ashBuiltinApplets(name) {
 		return brokenPipeStatus
 	}
 	fmt.Fprintf(r.streams.Stderr, "%s%s: write error: Broken pipe\n", r.diagnosticPrefix(), name)

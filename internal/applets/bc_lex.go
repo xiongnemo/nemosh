@@ -34,11 +34,12 @@ type bcToken struct {
 	line int
 }
 
-var bcKeywords = map[string]bool{
-	"define": true, "auto": true, "if": true, "else": true, "while": true,
-	"for": true, "break": true, "continue": true, "return": true,
-	"halt": true, "quit": true, "print": true,
-	"length": true, "scale": true, "sqrt": true, "read": true,
+func bcKeywords(key string) bool {
+	switch key {
+	case "define", "auto", "if", "else", "while", "for", "break", "continue", "return", "halt", "quit", "print", "length", "scale", "sqrt", "read":
+		return true
+	}
+	return false
 }
 
 // bcOperators are longest first, so `<=` is not read as `<` and then `=`, and `**` -- which
@@ -176,7 +177,7 @@ func (l *bcLexer) scanName() bcToken {
 		l.offset++
 	}
 	text := l.source[start:l.offset]
-	if bcKeywords[text] {
+	if bcKeywords(text) {
 		return bcToken{kind: bcTokenKeyword, text: text, line: l.line}
 	}
 	return bcToken{kind: bcTokenName, text: text, line: l.line}

@@ -137,12 +137,26 @@ func hostStatfs(native string) (statfsRecord, error) {
 	for limit := uint64(16) << 40; blockSize < 65536 && total >= limit; limit *= 2 {
 		blockSize *= 2
 	}
+	kindID, _ := windowsFilesystemTypes(windows.UTF16ToString(kind))
 	return statfsRecord{
-		id: uint64(serial) << 32, nameLength: uint64(nameLength), kind: windowsFilesystemTypes[windows.UTF16ToString(kind)],
+		id: uint64(serial) << 32, nameLength: uint64(nameLength), kind: kindID,
 		blockSize: blockSize, blocks: total / blockSize, free: free / blockSize, available: available / blockSize,
 	}, nil
 }
 
 // windowsFilesystemTypes is busybox-w32's FS_NAMES and fstypes (win32/statfs.c:16-17): the magic
 // numbers of the filesystems Windows names, and 0 for the rest.
-var windowsFilesystemTypes = map[string]uint64{"NTFS": 0x5346544e, "FAT": 0x4006, "FAT32": 0x4006, "CDFS": 0x9660, "UDF": 0x15013346}
+func windowsFilesystemTypes(key string) (uint64, bool) {
+	switch key {
+	case "NTFS":
+		return 0x5346544e, true
+	case "FAT", "FAT32":
+		return 0x4006, true
+	case "CDFS":
+		return 0x9660, true
+	case "UDF":
+		return 0x15013346, true
+	}
+	var zero uint64
+	return zero, false
+}

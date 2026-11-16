@@ -28,13 +28,14 @@ func newTouchApplet() Applet { return touchApplet{} }
 func (touchApplet) Name() string { return "touch" }
 
 // touchLongOptions are busybox's long forms and the letter each stands for.
-var touchLongOptions = map[string]string{"no-create": "c", "no-dereference": "h", "reference": "r", "date": "d"}
+const touchLongOptions = "no-create=c no-dereference=h reference=r date=d"
 
 func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Writer, stderr io.Writer) error {
 	var words []string
 	for index := 0; index < len(args); index++ {
 		name, value, valued := strings.Cut(strings.TrimPrefix(args[index], "--"), "=")
-		letter, long := touchLongOptions[name]
+		named := longOptionNamed(touchLongOptions, name)
+		letter, long := string(named), named != 0
 		switch {
 		case args[index] == "--" || !strings.HasPrefix(args[index], "--"):
 			words = append(words, args[index])

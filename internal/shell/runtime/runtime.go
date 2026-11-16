@@ -321,7 +321,7 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 	r.startingProgram(args[0])
 	// A program's write into a pipe no one reads ends the program, and the shell goes on; a
 	// builtin's ends the shell's stage. See pipe_stage.go.
-	if !ashBuiltinApplets[args[0]] {
+	if !ashBuiltinApplets(args[0]) {
 		defer r.pipeStage.running()()
 	}
 	applet, ok := r.lookupApplet(args[0])

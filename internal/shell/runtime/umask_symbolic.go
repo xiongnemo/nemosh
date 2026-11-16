@@ -24,10 +24,36 @@ var errIllegalMode = errors.New("illegal mode")
 
 // umaskClasses are the bits a class letter stands for: its permissions, with set-user-id for
 // u, set-group-id for g, and every special bit for a.
-var umaskClasses = map[byte]uint32{'u': 0o4700, 'g': 0o2070, 'o': 0o0007, 'a': 0o7777}
+func umaskClasses(key byte) uint32 {
+	switch key {
+	case 'u':
+		return 0o4700
+	case 'g':
+		return 0o2070
+	case 'o':
+		return 0o0007
+	case 'a':
+		return 0o7777
+	}
+	return 0
+}
 
 // umaskPermissions are the permission letters, as bits in every class.
-var umaskPermissions = map[byte]uint32{'r': 0o444, 'w': 0o222, 'x': 0o111, 'X': 0o111, 's': 0o6000, 't': 0o1000}
+func umaskPermissions(key byte) uint32 {
+	switch key {
+	case 'r':
+		return 0o444
+	case 'w':
+		return 0o222
+	case 'x', 'X':
+		return 0o111
+	case 's':
+		return 0o6000
+	case 't':
+		return 0o1000
+	}
+	return 0
+}
 
 // symbolicMask is the mask as `umask -S` prints it.
 func symbolicMask(mask uint16) string {
@@ -73,8 +99,8 @@ func applySymbolicMask(mask uint16, spec string) (uint16, error) {
 // applyModeClause applies one clause, `ug+w-x` or `o=u`: its class letters, then each action.
 func applyModeClause(mode, mask uint32, clause string) (uint32, error) {
 	var who uint32
-	for len(clause) > 0 && umaskClasses[clause[0]] != 0 {
-		who |= umaskClasses[clause[0]]
+	for len(clause) > 0 && umaskClasses(clause[0]) != 0 {
+		who |= umaskClasses(clause[0])
 		clause = clause[1:]
 	}
 	if clause == "" {
@@ -118,9 +144,9 @@ func actionBits(mode uint32, clause string) (uint32, string) {
 		return bits<<6 | bits<<3 | bits, clause[1:]
 	}
 	var bits uint32
-	for len(clause) > 0 && umaskPermissions[clause[0]] != 0 {
+	for len(clause) > 0 && umaskPermissions(clause[0]) != 0 {
 		if clause[0] != 'X' || mode&0o111 != 0 {
-			bits |= umaskPermissions[clause[0]]
+			bits |= umaskPermissions(clause[0])
 		}
 		clause = clause[1:]
 	}

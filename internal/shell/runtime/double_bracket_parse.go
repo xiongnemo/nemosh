@@ -200,7 +200,7 @@ func (reader *conditionReader) term() (*conditionNode, error) {
 // binary reads a binary test whose left operand is taken, the reader at its operator.
 func (reader *conditionReader) binary(left word) (*conditionNode, error) {
 	operator := reader.operator()
-	if !doubleBracketBinaryOperators[operator] {
+	if !doubleBracketBinaryOperators(operator) {
 		return nil, fmt.Errorf("syntax error: unexpected token `%s', conditional binary operator expected", reader.text())
 	}
 	reader.at++
@@ -218,5 +218,5 @@ func (reader *conditionReader) binaryFollows() bool {
 		return false
 	}
 	operator, operand := conditionOperator(reader.words[reader.at+1]), conditionOperator(reader.words[reader.at+2])
-	return doubleBracketBinaryOperators[operator] && !isConditionToken(operand)
+	return doubleBracketBinaryOperators(operator) && !isConditionToken(operand)
 }

@@ -270,7 +270,7 @@ func readSedDelimited(script string, delimiter byte) (string, string, error) {
 			return text.String(), script[index+1:], nil
 		case char == '\\' && index+1 < len(script):
 			index++
-			if control, ok := sedControlEscapes[script[index]]; ok {
+			if control, ok := sedControlEscapes(script[index]); ok {
 				text.WriteString(control)
 			} else if script[index] == delimiter && delimiter != '&' {
 				text.WriteByte(delimiter)

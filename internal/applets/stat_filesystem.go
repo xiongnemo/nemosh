@@ -50,19 +50,83 @@ func (s statfsRecord) conversion(spec cSpec, verb byte, name string) string {
 // number Linux's statfs answers, or of one busybox-w32 makes of what Windows calls a volume's
 // filesystem, as win32/statfs.c does.
 func filesystemTypeName(kind uint64) string {
-	if name, ok := filesystemTypes[uint32(kind)]; ok {
+	if name, ok := filesystemTypes(uint32(kind)); ok {
 		return name
 	}
 	return "UNKNOWN"
 }
 
-var filesystemTypes = map[uint32]string{
-	0xADFF: "affs", 0x1CD1: "devpts", 0x137D: "ext", 0xEF51: "ext2", 0xEF53: "ext2/ext3",
-	0x3153464a: "jfs", 0x58465342: "xfs", 0xF995E849: "hpfs", 0x9660: "isofs", 0x4000: "isofs",
-	0x4004: "isofs", 0x137F: "minix", 0x138F: "minix (30 char.)", 0x2468: "minix v2",
-	0x2478: "minix v2 (30 char.)", 0x4d44: "msdos", 0x4006: "fat", 0x564c: "novell", 0x6969: "nfs",
-	0x9fa0: "proc", 0x517B: "smb", 0x012FF7B4: "xenix", 0x012FF7B5: "sysv4", 0x012FF7B6: "sysv2",
-	0x012FF7B7: "coh", 0x15013346: "udf", 0x00011954: "ufs", 0x012FD16D: "xia", 0x5346544e: "ntfs",
-	0x1021994: "tmpfs", 0x52654973: "reiserfs", 0x28cd3d45: "cramfs", 0x7275: "romfs",
-	0x858458f6: "ramfs", 0x73717368: "squashfs", 0x62656572: "sysfs",
+func filesystemTypes(key uint32) (string, bool) {
+	switch key {
+	case 0xADFF:
+		return "affs", true
+	case 0x1CD1:
+		return "devpts", true
+	case 0x137D:
+		return "ext", true
+	case 0xEF51:
+		return "ext2", true
+	case 0xEF53:
+		return "ext2/ext3", true
+	case 0x3153464a:
+		return "jfs", true
+	case 0x58465342:
+		return "xfs", true
+	case 0xF995E849:
+		return "hpfs", true
+	case 0x9660, 0x4000, 0x4004:
+		return "isofs", true
+	case 0x137F:
+		return "minix", true
+	case 0x138F:
+		return "minix (30 char.)", true
+	case 0x2468:
+		return "minix v2", true
+	case 0x2478:
+		return "minix v2 (30 char.)", true
+	case 0x4d44:
+		return "msdos", true
+	case 0x4006:
+		return "fat", true
+	case 0x564c:
+		return "novell", true
+	case 0x6969:
+		return "nfs", true
+	case 0x9fa0:
+		return "proc", true
+	case 0x517B:
+		return "smb", true
+	case 0x012FF7B4:
+		return "xenix", true
+	case 0x012FF7B5:
+		return "sysv4", true
+	case 0x012FF7B6:
+		return "sysv2", true
+	case 0x012FF7B7:
+		return "coh", true
+	case 0x15013346:
+		return "udf", true
+	case 0x00011954:
+		return "ufs", true
+	case 0x012FD16D:
+		return "xia", true
+	case 0x5346544e:
+		return "ntfs", true
+	case 0x1021994:
+		return "tmpfs", true
+	case 0x52654973:
+		return "reiserfs", true
+	case 0x28cd3d45:
+		return "cramfs", true
+	case 0x7275:
+		return "romfs", true
+	case 0x858458f6:
+		return "ramfs", true
+	case 0x73717368:
+		return "squashfs", true
+	case 0x62656572:
+		return "sysfs", true
+	}
+	var zero string
+	return zero, false
 }

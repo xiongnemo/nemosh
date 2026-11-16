@@ -114,7 +114,18 @@ func translateBasicRegex(pattern string) (string, error) {
 
 // sedControlEscapes are the escapes busybox's sed turns into the characters they name before
 // it compiles a pattern (copy_parsing_escapes), outside a bracket and inside one.
-var sedControlEscapes = map[byte]string{'n': "\n", 't': "\t", 'r': "\r"}
+func sedControlEscapes(key byte) (string, bool) {
+	switch key {
+	case 'n':
+		return "\n", true
+	case 't':
+		return "\t", true
+	case 'r':
+		return "\r", true
+	}
+	var zero string
+	return zero, false
+}
 
 // translateEscape rewrites the character after a backslash, answering whether what it emits
 // leaves the scan at a position where `*` and `^` are literal again.
@@ -126,7 +137,8 @@ func translateEscape(char byte) (string, bool, error) {
 	case ')', '{', '}', '+', '?':
 		return string(char), false, nil
 	case 'n', 't', 'r':
-		return sedControlEscapes[char], false, nil
+		control, _ := sedControlEscapes(char)
+		return control, false, nil
 	// GNU's classes and word edges, which busybox's grep and sed both have: `\w` matched
 	// a literal w and `\b` a literal b. Go has the first six itself. `\<` and `\>` are
 	// the start and end of a word, which RE2 cannot say apart without lookaround; a word
@@ -174,7 +186,7 @@ func translateBracket(pattern string, start int) (string, int, error) {
 			if index+1 < len(pattern) {
 				next = pattern[index+1]
 			}
-			if control, ok := sedControlEscapes[next]; ok {
+			if control, ok := sedControlEscapes(next); ok {
 				out.WriteString(control)
 				index++
 			} else if next == '\\' {

@@ -383,6 +383,11 @@ jobs:
       # trips it, which was the point of the ceiling before tcell made it 2750. The
       # runner read 1070 on Windows, 924 on ubuntu and 936 on macos.
       #
+      # Lowered from 1200 to 780 on 2026-11-17, at 689 on this machine, which reads
+      # about 32 above the runner, by three more: -tags tcell_minimal (-43), the
+      # applets as a table made on first lookup (-198), and no package-level map
+      # literal anywhere in cmd/ or internal/ (-170), which a test now holds.
+      #
       # The timing fails the build from 2026-11-16, calibrated on the seven runs before:
       # the self-check never read more than 2.4% apart in any scenario, and head against
       # base never more than 2.5% where a commit had not set out to change the time --
@@ -410,7 +415,7 @@ jobs:
             echo "Startup-Cost-Accepted: a slowdown is reported, not failed"
             enforce=()
           fi
-          go run ./tools/startbench -head "$binary" -init-ceiling 1200 "${compare[@]}" "${enforce[@]}"
+          go run ./tools/startbench -head "$binary" -init-ceiling 780 "${compare[@]}" "${enforce[@]}"
 
       - name: production file size ceiling
         shell: bash

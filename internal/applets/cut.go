@@ -56,7 +56,7 @@ type cutSpec struct {
 }
 
 func parseCutArgs(ctx context.Context, args []string) (cutSpec, []string, error) {
-	options, operands, err := parseAppletLongOptions(ctx, args, map[string]string{"output-delimiter": "O"}, "sDn", "bcfFdO")
+	options, operands, err := parseAppletLongOptions(ctx, args, "output-delimiter=O", "sDn", "bcfFdO")
 	if err != nil {
 		return cutSpec{}, nil, err
 	}

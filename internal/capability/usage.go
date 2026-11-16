@@ -133,7 +133,7 @@ func renderOptions(command Command, usage Usage) string {
 // something rather than as `-k VALUE`. Falls back to VALUE where nothing better
 // has been recorded, which is honest rather than wrong.
 func valuePlaceholder(command, letter string) string {
-	if placeholder, ok := valuePlaceholders[command+letter]; ok {
+	if placeholder, ok := valuePlaceholders(command + letter); ok {
 		return placeholder
 	}
 	return "VALUE"

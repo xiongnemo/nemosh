@@ -166,9 +166,7 @@ func (r *mvRun) status() error {
 }
 
 // mvLongOptions are the long forms busybox's mv takes that stand for a letter.
-var mvLongOptions = map[string]string{
-	"interactive": "i", "force": "f", "no-clobber": "n", "no-target-directory": "T", "verbose": "v",
-}
+const mvLongOptions = "interactive=i force=f no-clobber=n no-target-directory=T verbose=v"
 
 // mvArguments reads mv's options, turning each long one into the letter it stands for.
 func mvArguments(ctx context.Context, args []string) (appletOptions, []string, error) {
@@ -184,8 +182,8 @@ func mvArguments(ctx context.Context, args []string) (appletOptions, []string, e
 		}
 		name, value, valued := strings.Cut(arg[2:], "=")
 		switch {
-		case mvLongOptions[name] != "" && !valued:
-			words = append(words, "-"+mvLongOptions[name])
+		case longOptionNamed(mvLongOptions, name) != 0 && !valued:
+			words = append(words, "-"+string(longOptionNamed(mvLongOptions, name)))
 		case name == "target-directory":
 			if !valued {
 				if index+1 >= len(args) {

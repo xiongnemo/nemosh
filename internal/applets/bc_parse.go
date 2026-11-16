@@ -67,8 +67,12 @@ func (p *bcParser) expectOperator(text string) error {
 
 func (p *bcParser) parseExpression() (bcExpr, error) { return p.parseAssignment() }
 
-var bcAssignOperators = map[string]bool{
-	"=": true, "+=": true, "-=": true, "*=": true, "/=": true, "%=": true, "^=": true,
+func bcAssignOperators(key string) bool {
+	switch key {
+	case "=", "+=", "-=", "*=", "/=", "%=", "^=":
+		return true
+	}
+	return false
 }
 
 func (p *bcParser) parseAssignment() (bcExpr, error) {
@@ -77,7 +81,7 @@ func (p *bcParser) parseAssignment() (bcExpr, error) {
 		return nil, err
 	}
 	token := p.peek()
-	if token.kind != bcTokenOperator || !bcAssignOperators[token.text] {
+	if token.kind != bcTokenOperator || !bcAssignOperators(token.text) {
 		return left, nil
 	}
 	if !bcIsLvalue(left) {
@@ -130,7 +134,7 @@ func (p *bcParser) parseRelational() (bcExpr, error) {
 		return nil, err
 	}
 	token := p.peek()
-	if token.kind != bcTokenOperator || !bcRelational[token.text] {
+	if token.kind != bcTokenOperator || !bcRelational(token.text) {
 		return left, nil
 	}
 	p.advance()
@@ -138,15 +142,19 @@ func (p *bcParser) parseRelational() (bcExpr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if next := p.peek(); next.kind == bcTokenOperator && bcRelational[next.text] {
+	if next := p.peek(); next.kind == bcTokenOperator && bcRelational(next.text) {
 		return nil, fmt.Errorf("line %d: %s cannot be chained after %s; parenthesise one of them",
 			next.line, next.text, token.text)
 	}
 	return bcBinaryExpr{operator: token.text, left: left, right: right}, nil
 }
 
-var bcRelational = map[string]bool{
-	"==": true, "!=": true, "<": true, "<=": true, ">": true, ">=": true,
+func bcRelational(key string) bool {
+	switch key {
+	case "==", "!=", "<", "<=", ">", ">=":
+		return true
+	}
+	return false
 }
 
 func (p *bcParser) parseAdditive() (bcExpr, error) {

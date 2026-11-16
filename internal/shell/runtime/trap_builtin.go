@@ -173,7 +173,7 @@ func trapConditionName(operand string) (trapName, bool) {
 		return trapExit, true
 	}
 	if number, err := proc.ParseSignal(name); err == nil {
-		if trap, ok := signalTraps[number]; ok {
+		if trap, ok := signalTraps(number); ok {
 			return trap, true
 		}
 		if number == int(syscall.SIGKILL) {

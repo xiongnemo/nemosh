@@ -131,9 +131,9 @@ func (l *awkLexer) scanName() (awkToken, error) {
 	}
 	text := l.source[start:l.offset]
 	switch {
-	case awkKeywords[text]:
+	case awkKeywords(text):
 		return l.emit(awkToken{kind: awkTokenKeyword, text: text, line: l.line}), nil
-	case awkBuiltins[text]:
+	case awkBuiltins(text):
 		return l.emit(awkToken{kind: awkTokenBuiltin, text: text, line: l.line}), nil
 	case l.offset < len(l.source) && l.source[l.offset] == '(':
 		// No space before the parenthesis makes this a call. `f (x)` is a

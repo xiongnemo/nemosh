@@ -84,13 +84,13 @@ func TestUsage_namesTheArgumentOfEveryOptionThatTakesOne(t *testing.T) {
 			continue
 		}
 		for _, letter := range command.ValueShort {
-			if _, ok := valuePlaceholders[command.Name+string(letter)]; !ok {
+			if _, ok := valuePlaceholders(command.Name + string(letter)); !ok {
 				t.Errorf("%s -%c takes a value and does not name it; add it to valuePlaceholders",
 					command.Name, letter)
 			}
 		}
 		for _, long := range command.ValueLong {
-			if _, ok := valuePlaceholders[command.Name+long]; !ok {
+			if _, ok := valuePlaceholders(command.Name + long); !ok {
 				t.Errorf("%s --%s takes a value and does not name it; add it to valuePlaceholders",
 					command.Name, long)
 			}
@@ -101,7 +101,8 @@ func TestUsage_namesTheArgumentOfEveryOptionThatTakesOne(t *testing.T) {
 // A placeholder for something that is not an option that takes a value is dead
 // weight, and dead weight is how a table stops being trustworthy.
 func TestUsage_hasNoUnusedPlaceholders(t *testing.T) {
-	for key := range valuePlaceholders {
+	for _, row := range valuePlaceholderTable {
+		key := row.key
 		found := false
 		for _, command := range commands {
 			if !strings.HasPrefix(key, command.Name) {
@@ -118,7 +119,7 @@ func TestUsage_hasNoUnusedPlaceholders(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("valuePlaceholders[%q] matches no option that takes a value", key)
+			t.Errorf("valuePlaceholders(%q) matches no option that takes a value", key)
 		}
 	}
 }

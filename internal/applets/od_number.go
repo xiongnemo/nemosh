@@ -8,30 +8,58 @@ import (
 	"strings"
 )
 
-// The suffixes busybox's numbers take: od's -N -j -S, and hexdump's -n -s.
-var (
-	bkmSuffixes = map[string]uint64{"b": 512, "k": 1024, "m": 1024 * 1024}
-	kmgSuffixes = map[string]uint64{"KiB": 1024, "kiB": 1024, "K": 1024, "k": 1024, "MiB": 1 << 20,
-		"miB": 1 << 20, "M": 1 << 20, "m": 1 << 20, "GiB": 1 << 30, "giB": 1 << 30, "G": 1 << 30, "g": 1 << 30,
-		"KB": 1000, "MB": 1000000, "GB": 1000000000}
-)
+// The suffixes busybox's numbers take, each the multiplier it stands for: od's -N -j -S, and
+// hexdump's -n -s.
+func bkmSuffixes(suffix string) (uint64, bool) {
+	switch suffix {
+	case "b":
+		return 512, true
+	case "k":
+		return 1024, true
+	case "m":
+		return 1024 * 1024, true
+	}
+	return 0, false
+}
+
+func kmgSuffixes(suffix string) (uint64, bool) {
+	switch suffix {
+	case "KiB", "kiB", "K", "k":
+		return 1024, true
+	case "MiB", "miB", "M", "m":
+		return 1 << 20, true
+	case "GiB", "giB", "G", "g":
+		return 1 << 30, true
+	case "KB":
+		return 1000, true
+	case "MB":
+		return 1000000, true
+	case "GB":
+		return 1000000000, true
+	}
+	return 0, false
+}
 
 // busyboxNumber is busybox's xstrtou_range_sfx with base 0: C's strtoull, so 0x10 and 010 too,
 // then nothing or one of suffixes. A sign or a blank before it, a letter after it, and a number
 // its type, of most typeMax, cannot hold are invalid; one past upper, or that the suffix takes
 // past the type, is out of range.
-func busyboxNumber(text string, typeMax, upper uint64, suffixes map[string]uint64) (uint64, error) {
+func busyboxNumber(text string, typeMax, upper uint64, suffixes func(string) (uint64, bool)) (uint64, error) {
 	return busyboxNumberBase(text, 0, typeMax, upper, suffixes)
 }
 
 // busyboxNumberBase is busyboxNumber in base, as xatoull_sfx reads a decimal one.
-func busyboxNumberBase(text string, base int, typeMax, upper uint64, suffixes map[string]uint64) (uint64, error) {
+func busyboxNumberBase(text string, base int, typeMax, upper uint64, suffixes func(string) (uint64, bool)) (uint64, error) {
 	invalid := fmt.Errorf("invalid number '%s'", text)
 	if text == "" || strings.IndexByte("+- \t\n\v\f\r", text[0]) >= 0 {
 		return 0, invalid
 	}
 	value, rest, ok := cNumberPrefix(text, base)
-	multiplier, known := suffixes[rest]
+	var multiplier uint64
+	known := false
+	if suffixes != nil {
+		multiplier, known = suffixes(rest)
+	}
 	if rest == "" {
 		multiplier, known = 1, true
 	}

@@ -38,8 +38,8 @@ func newNlApplet() Applet {
 	}}
 }
 
-var nlLongOptions = map[string]string{"body-numbering": "b", "line-increment": "i", "no-renumber": "p",
-	"number-separator": "s", "starting-line-number": "v", "number-width": "w"}
+const nlLongOptions = "body-numbering=b line-increment=i no-renumber=p number-separator=s " +
+	"starting-line-number=v number-width=w"
 
 // nlNumbering is busybox's number_state.
 type nlNumbering struct {

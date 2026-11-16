@@ -30,11 +30,8 @@ import (
 
 // patchLongOptions are busybox's long forms. --dry-run has no letter of its own there and has
 // none here, and --get takes an argument its -g does not.
-var patchLongOptions = map[string]string{
-	"reverse": "R", "unified": "u", "strip": "p", "input": "i", "forward": "N",
-	"remove-empty-files": "E", "force": "f", "get": "\x02", "dry-run": "\x01",
-	"backup-if-mismatch": "\x03", "no-backup-if-mismatch": "\x03",
-}
+const patchLongOptions = "reverse=R unified=u strip=p input=i forward=N remove-empty-files=E force=f " +
+	"get=\x02 dry-run=\x01 backup-if-mismatch=\x03 no-backup-if-mismatch=\x03"
 
 func newPatchApplet() Applet {
 	return simpleApplet{name: "patch", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {

@@ -41,12 +41,12 @@ type awkToken struct {
 // awkKeywords are the words the grammar reserves.
 //
 // `func` is gawk's abbreviation for `function` and busybox accepts it too, so it is here.
-var awkKeywords = map[string]bool{
-	"BEGIN": true, "END": true, "function": true, "func": true,
-	"if": true, "else": true, "while": true, "for": true, "do": true,
-	"break": true, "continue": true, "next": true, "nextfile": true,
-	"exit": true, "return": true, "delete": true, "in": true,
-	"getline": true, "print": true, "printf": true,
+func awkKeywords(key string) bool {
+	switch key {
+	case "BEGIN", "END", "function", "func", "if", "else", "while", "for", "do", "break", "continue", "next", "nextfile", "exit", "return", "delete", "in", "getline", "print", "printf":
+		return true
+	}
+	return false
 }
 
 // awkBuiltins are the functions the language provides.
@@ -54,13 +54,12 @@ var awkKeywords = map[string]bool{
 // They are a separate kind from a keyword because most may be called without
 // parentheses in the one case awk allows -- `length` alone means `length($0)`, which
 // both references confirm prints 0 on empty input.
-var awkBuiltins = map[string]bool{
-	"length": true, "substr": true, "index": true, "split": true,
-	"sub": true, "gsub": true, "match": true, "sprintf": true,
-	"sin": true, "cos": true, "atan2": true, "exp": true, "log": true,
-	"sqrt": true, "int": true, "rand": true, "srand": true,
-	"tolower": true, "toupper": true, "system": true, "close": true,
-	"fflush": true,
+func awkBuiltins(key string) bool {
+	switch key {
+	case "length", "substr", "index", "split", "sub", "gsub", "match", "sprintf", "sin", "cos", "atan2", "exp", "log", "sqrt", "int", "rand", "srand", "tolower", "toupper", "system", "close", "fflush":
+		return true
+	}
+	return false
 }
 
 // awkOperators are the punctuation tokens, longest first so that `>=` is not read as `>`

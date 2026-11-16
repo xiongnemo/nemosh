@@ -243,14 +243,22 @@ func TestArchiveCollisions_noticesWhatWindowsWouldMerge(t *testing.T) {
 	}
 }
 
-// Every reserved name in the table is actually refused, walked from the table
-// itself so a name added to it without a check cannot go unnoticed.
+// Every reserved name is refused: the Windows set, CON PRN AUX NUL, COM1-9 and LPT1-9, and
+// nothing that merely begins like one.
 func TestArchiveReservedNames_everyEntryIsRefused(t *testing.T) {
-	if len(archiveReservedNames) != 22 {
-		t.Fatalf("the reserved-name table has %d entries; the Windows set is 22 "+
-			"(CON PRN AUX NUL, COM1-9, LPT1-9)", len(archiveReservedNames))
+	reserved := []string{"con", "prn", "aux", "nul"}
+	for digit := '1'; digit <= '9'; digit++ {
+		reserved = append(reserved, "com"+string(digit), "lpt"+string(digit))
 	}
-	for name := range archiveReservedNames {
+	for _, name := range []string{"conx", "com0", "lpt10", "nu", "auxiliary"} {
+		if archiveReservedNames(name) {
+			t.Errorf("%s was taken for a reserved name", name)
+		}
+	}
+	for _, name := range reserved {
+		if !archiveReservedNames(name) {
+			t.Errorf("%s is not taken for a reserved name", name)
+		}
 		for _, spelling := range []string{name, strings.ToUpper(name), name + ".txt", "sub/" + name} {
 			if _, err := safeArchivePath(spelling); err == nil {
 				t.Errorf("safeArchivePath(%q) was accepted, but %q is a reserved name", spelling, name)

@@ -146,8 +146,8 @@ func completionSpecText(spec compgenSpec) string {
 		}
 	}
 	letters := map[string]byte{}
-	for letter, action := range compgenLetters {
-		letters[action] = letter
+	for _, row := range compgenLetters {
+		letters[row.action] = row.letter
 	}
 	for _, lettered := range []bool{true, false} {
 		for _, action := range completionPrintOrder {

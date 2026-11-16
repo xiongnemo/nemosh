@@ -28,7 +28,7 @@ import (
 // and this counted runes, which put the tab two cells late.
 func newExpandApplet() Applet {
 	return simpleApplet{name: "expand", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletLongOptions(ctx, args, map[string]string{"initial": "i", "tabs": "t"}, "i", "t")
+		options, paths, err := parseAppletLongOptions(ctx, args, "initial=i tabs=t", "i", "t")
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func writeSpaces(out *bufio.Writer, n int) {
 // as busybox's getopt32 has it, and -f takes it back.
 func newUnexpandApplet() Applet {
 	return simpleApplet{name: "unexpand", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, paths, err := parseAppletLongOptions(ctx, args, map[string]string{"first-only": "f", "tabs": "t", "all": "a"}, "fa", "t")
+		options, paths, err := parseAppletLongOptions(ctx, args, "first-only=f tabs=t all=a", "fa", "t")
 		if err != nil {
 			return err
 		}

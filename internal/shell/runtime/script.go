@@ -61,7 +61,8 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 		// A signal that ended the script with a trap set for it: a final one (see
 		// ReceiveSignals). One nothing caught has no trap to run.
 		if signal, ok := ExitSignal(ctx); ok {
-			r.runTrap(context.WithoutCancel(ctx), signalTraps[signal], status)
+			trap, _ := signalTraps(signal)
+			r.runTrap(context.WithoutCancel(ctx), trap, status)
 		}
 		status = r.runExitTrap(context.WithoutCancel(ctx), status)
 	}

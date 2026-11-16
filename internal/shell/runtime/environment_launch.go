@@ -28,11 +28,12 @@ import "strings"
 // difference from MSYS2, which rewrites anything resembling a path on its way
 // out and is regularly wrong about `--prefix=/opt` and about arguments that were
 // never paths at all. Guessing is the failure mode; a fixed list is not.
-var launchPathVariables = map[string]bool{
-	"HOME":   true,
-	"PWD":    true,
-	"OLDPWD": true,
-	"SHELL":  true,
+func launchPathVariables(key string) bool {
+	switch key {
+	case "HOME", "PWD", "OLDPWD", "SHELL":
+		return true
+	}
+	return false
 }
 
 // childEnvironment is what a launched program receives.
@@ -67,7 +68,7 @@ func (r Runtime) withDriveDirectories(items []string) []string {
 func (r Runtime) withNativePaths(items []string) []string {
 	for index, item := range items {
 		name, value, found := strings.Cut(item, "=")
-		if !found || !launchPathVariables[name] || value == "" {
+		if !found || !launchPathVariables(name) || value == "" {
 			continue
 		}
 		native, ok := r.nativeSpellingOf(value)

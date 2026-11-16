@@ -16,12 +16,12 @@ import (
 // this project has fixed that class of bug twice already.
 
 // doubleBracketBinaryOperators are the operators that take a left and a right.
-var doubleBracketBinaryOperators = map[string]bool{
-	"==": true, "=": true, "!=": true, "=~": true,
-	"<": true, ">": true,
-	"-eq": true, "-ne": true, "-lt": true, "-le": true, "-gt": true, "-ge": true,
-	// File comparisons, which `[` has too.
-	"-nt": true, "-ot": true, "-ef": true,
+func doubleBracketBinaryOperators(key string) bool {
+	switch key {
+	case "==", "=", "!=", "=~", "<", ">", "-eq", "-ne", "-lt", "-le", "-gt", "-ge", "-nt", "-ot", "-ef":
+		return true
+	}
+	return false
 }
 
 // evaluateConditionTest is one test: its operands expanded, traced as bash traces a test, and

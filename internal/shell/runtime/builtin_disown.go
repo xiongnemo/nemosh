@@ -175,9 +175,7 @@ func enabledBuiltins() []string {
 			names = append(names, name)
 		}
 	}
-	for name := range ashBuiltinApplets {
-		names = append(names, name)
-	}
+	names = append(names, ashBuiltinAppletNames[:]...)
 	sort.Strings(names)
 	return names
 }

@@ -175,20 +175,27 @@ func inertOptionRefusal(letter byte, enable bool) error {
 	if !enable {
 		return nil
 	}
-	reason, inert := inertShellOptions[letter]
+	reason, inert := inertShellOptions(letter)
 	if !inert {
 		return nil
 	}
 	return fmt.Errorf("-%c: not implemented: %s", letter, reason)
 }
 
-var inertShellOptions = map[byte]string{
-	'b': "asynchronous job completion is reported when `wait` or `jobs` asks, " +
-		"not the moment it happens; there is no notification channel to switch on",
-	'v': "a script is parsed in full before any of it runs, so there is no " +
-		"moment at which its lines are read one by one to be echoed",
-	'm': "there is no job control to switch on: nothing here can stop a job " +
-		"and resume it, which is what fg and bg are refused for too",
+func inertShellOptions(key byte) (string, bool) {
+	switch key {
+	case 'b':
+		return "asynchronous job completion is reported when `wait` or `jobs` asks, " +
+			"not the moment it happens; there is no notification channel to switch on", true
+	case 'v':
+		return "a script is parsed in full before any of it runs, so there is no " +
+			"moment at which its lines are read one by one to be echoed", true
+	case 'm':
+		return "there is no job control to switch on: nothing here can stop a job " +
+			"and resume it, which is what fg and bg are refused for too", true
+	}
+	var zero string
+	return zero, false
 }
 
 // Every other option acts: -a exports what is assigned (readonly.go), -C

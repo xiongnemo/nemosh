@@ -87,10 +87,10 @@ type awkInterp struct {
 // CONVFMT and OFMT are both `%.6g`, which is what makes `print 1/3` answer `0.333333`.
 // SUBSEP is the character POSIX names, and it is not printable on purpose: it joins the
 // parts of `a[i,j]` and must not collide with a real subscript.
-var awkSpecialDefaults = map[string]string{
-	"FS": " ", "OFS": " ", "ORS": "\n", "RS": "\n",
-	"CONVFMT": "%.6g", "OFMT": "%.6g", "SUBSEP": "\x1c",
-	"FILENAME": "",
+var awkSpecialDefaults = [...]struct{ name, value string }{
+	{"FS", " "}, {"OFS", " "}, {"ORS", "\n"}, {"RS", "\n"},
+	{"CONVFMT", "%.6g"}, {"OFMT", "%.6g"}, {"SUBSEP", "\x1c"},
+	{"FILENAME", ""},
 }
 
 func newAwkInterp(ctx context.Context, program *awkProgram, input io.Reader, output, errors io.Writer) *awkInterp {
@@ -107,8 +107,8 @@ func newAwkInterp(ctx context.Context, program *awkProgram, input io.Reader, out
 	interp.buffered = bufio.NewWriter(output)
 	interp.output = interp.buffered
 	interp.streaming = !writerIsRegularFile(output)
-	for name, value := range awkSpecialDefaults {
-		interp.vars[name] = awkStr(value)
+	for _, special := range awkSpecialDefaults {
+		interp.vars[special.name] = awkStr(special.value)
 	}
 	// ENVIRON is the environment the program was given: the shell's exports and a command's
 	// own assignments, `FOO=bar awk ...`, each a string that is also a number when it looks

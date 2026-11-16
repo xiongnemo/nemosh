@@ -8,12 +8,18 @@ package runtime
 // `command -v bash` names this binary then, since it is what runs.
 
 // fallbackShellNames are the names this shell answers to when PATH has no program by them.
-var fallbackShellNames = map[string]bool{"sh": true, "bash": true}
+func fallbackShellNames(key string) bool {
+	switch key {
+	case "sh", "bash":
+		return true
+	}
+	return false
+}
 
 // notOnPath is what a bare name PATH has no program for comes to: not found, but for sh and
 // bash, which are this binary, the one a job process runs.
 func notOnPath(name string) (string, error) {
-	if fallbackShellNames[name] {
+	if fallbackShellNames(name) {
 		if self, err := jobExecutable(); err == nil {
 			return self, nil
 		}

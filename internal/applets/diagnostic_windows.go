@@ -40,7 +40,7 @@ func platformCauseText(err error) (string, bool) {
 	if errno == syscall.ESPIPE {
 		return espipe, true
 	}
-	text, ok := windowsErrnoText[errno]
+	text, ok := windowsErrnoText(errno)
 	return text, ok
 }
 

@@ -61,7 +61,7 @@ func Strftime(when time.Time, format string) string {
 }
 
 func strftimeConversion(when time.Time, verb byte) (string, bool) {
-	if layout, ok := strftimeLayouts[verb]; ok {
+	if layout, ok := strftimeLayouts(verb); ok {
 		return when.Format(layout), true
 	}
 	hour12 := when.Hour() % 12
@@ -110,10 +110,53 @@ func strftimeConversion(when time.Time, verb byte) (string, bool) {
 }
 
 // strftimeLayouts are the conversions Go's reference layout spells directly.
-var strftimeLayouts = map[byte]string{
-	'a': "Mon", 'A': "Monday", 'b': "Jan", 'h': "Jan", 'B': "January",
-	'c': "Mon Jan _2 15:04:05 2006", 'd': "02", 'D': "01/02/06", 'e': "_2",
-	'F': "2006-01-02", 'H': "15", 'I': "03", 'm': "01", 'M': "04", 'p': "PM",
-	'r': "03:04:05 PM", 'R': "15:04", 'S': "05", 'T': "15:04:05", 'x': "01/02/06",
-	'X': "15:04:05", 'y': "06", 'Y': "2006", 'z': "-0700", 'Z': "MST",
+func strftimeLayouts(key byte) (string, bool) {
+	switch key {
+	case 'a':
+		return "Mon", true
+	case 'A':
+		return "Monday", true
+	case 'b', 'h':
+		return "Jan", true
+	case 'B':
+		return "January", true
+	case 'c':
+		return "Mon Jan _2 15:04:05 2006", true
+	case 'd':
+		return "02", true
+	case 'D', 'x':
+		return "01/02/06", true
+	case 'e':
+		return "_2", true
+	case 'F':
+		return "2006-01-02", true
+	case 'H':
+		return "15", true
+	case 'I':
+		return "03", true
+	case 'm':
+		return "01", true
+	case 'M':
+		return "04", true
+	case 'p':
+		return "PM", true
+	case 'r':
+		return "03:04:05 PM", true
+	case 'R':
+		return "15:04", true
+	case 'S':
+		return "05", true
+	case 'T', 'X':
+		return "15:04:05", true
+	case 'y':
+		return "06", true
+	case 'Y':
+		return "2006", true
+	case 'z':
+		return "-0700", true
+	case 'Z':
+		return "MST", true
+	}
+	var zero string
+	return zero, false
 }

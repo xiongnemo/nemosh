@@ -21,7 +21,7 @@ import (
 // took neither SKIP nor -n, and read -l and printed the first difference as if it had not.
 func newCmpApplet() Applet {
 	return simpleApplet{name: "cmp", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, paths, err := parseAppletLongOptions(ctx, args, map[string]string{"bytes": "n", "quiet": "s", "silent": "s", "verbose": "l"}, "sl", "n")
+		options, paths, err := parseAppletLongOptions(ctx, args, "bytes=n quiet=s silent=s verbose=l", "sl", "n")
 		if err != nil {
 			return err
 		}

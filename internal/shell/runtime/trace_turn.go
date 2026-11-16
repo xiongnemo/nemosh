@@ -183,7 +183,7 @@ func (t *traceTurn) subshell() *traceTurn {
 // startingProgram is the stage starting an applet or a program, by when the next stage in
 // either reference is under way. ash's own builtins among the applets start nothing.
 func (r Runtime) startingProgram(name string) {
-	if !ashBuiltinApplets[name] {
+	if !ashBuiltinApplets(name) {
 		r.traceTurn.passOn()
 	}
 }

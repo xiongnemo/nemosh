@@ -389,6 +389,14 @@ moved -- `--version` about 0.4 ms faster after the fork, which is about what the
 quickly; the ceiling is back to catching a table getting longer, at 1200 on the runner.
 The binary is 6 KB larger for the tables.
 
+Three more on 2026-11-17 took it from 1,102 to 689 here, and the ceiling to 780:
+
+| | allocations | what |
+| --- | --- | --- |
+| `-tags tcell_minimal` | −43 | twenty-two terminal descriptions for terminals Windows does not have; tcell draws as xterm-truecolor there, which terminfo/base keeps |
+| applet table | −198 | every applet's constructor was called and wrapped before main; `defaultApplets` is now an array the linker lays down, and an applet is made the first time its name is looked up |
+| map literals | −170 | sixty package-level maps -- long options, keywords, error texts, signal names -- now switches, arrays and strings of `name=L` words; `TestPackageInit_noPackageLevelMapLiterals` refuses a new one |
+
 Wrapping each applet at lookup instead of at registration was the first idea, and it cuts
 the same 152 from init. It would have charged one allocation to every command run instead,
 which is the wrong trade for a shell, and why the list.

@@ -37,11 +37,19 @@ var bashOptionSpecs = []shellOptionSpec{
 }
 
 // fixedShellOptions are the names whose behaviour this shell has one of, and why.
-var fixedShellOptions = map[string]string{
-	"igncr":      "a carriage return before a newline is dropped, as busybox-w32 drops it",
-	"keyword":    "an assignment after the command name is an argument",
-	"onecmd":     "a script runs to its end",
-	"privileged": "there is no set-user-ID on Windows to keep",
+func fixedShellOptions(key string) (string, bool) {
+	switch key {
+	case "igncr":
+		return "a carriage return before a newline is dropped, as busybox-w32 drops it", true
+	case "keyword":
+		return "an assignment after the command name is an argument", true
+	case "onecmd":
+		return "a script runs to its end", true
+	case "privileged":
+		return "there is no set-user-ID on Windows to keep", true
+	}
+	var zero string
+	return zero, false
 }
 
 // alwaysOff and alwaysOn are the flags of fixed options: a fresh value each time, so reading
@@ -55,7 +63,7 @@ func alwaysOn(*shellOptions) *bool {
 
 // fixedOptionRefusal refuses the value a fixed option does not have.
 func fixedOptionRefusal(spec shellOptionSpec, enable bool) error {
-	why, fixed := fixedShellOptions[spec.name]
+	why, fixed := fixedShellOptions(spec.name)
 	if !fixed || enable == *spec.field(&shellOptions{}) {
 		return nil
 	}

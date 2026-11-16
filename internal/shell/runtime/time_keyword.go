@@ -41,7 +41,7 @@ func afterTimeKeyword(line string, index int) bool {
 	if keyword < 0 || fields[keyword] != "time" {
 		return false
 	}
-	return keyword == 0 || commandIntroducers[fields[keyword-1]]
+	return keyword == 0 || commandIntroducers(fields[keyword-1])
 }
 
 // stripPipelineTime takes `time` or `time -p` off a pipeline whose first command is a group, and

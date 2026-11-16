@@ -27,20 +27,24 @@ type unimplementedBuiltin struct {
 
 const unimplementedBuiltinStatus = 126
 
-var unimplementedBuiltins = map[string]unimplementedBuiltin{
-	"ulimit": {
-		reason: "Windows has no getrlimit. busybox-w32 does not implement it either: " +
-			"it keeps the name and returns 1 with no message (shell/shell_common.c, " +
-			"the #else of `#if !ENABLE_PLATFORM_MINGW32`)",
-	},
-	"fg": {reason: noSuspensionReason, permanent: true},
-	// bash's, which stops the shell itself; it was `suspend: not found`, 127.
-	"suspend": {reason: "nothing here can suspend a process, this shell included", permanent: true},
-	"bg":      {reason: noSuspensionReason, permanent: true},
-	// readline's, which a bashrc calls to set keys and inputrc variables: `not found` read as
-	// a program to install.
-	"bind": {reason: "the line editor's keys are its own: it reads no inputrc, and nothing rebinds them. " +
-		"busybox-w32 has no bind either"},
+func unimplementedBuiltins(key string) (unimplementedBuiltin, bool) {
+	switch key {
+	case "ulimit":
+		return unimplementedBuiltin{
+			reason: "Windows has no getrlimit. busybox-w32 does not implement it either: " +
+				"it keeps the name and returns 1 with no message (shell/shell_common.c, " +
+				"the #else of `#if !ENABLE_PLATFORM_MINGW32`)",
+		}, true
+	case "fg", "bg":
+		return unimplementedBuiltin{reason: noSuspensionReason, permanent: true}, true
+	case "suspend":
+		return unimplementedBuiltin{reason: "nothing here can suspend a process, this shell included", permanent: true}, true
+	case "bind":
+		return unimplementedBuiltin{reason: "the line editor's keys are its own: it reads no inputrc, and nothing rebinds them. " +
+			"busybox-w32 has no bind either"}, true
+	}
+	var zero unimplementedBuiltin
+	return zero, false
 }
 
 // noSuspensionReason is why fg and bg are refused.
@@ -69,7 +73,7 @@ const noSuspensionReason = "nothing here can suspend a job, so there is nothing 
 // `hash`, `fg`, or `bg`. macOS does ship /usr/bin/ulimit, and found it on the
 // first run of the widened test matrix.
 func isUnimplementedBuiltin(name string) bool {
-	_, ok := unimplementedBuiltins[name]
+	_, ok := unimplementedBuiltins(name)
 	return ok
 }
 
@@ -77,7 +81,7 @@ func isUnimplementedBuiltin(name string) bool {
 // one. Checked before applet lookup and before PATH, so a program that happens
 // to share the name cannot make the answer depend on what is installed.
 func (r Runtime) reportUnimplementedBuiltin(name string) (int, bool) {
-	builtin, ok := unimplementedBuiltins[name]
+	builtin, ok := unimplementedBuiltins(name)
 	if !ok {
 		return 0, false
 	}

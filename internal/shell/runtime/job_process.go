@@ -190,14 +190,20 @@ func exitCodeSignal(code uint32) int {
 		return 11
 	case code == 0xc000013a:
 		return 2
-	case code&0xffffff == 0 && windowsSignals[code>>24]:
+	case code&0xffffff == 0 && windowsSignals(code>>24):
 		return int(code >> 24)
 	}
 	return 0
 }
 
 // windowsSignals are the signals busybox-w32 names, HUP to TERM and Windows' ABRT, 22.
-var windowsSignals = map[uint32]bool{1: true, 2: true, 3: true, 4: true, 8: true, 9: true, 11: true, 13: true, 15: true, 22: true}
+func windowsSignals(key uint32) bool {
+	switch key {
+	case 1, 2, 3, 4, 8, 9, 11, 13, 15, 22:
+		return true
+	}
+	return false
+}
 
 // JobStateFile is the child's end of the state pipe, from the argument after --job.
 func JobStateFile(argument string) (*os.File, error) {

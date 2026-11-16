@@ -88,9 +88,7 @@ func calculateIP(options appletOptions, operands []string) ([]string, error) {
 }
 
 // ipcalcLongOptions are busybox's, by any prefix that names one alone. They were unrecognized.
-var ipcalcLongOptions = map[string]string{
-	"netmask": "m", "broadcast": "b", "network": "n", "prefix": "p", "hostname": "h", "silent": "s",
-}
+const ipcalcLongOptions = "netmask=m broadcast=b network=n prefix=p hostname=h silent=s"
 
 // ipcalcAsked is what busybox's ipcalc asks before it reads the address: with neither -b, -n
 // nor -p, there must be an -m or an -h to answer, and no NETMASK, which only those three use.

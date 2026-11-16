@@ -53,12 +53,13 @@ func (o appletOptions) last(letters string) byte {
 // --help and says what was wrong in one line instead, which is the divergence
 // recorded in docs/design/v0-readiness.md.
 func parseAppletOptions(ctx context.Context, args []string, flags, valued string) (appletOptions, []string, error) {
-	return readAppletOptions(args, flags, valued, nil, optionsPermute(ProcessViewFromContext(ctx)))
+	return readAppletOptions(args, flags, valued, "", optionsPermute(ProcessViewFromContext(ctx)))
 }
 
-// parseAppletLongOptions is parseAppletOptions for an applet with long options too: long maps
-// each to the letter it stands for. See readLongOption.
-func parseAppletLongOptions(ctx context.Context, args []string, long map[string]string, flags, valued string) (appletOptions, []string, error) {
+// parseAppletLongOptions is parseAppletOptions for an applet with long options too: long names
+// each and the letter it stands for, as `name=L` words, "parents=p verbose=v". A string rather
+// than a map, which would be built before main on every start. See readLongOption.
+func parseAppletLongOptions(ctx context.Context, args []string, long string, flags, valued string) (appletOptions, []string, error) {
 	return readAppletOptions(args, flags, valued, long, optionsPermute(ProcessViewFromContext(ctx)))
 }
 
@@ -74,16 +75,16 @@ func optionsPermute(view ProcessView) bool {
 // parseAppletOptionsInOrder is parseAppletOptions for an applet whose options end at its first
 // operand, as busybox's getopt string says with a leading `+`: `xargs echo -n` runs echo -n.
 func parseAppletOptionsInOrder(args []string, flags, valued string) (appletOptions, []string, error) {
-	return readAppletOptions(args, flags, valued, nil, false)
+	return readAppletOptions(args, flags, valued, "", false)
 }
 
 // parseAppletLongOptionsInOrder is parseAppletOptionsInOrder with long options too, which end at
 // the first operand as the letters do: what follows is a program's own.
-func parseAppletLongOptionsInOrder(args []string, long map[string]string, flags, valued string) (appletOptions, []string, error) {
+func parseAppletLongOptionsInOrder(args []string, long string, flags, valued string) (appletOptions, []string, error) {
 	return readAppletOptions(args, flags, valued, long, false)
 }
 
-func readAppletOptions(args []string, flags, valued string, long map[string]string, permute bool) (appletOptions, []string, error) {
+func readAppletOptions(args []string, flags, valued string, long string, permute bool) (appletOptions, []string, error) {
 	parsed := appletOptions{given: map[byte]bool{}, values: map[byte]string{}, every: map[byte][]string{}}
 	var operands []string
 	for index := 0; index < len(args); index++ {
@@ -146,7 +147,7 @@ func (o *appletOptions) setValue(letter byte, value string) {
 // their letter before any option was read, so one in the arguments of a program env runs was
 // rewritten, `env echo --null x` echoing -0 x; a value given one that takes none became an
 // operand, `mkdir --parents=yes d` making yes; and a missing value was named by the letter.
-func (o *appletOptions) readLongOption(args []string, index int, flags, valued string, long map[string]string) (int, error) {
+func (o *appletOptions) readLongOption(args []string, index int, flags, valued string, long string) (int, error) {
 	given, value, attached := strings.Cut(args[index][2:], "=")
 	letter, err := longOptionLetter(long, given)
 	switch {
@@ -171,25 +172,38 @@ func (o *appletOptions) readLongOption(args []string, index int, flags, valued s
 
 // longOptionLetter is the letter of the long option given, whole or by a prefix of names that
 // all stand for one letter, or 0 for none, as getopt_long takes `--par` for --parents in every
-// busybox applet with long options. A prefix two letters share is ambiguous.
-func longOptionLetter(names map[string]string, given string) (byte, error) {
-	if letter, known := names[given]; known {
-		return letter[0], nil
+// busybox applet with long options. A prefix two letters share is ambiguous. names is the long
+// options as `name=L` words.
+func longOptionLetter(names string, given string) (byte, error) {
+	if letter := longOptionNamed(names, given); letter != 0 {
+		return letter, nil
 	}
-	found := ""
-	for name, letter := range names {
-		if given == "" || !strings.HasPrefix(name, given) {
+	found := byte(0)
+	for rest := names; rest != "" && given != ""; {
+		var word string
+		word, rest, _ = strings.Cut(rest, " ")
+		name, letter, _ := strings.Cut(word, "=")
+		if !strings.HasPrefix(name, given) {
 			continue
 		}
-		if found != "" && found != letter {
+		if found != 0 && found != letter[0] {
 			return 0, ambiguousOption(given)
 		}
-		found = letter
+		found = letter[0]
 	}
-	if found == "" {
-		return 0, nil
+	return found, nil
+}
+
+// longOptionNamed is the letter of the long option named whole, or 0 for none.
+func longOptionNamed(names string, given string) byte {
+	for rest := names; rest != ""; {
+		var word string
+		word, rest, _ = strings.Cut(rest, " ")
+		if name, letter, _ := strings.Cut(word, "="); name == given {
+			return letter[0]
+		}
 	}
-	return found[0], nil
+	return 0
 }
 
 // optionArgument takes the rest of the word if there is any -- `-m755` -- and

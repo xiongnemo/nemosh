@@ -20,13 +20,23 @@ import (
 
 // awkBuiltinArity is the fewest and the most arguments each built-in takes. A -1 means any
 // number, which only `sprintf` wants.
-var awkBuiltinArity = map[string][2]int{
-	"length": {0, 1}, "substr": {2, 3}, "index": {2, 2}, "split": {2, 3},
-	"sub": {2, 3}, "gsub": {2, 3}, "match": {2, 2}, "sprintf": {1, -1},
-	"sin": {1, 1}, "cos": {1, 1}, "atan2": {2, 2}, "exp": {1, 1}, "log": {1, 1},
-	"sqrt": {1, 1}, "int": {1, 1}, "rand": {0, 0}, "srand": {0, 1},
-	"tolower": {1, 1}, "toupper": {1, 1},
-	"system": {1, 1}, "close": {1, 1}, "fflush": {0, 1},
+func awkBuiltinArity(key string) ([2]int, bool) {
+	switch key {
+	case "length", "srand", "fflush":
+		return [2]int{0, 1}, true
+	case "substr", "split", "sub", "gsub":
+		return [2]int{2, 3}, true
+	case "index", "match", "atan2":
+		return [2]int{2, 2}, true
+	case "sprintf":
+		return [2]int{1, -1}, true
+	case "sin", "cos", "exp", "log", "sqrt", "int", "tolower", "toupper", "system", "close":
+		return [2]int{1, 1}, true
+	case "rand":
+		return [2]int{0, 0}, true
+	}
+	var zero [2]int
+	return zero, false
 }
 
 func (in *awkInterp) evalBuiltin(node awkBuiltinExpr) (awkValue, error) {
@@ -74,7 +84,7 @@ func (in *awkInterp) evalBuiltin(node awkBuiltinExpr) (awkValue, error) {
 
 // awkCheckArity refuses a call with the wrong number of arguments, in gawk's words.
 func awkCheckArity(node awkBuiltinExpr) error {
-	bounds, known := awkBuiltinArity[node.name]
+	bounds, known := awkBuiltinArity(node.name)
 	if !known {
 		return nil
 	}

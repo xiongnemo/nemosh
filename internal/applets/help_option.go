@@ -34,12 +34,12 @@ import (
 // Everything else in busybox prints usage, including `printf --help` and
 // `expr --help`, so those two follow it rather than GNU -- but only alone; see
 // helpAloneApplets.
-var helpAsDataApplets = map[string]bool{
-	"echo":  true,
-	"test":  true,
-	"[":     true,
-	"true":  true,
-	"false": true,
+func helpAsDataApplets(key string) bool {
+	switch key {
+	case "echo", "test", "[", "true", "false":
+		return true
+	}
+	return false
 }
 
 // helpAloneApplets are the applets that answer `--help` only as their one argument, as
@@ -47,7 +47,13 @@ var helpAsDataApplets = map[string]bool{
 // (`argc == 2`): after printf's format, and in expr's expression, it is data. `printf -v comp
 // "%q" --help`, which cobra's completion scripts run on every option they offer, printed
 // printf's usage into comp.
-var helpAloneApplets = map[string]bool{"printf": true, "expr": true}
+func helpAloneApplets(key string) bool {
+	switch key {
+	case "printf", "expr":
+		return true
+	}
+	return false
+}
 
 // helpRequested reports whether these arguments ask for usage.
 //
@@ -55,10 +61,10 @@ var helpAloneApplets = map[string]bool{"printf": true, "expr": true}
 // for the string `--help`, and `grep --help-me` is a mistyped option that its own
 // parser should complain about by name rather than have swallowed here.
 func helpRequested(name string, args []string) bool {
-	if helpAsDataApplets[name] {
+	if helpAsDataApplets(name) {
 		return false
 	}
-	if helpAloneApplets[name] {
+	if helpAloneApplets(name) {
 		return len(args) == 1 && args[0] == "--help"
 	}
 	for _, arg := range args {

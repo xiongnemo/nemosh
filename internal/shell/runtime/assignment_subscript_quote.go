@@ -88,14 +88,19 @@ func quoteAssignmentSubscripts(text string) string {
 			index = end
 			continue
 		}
-		start = start && (isAssignment(word) || beginsCommand[word])
+		start = start && (isAssignment(word) || beginsCommand(word))
 	}
 	return out.String()
 }
 
 // beginsCommand is the reserved words a command follows.
-var beginsCommand = map[string]bool{"if": true, "then": true, "elif": true, "else": true, "while": true,
-	"until": true, "do": true, "!": true, "{": true, "time": true}
+func beginsCommand(key string) bool {
+	switch key {
+	case "if", "then", "elif", "else", "while", "until", "do", "!", "{", "time":
+		return true
+	}
+	return false
+}
 
 // quotedSubscript is the `name[subscript]=` or `+=` at index, its subscript quoted, and where
 // its value begins, when the subscript holds a blank or an operator and no quoting of its own.

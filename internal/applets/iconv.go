@@ -105,7 +105,7 @@ func iconvIANAName(name string) string {
 		return "US-ASCII"
 	}
 	if number, ok := strings.CutPrefix(upper, "CP"); ok {
-		if iana, known := iconvCodePages[number]; known {
+		if iana, known := iconvCodePages(number); known {
 			return iana
 		}
 	}
@@ -113,16 +113,85 @@ func iconvIANAName(name string) string {
 }
 
 // iconvCodePages are the Windows code pages x/text has a codec for, by number.
-var iconvCodePages = map[string]string{
-	"437": "IBM437", "850": "IBM850", "852": "IBM852", "855": "IBM855", "858": "IBM00858",
-	"860": "IBM860", "862": "IBM862", "863": "IBM863", "865": "IBM865", "866": "IBM866",
-	"874": "windows-874", "932": "Shift_JIS", "936": "GBK", "949": "EUC-KR", "950": "Big5",
-	"1250": "windows-1250", "1251": "windows-1251", "1252": "windows-1252", "1253": "windows-1253",
-	"1254": "windows-1254", "1255": "windows-1255", "1256": "windows-1256", "1257": "windows-1257",
-	"1258": "windows-1258", "10000": "macintosh", "20127": "US-ASCII", "20866": "KOI8-R",
-	"21866": "KOI8-U", "28591": "ISO-8859-1", "28592": "ISO-8859-2", "28595": "ISO-8859-5",
-	"28597": "ISO-8859-7", "28605": "ISO-8859-15", "50220": "ISO-2022-JP", "51932": "EUC-JP",
-	"52936": "HZ-GB-2312", "54936": "GB18030",
+func iconvCodePages(key string) (string, bool) {
+	switch key {
+	case "437":
+		return "IBM437", true
+	case "850":
+		return "IBM850", true
+	case "852":
+		return "IBM852", true
+	case "855":
+		return "IBM855", true
+	case "858":
+		return "IBM00858", true
+	case "860":
+		return "IBM860", true
+	case "862":
+		return "IBM862", true
+	case "863":
+		return "IBM863", true
+	case "865":
+		return "IBM865", true
+	case "866":
+		return "IBM866", true
+	case "874":
+		return "windows-874", true
+	case "932":
+		return "Shift_JIS", true
+	case "936":
+		return "GBK", true
+	case "949":
+		return "EUC-KR", true
+	case "950":
+		return "Big5", true
+	case "1250":
+		return "windows-1250", true
+	case "1251":
+		return "windows-1251", true
+	case "1252":
+		return "windows-1252", true
+	case "1253":
+		return "windows-1253", true
+	case "1254":
+		return "windows-1254", true
+	case "1255":
+		return "windows-1255", true
+	case "1256":
+		return "windows-1256", true
+	case "1257":
+		return "windows-1257", true
+	case "1258":
+		return "windows-1258", true
+	case "10000":
+		return "macintosh", true
+	case "20127":
+		return "US-ASCII", true
+	case "20866":
+		return "KOI8-R", true
+	case "21866":
+		return "KOI8-U", true
+	case "28591":
+		return "ISO-8859-1", true
+	case "28592":
+		return "ISO-8859-2", true
+	case "28595":
+		return "ISO-8859-5", true
+	case "28597":
+		return "ISO-8859-7", true
+	case "28605":
+		return "ISO-8859-15", true
+	case "50220":
+		return "ISO-2022-JP", true
+	case "51932":
+		return "EUC-JP", true
+	case "52936":
+		return "HZ-GB-2312", true
+	case "54936":
+		return "GB18030", true
+	}
+	var zero string
+	return zero, false
 }
 
 func convertEncoding(stdout io.Writer, reader io.Reader, from, to encoding.Encoding, drop bool) error {

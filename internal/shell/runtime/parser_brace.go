@@ -117,7 +117,7 @@ func afterCoprocKeyword(line string, index int) bool {
 	// keyword is a reserved word a command may follow, or nothing. Only the word just
 	// before, since a function's header is not one: the whole of `f() {` was asked, and
 	// the brace of a coprocess in a one-line function body read as data.
-	return keyword == 0 || commandIntroducers[fields[keyword-1]]
+	return keyword == 0 || commandIntroducers(fields[keyword-1])
 }
 
 // afterCommandIntroducer reports whether everything before index is a reserved word a
@@ -153,7 +153,7 @@ func afterCommandIntroducer(line string, index int) bool {
 		return false
 	}
 	for _, field := range fields {
-		if !commandIntroducers[field] {
+		if !commandIntroducers(field) {
 			return false
 		}
 	}

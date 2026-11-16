@@ -8,11 +8,37 @@ import (
 
 // chmodClasses are the bits a class letter stands for: its permissions, with set-user-id for
 // u, set-group-id for g, and every special bit for a.
-var chmodClasses = map[byte]uint32{'a': 0o7777, 'u': 0o4700, 'g': 0o2070, 'o': 0o0007}
+func chmodClasses(key byte) uint32 {
+	switch key {
+	case 'a':
+		return 0o7777
+	case 'u':
+		return 0o4700
+	case 'g':
+		return 0o2070
+	case 'o':
+		return 0o0007
+	}
+	return 0
+}
 
 // chmodPermissions are the permission letters, as bits in every class. X is x, but only for a
 // directory or a file some class may already run.
-var chmodPermissions = map[byte]uint32{'r': 0o444, 'w': 0o222, 'x': 0o111, 'X': 0o111, 's': 0o6000, 't': 0o1000}
+func chmodPermissions(key byte) uint32 {
+	switch key {
+	case 'r':
+		return 0o444
+	case 'w':
+		return 0o222
+	case 'x', 'X':
+		return 0o111
+	case 's':
+		return 0o6000
+	case 't':
+		return 0o1000
+	}
+	return 0
+}
 
 // applyChmodMode is busybox's bb_parse_mode (libbb/parse_mode.c). An octal MODE, up to 7777,
 // is the new mode outright. Otherwise MODE is clauses separated by commas, each class letters
@@ -32,8 +58,8 @@ func applyChmodMode(spec string, current, umask uint32, isDir bool) (uint32, boo
 			continue
 		}
 		var who uint32
-		for spec != "" && chmodClasses[spec[0]] != 0 {
-			who |= chmodClasses[spec[0]]
+		for spec != "" && chmodClasses(spec[0]) != 0 {
+			who |= chmodClasses(spec[0])
 			if spec = spec[1:]; spec == "" {
 				return 0, false
 			}
@@ -74,7 +100,7 @@ func applyChmodMode(spec string, current, umask uint32, isDir bool) (uint32, boo
 // letters, and returns the bits in every class with the rest of the clause.
 func chmodActionBits(mode uint32, isDir bool, spec string) (uint32, string) {
 	if spec != "" && strings.IndexByte("ugo", spec[0]) >= 0 {
-		copied := chmodClasses[spec[0]] & 0o777 & mode
+		copied := chmodClasses(spec[0]) & 0o777 & mode
 		var bits uint32
 		for _, permission := range []uint32{0o444, 0o222, 0o111} {
 			if copied&permission != 0 {
@@ -84,9 +110,9 @@ func chmodActionBits(mode uint32, isDir bool, spec string) (uint32, string) {
 		return bits, spec[1:]
 	}
 	var bits uint32
-	for spec != "" && chmodPermissions[spec[0]] != 0 {
+	for spec != "" && chmodPermissions(spec[0]) != 0 {
 		if spec[0] != 'X' || isDir || mode&0o111 != 0 {
-			bits |= chmodPermissions[spec[0]]
+			bits |= chmodPermissions(spec[0])
 		}
 		spec = spec[1:]
 	}

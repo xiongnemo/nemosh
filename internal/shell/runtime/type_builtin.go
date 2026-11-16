@@ -108,12 +108,22 @@ func (r Runtime) describeFor(mode byte, noFunctions bool, name string) bool {
 // ashBuiltinApplets are the applets busybox's shell has as builtins of its own, and so calls
 // shell builtins, as bash does: `type echo` is "echo is a shell builtin" there. Here they are
 // applets, and were "a builtin applet".
-var ashBuiltinApplets = map[string]bool{"echo": true, "printf": true, "test": true, "[": true, "true": true, "false": true}
+var ashBuiltinAppletNames = [...]string{"echo", "printf", "test", "[", "true", "false"}
+
+func ashBuiltinApplets(name string) bool {
+	return slices.Contains(ashBuiltinAppletNames[:], name)
+}
 
 // appletBuiltins are the other way about: builtins here, which need the shell to run a command
 // or search its PATH, and applets in busybox, which calls them builtin applets: `type which` is
 // "which is a builtin applet" there. They were "a shell builtin".
-var appletBuiltins = map[string]bool{"time": true, "timeout": true, "which": true, "flock": true, "watch": true}
+func appletBuiltins(key string) bool {
+	switch key {
+	case "time", "timeout", "which", "flock", "watch":
+		return true
+	}
+	return false
+}
 
 // commandKind is one way the shell could read a name: the word `type -t` answers, the
 // sentence `type` does, and the path when it is a file.
@@ -152,12 +162,12 @@ func (r Runtime) commandKinds(name string) []commandKind {
 		switch {
 		case errorEndsShell(name):
 			description = name + " is a special shell builtin"
-		case appletBuiltins[name]:
+		case appletBuiltins(name):
 			description = name + " is a builtin applet"
 		}
 		kinds = append(kinds, commandKind{word: "builtin", description: description})
 	}
-	if builtin, ok := unimplementedBuiltins[name]; ok {
+	if builtin, ok := unimplementedBuiltins(name); ok {
 		// "and will not" separates a gap from a decision, which is the thing
 		// `type` is being asked about.
 		description := name + " is a shell builtin this shell does not implement"
@@ -171,7 +181,7 @@ func (r Runtime) commandKinds(name string) []commandKind {
 		// (AGENTS.md). An applet runs inside the shell, so to `-t` it is a builtin:
 		// a script asking for "file" is asking whether it would start a program.
 		description := name + " is a builtin applet"
-		if ashBuiltinApplets[name] {
+		if ashBuiltinApplets(name) {
 			description = name + " is a shell builtin"
 		}
 		kinds = append(kinds, commandKind{word: "builtin", description: description})

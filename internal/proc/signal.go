@@ -20,22 +20,44 @@ import (
 // reproduces rather than a number a kernel understands, and a name listed here is a promise.
 // It is busybox-w32's table, which has ILL, FPE, SEGV, PIPE and ABRT besides: they were an
 // invalid signal to `kill` and one `trap` did not support. ABRT is AbortSignal, 22 on Windows.
-var signalNumbers = map[string]int{
-	"HUP": 1, "INT": 2, "QUIT": 3, "ILL": 4, "FPE": 8, "KILL": 9, "SEGV": 11, "PIPE": 13, "TERM": 15,
-	"ABRT": AbortSignal,
+var signalNumbers = [...]Signal{
+	{"HUP", 1}, {"INT", 2}, {"QUIT", 3}, {"ILL", 4}, {"FPE", 8}, {"KILL", 9}, {"SEGV", 11},
+	{"PIPE", 13}, {"TERM", 15}, {"ABRT", AbortSignal},
 }
 
 // signalWords are what a job ended by each signal is reported as -- `Terminated`, not
 // `Done(143)` -- in the words bash and busybox on Linux both use, libc's. busybox-w32 has its
 // own table, which names all but KILL and TERM bare, `SEGV`.
-var signalWords = map[int]string{
-	1: "Hangup", 2: "Interrupt", 3: "Quit", 4: "Illegal instruction", 8: "Floating point exception",
-	9: "Killed", 11: "Segmentation fault", 13: "Broken pipe", 15: "Terminated", AbortSignal: "Aborted",
+func signalWords(key int) (string, bool) {
+	switch key {
+	case 1:
+		return "Hangup", true
+	case 2:
+		return "Interrupt", true
+	case 3:
+		return "Quit", true
+	case 4:
+		return "Illegal instruction", true
+	case 8:
+		return "Floating point exception", true
+	case 9:
+		return "Killed", true
+	case 11:
+		return "Segmentation fault", true
+	case 13:
+		return "Broken pipe", true
+	case 15:
+		return "Terminated", true
+	case AbortSignal:
+		return "Aborted", true
+	}
+	var zero string
+	return zero, false
 }
 
 // suspendSignals are the stop-and-continue family, by name and by the Linux number a script
 // written there would use.
-var suspendSignals = map[string]int{"CONT": 18, "STOP": 19, "TSTP": 20, "TTIN": 21, "TTOU": 22}
+var suspendSignals = [...]Signal{{"CONT", 18}, {"STOP", 19}, {"TSTP", 20}, {"TTIN", 21}, {"TTOU", 22}}
 
 // ErrCannotSuspend refuses the stop-and-continue signals.
 //
@@ -63,9 +85,9 @@ func ParseSignal(spec string) (int, error) {
 		if number == 0 || isSignalNumber(number) {
 			return number, nil
 		}
-		for name, suspend := range suspendSignals {
-			if number == suspend {
-				return 0, fmt.Errorf("%d is SIG%s: %w", number, name, ErrCannotSuspend)
+		for _, suspend := range suspendSignals {
+			if number == suspend.Number {
+				return 0, fmt.Errorf("%d is SIG%s: %w", number, suspend.Name, ErrCannotSuspend)
 			}
 		}
 		// A number is a signal only if the table has it, as busybox-w32 has it: `kill -9999`
@@ -74,11 +96,15 @@ func ParseSignal(spec string) (int, error) {
 		return 0, fmt.Errorf("%w: %s", ErrUnknownSignal, spec)
 	}
 	name := strings.TrimPrefix(strings.ToUpper(spec), "SIG")
-	if number, ok := signalNumbers[name]; ok {
-		return number, nil
+	for _, signal := range signalNumbers {
+		if signal.Name == name {
+			return signal.Number, nil
+		}
 	}
-	if _, ok := suspendSignals[name]; ok {
-		return 0, fmt.Errorf("%s: %w", name, ErrCannotSuspend)
+	for _, suspend := range suspendSignals {
+		if suspend.Name == name {
+			return 0, fmt.Errorf("%s: %w", name, ErrCannotSuspend)
+		}
 	}
 	return 0, fmt.Errorf("%w: %s", ErrUnknownSignal, spec)
 }
@@ -86,7 +112,7 @@ func ParseSignal(spec string) (int, error) {
 // isSignalNumber reports a number the table has.
 func isSignalNumber(number int) bool {
 	for _, known := range signalNumbers {
-		if known == number {
+		if known.Number == number {
 			return true
 		}
 	}
@@ -101,17 +127,14 @@ type Signal struct {
 
 // Signals lists the table in number order, which is how `kill -l` is read.
 func Signals() []Signal {
-	signals := make([]Signal, 0, len(signalNumbers))
-	for name, number := range signalNumbers {
-		signals = append(signals, Signal{Name: name, Number: number})
-	}
-	sort.Slice(signals, func(i, j int) bool { return signals[i].Number < signals[j].Number })
-	return signals
+	signals := signalNumbers
+	sort.Slice(signals[:], func(i, j int) bool { return signals[i].Number < signals[j].Number })
+	return signals[:]
 }
 
 // SignalWord is how something ended by signal is reported: `Killed`, `Terminated`.
 func SignalWord(signal int) string {
-	if word, ok := signalWords[signal]; ok {
+	if word, ok := signalWords(signal); ok {
 		return word
 	}
 	return fmt.Sprintf("Signal %d", signal)

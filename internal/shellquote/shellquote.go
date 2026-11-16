@@ -153,13 +153,35 @@ func ANSIC(value string) string {
 	return out.String()
 }
 
-var ansicEscapes = map[byte]string{
-	0x07: `\a`, 0x08: `\b`, 0x09: `\t`, 0x0a: `\n`, 0x0b: `\v`, 0x0c: `\f`, 0x0d: `\r`,
-	0x1b: `\E`, '\\': `\\`, '\'': `\'`,
+func ansicEscapes(key byte) (string, bool) {
+	switch key {
+	case 0x07:
+		return `\a`, true
+	case 0x08:
+		return `\b`, true
+	case 0x09:
+		return `\t`, true
+	case 0x0a:
+		return `\n`, true
+	case 0x0b:
+		return `\v`, true
+	case 0x0c:
+		return `\f`, true
+	case 0x0d:
+		return `\r`, true
+	case 0x1b:
+		return `\E`, true
+	case '\\':
+		return `\\`, true
+	case '\'':
+		return `\'`, true
+	}
+	var zero string
+	return zero, false
 }
 
 func writeANSICByte(out *strings.Builder, char byte) {
-	switch escape, ok := ansicEscapes[char]; {
+	switch escape, ok := ansicEscapes(char); {
 	case ok:
 		out.WriteString(escape)
 	case char < 0x20 || char == 0x7f:

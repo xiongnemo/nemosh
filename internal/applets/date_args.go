@@ -8,9 +8,7 @@ import (
 // dateLongOptions are busybox's (coreutils/date.c:144): the long forms and the letter each is,
 // taken by any prefix that names one alone, as getopt_long takes them. Only the whole name was
 // taken, so `date --da=...` was an unknown option.
-var dateLongOptions = map[string]string{
-	"rfc-822": "R", "rfc-2822": "R", "set": "s", "utc": "u", "date": "d", "reference": "r",
-}
+const dateLongOptions = "rfc-822=R rfc-2822=R set=s utc=u date=d reference=r"
 
 // parseDateArgs reads date's options and operands: a +FMT, and then TIME to set the clock to,
 // `MMDDhhmm[[CC]YY][.ss]` among its forms. -I takes its SPEC only in the same word.

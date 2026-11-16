@@ -69,7 +69,7 @@ func (p *awkParser) parseAssignment(flags awkExprFlags) (awkExpr, error) {
 		return nil, err
 	}
 	operator := p.peek().text
-	if p.peek().kind != awkTokenOperator || !awkAssignOperators[operator] {
+	if p.peek().kind != awkTokenOperator || !awkAssignOperators(operator) {
 		return left, nil
 	}
 	if !awkIsLvalue(left) {
@@ -84,8 +84,12 @@ func (p *awkParser) parseAssignment(flags awkExprFlags) (awkExpr, error) {
 	return awkAssignExpr{operator: operator, target: left, value: value}, nil
 }
 
-var awkAssignOperators = map[string]bool{
-	"=": true, "+=": true, "-=": true, "*=": true, "/=": true, "%=": true, "^=": true, "**=": true,
+func awkAssignOperators(key string) bool {
+	switch key {
+	case "=", "+=", "-=", "*=", "/=", "%=", "^=", "**=":
+		return true
+	}
+	return false
 }
 
 // awkIsLvalue reports whether something may be assigned to.

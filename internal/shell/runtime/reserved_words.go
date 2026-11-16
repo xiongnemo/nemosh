@@ -16,11 +16,12 @@ package runtime
 
 // reservedWords is the sixteen words of POSIX 2.4. `[[` and `select` are not among them --
 // POSIX has neither -- and are listed separately where they are implemented.
-var reservedWords = map[string]bool{
-	"!": true, "{": true, "}": true,
-	"case": true, "do": true, "done": true, "elif": true, "else": true,
-	"esac": true, "fi": true, "for": true, "if": true, "in": true,
-	"then": true, "until": true, "while": true,
+func reservedWords(key string) bool {
+	switch key {
+	case "!", "{", "}", "case", "do", "done", "elif", "else", "esac", "fi", "for", "if", "in", "then", "until", "while":
+		return true
+	}
+	return false
 }
 
 // commandIntroducers are the reserved words a command may follow directly, so a `{` after
@@ -32,24 +33,30 @@ var reservedWords = map[string]bool{
 // command only by way of a separator -- `{ echo a; } echo b` is not a thing. `in` is
 // followed by words or patterns. `case` and `for` are followed by a word, not a command:
 // `case` by the subject, `for` by the variable.
-var commandIntroducers = map[string]bool{
-	"if": true, "then": true, "elif": true, "else": true,
-	"while": true, "until": true, "do": true, "!": true,
-	"{": true,
+func commandIntroducers(key string) bool {
+	switch key {
+	case "if", "then", "elif", "else", "while", "until", "do", "!", "{":
+		return true
+	}
+	return false
 }
 
 // bashReservedWords are the ones bash adds that this shell implements. To a reader of the
 // line they are keywords whatever POSIX calls them, and bash's `type` calls them so: `type
 // [[` named whatever `[[.exe` there was on PATH.
-var bashReservedWords = map[string]bool{
-	"select": true, "[[": true, "]]": true, "function": true, "coproc": true,
+func bashReservedWords(key string) bool {
+	switch key {
+	case "select", "[[", "]]", "function", "coproc":
+		return true
+	}
+	return false
 }
 
 // ReservedWord reports whether word is one of the shell's reserved words, so that something
 // drawing a line can say so rather than calling it a command that does not exist, and `type`
 // and `command -v` can call it a keyword.
 func ReservedWord(word string) bool {
-	return reservedWords[word] || bashReservedWords[word]
+	return reservedWords(word) || bashReservedWords(word)
 }
 
 // CommandFollows reports whether a command may begin immediately after word.
@@ -59,7 +66,7 @@ func ReservedWord(word string) bool {
 // editor would colour `echo` in `then echo x` as an argument while the shell ran it as a
 // command.
 func CommandFollows(word string) bool {
-	if commandIntroducers[word] {
+	if commandIntroducers(word) {
 		return true
 	}
 	switch word {

@@ -32,13 +32,23 @@ var priorityLadder = []uint32{
 }
 
 // priorityNames are the same classes as a person would say them, matching the PRI column.
-var priorityNames = map[uint32]string{
-	windows.IDLE_PRIORITY_CLASS:         "idle",
-	windows.BELOW_NORMAL_PRIORITY_CLASS: "below",
-	windows.NORMAL_PRIORITY_CLASS:       "norm",
-	windows.ABOVE_NORMAL_PRIORITY_CLASS: "above",
-	windows.HIGH_PRIORITY_CLASS:         "high",
-	windows.REALTIME_PRIORITY_CLASS:     "real",
+func priorityNames(key uint32) (string, bool) {
+	switch key {
+	case windows.IDLE_PRIORITY_CLASS:
+		return "idle", true
+	case windows.BELOW_NORMAL_PRIORITY_CLASS:
+		return "below", true
+	case windows.NORMAL_PRIORITY_CLASS:
+		return "norm", true
+	case windows.ABOVE_NORMAL_PRIORITY_CLASS:
+		return "above", true
+	case windows.HIGH_PRIORITY_CLASS:
+		return "high", true
+	case windows.REALTIME_PRIORITY_CLASS:
+		return "real", true
+	}
+	var zero string
+	return zero, false
 }
 
 // AdjustPriority moves a process one step along the ladder and reports where it landed.
@@ -96,7 +106,7 @@ func indexOfPriority(class uint32) int {
 }
 
 func priorityName(class uint32) string {
-	if name, ok := priorityNames[class]; ok {
+	if name, ok := priorityNames(class); ok {
 		return name
 	}
 	return fmt.Sprintf("class %d", class)

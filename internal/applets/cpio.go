@@ -26,10 +26,8 @@ import (
 // --quiet, --to-stdout and the two --create options this build already obeys -- its device
 // numbers are 0 and its inodes counted from 1 -- have none, and go to bytes nobody types.
 // They were all unrecognized.
-var cpioLongOptions = map[string]string{
-	"extract": "i", "list": "t", "create": "o", "format": "H", "file": "F", "verbose": "v",
-	"null": "0", "quiet": "\x01", "to-stdout": "\x02", "ignore-devno": "\x03", "renumber-inodes": "\x03",
-}
+const cpioLongOptions = "extract=i list=t create=o format=H file=F verbose=v null=0 quiet=\x01 " +
+	"to-stdout=\x02 ignore-devno=\x03 renumber-inodes=\x03"
 
 func newCpioApplet() Applet {
 	return simpleApplet{name: "cpio", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {

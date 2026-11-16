@@ -26,16 +26,29 @@ import (
 
 // signalTraps are the signals a trap can be set for, by number: the ones `kill` sends, less
 // KILL, which nothing can catch. PIPE's trap runs for a write into a pipe too; see pipe_trap.go.
-var signalTraps = map[int]trapName{
-	1: trapHUP, 2: trapINT, 3: trapQUIT, 4: trapILL, 8: trapFPE, 11: trapSEGV, 13: trapPIPE,
-	15: trapTERM, proc.AbortSignal: trapABRT,
+var signalTrapTable = [...]struct {
+	number int
+	trap   trapName
+}{
+	{1, trapHUP}, {2, trapINT}, {3, trapQUIT}, {4, trapILL}, {8, trapFPE}, {11, trapSEGV}, {13, trapPIPE},
+	{15, trapTERM}, {proc.AbortSignal, trapABRT},
+}
+
+// signalTraps is the trap a signal number runs, if any.
+func signalTraps(number int) (trapName, bool) {
+	for _, row := range signalTrapTable {
+		if row.number == number {
+			return row.trap, true
+		}
+	}
+	return "", false
 }
 
 // signalNumber is the number of the signal a trap name is for, or 0.
 func signalNumber(name trapName) int {
-	for number, trap := range signalTraps {
-		if trap == name {
-			return number
+	for _, row := range signalTrapTable {
+		if row.trap == name {
+			return row.number
 		}
 	}
 	return 0
@@ -133,7 +146,7 @@ func (r Runtime) deliverSignals(ctx context.Context, result lineResult) lineResu
 		}
 	}
 	for _, signal := range r.signals.take() {
-		name := signalTraps[signal]
+		name, _ := signalTraps(signal)
 		action, set := r.traps[name]
 		if !set {
 			// Reset between the send and now, so the default after all.

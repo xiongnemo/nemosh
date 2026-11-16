@@ -14,15 +14,18 @@ import (
 // an owner or a mode restored to forget.
 
 // tarLongOptions are the long forms that stand for a letter.
-var tarLongOptions = map[string]string{
-	"list": "t", "extract": "x", "create": "c", "directory": "C", "file": "f", "to-stdout": "O",
-	"no-same-owner": "o", "verbose": "v", "keep-old": "k", "dereference": "h", "bzip2": "j",
-	"files-from": "T", "exclude-from": "X", "gzip": "z", "auto-compress": "a", "touch": "m",
-	"xz": "J",
-}
+const tarLongOptions = "list=t extract=x create=c directory=C file=f to-stdout=O no-same-owner=o " +
+	"verbose=v keep-old=k dereference=h bzip2=j files-from=T exclude-from=X gzip=z " +
+	"auto-compress=a touch=m xz=J"
 
 // tarLongValued are the long forms of a letter that takes a value.
-var tarLongValued = map[string]bool{"directory": true, "file": true, "files-from": true, "exclude-from": true}
+func tarLongValued(name string) bool {
+	switch name {
+	case "directory", "file", "files-from", "exclude-from":
+		return true
+	}
+	return false
+}
 
 // tarArguments turns the long options into letters, and takes up the four of tar's own.
 func tarArguments(args []string, request *tarRequest) ([]string, error) {
@@ -36,7 +39,7 @@ func tarArguments(args []string, request *tarRequest) ([]string, error) {
 			continue
 		}
 		name, value, valued := strings.Cut(arg[2:], "=")
-		takesValue := tarLongValued[name] || name == "exclude" || name == "strip-components"
+		takesValue := tarLongValued(name) || name == "exclude" || name == "strip-components"
 		if takesValue && !valued {
 			if index+1 >= len(args) {
 				return nil, fmt.Errorf("option '%s' requires an argument", arg)
@@ -45,8 +48,8 @@ func tarArguments(args []string, request *tarRequest) ([]string, error) {
 			value, valued = args[index], true
 		}
 		switch {
-		case tarLongOptions[name] != "" && valued == takesValue:
-			words = append(words, "-"+tarLongOptions[name])
+		case longOptionNamed(tarLongOptions, name) != 0 && valued == takesValue:
+			words = append(words, "-"+string(longOptionNamed(tarLongOptions, name)))
 			if takesValue {
 				words = append(words, value)
 			}

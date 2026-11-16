@@ -65,7 +65,7 @@ func decodePrompt(text string, now time.Time, fact func(byte) string, quoted boo
 			out.WriteByte('\\')
 		case '[', ']':
 		case 'd', 't', 'T', '@', 'A':
-			out.WriteString(applets.Strftime(now, promptTimeFormats[escape]))
+			out.WriteString(applets.Strftime(now, promptTimeFormats(escape)))
 		case 'D':
 			if index+1 == len(text) || text[index+1] != '{' {
 				out.WriteString(`\D`)
@@ -97,8 +97,20 @@ func decodePrompt(text string, now time.Time, fact func(byte) string, quoted boo
 }
 
 // promptTimeFormats are the times bash gives each escape, in strftime's terms.
-var promptTimeFormats = map[byte]string{
-	'd': "%a %b %d", 't': "%H:%M:%S", 'T': "%I:%M:%S", '@': "%I:%M %p", 'A': "%H:%M",
+func promptTimeFormats(key byte) string {
+	switch key {
+	case 'd':
+		return "%a %b %d"
+	case 't':
+		return "%H:%M:%S"
+	case 'T':
+		return "%I:%M:%S"
+	case '@':
+		return "%I:%M %p"
+	case 'A':
+		return "%H:%M"
+	}
+	return ""
 }
 
 // quotePromptValue is bash's sh_backslash_quote_for_double_quotes, when the text is to be

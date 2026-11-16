@@ -173,7 +173,7 @@ func (in *bcInterp) evalBinary(node bcBinaryExpr) (bigDecimal, error) {
 	if err != nil {
 		return bigDecimal{}, err
 	}
-	if bcRelational[node.operator] {
+	if bcRelational(node.operator) {
 		return bcBoolean(bcComparisonHolds(node.operator, compareDecimal(left, right))), nil
 	}
 	return applyDecimal(node.operator[0], left, right, in.scale())

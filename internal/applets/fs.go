@@ -22,7 +22,7 @@ import (
 // so `mkdir -p a/b/c` created a directory literally named -p.
 func newMkdirApplet() Applet {
 	return simpleApplet{name: "mkdir", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout io.Writer, _ io.Writer) error {
-		options, operands, err := parseAppletLongOptions(ctx, args, map[string]string{"parents": "p", "verbose": "v", "mode": "m"}, "pv", "m")
+		options, operands, err := parseAppletLongOptions(ctx, args, "parents=p verbose=v mode=m", "pv", "m")
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func newRmdirApplet() Applet {
 			}
 			words = append(words, arg)
 		}
-		options, operands, err := parseAppletLongOptions(ctx, words, map[string]string{"parents": "p", "verbose": "v"}, "pv", "")
+		options, operands, err := parseAppletLongOptions(ctx, words, "parents=p verbose=v", "pv", "")
 		if err != nil {
 			return err
 		}

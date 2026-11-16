@@ -13,16 +13,22 @@ import (
 // know, as an invalid option: dirs takes one letter a word. `pushd -- dir` and `popd --`
 // were refused, `-n` was not known, and every misuse was status 1.
 
-var dirStackUsage = map[string]string{
-	"pushd": "pushd [-n] [+N | -N | dir]",
-	"popd":  "popd [-n] [+N | -N]",
-	"dirs":  "dirs [-clpv] [+N] [-N]",
+func dirStackUsage(key string) string {
+	switch key {
+	case "pushd":
+		return "pushd [-n] [+N | -N | dir]"
+	case "popd":
+		return "popd [-n] [+N | -N]"
+	case "dirs":
+		return "dirs [-clpv] [+N] [-N]"
+	}
+	return ""
 }
 
 // misuseDirStack says a word the builtin cannot read, then its usage, and answers 2.
 func (r Runtime) misuseDirStack(builtin, word, problem string) int {
 	fmt.Fprintf(r.streams.Stderr, "%s%s: %s: %s\n", r.diagnosticPrefix(), builtin, word, problem)
-	fmt.Fprintf(r.streams.Stderr, "%s: usage: %s\n", builtin, dirStackUsage[builtin])
+	fmt.Fprintf(r.streams.Stderr, "%s: usage: %s\n", builtin, dirStackUsage(builtin))
 	return 2
 }
 

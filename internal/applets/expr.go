@@ -121,14 +121,20 @@ func (p *exprParser) parseAnd() (string, error) {
 	return left, nil
 }
 
-var comparisons = map[string]bool{"=": true, "!=": true, "<": true, "<=": true, ">": true, ">=": true}
+func comparisons(key string) bool {
+	switch key {
+	case "=", "!=", "<", "<=", ">", ">=":
+		return true
+	}
+	return false
+}
 
 func (p *exprParser) parseComparison() (string, error) {
 	left, err := p.parseAdditive()
 	if err != nil {
 		return "", err
 	}
-	for comparisons[p.peek()] {
+	for comparisons(p.peek()) {
 		operator := p.take()
 		right, err := p.parseAdditive()
 		if err != nil {

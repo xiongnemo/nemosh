@@ -80,10 +80,8 @@ func newInstallApplet() Applet {
 }
 
 // installLongOptions are the long forms busybox's install takes.
-var installLongOptions = map[string]string{
-	"verbose": "v", "directory": "d", "preserve-timestamps": "p", "strip": "s",
-	"group": "g", "mode": "m", "owner": "o", "target-directory": "t",
-}
+const installLongOptions = "verbose=v directory=d preserve-timestamps=p strip=s group=g mode=m owner=o " +
+	"target-directory=t"
 
 // installRun is one install: cp's run, which names failures and keeps the status, and what
 // each copy or directory is given once it is made.

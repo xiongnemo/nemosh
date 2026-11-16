@@ -21,7 +21,13 @@ import (
 // stops at the first of them, which is the fix for `find . ! -name x` reporting
 // `!: No such file or directory` -- the operator was being collected as a path
 // because it does not begin with a dash.
-var findOperators = map[string]bool{"!": true, "(": true, ")": true}
+func findOperators(key string) bool {
+	switch key {
+	case "!", "(", ")":
+		return true
+	}
+	return false
+}
 
 // parseFindArguments splits paths from the expression and validates the whole
 // expression before any walking starts.
@@ -29,7 +35,7 @@ func parseFindArguments(args []string, view ProcessView) ([]string, findExpressi
 	var paths []string
 	follow, index := findLinkOptions(args)
 	for ; index < len(args); index++ {
-		if strings.HasPrefix(args[index], "-") || findOperators[args[index]] {
+		if strings.HasPrefix(args[index], "-") || findOperators(args[index]) {
 			break
 		}
 		paths = append(paths, args[index])

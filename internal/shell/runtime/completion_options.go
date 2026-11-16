@@ -28,19 +28,38 @@ func (spec compgenSpec) clone() compgenSpec {
 	return spec
 }
 
-var compgenLetters = map[byte]string{
-	'a': "alias", 'b': "builtin", 'c': "command", 'd': "directory", 'e': "export", 'f': "file",
-	'g': "group", 'j': "job", 'k': "keyword", 's': "service", 'u': "user", 'v': "variable",
+var compgenLetters = [...]struct {
+	letter byte
+	action string
+}{
+	{'a', "alias"}, {'b', "builtin"}, {'c', "command"}, {'d', "directory"}, {'e', "export"}, {'f', "file"},
+	{'g', "group"}, {'j', "job"}, {'k', "keyword"}, {'s', "service"}, {'u', "user"}, {'v', "variable"},
+}
+
+// compgenLetter is the action a letter stands for.
+func compgenLetter(letter byte) (string, bool) {
+	for _, row := range compgenLetters {
+		if row.letter == letter {
+			return row.action, true
+		}
+	}
+	return "", false
 }
 
 // compgenOptionNames are the -o names, in bash's compopts order, which is how they print.
 var compgenOptionNames = []string{"bashdefault", "default", "dirnames", "filenames", "fullquote", "noquote", "nosort", "nospace", "plusdirs"}
 
 // completionUsages are the usage lines bash prints after a misused option.
-var completionUsages = map[string]string{
-	"compgen":  "compgen: usage: compgen [-V varname] [-abcdefgjksuv] [-o option] [-A action] [-G globpat] [-W wordlist] [-F function] [-C command] [-X filterpat] [-P prefix] [-S suffix] [word]",
-	"complete": "complete: usage: complete [-abcdefgjksuv] [-pr] [-DEI] [-o option] [-A action] [-G globpat] [-W wordlist] [-F function] [-C command] [-X filterpat] [-P prefix] [-S suffix] [name ...]",
-	"compopt":  "compopt: usage: compopt [-o|+o option] [-DEI] [name ...]",
+func completionUsages(key string) string {
+	switch key {
+	case "compgen":
+		return "compgen: usage: compgen [-V varname] [-abcdefgjksuv] [-o option] [-A action] [-G globpat] [-W wordlist] [-F function] [-C command] [-X filterpat] [-P prefix] [-S suffix] [word]"
+	case "complete":
+		return "complete: usage: complete [-abcdefgjksuv] [-pr] [-DEI] [-o option] [-A action] [-G globpat] [-W wordlist] [-F function] [-C command] [-X filterpat] [-P prefix] [-S suffix] [name ...]"
+	case "compopt":
+		return "compopt: usage: compopt [-o|+o option] [-DEI] [name ...]"
+	}
+	return ""
 }
 
 // completionOptions is what an option list said: the specification, the letters that stand
@@ -75,7 +94,7 @@ func (r Runtime) parseCompletionOptions(builtin string, args []string, flags, va
 		options.given = true
 		for at := 1; at < len(arg); at++ {
 			letter := arg[at]
-			if action, ok := compgenLetters[letter]; ok {
+			if action, ok := compgenLetter(letter); ok {
 				options.spec.actions = append(options.spec.actions, action)
 				continue
 			}
@@ -149,5 +168,5 @@ func (r Runtime) completionUsage(builtin, message string) {
 	if message != "" {
 		fmt.Fprintf(r.streams.Stderr, "%s%s: %s\n", r.diagnosticPrefix(), builtin, message)
 	}
-	fmt.Fprintln(r.streams.Stderr, completionUsages[builtin])
+	fmt.Fprintln(r.streams.Stderr, completionUsages(builtin))
 }
