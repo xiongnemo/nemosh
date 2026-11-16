@@ -536,6 +536,19 @@ read with the next byte only when that is `[` or `O`, and one that nothing follo
 letter arrives as Escape and the letter, so in vi mode it is the two keys. No counts, no
 `u`, and `.` repeats nothing, as in busybox.
 
+### Windows Terminal's shell integration
+
+In Windows Terminal, which says it is there with `WT_SESSION`, a session writes the marks
+its [shell integration](https://learn.microsoft.com/windows/terminal/tutorials/shell-integration)
+reads, when the prompt goes to a terminal: OSC 133;A where a prompt starts and B where it
+ends, C where a command starts to run, before PS0, and D where it finished with its status,
+written before the next prompt, or D alone after a line that ran nothing; and OSC 9;9 with
+the directory, so that a duplicated tab or a split pane opens there. With them the scrollbar
+marks each command, coloured by how it ended, and a command and its output can be jumped to
+and selected. A continuation prompt is not marked. `NEMOSH_SHELL_INTEGRATION=never` writes
+none, and `always` writes them in any terminal. busybox writes none; it is this shell's, as a
+prompt written to send them would be. A PS1 that already sends its own marks wants `never`.
+
 ### Programmable completion
 
 **`complete`, `compopt` and `compgen` are bash's**, busybox having no programmable

@@ -49,6 +49,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	ignoredEOFs := 0
 	var input strings.Builder
 	var expander historyExpander
+	var marks shellMarks
 
 	for {
 		// Completion follows `cd`, so the directory is refreshed each round
@@ -97,6 +98,10 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			}
 		}
 		prompt := interactivePromptWithStatus(ctx, rt, input.Len() > 0, lastStatus)
+		// Windows Terminal's marks, around a primary prompt only; see shell_integration.go.
+		if input.Len() == 0 {
+			prompt = c.markPrompt(&marks, rt, prompt, lastStatus)
+		}
 		// `set -o vi` takes effect at the next line, as busybox reads its flag for each one.
 		editor.vi.on = rt.ShellOptionIsOn("vi")
 		line, err := readLineInRawMode(ctx, terminal, editor, prompt)
@@ -175,7 +180,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 			rt.ReportInteractiveParseError(parseErr)
 			continue
 		}
-		status, exited, done := c.runEditedLine(ctx, &rt, controller, script, lastStatus)
+		status, exited, done := c.runEditedLine(ctx, &rt, controller, script, lastStatus, &marks)
 		lastStatus = status
 		// That command had the terminal in cooked mode, where a console read hands back a
 		// line ending CRLF -- and the terminator of the line it consumed last is still
@@ -203,12 +208,18 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 // command correctly on a copy and threw the status away, so `$?` at the prompt was zero
 // after every command -- while the prompt itself, which is drawn from this function's
 // return value rather than from the runtime, showed the right one.
-func (c command) runEditedLine(ctx context.Context, rt *runtime.Runtime, controller *interruptController, script runtime.Script, lastStatus int) (int, bool, error) {
+//
+// marks is where Windows Terminal's are: a command that runs is marked C as it starts, before
+// PS0, and nil marks nothing.
+func (c command) runEditedLine(ctx context.Context, rt *runtime.Runtime, controller *interruptController, script runtime.Script, lastStatus int, marks *shellMarks) (int, bool, error) {
 	executionCtx, clear, interrupted := controller.begin(ctx)
 	if interrupted {
 		clear()
 		fmt.Fprintln(c.stderr)
 		return 130, false, nil
+	}
+	if !script.Empty() {
+		fmt.Fprint(c.stderr, marks.executing())
 	}
 	fmt.Fprint(c.stderr, rt.CommandPrompt(executionCtx, lastStatus))
 	result := rt.RunInteractive(executionCtx, script)

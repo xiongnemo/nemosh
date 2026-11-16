@@ -83,6 +83,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 
 ### Added
 
+- **Windows Terminal's shell integration**: in Windows Terminal a session marks each prompt,
+  each command and how it ended (OSC 133), so the scrollbar shows them and a command and its
+  output can be jumped to and selected, and says its directory (OSC 9;9), where a duplicated
+  tab or a split pane now opens. `NEMOSH_SHELL_INTEGRATION=never` turns it off. A prompt
+  holding an escape ended `ESC \` is measured right; its backslash was a column.
 - **Tab completion**: paths in every spelling `cd` reads (`/c/...`, `/mnt/c/...`,
   `/tmp/...`); a program typed by its path (`./deploy<TAB>`); inside a quote already
   opened (`"My Do<TAB>`); `$VAR` and `${VAR`; the command after `sudo`, `env`, `xargs`,

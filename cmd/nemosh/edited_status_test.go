@@ -49,7 +49,7 @@ func TestRunEditedLine_carriesTheStatusToTheNextCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parse %q: %v", text, err)
 		}
-		status, _, runErr := shell.runEditedLine(ctx, &rt, controller, script, 0)
+		status, _, runErr := shell.runEditedLine(ctx, &rt, controller, script, 0, nil)
 		if runErr != nil {
 			t.Fatalf("run %q: %v", text, runErr)
 		}
@@ -90,7 +90,7 @@ func TestRunEditedLine_writesPS0BeforeTheCommand(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parse %q: %v", step.text, err)
 		}
-		if _, _, err := shell.runEditedLine(context.Background(), &rt, controller, script, step.lastStatus); err != nil {
+		if _, _, err := shell.runEditedLine(context.Background(), &rt, controller, script, step.lastStatus, nil); err != nil {
 			t.Fatalf("run %q: %v", step.text, err)
 		}
 	}

@@ -41,6 +41,7 @@ func main() {
 		stdout:            stdout,
 		stderr:            stderr,
 		stdinIsTerminal:   term.IsTerminal(int(stdin.Fd())),
+		stderrIsTerminal:  term.IsTerminal(int(stderr.Fd())),
 		interrupts:        signals,
 		consoleInterrupts: consoleInterrupts,
 	}
@@ -71,7 +72,10 @@ type command struct {
 	stdout          io.Writer
 	stderr          io.Writer
 	stdinIsTerminal bool
-	interrupts      <-chan os.Signal
+	// stderrIsTerminal is where the prompt goes, which Windows Terminal's marks are written
+	// with; see shell_integration.go.
+	stderrIsTerminal bool
+	interrupts       <-chan os.Signal
 	// consoleInterrupts says interrupts are the console's; see interruptController.console.
 	consoleInterrupts bool
 	registry          applets.Registry

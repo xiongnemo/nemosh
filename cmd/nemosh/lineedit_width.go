@@ -52,8 +52,15 @@ func skipEscapeSequence(text string, index int) int {
 		if introducer == '[' && text[index] >= '@' && text[index] <= '~' {
 			return index + 1
 		}
-		// An OSC runs to BEL or ST; a title-setting prompt uses one.
-		if introducer == ']' && (text[index] == 0x07 || text[index] == 0x1b) {
+		// An OSC runs to BEL or ST; a title-setting prompt uses one. ST is two bytes, ESC \,
+		// and the backslash was counted as a column: Windows Terminal writes its marks so.
+		if introducer == ']' && text[index] == 0x07 {
+			return index + 1
+		}
+		if introducer == ']' && text[index] == 0x1b {
+			if index+1 < len(text) && text[index+1] == '\\' {
+				return index + 2
+			}
 			return index + 1
 		}
 	}

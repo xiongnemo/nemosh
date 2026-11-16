@@ -90,6 +90,12 @@ Environment:
                                 rather than applets, separated by spaces,
                                 commas, or semicolons. Scoped to shell lookup:
                                 "nemosh cat" and a cat shim stay unconditional
+  NEMOSH_CTRL_C=program|kill    Ctrl-C leaves a program to handle it in a script
+                                too, or ends it at the prompt too; by default a
+                                program run from the prompt handles it
+  NEMOSH_SHELL_INTEGRATION=never|always
+                                Windows Terminal's prompt and command marks, on
+                                in Windows Terminal by default
 
 Home page: https://github.com/xiongnemo/nemosh
 `, len(applets.DefaultRegistry.Names()))

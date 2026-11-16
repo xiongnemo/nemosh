@@ -6,6 +6,9 @@ type Script struct {
 	warnings []string
 }
 
+// Empty is whether the script holds no command: a blank line, or one only a comment.
+func (s Script) Empty() bool { return len(s.program) == 0 }
+
 type programNode interface{ programNode() }
 
 type listNode struct{ value list }

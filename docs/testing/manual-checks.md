@@ -102,6 +102,16 @@ entered and left around *every single line read* rather than once per session. T
 fast, and type *while a command is still running* (start `sleep 5`, keep typing).
 Keystrokes should not be lost, duplicated, or echoed strangely at the mode switch.
 
+**Shell integration marks**, not yet checked by hand. In Windows Terminal's settings turn
+`autoMarkPrompts` off, so a missing mark is not filled in by the terminal, and turn on
+`showMarksOnScrollbar`. Then: `true`, `false`, an empty line, and Ctrl-C at a half-typed
+line each leave a mark on the scrollbar, green after `true`, red after `false`, plain after
+the other two; Ctrl-Up and Ctrl-Down (scrollToMark) jump between prompts; and
+selectCommand and selectOutput take a command and its output. After `cd C:/Windows`, and
+after `cd` to a directory with a space in its name, Duplicate Tab opens there. Ctrl-L, a Tab
+listing and Ctrl-R leave the prompt where it was. `NEMOSH_SHELL_INTEGRATION=never` leaves
+no mark, and in a conhost window, with `=always`, nothing is drawn of them.
+
 **`time {` over lines**, not yet checked by hand: type `time {` and Enter, and the
 prompt is a continuation one; `sleep 1`, Enter, `}`, Enter, and the report comes,
 `real 0m 1.0...`. The keyword over a compound is new since v1.4.0, and the prompt's
