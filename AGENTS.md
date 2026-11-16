@@ -66,7 +66,9 @@ tags and a shallow clone silently yields the fallback.
 - `third_party/gdamore-encoding` is a fork of the module tcell imports, which go.mod's
   `replace` links in place of upstream: its character sets are generated data rather
   than 1,103 allocations in `init` on every start. Its README says what changed and how
-  to follow upstream. The price of a `replace` is that
+  to follow upstream. `third_party/lucasb-eyer-go-colorful` is go-colorful without its
+  `HexColor`, which linked `database/sql/driver` and `encoding/json` for nothing tcell uses.
+  The price of a `replace` is that
   `go install github.com/xiongnemo/nemosh/cmd/nemosh@latest` refuses to build; nothing
   here documents that way of installing, and the release artifacts are unaffected.
 - The published artifact must be the same binary CI verified. No rebuild at
@@ -116,12 +118,11 @@ done
 ```
 
 `third_party/` is excluded because it is upstream's code and a generated table, not this
-project's. It is a module of its own, which `./...` does not reach, so it has its own two
-lines in the gate:
+project's. Each fork there is a module of its own, which `./...` does not reach, so the gate
+vets and tests each by name:
 
 ```bash
-go -C third_party/gdamore-encoding vet ./...
-go -C third_party/gdamore-encoding test ./...
+for module in third_party/*/; do go -C "$module" vet ./... && go -C "$module" test ./...; done
 ```
 
 Strict TDD: one failing test first, captured, then the minimum production

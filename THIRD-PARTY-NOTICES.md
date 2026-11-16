@@ -316,7 +316,9 @@ specific language governing permissions and limitations under the License.
 
 ## Lucas Beyer — `github.com/lucasb-eyer/go-colorful`
 
-MIT License. tcell uses it for colour space conversion.
+MIT License. tcell uses it for colour space conversion. nemosh carries v1.3.0 in
+`third_party/lucasb-eyer-go-colorful` without its `HexColor`; that directory's README says
+what was left out.
 
 ```text
 Copyright (c) 2013 Lucas Beyer

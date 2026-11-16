@@ -23,6 +23,9 @@ const releaseTags = "tcell_minimal"
 // and a change that brought one back would put back what taking it out saved.
 var forbiddenInRelease = []string{
 	"github.com/gdamore/tcell/v2/terminfo/extended",
+	// go-colorful's HexColor, a database/sql Scanner and Valuer nothing here uses; see
+	// third_party/lucasb-eyer-go-colorful.
+	"database/sql/driver",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell
