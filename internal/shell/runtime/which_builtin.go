@@ -40,7 +40,7 @@ func (r Runtime) whichBuiltin(args []string) int {
 			status = 1
 			continue
 		}
-		resolved, err := r.externalCommandPath(name)
+		resolved, err := r.knownCommandPath(name)
 		if err != nil {
 			// Silent, as which is: the exit status is the answer, and a script
 			// testing `which foo >/dev/null` wants no noise on the way.

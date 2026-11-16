@@ -49,7 +49,7 @@ func (r Runtime) lookupApplet(name string) (applets.Applet, bool) {
 }
 
 func (r Runtime) externalExists(name string) bool {
-	_, err := r.externalCommandPath(name)
+	_, err := r.knownCommandPath(name)
 	return err == nil
 }
 

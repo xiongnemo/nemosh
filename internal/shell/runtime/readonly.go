@@ -178,4 +178,12 @@ func (r Runtime) markVarMutation(name string) {
 	if name == "HISTSIZE" {
 		r.history.truncate(r.historyLimit())
 	}
+	// Any assignment to PATH forgets where commands were found, the same value too, as
+	// busybox's changepath does; a `cd` asks for each to be checked again. See command_hash.go.
+	switch name {
+	case "PATH":
+		r.commands.reset()
+	case "PWD":
+		r.commands.rehash()
+	}
 }

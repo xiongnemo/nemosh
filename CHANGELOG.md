@@ -50,6 +50,12 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   now about 1. `docs/examples/nemoshrc` shows the `complete -D` loader.
 - **A session reads `~/.nemoshrc` where `ENV` is not set.** `ENV`, where it is set, is
   still what is read; `docs/examples/nemoshrc` is one to start from.
+- **Where a program was found on PATH is remembered**, as busybox's ash remembers it, and not
+  looked for again at every run: with 31 directories on PATH, 1000 runs of `command -v git`
+  took 3.7 s and take 45 ms, where busybox takes 0.14 s, and each run of a program late on
+  PATH starts about 5 ms sooner. `hash` lists what was found and `hash -r` forgets it, which
+  they did not do; any assignment to PATH forgets it too. As in both references, a program
+  put in an earlier directory of PATH since is not what runs until `hash -r`.
 
 ### Added
 

@@ -176,7 +176,13 @@ func (r Runtime) commandKinds(name string) []commandKind {
 		}
 		kinds = append(kinds, commandKind{word: "builtin", description: description})
 	}
-	if resolved, err := r.externalCommandPath(name); err == nil {
+	// Remembered only when the program is what the name means, as busybox's find_command adds it
+	// only then: `type ls` is about the applet, and listed ls.exe in `hash`.
+	lookup := r.knownCommandPath
+	if len(kinds) == 0 {
+		lookup = r.externalCommandPath
+	}
+	if resolved, err := lookup(name); err == nil {
 		path := filepath.ToSlash(resolved)
 		kinds = append(kinds, commandKind{word: "file", description: fmt.Sprintf("%s is %s", name, path), path: path})
 	}

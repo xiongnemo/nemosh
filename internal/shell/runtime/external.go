@@ -139,67 +139,18 @@ func (r Runtime) programStatus(state *os.ProcessState) int {
 	return status
 }
 
-func (r Runtime) externalCommandPath(name string) (string, error) {
-	// An empty name is no command anywhere. Joined to a PATH directory it named the directory,
-	// and `""` was refused as not executable, 126, where both references say not found.
-	if name == "" {
-		return "", errExternalNotFound
-	}
-	if hasPathSeparator(name) {
-		resolved, err := r.ResolveNemoshPath(name)
-		if err != nil {
-			return "", err
-		}
-		if resolved.Device {
-			return "", fmt.Errorf("%s is %w: %w", resolved.Canonical, errExternalIsDevice, errExternalNotExecutable)
-		}
-		return executableCandidate(resolved.Native)
-	}
-	pathValue, present := r.vars["PATH"]
-	if r.searchPath != "" {
-		pathValue, present = r.searchPath, true
-	}
-	if !present || pathValue == "" {
-		return notOnPath(name)
-	}
-	var firstCandidateErr error
-	for _, dir := range filepath.SplitList(pathValue) {
-		if dir == "" {
-			dir = "."
-		}
-		resolved, err := r.ResolveNemoshPath(dir)
-		if err != nil {
-			if firstCandidateErr == nil {
-				firstCandidateErr = err
-			}
-			continue
-		}
-		if resolved.Device {
-			continue
-		}
-		candidate := filepath.Join(resolved.Native, name)
-		found, candidateErr := executableCandidate(candidate)
-		if candidateErr == nil {
-			return found, nil
-		}
-		if !errors.Is(candidateErr, errExternalNotFound) {
-			if firstCandidateErr == nil {
-				firstCandidateErr = candidateErr
-			}
-		}
-	}
-	if firstCandidateErr != nil {
-		return "", firstCandidateErr
-	}
-	return notOnPath(name)
+func executableCandidate(candidate string) (string, error) {
+	return executableCandidateWith(os.Stat, candidate)
 }
 
-func executableCandidate(candidate string) (string, error) {
+// executableCandidateWith is the program candidate names, as written or on Windows with one of
+// the suffixes busybox-w32 tries, asking about each through stat.
+func executableCandidateWith(stat statFunc, candidate string) (string, error) {
 	absolute, err := requireAbsoluteNativePath("executable", candidate)
 	if err != nil {
 		return "", err
 	}
-	executable, err := isExecutableFile(absolute)
+	executable, exists, err := isExecutableFile(stat, absolute)
 	if err != nil {
 		return "", err
 	}
@@ -207,9 +158,10 @@ func executableCandidate(candidate string) (string, error) {
 		return absolute, nil
 	}
 	// A file that is there and is no program is refused as one, 126, as busybox-w32 refuses it,
-	// once the suffixes have had their turn; it said not found, 127.
+	// once the suffixes have had their turn; it said not found, 127. That it is there was a
+	// second stat of the same name, for every directory of PATH a command was not in.
 	refusal := errExternalNotFound
-	if _, err := os.Stat(absolute); err == nil {
+	if exists {
 		refusal = fmt.Errorf("executable %q: %w", absolute, errExternalNotExecutable)
 	}
 	if runtime.GOOS != "windows" || hasWindowsExecutableSuffixOrDot(absolute) {
@@ -218,7 +170,7 @@ func executableCandidate(candidate string) (string, error) {
 	var firstSuffixErr error
 	for _, suffix := range windowsExecutableSuffixes {
 		withSuffix := absolute + suffix
-		executable, err := isExecutableFile(withSuffix)
+		executable, _, err := isExecutableFile(stat, withSuffix)
 		if err != nil {
 			if firstSuffixErr == nil {
 				firstSuffixErr = err
@@ -243,33 +195,35 @@ func requireAbsoluteNativePath(kind, path string) (string, error) {
 	return cleaned, nil
 }
 
-func isExecutableFile(path string) (bool, error) {
-	info, err := os.Stat(path)
+// isExecutableFile is whether path is a program, and whether there is anything there at all.
+func isExecutableFile(stat statFunc, path string) (executable, exists bool, err error) {
+	info, err := stat(path)
 	if err != nil {
 		// A name that cannot exist does not exist. Windows reports those
 		// separately from a missing file, and letting the difference through
 		// turned `not found` into a raw CreateFile failure.
 		if errors.Is(err, os.ErrNotExist) || isUnusableName(err) {
-			return false, nil
+			return false, false, nil
 		}
-		return false, fmt.Errorf("stat executable %q: %w", path, err)
+		return false, false, fmt.Errorf("stat executable %q: %w", path, err)
 	}
 	if info.IsDir() {
-		return false, fmt.Errorf("executable %q is %w: %w", path, errExternalIsDirectory, errExternalNotExecutable)
+		return false, true, fmt.Errorf("executable %q is %w: %w", path, errExternalIsDirectory, errExternalNotExecutable)
 	}
 	if runtime.GOOS != "windows" {
 		if info.Mode().Perm()&0o111 == 0 {
-			return false, fmt.Errorf("executable %q: %w", path, errExternalNotExecutable)
+			return false, true, fmt.Errorf("executable %q: %w", path, errExternalNotExecutable)
 		}
-		return true, nil
+		return true, true, nil
 	}
 	// Windows has no execute bit, so busybox synthesises one from the suffix and,
 	// failing that, the file's first bytes (win32/mingw.c:779). Without the sniff
 	// a plain notes.txt would be handed to CreateProcess and fail there instead.
 	if hasWindowsExecutableSuffix(path) {
-		return true, nil
+		return true, true, nil
 	}
-	return hasExecutableFormat(path)
+	executable, err = hasExecutableFormat(path)
+	return executable, true, err
 }
 
 func hasPathSeparator(path string) bool {

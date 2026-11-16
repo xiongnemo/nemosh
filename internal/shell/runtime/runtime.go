@@ -49,6 +49,9 @@ type Runtime struct {
 	history *shellHistory
 	// completions is what complete was told; see complete_builtin.go. Shared as history is.
 	completions *completionTable
+	// commands is where the commands that ran were found; see command_hash.go. A subshell
+	// starts with the shell's and keeps its own.
+	commands *commandTable
 	// dirStack is what lies beneath the current directory, for pushd/popd/dirs.
 	// Position zero is not stored -- it is read from the shell, so it cannot go
 	// stale when `cd` moves. See builtin_dirs.go.

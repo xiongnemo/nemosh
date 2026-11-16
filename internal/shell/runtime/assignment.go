@@ -118,7 +118,7 @@ func (r Runtime) runCommandWithLeadingAssignments(ctx context.Context, args []st
 }
 
 func (r Runtime) runCommandWithTemporaryAssignments(ctx context.Context, args []string, assignments []assignment) int {
-	commandRuntime := r.withLocalAssignments(assignments)
+	commandRuntime := r.withProgramPATH(args[0], assignments).withLocalAssignments(assignments)
 	if commandRuntime == nil {
 		return 1
 	}

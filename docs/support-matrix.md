@@ -719,6 +719,15 @@ loops record the whole command now, as the edited one always did.
   stderr, with 1, and its options to type keep its answer. A read-only variable refused is
   `x: is read only`, busybox's words for every refusal, where bash says `readonly
   variable`.
+- Where a program was found on PATH is remembered, as busybox's ash remembers it, and not
+  looked for again: `hash` lists the paths, in ash's order, each starred after a `cd` until
+  it is checked again; `hash -r` and any assignment to PATH, of the same value too, forget
+  them, and `PATH=x prog` does not; `command -v`, `type` and `hash NAME` remember what they
+  find, and `which` does not; a subshell starts with the shell's and changes only its own.
+  An entry is believed once stat says the program is still there, where busybox finds out
+  at exec and goes on along PATH; and a pipeline's stage remembers what it ran for itself,
+  so `git | cat; hash` lists nothing here and git in busybox. As in both references, a
+  program put in an earlier directory of PATH is not what runs until `hash -r`.
 - An alias is substituted as its command runs, not as its line is read: its value is
   read as shell text there, with the rest of the command after it, as both references
   read it. So one defined earlier on the same line, or after a function that uses it

@@ -21,7 +21,7 @@ import (
 // was given.
 func (r Runtime) Program(ctx context.Context, name string) (applets.Applet, bool) {
 	finder := r.programFinder(applets.ProcessViewFromContext(ctx))
-	if _, err := finder.externalCommandPath(name); err != nil {
+	if _, err := finder.knownCommandPath(name); err != nil {
 		return nil, false
 	}
 	return externalProgram{runtime: finder, name: name}, true
@@ -73,7 +73,7 @@ func (r Runtime) runProgram(ctx context.Context, name string, args []string, vie
 	if err != nil {
 		return fail(1, err)
 	}
-	executable, err := r.externalCommandPath(name)
+	executable, err := r.knownCommandPath(name)
 	if err == nil {
 		executable, err = requireAbsoluteNativePath("executable", executable)
 	}

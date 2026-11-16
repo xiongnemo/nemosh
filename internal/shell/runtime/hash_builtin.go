@@ -5,13 +5,14 @@ import (
 	"strings"
 )
 
-// hashBuiltin is busybox's `hash [-r] [name ...]` without the table. Each name is looked up
-// as a command would be, and one that cannot be found is "not found", status 1: that is what
-// a script asks it, `hash git 2>/dev/null || die "git is needed"`. It was refused. Lookup here
-// is never cached, so there is nothing to remember: `hash` lists nothing and `hash -r` forgets
-// nothing, where busybox lists and forgets the paths it has remembered. As in busybox, a
-// function, a builtin or an applet is found, a name with a slash is passed over, and names
-// after -r are not looked up.
+// hashBuiltin is busybox's hashcmd (shell/ash.c:11914): with no operand it lists where the
+// commands that ran were found, a path a line, starred where a `cd` since asks for one to be
+// checked again; -r forgets them all, and names after it are not looked up; a name is
+// forgotten and looked up again, and one that cannot be found is "not found", status 1 --
+// what a script asks it, `hash git 2>/dev/null || die "git is needed"`. As in busybox, a
+// function, a builtin or an applet is found, and a name with a slash is passed over. See
+// command_hash.go for the table, which until it was kept made `hash` list nothing and
+// `hash -r` forget nothing.
 func (r Runtime) hashBuiltin(args []string) int {
 	index := 0
 	for ; index < len(args); index++ {
@@ -29,6 +30,13 @@ func (r Runtime) hashBuiltin(args []string) int {
 				return 2
 			}
 		}
+		r.commands.reset()
+		return 0
+	}
+	if index == len(args) {
+		for _, line := range r.commands.listing(r.vars["PATH"]) {
+			fmt.Fprintln(r.streams.Stdout, line)
+		}
 		return 0
 	}
 	status := 0
@@ -36,6 +44,7 @@ func (r Runtime) hashBuiltin(args []string) int {
 		if strings.ContainsRune(name, '/') || r.isKnownCommand(name) {
 			continue
 		}
+		r.commands.forget(r.vars["PATH"], name)
 		if _, err := r.externalCommandPath(name); err != nil {
 			fmt.Fprintf(r.streams.Stderr, "%shash: %s: not found\n", r.diagnosticPrefix(), name)
 			status = 1

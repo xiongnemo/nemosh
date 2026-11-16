@@ -292,7 +292,7 @@ func (r Runtime) runCommandWithTokenAssignments(ctx context.Context, assignments
 		}
 		return r.runCommandWithRedirectOperations(ctx, commandTokens, operations)
 	}
-	commandRuntime := r.withLocalAssignments(assignments)
+	commandRuntime := r.withProgramPATH(commandTokens[0].value, assignments).withLocalAssignments(assignments)
 	if commandRuntime == nil {
 		return 1
 	}

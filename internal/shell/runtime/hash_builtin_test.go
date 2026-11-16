@@ -3,13 +3,14 @@ package runtime_test
 import "testing"
 
 // hash answers whether a name can be run, as busybox's does: `hash git || die` is what a
-// script uses it for, and it was refused with 126. Nothing is remembered, since lookup here
-// is never cached, so `hash` lists nothing and `hash -r` has nothing to forget.
+// script uses it for, and it was refused with 126. What it lists and forgets is the table of
+// programs found on PATH, which command_hash_test.go tests; nothing here runs one, so a
+// builtin, an applet or a function leaves it empty.
 func TestHash(t *testing.T) {
 	tests := []struct {
 		name, script, stdout, stderr string
 	}{
-		{name: "nothing is remembered", script: "hash\necho \"st=$?\"\nhash -r\necho \"st=$?\"\n", stdout: "st=0\nst=0\n"},
+		{name: "nothing found, nothing listed", script: "hash cd ls\nhash\necho \"st=$?\"\nhash -r\necho \"st=$?\"\n", stdout: "st=0\nst=0\n"},
 		{
 			name:   "a builtin, an applet and a function are there",
 			script: "f() { :; }\nhash cd ls f\necho \"st=$?\"\n",

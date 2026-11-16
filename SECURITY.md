@@ -58,7 +58,7 @@ something the script did **not** say:
 - **Applet options that are not implemented.** They are refused by name with a
   non-zero status. A script asking for one fails; it does not get something
   else. `docs/support-matrix.md` records which is which, measured.
-- **`hash`, `ulimit`, `fg`, `bg`, `set -b`/`-n`/`-v`.** Refused with a reason.
+- **`ulimit`, `fg`, `bg`, `set -b`/`-m`/`-v`.** Refused with a reason.
 - **Linux and macOS behaviour.** Build-and-test targets, not supported ones.
 - **Terminal state after a crash.** Raw mode is restored on every path out
   including a panic; if you find one where it is not, that is an ordinary bug

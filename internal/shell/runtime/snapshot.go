@@ -65,7 +65,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 	if err != nil {
 		return Runtime{}, err
 	}
-	jobs := r.jobScope
+	jobs, commands := r.jobScope, r.commands
 	lifecycle := &shellLifecycle{}
 	// A subshell has no inbox: a signal is addressed to the shell or the job, and one
 	// that arrives while a subshell runs is the shell's to deliver once it has finished.
@@ -73,6 +73,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 	if privateJobs {
 		jobs = newPrivateJobScope(ctx, r.jobScope.supervisor)
 		jobs.outer = r.jobScope
+		commands = r.commands.fork()
 	} else {
 		lifecycle, signals = r.lifecycle, r.signals
 	}
@@ -95,6 +96,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		childCPU:    r.childCPU,
 		history:     r.history,
 		completions: r.completions,
+		commands:    commands,
 		// A subshell starts with no pending break: `(break)` inside a loop does
 		// not break the loop outside it, because the loop is not in the subshell.
 		// It knows it is inside one, though, as busybox's forked subshell does: a

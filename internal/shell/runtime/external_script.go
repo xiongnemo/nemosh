@@ -225,12 +225,12 @@ func (r Runtime) interpreterExecutable(interp interpreter) (string, string, erro
 			return "", interp.name, nil
 		}
 	}
-	resolved, err := r.externalCommandPath(interp.path)
+	resolved, err := r.knownCommandPath(interp.path)
 	if err == nil {
 		return resolved, "", nil
 	}
 	if unix {
-		if byName, nameErr := r.externalCommandPath(interp.name); nameErr == nil {
+		if byName, nameErr := r.knownCommandPath(interp.name); nameErr == nil {
 			return byName, "", nil
 		}
 	}
