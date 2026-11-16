@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +22,8 @@ type cpFlags struct {
 // cpRun is one cp: its flags, where it asks and reports, and what it has made so far. applet
 // names it in messages, cp unless mv is copying across volumes.
 type cpRun struct {
+	// ctx is what ends a copy under way, Ctrl-C's cancellation; nil is context.Background.
+	ctx            context.Context
 	applet         string
 	flags          cpFlags
 	view           ProcessView
@@ -141,6 +144,9 @@ func (r *cpRun) copyDirectory(source, dest pathOperand, sourceInfo, destInfo os.
 // and unlinks what is in the way, read-only or not, so the copy is a new file and never the
 // target of a link that stood at dest.
 func (r *cpRun) copyRegular(source, dest pathOperand, info os.FileInfo) bool {
+	if settled, made := r.copyAccelerated(source, dest, info); settled {
+		return made
+	}
 	reader, err := r.openSource(source)
 	if err != nil {
 		return r.fail(cannotOpen(source.operand, err))
@@ -159,7 +165,7 @@ func (r *cpRun) copyRegular(source, dest pathOperand, info os.FileInfo) bool {
 			return r.fail(cannotOpen(dest.operand, err))
 		}
 	}
-	_, copyErr := io.Copy(writer, reader)
+	_, copyErr := copyFileBytes(r.context(), writer, reader)
 	if closeErr := writer.Close(); copyErr == nil && closeErr != nil {
 		copyErr = fmt.Errorf("error writing to '%s': %s", dest.operand, causeText(closeErr))
 	}

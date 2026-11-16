@@ -37,7 +37,7 @@ func newCpApplet() Applet {
 			return err
 		}
 		view := ProcessViewFromContext(ctx)
-		run := &cpRun{flags: flags, view: view, stdin: stdin, stdout: stdout, stderr: stderr, umask: processFileModeMask(view)}
+		run := &cpRun{ctx: ctx, flags: flags, view: view, stdin: stdin, stdout: stdout, stderr: stderr, umask: processFileModeMask(view)}
 		last := flags.targetDir
 		sources := operands
 		if last == "" {
