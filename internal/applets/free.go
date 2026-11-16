@@ -41,10 +41,7 @@ func newFreeApplet() Applet {
 			return fmt.Errorf("extra operand '%s'", operands[0])
 		}
 		// The same sampler `top` uses, so the two cannot disagree about how much
-		// memory the machine has. Off Windows it refuses with
-		// proc.ErrListUnsupported rather than reporting zeros, which is the rule
-		// the whole proc package follows: "nothing" and "I cannot see" are
-		// different answers and only one is safe to act on.
+		// memory the machine has.
 		snapshot, err := proc.NewSampler().Sample(false)
 		if err != nil {
 			return err

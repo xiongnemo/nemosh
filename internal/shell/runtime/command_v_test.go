@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -86,11 +85,7 @@ func TestRuntime_reportsFailure_whenCommandVNamesNothingReachable(t *testing.T) 
 func TestRuntime_reportsThePathAsWritten_whenCommandVNamesAPath(t *testing.T) {
 	// Given
 	dir := t.TempDir()
-	name := "prog.exe"
-	if runtime.GOOS != "windows" {
-		name = "prog"
-	}
-	program := filepath.Join(dir, name)
+	program := filepath.Join(dir, "prog.exe")
 	if err := os.WriteFile(program, []byte("MZ"), 0o755); err != nil {
 		t.Fatalf("seed program: %v", err)
 	}

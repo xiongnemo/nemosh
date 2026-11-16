@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -73,14 +72,12 @@ func TestLs_takesBusyboxsOptions(t *testing.T) {
 	if stdout, _, err := runSmall(t, dir, "", "ls", "-n", "d/f.txt"); err != nil || !numeric.MatchString(stdout) {
 		t.Errorf("ls -n = %q, %v", stdout, err)
 	}
-	if runtime.GOOS == "windows" {
-		// busybox-w32's count_subdirs: two, and one for each directory in it.
-		links := regexp.MustCompile(`^d\S{9}\s+3 .* d/sub\nd\S{9}\s+2 .* d/sub2\n$`)
-		if stdout, _, err := runSmall(t, dir, "", "ls", "-ld", "d/sub", "d/sub2"); err != nil || !links.MatchString(stdout) {
-			t.Errorf("ls -ld = %q, %v", stdout, err)
-		}
-		if stdout, _, err := runSmall(t, dir, "", "ls", "-s", "d/sub2", "d/sub"); err != nil || !strings.Contains(stdout, "d/sub:\ntotal 0\n     0 deeper\n") {
-			t.Errorf("ls -s = %q, %v", stdout, err)
-		}
+	// busybox-w32's count_subdirs: two, and one for each directory in it.
+	links := regexp.MustCompile(`^d\S{9}\s+3 .* d/sub\nd\S{9}\s+2 .* d/sub2\n$`)
+	if stdout, _, err := runSmall(t, dir, "", "ls", "-ld", "d/sub", "d/sub2"); err != nil || !links.MatchString(stdout) {
+		t.Errorf("ls -ld = %q, %v", stdout, err)
+	}
+	if stdout, _, err := runSmall(t, dir, "", "ls", "-s", "d/sub2", "d/sub"); err != nil || !strings.Contains(stdout, "d/sub:\ntotal 0\n     0 deeper\n") {
+		t.Errorf("ls -s = %q, %v", stdout, err)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -166,12 +165,6 @@ func TestStat(t *testing.T) {
 // session does not own. STAT: derivable from the process's threads, but an approximation belongs
 // in `top`, where a monitor's reader expects one, rather than in `ps`.
 func TestPs(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		// internal/proc lists processes on Windows only, and refuses elsewhere
-		// rather than guessing. ps therefore reports that refusal, which is the
-		// correct behaviour and not what this test is about.
-		t.Skip("the process list is implemented on Windows only")
-	}
 	// When
 	applet, ok := applets.DefaultRegistry.Lookup("ps")
 	if !ok {

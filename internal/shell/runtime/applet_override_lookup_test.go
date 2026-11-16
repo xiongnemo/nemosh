@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -29,9 +28,7 @@ func externalEchoOnPath(t *testing.T) {
 		t.Fatalf("expected test executable read to succeed, got %v", err)
 	}
 	name := "echo"
-	if goruntime.GOOS == "windows" {
-		name += ".exe"
-	}
+	name += ".exe"
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, name), data, 0o700); err != nil {
 		t.Fatalf("expected external echo write to succeed, got %v", err)

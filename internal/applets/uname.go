@@ -174,32 +174,15 @@ func hostUnameInfo() unameInfo {
 	machine := unameMachine(runtime.GOARCH)
 	release, version := osReleaseAndVersion()
 	return unameInfo{
-		sysname:   unameSysname(runtime.GOOS),
+		sysname:   "Windows_NT",
 		nodename:  nodename,
 		release:   release,
 		version:   version,
 		machine:   machine,
 		processor: unameUnknown,
 		platform:  unameUnknown,
-		os:        unameOS(runtime.GOOS),
+		os:        "MS/Windows",
 	}
-}
-
-func unameSysname(goos string) string {
-	if goos == "windows" {
-		return "Windows_NT"
-	}
-	if goos == "darwin" {
-		return "Darwin"
-	}
-	return "Linux"
-}
-
-func unameOS(goos string) string {
-	if goos == "windows" {
-		return "MS/Windows"
-	}
-	return "GNU/Linux"
 }
 
 func unameMachine(goarch string) string {

@@ -3,7 +3,6 @@ package applets_test
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -17,14 +16,7 @@ func TestFind_statPredicates(t *testing.T) {
 	if err := os.Link(filepath.Join(dir, "a.txt"), filepath.Join(dir, "hard.txt")); err != nil {
 		t.Fatal(err)
 	}
-	if runtime.GOOS != "windows" {
-		// Windows makes the x bits up from the name and the first line; elsewhere they are set.
-		for _, name := range []string{"b.exe", "c.sh", "d.sh"} {
-			if err := os.Chmod(filepath.Join(dir, name), 0o755); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
+	// Windows makes the x bits up from the name and the first line.
 	inode, _, err := runSmall(t, dir, "", "stat", "-c", "%i", "a.txt")
 	if err != nil {
 		t.Fatal(err)

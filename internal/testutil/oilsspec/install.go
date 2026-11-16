@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -109,8 +108,5 @@ func copyFile(from, to string, mode os.FileMode) error {
 }
 
 func executableSuffix() string {
-	if runtime.GOOS == "windows" {
-		return ".exe"
-	}
-	return ""
+	return ".exe"
 }

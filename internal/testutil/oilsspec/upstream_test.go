@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -51,22 +51,25 @@ func TestVendoredCopyIsUpstreams(t *testing.T) {
 	}
 }
 
-// A file Oils keeps executable is executable here too, since cases run
-// spec/testdata/echo.sh and its like by path, and one Oils does not keep executable is not.
+// A file Oils keeps executable is recorded executable here too, since cases run
+// spec/testdata/echo.sh and its like by path, and one Oils does not keep executable is not. A
+// Windows checkout has no executable bit, so it is git's record of the mode that is asked.
 func TestVendoredCopyKeepsUpstreamsModes(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("a Windows checkout has no executable bit; git records it, and Unix checks it")
-	}
 	record := readUpstream(t)
+	listing, err := exec.Command("git", "-C", root, "ls-files", "-s", "--", ".").Output()
+	if err != nil {
+		t.Skipf("no git to ask for the modes: %v", err)
+	}
+	modes := map[string]string{}
+	for _, line := range strings.Split(strings.TrimSpace(string(listing)), "\n") {
+		if fields, name, found := strings.Cut(line, "\t"); found {
+			modes[name] = strings.Fields(fields)[0]
+		}
+	}
 
 	for name, file := range record.Files {
-		info, err := os.Stat(filepath.Join(root, filepath.FromSlash(name)))
-		if err != nil {
-			t.Errorf("%s: %v", name, err)
-			continue
-		}
-		if executable := info.Mode()&0o111 != 0; executable != (file.Mode == "100755") {
-			t.Errorf("%s has mode %v, and Oils records it as %s", name, info.Mode(), file.Mode)
+		if mode := modes[name]; mode != file.Mode {
+			t.Errorf("%s has mode %q in git, and Oils records it as %s", name, mode, file.Mode)
 		}
 	}
 }

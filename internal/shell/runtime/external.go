@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/proc"
@@ -143,8 +142,8 @@ func executableCandidate(candidate string) (string, error) {
 	return executableCandidateWith(os.Stat, candidate)
 }
 
-// executableCandidateWith is the program candidate names, as written or on Windows with one of
-// the suffixes busybox-w32 tries, asking about each through stat.
+// executableCandidateWith is the program candidate names, as written or with one of the
+// suffixes busybox-w32 tries, asking about each through stat.
 func executableCandidateWith(stat statFunc, candidate string) (string, error) {
 	absolute, err := requireAbsoluteNativePath("executable", candidate)
 	if err != nil {
@@ -164,7 +163,7 @@ func executableCandidateWith(stat statFunc, candidate string) (string, error) {
 	if exists {
 		refusal = fmt.Errorf("executable %q: %w", absolute, errExternalNotExecutable)
 	}
-	if runtime.GOOS != "windows" || hasWindowsExecutableSuffixOrDot(absolute) {
+	if hasWindowsExecutableSuffixOrDot(absolute) {
 		return "", refusal
 	}
 	var firstSuffixErr error
@@ -210,12 +209,6 @@ func isExecutableFile(stat statFunc, path string) (executable, exists bool, err 
 	if info.IsDir() {
 		return false, true, fmt.Errorf("executable %q is %w: %w", path, errExternalIsDirectory, errExternalNotExecutable)
 	}
-	if runtime.GOOS != "windows" {
-		if info.Mode().Perm()&0o111 == 0 {
-			return false, true, fmt.Errorf("executable %q: %w", path, errExternalNotExecutable)
-		}
-		return true, true, nil
-	}
 	// Windows has no execute bit, so busybox synthesises one from the suffix and,
 	// failing that, the file's first bytes (win32/mingw.c:779). Without the sniff
 	// a plain notes.txt would be handed to CreateProcess and fail there instead.
@@ -227,8 +220,5 @@ func isExecutableFile(stat statFunc, path string) (executable, exists bool, err 
 }
 
 func hasPathSeparator(path string) bool {
-	if strings.ContainsRune(path, '/') {
-		return true
-	}
-	return runtime.GOOS == "windows" && (strings.ContainsRune(path, '\\') || filepath.VolumeName(path) != "")
+	return strings.ContainsAny(path, `/\`) || filepath.VolumeName(path) != ""
 }

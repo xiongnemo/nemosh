@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -17,9 +16,7 @@ import (
 func TestExecutableCandidate_rejectsRelativeNativePath(t *testing.T) {
 	t.Chdir(t.TempDir())
 	candidate := "relative-probe"
-	if os.PathSeparator == '\\' {
-		candidate += ".exe"
-	}
+	candidate += ".exe"
 	if err := os.WriteFile(candidate, []byte("probe"), 0o700); err != nil {
 		t.Fatalf("write relative candidate: %v", err)
 	}
@@ -72,9 +69,7 @@ func TestExecutableCandidate_reportsExistingDirectoryAsNotExecutable(t *testing.
 
 func TestExternalCommandPath_continuesAfterCandidateError_andFindsLaterExecutable(t *testing.T) {
 	command := "probe"
-	if os.PathSeparator == '\\' {
-		command += ".exe"
-	}
+	command += ".exe"
 	validDir := t.TempDir()
 	valid := filepath.Join(validDir, command)
 	if err := os.WriteFile(valid, []byte("probe"), 0o700); err != nil {
@@ -98,9 +93,7 @@ func TestExternalCommandPath_continuesAfterCandidateError_andFindsLaterExecutabl
 
 func TestExternalCommandPath_continuesAfterPathResolutionError_andFindsLaterExecutable(t *testing.T) {
 	command := "probe"
-	if os.PathSeparator == '\\' {
-		command += ".exe"
-	}
+	command += ".exe"
 	validDir := t.TempDir()
 	valid := filepath.Join(validDir, command)
 	if err := os.WriteFile(valid, []byte("probe"), 0o700); err != nil {
@@ -165,9 +158,6 @@ func TestRuntime_explicitResolvedDeviceReturns126(t *testing.T) {
 }
 
 func TestExecutableCandidate_windowsContinuesAfterBadEarlierSuffix(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("Windows suffix lookup")
-	}
 	base := filepath.Join(t.TempDir(), "probe")
 	if err := os.Mkdir(base+".com", 0o700); err != nil {
 		t.Fatalf("create bad .com candidate: %v", err)

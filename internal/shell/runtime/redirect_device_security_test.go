@@ -1,12 +1,7 @@
 //go:build windows
 
-// The device redirects these describe are Windows-only, so these are too.
-//
-// `/dev/null`, `/dev/zero` and the rest are the shell's invention where the platform has none. Where
-// the platform has its own -- Linux, macOS -- redirecting to them is ordinary file redirection and
-// the assertions here, which expect this shell's typed errors, describe nothing that happens. The
-// non-Windows half is redirect_device_security_other_test.go, which was already written against a
-// /dev the shell does not claim.
+// `/dev/null`, `/dev/zero` and the rest are the shell's invention, as Windows has none, and these
+// expect its typed errors.
 //
 // The descriptor aliases are the exception and are not tested here: `/dev/stdout` and `/dev/fd/N`
 // stay the shell's on every platform, because they name its descriptors rather than hardware. See

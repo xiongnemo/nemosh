@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -14,10 +13,6 @@ import (
 )
 
 func TestP05WaveA_ExternalLookup_searchesRuntimePATHForExplicitSuffix(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("Windows suffix lookup")
-	}
-
 	// Given
 	runtimeDir := t.TempDir()
 	binDir := filepath.Join(runtimeDir, "bin")
@@ -41,10 +36,6 @@ func TestP05WaveA_ExternalLookup_searchesRuntimePATHForExplicitSuffix(t *testing
 }
 
 func TestP05WaveA_ExternalLookup_acceptsMountAliasForExplicitExecutable(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("Windows mount aliases")
-	}
-
 	// Given
 	executable := filepath.Join(t.TempDir(), "mount-probe.exe")
 	copyRuntimeHelper(t, executable)
@@ -90,10 +81,6 @@ func TestP05WaveA_ExternalLaunch_preservesOrdinaryArgvWithoutPathConversion(t *t
 }
 
 func TestP05WaveA_ExternalLookup_reportsPathmodelErrorBeforeLaunch(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("Windows Cygdrive policy")
-	}
-
 	// Given
 	var stderr bytes.Buffer
 	rt := shellruntime.NewWithState(applets.DefaultRegistry, shellruntime.Streams{Stderr: &stderr}, shellruntime.State{

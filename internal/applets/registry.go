@@ -5,7 +5,6 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"sort"
 	"strings"
 )
@@ -81,21 +80,15 @@ func InvocationName(args []string) string {
 		return ""
 	}
 	base := filepath.Base(args[0])
-	if runtime.GOOS == "windows" && strings.EqualFold(filepath.Ext(base), ".exe") {
+	if strings.EqualFold(filepath.Ext(base), ".exe") {
 		base = base[:len(base)-len(".exe")]
 	}
 	return strings.ToLower(base)
 }
 
-// DefaultRegistry is every applet this build carries, portable ones first and
-// then whatever the platform adds.
-//
-// The list varies by platform on purpose, and only downwards: a name is added
-// where it means something and left alone where it does not. `su` is registered
-// on Windows and nowhere else, because Unix already has a real `su` in
-// util-linux and an applet of that name would shadow it -- ours does no setuid,
-// reads no user database, and answers only to `root`. busybox-w32 makes the same
-// split by building suw32 under PLATFORM_MINGW32 alone.
+// DefaultRegistry is every applet this build carries: the ones busybox has on
+// every platform, then the ones that mean something only on Windows, as
+// busybox-w32 builds suw32 under PLATFORM_MINGW32 alone.
 var DefaultRegistry = NewRegistry(append(portableApplets(), platformApplets()...)...)
 
 // IsDefault reports whether this is DefaultRegistry, or a copy of it: the applets another

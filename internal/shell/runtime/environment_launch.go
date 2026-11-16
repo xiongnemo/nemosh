@@ -37,7 +37,7 @@ var launchPathVariables = map[string]bool{
 
 // childEnvironment is what a launched program receives.
 func (r Runtime) childEnvironment() []string {
-	return r.withDriveDirectories(r.withNativePaths(r.withoutArrays(r.withOptionLists(r.env.childEnviron(hostEnvironmentPlatform())))))
+	return r.withDriveDirectories(r.withNativePaths(r.withoutArrays(r.withOptionLists(r.env.childEnviron()))))
 }
 
 // withDriveDirectories is items with where each drive was left in front, as Windows's `=D:`
@@ -62,12 +62,9 @@ func (r Runtime) withDriveDirectories(items []string) []string {
 	return combined
 }
 
-// withNativePaths is items with the shell's own path variables in the platform's spelling, as a
+// withNativePaths is items with the shell's own path variables in Windows' spelling, as a
 // launched program has to have them.
 func (r Runtime) withNativePaths(items []string) []string {
-	if hostEnvironmentPlatform() != windowsEnvironment {
-		return items
-	}
 	for index, item := range items {
 		name, value, found := strings.Cut(item, "=")
 		if !found || !launchPathVariables[name] || value == "" {

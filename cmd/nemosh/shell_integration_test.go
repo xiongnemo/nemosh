@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"regexp"
-	goruntime "runtime"
 	"strings"
 	"testing"
 )
@@ -69,7 +68,7 @@ func TestShellMarks_markEachPromptAndCommandOfASession(t *testing.T) {
 	if got := strings.Join(marks, " "); got != want {
 		t.Fatalf("marks %q, want %q, in %q", got, want, screen.String())
 	}
-	if goruntime.GOOS == "windows" && !strings.Contains(screen.String(), "\x1b]9;9;\"") {
+	if !strings.Contains(screen.String(), "\x1b]9;9;\"") {
 		t.Fatalf("the directory was not said: %q", screen.String())
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -231,9 +230,7 @@ func TestBehaviorAppletScriptCases_executeAgainstFreshNemosh(t *testing.T) {
 func buildFreshNemosh(t *testing.T) string {
 	t.Helper()
 	binary := filepath.Join(t.TempDir(), "nemosh")
-	if runtime.GOOS == "windows" {
-		binary += ".exe"
-	}
+	binary += ".exe"
 	build := exec.Command("go", "build", "-o", binary, "./cmd/nemosh")
 	build.Dir = filepath.Join("..", "..", "..")
 	if output, err := build.CombinedOutput(); err != nil {

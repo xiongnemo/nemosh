@@ -105,7 +105,7 @@ func hostState() State {
 	if err != nil {
 		cwd = "."
 	}
-	return State{Cwd: WorkingDirectory(cwd), Env: newHostEnvironment(os.Environ(), hostEnvironmentPlatform())}
+	return State{Cwd: WorkingDirectory(cwd), Env: newHostEnvironment(os.Environ())}
 }
 
 func NewWithState(registry applets.Registry, streams Streams, state State) Runtime {

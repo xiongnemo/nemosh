@@ -2,7 +2,6 @@ package applets_test
 
 import (
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -16,10 +15,7 @@ import (
 func TestTar_storesNamesAsBusyboxDoes(t *testing.T) {
 	root := writeSmallFixture(t, map[string]string{"w/f.txt": "hi\n", "w/sub/g.txt": "g\n"})
 	absolute := filepath.ToSlash(filepath.Join(root, "w", "f.txt"))
-	prefix := "/"
-	if runtime.GOOS == "windows" {
-		prefix = absolute[:3]
-	}
+	prefix := absolute[:3]
 	for _, test := range []struct {
 		dir            string
 		args           []string

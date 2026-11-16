@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 )
@@ -65,15 +64,12 @@ func TestGzip_takesAFileInBusyboxsOrder(t *testing.T) {
 }
 
 // gunzip gives the file it writes the time the last member holds, as busybox's sets it, and
-// a member that holds none leaves the time it was written. The new file has the original's
-// permissions, less the umask's: a 0600 file's archive is 0600, where it was 0644. Each was
-// measured against busybox.
-func TestGunzip_keepsTheStoredTimeAndTheMode(t *testing.T) {
+// a member that holds none leaves the time it was written. Each was measured against busybox.
+func TestGunzip_keepsTheStoredTime(t *testing.T) {
 	stamp := time.Unix(1577934245, 0)
 	dir := writeSmallFixture(t, map[string]string{
 		"m.txt.gz": gzipMember(t, "one\n", time.Unix(1000000000, 0)) + gzipMember(t, "two\n", stamp),
 		"z.txt.gz": gzipMember(t, "zero\n", time.Time{}),
-		"p.txt":    "private\n",
 	})
 	for _, name := range []string{"m.txt.gz", "z.txt.gz"} {
 		if _, err, _ := compressSays(t, dir, "", "gunzip", name); err != "" {
@@ -89,19 +85,5 @@ func TestGunzip_keepsTheStoredTimeAndTheMode(t *testing.T) {
 		t.Error(err)
 	} else if time.Since(info.ModTime()) > time.Hour {
 		t.Errorf("gunzip z.txt.gz made z.txt at %v; want the time it was written", info.ModTime())
-	}
-	if runtime.GOOS == "windows" {
-		return
-	}
-	if err := os.Chmod(filepath.Join(dir, "p.txt"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err, _ := compressSays(t, dir, "", "gzip", "p.txt"); err != "" {
-		t.Fatalf("gzip p.txt: %q", err)
-	}
-	if info, err := os.Stat(filepath.Join(dir, "p.txt.gz")); err != nil {
-		t.Error(err)
-	} else if info.Mode().Perm() != 0o600 {
-		t.Errorf("gzip of a 0600 file made %v; want 0600", info.Mode().Perm())
 	}
 }

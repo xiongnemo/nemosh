@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	goruntime "runtime"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -31,7 +30,7 @@ func TestProgramStatus_aProgramEndedBySignalLeaves128PlusN(t *testing.T) {
 	if stdout.String() != "status 143\n" {
 		t.Fatalf("stdout = %q, stderr = %q, want status 143", stdout.String(), stderr.String())
 	}
-	if goruntime.GOOS == "windows" && stderr.String() != "Terminated\n" {
+	if stderr.String() != "Terminated\n" {
 		t.Fatalf("stderr = %q, want %q", stderr.String(), "Terminated\n")
 	}
 }

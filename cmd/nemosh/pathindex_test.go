@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"slices"
 	"testing"
 	"time"
@@ -20,13 +19,9 @@ func seedPathDirectory(t *testing.T, names ...string) string {
 	return directory
 }
 
-// program is a program's file name as this platform runs it by name: wsl.exe for `wsl` on
-// Windows, and wsl elsewhere, where a name runs only as it is spelled.
+// program is a program's file name as Windows runs it by name: wsl.exe for `wsl`.
 func program(name string) string {
-	if goruntime.GOOS == "windows" {
-		return name + ".exe"
-	}
-	return name
+	return name + ".exe"
 }
 
 func settledIndex(t *testing.T, pathValue string) *pathIndex {

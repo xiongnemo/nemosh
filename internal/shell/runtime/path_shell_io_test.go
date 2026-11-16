@@ -60,10 +60,6 @@ func TestP05WaveA_SourceAndRedirect_useInjectedTmpBacking(t *testing.T) {
 }
 
 func TestP05WaveA_ShellIO_acceptsMountAliasAndDriveCurrentRoot(t *testing.T) {
-	if !isWindowsRuntime() {
-		t.Skip("Windows path aliases")
-	}
-
 	// Given
 	nativeRoot := filepath.VolumeName(t.TempDir()) + string(os.PathSeparator)
 	nativeDir := t.TempDir()
@@ -89,10 +85,6 @@ func TestP05WaveA_ShellIO_acceptsMountAliasAndDriveCurrentRoot(t *testing.T) {
 }
 
 func TestP05WaveA_CD_reportsHostOnlyUNCHintWithoutChangingCWD(t *testing.T) {
-	if !isWindowsRuntime() {
-		t.Skip("Windows UNC roots")
-	}
-
 	// Given
 	cwd := t.TempDir()
 	var stderr bytes.Buffer
@@ -159,8 +151,4 @@ func assertPathFileText(t *testing.T, path, want string) {
 	if got := string(data); got != want {
 		t.Fatalf("expected %s contents %q, got %q", path, want, got)
 	}
-}
-
-func isWindowsRuntime() bool {
-	return os.PathSeparator == '\\'
 }

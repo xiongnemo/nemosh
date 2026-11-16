@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -58,15 +57,9 @@ func (r Runtime) setIdentityVariables() {
 	}
 }
 
-// operatingSystemType is OSTYPE for the system this runs on, as bash names it.
+// operatingSystemType is OSTYPE for Windows, as Git for Windows' bash names it.
 func operatingSystemType() string {
-	switch runtime.GOOS {
-	case "windows":
-		return "msys"
-	case "linux":
-		return "linux-gnu"
-	}
-	return runtime.GOOS
+	return "msys"
 }
 
 // EnterShellLevel is a shell's start: SHLVL goes up by one and is exported, as in both

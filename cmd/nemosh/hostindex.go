@@ -83,21 +83,15 @@ func (h *hostIndex) builtFrom() string {
 	return h.builtOn
 }
 
-// hostSources is where to look, in the order a reader would.
+// hostSources is where to look: ssh's config.
 //
-// The hosts file is included off Windows and not on it. Two measured reasons:
-// the Windows one ships with every line commented out and stays that way on an
-// ordinary machine -- 21 lines and no entries on the machine this was written
-// on -- while `/etc/hosts` on a Unix box usually holds something real. And a
-// hosts file is the file most likely to have been replaced wholesale by an
-// ad-blocking list of tens of thousands of names, which would bury the handful
-// that were meant.
+// The Windows hosts file, %SystemRoot%\System32\drivers\etc\hosts, is not read. On
+// an ordinary machine it is the file Microsoft shipped with every line commented
+// out -- 21 lines and no entries on the machine this was written on -- and what it
+// is often replaced with is an ad-blocking list of tens of thousands of names,
+// which would bury the handful anyone meant.
 func hostSources(home string) []string {
-	sources := []string{filepath.Join(home, ".ssh", "config")}
-	if path := hostsFilePath(); path != "" {
-		sources = append(sources, path)
-	}
-	return sources
+	return []string{filepath.Join(home, ".ssh", "config")}
 }
 
 func fingerprintFiles(paths []string) string {

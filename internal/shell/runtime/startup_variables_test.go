@@ -2,7 +2,6 @@ package runtime_test
 
 import (
 	"os"
-	goruntime "runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,10 +17,7 @@ func TestRuntime_identityVariables(t *testing.T) {
 	if euid < 0 {
 		euid = uid
 	}
-	ostype := map[string]string{"windows": "msys", "linux": "linux-gnu"}[goruntime.GOOS]
-	if ostype == "" {
-		ostype = goruntime.GOOS
-	}
+	ostype := "msys"
 
 	// When
 	status, stdout, stderr := runSetScript(t,

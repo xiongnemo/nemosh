@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	goruntime "runtime"
 	"testing"
 	"time"
 
@@ -75,9 +74,7 @@ func sweepStaleJobBinaries() {
 
 func buildJobBinary(directory string) (string, bool) {
 	binary := filepath.Join(directory, "nemosh")
-	if goruntime.GOOS == "windows" {
-		binary += ".exe"
-	}
+	binary += ".exe"
 	build := exec.Command("go", "build", "-o", binary, "github.com/xiongnemo/nemosh/cmd/nemosh")
 	build.Env = append(os.Environ(), "CGO_ENABLED=0")
 	if output, err := build.CombinedOutput(); err != nil {

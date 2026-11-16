@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"slices"
 	"strings"
 )
@@ -47,8 +46,8 @@ func (r Runtime) compgenPaths(word string, dirsOnly bool) []string {
 	return names
 }
 
-// pathCommandNames are the commands on PATH that begin with word: on Windows the files with an
-// executable suffix, named without it, as they are run; elsewhere the files with an execute bit.
+// pathCommandNames are the commands on PATH that begin with word: the files with an executable
+// suffix, named without it, as they are run.
 func (r Runtime) pathCommandNames(word string) []string {
 	var names []string
 	for _, directory := range filepath.SplitList(r.vars["PATH"]) {
@@ -65,17 +64,10 @@ func (r Runtime) pathCommandNames(word string) []string {
 		}
 		for _, entry := range entries {
 			name := entry.Name()
-			if entry.IsDir() {
+			if entry.IsDir() || !hasWindowsExecutableSuffix(name) {
 				continue
 			}
-			if goruntime.GOOS == "windows" {
-				if !hasWindowsExecutableSuffix(name) {
-					continue
-				}
-				name = strings.TrimSuffix(name, filepath.Ext(name))
-			} else if info, err := entry.Info(); err != nil || info.Mode().Perm()&0o111 == 0 {
-				continue
-			}
+			name = strings.TrimSuffix(name, filepath.Ext(name))
 			if strings.HasPrefix(name, word) {
 				names = append(names, name)
 			}

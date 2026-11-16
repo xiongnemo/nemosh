@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -55,9 +54,6 @@ func TestRuntime_returnsExternalCommandStatus_whenCommandExitsNonZero(t *testing
 }
 
 func TestRuntime_usesFixedWindowsSuffixOrder_whenExternalCommandHasNoSuffix(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("fixed executable suffix order is Windows-only")
-	}
 	// Given
 	exe, err := os.Executable()
 	if err != nil {
@@ -93,50 +89,6 @@ func TestRuntime_usesFixedWindowsSuffixOrder_whenExternalCommandHasNoSuffix(t *t
 	}
 }
 
-func TestRuntime_usesUnsuffixedExecutableFromRuntimeRelativePath_withoutHostPathFallback_onNonWindows(t *testing.T) {
-	if goruntime.GOOS == "windows" {
-		t.Skip("Unix executable lookup semantics are non-Windows-only")
-	}
-	// Given
-	exe, err := os.Executable()
-	if err != nil {
-		t.Fatalf("expected test executable path, got %v", err)
-	}
-	runtimeDir := t.TempDir()
-	runtimeBin := filepath.Join(runtimeDir, "bin")
-	hostBin := t.TempDir()
-	if err := os.Mkdir(runtimeBin, 0o700); err != nil {
-		t.Fatalf("expected runtime bin creation to succeed, got %v", err)
-	}
-	command := "nemosh-runtime-path-probe"
-	data, err := os.ReadFile(exe)
-	if err != nil {
-		t.Fatalf("expected test executable read to succeed, got %v", err)
-	}
-	for _, candidate := range []string{filepath.Join(runtimeBin, command), filepath.Join(hostBin, command)} {
-		if err := os.WriteFile(candidate, data, 0o700); err != nil {
-			t.Fatalf("expected helper command write to succeed, got %v", err)
-		}
-	}
-	t.Setenv("PATH", hostBin)
-	var stdout bytes.Buffer
-	rt := runtime.NewWithState(applets.DefaultRegistry, runtime.Streams{Stdout: &stdout}, runtime.State{
-		Cwd: runtime.WorkingDirectory(runtimeDir),
-		Env: runtime.NewEnvironment([]string{"PATH=bin", "NEMOSH_RUNTIME_HELPER_PROCESS=1"}),
-	})
-
-	// When
-	status := rt.RunScript(context.Background(), command+" -test.run=TestRuntimeHelperProcess -- executable\n")
-
-	// Then
-	if status != 0 {
-		t.Fatalf("expected status 0, got %d", status)
-	}
-	if got := strings.TrimSpace(stdout.String()); got != filepath.Join(runtimeBin, command) {
-		t.Fatalf("expected runtime-owned executable %q, got %q", filepath.Join(runtimeBin, command), got)
-	}
-}
-
 func TestRuntime_externalChildUsesRuntimeCwdEnvPathAndTemporaryAssignments(t *testing.T) {
 	// Given
 	exe, err := os.Executable()
@@ -150,9 +102,7 @@ func TestRuntime_externalChildUsesRuntimeCwdEnvPathAndTemporaryAssignments(t *te
 	}
 	command := "nemosh-runtime-state"
 	candidate := filepath.Join(commandDir, command)
-	if goruntime.GOOS == "windows" {
-		candidate += ".exe"
-	}
+	candidate += ".exe"
 	data, err := os.ReadFile(exe)
 	if err != nil {
 		t.Fatalf("read test executable: %v", err)
@@ -180,9 +130,6 @@ func TestRuntime_externalChildUsesRuntimeCwdEnvPathAndTemporaryAssignments(t *te
 }
 
 func TestRuntime_windowsChildUsesCanonicalPATHWithoutChangingExactParentEntries(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("native Windows environment serialization")
-	}
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatalf("test executable: %v", err)
@@ -224,9 +171,7 @@ func TestRuntime_externalLookupUsesExactPATHWithoutPathFallback(t *testing.T) {
 	dir := t.TempDir()
 	command := "nemosh-path-case-probe"
 	candidate := filepath.Join(dir, command)
-	if goruntime.GOOS == "windows" {
-		candidate += ".exe"
-	}
+	candidate += ".exe"
 	data, err := os.ReadFile(exe)
 	if err != nil {
 		t.Fatalf("read executable: %v", err)

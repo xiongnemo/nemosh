@@ -2,7 +2,6 @@ package applets
 
 import (
 	"context"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +19,6 @@ import (
 
 func runTopBatchApplet(t *testing.T, args ...string) (string, string) {
 	t.Helper()
-	requireProcessSampling(t)
 	var stdout, stderr strings.Builder
 	// A generous timeout: sampling walks every process on the machine, and a CI
 	// runner is slow and busy.
@@ -280,7 +278,6 @@ func TestTopArgs_readsEveryOptionItAccepts(t *testing.T) {
 func TestTopBatch_stopsWhenCancelledBetweenSamples(t *testing.T) {
 	// Guarded like the rest: off Windows the first sample fails on its own and the
 	// test would pass without ever reaching the wait it is about.
-	requireProcessSampling(t)
 	ctx, cancel := context.WithCancel(t.Context())
 	var stdout strings.Builder
 	options, err := topArgs([]string{"-b", "-n", "50", "-d", "30"})
@@ -299,19 +296,5 @@ func TestTopBatch_stopsWhenCancelledBetweenSamples(t *testing.T) {
 		}
 	case <-time.After(30 * time.Second):
 		t.Fatal("the run slept through its cancellation")
-	}
-}
-
-// requireProcessSampling skips where the process table is not implemented.
-//
-// internal/proc samples on Windows only and answers ErrListUnsupported elsewhere
-// rather than guessing, so on ubuntu and macos every one of these would fail at the
-// first sample -- which is the platform trap AGENTS.md records after four commits
-// went green here and red on CI. startTop takes the same guard for the same reason;
-// the topArgs tests do not need it, because parsing options touches no machine.
-func requireProcessSampling(t *testing.T) {
-	t.Helper()
-	if runtime.GOOS != "windows" {
-		t.Skip("the process table is implemented on Windows only")
 	}
 }

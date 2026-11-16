@@ -4,12 +4,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	goruntime "runtime"
 	"testing"
 )
 
-// linkedDirectory makes real/ and link/, a link to it: a junction on Windows, which needs no
-// privilege where a symbolic link does, and a symbolic link elsewhere.
+// linkedDirectory makes real/ and link/, a link to it: a junction, which needs no privilege where
+// a symbolic link does.
 func linkedDirectory(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -17,14 +16,8 @@ func linkedDirectory(t *testing.T) string {
 	if err := os.Mkdir(real, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if goruntime.GOOS == "windows" {
-		if out, err := exec.Command("cmd", "/c", "mklink", "/J", link, real).CombinedOutput(); err != nil {
-			t.Skipf("no junction can be made here: %v %s", err, out)
-		}
-		return filepath.ToSlash(root)
-	}
-	if err := os.Symlink(real, link); err != nil {
-		t.Skipf("no symbolic link can be made here: %v", err)
+	if out, err := exec.Command("cmd", "/c", "mklink", "/J", link, real).CombinedOutput(); err != nil {
+		t.Skipf("no junction can be made here: %v %s", err, out)
 	}
 	return filepath.ToSlash(root)
 }

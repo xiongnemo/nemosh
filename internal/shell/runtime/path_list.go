@@ -1,17 +1,12 @@
 package runtime
 
-import goruntime "runtime"
-
-// On Windows, PATH, CDPATH and MANPATH take a `:` between their directories as well as the
-// `;` Windows programs read, as busybox-w32 has them (fix_pathvar in its shell/ash.c): an
-// assignment rewrites each `:` that is not a drive letter's into `;`. So `PATH=bin:$PATH`,
-// which is how a script written for Unix puts a directory first, finds what is in bin, and a
-// program it starts is handed a list it can read. Here it was one directory, named
-// `bin:C:\Users...`, which held nothing.
+// PATH, CDPATH and MANPATH take a `:` between their directories as well as the `;` Windows
+// programs read, as busybox-w32 has them (fix_pathvar in its shell/ash.c): an assignment
+// rewrites each `:` that is not a drive letter's into `;`. So `PATH=bin:$PATH`, which is how a
+// script written for Unix puts a directory first, finds what is in bin, and a program it starts
+// is handed a list it can read. Here it was one directory, named `bin:C:\Users...`, which held
+// nothing.
 func windowsPathList(name, value string) string {
-	if goruntime.GOOS != "windows" {
-		return value
-	}
 	switch name {
 	case "PATH", "CDPATH", "MANPATH":
 	default:

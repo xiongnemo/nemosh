@@ -3,7 +3,6 @@ package applets_test
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -65,9 +64,7 @@ func TestMkdir_namesTheStepThatFailedAsBusyboxDoes(t *testing.T) {
 			t.Errorf("%q: got %v, want %q", test.args, err, test.wantErr)
 		}
 	}
-	if runtime.GOOS == "windows" {
-		if _, _, err := runPermuted(t, view, "", "mkdir", root); err == nil || err.Error() != "cannot create directory '"+root+"': File exists" {
-			t.Errorf("mkdir %s: got %v, want File exists", root, err)
-		}
+	if _, _, err := runPermuted(t, view, "", "mkdir", root); err == nil || err.Error() != "cannot create directory '"+root+"': File exists" {
+		t.Errorf("mkdir %s: got %v, want File exists", root, err)
 	}
 }

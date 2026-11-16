@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"sort"
 	"strings"
 )
@@ -125,13 +124,9 @@ func (r Runtime) nearNames(name string) []string {
 	return names
 }
 
-// foldName is a command name as the platform compares it: Windows finds a program whatever
-// its case.
+// foldName is a command name as Windows compares it, which finds a program whatever its case.
 func foldName(name string) string {
-	if goruntime.GOOS == "windows" {
-		return strings.ToLower(name)
-	}
-	return name
+	return strings.ToLower(name)
 }
 
 // editDistance counts the insertions, deletions, substitutions and swaps of neighbours that

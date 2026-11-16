@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 )
 
 // command's options, which are busybox's: -v answers what a name is briefly, -V in type's
@@ -55,11 +54,8 @@ func (r Runtime) commandVerbose(name string) int {
 }
 
 // defaultSearchPath is where `command -p` looks: System32 and the Windows directory, where
-// busybox-w32 looks, and /bin and /usr/bin elsewhere, as both references look there.
+// busybox-w32 looks.
 func defaultSearchPath() string {
-	if goruntime.GOOS != "windows" {
-		return "/bin:/usr/bin"
-	}
 	root := os.Getenv("SystemRoot")
 	if root == "" {
 		root = `C:\Windows`

@@ -1,12 +1,10 @@
 package applets_test
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -135,15 +133,10 @@ func TestPkill_stopsWhatItMatches(t *testing.T) {
 	}
 }
 
-// The process list is what these need, and where it cannot be read they say so
-// rather than answering "no match" on a machine full of processes.
+// The process list is what these need.
 func listableOrSkip(t *testing.T) ([]proc.Process, bool) {
 	t.Helper()
 	processes, err := proc.List()
-	if errors.Is(err, proc.ErrListUnsupported) {
-		t.Skipf("the process list is not implemented on %s, which is a build-and-test target", runtime.GOOS)
-		return nil, false
-	}
 	if err != nil {
 		t.Fatalf("listing processes: %v", err)
 	}
@@ -157,10 +150,7 @@ var helperName = fmt.Sprintf("pkillprobe%d", os.Getpid())
 
 func buildHelperShell(t *testing.T) string {
 	t.Helper()
-	binary := t.TempDir() + "/" + helperName
-	if runtime.GOOS == "windows" {
-		binary += ".exe"
-	}
+	binary := t.TempDir() + "/" + helperName + ".exe"
 	build := exec.Command("go", "build", "-o", binary, "github.com/xiongnemo/nemosh/cmd/nemosh")
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("building the helper: %v\n%s", err, output)

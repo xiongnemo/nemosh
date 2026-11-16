@@ -147,16 +147,14 @@ func scanPath(pathValue string, resolve func(string) (string, bool)) (map[string
 			if entry.IsDir() {
 				continue
 			}
+			// Windows decides what is runnable by suffix, so a file without one is not a
+			// program and is not indexed. A directory full of documents on PATH -- which
+			// happens -- would otherwise be offered as commands.
 			name := entry.Name()
 			if stem, ok := executableStem(name); ok {
 				offer(stem)
 				recognise(name)
-				continue
 			}
-			if !runsWithoutASuffix {
-				continue
-			}
-			offer(name)
 		}
 	}
 	sort.Strings(sorted)
@@ -175,5 +173,5 @@ func executableStem(name string) (string, bool) {
 }
 
 // The suffixes this shell will launch, which are the launcher's own: a name is offered by
-// exactly the suffixes it runs by, and none off Windows, where a name runs as it is spelled.
+// exactly the suffixes it runs by.
 var executableSuffixes = runtime.ExecutableSuffixes()

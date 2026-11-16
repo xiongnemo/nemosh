@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -28,8 +27,8 @@ var (
 )
 
 // odLongSize is C's long, which -l and -t dL name: four bytes on Windows, as busybox-w32 has
-// it, and eight elsewhere, as busybox has it there.
-var odLongSize = map[bool]int{true: 4, false: 8}[runtime.GOOS == "windows"]
+// it.
+const odLongSize = 4
 
 // parseOdTypes is busybox's decode_format_string: each type in text, one after another, so
 // -t x1c is two.

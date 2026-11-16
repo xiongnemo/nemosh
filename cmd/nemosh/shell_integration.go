@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	goruntime "runtime"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/shell/runtime"
@@ -77,16 +76,13 @@ func (m *shellMarks) executing() string {
 }
 
 // markPrompt is the primary prompt with its marks when they are on, after writing the mark that
-// ends the last cycle. The directory is said on Windows, the terminal being Windows'.
+// ends the last cycle.
 func (c command) markPrompt(marks *shellMarks, rt runtime.Runtime, prompt string, status int) string {
 	if !shellMarksOn(rt.LookupVariable, c.stderrIsTerminal) {
 		*marks = shellMarks{}
 		return prompt
 	}
 	fmt.Fprint(c.stderr, marks.finished(status))
-	directory := ""
-	if goruntime.GOOS == "windows" {
-		directory, _ = nativePath(rt, ".")
-	}
+	directory, _ := nativePath(rt, ".")
 	return marks.prompt(prompt, directory)
 }

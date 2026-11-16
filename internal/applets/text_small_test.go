@@ -3,7 +3,6 @@ package applets_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -430,16 +429,9 @@ func TestShuf_permutesWithoutLosingLines(t *testing.T) {
 
 // free reports from the same sampler `top` draws its meters from, so the two
 // cannot disagree about how much memory the machine has.
-//
-// Sampling is implemented on Windows only and refuses elsewhere with
-// ErrListUnsupported, which is the rule the whole proc package follows -- so this
-// skips rather than asserting zeros off Windows.
 func TestFree_reportsTheSameMemoryAsTheSampler(t *testing.T) {
 	stdout, stderr, err := runSmall(t, t.TempDir(), "", "free")
 	if err != nil {
-		if errors.Is(err, proc.ErrListUnsupported) {
-			t.Skip("memory sampling is implemented on Windows only")
-		}
 		t.Fatalf("free: %v (%s)", err, stderr)
 	}
 	lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
@@ -458,7 +450,7 @@ func TestFree_reportsTheSameMemoryAsTheSampler(t *testing.T) {
 	// formatter that read the wrong field would still print a plausible number.
 	snapshot, err := proc.NewSampler().Sample(false)
 	if err != nil {
-		t.Skip("memory sampling is implemented on Windows only")
+		t.Fatalf("sampling memory: %v", err)
 	}
 	wantTotal := snapshot.Memory.TotalPhysical / 1024
 	fields := strings.Fields(lines[1])

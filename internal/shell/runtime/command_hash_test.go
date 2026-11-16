@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -28,10 +27,7 @@ func (c *statCounter) stat(path string) (os.FileInfo, error) {
 
 // hashProbeFile is the program's name on disk: Windows finds `probe` as probe.exe.
 func hashProbeFile() string {
-	if goruntime.GOOS == "windows" {
-		return "probe.exe"
-	}
-	return "probe"
+	return "probe.exe"
 }
 
 func writeHashProbe(t *testing.T, dir string) string {
@@ -260,9 +256,6 @@ func sameFile(t *testing.T, a, b string) bool {
 // Names are kept as written, as busybox keeps them: on Windows `PROBE` finds probe.exe and is
 // an entry of its own beside `probe`.
 func TestCommandHash_namesAreKeptAsWritten(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("only Windows finds a program under another case")
-	}
 	rt, _, _, stdout := hashRuntime(t, 1)
 
 	// When

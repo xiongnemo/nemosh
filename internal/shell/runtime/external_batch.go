@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"runtime"
 	"strings"
 )
 
@@ -119,7 +118,7 @@ func (r Runtime) externalCommand(ctx context.Context, executable string, args []
 }
 
 func (r Runtime) externalCommandLine(ctx context.Context, executable string, args []string) (*exec.Cmd, error) {
-	if runtime.GOOS != "windows" || !hasBatchSuffix(executable) {
+	if !hasBatchSuffix(executable) {
 		return exec.CommandContext(ctx, executable, args...), nil
 	}
 	comspec, err := comSpecPath(r.vars)

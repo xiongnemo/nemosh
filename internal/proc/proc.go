@@ -9,12 +9,9 @@
 // TerminateProcess. Two copies of a lookup drift; this project has already fixed
 // that once, in `command -v`.
 //
-// Windows is where this is implemented. busybox does the same work in the same
-// places: CreateToolhelp32Snapshot for the process list (win32/process.c:740) and
-// TerminateProcess for the kill (win32/process.c:909). Elsewhere the platform's
-// own signal is used for killing, and listing is refused rather than guessed at
-// -- reading /proc would work on Linux and nothing portable works on macOS, and
-// Linux here is a build-and-test target rather than a supported one.
+// busybox-w32 does the same work in the same places: CreateToolhelp32Snapshot for
+// the process list (win32/process.c:740) and TerminateProcess for the kill
+// (win32/process.c:909).
 package proc
 
 import (
@@ -28,11 +25,6 @@ import (
 // type and one lookup rather than a poor one for `ps` and a rich one for `top`. That was the
 // point of this package: two copies of a lookup drift, and this project has fixed that once
 // already, in `command -v`.
-
-// ErrListUnsupported is returned where the process list cannot be read. A caller
-// must report it rather than treat it as an empty list -- "nothing matched" and
-// "I cannot see" are different answers, and only one of them is safe to act on.
-var ErrListUnsupported = errors.New("listing processes is not implemented on this platform")
 
 // ErrNoSuchProcess is a pid with no running process behind it, whether there never was one or
 // it has exited: strerror's words for ESRCH, as the C library spells them everywhere.

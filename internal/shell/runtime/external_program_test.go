@@ -3,21 +3,16 @@ package runtime_test
 import (
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 )
 
 // writeTestProgram puts a program that says its arguments and $NEMOSH_TEST_PROGRAM_VAR in dir,
-// named nemosh-test-program: a batch file on Windows, which ComSpec runs, and a script elsewhere.
-// Not a shebang script on Windows, where this shell runs one, and the shell's binary in a test is
-// the test binary.
+// named nemosh-test-program: a batch file, which ComSpec runs. Not a shebang script, which this
+// shell runs, and the shell's binary in a test is the test binary.
 func writeTestProgram(t *testing.T, dir string) {
 	t.Helper()
-	name, text := "nemosh-test-program", "#!/bin/sh\necho \"program $* [$NEMOSH_TEST_PROGRAM_VAR]\"\n"
-	if goruntime.GOOS == "windows" {
-		name, text = "nemosh-test-program.bat", "@echo program %* [%NEMOSH_TEST_PROGRAM_VAR%]\r\n"
-	}
+	name, text := "nemosh-test-program.bat", "@echo program %* [%NEMOSH_TEST_PROGRAM_VAR%]\r\n"
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o755); err != nil {
 		t.Fatalf("write the program: %v", err)
 	}

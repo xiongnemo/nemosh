@@ -133,7 +133,7 @@ func TestEnvironment_zeroValueIsUsableAndCloneable(t *testing.T) {
 	if value, ok := environment.LookupEnv("Path"); !ok || value != "" {
 		t.Fatalf("Path: value=%q present=%t", value, ok)
 	}
-	if got, want := clone.childEnviron(windowsEnvironment), []string{"PATH=second"}; !reflect.DeepEqual(got, want) {
+	if got, want := clone.childEnviron(), []string{"PATH=second"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("child env: got %v want %v", got, want)
 	}
 	environment.Unset("Path")

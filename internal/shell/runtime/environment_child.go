@@ -1,29 +1,13 @@
 package runtime
 
 import (
-	"runtime"
 	"sort"
 	"strings"
 )
 
-type environmentPlatform uint8
-
-const (
-	unixEnvironment environmentPlatform = iota
-	windowsEnvironment
-)
-
-func hostEnvironmentPlatform() environmentPlatform {
-	if runtime.GOOS == "windows" {
-		return windowsEnvironment
-	}
-	return unixEnvironment
-}
-
-func (e Environment) childEnviron(platform environmentPlatform) []string {
-	if platform == unixEnvironment {
-		return e.Environ()
-	}
+// childEnviron is the environment a child is given: one of each name as Windows folds its case,
+// the canonical spelling of a known name, and otherwise the latest set.
+func (e Environment) childEnviron() []string {
 	winners := make([]environmentValue, 0, len(e.values))
 	for _, candidate := range e.values {
 		matched := -1

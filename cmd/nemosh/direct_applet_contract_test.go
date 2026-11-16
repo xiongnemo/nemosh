@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -146,10 +145,7 @@ func TestDirectApplet_clearsInterruptController_whenInjectedStateIsInvalid(t *te
 }
 
 func directAppletInvocationName(name string) string {
-	if runtime.GOOS == "windows" {
-		return name + ".exe"
-	}
-	return name
+	return name + ".exe"
 }
 
 func runDirectAppletTest(args []string) (string, string, error) {

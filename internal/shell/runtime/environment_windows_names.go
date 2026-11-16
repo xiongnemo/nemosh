@@ -12,10 +12,7 @@ func canonicalWindowsEnvironmentName(name string) (string, bool) {
 	}
 }
 
-func newHostEnvironment(items []string, platform environmentPlatform) Environment {
-	if platform != windowsEnvironment {
-		return NewEnvironment(items)
-	}
+func newHostEnvironment(items []string) Environment {
 	canonicalInputs := make(map[string]struct{})
 	for _, item := range items {
 		name, _, found := strings.Cut(item, "=")

@@ -33,24 +33,20 @@ func TestEnvironment_clonePreservesMutationOrder(t *testing.T) {
 	clone.Set("Path", "third")
 
 	wantParent := []string{"OTHER=value", "PATH=second"}
-	if got := env.childEnviron(windowsEnvironment); !reflect.DeepEqual(got, wantParent) {
+	if got := env.childEnviron(); !reflect.DeepEqual(got, wantParent) {
 		t.Fatalf("parent: got %v want %v", got, wantParent)
 	}
 	wantClone := []string{"OTHER=value", "PATH=second"}
-	if got := clone.childEnviron(windowsEnvironment); !reflect.DeepEqual(got, wantClone) {
+	if got := clone.childEnviron(); !reflect.DeepEqual(got, wantClone) {
 		t.Fatalf("clone: got %v want %v", got, wantClone)
 	}
 }
 
-func TestEnvironment_childEnvironSerializesDeterministicallyByPlatform(t *testing.T) {
+func TestEnvironment_childEnvironSerializesDeterministically(t *testing.T) {
 	env := NewEnvironment([]string{"z=last-sort", "PATH=upper", "Empty=", "Path=title"})
 
-	wantUnix := []string{"Empty=", "PATH=upper", "Path=title", "z=last-sort"}
-	if got := env.childEnviron(unixEnvironment); !reflect.DeepEqual(got, wantUnix) {
-		t.Fatalf("unix: got %v want %v", got, wantUnix)
-	}
 	wantWindows := []string{"Empty=", "PATH=upper", "z=last-sort"}
-	if got := env.childEnviron(windowsEnvironment); !reflect.DeepEqual(got, wantWindows) {
+	if got := env.childEnviron(); !reflect.DeepEqual(got, wantWindows) {
 		t.Fatalf("windows: got %v want %v", got, wantWindows)
 	}
 }
@@ -60,7 +56,7 @@ func TestEnvironment_windowsSerializationKeepsCanonicalKnownName(t *testing.T) {
 	env.Set("Path", "")
 
 	want := []string{"PATH=second"}
-	if got := env.childEnviron(windowsEnvironment); !reflect.DeepEqual(got, want) {
+	if got := env.childEnviron(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v want %v", got, want)
 	}
 }
@@ -71,7 +67,7 @@ func TestNewHostEnvironment_windowsCanonicalizesKnownNames_andCanonicalInputWins
 		"PATH=canonical",
 		"pAtH=title-last",
 		"ComSpec=command-shell",
-	}, windowsEnvironment)
+	})
 
 	if value, ok := env.LookupEnv("PATH"); !ok || value != "canonical" {
 		t.Fatalf("PATH: value=%q present=%t", value, ok)
@@ -89,7 +85,7 @@ func TestEnvironment_windowsSerializationPrefersCanonicalKnownName_overLaterCase
 	env.Set("pAtH", "latest")
 
 	want := []string{"PATH=canonical"}
-	if got := env.childEnviron(windowsEnvironment); !reflect.DeepEqual(got, want) {
+	if got := env.childEnviron(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v want %v", got, want)
 	}
 }
@@ -99,7 +95,7 @@ func TestEnvironment_windowsSerializationUsesLatestMutation_forUnknownName(t *te
 	env.Set("custom", "latest")
 
 	want := []string{"custom=latest"}
-	if got := env.childEnviron(windowsEnvironment); !reflect.DeepEqual(got, want) {
+	if got := env.childEnviron(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v want %v", got, want)
 	}
 }
@@ -113,7 +109,7 @@ func TestRuntime_canonicalParentWinsWindowsSerializationWithoutChangingParent(t 
 		t.Fatal("temporary assignment failed")
 	}
 	want := []string{"PATH=upper"}
-	if got := child.env.childEnviron(windowsEnvironment); !reflect.DeepEqual(got, want) {
+	if got := child.env.childEnviron(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("child: got %v want %v", got, want)
 	}
 	if value, ok := runtime.env.LookupEnv("PATH"); !ok || value != "upper" {

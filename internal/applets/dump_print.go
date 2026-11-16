@@ -3,7 +3,6 @@ package applets
 import (
 	"encoding/binary"
 	"math"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -67,12 +66,12 @@ func (p *dumpPrint) render(block []byte, at int, address int64, last bool) strin
 }
 
 // signed is a %d's datum: of eight bytes, as busybox passes it, a long long that %d reads the
-// low four bytes of and %ld as many as C's long has.
+// low four bytes of, and %ld too, C's long being four bytes on Windows.
 func (p *dumpPrint) signed(datum []byte) int64 {
 	value := int64(binary.LittleEndian.Uint64(datum))
 	shift := 64 - 8*uint(p.bytes)
 	value = value << shift >> shift
-	if p.bytes == 8 && (p.long == 0 || p.long == 1 && runtime.GOOS == "windows") {
+	if p.bytes == 8 && p.long <= 1 {
 		value = int64(int32(value))
 	}
 	return value

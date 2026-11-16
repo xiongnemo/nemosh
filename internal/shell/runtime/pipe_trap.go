@@ -1,9 +1,6 @@
 package runtime
 
-import (
-	"fmt"
-	"sync/atomic"
-)
+import "fmt"
 
 // A trap on SIGPIPE, which pipe_stage.go models. `trap "" PIPE` is how a script that pipes
 // into head asks for a failed write rather than an ended shell, and it was "not supported by
@@ -56,16 +53,14 @@ func (r Runtime) pipeDispositionFor(top bool) pipeDisposition {
 	return pipeDefault
 }
 
-// dispose makes disposition what SIGPIPE does to the shell, as `trap` arms or resets it, and
-// to the process when the shell is the process's own.
+// dispose makes disposition what SIGPIPE does to the shell, as `trap` arms or resets it.
+// Windows has no SIGPIPE to give the process: a write into a pipe no one reads fails, for the
+// shell and for the programs it starts alike, and pipe_stage.go is all there is of the signal.
 func (s *pipeStage) dispose(disposition pipeDisposition) {
 	if s == nil {
 		return
 	}
 	s.disposition.Store(int32(disposition))
-	if s.top && processSIGPIPEOwned.Load() {
-		setProcessPipe(disposition)
-	}
 }
 
 func (s *pipeStage) current() pipeDisposition {
@@ -92,12 +87,3 @@ func (r Runtime) brokenPipe(name string) int {
 	fmt.Fprintf(r.streams.Stderr, "%s%s: write error: Broken pipe\n", r.diagnosticPrefix(), name)
 	return 1
 }
-
-// processSIGPIPEOwned is set by a binary whose shell's SIGPIPE is the process's: cmd/nemosh,
-// which runs one shell. A test's many shells share its process, and none of them may set it.
-var processSIGPIPEOwned atomic.Bool
-
-// OwnProcessSIGPIPE says the shells this binary starts own the process's SIGPIPE, as a shell's
-// is its process's: `trap "" PIPE` at the top makes the process ignore it, and the programs it
-// starts inherit that. cmd/nemosh calls it before anything else.
-func OwnProcessSIGPIPE() { processSIGPIPEOwned.Store(true) }

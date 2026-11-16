@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -293,9 +292,7 @@ func TestPlanScriptLaunch_stopsAfterFourInterpreters(t *testing.T) {
 func TestPlanScriptLaunch_findsAnEnvInterpreterOnPath(t *testing.T) {
 	dir := t.TempDir()
 	program := filepath.Join(dir, "nemosh-test-interpreter")
-	if goruntime.GOOS == "windows" {
-		program += ".exe"
-	}
+	program += ".exe"
 	if err := os.WriteFile(program, []byte("not run\n"), 0o755); err != nil {
 		t.Fatalf("write interpreter: %v", err)
 	}

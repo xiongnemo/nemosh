@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"runtime"
 )
 
 // externalCommandPath is where name is run from, which the shell's table remembers; see
@@ -117,13 +116,10 @@ func (r Runtime) searchCommand(stat statFunc, pathValue, name string, previous h
 }
 
 // stillAProgram is whether what was found at native can still be run from there: it is there,
-// it is no directory, and off Windows it has an execute bit.
+// and it is no directory.
 func stillAProgram(stat statFunc, native string) bool {
 	info, err := stat(native)
-	if err != nil || info.IsDir() {
-		return false
-	}
-	return runtime.GOOS == "windows" || info.Mode().Perm()&0o111 != 0
+	return err == nil && !info.IsDir()
 }
 
 // relativeSearchDirectory is busybox's is_relative_path for a directory of PATH: one that names
@@ -132,9 +128,9 @@ func relativeSearchDirectory(dir string) bool {
 	if dir == "" {
 		return true
 	}
-	if dir[0] == '/' || runtime.GOOS == "windows" && dir[0] == '\\' {
+	if dir[0] == '/' || dir[0] == '\\' {
 		return false
 	}
 	drive := len(dir) >= 3 && dir[1] == ':' && (dir[2] == '/' || dir[2] == '\\')
-	return runtime.GOOS != "windows" || !drive
+	return !drive
 }

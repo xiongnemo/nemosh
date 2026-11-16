@@ -8,8 +8,7 @@ import (
 // titleBuiltin is busybox-w32's title (shell/ash.c:16063-16075): with an operand the console's
 // title becomes it -- the first operand alone, whatever it looks like, for busybox reads no
 // options -- and with none the title is printed. busybox answers 0 and says nothing when the
-// console cannot be asked; this says why and answers 1, as a capability that is absent must, and
-// off Windows, where there is no console title to ask, it always does.
+// console cannot be asked; this says why and answers 1, as a capability that is absent must.
 func (r Runtime) titleBuiltin(args []string) int {
 	return runTitle(args, hostConsoleTitle{}, r.streams.Stdout, r.streams.Stderr, r.diagnosticPrefix())
 }

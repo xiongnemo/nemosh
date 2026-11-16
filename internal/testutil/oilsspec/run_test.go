@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -172,10 +171,6 @@ func TestRepoRoot_isTheOilsSkeletonWithTheTestdataInIt(t *testing.T) {
 		want, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
 		if err != nil || string(got) != string(want) || len(want) == 0 {
 			t.Errorf("%s is not the vendored file: %v", name, err)
-		}
-		info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(name)))
-		if runtime.GOOS != "windows" && (err != nil || info.Mode()&0o111 == 0) {
-			t.Errorf("%s is not executable", name)
 		}
 	}
 }

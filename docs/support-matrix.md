@@ -133,7 +133,7 @@ it is easier to see them together.
 | `logout` | yes | `exit` in a login shell (`nemosh -l`); elsewhere bash's `not login shell: use 'exit'`, status 1, and the shell goes on |
 | `kill %N` | yes | a job is a process: the signal goes over its control pipe, and KILL ends its Job Object. A goroutine job (`NEMOSH_JOBS=goroutine`) is ended by cancelling its context |
 | `coproc cmd`, `coproc NAME { ...; }` | yes | bash's, which busybox-w32 has not got: a background job with a pipe to its stdin and one from its stdout. The shell's ends are `${NAME[1]}` and `${NAME[0]}`, on 60 and 63 as bash puts them. `$NAME_PID` is the job's `$!`. `exec {NAME[1]}>&-` ends its input, and the `wait` that reaps it closes both ends and unsets both names. NAME is COPROC unless the command is a compound one (a group, a subshell, a loop, an if or a case), as in bash. It runs under either launcher, since it is an ordinary job whose group redirects its 0 and 1. It used to be refused with 126 |
-| `kill PID`, `kill -l` | yes | `TerminateProcess` on Windows, a real signal elsewhere |
+| `kill PID`, `kill -l` | yes | `TerminateProcess` |
 | `pgrep`, `pkill` | yes | `CreateToolhelp32Snapshot` lists, the above terminates |
 | **`fg`, `bg`** | **no, and not planned** | they resume a *suspended* job, and nothing here can suspend one |
 | **Ctrl-Z as suspend** | **no** | same primitive. At the prompt Ctrl-Z turns the line's backslashes into slashes, as busybox-w32's editor does, so a pasted `C:\Users\nemo` becomes `C:/Users/nemo`; `NEMOSH_CTRL_Z=eof` makes it end input on an empty line instead, as it did until 2026-11-15 |
@@ -201,17 +201,17 @@ cancellation, and an external command in the job, launched with
 
 | Form | Behaviour |
 | --- | --- |
-| `kill %N` | **a trap the job set for the signal runs**, once the command in progress has finished, and then the job carries on; `trap '' TERM` makes it ignore the signal. That is bash's behaviour, for every signal `kill -l` lists but KILL. busybox-w32 cannot deliver a signal to a trap, so every kill there ends the job. A signal the job does not catch ends it, and its EXIT trap still runs. KILL is never caught. The status says which signal it was, as busybox's does: `wait` answers 128 plus the signal -- 137 for KILL, 143 for TERM -- and `jobs` names it `Killed` or `Terminated` rather than `Done(1)`, which is what it used to say. `wait %N` and `wait PID` say the word on stderr too, but not for INT or PIPE, and a `wait` with no operands says nothing, as busybox's says nothing. The words are libc's, `Segmentation fault`, as bash and busybox on Linux print them; busybox-w32's own table names all but KILL and TERM bare, `SEGV`. Off Windows a job process ends by the signal itself: for QUIT, ILL, FPE, SEGV, ABRT and PIPE, which Go's runtime will not hand back, it becomes `/bin/sh` and sends the signal to itself |
-| `trap … TERM` in a script | runs when a TERM reaches the script from outside it, as bash's does. Off Windows that is a real `kill` (and HUP and QUIT too), and the trap runs once the command in progress has finished. On Windows it is the console closing, the user logging off or the machine shutting down, which is all Go reports as TERM there. Windows ends every process on the console within seconds of that, so the script is stopped where it is: its TERM trap runs, then its EXIT trap, and it exits by the signal. A prompt ignores TERM, as bash's does |
-| `trap … PIPE` | SIGPIPE is what a write into a pipe no one reads raises: the shell, a subshell or a pipeline stage whose own write it is ends there with 141, and a program it runs ends alone, as in both references. `trap '' PIPE` (or `13`) ignores it, as bash's does: the write fails instead and says so, `echo: write error: Broken pipe` and status 1, the shell goes on, and a program sees its failed write the same way. A trap for it runs once the command in progress has finished, after the same failed write, while a program still ends of it. A subshell or a stage keeps it ignored and drops a trap for it, as POSIX has it. Off Windows the shell's top level makes it the process's SIGPIPE, which the programs it starts inherit. busybox-w32 takes the trap too. `kill -PIPE` sends it like any other signal: a job's or the shell's trap for it runs, and with none the job ends with 141, which `wait` does not say, as busybox's does not |
-| `kill PID` | `TerminateProcess` on Windows, a real signal elsewhere. busybox-w32 uses `TerminateProcess` only for KILL; every other signal injects a thread into the target that calls `ExitProcess(signal << 24)` (`win32/process.c:862-909`), so the parent sees which signal ended it |
+| `kill %N` | **a trap the job set for the signal runs**, once the command in progress has finished, and then the job carries on; `trap '' TERM` makes it ignore the signal. That is bash's behaviour, for every signal `kill -l` lists but KILL. busybox-w32 cannot deliver a signal to a trap, so every kill there ends the job. A signal the job does not catch ends it, and its EXIT trap still runs. KILL is never caught. The status says which signal it was, as busybox's does: `wait` answers 128 plus the signal -- 137 for KILL, 143 for TERM -- and `jobs` names it `Killed` or `Terminated` rather than `Done(1)`, which is what it used to say. `wait %N` and `wait PID` say the word on stderr too, but not for INT or PIPE, and a `wait` with no operands says nothing, as busybox's says nothing. The words are libc's, `Segmentation fault`, as bash and busybox on Linux print them; busybox-w32's own table names all but KILL and TERM bare, `SEGV`. |
+| `trap … TERM` in a script | runs when a TERM reaches the script from outside it, as bash's does. That is the console closing, the user logging off or the machine shutting down, which is all Go reports as TERM there. Windows ends every process on the console within seconds of that, so the script is stopped where it is: its TERM trap runs, then its EXIT trap, and it exits by the signal. A prompt ignores TERM, as bash's does |
+| `trap … PIPE` | SIGPIPE is what a write into a pipe no one reads raises: the shell, a subshell or a pipeline stage whose own write it is ends there with 141, and a program it runs ends alone, as in both references. `trap '' PIPE` (or `13`) ignores it, as bash's does: the write fails instead and says so, `echo: write error: Broken pipe` and status 1, the shell goes on, and a program sees its failed write the same way. A trap for it runs once the command in progress has finished, after the same failed write, while a program still ends of it. A subshell or a stage keeps it ignored and drops a trap for it, as POSIX has it. busybox-w32 takes the trap too. `kill -PIPE` sends it like any other signal: a job's or the shell's trap for it runs, and with none the job ends with 141, which `wait` does not say, as busybox's does not |
+| `kill PID` | `TerminateProcess`. busybox-w32 uses `TerminateProcess` only for KILL; every other signal injects a thread into the target that calls `ExitProcess(signal << 24)` (`win32/process.c:862-909`), so the parent sees which signal ended it |
 | `kill -9`, `kill -TERM`, `kill -SIGTERM` | all accepted; a script writes the number and a person writes the name |
 | `kill -0 %N`, `kill -0 PID` | **asks, and changes nothing**: 0 while the job or process is running, 1 once it has ended. It used to be one more signal, so the question ended what it asked about |
 | `kill -STOP`, `-CONT`, `-TSTP` (or 18–22, but 22 on Windows is ABRT) | **refused by name**, status 1. Nothing here can suspend a process, and delivered the way every other signal is, STOP would end it. busybox-w32 has neither name either. `pkill` and `killall` refuse them too: all three read one table, `internal/proc/signal.go` |
-| `kill -l` | lists the signals this shell can act on, not the whole POSIX set: busybox-w32's table, HUP, INT, QUIT, ILL, FPE, KILL, SEGV, PIPE, TERM and ABRT. ABRT is 22 on Windows, as MinGW numbers it and busybox-w32 lists it, and 6 elsewhere. ILL to ABRT were an invalid signal to `kill`, and a signal `trap` did not support. `trap` lists the traps in busybox's order, EXIT, the signals by number, then ERR, with bash's DEBUG and RETURN either side of it. A trap for KILL is taken and listed, as in both, and never runs, since nothing catches KILL. `trap -p` is bash's, and lists as bash's does: `trap -- 'echo INT' SIGINT` |
+| `kill -l` | lists the signals this shell can act on, not the whole POSIX set: busybox-w32's table, HUP, INT, QUIT, ILL, FPE, KILL, SEGV, PIPE, TERM and ABRT. ABRT is 22, as MinGW numbers it and busybox-w32 lists it. ILL to ABRT were an invalid signal to `kill`, and a signal `trap` did not support. `trap` lists the traps in busybox's order, EXIT, the signals by number, then ERR, with bash's DEBUG and RETURN either side of it. A trap for KILL is taken and listed, as in both, and never runs, since nothing catches KILL. `trap -p` is bash's, and lists as bash's does: `trap -- 'echo INT' SIGINT` |
 | a pid that has already exited | refused, not reported as killed — the check busybox makes with `GetExitCodeProcess` first |
 | a job that has already ended | refused the same way. Both references accept `kill %1` for a job that has ended but not been reported; they refuse `kill $pid` once the process is gone, and here `$!` is `%1`, so the second is what a script is writing |
-| pid `0` or negative | refused on Windows: those mean process groups, which Windows has not got in the POSIX sense. Passed through elsewhere |
+| pid `0` or negative | refused: those mean process groups, which Windows has not got in the POSIX sense |
 | its failures | busybox's statuses, in this shell's words. No operand is `expected a job or a process id`, 1, where bash prints its usage with 2; a signal it does not know is `invalid signal 'X'`; an operand that is no number is `invalid pid 'X'`; one it could not signal is `cannot signal pid N: No such process` (or `Permission denied`), in strerror's words, where Windows said `The parameter is incorrect.`; and the status is how many operands failed, as busybox counts them, 255 at most. A job spec that names no job is 2, and since every spec is found before anything is sent, nothing is signalled. `%%` and `%-` with no such job are `No current job` and `No previous job`, as every ash says them |
 
 `kill` does not claim the job, so a later `wait %N` still finds it.
@@ -435,11 +435,10 @@ a script that removed an element and carried on was quietly wrong -- the failure
 AGENTS.md singles out.
 
 **`UID`, `EUID` and `OSTYPE`** are bash's, which busybox does not set. `UID` and `EUID` are
-read-only integers, the uid `id -u` answers: on Windows 0 only when the shell is elevated,
-and busybox-w32's 4095 otherwise, so `[ "$EUID" -ne 0 ]` asks there what it asks on Linux.
-`OSTYPE` is `msys` on Windows, the value scripts test to know Git Bash (whose bash 2.55 says
-`cygwin`), `linux-gnu` on Linux and `darwin` on macOS; one already set is kept. None is
-exported.
+read-only integers, the uid `id -u` answers: 0 only when the shell is elevated, and
+busybox-w32's 4095 otherwise, so `[ "$EUID" -ne 0 ]` asks what it asks on Linux. `OSTYPE` is
+`msys`, the value scripts test to know Git Bash (whose bash 2.55 says `cygwin`); one already
+set is kept. None is exported.
 
 **`sh` and `bash` that `PATH` has no program for are this shell**, as both are busybox-w32's
 names for its own: `sh -c ...`, `bash build.sh`, and a script that begins `#!/bin/bash` or
@@ -793,27 +792,16 @@ column that matters is the third one.
 
 ### Devices
 
-**Windows only, with one exception.** The device model exists because Windows has
-no `/dev`; on Linux and macOS the system has a real one with the machine's devices
-in it, and that is the right answer, so those builds reach it through the ordinary
-filesystem and this shell provides nothing under it. `/dev/clipboard` is therefore
-a Windows facility and simply a path that does not exist elsewhere.
+The device model exists because Windows has no `/dev`, so the shell provides one,
+`/dev/clipboard` among it.
 
-The exception is the **descriptor aliases** -- `/dev/stdin`, `/dev/stdout`,
-`/dev/stderr`, `/dev/fd/N` -- which the shell answers for on every platform,
-because they are not hardware. They name *this shell's* descriptors, which after a
+The **descriptor aliases** -- `/dev/stdin`, `/dev/stdout`, `/dev/stderr`,
+`/dev/fd/N` -- are not hardware. They name *this shell's* descriptors, which after a
 redirect are not the process's, and which its fd table may hold as something that
 is not an operating-system file at all: a pipe it made, a buffer, the clipboard.
 bash documents both routes for itself, using the platform's special files where
 they exist and emulating them where they do not; emulating is what keeps the fd
-table authoritative.
-
-That constraint is held by a pair of tests that fail on opposite platforms --
-`device_platform_windows_test.go` and `device_platform_other_test.go` -- rather
-than by a comment. CI made the case for it: with the interception left in place,
-the completion tests listed the real `/dev` on ubuntu and macos, three hundred
-ttys and every loop device, through a code path written to serve eight synthetic
-names.
+table authoritative. `device_platform_windows_test.go` holds the model.
 
 `/dev` is a set of names rather than a directory. Each is openable, and since
 Stage 1 of `docs/design/device-filesystem.md` each is also *observable*: `test -e`
@@ -1063,8 +1051,7 @@ Three of these diverge from GNU on purpose, and say so where it matters:
 command substitution's trailing newlines go with the CR of each CRLF among them --
 bash on Windows does that too -- so `v=$(cmd /c ver)` ends where its text does, and
 a field split from an unquoted expansion ends before a CRLF's CR, so `set -- $(where
-git)` has no CR on its words. A CR anywhere else is a character, and on Linux and
-macOS every CR is one, as busybox and bash have it there.
+git)` has no CR on its words. A CR anywhere else is a character.
 
 Settled on 2026-08-23, after seven applets were found wrong at once. Every
 expectation below was measured against busybox **and** GNU, which agree with each
@@ -2611,8 +2598,7 @@ moment apart can disagree; busybox's do too.
 ### `lsattr` and `chattr`
 
 The pair busybox-w32 has for Windows' file attributes rather than ext2's flags,
-registered on Windows alone, as `su` is: on Linux and macOS the names are
-e2fsprogs', and an applet there would shadow the real one. `lsattr` prints the same
+which busybox registers on Windows alone, as it does `su`. `lsattr` prints the same
 eleven columns, `R o e c S r h s a t n` -- a reparse point, offline, encrypted,
 compressed, sparse, read only, hidden, system, archive, temporary and not indexed --
 and the first is `l` for a symbolic link, `j` for a junction, `m` for a volume mounted

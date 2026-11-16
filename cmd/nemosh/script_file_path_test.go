@@ -2,7 +2,6 @@ package main
 
 import (
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -11,9 +10,6 @@ import (
 // form docs/design/windows-path-model.md lists first among the accepted ones.
 func nemoshDriveSpelling(t *testing.T, native string) string {
 	t.Helper()
-	if runtime.GOOS != "windows" {
-		return filepath.ToSlash(native)
-	}
 	volume := filepath.VolumeName(native)
 	if len(volume) != 2 || volume[1] != ':' {
 		t.Skipf("temporary directory %q is not on a drive letter", native)

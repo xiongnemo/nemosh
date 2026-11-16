@@ -12,9 +12,6 @@ import (
 // user chose busybox's.
 const initialFileModeMask uint16 = 0o002
 
-// setProcessFileModeMask has no process mask to set: Windows has none.
-func setProcessFileModeMask(uint16) {}
-
 // startChild starts command as it is: a Windows child has no umask to be given.
 func (r Runtime) startChild(command *exec.Cmd) error {
 	return command.Start()

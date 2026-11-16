@@ -25,10 +25,9 @@ type pipeStage struct {
 	programs atomic.Int32
 	abandon  context.CancelCauseFunc
 	// disposition is what SIGPIPE does to the shell, and caught that it came while a trap
-	// caught it; top is the shell itself, whose SIGPIPE is the process's. See pipe_trap.go.
+	// caught it. See pipe_trap.go.
 	disposition atomic.Int32
 	caught      atomic.Bool
-	top         bool
 }
 
 // brokenPipeStatus is what a write into a pipe no one reads leaves: SIGPIPE's 128+13.
@@ -65,7 +64,7 @@ func (s *pipeStage) running() func() {
 // standard error is its own.
 func (r Runtime) ownStage(ctx context.Context, top bool) (context.Context, Runtime, func()) {
 	ctx, abandon := context.WithCancelCause(ctx)
-	stage := &pipeStage{abandon: abandon, top: top}
+	stage := &pipeStage{abandon: abandon}
 	stage.dispose(r.pipeDispositionFor(top))
 	r.pipeStage = stage
 	restores := r.fds.answerTo(stage, top)

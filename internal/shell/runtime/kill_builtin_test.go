@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -219,9 +218,7 @@ func sleepingHelper(t *testing.T) string {
 	// A name of its own: the applets package's pkill test matches its helper by name, and
 	// ended this one when the two packages' tests ran at once and both were "helper".
 	binary := t.TempDir() + "/killprobe"
-	if runtime.GOOS == "windows" {
-		binary += ".exe"
-	}
+	binary += ".exe"
 	build := exec.Command("go", "build", "-o", binary, "github.com/xiongnemo/nemosh/cmd/nemosh")
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("building the helper: %v\n%s", err, output)

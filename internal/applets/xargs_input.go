@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 )
 
@@ -130,7 +129,7 @@ func (r *xargsReader) line(room int, end byte) (string, bool, error) {
 
 // xargsConsole is where -p reads its answers: the console, which is neither stdin nor stdout.
 var xargsConsole = func() (io.ReadCloser, error) {
-	return os.Open(map[bool]string{true: "CONIN$", false: "/dev/tty"}[runtime.GOOS == "windows"])
+	return os.Open("CONIN$")
 }
 
 // ask is -p's question, busybox's xargs_ask_confirmation: ` ?...` after the command line, and

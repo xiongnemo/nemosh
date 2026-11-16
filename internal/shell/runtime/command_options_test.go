@@ -1,7 +1,6 @@
 package runtime_test
 
 import (
-	goruntime "runtime"
 	"strings"
 	"testing"
 )
@@ -20,10 +19,7 @@ func TestCommand_verboseAndDefaultPath(t *testing.T) {
 		}
 	})
 	t.Run("-p looks where the system keeps its own", func(t *testing.T) {
-		name, run, ran := "sh", "command -p sh -c 'echo ran'\n", "ran\n"
-		if goruntime.GOOS == "windows" {
-			name, run, ran = "where.exe", "command -p cmd.exe /c echo ran\n", "ran\r\n"
-		}
+		name, run, ran := "where.exe", "command -p cmd.exe /c echo ran\n", "ran\r\n"
 		status, stdout, stderr := runSetScript(t, "PATH=/nonexistent\ncommand -pv "+name+"\n"+run)
 		lines := strings.SplitAfterN(stdout, "\n", 2)
 		if status != 0 || len(lines) != 2 || !strings.HasSuffix(strings.ToLower(lines[0]), "/"+name+"\n") || lines[1] != ran {

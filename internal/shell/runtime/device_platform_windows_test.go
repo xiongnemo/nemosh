@@ -8,10 +8,7 @@ import (
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
-// The other half of the same constraint: on Windows there is no /dev, so the shell provides one.
-//
-// Paired with device_platform_other_test.go deliberately. Two tests that fail on opposite platforms
-// state the rule better than a comment could, and neither can drift without CI noticing.
+// Windows has no /dev, so the shell provides one.
 
 func TestDevicePlatform_devIsProvidedByTheShell(t *testing.T) {
 	rt := New(applets.DefaultRegistry, Streams{})

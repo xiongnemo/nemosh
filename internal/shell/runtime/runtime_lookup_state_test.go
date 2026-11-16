@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -142,17 +141,11 @@ func TestRuntime_externalLookupUsesExactUppercasePATH_overCaseVariant(t *testing
 }
 
 func executableName(command string) string {
-	if goruntime.GOOS == "windows" {
-		return command + ".exe"
-	}
-	return command
+	return command + ".exe"
 }
 
 func sameNativePath(left, right string) bool {
-	if goruntime.GOOS == "windows" {
-		return strings.EqualFold(filepath.Clean(left), filepath.Clean(right))
-	}
-	return filepath.Clean(left) == filepath.Clean(right)
+	return strings.EqualFold(filepath.Clean(left), filepath.Clean(right))
 }
 
 func shellSingleQuote(value string) string {

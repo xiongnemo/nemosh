@@ -20,7 +20,3 @@ const errorElevationRequired = syscall.Errno(740)
 func requiresElevation(err error) bool {
 	return errors.Is(err, errorElevationRequired)
 }
-
-// elevationIsAWindowsIdea is what the shared test expects of the platform: only
-// here does a launch fail for wanting administrator.
-const elevationIsAWindowsIdea = true

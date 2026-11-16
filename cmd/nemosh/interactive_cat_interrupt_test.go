@@ -12,7 +12,6 @@ import (
 )
 
 func TestRunInteractive_interruptsCatBeforeFreshInputAndPreservesFreshLine(t *testing.T) {
-	requireVerifiedInterruptPlatform(t)
 	tests := []struct {
 		name    string
 		command string

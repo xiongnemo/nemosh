@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
 
@@ -244,12 +243,12 @@ func (r tarRequest) addTarEntry(c *tarCreation, native, name string, above []os.
 
 // memberName is the name an entry is stored by: the name as given, less what busybox's
 // skip_unsafe_prefix takes off one -- leading slashes, a leading `../`, all up to the last
-// `/../` -- and on Windows a drive before them, which busybox-w32 keeps, though no tar
-// extracts it where it says. The first time something is taken off, it is said. Such a name
-// was stored whole, and this build's own extraction refused it.
+// `/../` -- and a drive before them, which busybox-w32 keeps, though no tar extracts it where
+// it says. The first time something is taken off, it is said. Such a name was stored whole,
+// and this build's own extraction refused it.
 func (c *tarCreation) memberName(name string) string {
 	cut := 0
-	if runtime.GOOS == "windows" && len(name) >= 2 && name[1] == ':' {
+	if len(name) >= 2 && name[1] == ':' {
 		cut = 2
 	}
 	cut += unsafePrefix(name[cut:])

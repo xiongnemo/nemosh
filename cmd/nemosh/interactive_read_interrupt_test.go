@@ -11,7 +11,6 @@ import (
 )
 
 func TestRunInteractive_interruptsReadBeforeFreshInputAndPreservesFreshLine(t *testing.T) {
-	requireVerifiedInterruptPlatform(t)
 	// Given
 	reader, writer, err := os.Pipe()
 	if err != nil {

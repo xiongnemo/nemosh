@@ -3,7 +3,6 @@ package runtime_test
 import (
 	"bytes"
 	"context"
-	stdruntime "runtime"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -23,21 +22,10 @@ func TestRuntime_unamePrintsSysname_whenRunWithoutOptions(t *testing.T) {
 	if status != 0 {
 		t.Fatalf("expected status 0, got %d", status)
 	}
-	if got, want := stdout.String(), expectedRuntimeUnameSysname()+"\n"; got != want {
+	if got, want := stdout.String(), "Windows_NT\n"; got != want {
 		t.Fatalf("expected stdout %q, got %q", want, got)
 	}
 	if got := stderr.String(); got != "" {
 		t.Fatalf("expected empty stderr, got %q", got)
-	}
-}
-
-func expectedRuntimeUnameSysname() string {
-	switch stdruntime.GOOS {
-	case "windows":
-		return "Windows_NT"
-	case "darwin":
-		return "Darwin"
-	default:
-		return "Linux"
 	}
 }

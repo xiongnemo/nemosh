@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"strconv"
 	"strings"
 
@@ -116,11 +115,9 @@ func (r Runtime) promptDirectory(last bool) string {
 	return directory
 }
 
+// samePromptPath is whether two paths are one, as Windows folds their case.
 func samePromptPath(a, b string) bool {
-	if goruntime.GOOS == "windows" {
-		return strings.EqualFold(a, b)
-	}
-	return a == b
+	return strings.EqualFold(a, b)
 }
 
 // shellName is \s: the name the shell was started by, without its directory, and without the

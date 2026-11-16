@@ -3,7 +3,6 @@ package applets_test
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -104,9 +103,9 @@ func TestOd_dumpsAsBusyboxsOdBloaty(t *testing.T) {
 	if want := "0000002 (0000100) 062143 063145\n0000006 (0000104)\n"; err != nil || stderr != "" || stdout != want {
 		t.Errorf("od --traditional 2 100 < s1: %q, %q, %v; want %q", stdout, stderr, err, want)
 	}
-	// A long is four bytes on Windows and eight elsewhere, so -l is -i or -t d8.
+	// A long is four bytes on Windows, so -l is -t d4.
 	long, _, _ := runPermuted(t, view, "", "od", "-l", "bin")
-	want, _, _ := runPermuted(t, view, "", "od", "-t", map[bool]string{true: "d4", false: "d8"}[runtime.GOOS == "windows"], "bin")
+	want, _, _ := runPermuted(t, view, "", "od", "-t", "d4", "bin")
 	if long != want {
 		t.Errorf("od -l bin: %q; want %q", long, want)
 	}

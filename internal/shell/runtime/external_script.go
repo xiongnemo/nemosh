@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 )
 
@@ -134,12 +133,8 @@ func unixInterpreterPath(path string) bool {
 
 // externalLaunchTarget rewrites a launch when the resolved file is a script.
 // Windows cannot run one directly, so the interpreter becomes the program and
-// the script becomes its first operand. Everywhere else the kernel reads the
-// shebang itself and this stays out of the way.
+// the script becomes its first operand.
 func (r Runtime) externalLaunchTarget(executable string, args []string) (string, []string, error) {
-	if runtime.GOOS != "windows" {
-		return executable, args, nil
-	}
 	self, err := os.Executable()
 	if err != nil {
 		return "", nil, fmt.Errorf("locate the nemosh executable: %w", err)

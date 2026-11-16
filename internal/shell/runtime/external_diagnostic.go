@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 )
 
@@ -88,8 +87,6 @@ func (r Runtime) notExecutableHint(name string, err error) string {
 		return r.powerShellHint(name)
 	case strings.HasSuffix(strings.ToLower(name), ".dll"):
 		return "a DLL is loaded by a program, not launched as one"
-	case goruntime.GOOS != "windows":
-		return "the file is there but is not executable; chmod +x makes it so"
 	}
 	return "the file is there but is not something Windows will start; check that it is a program and not data"
 }

@@ -3,7 +3,6 @@ package applets
 import (
 	"context"
 	"io"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -35,13 +34,6 @@ type topHarness struct {
 
 func startTop(t *testing.T) *topHarness {
 	t.Helper()
-	if runtime.GOOS != "windows" {
-		// internal/proc samples on Windows only and refuses elsewhere rather than
-		// guessing, so the application would draw a sampling failure and nothing else --
-		// correct behaviour, and not what these tests are about. TestPs takes the same
-		// guard for the same reason.
-		t.Skip("the process table is implemented on Windows only")
-	}
 	// Handed over uninitialised: tview's SetScreen calls Init, and calling it here as well
 	// makes two writers to the screen's buffers. The default 80x25 fits everything asserted.
 	screen := tcell.NewSimulationScreen("UTF-8")

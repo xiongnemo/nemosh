@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -30,13 +29,6 @@ func runUname(t *testing.T, args ...string) string {
 // (win32/uname.c:21-23), so `uname -a` there reads `10.0 19045` where Nemosh
 // read `unknown unknown`.
 func TestUname_reportsTheRealReleaseAndVersion(t *testing.T) {
-	// Windows is where these have a source. Elsewhere the applet says unknown
-	// on purpose, because Go exposes no portable way to read them and this
-	// platform is build-and-test rather than supported.
-	if runtime.GOOS != "windows" {
-		t.Skip("release and version are only sourced on Windows")
-	}
-
 	// When
 	release := runUname(t, "-r")
 	version := runUname(t, "-v")
@@ -53,10 +45,6 @@ func TestUname_reportsTheRealReleaseAndVersion(t *testing.T) {
 // `uname -a` carries them in place, so the middle of the line stops reading
 // "unknown unknown".
 func TestUname_allCarriesReleaseAndVersion(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("release and version are only sourced on Windows")
-	}
-
 	// When
 	all := runUname(t, "-a")
 

@@ -2,9 +2,7 @@ package applets_test
 
 import (
 	"os"
-	"os/user"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -53,18 +51,6 @@ func TestInstall_copiesAndSetsAttributesAsBusyboxDoes(t *testing.T) {
 	if info, err := os.Stat(filepath.Join(dir, "n1", "n2")); err != nil || !info.IsDir() {
 		t.Errorf("install -d n1/n2 made no directory: %v", err)
 	}
-	// The mode is 0755 with no -m, whatever the umask, and -m's otherwise. Windows keeps only
-	// the owner's write bit.
-	if runtime.GOOS != "windows" {
-		if _, _, err := runPermuted(t, view, "", "install", "-m", "640", "a", "a5"); err != nil {
-			t.Fatal(err)
-		}
-		for name, want := range map[string]os.FileMode{"a2": 0o755, "a5": 0o640, "n1/n2": 0o755} {
-			if info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(name))); err != nil || info.Mode().Perm() != want {
-				t.Errorf("%s: mode %v, %v; want %v", name, info.Mode().Perm(), err, want)
-			}
-		}
-	}
 }
 
 // What busybox's install refuses, and the owner, the group, -p and -s. -s runs strip, which is a
@@ -110,32 +96,13 @@ func TestInstall_refusesAndReportsAsBusyboxDoes(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "s")); err != nil {
 		t.Errorf("install -s made no copy before it failed to strip: %v", err)
 	}
-	// The session's own account is a user everywhere, and its primary group a group, and -p
-	// keeps the times. The group is not the account's name everywhere: macOS's runner is in
-	// staff, and has no group called runner.
-	me, group := applets.CurrentUserName(), primaryGroupName(t)
-	if _, stderr, err := runPermuted(t, view, "", "install", "-p", "-o", me, "-g", group, "a", "p"); err != nil {
-		t.Fatalf("install -o %s -g %s: %q, %v", me, group, stderr, err)
+	// The session's own account is a user, and a group too, as install reads its name as the
+	// account, and -p keeps the times.
+	me := applets.CurrentUserName()
+	if _, stderr, err := runPermuted(t, view, "", "install", "-p", "-o", me, "-g", me, "a", "p"); err != nil {
+		t.Fatalf("install -o %s -g %s: %q, %v", me, me, stderr, err)
 	}
 	if info, err := os.Stat(filepath.Join(dir, "p")); err != nil || !info.ModTime().Equal(past) {
 		t.Errorf("install -p: the copy's time is %v, %v; want %v", info.ModTime(), err, past)
 	}
-}
-
-// primaryGroupName is a group the session's account is in: on Windows the account's own name,
-// which install reads as the account, and elsewhere the account's primary group.
-func primaryGroupName(t *testing.T) string {
-	t.Helper()
-	if runtime.GOOS == "windows" {
-		return applets.CurrentUserName()
-	}
-	account, err := user.Current()
-	if err != nil {
-		t.Fatal(err)
-	}
-	group, err := user.LookupGroupId(account.Gid)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return group.Name
 }

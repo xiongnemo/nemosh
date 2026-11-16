@@ -209,9 +209,8 @@ func (r compressRequest) oneFile(view ProcessView, path string, stdout io.Writer
 //
 // The companion is made where nothing is, as busybox opens it O_EXCL: what is there is
 // `cannot open 'FILE.gz': File exists`, and -f removes it first. It has the original's
-// permissions less the umask's, as busybox gives it the original's mode, so a private
-// file's archive is private too; it was made 0666 less the umask's. gunzip gives it the
-// time the data holds, when it holds one.
+// permissions, as busybox gives it the original's mode, so a read-only file's archive is
+// read-only too. gunzip gives it the time the data holds, when it holds one.
 //
 // The original is removed only after the new file is complete *and both handles
 // are closed*, so an interrupted run leaves the input intact rather than losing
@@ -229,8 +228,7 @@ func (r compressRequest) rewriteFile(view ProcessView, native, path string, info
 	if found, err := os.Lstat(target); err == nil && r.force && !found.IsDir() {
 		os.Remove(target)
 	}
-	mode := maskedMode(info.Mode().Perm(), processFileModeMask(view))
-	destination, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+	destination, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, info.Mode().Perm())
 	if err != nil {
 		source.Close()
 		return cannotOpen(shown, err)

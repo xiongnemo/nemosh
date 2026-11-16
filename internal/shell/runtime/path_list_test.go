@@ -3,7 +3,6 @@ package runtime_test
 import (
 	"fmt"
 	"path/filepath"
-	goruntime "runtime"
 	"testing"
 )
 
@@ -14,9 +13,6 @@ import (
 // busybox-w32's, down to a one-letter directory at the start of a list reading as a drive.
 // The program is looked up and not run: run, it would be this test binary.
 func TestRuntime_windowsPathListTakesColons(t *testing.T) {
-	if goruntime.GOOS != "windows" {
-		t.Skip("busybox-w32's rule, which is for Windows alone")
-	}
 	script := fmt.Sprintf("cd '%s'\n", filepath.ToSlash(t.TempDir())) +
 		"mkdir bin; printf MZ > bin/prog.exe\n" +
 		"found() { case $1 in *bin/prog.exe) echo found;; *) echo \"missing: $1\";; esac; }\n" +

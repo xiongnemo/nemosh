@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path/filepath"
-	"runtime"
 	"strconv"
 )
 
@@ -213,37 +211,17 @@ func accountID(name string, group bool) (int, error) {
 	if group {
 		kind = "group"
 	}
-	if runtime.GOOS == "windows" {
-		switch name {
-		case rootUserName:
-			return 0, nil
-		case CurrentUserName(), accountName():
-			return currentUserID(), nil
-		}
-		return 0, fmt.Errorf("unknown %s %s", kind, name)
+	switch name {
+	case rootUserName:
+		return 0, nil
+	case CurrentUserName(), accountName():
+		return currentUserID(), nil
 	}
-	var id string
-	if group {
-		found, err := user.LookupGroup(name)
-		if err != nil {
-			return 0, fmt.Errorf("unknown %s %s", kind, name)
-		}
-		id = found.Gid
-	} else {
-		found, err := user.Lookup(name)
-		if err != nil {
-			return 0, fmt.Errorf("unknown %s %s", kind, name)
-		}
-		id = found.Uid
-	}
-	return strconv.Atoi(id)
+	return 0, fmt.Errorf("unknown %s %s", kind, name)
 }
 
 // changeOwner gives host to owner's user and group. Windows has no Unix owner to give, and
 // busybox-w32's chown does nothing and succeeds.
-func changeOwner(host string, owner installOwner) error {
-	if runtime.GOOS == "windows" {
-		return nil
-	}
-	return os.Lchown(host, owner.uid, owner.gid)
+func changeOwner(string, installOwner) error {
+	return nil
 }

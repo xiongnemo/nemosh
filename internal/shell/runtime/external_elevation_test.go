@@ -47,7 +47,7 @@ func TestRequiresElevation_matchesThroughTheWrappedError(t *testing.T) {
 		{
 			name: "the real shape, as os/exec returns it",
 			err:  &os.PathError{Op: "fork/exec", Path: `C:\Windows\system32\WinSAT.exe`, Err: syscall.Errno(740)},
-			want: elevationIsAWindowsIdea,
+			want: true,
 		},
 		{
 			name: "some other launch failure",

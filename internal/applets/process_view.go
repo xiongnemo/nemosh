@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -208,11 +207,9 @@ func (v hostProcessView) LookupEnv(name string) (string, bool) {
 	return "", false
 }
 
+// environmentNamesEqual is whether two environment names are one, as Windows folds their case.
 func environmentNamesEqual(left, right string) bool {
-	if runtime.GOOS == "windows" {
-		return strings.EqualFold(left, right)
-	}
-	return left == right
+	return strings.EqualFold(left, right)
 }
 
 func resolveViewPath(cwd, path string) string {
