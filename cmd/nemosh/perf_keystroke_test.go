@@ -19,9 +19,19 @@ import (
 // The list sizes are measured from the machine this was written on: 78 PATH
 // directories yielding just over a thousand offerable names, and a history file
 // at its default cap.
+//
+// The figure is the fewest of three measurements. testing.AllocsPerRun counts every
+// allocation the process makes while it runs, and a goroutine some other test left running
+// added fourteen a run to one measurement on a Windows runner on 2026-11-17, under -race and
+// -shuffle, where this machine with the same seed counted none. Noise only ever adds: an
+// allocation the suggester makes is in every measurement, so the fewest is the suggester's.
 func keystrokeAllocations(t *testing.T, work func()) int {
 	t.Helper()
-	return int(testing.AllocsPerRun(50, work))
+	fewest := int(testing.AllocsPerRun(50, work))
+	for range 2 {
+		fewest = min(fewest, int(testing.AllocsPerRun(50, work)))
+	}
+	return fewest
 }
 
 func syntheticCommands(count int) []string {
