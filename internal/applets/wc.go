@@ -1,14 +1,10 @@
 package applets
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"unicode"
-
-	"github.com/xiongnemo/nemosh/internal/textgrid"
 )
 
 func newWcApplet() Applet {
@@ -18,8 +14,12 @@ func newWcApplet() Applet {
 			return err
 		}
 		flags.manyFiles = len(paths) > 1
+		count := countBytes
+		if !flags.words && !flags.chars && !flags.longest {
+			count = countLinesAndBytes
+		}
 		if len(paths) == 0 {
-			counts, err := countBytes(stdin)
+			counts, err := count(stdin)
 			if err != nil {
 				return err
 			}
@@ -43,7 +43,7 @@ func newWcApplet() Applet {
 				opened = false
 				continue
 			}
-			counts, countErr := countBytes(file)
+			counts, countErr := count(file)
 			closeErr := file.Close()
 			if err := errors.Join(countErr, closeErr); err != nil {
 				return err
@@ -176,70 +176,4 @@ func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string
 	}
 	_, err := fmt.Fprintln(stdout)
 	return err
-}
-
-// countBytes counts one stream, in bytes and in characters at once.
-//
-// Those are different questions on a UTF-16 file, which is why `-m` was recorded as
-// outstanding: `-c` must stay a count of the bytes on disk, and `-m` has to be a count of
-// the characters they encode. Counting the raw bytes on the way *into* the decoder
-// answers both from a single pass -- `-c` from the tally, and `-m`, `-l`, `-w` and `-L`
-// from the decoded text, which is the only view in which they mean anything.
-//
-// The byte-order mark is not a character. It is consumed as a mark on the way in, so `-c`
-// counts its bytes and `-m` does not count it as one -- the same rule `grep` follows when
-// it strips a mark rather than trying to match `^` after it. GNU counts it; this is a
-// deliberate divergence and the reason is that a mark is the file saying what it is,
-// rather than part of what it says.
-func countBytes(input io.Reader) (wcCounts, error) {
-	counting := &countingReader{inner: input}
-	reader := bufio.NewReader(decodeTextInput(counting))
-	counts := wcCounts{}
-	inWord := false
-	lineWidth := 0
-	for {
-		r, size, err := reader.ReadRune()
-		if size > 0 {
-			counts.chars++
-		}
-		switch {
-		case r == '\n' || r == '\r' || r == '\f' || r == '\v':
-			// -L is the width of the longest line, not counting what ends it. A carriage
-			// return, a form feed and a vertical tab end one too, and all but the vertical
-			// tab start the next at the left, as busybox's wc has them; only a newline is a
-			// line for -l.
-			counts.longest = max(counts.longest, lineWidth)
-			if r == '\n' {
-				counts.lines++
-			}
-			if r != '\v' {
-				lineWidth = 0
-			}
-		case r == '\t':
-			// A tab reaches the next multiple of eight, as busybox and GNU count it; it
-			// counted nothing.
-			lineWidth = (lineWidth | 7) + 1
-		case size > 0:
-			lineWidth += textgrid.RuneCells(r)
-		}
-		if size > 0 && unicode.IsSpace(r) {
-			inWord = false
-		} else if size > 0 && !inWord {
-			counts.words++
-			inWord = true
-		}
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				// A final line without a newline is still a line for -L, which is
-				// the width of the longest *line* rather than of the longest
-				// newline-terminated one.
-				counts.longest = max(counts.longest, lineWidth)
-				// Read to the end, so the tally is the whole file -- including any
-				// bytes the decoder consumed as a mark and never handed on.
-				counts.bytes = int(counting.total)
-				return counts, nil
-			}
-			return wcCounts{}, err
-		}
-	}
 }

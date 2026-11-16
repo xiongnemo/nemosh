@@ -36,7 +36,8 @@ func TestFinalSecurity_countBytes_preservesWordsAcrossChunkBoundaries(t *testing
 func TestFinalSecurity_countBytes_countsLargeBoundedInputIncrementally(t *testing.T) {
 	// Given
 	const repetitions = 1 << 20
-	input := &boundedRequestReader{remaining: repetitions * 5, pattern: []byte("word\n"), maxRequest: 32 * 1024}
+	// wc reads 64 KiB at a time, and no more however long the input is.
+	input := &boundedRequestReader{remaining: repetitions * 5, pattern: []byte("word\n"), maxRequest: wcBlock}
 
 	// When
 	counts, err := countBytes(input)
