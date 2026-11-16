@@ -51,10 +51,9 @@ func TestRegistryNames_returnsACopy(t *testing.T) {
 // package would ship a shim for an applet that does not exist, or miss one that
 // does, so the agreement is pinned here rather than assumed.
 func TestRegistryNames_agreeWithTheManifestSourceParse(t *testing.T) {
-	// Given: both halves of the list, the applets busybox has everywhere and the
-	// ones only Windows has, which are in a file of their own.
+	// Given: the table.
 	var source []byte
-	for _, file := range []string{"registry.go", "registry_windows.go"} {
+	for _, file := range []string{"registry_table.go"} {
 		text, err := os.ReadFile(filepath.Join(file))
 		if err != nil {
 			t.Fatal(err)

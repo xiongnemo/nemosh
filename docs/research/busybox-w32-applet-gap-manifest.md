@@ -22,8 +22,8 @@ Derived on 2026-07-07 from the local working tree:
 - BusyBox applet names: unique first macro argument from `//applet:` lines that
   contain `APPLET`, `APPLET_ODDNAME`, `APPLET_NOEXEC`, `APPLET_NOFORK`, or
   `APPLET_SCRIPTED` in `*.c` files under the clone.
-- Nemosh applet names: constructor calls in `internal/applets/registry.go`,
-  including literal names passed to `newTestApplet(...)`.
+- Nemosh applet names: the rows of `defaultApplets` in
+  `internal/applets/registry_table.go`, each a name and how to make its applet.
 
 Current derived counts:
 

@@ -8,7 +8,8 @@ import (
 
 var (
 	busyBoxAppletPattern = regexp.MustCompile(`\bAPPLET(?:_ODDNAME|_NOEXEC|_NOFORK|_SCRIPTED)?\(([^,)]*)`)
-	nemoshAppletPattern  = regexp.MustCompile(`\bnew([A-Za-z0-9]+)Applet\((?:"([^"]*)")?`)
+	// A row of internal/applets' defaultApplets: `{"cat", newCatApplet},`.
+	nemoshAppletPattern = regexp.MustCompile(`(?m)^\s*\{"([^"]+)",`)
 )
 
 type AppletComparison struct {
@@ -33,15 +34,11 @@ func ParseBusyBoxApplets(source string) []string {
 	return applets
 }
 
+// ParseNemoshRegistry is the names in the source of internal/applets' table, in its order.
 func ParseNemoshRegistry(source string) []string {
 	applets := make([]string, 0)
-	matches := nemoshAppletPattern.FindAllStringSubmatch(source, -1)
-	for _, match := range matches {
-		if match[2] != "" {
-			applets = append(applets, match[2])
-			continue
-		}
-		applets = append(applets, strings.ToLower(match[1]))
+	for _, match := range nemoshAppletPattern.FindAllStringSubmatch(source, -1) {
+		applets = append(applets, match[1])
 	}
 	return applets
 }

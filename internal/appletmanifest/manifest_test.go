@@ -25,22 +25,22 @@ func TestParseBusyBoxApplets_returnsNames_whenMacroVariantsAreDeclared(t *testin
 	}
 }
 
-func TestParseNemoshRegistry_returnsNames_whenDefaultRegistryContainsConstructors(t *testing.T) {
-	// Given: Nemosh registry source text with default registry constructor calls.
+func TestParseNemoshRegistry_returnsNames_whenTheTableHasRows(t *testing.T) {
+	// Given: the source of a table of applets.
 	source := `
-var DefaultRegistry = NewRegistry(
-	newTrueApplet(),
-	newTestApplet("["),
-	newWinpathApplet(),
-	newPosixpathApplet(),
-)
+var defaultApplets = [...]appletEntry{
+	{"[", func() Applet { return newTestApplet("[") }},
+	{"posixpath", newPosixpathApplet},
+	{"true", newTrueApplet},
+	{"winpath", newWinpathApplet},
+}
 `
 
-	// When: the registry source text is parsed.
+	// When: the table's source text is parsed.
 	got := ParseNemoshRegistry(source)
 
-	// Then: constructor calls are mapped to registered applet names in source order.
-	want := []string{"true", "[", "winpath", "posixpath"}
+	// Then: the rows' names, in the table's order.
+	want := []string{"[", "posixpath", "true", "winpath"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("ParseNemoshRegistry() = %v, want %v", got, want)
 	}
