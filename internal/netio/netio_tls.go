@@ -1,7 +1,6 @@
 package netio
 
 import (
-	"context"
 	"crypto/tls"
 	"net"
 	"time"
@@ -42,9 +41,4 @@ func (a netAdapter) RemoteAddr() net.Addr { return textAddr(a.Conn.RemoteAddr())
 func (a netAdapter) SetDeadline(deadline time.Time) error {
 	_ = a.Conn.SetReadDeadline(deadline)
 	return a.Conn.SetWriteDeadline(deadline)
-}
-
-// LookupAddr is the names an address has, by a reverse lookup.
-func LookupAddr(ctx context.Context, address string) ([]string, error) {
-	return net.DefaultResolver.LookupAddr(ctx, address)
 }

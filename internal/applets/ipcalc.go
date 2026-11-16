@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
+	"math/bits"
+	"net/netip"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/netio"
 )
 
 // ipcalc works out the network numbers people otherwise do in their heads and get wrong.
@@ -19,7 +22,8 @@ import (
 // **A netmask with holes in it is not rejected.** `ipcalc -n 1.2.3.4 255.0.255.0` answers
 // `1.0.3.0`, because the operation really is a bitwise and, and refusing the non-contiguous
 // case would refuse a calculation that is perfectly well defined. That is what busybox does
-// too. What *is* refused is a prefix outside 0..32 and an address that is not one.
+// too, and its PREFIX is the bits the mask has set, 16 for that one, where it was 0. What *is*
+// refused is a prefix outside 0..32 and an address that is not one.
 func newIpcalcApplet() Applet {
 	return simpleApplet{name: "ipcalc", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
 		options, operands, err := parseAppletLongOptions(ctx, args, ipcalcLongOptions, "bnmphs", "")
@@ -35,7 +39,7 @@ func newIpcalcApplet() Applet {
 		if err := ipcalcAsked(options, operands); err != nil {
 			return ExitStatusMessage(1, err)
 		}
-		lines, err := calculateIP(options, operands)
+		lines, err := calculateIP(ctx, options, operands)
 		if err != nil {
 			if options.has('s') {
 				// -s asks for the status without the diagnostic, which is what a script
@@ -49,40 +53,49 @@ func newIpcalcApplet() Applet {
 	}}
 }
 
-func calculateIP(options appletOptions, operands []string) ([]string, error) {
+// parseIPv4 is a dotted IPv4 address as its 32 bits, or false for anything else.
+func parseIPv4(text string) (uint32, bool) {
+	address, err := netip.ParseAddr(text)
+	if err != nil || !address.Is4() {
+		return 0, false
+	}
+	octets := address.As4()
+	return uint32(octets[0])<<24 | uint32(octets[1])<<16 | uint32(octets[2])<<8 | uint32(octets[3]), true
+}
+
+func ipv4Text(value uint32) string {
+	return netip.AddrFrom4([4]byte{byte(value >> 24), byte(value >> 16), byte(value >> 8), byte(value)}).String()
+}
+
+func calculateIP(ctx context.Context, options appletOptions, operands []string) ([]string, error) {
 	text, prefixText, hasPrefix := strings.Cut(operands[0], "/")
-	address := net.ParseIP(text).To4()
-	if address == nil {
+	address, ok := parseIPv4(text)
+	if !ok {
 		return nil, fmt.Errorf("bad IP address: %s", text)
 	}
-	prefix, err := ipPrefix(prefixText, hasPrefix, operands, address)
+	mask, err := ipMask(prefixText, hasPrefix, operands, address)
 	if err != nil {
 		return nil, err
 	}
-	mask := net.CIDRMask(prefix, 32)
-	if len(operands) == 2 && !hasPrefix {
-		// An explicit netmask operand is used as given, holes and all.
-		given := net.ParseIP(operands[1]).To4()
-		if given == nil {
-			return nil, fmt.Errorf("bad netmask: %s", operands[1])
-		}
-		mask = net.IPMask(given)
-	}
 	var lines []string
 	if options.has('m') {
-		lines = append(lines, "NETMASK="+net.IP(mask).String())
+		lines = append(lines, "NETMASK="+ipv4Text(mask))
 	}
 	if options.has('b') {
-		lines = append(lines, "BROADCAST="+applyIPMask(address, mask, true).String())
+		lines = append(lines, "BROADCAST="+ipv4Text(address|^mask))
 	}
 	if options.has('n') {
-		lines = append(lines, "NETWORK="+applyIPMask(address, mask, false).String())
+		lines = append(lines, "NETWORK="+ipv4Text(address&mask))
 	}
 	if options.has('p') {
-		lines = append(lines, "PREFIX="+strconv.Itoa(prefix))
+		lines = append(lines, "PREFIX="+strconv.Itoa(bits.OnesCount32(mask)))
 	}
 	if options.has('h') {
-		lines = append(lines, "HOSTNAME="+resolveIPName(address))
+		name, err := resolveIPName(ctx, ipv4Text(address))
+		if err != nil {
+			return nil, err
+		}
+		lines = append(lines, "HOSTNAME="+name)
 	}
 	return lines, nil
 }
@@ -107,58 +120,54 @@ func ipcalcAsked(options appletOptions, operands []string) error {
 	return nil
 }
 
-// ipPrefix answers the prefix length, from the address, from a netmask operand, or from the
-// old class rule.
+// ipMask answers the netmask: from a prefix after the address, from a netmask operand, holes
+// and all, or from the old class rule.
 //
 // **The class rule is what makes a bare address answer anything at all.** Classful routing
 // has not existed since 1993, but `ipcalc 10.1.2.3` still answers /8 in every version of
 // this command, and a script reading NETMASK from it expects that number.
-func ipPrefix(text string, present bool, operands []string, address net.IP) (int, error) {
-	if present {
+func ipMask(text string, present bool, operands []string, address uint32) (uint32, error) {
+	prefix := 24
+	switch {
+	case present:
 		// A netmask after the slash is no number, as busybox's xatoul_range reads it:
 		// `invalid number '255.255.255.0'`. It was said to be out of range.
-		return xatouRange(text, 0, 32)
-	}
-	if len(operands) == 2 {
-		mask := net.ParseIP(operands[1]).To4()
-		if mask == nil {
+		value, err := xatouRange(text, 0, 32)
+		if err != nil {
+			return 0, err
+		}
+		prefix = value
+	case len(operands) == 2:
+		mask, ok := parseIPv4(operands[1])
+		if !ok {
 			return 0, fmt.Errorf("bad netmask: %s", operands[1])
 		}
-		ones, _ := net.IPMask(mask).Size()
-		return ones, nil
+		return mask, nil
+	case address>>24 < 128:
+		prefix = 8
+	case address>>24 < 192:
+		prefix = 16
 	}
-	switch {
-	case address[0] < 128:
-		return 8, nil
-	case address[0] < 192:
-		return 16, nil
+	if prefix == 0 {
+		return 0, nil
 	}
-	return 24, nil
+	return ^uint32(0) << (32 - prefix), nil
 }
 
-// applyIPMask answers the network address, or the broadcast address when the host bits are
-// set rather than cleared.
-func applyIPMask(address net.IP, mask net.IPMask, broadcast bool) net.IP {
-	out := make(net.IP, 4)
-	for index := 0; index < 4; index++ {
-		if broadcast {
-			out[index] = address[index] | ^mask[index]
-			continue
-		}
-		out[index] = address[index] & mask[index]
-	}
-	return out
-}
-
-// resolveIPName asks the resolver what the address is called.
-//
-// The one part of this command that talks to the network, which is why it is only done when
-// -h asks. An address with no name answers the address, rather than an error: the caller
-// asked what it is called, and "itself" is a truthful answer.
-func resolveIPName(address net.IP) string {
-	names, err := net.LookupAddr(address.String())
+// resolveIPName asks the resolver what the address is called, which is the one part of this
+// command that talks to the network and so is done only when -h asks. One with no name is
+// busybox's `can't find hostname for ADDRESS`, status 1, where it answered the address.
+func resolveIPName(ctx context.Context, address string) (string, error) {
+	names, err := lookupIPName(ctx, address)
 	if err != nil || len(names) == 0 {
-		return address.String()
+		reason := "no name"
+		if err != nil {
+			reason = err.Error()
+		}
+		return "", fmt.Errorf("can't find hostname for %s: %s", address, reason)
 	}
-	return strings.TrimSuffix(names[0], ".")
+	return strings.TrimSuffix(names[0], "."), nil
 }
+
+// lookupIPName is how -h asks for a name; a test makes it answer.
+var lookupIPName = netio.LookupAddr
