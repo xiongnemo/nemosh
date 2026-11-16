@@ -44,6 +44,10 @@ var forbiddenInRelease = []string{
 	"crypto/x509",
 	// Random bytes are the system's, RtlGenRandom; see internal/osrand.
 	"crypto/rand",
+	// The checksums' hashes are CNG's; see internal/digest. SHA-3 stays crypto's.
+	"crypto/md5",
+	"crypto/sha1",
+	"crypto/sha512",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

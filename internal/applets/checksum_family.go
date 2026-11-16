@@ -1,12 +1,12 @@
 package applets
 
 import (
-	"crypto/sha1"
 	"crypto/sha3"
-	"crypto/sha512"
 	"fmt"
 	"hash"
 	"strconv"
+
+	"github.com/xiongnemo/nemosh/internal/digest"
 )
 
 // The rest of the hash family. nemosh had md5sum and sha256sum; busybox-w32 also
@@ -16,12 +16,15 @@ import (
 // Each is the same applet with a different constructor, so -c, -b, -t and -w and
 // the `<hex>  <name>` format come along for free rather than being reimplemented
 // four times.
+//
+// MD5, SHA-1 and SHA-2 are CNG's, internal/digest, as busybox-w32's are; SHA-3 is crypto's,
+// as busybox's is its own, CNG having no SHA3-224.
 
-func newSha1sumApplet() Applet { return newChecksumApplet("sha1sum", sha1.New) }
+func newSha1sumApplet() Applet { return newChecksumApplet("sha1sum", digest.SHA1) }
 
-func newSha384sumApplet() Applet { return newChecksumApplet("sha384sum", sha512.New384) }
+func newSha384sumApplet() Applet { return newChecksumApplet("sha384sum", digest.SHA384) }
 
-func newSha512sumApplet() Applet { return newChecksumApplet("sha512sum", sha512.New) }
+func newSha512sumApplet() Applet { return newChecksumApplet("sha512sum", digest.SHA512) }
 
 // sha3sumDefaultBits is 224, which is what busybox defaults to -- measured, and
 // worth stating because 512 is the obvious guess and would be silently wrong.

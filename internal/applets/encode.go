@@ -2,8 +2,6 @@ package applets
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -11,6 +9,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/digest"
 )
 
 // base64 and the checksums: what you reach for after downloading something, and
@@ -117,9 +117,9 @@ func isBase64Rune(r rune) bool {
 // The checksum family. One implementation, several names, because the only
 // difference is which hash is constructed -- and several copies of the -c parser
 // would drift. The rest of the names are in checksum_family.go.
-func newSha256sumApplet() Applet { return newChecksumApplet("sha256sum", sha256.New) }
+func newSha256sumApplet() Applet { return newChecksumApplet("sha256sum", digest.SHA256) }
 
-func newMd5sumApplet() Applet { return newChecksumApplet("md5sum", md5.New) }
+func newMd5sumApplet() Applet { return newChecksumApplet("md5sum", digest.MD5) }
 
 // The output format is `<hex>  <name>`, two spaces, and with -b `<hex> *<name>`, busybox's and
 // GNU's alike; -t after -b is two spaces again.
