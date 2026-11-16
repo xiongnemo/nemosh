@@ -46,9 +46,10 @@ func TestEditor_opensAtTheLineAPlusOperandNames(t *testing.T) {
 	harness.waitForScreen(t, "Cut one line")
 	harness.writeOut(t)
 
-	// Then
-	written := waitForFile(t, path, func(text string) bool { return !strings.Contains(text, "number 5\n") })
-	if strings.Count(written, "\n") != 9 || !strings.Contains(written, "number 4\n") || !strings.Contains(written, "number 6\n") {
+	// Then: nine lines written. Without one line less, the file emptied by the write before it
+	// is written lacked line 5 as well, and a macOS runner read it there.
+	written := waitForFile(t, path, func(text string) bool { return strings.Count(text, "\n") == 9 })
+	if strings.Contains(written, "number 5\n") || !strings.Contains(written, "number 4\n") || !strings.Contains(written, "number 6\n") {
 		t.Fatalf("cut the wrong line:\n%s", written)
 	}
 }
