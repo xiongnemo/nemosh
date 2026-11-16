@@ -69,11 +69,23 @@ var jobStateCoverage = map[string]string{
 	"lifecycle":         "rebuilt: the child's exit is its own",
 }
 
+// A field of the shellState a Runtime embeds is the Runtime's as much as its own are, and is
+// decided here by its name as they are.
 func TestJobState_everyRuntimeFieldIsDecided(t *testing.T) {
-	fields := reflect.TypeFor[Runtime]()
+	var names []string
+	runtime := reflect.TypeFor[Runtime]()
+	for index := range runtime.NumField() {
+		if field := runtime.Field(index); field.Anonymous && field.Type == reflect.TypeFor[*shellState]() {
+			shared := field.Type.Elem()
+			for inner := range shared.NumField() {
+				names = append(names, shared.Field(inner).Name)
+			}
+			continue
+		}
+		names = append(names, runtime.Field(index).Name)
+	}
 	seen := map[string]bool{}
-	for index := range fields.NumField() {
-		name := fields.Field(index).Name
+	for _, name := range names {
 		seen[name] = true
 		if _, ok := jobStateCoverage[name]; !ok {
 			t.Errorf("Runtime.%s has no entry in jobStateCoverage: decide whether a job process inherits it", name)

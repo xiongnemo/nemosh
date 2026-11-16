@@ -129,6 +129,8 @@ func (r Runtime) runCommandWithTemporaryAssignments(ctx context.Context, args []
 
 func (r Runtime) withLocalAssignments(assignments []assignment) *Runtime {
 	commandRuntime := r
+	// Its variables, environment and changes are its own; see shellState.
+	commandRuntime.detach()
 	commandRuntime.vars = make(map[string]string, len(r.vars)+len(assignments))
 	commandRuntime.env = r.env.clone()
 	commandRuntime.shadowed = nil

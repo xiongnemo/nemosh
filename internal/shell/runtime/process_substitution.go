@@ -154,6 +154,7 @@ func (r Runtime) runIntoFile(ctx context.Context, script Script, file *os.File, 
 		return errors.Join(err, table.closeAll())
 	}
 	child = child.withFDTable(table)
+	child.detach()
 	child.traps = map[trapName]string{}
 	// The status is discarded, which is bash's behaviour: `diff <(false) x` reports what
 	// diff said, not what false said.

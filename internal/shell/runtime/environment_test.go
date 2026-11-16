@@ -101,7 +101,7 @@ func TestEnvironment_windowsSerializationUsesLatestMutation_forUnknownName(t *te
 }
 
 func TestRuntime_canonicalParentWinsWindowsSerializationWithoutChangingParent(t *testing.T) {
-	runtime := Runtime{vars: map[string]string{}, env: NewEnvironment([]string{"PATH=upper", "Path=title"})}
+	runtime := Runtime{shellState: &shellState{vars: map[string]string{}, env: NewEnvironment([]string{"PATH=upper", "Path=title"})}}
 
 	child := runtime.withLocalAssignments([]assignment{{name: "pAtH", value: "child"}})
 

@@ -190,6 +190,7 @@ func (r Runtime) withProgramPATH(name string, assignments []assignment) Runtime 
 		return r
 	}
 	if _, function := r.calledFunction(name); !function {
+		r.detach()
 		r.commands = r.commands.fork()
 	}
 	return r

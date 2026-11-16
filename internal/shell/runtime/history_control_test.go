@@ -109,7 +109,7 @@ func TestRecordHistoryLine(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			r := Runtime{vars: map[string]string{}, history: newShellHistory(), mutatedVars: map[string]struct{}{}}
+			r := Runtime{shellState: &shellState{vars: map[string]string{}, history: newShellHistory(), mutatedVars: map[string]struct{}{}}}
 			if test.control != "" {
 				r.vars["HISTCONTROL"] = test.control
 			}
@@ -130,18 +130,18 @@ func TestRecordHistoryLine(t *testing.T) {
 // HISTSIZE never exceeds the built-in ceiling, so a rc file cannot make one session hold
 // an unbounded list.
 func TestHistoryLimit_isCapped(t *testing.T) {
-	r := Runtime{vars: map[string]string{"HISTSIZE": "99999999"}}
+	r := Runtime{shellState: &shellState{vars: map[string]string{"HISTSIZE": "99999999"}}}
 	if got := r.historyLimit(); got != maxHistoryEntries {
 		t.Fatalf("historyLimit = %d, want the ceiling %d", got, maxHistoryEntries)
 	}
 	// Unset is the ceiling too, which is what keeps the old behaviour for anyone who
 	// never sets it.
-	empty := Runtime{vars: map[string]string{}}
+	empty := Runtime{shellState: &shellState{vars: map[string]string{}}}
 	if got := empty.historyLimit(); got != maxHistoryEntries {
 		t.Fatalf("historyLimit with no HISTSIZE = %d, want %d", got, maxHistoryEntries)
 	}
 	// And a negative value falls back rather than truncating to nothing.
-	negative := Runtime{vars: map[string]string{"HISTSIZE": "-5"}}
+	negative := Runtime{shellState: &shellState{vars: map[string]string{"HISTSIZE": "-5"}}}
 	if got := negative.historyLimit(); got != maxHistoryEntries {
 		t.Fatalf("historyLimit with a negative HISTSIZE = %d, want %d", got, maxHistoryEntries)
 	}

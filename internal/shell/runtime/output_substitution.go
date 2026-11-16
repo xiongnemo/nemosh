@@ -78,6 +78,7 @@ func (child Runtime) readSubstitution(ctx context.Context, script Script, pipe *
 		return
 	}
 	child = child.withFDTable(table)
+	child.detach()
 	child.traps = map[trapName]string{}
 	child.executeTypedScriptFrom(ctx, script, savedStatus)
 }

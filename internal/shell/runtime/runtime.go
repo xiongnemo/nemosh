@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 )
@@ -16,59 +15,27 @@ type Streams struct {
 	Stderr io.Writer
 }
 
+// Runtime is the shell as one command sees it. It is passed by value, and a method that changes
+// what only its own command should see -- a redirection's streams, a function call's parameters
+// and frame, the flags below that mark where an expansion is -- changes its copy. Every method
+// call copies it, so its size is the interpreter's cost: 512 bytes more made a loop a third
+// slower, measured. What a copy shares with the value it was copied from, the tables a command
+// reads and writes through, is therefore one pointer, shellState, and not on the value at all.
 type Runtime struct {
-	initErr     error
-	registry    applets.Registry
-	functions   map[functionName]functionDefinition
-	streams     Streams
-	fds         *fdTable
-	vars        map[string]string
-	traps       map[trapName]string
-	trapRunning map[trapName]bool
+	*shellState
+	streams Streams
+	fds     *fdTable
 	// trapStatus is the status the running trap's action was entered with, which an `exit`
 	// given none ends with; see runTrap. Nil outside one.
 	trapStatus *int
-	// signals holds what `kill` sent this shell until a command boundary runs the trap;
-	// see signal_inbox.go. Nil in a subshell, which a signal is never addressed to.
-	signals   *signalInbox
-	params    *parameters
-	options   *shellOptions
-	expansion *expansionState
-	aliases   map[string]string
+	params     *parameters
 	// aliasChain is the aliases whose text is running, which are not substituted again inside
 	// it; see alias_expand.go. aliasView is the aliases the running line was read with, and
 	// nil for the ones defined now; see alias_view.go.
 	aliasChain []string
 	aliasView  map[string]string
-	// childCPU is shared by pointer across snapshots: a pipeline stage's
-	// children are the shell's children too, and `times` in the parent has to
-	// see what they used.
-	childCPU *childCPUTime
-	// history is shared by pointer across snapshots, so a command recorded in a
-	// pipeline stage is still there when the parent's `history` asks.
-	history *shellHistory
-	// completions is what complete was told; see complete_builtin.go. Shared as history is.
-	completions *completionTable
-	// commands is where the commands that ran were found; see command_hash.go. A subshell
-	// starts with the shell's and keeps its own.
-	commands *commandTable
-	// dirStack is what lies beneath the current directory, for pushd/popd/dirs.
-	// Position zero is not stored -- it is read from the shell, so it cannot go
-	// stale when `cd` moves. See builtin_dirs.go.
-	dirStack *directoryStack
-	// arrays is the indexed-array store, kept apart from vars because packing
-	// elements into one string cannot represent an element containing the
-	// separator -- which is the case arrays exist for. See array.go.
-	arrays *shellArrays
 	// shadowed is what a command's temporary assignments took out of arrays; see array_shadow.go.
 	shadowed []shadowedArray
-	// loops carries the pending `break n` / `continue n` level. Shared by pointer
-	// for the reason loop_levels.go gives: only loops read it, and threading it
-	// through every flowControl signature would touch everything that does not.
-	loops *loopLevels
-	// special holds what $RANDOM and $SECONDS are computed from. Shared by
-	// pointer so a subshell keeps counting from the same start.
-	special *specialState
 	// locals belongs to the function call in progress and is nil outside one,
 	// which is how `local` knows there is nothing to restore to.
 	locals *localScope
@@ -76,19 +43,12 @@ type Runtime struct {
 	// of it: $FUNCNAME, $BASH_SOURCE, $BASH_LINENO and `caller`. See call_stack.go.
 	frames     *callFrame
 	scriptFile string
-	// substitutions counts the `>(cmd)` commands still reading, which a script waits for
-	// before it exits. One for the whole shell, shared by every snapshot: a pipeline stage
-	// or a subshell can start one too. See output_substitution.go.
-	substitutions *sync.WaitGroup
 	// traceTurn orders a pipeline's `set -x` lines, a stage's after the stage's before it; see
 	// trace_turn.go. Shared with what the stage clones, a subshell or a nested pipeline in it.
 	traceTurn *traceTurn
 	// pipeStage is the pipeline stage whose pipe this runtime's output goes into, which a
 	// write that finds its reader gone ends; see pipe_stage.go. Shared as traceTurn is.
 	pipeStage *pipeStage
-	// appletFrames are the frames applet calls were handed recently, which a call the same
-	// as one of them is handed again; see applet_frame.go. Shared by every snapshot.
-	appletFrames *appletFrames
 	// errExitSuppressed marks the places POSIX 2.9.1 exempts from `set -e`: a
 	// condition, a negated pipeline, and every command but the last of an
 	// and-or list. It rides on the Runtime value rather than the shared options
@@ -113,10 +73,6 @@ type Runtime struct {
 	// starFields marks an unquoted `*` list, `${a[*]}`, which is a field per element as
 	// unquoted `$*` is; see buildParameter. On the value, so it is that word's alone.
 	starFields    bool
-	readonly      map[string]struct{}
-	attributes    map[string]variableAttributes
-	mutatedVars   map[string]struct{}
-	mask          *fileModeMask
 	sourceDepth   int
 	functionDepth int
 	// subshellDepth is $BASH_SUBSHELL; see subshellSnapshot.
@@ -125,10 +81,6 @@ type Runtime struct {
 	// see command_options.go.
 	searchPath  string
 	interactive interactiveState
-	paths       *pathState
-	env         Environment
-	jobScope    *jobScope
-	lifecycle   *shellLifecycle
 }
 
 type shellLifecycle struct {

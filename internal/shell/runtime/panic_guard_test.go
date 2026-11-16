@@ -16,9 +16,8 @@ import (
 
 func guardTestRuntime(stderr *bytes.Buffer) Runtime {
 	created := Runtime{
-		streams:   Streams{Stderr: stderr},
-		vars:      map[string]string{},
-		expansion: newExpansionState(),
+		shellState: &shellState{vars: map[string]string{}, expansion: newExpansionState()},
+		streams:    Streams{Stderr: stderr},
 	}
 	return created
 }

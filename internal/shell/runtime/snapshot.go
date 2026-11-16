@@ -77,22 +77,17 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 	} else {
 		lifecycle, signals = r.lifecycle, r.signals
 	}
-	return Runtime{
+	state := &shellState{
 		initErr:     r.initErr,
 		registry:    r.registry,
 		functions:   cloneMap(r.functions),
-		streams:     table.streams(),
-		fds:         table,
 		vars:        cloneMap(r.vars),
 		traps:       r.inheritedTraps(),
 		trapRunning: r.runningInSnapshot(),
 		signals:     signals,
-		params:      &parameters{name: r.params.name, values: append([]string(nil), r.params.values...), function: r.params.function, getopts: r.params.getopts},
 		options:     r.options.clone(),
 		expansion:   r.snapshotExpansionState(),
 		aliases:     cloneMap(r.aliases),
-		aliasChain:  r.aliasChain,
-		aliasView:   r.aliasView, // the line's, as its other commands have; see alias_view.go
 		childCPU:    r.childCPU,
 		history:     r.history,
 		completions: r.completions,
@@ -112,7 +107,25 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		// Cloned for the same reason arrays are: `(pushd /tmp)` must leave the
 		// parent's stack alone. $SECONDS and history are the deliberate exceptions
 		// above; a directory stack is not one of them.
-		dirStack: r.dirStack.clone(),
+		dirStack:      r.dirStack.clone(),
+		substitutions: r.substitutions,
+		appletFrames:  r.appletFrames,
+		readonly:      cloneMap(r.readonly),
+		attributes:    cloneMap(r.attributes),
+		mutatedVars:   cloneMap(r.mutatedVars),
+		mask:          &fileModeMask{value: r.mask.value},
+		paths:         &paths,
+		env:           r.env.clone(),
+		jobScope:      jobs,
+		lifecycle:     lifecycle,
+	}
+	return Runtime{
+		shellState: state,
+		streams:    table.streams(),
+		fds:        table,
+		params:     &parameters{name: r.params.name, values: append([]string(nil), r.params.values...), function: r.params.function, getopts: r.params.getopts},
+		aliasChain: r.aliasChain,
+		aliasView:  r.aliasView, // the line's, as its other commands have; see alias_view.go
 		// locals belongs to a function call, and a snapshot is not inside
 		// one: a subshell or a background worker that returns has nothing
 		// of the caller's to restore.
@@ -123,23 +136,13 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		// y` prints x in both references. The snapshot started with it cleared, so the
 		// subshell stopped at false.
 		errExitSuppressed: r.errExitSuppressed,
-		substitutions:     r.substitutions,
 		traceTurn:         r.traceTurn,
 		pipeStage:         r.pipeStage,
-		appletFrames:      r.appletFrames,
 		scriptFile:        r.scriptFile,
-		readonly:          cloneMap(r.readonly),
-		attributes:        cloneMap(r.attributes),
-		mutatedVars:       cloneMap(r.mutatedVars),
-		mask:              &fileModeMask{value: r.mask.value},
 		sourceDepth:       r.sourceDepth,
 		functionDepth:     r.functionDepth,
 		subshellDepth:     r.subshellDepth,
 		interactive:       r.interactive,
-		paths:             &paths,
-		env:               r.env.clone(),
-		jobScope:          jobs,
-		lifecycle:         lifecycle,
 	}, nil
 }
 
