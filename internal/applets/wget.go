@@ -28,7 +28,7 @@ const wgetDefaultTimeout = 900 * time.Second
 // wgetValued is the letters whose argument may be the next word. Named because
 // wgetLongOptions has to skip such an argument without reading it: a User-Agent
 // or an output name is allowed to look exactly like a long option.
-const wgetValued = "OoPUT"
+const wgetValued = "OoPUTY"
 
 func newWgetApplet() Applet {
 	return simpleApplet{name: "wget", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
@@ -52,6 +52,8 @@ func newWgetApplet() Applet {
 			headers:    headers,
 			spider:     spider,
 			timeout:    wgetDefaultTimeout,
+			// busybox's -Y: off is no proxy, and anything else is the environment's.
+			noProxy: options.value('Y') == "off",
 		}
 		if options.has('T') {
 			seconds, err := parseGrepNumber(options.value('T'))
@@ -100,13 +102,18 @@ func wgetLongOptions(args []string) ([]string, []string, bool, error) {
 		switch name {
 		case "spider":
 			spider = true
-		case "header":
+		case "header", "proxy":
 			if !attached {
 				if index+1 >= len(args) {
 					return nil, nil, false, missingOptionArgument(name)
 				}
 				index++
 				value = args[index]
+			}
+			if name == "proxy" {
+				// busybox's long spelling of -Y.
+				kept = append(kept, "-Y", value)
+				continue
 			}
 			// Repeatable, because one request usually needs more than one header.
 			headers = append(headers, value)
@@ -126,6 +133,7 @@ type wgetRequest struct {
 	headers    []string
 	spider     bool
 	timeout    time.Duration
+	noProxy    bool
 }
 
 func (r wgetRequest) fetch(ctx context.Context, address string, stdout, stderr io.Writer) error {

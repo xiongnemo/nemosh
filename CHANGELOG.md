@@ -106,6 +106,10 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 
 ### Added
 
+- **wget reads its proxy from the shell**: `http_proxy` and `https_proxy`, as busybox's does,
+  from what the shell exports rather than the environment nemosh started with, so
+  `http_proxy=... wget URL` works; `no_proxy`, a CONNECT tunnel for https, and `-Y off` or
+  `--proxy off` to go direct. Only an `http://` proxy is spoken to.
 - **`title`**, busybox-w32's builtin: `title TEXT` sets the console's title, a tab's in Windows
   Terminal, and `title` prints it. Off Windows it says there is none, with status 1.
 - **Windows Terminal's shell integration**: in Windows Terminal a session marks each prompt,

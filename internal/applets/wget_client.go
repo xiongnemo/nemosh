@@ -18,6 +18,7 @@ import (
 // for https. A redirect is followed sixteen times at most, busybox's limit, a 303 as a GET, and
 // an Authorization dropped when the host changes; credentials in the URL are sent as Basic, as
 // busybox sends them. -T is busybox's: how long a connection, and each read after it, may take.
+// A proxy, if the environment names one, is wget_proxy.go's.
 
 const wgetRedirects = 16
 
@@ -85,55 +86,74 @@ func (r wgetRequest) get(ctx context.Context, address string) (*wgetFetched, err
 	}
 }
 
-// exchange sends one request for location and reads the head of its answer.
+// exchange sends one request for location, through a proxy if there is one, and reads the head of
+// its answer.
 func (r wgetRequest) exchange(ctx context.Context, method string, location *url.URL, authorization *string) (*wgetFetched, error) {
-	host, port := location.Hostname(), location.Port()
-	if port == "" && location.Scheme == "https" {
-		port = "443"
-	} else if port == "" {
-		port = "80"
+	proxy, err := r.proxyFor(ctx, location)
+	if err != nil {
+		return nil, err
 	}
-	conn, err := netio.Dial(ctx, host, port, r.timeout)
+	host, port := location.Hostname(), portOf(location)
+	dialHost, dialPort := host, port
+	if proxy != nil {
+		dialHost, dialPort = proxy.Hostname(), portOf(proxy)
+	}
+	plain, err := netio.Dial(ctx, dialHost, dialPort, r.timeout)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch %s: %v", location, err)
 	}
+	// From here the context closes the connection, so Ctrl-C ends a handshake or a CONNECT as
+	// surely as it ends the body; closing the plain connection ends TLS over it too.
+	unwatch := context.AfterFunc(ctx, func() { plain.Close() })
+	fail := func(err error) (*wgetFetched, error) {
+		unwatch()
+		plain.Close()
+		return nil, fmt.Errorf("cannot fetch %s: %v", location, err)
+	}
+	if r.timeout > 0 {
+		// The handshake and the CONNECT are reads too, which -T bounds as it bounds the rest.
+		_ = plain.SetReadDeadline(time.Now().Add(r.timeout))
+	}
+	conn, target, fields := plain, location.RequestURI(), []string(nil)
+	if proxy != nil && location.Scheme == "https" {
+		if err := r.tunnel(plain, netio.JoinHostPort(host, port), proxyAuthorization(proxy)); err != nil {
+			return fail(err)
+		}
+	} else if proxy != nil {
+		target, fields = absoluteForm(location), proxyAuthorization(proxy)
+	}
 	if location.Scheme == "https" {
-		secured, err := netio.Client(conn, host)
+		secured, err := netio.Client(plain, host)
 		if err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("cannot fetch %s: %v", location, err)
+			return fail(err)
 		}
 		conn = secured
 	}
-	unwatch := context.AfterFunc(ctx, func() { conn.Close() })
 	if location.User != nil {
 		password, _ := location.User.Password()
 		*authorization = "Basic " + base64.StdEncoding.EncodeToString([]byte(location.User.Username()+":"+password))
 	}
-	if err := r.writeRequest(conn, method, location, *authorization); err != nil {
-		unwatch()
-		conn.Close()
-		return nil, fmt.Errorf("cannot fetch %s: %v", location, err)
+	if *authorization != "" {
+		fields = append(fields, "Authorization: "+*authorization)
+	}
+	if err := r.writeRequest(conn, method, target, location.Host, fields); err != nil {
+		return fail(err)
 	}
 	reader := bufio.NewReaderSize(&timedReader{conn: conn, timeout: r.timeout}, 32<<10)
 	response, err := readHTTPResponse(reader, method)
 	if err != nil {
-		unwatch()
-		conn.Close()
-		return nil, fmt.Errorf("cannot fetch %s: %v", location, err)
+		return fail(err)
 	}
 	return &wgetFetched{httpResponse: response, location: location, conn: conn, unwatch: unwatch}, nil
 }
 
-func (r wgetRequest) writeRequest(conn io.Writer, method string, location *url.URL, authorization string) error {
+// writeRequest sends method for target to host, with fields after wget's own.
+func (r wgetRequest) writeRequest(conn io.Writer, method, target, host string, extra []string) error {
 	agent := r.agent
 	if agent == "" {
 		agent = "nemosh-wget"
 	}
-	fields := []string{"Host: " + location.Host, "User-Agent: " + agent, "Accept: */*", "Connection: close"}
-	if authorization != "" {
-		fields = append(fields, "Authorization: "+authorization)
-	}
+	fields := append([]string{"Host: " + host, "User-Agent: " + agent, "Accept: */*", "Connection: close"}, extra...)
 	// After the User-Agent, so `--header 'User-Agent: x'` wins over -U rather than being
 	// silently dropped: the more specific spelling is the later one.
 	for _, header := range r.headers {
@@ -151,7 +171,7 @@ func (r wgetRequest) writeRequest(conn io.Writer, method string, location *url.U
 		fields = append(fields, name+": "+value)
 	}
 	var request strings.Builder
-	fmt.Fprintf(&request, "%s %s HTTP/1.1\r\n", method, location.RequestURI())
+	fmt.Fprintf(&request, "%s %s HTTP/1.1\r\n", method, target)
 	for _, field := range fields {
 		request.WriteString(field + "\r\n")
 	}

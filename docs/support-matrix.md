@@ -1013,7 +1013,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `unzip` | `-l -v -t -p -j -n -o -q -K -d DIR -x`, an option anywhere, and after `-x` the members left out, as busybox reads them | refused by name |
 | `uudecode` | `-o`; `-o -` writes to stdout | refused by name |
 | `uuencode` | `[FILE] NAME`, and `-m` for busybox's `begin-base64` form, which `uudecode` reads back | refused by name |
-| `wget` | `-O -P -U -T -q -S --header --spider`; `-c` and `-o` accepted | refused by name |
+| `wget` | `-O -P -U -T -Y -q -S --header --proxy --spider`; `-c` and `-o` accepted; `http_proxy`, `https_proxy` and `no_proxy` | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
 | `watch` | `-n SEC -t -x`, and `-d` taken and ignored, as busybox's; every SEC seconds, two by default, it clears the screen, heads it `Every 2.0s: CMD` with the date at the right, and runs CMD, its words joined and read as shell text in a subshell, or with `-x` as the words they are, until it is interrupted. A builtin, since it runs a command line as the shell runs one | refused by name |
 | `whois` | `-h -p`; `-i` accepted | refused by name |
@@ -1980,6 +1980,16 @@ than a selection from it.
   how long the connection and each read after it may take, 900 seconds unless
   given, where it was thirty for the whole fetch; `-S` prints the status line and
   every header field; nothing is asked for compressed, and there is no HTTP/2.
+- **A proxy is the shell's environment's**, `http_proxy` for an http URL and
+  `https_proxy` for an https one, in either case, and none under `-Y off`, as busybox
+  reads them — from the variables the shell exports, not from the environment nemosh
+  started with. Two things busybox does not do, and `net/http` did while it fetched
+  for `wget`, are kept: `no_proxy` names hosts that go direct (`*`, a name and what is
+  within it, `.name` only within it, an address, a CIDR prefix, any of them with a
+  port), and so does a loopback address, always; and an https URL goes through a
+  CONNECT tunnel, where busybox sends the request to the proxy in the clear. The
+  proxy's credentials, if its URL has them, go as `Proxy-Authorization`. Only an
+  `http://` proxy is spoken to; an `https://` or `socks5://` one is refused by name.
 - **`httpd` limits what it reads**, being the one parser a network reaches: a
   request line past 8 KiB is 414, a header past 16 KiB or 100 fields 431. One
   request a connection, 64 connections at once, ten seconds for a header. It

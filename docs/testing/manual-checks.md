@@ -280,6 +280,25 @@ These only exist off a GUI launch or a real clipboard, so no test reaches them.
   wait at once with 130. A busybox-w32 flock is no test of it: the two lock different
   bytes of the file, and do not keep each other out.
 
+## H. The network, against the real one
+
+Every network test runs against a server the test starts on loopback, so three things
+no test can reach are left to a hand: a certificate a public CA signed, a real proxy,
+and a browser. Not yet checked by hand; `wget` became its own client on 2026-11-17.
+
+- **`wget` over https**: `wget -O - https://example.com/ | head -3` prints the page,
+  and `wget -S -O /dev/null https://github.com/` lists the redirects' fields; a name
+  the certificate does not cover, `wget -O - https://wrong.host.badssl.com/`, fails
+  with the certificate's reason, and so does `https://self-signed.badssl.com/`.
+- **Through a proxy**, if one is to hand: `https_proxy=http://HOST:PORT wget -O -
+  https://example.com/ | head -3` goes through it (its log shows the CONNECT), and
+  `wget -Y off ...` does not. `no_proxy=example.com` sends that host direct.
+- **Ctrl-C during a download** of any large file, a Linux ISO say, gives the prompt
+  back at once and leaves no partial file.
+- **`httpd` in a browser**: `httpd -f -p 8080 -h .` and open `http://localhost:8080/`;
+  the listing links work, a video seeks (that is a Range request), and a reload
+  shows the browser's 304 in its network panel.
+
 ## If something fails
 
 Capture, in this order: what you typed, what appeared, and `nemosh --version`. For
