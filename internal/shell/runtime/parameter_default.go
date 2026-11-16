@@ -217,12 +217,17 @@ func (r Runtime) lookupParameter(ctx context.Context, name string, savedStatus i
 // Atoi reads one. Atoi is asked only where a number could begin -- a digit, or a sign before one
 // -- since the error it returns for a name was an allocation, for every variable read.
 func positionalNumber(name string) (int, bool) {
-	digit := func(at int) bool { return at < len(name) && name[at] >= '0' && name[at] <= '9' }
-	if !digit(0) && !((len(name) > 0 && (name[0] == '+' || name[0] == '-')) && digit(1)) {
+	if !mayBeNumber(name) {
 		return 0, false
 	}
 	number, err := strconv.Atoi(name)
 	return number, err == nil && number > 0
+}
+
+// mayBeNumber is whether Atoi could read name: it begins with a digit, or a sign before one.
+func mayBeNumber(name string) bool {
+	digit := func(at int) bool { return at < len(name) && name[at] >= '0' && name[at] <= '9' }
+	return digit(0) || len(name) > 0 && (name[0] == '+' || name[0] == '-') && digit(1)
 }
 
 func (r Runtime) expandScalarParameterText(ctx context.Context, text string, savedStatus int) string {
@@ -275,8 +280,11 @@ func isBareParameterReference(body string) bool {
 	if isVariableName(body) {
 		return true
 	}
-	if number, err := strconv.Atoi(body); err == nil && number >= 0 {
-		return true
+	// Atoi only where a number could begin: its error for `x#*/` was an allocation a trim.
+	if mayBeNumber(body) {
+		if number, err := strconv.Atoi(body); err == nil && number >= 0 {
+			return true
+		}
 	}
 	switch body {
 	case "?", "#", "@", "*", "-", "$", "!":

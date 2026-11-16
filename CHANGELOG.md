@@ -74,6 +74,12 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   took 806 (busybox 1.6 s), and of 15.5 GB of scoop's apps 0.8 s where it took 3.3 (busybox
   6.6), every line of `du -a` the same. `rm -r` asks nothing of what its directory listed, which
   it stat'd twice: 2,000 files in 126 ms where it took 174 (busybox 353).
+- **`${x#pat}`, `##`, `%` and `%%` are a search where the pattern is a literal with a `*`
+  around it**, `${p##*/}` and `${f%.*}` among them, and any other pattern is matched without
+  converting it again for each cut point: 10,000 `${p##*/}` of an 80-character path take 90 ms
+  where they took 279 (busybox 83, bash 136). Finding the operator in `${name...}` reads the
+  byte there rather than trying 23 operators at every byte of the name, so a loop of short
+  trims takes 111 ms where it took 135 (bash 139).
 
 ### Added
 

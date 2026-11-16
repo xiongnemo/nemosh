@@ -48,14 +48,33 @@ func splitParameterOperator(body string) (string, string, string, bool) {
 // parameterOperatorAt is the operator that starts at index, or "". Longest first, and the
 // `:x` defaults before a bare `:`, which is what keeps `${x:-2}` a default and `${x: -2}` a
 // substring. The pairs `//`, `^^`, `,,` and `~~` likewise precede their single forms.
+//
+// Read from the byte there rather than by trying each of the 23 at every byte of a name, which
+// was more of what a trim cost than the trim was.
 func parameterOperatorAt(body string, index int) string {
-	for _, operator := range [...]string{
-		":-", ":=", ":+", ":?", "##", "%%", "//", "/#", "/%", "^^", ",,", "~~",
-		":", "-", "=", "+", "?", "#", "%", "/", "^", ",", "~",
-	} {
-		if strings.HasPrefix(body[index:], operator) {
-			return operator
+	rest := body[index:]
+	second := byte(0)
+	if len(rest) > 1 {
+		second = rest[1]
+	}
+	switch rest[0] {
+	case ':':
+		if second != 0 && strings.IndexByte("-=+?", second) >= 0 {
+			return rest[:2]
 		}
+		return rest[:1]
+	case '#', '%', '^', ',', '~':
+		if second == rest[0] {
+			return rest[:2]
+		}
+		return rest[:1]
+	case '/':
+		if second != 0 && strings.IndexByte("/#%", second) >= 0 {
+			return rest[:2]
+		}
+		return rest[:1]
+	case '-', '=', '+', '?':
+		return rest[:1]
 	}
 	return ""
 }
