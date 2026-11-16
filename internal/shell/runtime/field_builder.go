@@ -32,8 +32,17 @@ type fieldBuilder struct {
 	// patterns is each field as a pathname pattern, its quoted characters escaped, or the
 	// empty string for a field that is not one. See text.
 	patterns []string
-	current  strings.Builder
-	pattern  strings.Builder
+	// first is the field's text while it is one piece, as most fields are -- $i, a literal --
+	// which goes into the field as it is, with nothing copied; firstGlob is whether it went in
+	// unquoted, and pieces how many there are. A second piece starts the builders.
+	first     string
+	firstGlob bool
+	pieces    int
+	current   strings.Builder
+	pattern   strings.Builder
+	// fieldStore and patternStore hold a word's one field, which most words come to, so the
+	// lists cost nothing more than the builder.
+	fieldStore, patternStore [1]string
 	// open is whether the field being built has begun: it holds a character, or a quoted
 	// empty string, which begins one.
 	open bool
@@ -66,15 +75,29 @@ func (r Runtime) newFieldBuilder() *fieldBuilder {
 // matches a file named [abc], and `*.[C\-D]` a file ending in -, in both references. The
 // pattern was the field's text, where the quoting had already gone.
 func (b *fieldBuilder) text(value string, glob bool) {
+	switch b.pieces {
+	case 0:
+		b.first, b.firstGlob = value, glob
+	case 1:
+		b.writePiece(b.first, b.firstGlob)
+		b.writePiece(value, glob)
+	default:
+		b.writePiece(value, glob)
+	}
+	b.pieces++
+	b.open = true
+	b.glob = b.glob || glob && containsGlobMeta(value)
+	b.delimiter = noDelimiter
+}
+
+// writePiece adds a piece to the builders, as itself and as a pattern.
+func (b *fieldBuilder) writePiece(value string, glob bool) {
 	b.current.WriteString(value)
 	if glob {
 		b.pattern.WriteString(value)
 	} else {
 		b.pattern.WriteString(escapeGlob(value))
 	}
-	b.open = true
-	b.glob = b.glob || glob && containsGlobMeta(value)
-	b.delimiter = noDelimiter
 }
 
 // split adds what an unquoted expansion produced, which its IFS characters divide.
@@ -156,16 +179,26 @@ func (b *fieldBuilder) unquotedList(values []string, joiner string) {
 
 // close ends the field being built, empty or not.
 func (b *fieldBuilder) close() {
-	b.fields = append(b.fields, b.current.String())
+	text, patternText := b.first, b.first
+	if b.pieces > 1 {
+		text, patternText = b.current.String(), b.pattern.String()
+		b.current.Reset()
+		b.pattern.Reset()
+	} else if !b.firstGlob {
+		patternText = escapeGlob(b.first)
+	}
+	if b.fields == nil {
+		b.fields, b.patterns = b.fieldStore[:0], b.patternStore[:0]
+	}
+	b.fields = append(b.fields, text)
 	pattern := ""
 	// An extended group is looked for in the whole field too, since it can arrive in pieces:
 	// a default's word is added a character at a time, so `${u:-@(a|b)}` never globbed.
-	if b.glob || hasExtendedPattern(b.pattern.String()) {
-		pattern = b.pattern.String()
+	if b.glob || hasExtendedPattern(patternText) {
+		pattern = patternText
 	}
 	b.patterns = append(b.patterns, pattern)
-	b.current.Reset()
-	b.pattern.Reset()
+	b.first, b.firstGlob, b.pieces = "", false, 0
 	b.open, b.glob = false, false
 }
 

@@ -202,7 +202,7 @@ func (r Runtime) dispatchCommand(ctx context.Context, commandArgs []string, assi
 	if result, handled := r.controlFlowBuiltin(ctx, commandArgs, assignments, operations, savedStatus); handled {
 		return result
 	}
-	return lineResult{status: r.runCommandWithTokenAssignments(ctx, assignments, expanded[len(expanded)-len(commandArgs):], operations)}
+	return lineResult{status: r.runTokensWithAssignments(ctx, assignments, expanded[len(expanded)-len(commandArgs):], commandArgs, operations)}
 }
 
 // assignmentStatus is what a command consisting only of assignments exits with.
@@ -280,23 +280,29 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 }
 
 func (r Runtime) runCommandWithTokenAssignments(ctx context.Context, assignments []assignment, commandTokens []shellToken, operations []redirectOperation) int {
+	return r.runTokensWithAssignments(ctx, assignments, commandTokens, tokenValues(commandTokens), operations)
+}
+
+// runTokensWithAssignments is runCommandWithTokenAssignments given the command's words as text
+// too, which runExpandedWords has made already: a list a command, three for a loop's turn.
+func (r Runtime) runTokensWithAssignments(ctx context.Context, assignments []assignment, commandTokens []shellToken, args []string, operations []redirectOperation) int {
 	if len(commandTokens) == 0 {
 		return r.assignVars(assignments)
 	}
 	if len(assignments) == 0 {
-		return r.runCommandWithRedirectOperations(ctx, commandTokens, operations)
+		return r.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)
 	}
 	if isSpecialBuiltin(commandTokens[0].value) {
 		if status := r.assignVars(assignments); status != 0 {
 			return status
 		}
-		return r.runCommandWithRedirectOperations(ctx, commandTokens, operations)
+		return r.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)
 	}
 	commandRuntime := r.withProgramPATH(commandTokens[0].value, assignments).withLocalAssignments(assignments)
 	if commandRuntime == nil {
 		return 1
 	}
-	status := commandRuntime.runCommandWithRedirectOperations(ctx, commandTokens, operations)
+	status := commandRuntime.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)
 	r.mergeBuiltinMutations(*commandRuntime)
 	return status
 }

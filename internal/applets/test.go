@@ -7,7 +7,7 @@ import (
 )
 
 func newTestApplet(name string) Applet {
-	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	return simpleApplet{name: name, quiet: true, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		if name == "[" {
 			if !closedBracket(args) {
 				// test_main2 strips argv[0] and then demands the last remaining

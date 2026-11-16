@@ -9,6 +9,9 @@ type simpleApplet struct {
 	name       string
 	run        func(args []string, stdin io.Reader, stdout, stderr io.Writer) error
 	runContext func(context.Context, []string, io.Reader, io.Writer, io.Writer) error
+	// quiet is an applet that reads no operand it could fail to open, test and [, which a loop
+	// runs every turn: it is given no operand reporter, which was two allocations a run.
+	quiet bool
 }
 
 func (a simpleApplet) Name() string {
@@ -20,6 +23,9 @@ func (a simpleApplet) Run(ctx context.Context, args []string, stdin io.Reader, s
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
+		if a.runContext != nil && a.quiet {
+			return a.runContext(ctx, args, stdin, stdout, stderr)
+		}
 		if a.runContext != nil {
 			return a.runContext(withOperandReporter(ctx, a.name, stderr), args, stdin, stdout, stderr)
 		}

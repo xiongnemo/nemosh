@@ -27,7 +27,7 @@ func (r Runtime) evaluateArithmeticAt(expression string, depth, nesting int) (in
 	if strings.TrimSpace(expression) == "" {
 		return 0, nil
 	}
-	parser := &arithmeticParser{tokens: tokenizeArithmetic(expression), runtime: r, depth: depth, nesting: nesting}
+	parser := &arithmeticParser{tokens: arithmeticTokensOf(expression), runtime: r, depth: depth, nesting: nesting}
 	value, err := parser.comma()
 	if err != nil {
 		return 0, err

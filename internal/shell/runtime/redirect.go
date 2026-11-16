@@ -31,7 +31,12 @@ func (r Runtime) applyRedirects(args []string) ([]string, Streams, func() error,
 }
 
 func (r Runtime) runCommandWithRedirectOperations(ctx context.Context, command []shellToken, operations []redirectOperation) int {
-	args := tokenValues(command)
+	return r.runTokensWithRedirectOperations(ctx, command, tokenValues(command), operations)
+}
+
+// runTokensWithRedirectOperations is runCommandWithRedirectOperations given the command's words
+// as text too, which its caller has made already.
+func (r Runtime) runTokensWithRedirectOperations(ctx context.Context, command []shellToken, args []string, operations []redirectOperation) int {
 	r.arrayOperands = arrayLiteralOperands(command)
 	return r.withAppliedRedirectsFor(len(args) > 0 && isSpecialBuiltin(args[0]), operations, func(redirected Runtime) lineResult {
 		return lineResult{status: redirected.runCommand(ctx, args)}

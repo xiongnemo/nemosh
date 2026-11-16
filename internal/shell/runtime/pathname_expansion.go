@@ -199,6 +199,23 @@ func isGlobPattern(segment string) bool {
 	return false
 }
 
+// isPathnamePattern reports a field with a segment isGlobPattern finds something to match in.
+// One without is no pattern at all, and stands as written whatever nullglob and failglob say,
+// as in bash: `[` under nullglob is still `[`, where it vanished, and under failglob it was
+// `no match`, which made every `[ ... ]` in such a script fail.
+func isPathnamePattern(field string) bool {
+	for rest := field; ; {
+		segment, after, more := strings.Cut(rest, "/")
+		if isGlobPattern(segment) {
+			return true
+		}
+		if !more {
+			return false
+		}
+		rest = after
+	}
+}
+
 // matchGlobSegment applies `set -o nocaseglob`, which busybox implements as
 // FNM_CASEFOLD (shell/ash.c:9230). Folding both sides rather than the pattern
 // alone is what makes it work in either direction: `upper.*` finds UPPER.TXT

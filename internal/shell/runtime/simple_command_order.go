@@ -15,6 +15,11 @@ import "context"
 // makes the redirections, and lets them through.
 func (r Runtime) runSimpleWords(ctx context.Context, command []word, operations []redirectOperation, mark, savedStatus int) lineResult {
 	prefix := assignmentPrefix(command)
+	if prefix == 1 && len(command) == 1 && len(operations) == 0 {
+		if result, done := r.runLoneAssignment(ctx, command[0], mark, savedStatus); done {
+			return result
+		}
+	}
 	arguments := r.expandCommandArguments(ctx, command[prefix:], savedStatus)
 	if r.shellErrorRaised() {
 		return r.shellErrorResult()
@@ -28,7 +33,11 @@ func (r Runtime) runSimpleWords(ctx context.Context, command []word, operations 
 	}
 	run := func(runner Runtime, operations []redirectOperation) lineResult {
 		leading := runner.expandLeadingAssignments(ctx, command[:prefix], savedStatus)
-		return runner.runExpandedWords(ctx, r, command, append(leading, arguments...), len(leading), operations, mark, savedStatus)
+		expanded := arguments
+		if len(leading) > 0 {
+			expanded = append(leading, arguments...)
+		}
+		return runner.runExpandedWords(ctx, r, command, expanded, len(leading), operations, mark, savedStatus)
 	}
 	// exec's redirections are its own to make: without a command they outlive it.
 	if prefix == 0 || len(operations) == 0 || isExecCommand(arguments) {
@@ -46,4 +55,24 @@ func isExecCommand(arguments []shellToken) bool {
 		return false
 	}
 	return throughCommandPrefix(tokenValues(arguments))[0] == "exec"
+}
+
+// runLoneAssignment runs a command that is one assignment and nothing else, as most of a loop's
+// lines are: its word expanded once and assigned, with nothing bound for later words to see and
+// then undone, and no list of tokens made of it. It says it ran nothing when the word comes to
+// anything but one assignment, which the whole path then takes.
+func (r Runtime) runLoneAssignment(ctx context.Context, item word, mark, savedStatus int) (lineResult, bool) {
+	values := r.expandAssignmentWord(ctx, item, false, savedStatus)
+	if r.shellErrorRaised() {
+		return r.shellErrorResult(), true
+	}
+	if len(values) != 1 || !isAssignment(keepEmptySubscript(values[0])) {
+		return lineResult{}, false
+	}
+	r.traceCommand(ctx, values, savedStatus)
+	target, value, _ := cutAssignment(keepEmptySubscript(values[0]))
+	name, appended := splitAssignmentTarget(target)
+	status := r.assignmentStatus([]assignment{{name: name, value: value, appended: appended}}, mark)
+	r.vars["_"] = ""
+	return r.abortOnShellError(lineResult{status: status}), true
 }

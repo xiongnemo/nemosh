@@ -42,7 +42,7 @@ func plainWord(item word) (string, bool) {
 	}
 	part := item.parts[0]
 	if part.kind != wordPartLiteral || part.quote != quoteUnquoted || part.text == "" ||
-		strings.IndexByte(part.text, '{') >= 0 || containsGlobMeta(part.text) {
+		strings.IndexByte(part.text, '{') >= 0 || containsGlobMeta(part.text) && isPathnamePattern(part.text) {
 		return "", false
 	}
 	return part.text, true
@@ -61,9 +61,13 @@ func mayHoldBrace(item word) bool {
 
 func (r Runtime) expandOneCommandWord(ctx context.Context, item word, savedStatus int) []string {
 	fields, patterns := r.expandWordFields(ctx, item, savedStatus)
+	// One field that is no pattern, as $i is, is the list the builder made.
+	if len(fields) == 1 && (patterns[0] == "" || !isPathnamePattern(patterns[0])) {
+		return fields
+	}
 	var expanded []string
 	for index, field := range fields {
-		if patterns[index] == "" {
+		if patterns[index] == "" || !isPathnamePattern(patterns[index]) {
 			expanded = append(expanded, field)
 			continue
 		}
