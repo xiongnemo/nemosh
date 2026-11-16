@@ -16,7 +16,9 @@ type cpFlags struct {
 	interactive, noClobber                   bool
 	hardLink, softLink, noTargetDir          bool
 	update, verbose, removeDest, parents     bool
-	targetDir                                string
+	// move is mv's copy across volumes, which keeps what a rename keeps; see cp_accelerate.go.
+	move      bool
+	targetDir string
 }
 
 // cpRun is one cp: its flags, where it asks and reports, and what it has made so far. applet

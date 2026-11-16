@@ -19,7 +19,8 @@ import (
 // file's is, and its attributes are the archive bit and, for a source no one may write, read
 // only, as cp's own copy makes them -- not the source's hidden or system bits. Its alternate data
 // streams are left behind, as cp's copy of the bytes leaves them (COPY_FILE_SKIP_ALTERNATE_STREAMS,
-// Windows 10 2004 and later; where it is refused the bytes are copied as before).
+// Windows 10 2004 and later; where it is refused the bytes are copied as before). mv's copy across
+// volumes keeps all of it, streams, attributes and times, which is what a rename keeps.
 
 // cpAccelerateAt is the size from which a regular file is copied by CopyFile2.
 var cpAccelerateAt int64 = 4 << 20
@@ -43,9 +44,9 @@ type copyFile2Parameters struct {
 	context     uintptr
 }
 
-// copyFileAccelerated copies source to dest, which must not be there, by CopyFile2, and ends the
-// copy when ctx is cancelled.
-func copyFileAccelerated(ctx context.Context, source, dest string) error {
+// copyFileAccelerated copies source to dest, which must not be there, by CopyFile2, with its
+// alternate data streams only when keepStreams, and ends the copy when ctx is cancelled.
+func copyFileAccelerated(ctx context.Context, source, dest string, keepStreams bool) error {
 	copyFile2Call.once.Do(func() { copyFile2Call.proc = windows.NewLazySystemDLL("kernel32.dll").NewProc("CopyFile2") })
 	if err := copyFile2Call.proc.Find(); err != nil {
 		return err
@@ -62,6 +63,9 @@ func copyFileAccelerated(ctx context.Context, source, dest string) error {
 	stop := context.AfterFunc(ctx, func() { atomic.StoreInt32(cancel, 1) })
 	defer stop()
 	parameters := copyFile2Parameters{flags: copyFileFailIfExists | copyFileSkipAlternateStreams, cancel: cancel}
+	if keepStreams {
+		parameters.flags = copyFileFailIfExists
+	}
 	parameters.size = uint32(unsafe.Sizeof(parameters))
 	result, _, _ := copyFile2Call.proc.Call(uintptr(unsafe.Pointer(from)), uintptr(unsafe.Pointer(to)), uintptr(unsafe.Pointer(&parameters)))
 	if result == 0 {

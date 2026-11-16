@@ -14,17 +14,21 @@ var copyAccelerated = copyFileAccelerated
 // copyAccelerated copies a large regular file by CopyFile2: it answers whether it settled the
 // copy, made or failed, and leaves anything CopyFile2 refuses to copyRegular's own reading and
 // writing, which says in its words what fails there.
+//
+// mv's copy across volumes is CopyFile2's for a file of any size, and keeps what CopyFile2
+// carries -- the alternate data streams, the attributes, the time -- since those are what a
+// rename on one volume keeps, and a move should not keep less for crossing a drive.
 func (r *cpRun) copyAccelerated(source, dest pathOperand, info os.FileInfo) (bool, bool) {
-	if source.device || dest.device || !info.Mode().IsRegular() || info.Size() < cpAccelerateAt {
+	if source.device || dest.device || !info.Mode().IsRegular() || info.Size() < cpAccelerateAt && !r.flags.move {
 		return false, false
 	}
-	err := copyAccelerated(r.context(), source.host, dest.host)
+	err := copyAccelerated(r.context(), source.host, dest.host, r.flags.move)
 	if isFileExists(err) {
 		// What is in the way is removed and the copy made afresh, as copyRegular's O_EXCL has it.
 		if answer := r.askAndUnlink(dest, fs.ErrExist); answer != unlinked {
 			return true, answer == unlinkDeclined
 		}
-		err = copyAccelerated(r.context(), source.host, dest.host)
+		err = copyAccelerated(r.context(), source.host, dest.host, r.flags.move)
 	}
 	switch {
 	case err == nil:
@@ -38,8 +42,10 @@ func (r *cpRun) copyAccelerated(source, dest pathOperand, info os.FileInfo) (boo
 	default:
 		return false, false
 	}
-	if err := settleCopiedFile(dest.host, info.Mode(), r.flags.preserve); err != nil {
-		return true, r.fail(cannotOpen(dest.operand, err))
+	if !r.flags.move {
+		if err := settleCopiedFile(dest.host, info.Mode(), r.flags.preserve); err != nil {
+			return true, r.fail(cannotOpen(dest.operand, err))
+		}
 	}
 	r.finish(source, dest, info)
 	return true, true

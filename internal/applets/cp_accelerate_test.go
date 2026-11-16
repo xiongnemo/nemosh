@@ -21,8 +21,11 @@ func runCp(t *testing.T, dir string, copier func(context.Context, string, string
 	t.Cleanup(func() { cpAccelerateAt, copyAccelerated = savedAt, savedCopier })
 	calls := 0
 	cpAccelerateAt = 0
-	copyAccelerated = func(ctx context.Context, source, dest string) error {
+	copyAccelerated = func(ctx context.Context, source, dest string, keepStreams bool) error {
 		calls++
+		if keepStreams {
+			t.Errorf("cp asked to keep %s's alternate data streams", source)
+		}
 		return copier(ctx, source, dest)
 	}
 	applet, _ := DefaultRegistry.Lookup("cp")
@@ -67,7 +70,10 @@ func TestCp_copiesARegularFileByCopyFile2(t *testing.T) {
 		// Refused for the file in the way, and made once it is gone.
 		{args: []string{"source", "there"}, dest: "there", calls: 2},
 	} {
-		stderr, calls, err := runCp(t, dir, copyFileAccelerated, test.args...)
+		plain := func(ctx context.Context, source, dest string) error {
+			return copyFileAccelerated(ctx, source, dest, false)
+		}
+		stderr, calls, err := runCp(t, dir, plain, test.args...)
 		if err != nil || calls != test.calls {
 			t.Fatalf("cp %q: %v, %q, %d copies by CopyFile2", test.args, err, stderr, calls)
 		}

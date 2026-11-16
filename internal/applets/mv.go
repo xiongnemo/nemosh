@@ -22,6 +22,8 @@ import (
 // is replaced, as busybox-w32's rename replaces one. Several SOURCEs with a last operand that is
 // not a directory are refused up front, as cp refuses them.
 type mvRun struct {
+	// ctx ends a copy across volumes under way, as it ends cp's.
+	ctx                                                 context.Context
 	force, interactive, noClobber, noTargetDir, verbose bool
 	terminal                                            bool
 	umask                                               uint32
@@ -38,7 +40,7 @@ func newMvApplet() Applet {
 		}
 		view := ProcessViewFromContext(ctx)
 		last := options.last("fin")
-		run := &mvRun{force: last == 'f', interactive: last == 'i', noClobber: last == 'n', noTargetDir: options.has('T'),
+		run := &mvRun{ctx: ctx, force: last == 'f', interactive: last == 'i', noClobber: last == 'n', noTargetDir: options.has('T'),
 			verbose: options.has('v'), terminal: inputIsTerminal(ctx, stdin), umask: processFileModeMask(view),
 			stdin: stdin, stdout: stdout, stderr: stderr}
 		target, sources := options.value('t'), operands
@@ -100,6 +102,9 @@ func newMvApplet() Applet {
 	}}
 }
 
+// moveRename is how mv renames; a test makes it say the volumes differ.
+var moveRename = renameForMove
+
 // move renames source to dest, and across volumes copies and removes it, as busybox's mv_main
 // does. -v's line is printed whatever became of it, as there.
 func (r *mvRun) move(source, dest pathOperand, destExists bool) {
@@ -117,7 +122,7 @@ func (r *mvRun) move(source, dest pathOperand, destExists bool) {
 			}
 		}
 	}
-	err := renameForMove(source.host, dest.host)
+	err := moveRename(source.host, dest.host)
 	if err == nil {
 		return
 	}
@@ -140,7 +145,7 @@ func (r *mvRun) move(source, dest pathOperand, destExists bool) {
 			return
 		}
 	}
-	copier := &cpRun{applet: "mv", flags: cpFlags{recurse: true, preserve: true}, stderr: r.stderr, stdout: io.Discard, umask: r.umask}
+	copier := &cpRun{ctx: r.ctx, applet: "mv", flags: cpFlags{recurse: true, preserve: true, move: true}, stderr: r.stderr, stdout: io.Discard, umask: r.umask}
 	remover := &rmRun{applet: "mv", recursive: true, force: true, stdout: io.Discard, stderr: r.stderr}
 	if !copier.copy(source, dest, true) || !remover.remove(source.host, source.operand) {
 		r.failed = true
