@@ -1,7 +1,7 @@
 // Command startbench compares two nemosh binaries on the two things a start costs:
 // the allocations package init makes, and the time a few command lines take. It
 // reports a third, the commit charge of a session waiting for input, and holds it
-// to nothing.
+// to a ceiling as it holds init: a number, the same from run to run.
 //
 // Allocations are a count, the same on every run of one binary, so they are held
 // to a ceiling outright. Time is not -- five consecutive starts on an idle machine
@@ -26,6 +26,7 @@ type options struct {
 	base, head            string
 	warmup, runs, confirm int
 	initCeiling           int
+	commitCeiling         int // MiB
 	enforce, selfCheck    bool
 }
 
@@ -39,6 +40,7 @@ func main() {
 	flag.IntVar(&o.runs, "runs", 40, "pairs kept in each round")
 	flag.IntVar(&o.confirm, "confirm", 2, "rounds a slower scenario is run again before it is believed")
 	flag.IntVar(&o.initCeiling, "init-ceiling", 0, "fail when head's package init allocates more than this; 0 for none")
+	flag.IntVar(&o.commitCeiling, "commit-ceiling", 0, "fail when a session of head's commits more than this many MiB; 0 for none")
 	flag.BoolVar(&o.enforce, "enforce", false, "fail on a confirmed slowdown, rather than saying it would")
 	flag.BoolVar(&o.selfCheck, "self-check", false, "also time head against itself, which must never read as slower")
 	flag.Parse()

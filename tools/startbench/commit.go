@@ -60,8 +60,8 @@ func commitOf(binary string) (uint64, error) {
 	return uint64(counters.private), nil
 }
 
-// reportCommit says head's commit charge, against base's when there is one. It is reported and
-// not held to anything.
+// reportCommit says head's commit charge, against base's when there is one, and holds it to the
+// ceiling.
 func reportCommit(o options, out io.Writer) bool {
 	head, err := commitOf(o.head)
 	if err != nil {
@@ -77,7 +77,14 @@ func reportCommit(o options, out io.Writer) bool {
 		}
 		line += fmt.Sprintf(", base %.1f MiB (%+.1f)", mebibytes(base), mebibytes(head)-mebibytes(base))
 	}
+	if o.commitCeiling > 0 {
+		line += fmt.Sprintf(", ceiling %d MiB", o.commitCeiling)
+	}
 	fmt.Fprintln(out, line)
+	if o.commitCeiling > 0 && mebibytes(head) > float64(o.commitCeiling) {
+		fmt.Fprintln(out, "commit grew past the ceiling: something new is committed in every process, touched or not")
+		return false
+	}
 	return true
 }
 

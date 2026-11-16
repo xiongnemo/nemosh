@@ -50,6 +50,10 @@ var forbiddenInRelease = []string{
 	"crypto/sha512",
 	// And xz's SHA-256 check is CNG's too, through third_party/ulikunitz-xz.
 	"crypto/sha256",
+	// Which is what the five above were for: the FIPS entropy source, whose 32 MiB buffer every
+	// process committed. Named itself, since a package not listed here could bring it back;
+	// startbench's -commit-ceiling in product.yml sees it come back however it comes.
+	"crypto/internal/fips140/drbg",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

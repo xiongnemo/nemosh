@@ -176,8 +176,9 @@ go run ./tools/startbench -head dist/nemosh.exe -base dist/nemosh-base.exe -self
 ```
 
 `tools/startbench` is what CI runs in its "package init and startup time" step: the
-package init allocations against a ceiling, and the time of four command lines against
-a base binary -- build `HEAD` into `dist/nemosh-base.exe` from a worktree to compare a
+package init allocations against a ceiling, a waiting session's commit charge against
+another (32 MiB; Go's crypto packages alone cost 32 of their own, committed and never
+touched, until they went), and the time of four command lines against a base binary -- build `HEAD` into `dist/nemosh-base.exe` from a worktree to compare a
 working tree with what it started from. Both binaries must be named `nemosh-*`; one
 called `head.exe` answers to its name and runs the `head` applet. Locally the init count
 reads about 32 higher than on the runner, so compare it against a base built here rather

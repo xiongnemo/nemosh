@@ -317,8 +317,9 @@ anyway, by never comparing a time against a number:
   `echo ready; read x`, and once it has said ready its `PrivateUsage` is read, which is
   what Task Manager calls the commit size. It is a number, the same from run to run, and
   a cost that neither the allocations nor the clock can see -- the 32 MiB below is
-  committed and never touched. Reported, not yet held to anything: 45.4 MiB for a session
-  on 2026-11-17, of which the crypto packages' buffer was 32, and 13.3 once it was gone.
+  committed and never touched. 45.4 MiB for a session on 2026-11-17, of which the crypto
+  packages' buffer was 32, and 13.3 once it was gone; CI holds it to 32 MiB
+  (`-commit-ceiling`), which a session has room to grow into and the buffer does not.
 
 The seven runs on windows-latest that calibrated it, the largest difference in any of the
 three scenarios:

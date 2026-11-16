@@ -398,6 +398,13 @@ jobs:
       # floor is about four times that noise. A commit that is slower on purpose says so in a
       # `Startup-Cost-Accepted: <why>` trailer, and is reported rather than failed: the
       # same as raising a ceiling with a reason written next to it.
+      #
+      # And the commit charge of a session waiting for input, from 2026-11-17: 45.4 MiB
+      # on this machine while Go's crypto packages were linked, of which their FIPS
+      # entropy source's buffer was 32, committed and never touched, and 13.3 once the
+      # random bytes, the hashes and TLS were the system's. 32 MiB lets a session grow
+      # by more than half again and still fails the moment that buffer comes back, by
+      # whatever import brings it.
       - name: package init and startup time
         shell: bash
         run: |
@@ -417,7 +424,7 @@ jobs:
             echo "Startup-Cost-Accepted: a slowdown is reported, not failed"
             enforce=()
           fi
-          go run ./tools/startbench -head "$binary" -init-ceiling 780 "${compare[@]}" "${enforce[@]}"
+          go run ./tools/startbench -head "$binary" -init-ceiling 780 -commit-ceiling 32 "${compare[@]}" "${enforce[@]}"
 
       - name: production file size ceiling
         shell: bash
