@@ -26,6 +26,8 @@ var forbiddenInRelease = []string{
 	// go-colorful's HexColor, a database/sql Scanner and Valuer nothing here uses; see
 	// third_party/lucasb-eyer-go-colorful.
 	"database/sql/driver",
+	// The background jobs' state has a codec of its own; see job_state_codec.go.
+	"encoding/json",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

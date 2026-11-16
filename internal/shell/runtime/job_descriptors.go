@@ -21,10 +21,10 @@ import (
 // number the job knows it by, the handle it arrives under, what it may do. No handle is a
 // descriptor the shell had closed.
 type jobDescriptor struct {
-	FD       int    `json:"fd"`
-	Handle   string `json:"handle,omitempty"`
-	Readable bool   `json:"readable,omitempty"`
-	Writable bool   `json:"writable,omitempty"`
+	FD       int
+	Handle   string
+	Readable bool
+	Writable bool
 }
 
 // jobHandoff is the parent's side of one job's descriptors: the cloned table, released when

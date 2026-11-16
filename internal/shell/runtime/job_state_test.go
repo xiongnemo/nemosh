@@ -3,7 +3,6 @@ package runtime
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -106,7 +105,7 @@ func TestJobState_everyOptionIsCarried(t *testing.T) {
 	}
 }
 
-// A runtime with every kind of state set, captured, sent through JSON and restored into a
+// A runtime with every kind of state set, captured, encoded, decoded and restored into a
 // fresh one, answers a probe of all of it exactly as the original does, and hands back the
 // job's program.
 // A job started inside an alias's text is still inside it, and does not substitute that alias
@@ -119,12 +118,8 @@ func TestJobState_carriesTheAliasChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	encoded, err := json.Marshal(original.captureJobState(job.program[0]))
+	decoded, err := decodeJobState(encodeJobState(original.captureJobState(job.program[0])))
 	if err != nil {
-		t.Fatal(err)
-	}
-	var decoded jobState
-	if err := json.Unmarshal(encoded, &decoded); err != nil {
 		t.Fatal(err)
 	}
 	restored := New(applets.DefaultRegistry, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
@@ -167,12 +162,8 @@ set -- one "two words"
 	if err != nil {
 		t.Fatal(err)
 	}
-	encoded, err := json.Marshal(original.captureJobState(job.program[0]))
+	decoded, err := decodeJobState(encodeJobState(original.captureJobState(job.program[0])))
 	if err != nil {
-		t.Fatal(err)
-	}
-	var decoded jobState
-	if err := json.Unmarshal(encoded, &decoded); err != nil {
 		t.Fatal(err)
 	}
 	restored := New(applets.DefaultRegistry, Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})

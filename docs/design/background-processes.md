@@ -84,8 +84,12 @@ as written. Recorded when this lands.
 
 ### 3. The state travels through one codec, with a guard
 
-The state is a plain struct of exported fields, encoded as JSON -- it is read once, by
-the same binary, and JSON is the one encoding a person can read when a job misbehaves.
+The state is a plain struct, encoded by a codec of its own (job_state_codec.go) -- it is
+read once, by the same binary. It was JSON until 2026-11-17, for being the one encoding a
+person can read when a job misbehaves; that linked encoding/json for this alone, 0.67 MB of
+the binary under Go 1.27, and turned every byte of a value that was not UTF-8 into U+FFFD.
+One walk names every field for both directions, and a test fills every field of the
+struct by reflection and holds the round trip to it.
 Everything `clone()` copies (snapshot.go) goes into the description: variables, both
 kinds of array and which indices are live, attributes, read-only and exported names
 (including the pending ones, export_pending.go), functions, aliases, options and the

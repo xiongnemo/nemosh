@@ -8,8 +8,7 @@ import (
 )
 
 // jobState is what a background job inherits from the shell, in a form that crosses a
-// process boundary: exported fields, meant for JSON. It is step one of
-// docs/design/background-processes.md, and nothing starts a process with it yet.
+// process boundary; job_state_codec.go is how it crosses.
 //
 // The job's program and the functions it can call travel as text, printed from what was
 // parsed (script_print.go), and are parsed again on the other side. The environment and
@@ -17,68 +16,68 @@ import (
 // builds its runtime from them the way any nemosh does. What is here is everything else
 // clone() copies; job_state_test.go keeps the two from drifting apart.
 type jobState struct {
-	Program       string                         `json:"program"`
-	Line          int                            `json:"line"`
-	Functions     string                         `json:"functions"`
-	FunctionFiles map[string]string              `json:"functionFiles"`
-	Vars          map[string]string              `json:"vars"`
-	Indexed       map[string]jobIndexedArray     `json:"indexed"`
-	Associative   map[string]jobAssociativeArray `json:"associative"`
-	Attributes    map[string]jobAttributes       `json:"attributes"`
-	Readonly      []string                       `json:"readonly"`
-	Aliases       map[string]string              `json:"aliases"`
-	Options       map[string]bool                `json:"options"`
-	Invocation    string                         `json:"invocation"`
-	Name          string                         `json:"name"`
-	Positional    []string                       `json:"positional"`
-	Function      string                         `json:"function"`
-	Frames        []jobFrame                     `json:"frames"`
-	ScriptFile    string                         `json:"scriptFile"`
-	Traps         map[string]string              `json:"traps"`
-	Umask         uint16                         `json:"umask"`
-	DirStack      []string                       `json:"dirStack"`
+	Program       string
+	Line          int
+	Functions     string
+	FunctionFiles map[string]string
+	Vars          map[string]string
+	Indexed       map[string]jobIndexedArray
+	Associative   map[string]jobAssociativeArray
+	Attributes    map[string]jobAttributes
+	Readonly      []string
+	Aliases       map[string]string
+	Options       map[string]bool
+	Invocation    string
+	Name          string
+	Positional    []string
+	Function      string
+	Frames        []jobFrame
+	ScriptFile    string
+	Traps         map[string]string
+	Umask         uint16
+	DirStack      []string
 	// AliasChain is the aliases whose text the job is part of, which it does not substitute
 	// again: `alias x='x &'` starts one job, not one after another; see alias_expand.go.
-	AliasChain []string `json:"aliasChain"`
+	AliasChain []string
 	// AliasView is the aliases the job's line was read with, which it is substituted from, and
 	// null for the ones in Aliases; see alias_view.go. {} is none at all.
-	AliasView map[string]string `json:"aliasView"`
+	AliasView map[string]string
 	// Getopts is where getopts is in Positional: the next word and the letter in the one
 	// before it; see getoptsState.
-	Getopts [2]int `json:"getopts"`
+	Getopts [2]int
 	// Seconds is what $SECONDS says now, so the child's count carries on from it.
-	Seconds int `json:"seconds"`
+	Seconds int
 	// ShellPID and ShellPPID are the shell's `$$` and `$PPID`, which a job keeps.
-	ShellPID      int `json:"shellPid"`
-	ShellPPID     int `json:"shellPpid"`
-	FunctionDepth int `json:"functionDepth"`
-	SourceDepth   int `json:"sourceDepth"`
+	ShellPID      int
+	ShellPPID     int
+	FunctionDepth int
+	SourceDepth   int
 	// SubshellDepth is the shell's $BASH_SUBSHELL; the job, a subshell, is one deeper.
-	SubshellDepth     int  `json:"subshellDepth"`
-	ErrExitSuppressed bool `json:"errExitSuppressed"`
+	SubshellDepth     int
+	ErrExitSuppressed bool
 	// Descriptors is the job's descriptor table past what the child's standard handles
 	// carry, filled by the launcher rather than captured; see job_descriptors.go.
-	Descriptors []jobDescriptor `json:"descriptors"`
+	Descriptors []jobDescriptor
 	// Control is the handle of the pipe `kill` sends the job its signals on; see
 	// job_process_signal.go.
-	Control string `json:"control"`
+	Control string
 }
 
 // jobIndexedArray is an indexed array's elements, each value at the index beside it.
 type jobIndexedArray struct {
-	Values []string `json:"values"`
-	Live   []int    `json:"live"`
+	Values []string
+	Live   []int
 	// Unassigned is an array declared and never assigned; see declareUnassigned.
-	Unassigned bool `json:"unassigned,omitempty"`
+	Unassigned bool
 }
 
 type jobAssociativeArray struct {
-	Keys   []string `json:"keys"`
-	Values []string `json:"values"`
+	Keys   []string
+	Values []string
 	// Buckets is the size of its hash table, which with the keys' order is where they sit;
 	// see bashHashTable.
-	Buckets    uint32 `json:"buckets"`
-	Unassigned bool   `json:"unassigned,omitempty"`
+	Buckets    uint32
+	Unassigned bool
 }
 
 type jobAttributes struct {

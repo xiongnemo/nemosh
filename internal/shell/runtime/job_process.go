@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -118,10 +117,7 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 // startJobProcess starts command as `nemosh --job <handle>`, the handle an inherited pipe
 // the state is then written to.
 func (r Runtime) startJobProcess(command *exec.Cmd, handoff *jobHandoff, executable string, state jobState) error {
-	data, err := json.Marshal(state)
-	if err != nil {
-		return err
-	}
+	data := encodeJobState(state)
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return err
@@ -212,8 +208,8 @@ func JobStateFile(argument string) (*os.File, error) {
 
 // RunJob is the child's side, `nemosh --job`: the state read, the job run, its status.
 func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
-	var state jobState
-	if err := json.Unmarshal(data, &state); err != nil {
+	state, err := decodeJobState(data)
+	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%sjob state: %v\n", r.diagnosticPrefix(), err)
 		return 2
 	}
