@@ -306,6 +306,12 @@ anyway, by never comparing a time against a number:
   until seven CI runs of the self-check had shown the threshold sits outside the noise, and
   fails the build since; a commit slower on purpose carries a `Startup-Cost-Accepted:`
   trailer saying why, and is reported instead.
+- **And the commit charge, beside it**, from 2026-11-17: each binary is started on
+  `echo ready; read x`, and once it has said ready its `PrivateUsage` is read, which is
+  what Task Manager calls the commit size. It is a number, the same from run to run, and
+  a cost that neither the allocations nor the clock can see -- the 32 MiB below is
+  committed and never touched. Reported, not yet held to anything: 45.4 MiB for a session
+  on 2026-11-17, of which the crypto packages' buffer is 32.
 
 The seven runs on windows-latest that calibrated it, the largest difference in any of the
 three scenarios:

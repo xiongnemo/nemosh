@@ -1,5 +1,7 @@
 // Command startbench compares two nemosh binaries on the two things a start costs:
-// the allocations package init makes, and the time a few command lines take.
+// the allocations package init makes, and the time a few command lines take. It
+// reports a third, the commit charge of a session waiting for input, and holds it
+// to nothing.
 //
 // Allocations are a count, the same on every run of one binary, so they are held
 // to a ceiling outright. Time is not -- five consecutive starts on an idle machine
@@ -50,6 +52,9 @@ func main() {
 func startbench(o options, out io.Writer) int {
 	status := 0
 	if !checkInit(o, out) {
+		status = 1
+	}
+	if !reportCommit(o, out) {
 		status = 1
 	}
 	if o.base == "" {
