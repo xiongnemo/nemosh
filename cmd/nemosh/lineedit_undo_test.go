@@ -12,13 +12,13 @@ func TestLineEditor_undoIsReadlines(t *testing.T) {
 		history          []string
 	}{
 		{name: "what was typed is one change", keys: "echo hi\x1f\r", want: ""},
-		{name: "a backspace taken back", keys: "echo hi\x08\x1f\r", want: "echo hi"},
+		{name: "a backspace taken back", keys: "echo hi\x7f\x1f\r", want: "echo hi"},
 		{name: "a move parts two runs of typing", keys: "echo\x01x\x1f\r", want: "echo"},
 		{name: "twenty typed characters to a change", keys: "aaaaaaaaaaaaaaaaaaaaaaaaa\x1f\r", want: "aaaaaaaaaaaaaaaaaaaa"},
 		{name: "C-x C-u is undo too", keys: "echo hi\x18\x15\r", want: ""},
 		{name: "a kill taken back", keys: "echo hello\x17\x1f\r", want: "echo hello"},
-		{name: "each undo one change further back", keys: "echo hello\x17\x08\x1f\x1f\r", want: "echo hello"},
-		{name: "M-r takes back every change", keys: "echo\x08X\x17Y\x1br\r", want: ""},
+		{name: "each undo one change further back", keys: "echo hello\x17\x7f\x1f\x1f\r", want: "echo hello"},
+		{name: "M-r takes back every change", keys: "echo\x7fX\x17Y\x1br\r", want: ""},
 		{name: "nothing to take back", keys: "\x1f\r", want: ""},
 		{name: "a recalled line starts its own", keys: "\x1b[A\x1f\r", want: "ls", history: []string{"ls"}},
 		{name: "a recalled line's own changes", keys: "\x1b[A -l\x1f\r", want: "ls", history: []string{"ls"}},

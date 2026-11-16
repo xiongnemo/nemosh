@@ -93,6 +93,8 @@ Environment:
   NEMOSH_CTRL_C=program|kill    Ctrl-C leaves a program to handle it in a script
                                 too, or ends it at the prompt too; by default a
                                 program run from the prompt handles it
+  NEMOSH_CTRL_H=word|backspace  what Ctrl+Backspace, which is ^H, deletes; a word
+                                on Windows by default, a character elsewhere
   NEMOSH_SHELL_INTEGRATION=never|always
                                 Windows Terminal's prompt and command marks, on
                                 in Windows Terminal by default

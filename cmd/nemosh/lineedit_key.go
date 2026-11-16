@@ -71,6 +71,9 @@ const (
 	keyPasteEnd
 	// keyPaste is what came between them, gathered into text by readPaste.
 	keyPaste
+	// keyCtrlH is 0x08: Ctrl+Backspace in Windows Terminal, and Backspace on a terminal set to
+	// erase with ^H. nextKey makes it one or the other; see lineedit_ctrlh.go.
+	keyCtrlH
 )
 
 type key struct {
@@ -105,8 +108,10 @@ func decodeKey(buffer []byte) (key, int) {
 		// A bare line feed is still Enter: that is how a pipe or a file spells it, and
 		// `nemosh < script` depends on it.
 		return key{kind: keyEnter}, 1
-	case 0x7f, 0x08:
+	case 0x7f:
 		return key{kind: keyBackspace}, 1
+	case 0x08:
+		return key{kind: keyCtrlH}, 1
 	case '\t':
 		return key{kind: keyTab}, 1
 	case 0x03:
@@ -250,21 +255,7 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 		return key{kind: keyIncomplete}, 0
 	}
 	if buffer[end] == ';' {
-		// A modified arrow: CSI 1;5D is Ctrl-Left, CSI 1;5C is Ctrl-Right.
-		modifier := end + 1
-		for modifier < len(buffer) && buffer[modifier] >= '0' && buffer[modifier] <= '9' {
-			modifier++
-		}
-		if modifier >= len(buffer) {
-			return key{kind: keyIncomplete}, 0
-		}
-		switch buffer[modifier] {
-		case 'D':
-			return key{kind: keyWordLeft}, modifier + 1
-		case 'C':
-			return key{kind: keyWordRight}, modifier + 1
-		}
-		return key{kind: keyUnknown}, modifier + 1
+		return decodeModifiedKey(buffer, end)
 	}
 	if buffer[end] != '~' {
 		return key{kind: keyUnknown}, end + 1

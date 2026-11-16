@@ -96,6 +96,11 @@ Terminal delivers them as expected is exactly what cannot be tested from here.
   `ESC[H ESC[J` since v1.4, so look at each in Windows Terminal and in a conhost
   window; confirmed 2026-10-06.
 - **Ctrl-A / Ctrl-E** to line start and end.
+- **Ctrl+Backspace and Ctrl+Delete**, not yet checked by hand: in `echo hello world`,
+  Ctrl+Backspace takes `world`, and Ctrl-Y puts it back; Ctrl-A and Ctrl+Delete takes
+  `echo`; Shift+Left moves one character and Ctrl+Left a word. `NEMOSH_CTRL_H=backspace`
+  makes Ctrl+Backspace one character again. A conhost window measured the same bytes as the
+  test's console; Windows Terminal is the one to look at.
 
 **Worth watching for specifically, because the fix changed it:** raw mode is now
 entered and left around *every single line read* rather than once per session. Type

@@ -13,7 +13,7 @@ func TestLineEditor_killRingIsReadlines(t *testing.T) {
 		// Two ^W straight after each other are one kill, and ^Y puts back both words.
 		{name: "two ^W are one entry", keys: "echo one two\x17\x17\x19\r", want: "echo one two"},
 		// A key between them makes two entries, and ^Y puts in the newest.
-		{name: "a key between kills parts them", keys: "a b\x17x\x08\x17\x19\r", want: "a "},
+		{name: "a key between kills parts them", keys: "a b\x17x\x7f\x17\x19\r", want: "a "},
 		// M-d kills forward, and two of them join after each other.
 		{name: "M-d kills forward and joins", keys: "one two three\x01\x1bd\x1bd\x05 \x19\r", want: " three one two"},
 		// ^Y then M-y: the yank taken out and the kill before it put in.

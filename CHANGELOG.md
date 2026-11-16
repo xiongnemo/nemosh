@@ -80,6 +80,10 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
   where they took 279 (busybox 83, bash 136). Finding the operator in `${name...}` reads the
   byte there rather than trying 23 operators at every byte of the name, so a loop of short
   trims takes 111 ms where it took 135 (bash 139).
+- **Ctrl+Backspace deletes a word, and Ctrl+Delete the word after the cursor**, as in
+  PowerShell, where Ctrl+Backspace deleted a character and Ctrl+Delete nothing; Shift+Left and
+  Shift+Right move a character, where they moved a word. Off Windows Ctrl+Backspace, which is
+  `^H`, is still a Backspace, and `NEMOSH_CTRL_H=word` or `backspace` chooses anywhere.
 
 ### Added
 

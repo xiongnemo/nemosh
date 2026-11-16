@@ -6,6 +6,10 @@ import "io"
 // of a sequence. A paste comes back whole, as one key; see readPaste.
 func (e *lineEditor) nextKey() (key, error) {
 	decoded, err := e.nextTypedKey()
+	// Ctrl-H is a word or a character before any mode sees it; see lineedit_ctrlh.go.
+	if decoded.kind == keyCtrlH {
+		decoded.kind = e.ctrlHKind()
+	}
 	if err != nil || decoded.kind != keyPasteStart {
 		return decoded, err
 	}

@@ -510,6 +510,14 @@ held one entry, the newest, until 2026-10-02.
     `VISUAL`, or `EDITOR`, or `emacs` (`vi` in vi mode), and what the editor leaves is
     said on standard error and run as though typed, kept in history in the line's place.
     An editor that fails runs nothing.
+- The Windows keys: Ctrl+Backspace deletes the word before the cursor, into the kill ring as
+  `^W` puts it, and Ctrl+Delete and Alt+Delete the word after it, as they do in PowerShell
+  and a Windows edit box. A terminal sends Ctrl+Backspace as `^H`, which a Unix terminal set
+  to erase with `^H` sends for Backspace too, so off Windows `^H` is still a Backspace;
+  `NEMOSH_CTRL_H=word` or `backspace` says which anywhere. Shift+Left and Shift+Right move a
+  character, where every modified arrow moved a word; Ctrl and Alt still do. busybox-w32's
+  editor deletes a character on Ctrl+Backspace and ignores Ctrl+Delete and the Shift arrows.
+  What a console sends for each was measured from one, by writing the key events into it.
 
 ### The line editor's vi mode
 
