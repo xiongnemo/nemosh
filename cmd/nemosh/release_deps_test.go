@@ -54,6 +54,10 @@ var forbiddenInRelease = []string{
 	// process committed. Named itself, since a package not listed here could bring it back;
 	// startbench's -commit-ceiling in product.yml sees it come back however it comes.
 	"crypto/internal/fips140/drbg",
+	// net's init starts Winsock in every process, for a shell that opens a socket only for nc,
+	// wget and the rest, which speak Winsock themselves (internal/netio). x/sys/windows imported
+	// it for one method; see third_party/x-sys.
+	"net",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

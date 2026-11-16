@@ -73,12 +73,14 @@ jobs:
       # Each directory of third_party/ is a fork linked in place of an upstream module
       # (go.mod's replace; see its README). Each is a module of its own, which ./... does
       # not reach, so each is vetted and tested by name. gdamore-encoding's tests are what
-      # hold its generated tables to upstream's algorithm.
+      # hold its generated tables to upstream's algorithm. A module's vet.flags, if it has
+      # one, is passed to vet: x-sys's turns off unsafeptr alone, which reports what a
+      # syscall package's generated wrappers have to do (see its README).
       - name: third_party modules
         shell: bash
         run: |
           for module in third_party/*/; do
-            go -C "$module" vet ./...
+            go -C "$module" vet $(cat "${module}vet.flags" 2>/dev/null) ./...
             go -C "$module" test -race -count=1 ./...
           done
 

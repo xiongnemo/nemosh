@@ -68,7 +68,10 @@ tags and a shallow clone silently yields the fallback.
   than 1,103 allocations in `init` on every start. Its README says what changed and how
   to follow upstream. `third_party/lucasb-eyer-go-colorful` is go-colorful without its
   `HexColor`, which linked `database/sql/driver` and `encoding/json` for nothing tcell uses.
-  The price of a `replace` is that
+  `third_party/ulikunitz-xz` takes its SHA-256 check from CNG rather than `crypto/sha256`,
+  which brought Go's FIPS entropy source and its 32 MiB of commit into every process, and
+  `third_party/x-sys` is x/sys without the one method that imported `net`, whose init
+  started Winsock on every start. The price of a `replace` is that
   `go install github.com/xiongnemo/nemosh/cmd/nemosh@latest` refuses to build; nothing
   here documents that way of installing, and the release artifacts are unaffected.
 - The published artifact must be the same binary CI verified. No rebuild at
@@ -119,10 +122,11 @@ done
 
 `third_party/` is excluded because it is upstream's code and a generated table, not this
 project's. Each fork there is a module of its own, which `./...` does not reach, so the gate
-vets and tests each by name:
+vets and tests each by name, with the flags in its `vet.flags` if it has one (x-sys's turns
+off `unsafeptr`, which reports what its generated syscall wrappers must do):
 
 ```bash
-for module in third_party/*/; do go -C "$module" vet ./... && go -C "$module" test ./...; done
+for module in third_party/*/; do go -C "$module" vet $(cat "${module}vet.flags" 2>/dev/null) ./... && go -C "$module" test ./...; done
 ```
 
 Strict TDD: one failing test first, captured, then the minimum production

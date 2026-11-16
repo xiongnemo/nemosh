@@ -97,6 +97,15 @@ groups do not, and both are the wrong things to hand-roll for 1.5 ms:
 Reversible: if `x/sys/windows` ever drops the `net` import, this cost disappears
 with no work here.
 
+**Taken another way, 2026-11-17.** Leaving `x/sys/windows` was the wrong price; dropping
+the import was not, and a fork can do it without reimplementing either group above:
+`third_party/x-sys` is v0.47.0 with `SocketAddress.IP`, the one method that used `net`,
+left out. The applets that do open sockets speak Winsock themselves by then
+(`internal/netio`), so nothing else imported `net`. `init net` is gone from
+`GODEBUG=inittrace=1`; measured with `tools/startbench` against the commit before,
+median of 40: `--version` 6.05 to 5.51 ms, `-c true` 8.72 to 8.07 ms, and 24 fewer init
+allocations. `cmd/nemosh/release_deps_test.go` forbids `net`.
+
 ### A 32 MiB reservation from the crypto packages, gone 2026-11-17
 
 `crypto/internal/fips140/drbg.memory` is a 33,554,432-byte scratch buffer that

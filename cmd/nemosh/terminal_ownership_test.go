@@ -52,8 +52,11 @@ func TestTerminalState_isChangedOnlyWhereItIsOwned(t *testing.T) {
 			return err
 		}
 		if entry.IsDir() {
-			// references/ carries vendored C for citation, and it is not this tree's code.
-			if name := entry.Name(); name == "references" || name == ".git" || name == "dist" {
+			// references/ carries vendored C for citation, and it is not this tree's code; nor is
+			// third_party/, upstream's modules, which are no more this tree's for being forked
+			// than tcell is in the module cache. x/sys there declares SetConsoleMode, which is
+			// how this tree calls it, and calls it nowhere.
+			if name := entry.Name(); name == "references" || name == "third_party" || name == ".git" || name == "dist" {
 				return filepath.SkipDir
 			}
 			return nil
