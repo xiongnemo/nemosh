@@ -45,7 +45,7 @@ func newChmodApplet() Applet {
 				request.report(file, err)
 				continue
 			}
-			if err := request.change(ctx, native, file, 0); err != nil {
+			if err := request.change(ctx, native, file, 0, nil); err != nil {
 				return err
 			}
 		}
@@ -106,26 +106,25 @@ func parseChmodArguments(args []string, permute bool) (chmodRequest, []string, e
 }
 
 // change applies the MODE to one file, shown by the name it goes by in messages, and with -R
-// to what a directory holds. Only a MODE that cannot be read is an error that ends chmod.
-func (r *chmodRequest) change(ctx context.Context, native, shown string, depth int) error {
-	stat := os.Stat
-	if depth > 0 {
-		stat = os.Lstat
-	}
-	info, err := stat(native)
-	if err != nil {
-		r.report(shown, err)
-		return nil
+// to what a directory holds. Only a MODE that cannot be read is an error that ends chmod. info is
+// what the directory that holds the file said of it, under -R, so it is not asked again.
+func (r *chmodRequest) change(ctx context.Context, native, shown string, depth int, info os.FileInfo) error {
+	if info == nil {
+		var err error
+		if info, err = os.Stat(native); err != nil {
+			r.report(shown, err)
+			return nil
+		}
 	}
 	if depth > 0 && info.Mode()&os.ModeSymlink != 0 {
 		return nil
 	}
-	current := currentPermissions(native, info, r.umask)
+	current := chmodReckoned(native, info, r.umask, r.verbose || r.changes)
 	mode, ok := applyChmodMode(r.mode, current, r.umask, info.IsDir())
 	if !ok {
 		return fmt.Errorf("invalid mode '%s'", r.mode)
 	}
-	if err := applyPermissions(native, mode, info.IsDir()); err != nil {
+	if err := chmodApply(native, info, mode); err != nil {
 		if r.failed = true; !r.quiet {
 			r.report(shown, err)
 		}
@@ -150,7 +149,13 @@ func (r *chmodRequest) change(ctx context.Context, native, shown string, depth i
 		if os.IsPathSeparator(shown[len(shown)-1]) {
 			inner = shown + entry.Name()
 		}
-		if err := r.change(ctx, filepath.Join(native, entry.Name()), inner, depth+1); err != nil {
+		// What the listing read of an entry is its Lstat, so a link is not followed.
+		entryInfo, err := entry.Info()
+		if err != nil {
+			r.report(inner, err)
+			continue
+		}
+		if err := r.change(ctx, filepath.Join(native, entry.Name()), inner, depth+1, entryInfo); err != nil {
 			return err
 		}
 	}
