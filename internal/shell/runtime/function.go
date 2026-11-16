@@ -94,17 +94,21 @@ func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefini
 	// named the function's last one.
 	defer r.enterLine(r.currentLine())
 	caller := r.params
-	r = r.enterFrame(definition.name.value, definition.file)
-	r.params = &parameters{name: r.params.name, values: append([]string(nil), args...), function: definition.name.value}
+	// The call's frame, parameters and local scope are one allocation; see callRecord.
+	record := &callRecord{
+		frame:  callFrame{name: definition.name.value, file: definition.file, line: r.currentLine(), outer: r.frames},
+		params: parameters{name: r.params.name, values: append([]string(nil), args...), function: definition.name.value},
+	}
+	r.frames, r.params = &record.frame, &record.params
 	r.functionDepth++
 	// A call gets its own local scope, and whatever `local` shadowed inside it
 	// is put back on the way out -- including when the body returns early or
 	// breaks out of a loop, which is why the restore is deferred. Put back beside the
 	// caller's parameters, so a local OPTIND restored is where the caller's getopts starts
 	// over, as busybox has it.
-	scope := newLocalScope()
+	scope := &record.scope
 	for _, name := range assigned {
-		scope.saved[name] = r.variableAsItIs(name)
+		scope.save(name, r.variableAsItIs(name))
 	}
 	r.locals = scope
 	restoring := r

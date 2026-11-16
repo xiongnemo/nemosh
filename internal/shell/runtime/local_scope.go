@@ -24,8 +24,22 @@ type savedVariable struct {
 	readonly   bool
 }
 
-func newLocalScope() *localScope {
-	return &localScope{saved: map[string]savedVariable{}}
+// callRecord is what a function call has of its own: the frame FUNCNAME and caller read, its
+// positional parameters, and its local scope, made in one allocation where they were three, and
+// a fourth for the scope's map, which is now made only when something is made local. Each is
+// still reached through its own pointer, and the record lives as long as any of them is held.
+type callRecord struct {
+	frame  callFrame
+	params parameters
+	scope  localScope
+}
+
+// save keeps what name was before the call made it its own, making the map the first time.
+func (s *localScope) save(name string, saved savedVariable) {
+	if s.saved == nil {
+		s.saved = map[string]savedVariable{}
+	}
+	s.saved[name] = saved
 }
 
 // makeLocal gives the call a name of its own. The first time, what the name was is saved
@@ -38,7 +52,7 @@ func (r Runtime) makeLocal(name string) {
 		return
 	}
 	saved := r.variableAsItIs(name)
-	r.locals.saved[name] = saved
+	r.locals.save(name, saved)
 	exported := r.isExported(name)
 	delete(r.vars, name)
 	r.arrays.unset(name)
