@@ -42,6 +42,8 @@ var forbiddenInRelease = []string{
 	// internal/netio/schannel_windows.go.
 	"crypto/tls",
 	"crypto/x509",
+	// Random bytes are the system's, RtlGenRandom; see internal/osrand.
+	"crypto/rand",
 }
 
 // requiredInRelease are packages a release build must still link: without terminfo/base, tcell

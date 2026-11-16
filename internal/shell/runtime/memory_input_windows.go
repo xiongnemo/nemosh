@@ -3,12 +3,13 @@
 package runtime
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/sys/windows"
+
+	"github.com/xiongnemo/nemosh/internal/osrand"
 )
 
 // openSharedTemp is a new temporary file, read and written through one handle, that
@@ -16,7 +17,7 @@ import (
 // handed to.
 func openSharedTemp() (*os.File, error) {
 	suffix := make([]byte, 8)
-	if _, err := rand.Read(suffix); err != nil {
+	if _, err := osrand.Read(suffix); err != nil {
 		return nil, err
 	}
 	path := filepath.Join(os.TempDir(), "nemosh-input-"+hex.EncodeToString(suffix))

@@ -1,11 +1,12 @@
 package runtime
 
 import (
-	"crypto/rand"
 	"io"
 	"io/fs"
 	"path"
 	"time"
+
+	"github.com/xiongnemo/nemosh/internal/osrand"
 )
 
 // The devices, as one table.
@@ -73,12 +74,12 @@ var virtualDevices = []virtualDevice{
 // `echo x > /dev/zero` was "unsupported device".
 func discardWrites(bool) (io.WriteCloser, error) { return nullDevice{}, nil }
 
-// openRandomReader is crypto/rand for both spellings.
+// openRandomReader is the system's random bytes, osrand's, for both spellings.
 //
 // `/dev/random` and `/dev/urandom` differ on Linux -- one can block waiting for entropy -- and on
 // Windows there is one source and it does not block, so the distinction has nothing to represent
 // here. Both names work because scripts use both.
-func openRandomReader() (io.ReadCloser, error) { return io.NopCloser(rand.Reader), nil }
+func openRandomReader() (io.ReadCloser, error) { return io.NopCloser(osrand.Reader), nil }
 
 // lookupDevice finds a device by its full path.
 func lookupDevice(path string) (virtualDevice, bool) {

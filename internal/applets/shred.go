@@ -2,13 +2,14 @@ package applets
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/osrand"
 )
 
 // shred is busybox's (coreutils/shred.c): `shred [-fuz] [-n N] [-s SIZE] FILE...` writes random
@@ -89,7 +90,7 @@ func shredOne(view ProcessView, operand string, options appletOptions, passes in
 			length = size
 		}
 		for range passes {
-			err = errors.Join(err, overwrite(file, rand.Reader, length))
+			err = errors.Join(err, overwrite(file, osrand.Reader, length))
 		}
 		if options.has('z') {
 			err = errors.Join(err, overwrite(file, zeroReader{}, length))

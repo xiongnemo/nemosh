@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	cryptorand "crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"math/rand/v2"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/xiongnemo/nemosh/internal/osrand"
 )
 
 // The variables the shell computes rather than stores: $RANDOM, $SRANDOM, $SECONDS, $PPID,
@@ -164,10 +165,10 @@ func (r Runtime) assignSpecialVar(name, value string) bool {
 	return false
 }
 
-// secureRandom32 is SRANDOM's number, from crypto/rand, which does not fail.
+// secureRandom32 is SRANDOM's number, from the system's random bytes, which do not fail.
 func secureRandom32() uint32 {
 	var bytes [4]byte
-	_, _ = cryptorand.Read(bytes[:])
+	_, _ = osrand.Read(bytes[:])
 	return binary.LittleEndian.Uint32(bytes[:])
 }
 

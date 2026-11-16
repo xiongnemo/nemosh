@@ -1,11 +1,12 @@
 package applets
 
 import (
-	"crypto/rand"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/osrand"
 )
 
 // What `mktemp` gets wrong is worth stating, because three of the four defects were silent.
@@ -103,15 +104,15 @@ func reserveTemporary(path string, wantDirectory bool) error {
 	return file.Close()
 }
 
-// randomTemporaryText is count characters from crypto/rand.
+// randomTemporaryText is count characters from the system's random bytes, osrand's.
 //
-// crypto/rand rather than math/rand because the whole point of the applet is a name nobody
-// else can predict, and it is already linked into this binary.
+// Those rather than math/rand because the whole point of the applet is a name nobody
+// else can predict.
 func randomTemporaryText(count int) string {
 	bytes := make([]byte, count)
-	if _, err := rand.Read(bytes); err != nil {
-		// crypto/rand.Read is documented never to fail; if it ever does, a panic here
-		// beats a predictable name.
+	if _, err := osrand.Read(bytes); err != nil {
+		// RtlGenRandom does not fail on any Windows nemosh runs on; if it ever does, a
+		// panic here beats a predictable name.
 		panic("mktemp: " + err.Error())
 	}
 	for index, value := range bytes {

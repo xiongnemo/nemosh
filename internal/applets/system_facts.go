@@ -2,12 +2,13 @@ package applets
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"io"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/osrand"
 )
 
 // The small commands that answer one question about the machine or the session.
@@ -142,7 +143,7 @@ func newGroupsApplet() Applet {
 // in a log needs.
 //
 // Version 4: random apart from the six bits that say which version and variant it is. The
-// randomness comes from **crypto/rand**, and that is a correctness question rather than a
+// randomness comes from **the system's**, osrand, and that is a correctness question rather than a
 // stylistic one -- a seeded generator would make a "unique" identifier that repeats from
 // one run to the next, which is the one thing this command must not do.
 func newUUIDGenApplet() Applet {
@@ -161,7 +162,7 @@ func newUUIDGenApplet() Applet {
 
 func randomUUID() (string, error) {
 	var bytes [16]byte
-	if _, err := rand.Read(bytes[:]); err != nil {
+	if _, err := osrand.Read(bytes[:]); err != nil {
 		return "", fmt.Errorf("cannot read random bytes: %v", err)
 	}
 	// The version nibble and the variant bits, which are what make this a v4 UUID rather
