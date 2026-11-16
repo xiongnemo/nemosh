@@ -15,6 +15,11 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 
 ### Changed
 
+- **Windows is the only platform.** Nemosh no longer builds for Linux or macOS, and no
+  release carries their `.tar.gz` archives or the `.deb`, `.rpm` and `.apk` packages, which
+  were an unsupported convenience; v1.4.0 and the nightly `v1.4.66-master-b9608f763100` are
+  the last that have them. What was written for those platforms goes, and a Windows API is
+  called directly where one does the job, as busybox-w32 does.
 - **Paths are reported as busybox-w32 reports them**, `C:/Users/nemo`: `~`, `$HOME`,
   `pwd`, `$PWD`, `$OLDPWD`, `dirs`, the prompt and `realpath`. A native program handed
   `~/x` can now open it; `nvim ~/.ssh/config` opened `\c\Users\...`. `NEMOSH_PATHS=msys`

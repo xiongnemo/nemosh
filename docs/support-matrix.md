@@ -11,18 +11,20 @@ changes; see AGENTS.md, Documentation Hygiene.
 
 ## Platforms
 
-A binary being published is not the same as the platform being supported, and
-the second column is the one that decides. Four of these ship archives; one is
-supported.
+Windows is the only platform, from 2026-11-17. Nemosh does not build for
+anything else: there is no `_other.go` half of a platform split, and a Windows
+API is called directly where one does the job, as busybox-w32 does.
 
 | Platform | Status | What that means |
 | --- | --- | --- |
 | `windows/amd64` | **Supported** | The target. Bugs here are bugs. Behavior corpus, differential suite against busybox-w32/ash, and native path, launch, device, and interrupt tests all run here. |
-| `linux/amd64` | **Build and test only**, binary published | CI compiles and runs the full suite, which is what keeps the platform splits from rotting. Not a support commitment: three interactive interrupt tests are skipped here, and the Windows-only surfaces (clipboard device, `ComSpec` batch launch, 8.3 fallback, case-preserving `cd`) have no counterpart. |
-| `linux/arm64` | **Compile only**, binary published | Cross-compiled and never executed. |
-| `darwin/arm64` | **Build and test only**, binary published | `macos-latest` runs the full suite, which is what makes the `_other.go` half of every platform split — process listing, identity, executability, device input — *executed* rather than merely compiled. It found three failures the hour it was added, one of them a real defect in `command -v`. The strict differential does not run there: the only reference shell macOS ships is bash 3.2, so a divergence says more about 2007 than about Nemosh. |
-| `darwin/amd64` | **Compile only**, binary published | Cross-compiled. GitHub's macOS runners are arm64, so the Intel build is never executed. |
 | `windows/arm64` | **Untested** | Not built, not run, not claimed. |
+
+Until then `linux/amd64` and `darwin/arm64` ran the full suite on CI,
+`linux/arm64` and `darwin/amd64` were cross-compiled, and all four were published
+as an unsupported convenience, the Linux ones also as `.deb`, `.rpm` and `.apk`.
+The release v1.4.0 and the nightly `v1.4.66-master-b9608f763100` are the last
+that have them.
 
 Go 1.26, `CGO_ENABLED=0`, single binary, no runtime sidecars.
 

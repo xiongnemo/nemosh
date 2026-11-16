@@ -2,8 +2,9 @@ name: Product
 
 # This is the gate the readiness ledger means by "product CI": it builds Nemosh,
 # runs its tests, executes the behavior corpus against a freshly built binary,
-# and holds the repository's own rules -- formatting, vet on three platforms, and
-# the 250-pure-LOC ceiling per production file.
+# and holds the repository's own rules -- formatting, vet, and the 250-pure-LOC
+# ceiling per production file. Windows is the only platform nemosh is built for, from
+# 2026-11-17; it ran on ubuntu and macos too until then.
 #
 # The research probe workflow next to this one exercises reference shells only
 # and is not evidence about Nemosh.
@@ -25,15 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # macOS earns its place by *executing* the `_other.go` half of every
-        # platform split -- process listing, identity, executability, device
-        # input. Those files are compiled for darwin by `GOOS=darwin go build`
-        # below, and compiling is not running: a nil map, a wrong path
-        # separator, or a syscall that returns a different errno there survives
-        # a cross-compile untouched. Linux runs the same files, so this is not
-        # redundant only because darwin and linux disagree often enough to
-        # matter (case-insensitive filesystem by default, BSD userland).
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest]
     steps:
       # Actions are pinned to commit SHAs, not tags. A tag is mutable, so `@v4`
       # is a promise the upstream owner can rewrite at any time; the comment
@@ -51,21 +44,15 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # Windows is the first-class target, so its own reference shell is what
-      # the differential runner should have. Ubuntu already ships dash and bash.
+      # busybox-w32 is the reference shell the differential runner measures against.
       #
       # Pinned, because the reference is what the suite measures against and it
       # moved under it: unpinned, choco installed FRP-6354 on 2026-11-15, whose awk
       # changed two answers, and a commit that touched no awk went red. Moving the
       # pin is a change of its own, measured with that build on PATH locally.
-      - name: Install busybox (Windows)
-        if: runner.os == 'Windows'
+      - name: Install busybox
         shell: bash
         run: choco install busybox --version=6354.0.0 --no-progress -y || echo "busybox unavailable; the differential runner will skip it"
-
-      - name: Install dash (Ubuntu)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y dash busybox
 
       - name: gofmt
         shell: bash
@@ -82,15 +69,6 @@ jobs:
 
       - name: go vet
         run: go vet ./...
-
-      # Nemosh is Windows-first but must keep compiling for the two Unix targets,
-      # because the platform splits are what would rot silently otherwise.
-      - name: go vet (cross-platform)
-        shell: bash
-        run: |
-          GOOS=linux go vet ./...
-          GOOS=darwin go build ./...
-          GOOS=windows go build ./...
 
       # third_party/ is a fork linked in place of an upstream module (go.mod's replace;
       # see its README). It is a module of its own, which ./... does not reach, so it is
@@ -118,17 +96,10 @@ jobs:
       # Strict mode turns a divergence from a reference shell into a failure.
       # CI has a known toolbox, which is the condition that makes that fair; on a
       # developer's machine the same test reports and does not fail.
-      #
-      # macOS is the exception, and reports instead. The only reference shell it
-      # ships is bash 3.2 -- Apple froze it in 2007 over the GPLv3 change -- so a
-      # divergence there is as likely to be nineteen years of bash as anything
-      # about Nemosh. Gating on it would make the build depend on a shell nobody
-      # is targeting. The output is still printed, so a real difference is
-      # visible; it is just not a veto.
       - name: differential against reference shells
         shell: bash
         env:
-          NEMOSH_DIFFERENTIAL: ${{ runner.os == 'macOS' && 'report' || 'strict' }}
+          NEMOSH_DIFFERENTIAL: strict
         run: go test ./internal/testutil/behavior/ -run Differential -count=1 -v
 
       # The Oils spec suite, vendored in tests/oils, measures how far nemosh is from
@@ -142,13 +113,10 @@ jobs:
       # it with NEMOSH_OILS=update in the same commit. The first CI run under it, not
       # gating, differed from a local run in two cases; one was the runner's account
       # and is excluded now, the other hangs on timing and is recorded as flaky.
-      # Ubuntu reports. macOS is left out: its bash is 3.2, and nothing here was
-      # measured on it.
       - name: Oils spec suite
-        if: runner.os != 'macOS'
         shell: bash
         env:
-          NEMOSH_OILS: ${{ runner.os == 'Windows' && 'strict' || 'report' }}
+          NEMOSH_OILS: strict
         run: go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
 
       # Fuzz seeds are run as ordinary tests on every platform: the corpus in
@@ -166,9 +134,10 @@ jobs:
           go test ./internal/shell/runtime/ -run 'Fuzz' -count=1
           go test ./internal/applets/ -run 'Fuzz' -count=1
 
-      # A short exploration on Linux only. Long enough to be worth having, short
-      # enough not to make every push wait; anything it finds is written to
-      # testdata and becomes a seed above.
+      # A short exploration, on the runner and never on a developer's machine. Long
+      # enough to be worth having, short enough not to make every push wait; anything
+      # it finds is written to testdata and becomes a seed above. It ran on the Linux
+      # runner until Windows became the only platform.
       #
       # **The saved input decides, not the exit status.** A real finding is always
       # written to testdata/fuzz/<target>/, which is what the corpus regression step
@@ -185,7 +154,7 @@ jobs:
       # A hang, a panic, or any other wording still fails, because those are findings
       # even when the harness is what noticed.
       - name: fuzz exploration
-        if: runner.os == 'Linux'
+        shell: bash
         run: |
           corpus() {
             git status --porcelain -- \
@@ -231,8 +200,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          binary="dist/nemosh"
-          [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
+          binary="dist/nemosh.exe"
           CGO_ENABLED=0 go build -trimpath \
             -ldflags "-s -w $(bash scripts/version.sh --ldflags)" \
             -o "$binary" ./cmd/nemosh
@@ -324,8 +292,7 @@ jobs:
       - name: binary size ceiling
         shell: bash
         run: |
-          binary="dist/nemosh"
-          [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
+          binary="dist/nemosh.exe"
           size=$(wc -c < "$binary")
           ceiling=18874368
           echo "$binary is $size bytes, ceiling $ceiling"
@@ -397,8 +364,7 @@ jobs:
       # both 10% and a floor, in three rounds out of three. The self-check times this
       # build against itself, which can differ only by noise; until enough runs of
       # it have shown the threshold sits outside the noise, a slowdown is reported
-      # as WOULD FAIL rather than failing. The timing is Windows only, the platform
-      # supported; the allocation ceiling holds on all three, as before.
+      # as WOULD FAIL rather than failing.
       #
       # Lowered from 2750 to 1200 on 2026-11-16, at 2741 on windows-latest before and
       # about 1070 after, by three commits that took work out of init rather than
@@ -426,19 +392,15 @@ jobs:
       - name: package init and startup time
         shell: bash
         run: |
-          binary="dist/nemosh"
-          [ "$RUNNER_OS" = "Windows" ] && binary="dist/nemosh.exe"
-          compare=()
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            # Named nemosh-*: a binary answers to the name it was started by, and one
-            # called base.exe would be looked up as an applet.
-            base_tree="$RUNNER_TEMP/startbench-base"
-            base="$RUNNER_TEMP/nemosh-base.exe"
-            git worktree add --detach "$base_tree" HEAD^
-            (cd "$base_tree" && CGO_ENABLED=0 go build -trimpath \
-              -ldflags "-s -w $(bash scripts/version.sh --ldflags)" -o "$base" ./cmd/nemosh)
-            compare=(-base "$base" -self-check)
-          fi
+          binary="dist/nemosh.exe"
+          # Named nemosh-*: a binary answers to the name it was started by, and one
+          # called base.exe would be looked up as an applet.
+          base_tree="$RUNNER_TEMP/startbench-base"
+          base="$RUNNER_TEMP/nemosh-base.exe"
+          git worktree add --detach "$base_tree" HEAD^
+          (cd "$base_tree" && CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w $(bash scripts/version.sh --ldflags)" -o "$base" ./cmd/nemosh)
+          compare=(-base "$base" -self-check)
           # A pull request's HEAD is the merge commit; the trailer is on the branch's own.
           enforce=(-enforce)
           messages=$(git log -1 --format=%B HEAD; if git rev-parse -q --verify HEAD^2 >/dev/null; then git log -1 --format=%B HEAD^2; fi)

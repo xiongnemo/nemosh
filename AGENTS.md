@@ -71,11 +71,12 @@ tags and a shallow clone silently yields the fallback.
   here documents that way of installing, and the release artifacts are unaffected.
 - The published artifact must be the same binary CI verified. No rebuild at
   release time.
-- Keep cross-build matrices opt-in. Do not build every target
-  `go tool dist list` reports; a new Go release may add targets this repository
-  has not validated.
-- Windows is the supported platform. Linux and macOS are build-and-test checks,
-  not support commitments; see the support matrix in `README.md`.
+- **Windows is the only platform, from 2026-11-17.** windows/amd64 is the one
+  target built, tested and published. Nothing is written for another GOOS -- no
+  `_other` or `!windows` file, no `runtime.GOOS` branch -- and a Windows API is
+  called directly where one does the job, as busybox-w32 does. Until then Linux and
+  macOS were build-and-test checks on CI, with binaries published as an unsupported
+  convenience; the lessons that were only about them are gone from this file.
 - Distribution is Scoop, through
   [`xiongnemo/windows-binaries-scoop-bucket`](https://github.com/xiongnemo/windows-binaries-scoop-bucket).
   The publish job announces each release to
@@ -91,15 +92,9 @@ tags and a shallow clone silently yields the fallback.
   declares its hash agrees with itself no matter what went wrong in between.
   Anything that replaces the Excavator has to keep hashing the published
   artifact.
-- The Linux binaries are also packaged as `.deb`, `.rpm` and `.apk` from
-  `packaging/nfpm.yaml`, from the same static binary, and smoke-installed on
-  Debian, Ubuntu, Fedora, Rocky and Alpine before anything publishes. The publish
-  job then tells [`xiongnemo/packages`](https://github.com/xiongnemo/packages),
-  which indexes the assets for apt/dnf/apk at https://package.anzupop.com --
-  under the same rule as the bucket: it fetches the release by tag and hashes
-  the published files itself. A build that is not exactly a tag is a `pre`
-  prerelease of its base (`1.4.3~pre-1`, apk `1.4.3_pre-r1`); nFPM's default apk
-  spelling, `1.4.3_master-<commit>`, is one apk-tools rejects.
+- Until 2026-11-17 the Linux binaries were also packaged as `.deb`, `.rpm` and
+  `.apk` with nFPM and indexed for apt/dnf/apk at https://package.anzupop.com by
+  `xiongnemo/packages`. They went with the platform; the dispatch stays, for Scoop.
 
 ## Tests And Gates
 
@@ -107,8 +102,7 @@ Before handing off substantive changes, all of:
 
 ```bash
 gofmt -l .                                    # empty
-go vet ./... && GOOS=linux go vet ./...
-GOOS=darwin go build ./...
+go vet ./...
 NEMOSH_DIFFERENTIAL=strict go test -race -shuffle=on -count=1 ./...
 ```
 
@@ -161,26 +155,15 @@ which is indistinguishable from a session that has already ended. What a person 
 to check by hand, and what is already covered so they need not, is
 `docs/testing/manual-checks.md`.
 
-**The local gate is Windows-only, and CI is not.** A green run here says nothing
-about ubuntu and macos, which run the same suite. Four commits went in on
-2026-08-22 before anyone looked, and all four failed CI for one reason:
+**The local gate is not CI.** The runner is a different Windows machine, which owns
+its files differently, puts its temporary directory under `HOME`, and has other
+programs on `PATH`; four commits went in on 2026-08-22 before anyone looked, and all
+four were red. **Check `gh run list` after pushing**, not after four pushes.
 
-> **A directory's apparent size is platform-dependent.** Windows reports 0,
-> Linux and macOS report the directory block — 4096 and 96 respectively.
-
-So `find . -size -1c` matched the walk root on Windows and not elsewhere, and
-`ls -S` put a subdirectory last here and first there. Both were assertions that
-had quietly encoded a Windows fact as the answer. When a test compares sizes,
-either constrain it to files (`-type f`, a fixture with no subdirectory) or
-expect a different answer per platform — and **check `gh run list` after pushing**
-rather than after four pushes. Anything reading `os.FileInfo` off a directory
-deserves the same suspicion: size, mode bits, and link count all differ.
-
-It happened again on 2026-08-23, worse and for a different reason: **six** pushes
-went red on the same step, the binary size ceiling, and the local gate cannot see
-it because the ceilings live only in `product.yml`. The full gate in this file
-runs `gofmt`, `vet`, the cross-platform vet, the darwin build, the suite and the
-250-line loop — it does **not** build a release binary or measure one. So a stage
+On 2026-08-23 **six** pushes went red on the same step, the binary size ceiling, and
+the local gate cannot see it because the ceilings live only in `product.yml`. The
+full gate in this file runs `gofmt`, `vet`, the suite and the 250-line loop -- it
+does **not** build a release binary or measure one. So a stage
 that adds a dependency (`net/http` cost 2.07 MiB on its own) passes locally every
 time and fails on every runner. After a stage that adds an import nothing in this
 tree had before, measure it:
@@ -201,28 +184,6 @@ than against the ceiling. Time is never compared against a number, only against 
 base, interleaved, in rounds; see `docs/design/startup-and-footprint.md`. A scenario 10%
 and a floor slower in every round fails the build; a commit that is slower on purpose
 says why in a `Startup-Cost-Accepted: <why>` trailer and is reported instead.
-
-**The specific trap, a third time, on 2026-08-23: a test that samples the machine.**
-`internal/proc` implements listing on Windows only and answers
-`ErrListUnsupported` elsewhere rather than guessing, so *any* test that reaches
-`top`, `ps` or `free` for real passes here and fails on both other runners. The guard
-already exists and is worth copying rather than reinventing --
-`startTop` in `top_view_test.go` skips on `runtime.GOOS != "windows"`, and
-`top_batch_test.go` now has `requireProcessSampling` for the same reason. Before
-writing a test that reads the process table, ask which of the three machines can
-answer it.
-
-Cross-compiling the tests catches the *build* half of this and nothing else:
-
-```bash
-GOOS=linux go test -c -o /dev/null ./internal/applets/    # compiles, says nothing about behaviour
-GOOS=darwin go test -c -o /dev/null ./internal/applets/
-```
-
-Running the suite under WSL was tried and does not work here: the Debian image has
-Go 1.23 against this module's 1.26, and fetching a toolchain needs network the
-sandbox does not have. So CI is the only real cross-platform check, which is the
-reason to read the run list rather than to assume.
 
 **Per-package coverage understates anything driven from another package.**
 `go test -coverprofile ./internal/applets/` reported `device_walk.go` at 14.3% and it

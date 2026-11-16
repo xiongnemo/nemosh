@@ -182,7 +182,10 @@ and is the one item of this section that v0 delivered. The rest is new:
   `.tar.gz` -- tar rather than zip because a zip does not carry the executable
   bit. Publishing is not promising: the release notes, the README table and the
   support matrix each say that only `windows/amd64` is supported and that a bug
-  elsewhere is a report rather than a release blocker.
+  elsewhere is a report rather than a release blocker. **Withdrawn 2026-11-17**:
+  Windows is the only platform from then, nemosh builds for nothing else, and the
+  archives and the Linux packages stopped with v1.4.0 and the nightly
+  `v1.4.66-master-b9608f763100`.
 - SBOM. **Declined 2026-08-14.** A Go binary already records its module graph, so
   `go version -m nemosh.exe` reports every dependency and its hash -- two of them,
   `golang.org/x/sys` and `golang.org/x/term`. A formal SPDX or CycloneDX document

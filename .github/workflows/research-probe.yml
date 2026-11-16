@@ -20,35 +20,9 @@ on:
 permissions:
   contents: read
 
+# Windows only, from 2026-11-17, as nemosh is; the probe of sh and bash --posix on ubuntu and
+# macos went with the platforms.
 jobs:
-  unix-shells:
-    name: ${{ matrix.os }} / ${{ matrix.shell_name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            shell_name: sh
-            shell_cmd: sh
-          - os: ubuntu-latest
-            shell_name: bash-posix
-            shell_cmd: bash --posix
-          - os: macos-latest
-            shell_name: sh
-            shell_cmd: sh
-          - os: macos-latest
-            shell_name: bash-posix
-            shell_cmd: bash --posix
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Runner info
-        run: |
-          uname -a
-          printf 'PATH=%s\n' "$PATH"
-      - name: POSIX smoke probe
-        run: sh scripts/research/posix-smoke.sh ${{ matrix.shell_cmd }}
-
   windows-native:
     name: windows-latest / native inventory
     runs-on: windows-latest

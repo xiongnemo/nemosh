@@ -1,7 +1,7 @@
 # Nemosh
 
-A native Windows-first, cross-platform, BusyBox-style shell and utility bundle,
-written in Go. One binary, no runtime dependencies.
+A native Windows BusyBox-style shell and utility bundle, written in Go. One
+binary, no runtime dependencies.
 
 The shell target is advanced ash-like behavior. It is **not** MSYS2, Cygwin,
 PowerShell, or cmd compatibility, and it makes no POSIX certification claim.
@@ -34,13 +34,13 @@ pipeline never receives paths the expression did not select.
 | Platform | Status | Binary published |
 | --- | --- | --- |
 | `windows/amd64` | **Supported** — the target | yes, `.zip` |
-| `linux/amd64` | Build and test only, not a support commitment | yes, `.tar.gz` |
-| `linux/arm64` | Compiled, never executed | yes, `.tar.gz` |
-| `darwin/amd64`, `darwin/arm64` | Compiled, never executed | yes, `.tar.gz` |
 | `windows/arm64` | Untested | no |
 
-A published binary is a convenience, not a promise. Only `windows/amd64` is
-supported; a bug elsewhere is a welcome report and not a release blocker.
+Windows is the only platform. Nemosh calls Windows APIs directly where one does
+the job, as busybox-w32 does, and does not build for anything else. Until
+2026-11-17 the Linux and macOS binaries were published as an unsupported
+convenience, along with `.deb`, `.rpm` and `.apk` packages; the release v1.4.0
+and the nightly `v1.4.66-master-b9608f763100` are the last that have them.
 
 ## Install
 
@@ -66,20 +66,6 @@ escape away from being eaten by whatever generates the documentation.
 The download is verified against a published SHA-256. Artifacts are not
 code-signed, so a browser download will raise SmartScreen; Scoop checks the
 checksum instead.
-
-The Linux builds -- a convenience, per the matrix above -- are also packaged as
-`.deb`, `.rpm` and `.apk`, attached to each release and installable from
-[package.anzupop.com](https://package.anzupop.com):
-
-```sh
-sudo curl -fsSLo /usr/share/keyrings/nemo.gpg https://package.anzupop.com/keys/nemo-packages.gpg
-echo "deb [signed-by=/usr/share/keyrings/nemo.gpg] https://package.anzupop.com/apt nightly main" | sudo tee /etc/apt/sources.list.d/nemo.list
-sudo apt update && sudo apt install nemosh
-```
-
-The page there has the dnf and apk equivalents. A build that is not exactly a
-tag is packaged as a prerelease of its base -- `1.4.3~pre-1`, or `1.4.3_pre-r1`
-for apk -- because a package version has no room for a branch and a commit.
 
 ## Build
 
@@ -166,8 +152,7 @@ Every change is test-first, and the full gate must pass:
 
 ```bash
 gofmt -l .                                    # empty
-go vet ./... && GOOS=linux go vet ./...
-GOOS=darwin go build ./...
+go vet ./...
 NEMOSH_DIFFERENTIAL=strict go test -race -shuffle=on -count=1 ./...
 ```
 

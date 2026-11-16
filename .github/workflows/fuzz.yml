@@ -27,10 +27,12 @@ on:
 permissions:
   contents: read
 
+# On Windows, because nemosh builds for nothing else from 2026-11-17: a package's tests do not
+# compile on a Linux runner any more.
 jobs:
   targets:
     name: find the targets
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     outputs:
       matrix: ${{ steps.list.outputs.matrix }}
     steps:
@@ -59,7 +61,7 @@ jobs:
   fuzz:
     name: ${{ matrix.target }}
     needs: targets
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
