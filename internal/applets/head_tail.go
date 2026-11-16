@@ -161,6 +161,14 @@ func newTailApplet() Applet {
 func copyTailOf(stdout io.Writer, input io.Reader, spec countSpec) error {
 	// `tail -n +10` starts at line 10 rather than ending there. This is the case the sign
 	// was being dropped on; see head_tail_offset.go.
+	if !spec.fromStart {
+		// A regular file is read back from its end; see tail_seek.go.
+		if file := seekableTail(input); file != nil {
+			if done, err := tailFromEnd(stdout, file, spec); done {
+				return err
+			}
+		}
+	}
 	if spec.fromStart {
 		if spec.bytes {
 			return copyBytesFromStart(stdout, input, spec.count)

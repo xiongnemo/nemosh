@@ -42,6 +42,7 @@ func TestStreams_areAskedThroughTheHelpersRatherThanAsserted(t *testing.T) {
 		"leaseTopStdin":    "borrows the console for tcell, and walks to it",
 		"readWithContext":  "needs the file itself to cancel a read that has already blocked",
 		"openProcessInput": "opens an operand, which really is a file rather than a stream",
+		"operandFile":      "the walker for an operand openProcessInput opened, which really is a file",
 	}
 
 	entries, err := os.ReadDir(".")

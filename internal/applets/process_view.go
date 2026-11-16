@@ -90,6 +90,19 @@ func OpenHostInput(native string) (io.ReadCloser, error) {
 	return file, nil
 }
 
+// operandFile is the file an operand OpenProcessInput opened reads, for an applet that would seek
+// in it, as tail reads one back from its end -- or false for a device the view opened, or for
+// standard input, which is a stream and is never asked this way (see stream_question_test.go).
+// An operand is a file rather than a stream, which is why openProcessInput's result may be.
+func operandFile(input io.Reader) (*os.File, bool) {
+	wrapped, ok := input.(*contextReadCloser)
+	if !ok {
+		return nil, false
+	}
+	file, ok := wrapped.input.(*os.File)
+	return file, ok
+}
+
 type contextReadCloser struct {
 	ctx      context.Context
 	input    io.ReadCloser
