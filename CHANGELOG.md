@@ -8,10 +8,16 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
-## Unreleased
+## v1.5.0 - 2026-11-18
 
-Day-to-day use: Tab, the prompt, startup, and what the shell says when a name is not
-found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
+Windows only, in three architectures, and built on Windows itself: TLS is Schannel's, sockets
+Winsock's, checksums and random bytes CNG's and code pages the system's, as busybox-w32's are,
+and windows/arm64 and windows/386 are built and tested beside windows/amd64. Against v1.4.0,
+measured on one machine with tools/startbench: the binary is 11.0 MB where it was 15.7, a
+session waiting for input commits 13.2 MiB where it committed 47.0, package init allocates 414
+times where it allocated 2,732, and `nemosh -c true` takes 8.7 ms where it took 25.9 -- 2,000
+commands 19.9 ms where they took 54.2. And day-to-day use: Tab, the prompt, startup, and what
+the shell says when a name is not found. Oils: 2153 of the 2548 cases bash passes, 84.5%.
 
 ### Changed
 
