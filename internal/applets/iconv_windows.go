@@ -73,14 +73,19 @@ func multiToWide(codePage int, flags uint32, in []byte, wide []uint16) int {
 
 // wideToMulti is WideCharToMultiByte of wide into out: how many it wrote, whether the default
 // character stood in for one it could not, and whether out was too small.
+//
+// The flag's address is a pointer until the call itself converts it, where LazyProc.Call's
+// uintptrescapes keeps what it points at from moving. Made a uintptr a statement before, it was
+// no pointer to the runtime, so a call that grew the stack moved the flag away from the address
+// Windows was given.
 func wideToMulti(codePage int, flags uint32, wide []uint16, out []byte, askDefault bool) (int, bool, bool) {
 	var usedDefault int32
-	usedPointer := uintptr(0)
+	var used *int32
 	if askDefault {
-		usedPointer = uintptr(unsafe.Pointer(&usedDefault))
+		used = &usedDefault
 	}
-	written, _, err := iconvAPI().wideToMulti.Call(uintptr(codePage), uintptr(flags),
-		uintptr(unsafe.Pointer(&wide[0])), uintptr(len(wide)), uintptr(unsafe.Pointer(&out[0])), uintptr(len(out)), 0, usedPointer)
+	written, _, err := iconvAPI().wideToMulti.Call(uintptr(codePage), uintptr(flags), uintptr(unsafe.Pointer(&wide[0])),
+		uintptr(len(wide)), uintptr(unsafe.Pointer(&out[0])), uintptr(len(out)), 0, uintptr(unsafe.Pointer(used)))
 	return int(written), usedDefault != 0, written == 0 && errors.Is(err, errInsufficientBuffr)
 }
 
