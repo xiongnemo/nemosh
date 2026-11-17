@@ -110,7 +110,7 @@ func copyHeadOf(stdout io.Writer, input io.Reader, spec countSpec) error {
 	if !spec.bytes {
 		return copyHead(stdout, input, spec.count)
 	}
-	_, err := io.CopyN(stdout, input, int64(spec.count))
+	_, err := io.CopyN(stdout, input, spec.count)
 	if errors.Is(err, io.EOF) {
 		// Fewer bytes than asked for is not a failure: it is a short file.
 		return nil
@@ -129,11 +129,11 @@ func copyHeadOf(stdout io.Writer, input io.Reader, spec countSpec) error {
 // scanLineWithEnding is eachLine's splitter, reused rather than reinvented -- head
 // cannot use eachLine itself because it stops after count lines and eachLine reads
 // to the end.
-func copyHead(stdout io.Writer, input io.Reader, count int) error {
+func copyHead(stdout io.Writer, input io.Reader, count int64) error {
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	scanner.Split(scanLineWithEnding)
-	for i := 0; i < count && scanner.Scan(); i++ {
+	for i := int64(0); i < count && scanner.Scan(); i++ {
 		if _, err := io.WriteString(stdout, scanner.Text()); err != nil {
 			return err
 		}
@@ -182,8 +182,8 @@ func copyTailOf(stdout io.Writer, input io.Reader, spec countSpec) error {
 	if err != nil {
 		return err
 	}
-	if len(data) > spec.count {
-		data = data[len(data)-spec.count:]
+	if int64(len(data)) > spec.count {
+		data = data[int64(len(data))-spec.count:]
 	}
 	_, err = stdout.Write(data)
 	return err
@@ -191,16 +191,18 @@ func copyTailOf(stdout io.Writer, input io.Reader, spec countSpec) error {
 
 // copyTail writes the last count lines, each with the ending it arrived with. See
 // copyHead for why the ending is kept rather than replaced.
-func copyTail(stdout io.Writer, input io.Reader, count int) error {
+func copyTail(stdout io.Writer, input io.Reader, count int64) error {
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	scanner.Split(scanLineWithEnding)
 	// The tokens keep their endings, so this holds whole lines rather than lines
-	// plus an assumption about how they ended.
-	lines := make([]string, 0, count)
+	// plus an assumption about how they ended. They grow as lines arrive, and are not made
+	// count long first: `tail -n 1000000000000` of a pipe asked for 16 TB before reading a
+	// line, and the shell died of it.
+	var lines []string
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
-		if len(lines) > count {
+		if int64(len(lines)) > count {
 			lines = lines[1:]
 		}
 	}

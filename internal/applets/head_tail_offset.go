@@ -20,7 +20,9 @@ import (
 
 // countSpec is a count together with what its sign asked for.
 type countSpec struct {
-	count int
+	// count is 64 bits on every build: a count of bytes passes what an int holds on windows/386
+	// at 2 GiB, and `tail -c 3G` of a disk image is an ordinary thing to ask.
+	count int64
 	// bytes is -c rather than -n.
 	bytes bool
 	// fromStart is the `+N` form: begin at N rather than end there. Only tail has it;
@@ -59,9 +61,9 @@ func parseCountSpec(text string, bytes bool) (countSpec, error) {
 // headTailCount is a count once its sign is off, as busybox's eat_num reads one with
 // bkm_suffixes: decimal digits, and b, k or m after them for 512, 1024 or 1048576. A second
 // sign, a blank or any other letter is an invalid number. `head -c 1k` was one.
-func headTailCount(digits string) (int, error) {
-	value, err := busyboxNumberBase(digits, 10, math.MaxInt, math.MaxInt, bkmSuffixes)
-	return int(value), err
+func headTailCount(digits string) (int64, error) {
+	value, err := busyboxNumberBase(digits, 10, math.MaxInt64, math.MaxInt64, bkmSuffixes)
+	return int64(value), err
 }
 
 // copyLinesFromStart is `tail -n +N`: everything from line N onward, counting from 1.
@@ -69,11 +71,11 @@ func headTailCount(digits string) (int, error) {
 // `+0` and `+1` both mean the whole input, which is what both references do -- there is no
 // line zero to skip to. Each line keeps the ending it came with, as copyTail keeps it, so a
 // last line with none is written with none; one was added, and a CRLF became an LF.
-func copyLinesFromStart(stdout io.Writer, input io.Reader, count int) error {
+func copyLinesFromStart(stdout io.Writer, input io.Reader, count int64) error {
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	scanner.Split(scanLineWithEnding)
-	seen := 0
+	seen := int64(0)
 	for scanner.Scan() {
 		seen++
 		if seen < count {
@@ -87,10 +89,10 @@ func copyLinesFromStart(stdout io.Writer, input io.Reader, count int) error {
 }
 
 // copyBytesFromStart is `tail -c +N`: from byte N onward, counting from 1.
-func copyBytesFromStart(stdout io.Writer, input io.Reader, count int) error {
+func copyBytesFromStart(stdout io.Writer, input io.Reader, count int64) error {
 	skip := count - 1
 	if skip > 0 {
-		if _, err := io.CopyN(io.Discard, input, int64(skip)); err != nil {
+		if _, err := io.CopyN(io.Discard, input, skip); err != nil {
 			// A short input leaves nothing to print, which is not a failure.
 			return nil
 		}
@@ -104,8 +106,9 @@ func copyBytesFromStart(stdout io.Writer, input io.Reader, count int) error {
 // The whole input has to be read before the first line can be printed, because which lines
 // are "the last N" is not known until the end. A ring of N+1 lines is enough state for that:
 // a line leaves the ring only once N further lines have arrived behind it, which proves it is
-// not one of the last N.
-func copyAllButLastLines(stdout io.Writer, input io.Reader, count int) error {
+// not one of the last N. It grows as lines arrive and is not made N+1 long first: `head -n
+// -1000000000000` asked for 16 TB before reading a line, and the shell died of it.
+func copyAllButLastLines(stdout io.Writer, input io.Reader, count int64) error {
 	if count == 0 {
 		return copyLinesFromStart(stdout, input, 1)
 	}
@@ -113,10 +116,10 @@ func copyAllButLastLines(stdout io.Writer, input io.Reader, count int) error {
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
 	scanner.Split(scanLineWithEnding)
-	held := make([]string, 0, count+1)
+	var held []string
 	for scanner.Scan() {
 		held = append(held, scanner.Text())
-		if len(held) <= count {
+		if int64(len(held)) <= count {
 			continue
 		}
 		if _, err := io.WriteString(stdout, held[0]); err != nil {
@@ -128,14 +131,14 @@ func copyAllButLastLines(stdout io.Writer, input io.Reader, count int) error {
 }
 
 // copyAllButLastBytes is `head -c -N`.
-func copyAllButLastBytes(stdout io.Writer, input io.Reader, count int) error {
+func copyAllButLastBytes(stdout io.Writer, input io.Reader, count int64) error {
 	data, err := io.ReadAll(input)
 	if err != nil {
 		return err
 	}
-	if len(data) <= count {
+	if int64(len(data)) <= count {
 		return nil
 	}
-	_, err = stdout.Write(data[:len(data)-count])
+	_, err = stdout.Write(data[:int64(len(data))-count])
 	return err
 }

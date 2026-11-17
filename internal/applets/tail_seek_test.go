@@ -33,7 +33,7 @@ func TestTail_fromTheEndIsWhatReadingThroughGives(t *testing.T) {
 				if skip > int64(len(content)) {
 					continue
 				}
-				for count := 0; count <= 6; count++ {
+				for count := int64(0); count <= 6; count++ {
 					for _, inBytes := range []bool{false, true} {
 						spec := countSpec{count: count, bytes: inBytes}
 						var want, got bytes.Buffer

@@ -39,7 +39,7 @@ const (
 // With permute an option may follow the files, as tail's getopt lets it; head's options end at
 // its first file, as busybox's head reads its own. follow is tail's -f -F and -s, and nil for
 // head, which has none of them.
-func headTailArgs(applet string, args []string, defaultCount int, allowBytes, permute bool, follow *tailFollow) (countSpec, headerMode, []string, error) {
+func headTailArgs(applet string, args []string, defaultCount int64, allowBytes, permute bool, follow *tailFollow) (countSpec, headerMode, []string, error) {
 	spec := countSpec{count: defaultCount}
 	headers := headersWhenMany
 	var operands []string
@@ -195,7 +195,7 @@ func headTailCountValue(arg string, args []string, index, position int, letter b
 // `invalid number '2n'`. Reporting it here keeps that message, where falling
 // through to the letters would have produced "unsupported option -n" for an
 // option that exists.
-func bareCountOption(arg string) (int, bool, error) {
+func bareCountOption(arg string) (int64, bool, error) {
 	if len(arg) < 2 || arg[0] != '-' {
 		return 0, false, nil
 	}

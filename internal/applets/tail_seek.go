@@ -39,7 +39,7 @@ func tailFromEnd(stdout io.Writer, file *os.File, spec countSpec) (bool, error) 
 	if err != nil {
 		return false, nil
 	}
-	start := max(origin, size-int64(spec.count))
+	start := max(origin, size-spec.count)
 	if !spec.bytes {
 		if start, err = tailLinesStart(file, origin, size, spec.count); err != nil {
 			return true, err
@@ -57,12 +57,12 @@ func tailFromEnd(stdout io.Writer, file *os.File, spec countSpec) (bool, error) 
 // tailLinesStart is where the last count lines between origin and size begin: after the
 // count-th line end back from the end, the file's own last one not counted, since it ends the
 // last line rather than beginning another.
-func tailLinesStart(file *os.File, origin, size int64, count int) (int64, error) {
+func tailLinesStart(file *os.File, origin, size, count int64) (int64, error) {
 	if count <= 0 {
 		return size, nil
 	}
 	buffer := make([]byte, min(int64(tailBlock), max(size-origin, 1)))
-	ends := 0
+	ends := int64(0)
 	for end := size; end > origin; {
 		chunk := min(int64(len(buffer)), end-origin)
 		at := end - chunk
