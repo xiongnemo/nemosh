@@ -32,6 +32,8 @@ func TestDate_readsAndPrintsAsBusyboxDoes(t *testing.T) {
 		{[]string{"-u", "-d", "020304", format}, "2026-09-02_03:04:00"},
 		{[]string{"-u", "-d", "2020-02-30", format}, "2020-03-01_00:00:00"},
 		{[]string{"-u", "-D", "%d/%m/%Y", "-d", "02/01/2020", format}, "2020-01-02_00:00:00"},
+		// Past 2038, which seconds in an int on windows/386 cannot reach.
+		{[]string{"-u", "-D", "%s", "-d", "4102444800", format}, "2100-01-01_00:00:00"},
 		{[]string{"-u", "--date=@0", "-R"}, "Thu, 01 Jan 1970 00:00:00 +0000"},
 		{[]string{"-u", "-d", "@0", "-I"}, "1970-01-01"},
 		{[]string{"-u", "-d", "@0", "-Iminutes"}, "1970-01-01T00:00+00:00"},

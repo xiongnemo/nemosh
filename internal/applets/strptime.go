@@ -43,10 +43,9 @@ func strptime(input, format string, fields *dateFields) (string, bool) {
 		case 'z':
 			input, ok = strptimeOffset(input, fields)
 		case 's':
-			var seconds int
+			var seconds int64
 			if input, seconds, ok = strptimeNumber(input, 19, -1<<62, 1<<62); ok {
-				epoch := int64(seconds)
-				fields.epoch = &epoch
+				fields.epoch = &seconds
 			}
 		default:
 			input, ok = strptimeField(input, verb, fields)
@@ -75,10 +74,11 @@ func strptimeField(input string, verb byte, fields *dateFields) (string, bool) {
 	if !known {
 		return input, false
 	}
-	rest, value, ok := strptimeNumber(input, spec.width, spec.low, spec.high)
+	rest, wide, ok := strptimeNumber(input, spec.width, int64(spec.low), int64(spec.high))
 	if !ok {
 		return input, false
 	}
+	value := int(wide)
 	switch {
 	case spec.into != nil:
 		*spec.into = value
@@ -92,8 +92,9 @@ func strptimeField(input string, verb byte, fields *dateFields) (string, bool) {
 	return rest, true
 }
 
-// strptimeNumber reads up to width digits, after any blanks and an optional sign.
-func strptimeNumber(input string, width, low, high int) (string, int, bool) {
+// strptimeNumber reads up to width digits, after any blanks and an optional sign. In 64 bits on
+// every build, for %s: an int is 32 on windows/386, and seconds since 1970 pass that in 2038.
+func strptimeNumber(input string, width int, low, high int64) (string, int64, bool) {
 	input = strings.TrimLeft(input, " \t")
 	end := 0
 	if end < len(input) && (input[end] == '-' || input[end] == '+') && low < 0 {
@@ -103,7 +104,7 @@ func strptimeNumber(input string, width, low, high int) (string, int, bool) {
 	for end < len(input) && end-digits < width && input[end] >= '0' && input[end] <= '9' {
 		end++
 	}
-	value, err := strconv.Atoi(input[:end])
+	value, err := strconv.ParseInt(input[:end], 10, 64)
 	if end == digits || err != nil || value < low || value > high {
 		return input, 0, false
 	}
