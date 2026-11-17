@@ -13,8 +13,8 @@ the rest of this file is about.
 
 | | |
 | --- | --- |
-| `%APPDATA%\nemosh\completions\<cmd>.toml` | yours, on Windows |
-| `~/.config/nemosh/completions/<cmd>.toml` | yours, elsewhere |
+| `$XDG_CONFIG_HOME/nemosh/completions/<cmd>.toml`, by default `~/.config/nemosh/completions` | yours, on Windows too |
+| `%APPDATA%\nemosh\completions\<cmd>.toml` | yours, where releases up to 1.5 looked first; `nemosh --migrate` moves them |
 | this directory | bundled, compiled into the binary |
 
 Yours wins. That is the whole fix for a bundled spec that is wrong for your

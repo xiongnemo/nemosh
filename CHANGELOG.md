@@ -17,6 +17,10 @@ patch number is the commits since that tag.
   too. `~/.nemosh_history` is still used when it is the only one there, and a session says so
   once before its first prompt; `nemosh --migrate` moves it. A `HISTFILE` of your own wins as it
   did, and `~/.nemoshrc` and `$ENV` stay where a shell's rc file is.
+- **Your completion specs are kept in `~/.config/nemosh/completions`**, or
+  `$XDG_CONFIG_HOME/nemosh/completions`, and `%APPDATA%\nemosh\completions`, where releases up
+  to 1.5 looked first, is looked in after it, so each spec is found where it is; a session says
+  so once when one is there, and `nemosh --migrate` merges the directory into the new one.
 
 ### Added
 

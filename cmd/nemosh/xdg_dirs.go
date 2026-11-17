@@ -54,6 +54,39 @@ func resolveHistoryPath(lookup func(string) (string, bool), exists func(string) 
 	return current, false
 }
 
+// specPaths is where a user's completion specs are kept, $XDG_CONFIG_HOME/nemosh/completions, and
+// where releases up to 1.5 looked first, %APPDATA%\nemosh\completions, as native paths, each empty
+// when what it is made from is not set. The home is HOME, or USERPROFILE without it.
+func specPaths(lookup func(string) (string, bool)) (current, legacy string) {
+	home, ok := lookup("HOME")
+	if !ok || home == "" {
+		home, _ = lookup("USERPROFILE")
+	}
+	if home != "" {
+		current = filepath.FromSlash(xdgBase(lookup, "XDG_CONFIG_HOME", home, ".config") + "/nemosh/completions")
+	}
+	if appData, ok := lookup("APPDATA"); ok && appData != "" {
+		legacy = filepath.Join(appData, "nemosh", "completions")
+	}
+	return current, legacy
+}
+
+// sessionSpecLookup is the environment a session reads to say where its completion specs are;
+// the test binary's TestMain gives it one without APPDATA, so no test looks in a real one.
+var sessionSpecLookup = environmentLookup
+
+// sayOldSpecs says once that completion specs are read from where releases up to 1.5 kept them,
+// when one is there; each is used where it is, the new place first (specSearchDirectories).
+func sayOldSpecs(stderr io.Writer, lookup func(string) (string, bool)) {
+	current, legacy := specPaths(lookup)
+	if legacy == "" {
+		return
+	}
+	if specs, _ := filepath.Glob(filepath.Join(legacy, "*.toml")); len(specs) > 0 {
+		sayOldLocation(stderr, "completion specs", filepath.ToSlash(legacy), filepath.ToSlash(current))
+	}
+}
+
 // sayOldLocation is the one line that says an item was read where an older release kept it.
 func sayOldLocation(stderr io.Writer, what, old, current string) {
 	fmt.Fprintf(stderr, "nemosh: using %s from the old location %s; run \"nemosh --migrate\" to move it to %s\n", what, old, current)

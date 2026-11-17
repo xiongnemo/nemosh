@@ -15,9 +15,21 @@ import (
 // of thing prompt assertions must not see.
 //
 // A test that wants a startup file sets one explicitly, as startup_test.go does.
+//
+// The same for %APPDATA%, where releases up to 1.5 kept completion specs: a session says so when
+// one is there, so a prompt assertion would pass or fail by whose machine it ran on, and a test
+// would be looking in a real home. The session reads its environment through sessionSpecLookup,
+// and here that has no APPDATA; spec_dirs_test.go hands its own. APPDATA itself is left alone,
+// since the go commands some tests run keep their settings under it.
 func TestMain(m *testing.M) {
 	if err := os.Unsetenv("ENV"); err != nil {
 		panic(err)
+	}
+	sessionSpecLookup = func(name string) (string, bool) {
+		if name == "APPDATA" {
+			return "", false
+		}
+		return os.LookupEnv(name)
 	}
 	os.Exit(m.Run())
 }

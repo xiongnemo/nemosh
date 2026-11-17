@@ -42,6 +42,38 @@ func (m *migrateRun) moveFile(what, from, to string) {
 	}
 }
 
+// mergeDirectory moves every file of an item's directory into its new one, each as moveFile
+// moves one, and then removes the directories that leaves empty: the old one's own, the old one,
+// and the directory of nemosh's that held it -- never one above that, such as %APPDATA%.
+func (m *migrateRun) mergeDirectory(item migrateItem) {
+	var directories []string
+	_ = filepath.WalkDir(item.from, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if entry.IsDir() {
+			directories = append(directories, path)
+			return nil
+		}
+		relative, err := filepath.Rel(item.from, path)
+		if err == nil {
+			m.moveFile(item.what, path, filepath.Join(item.to, relative))
+		}
+		return nil
+	})
+	if m.dryRun {
+		return
+	}
+	// Deepest first, so a directory is empty by the time it is tried; os.Remove takes only an
+	// empty one, so anything left behind -- a conflict's old copy -- keeps its directory.
+	for index := len(directories) - 1; index >= 0; index-- {
+		_ = os.Remove(directories[index])
+	}
+	if item.owner != "" {
+		_ = os.Remove(item.owner)
+	}
+}
+
 // relocate renames from to to, and across volumes copies it, checks the copy byte for byte by
 // size and hash, and only then removes from. The directory it goes in is made, 0700.
 func (m *migrateRun) relocate(from, to string) error {

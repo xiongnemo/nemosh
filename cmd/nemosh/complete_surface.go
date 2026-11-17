@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -132,16 +131,17 @@ func shippedOperandKind(kind capability.OperandKind) completionspec.OperandKind 
 
 // specSearchDirectories is where a user's own specs live, in the order they are
 // tried. Theirs wins over what was compiled in, which is the whole fix for a
-// bundled spec that is wrong for a particular machine.
+// bundled spec that is wrong for a particular machine. Where they are kept,
+// $XDG_CONFIG_HOME/nemosh/completions, comes first, and where releases up to 1.5
+// looked first, %APPDATA%\nemosh\completions, after it, so each spec is found
+// where it is and the new place wins for one in both; see xdg_dirs.go.
 func specSearchDirectories(lookup func(string) (string, bool)) []string {
 	var dirs []string
-	if appData, ok := lookup("APPDATA"); ok && appData != "" {
-		dirs = append(dirs, filepath.Join(appData, "nemosh", "completions"))
-	}
-	if config, ok := lookup("XDG_CONFIG_HOME"); ok && config != "" {
-		dirs = append(dirs, filepath.Join(config, "nemosh", "completions"))
-	} else if home, ok := lookup("HOME"); ok && home != "" {
-		dirs = append(dirs, filepath.Join(home, ".config", "nemosh", "completions"))
+	current, legacy := specPaths(lookup)
+	for _, dir := range []string{current, legacy} {
+		if dir != "" {
+			dirs = append(dirs, dir)
+		}
 	}
 	return dirs
 }

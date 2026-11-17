@@ -20,9 +20,13 @@ import (
 // both, says so, and ends with status 1. A second run finds nothing to do. ~/.nemoshrc is the rc
 // file, which stays where it is.
 
-// migrateItem is one thing that moves, from where an older release kept it to where it goes.
+// migrateItem is one thing that moves, from where an older release kept it to where it goes: a
+// file, or a directory merged into another a file at a time. owner is the directory of nemosh's
+// own the old one was made in, removed with it when the move leaves it empty, and empty for none.
 type migrateItem struct {
 	what, from, to string
+	directory      bool
+	owner          string
 }
 
 // migrateRun is one migration: where it looks, what it says, and how it asks for the rest.
@@ -72,6 +76,10 @@ func (m *migrateRun) run(args []string) error {
 		fmt.Fprintf(m.stdout, "nemosh: other nemosh processes are running (%s), so the migration itself would be refused until they end\n", strings.Join(text, ", "))
 	}
 	for _, item := range found {
+		if item.directory {
+			m.mergeDirectory(item)
+			continue
+		}
 		m.moveFile(item.what, item.from, item.to)
 	}
 	if !m.dryRun {
@@ -97,7 +105,11 @@ func (m *migrateRun) items() []migrateItem {
 		return m.lookup(name)
 	}
 	current, legacy := historyPaths(homed)
-	return []migrateItem{{what: "history", from: filepath.FromSlash(legacy), to: filepath.FromSlash(current)}}
+	items := []migrateItem{{what: "history", from: filepath.FromSlash(legacy), to: filepath.FromSlash(current)}}
+	if current, legacy := specPaths(homed); current != "" && legacy != "" {
+		items = append(items, migrateItem{what: "completion specs", from: legacy, to: current, directory: true, owner: filepath.Dir(legacy)})
+	}
+	return items
 }
 
 // migrateHome is HOME when it is a native absolute path, and USERPROFILE otherwise, which is

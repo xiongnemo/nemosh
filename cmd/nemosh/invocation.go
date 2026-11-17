@@ -233,6 +233,7 @@ func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 		return startupExit(rt, status)
 	}
 	setDefaultHistoryFile(rt, c.stderr)
+	sayOldSpecs(c.stderr, sessionSpecLookup)
 	return nil
 }
 
@@ -251,6 +252,7 @@ func (c command) runSessionCommand(ctx context.Context, controller *interruptCon
 		return startupExit(rt, status)
 	}
 	setDefaultHistoryFile(rt, c.stderr)
+	sayOldSpecs(c.stderr, sessionSpecLookup)
 	rt.MarkSession()
 	return c.runScriptWith(ctx, controller, rt, script)
 }
