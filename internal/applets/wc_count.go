@@ -49,7 +49,7 @@ func countBytes(input io.Reader) (wcCounts, error) {
 			// the longest *line* rather than of the longest newline-terminated one. The tally
 			// is the whole file, any bytes the decoder took as a mark included.
 			counter.counts.longest = max(counter.counts.longest, counter.width)
-			counter.counts.bytes = int(counting.total)
+			counter.counts.bytes = counting.total
 			return counter.counts, nil
 		}
 	}
@@ -64,12 +64,12 @@ func countLinesAndBytes(input io.Reader) (wcCounts, error) {
 	var counts wcCounts
 	for {
 		read, err := decoded.Read(buffer)
-		counts.lines += bytes.Count(buffer[:read], []byte{'\n'})
+		counts.lines += int64(bytes.Count(buffer[:read], []byte{'\n'}))
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
 				return wcCounts{}, err
 			}
-			counts.bytes = int(counting.total)
+			counts.bytes = counting.total
 			return counts, nil
 		}
 	}
@@ -80,7 +80,7 @@ func countLinesAndBytes(input io.Reader) (wcCounts, error) {
 type wcCounter struct {
 	counts wcCounts
 	inWord bool
-	width  int
+	width  int64
 }
 
 // count counts block, and says how much of it was counted: all of it, but for a character
@@ -135,7 +135,7 @@ func (c *wcCounter) count(block []byte, last bool) int {
 		r, size := utf8.DecodeRune(block[at:])
 		at += size
 		counts.chars++
-		width += textgrid.RuneCells(r)
+		width += int64(textgrid.RuneCells(r))
 		if unicode.IsSpace(r) {
 			inWord = false
 		} else if !inWord {

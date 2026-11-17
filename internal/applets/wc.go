@@ -88,12 +88,14 @@ type wcFlags struct {
 	manyFiles bool
 }
 
+// wcCounts is 64 bits on every build: a file of 3 GB is an ordinary thing to count, and an int is
+// 32 bits on windows/386, where `wc -c` of one printed a negative number.
 type wcCounts struct {
-	lines   int
-	words   int
-	bytes   int
-	chars   int
-	longest int
+	lines   int64
+	words   int64
+	bytes   int64
+	chars   int64
+	longest int64
 }
 
 // wcColumnWidth is busybox-w32's field width for an aligned count.
@@ -135,7 +137,7 @@ func wcArgs(ctx context.Context, args []string) (wcFlags, []string, error) {
 }
 
 func printWcCounts(stdout io.Writer, flags wcFlags, counts wcCounts, path string) error {
-	values := make([]int, 0, 3)
+	values := make([]int64, 0, 3)
 	if flags.lines {
 		values = append(values, counts.lines)
 	}

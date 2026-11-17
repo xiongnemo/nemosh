@@ -115,7 +115,7 @@ func referenceWcCount(input io.Reader) (wcCounts, error) {
 	reader := bufio.NewReader(decodeTextInput(counting))
 	counts := wcCounts{}
 	inWord := false
-	lineWidth := 0
+	lineWidth := int64(0)
 	for {
 		r, size, err := reader.ReadRune()
 		if size > 0 {
@@ -133,7 +133,7 @@ func referenceWcCount(input io.Reader) (wcCounts, error) {
 		case r == '\t':
 			lineWidth = (lineWidth | 7) + 1
 		case size > 0:
-			lineWidth += textgrid.RuneCells(r)
+			lineWidth += int64(textgrid.RuneCells(r))
 		}
 		if size > 0 && unicode.IsSpace(r) {
 			inWord = false
@@ -144,7 +144,7 @@ func referenceWcCount(input io.Reader) (wcCounts, error) {
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				counts.longest = max(counts.longest, lineWidth)
-				counts.bytes = int(counting.total)
+				counts.bytes = counting.total
 				return counts, nil
 			}
 			return wcCounts{}, err

@@ -24,9 +24,9 @@ func TestFinalSecurity_countBytes_preservesWordsAcrossChunkBoundaries(t *testing
 	want := wcCounts{
 		lines:   1,
 		words:   4,
-		bytes:   len(text),
-		chars:   len([]rune(text)),
-		longest: len([]rune("γδ epsilon")),
+		bytes:   int64(len(text)),
+		chars:   int64(len([]rune(text))),
+		longest: int64(len([]rune("γδ epsilon"))),
 	}
 	if counts != want {
 		t.Fatalf("chunked counts: got %+v want %+v", counts, want)

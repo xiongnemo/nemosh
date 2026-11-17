@@ -276,9 +276,12 @@ func (p *exprParser) parseFunction(name string) (string, error) {
 	}
 	start, startOk := exprNumber(position)
 	count, countOk := exprNumber(length)
-	if !startOk || !countOk || start < 1 || count < 1 {
+	// A start past the value's bytes is past its characters too, so what is left is a position
+	// and a length an int holds, as it is not on windows/386 for every number busybox's 64-bit
+	// arithmetic reads: `expr substr abcdef 4294967298 1` was b there.
+	if !startOk || !countOk || start < 1 || count < 1 || start > int64(len(value)) {
 		return "", nil
 	}
 	// Characters for UTF-8, bytes otherwise; see text_encoding.go.
-	return substringText(value, int(start-1), int(count)), nil
+	return substringText(value, int(start-1), int(min(count, int64(len(value))))), nil
 }

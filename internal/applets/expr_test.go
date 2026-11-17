@@ -75,6 +75,13 @@ func TestExpr(t *testing.T) {
 			name: "substr past the end is empty",
 			args: []string{"substr", "ab", "5", "3"}, want: "", status: 1,
 		},
+		{
+			// Past what a 32-bit int holds, as busybox-w32 answers both: the start was 1 and
+			// the length 1 on windows/386.
+			name: "substr past 32 bits is still past the end",
+			args: []string{"substr", "abcdef", "4294967298", "1"}, want: "", status: 1,
+		},
+		{name: "a length past 32 bits is the rest", args: []string{"substr", "abcdef", "2", "4294967297"}, want: "bcdef"},
 		{name: "index is one-based, zero for absent", args: []string{"index", "abc", "c"}, want: "3"},
 		{
 			// The status surprises people and is worth pinning: a result of zero
