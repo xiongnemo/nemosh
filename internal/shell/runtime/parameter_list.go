@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 )
@@ -97,7 +98,7 @@ func (r Runtime) parameterList(ctx context.Context, name string) ([]string, bool
 
 // listIndices is the subscripts of the indexed array a list name stands for, in order, and
 // nil for any other list: the positional parameters, an associative array, a scalar.
-func (r Runtime) listIndices(name string) []int {
+func (r Runtime) listIndices(name string) []int64 {
 	reference, ok := parseArrayReference(name)
 	if !ok || r.arrays.isAssociative(reference.name) {
 		return nil
@@ -128,7 +129,7 @@ func (r Runtime) listIndices(name string) []int {
 //
 // indices is the array's subscripts, in order, or nil for a list whose positions are its
 // indices.
-func (r Runtime) sliceList(ctx context.Context, elements []string, indices []int, spec, name string, savedStatus int) ([]string, bool) {
+func (r Runtime) sliceList(ctx context.Context, elements []string, indices []int64, spec, name string, savedStatus int) ([]string, bool) {
 	return r.joinStar(name, r.sliceElements(ctx, elements, indices, spec, savedStatus)), true
 }
 
@@ -145,16 +146,16 @@ func (r Runtime) joinStar(name string, elements []string) []string {
 }
 
 // sliceElements is the elements a slice selects, or none when it selects none or is wrong.
-func (r Runtime) sliceElements(ctx context.Context, elements []string, indices []int, spec string, savedStatus int) []string {
+func (r Runtime) sliceElements(ctx context.Context, elements []string, indices []int64, spec string, savedStatus int) []string {
 	offsetText, lengthText, hasLength := splitSubstringSpec(spec)
 	offset, err := r.substringNumber(ctx, offsetText, "offset", savedStatus)
 	if err != nil {
 		r.reportExpansionError(err)
 		return nil
 	}
-	span := len(elements)
+	span := int64(len(elements))
 	if len(indices) > 0 {
-		span = indices[len(indices)-1] + 1
+		span = min(indices[len(indices)-1], math.MaxInt64-1) + 1
 	}
 	// Before the start or past the end is nothing before the length is read, as bash's
 	// verify_substring_values has it, and only then can the length be wrong. An indexed
@@ -170,9 +171,13 @@ func (r Runtime) sliceElements(ctx context.Context, elements []string, indices [
 	if offset < 0 || offset > limit {
 		return nil
 	}
-	first := offset
+	// The position of the first element the slice takes: an index's, or a list's offset, which
+	// is within the list by now and so a position an int holds.
+	var first int
 	if indices != nil {
 		first, _ = slices.BinarySearch(indices, offset)
+	} else {
+		first = int(offset)
 	}
 	end := len(elements)
 	if hasLength {
@@ -185,7 +190,9 @@ func (r Runtime) sliceElements(ctx context.Context, elements []string, indices [
 			r.skipLineFor(fmt.Errorf("%s: substring expression < 0", lengthText))
 			return nil
 		}
-		end = min(first+length, end)
+		if length < int64(end-first) {
+			end = first + int(length)
+		}
 	}
 	if first >= len(elements) || end <= first {
 		return nil

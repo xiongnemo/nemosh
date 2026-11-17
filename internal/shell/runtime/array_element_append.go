@@ -19,7 +19,7 @@ func (r Runtime) subscriptOnce(ctx context.Context, reference arrayReference) (a
 	if err != nil {
 		return reference, err
 	}
-	reference.subscript = strconv.Itoa(index)
+	reference.subscript = strconv.FormatInt(index, 10)
 	return reference, nil
 }
 
@@ -32,7 +32,7 @@ func (r Runtime) appendedElement(ctx context.Context, reference arrayReference, 
 	}
 	// An element before the front of the array has nothing to read, and the write refuses it.
 	if base, err := r.namerefBase(reference.name); err == nil && !r.arrays.isAssociative(base) {
-		if index, err := strconv.Atoi(reference.subscript); err == nil {
+		if index, err := strconv.ParseInt(reference.subscript, 10, 64); err == nil {
 			if _, within := countFromEnd(index, r.arrays.span(base)); !within {
 				return reference, value, true
 			}

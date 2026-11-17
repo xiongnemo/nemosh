@@ -32,38 +32,41 @@ import (
 func (r Runtime) parameterSubstring(ctx context.Context, value, spec string, savedStatus int) (string, error) {
 	offsetText, lengthText, hasLength := splitSubstringSpec(spec)
 	runes := []rune(value)
+	count := int64(len(runes))
 	offset, err := r.substringNumber(ctx, offsetText, "offset", savedStatus)
 	if err != nil {
 		return "", err
 	}
 	if offset < 0 {
-		offset += len(runes)
+		offset += count
 	}
 	// Before the start is nothing, as both references read it: `${1: -8}` of seven characters
 	// is empty. It was the whole value.
-	if offset < 0 || offset > len(runes) {
+	if offset < 0 || offset > count {
 		return "", nil
 	}
-	end := len(runes)
+	end := count
 	if hasLength {
 		length, err := r.substringNumber(ctx, lengthText, "length", savedStatus)
 		if err != nil {
 			return "", err
 		}
-		if length < 0 {
+		switch {
+		case length < 0:
 			// A negative length is an offset from the end rather than a count:
 			// `${x:1:-1}` over abcdef is bcde, so it means "stop one short". One that ends
 			// before the offset is bash's error, which abandons the line; it was nothing.
-			end = len(runes) + length
+			end = count + length
 			if end < offset {
 				r.skipLineFor(fmt.Errorf("%s: substring expression < 0", lengthText))
 				return "", nil
 			}
-		} else {
+		case length < count-offset:
+			// Compared before it is added, so a length near the largest an int64 holds is
+			// the rest of the value, as bash has it, and not an addition that wraps.
 			end = offset + length
 		}
 	}
-	end = min(end, len(runes))
 	if end <= offset {
 		return "", nil
 	}
@@ -71,8 +74,9 @@ func (r Runtime) parameterSubstring(ctx context.Context, value, spec string, sav
 }
 
 // substringNumber evaluates an offset or a length, expanded first, as $(( )) expands what
-// is in it: evaluated as written, `${s:$i:2}` stopped at the `$` as a syntax error.
-func (r Runtime) substringNumber(ctx context.Context, text, what string, savedStatus int) (int, error) {
+// is in it: evaluated as written, `${s:$i:2}` stopped at the `$` as a syntax error. In 64
+// bits on every build, as bash's intmax_t: an int is 32 on windows/386.
+func (r Runtime) substringNumber(ctx context.Context, text, what string, savedStatus int) (int64, error) {
 	trimmed := strings.TrimSpace(r.expandArithmeticText(ctx, text, savedStatus))
 	if trimmed == "" {
 		return 0, nil
@@ -81,7 +85,7 @@ func (r Runtime) substringNumber(ctx context.Context, text, what string, savedSt
 	if err != nil {
 		return 0, fmt.Errorf("bad substitution: %s: %w", what, err)
 	}
-	return int(value), nil
+	return value, nil
 }
 
 // splitSubstringSpec cuts `offset:length` at the top level, so a parenthesised

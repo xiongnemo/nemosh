@@ -36,12 +36,12 @@ func isDescriptorName(text string) bool {
 }
 
 // descriptorElement splits `name[n]` into the array and the index; a plain name has none.
-func descriptorElement(name string) (string, int, bool) {
+func descriptorElement(name string) (string, int64, bool) {
 	base, subscript, found := strings.Cut(name, "[")
 	if !found {
 		return name, 0, false
 	}
-	index, err := strconv.Atoi(strings.TrimSuffix(subscript, "]"))
+	index, err := strconv.ParseInt(strings.TrimSuffix(subscript, "]"), 10, 64)
 	if err != nil || !strings.HasSuffix(subscript, "]") || index < 0 {
 		return "", 0, false
 	}

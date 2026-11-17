@@ -61,7 +61,7 @@ func (r Runtime) assignCompound(ctx context.Context, name, raw string, extend bo
 // assignIndexedCompound writes an indexed array. An element without a subscript goes at the
 // index after the one before it, which is bash's rule: `a=([5]=x y)` puts y at 6.
 func (r Runtime) assignIndexedCompound(name string, elements []arrayElement, extend bool) int {
-	next := 0
+	next := int64(0)
 	if extend {
 		// A scalar appended to becomes the array's element 0, empty or not, as in bash:
 		// `s=abc; s+=(d e)` is abc, d and e. Its value was dropped.
@@ -82,12 +82,12 @@ func (r Runtime) assignIndexedCompound(name string, elements []arrayElement, ext
 // negative subscript counts back from the end of the array as it stands by then, as in bash:
 // `a=([5]=x [-1]=y)` is y at 5, and `a+=([-1]=z)` replaces the last element. It was refused.
 // `[i]+=v` appends to what is at i by then, so `a=([1]=x [1]+=y)` is xy.
-func (r Runtime) writeIndexedElements(name string, elements []arrayElement, next int) int {
+func (r Runtime) writeIndexedElements(name string, elements []arrayElement, next int64) int {
 	for _, element := range elements {
 		index := next
 		if element.keyed {
 			number, err := r.evaluateArithmetic(element.key)
-			position, within := countFromEnd(int(number), r.arrays.span(name))
+			position, within := countFromEnd(number, r.arrays.span(name))
 			if err != nil || !within {
 				return r.refuseElement(element.text + ": bad array subscript")
 			}

@@ -188,7 +188,7 @@ func (r Runtime) recordPipeStatus(statuses ...int) {
 	// allocated. The indices stay, so the order kept of them does.
 	if array, ok := r.arrays.indexed["PIPESTATUS"]; ok && !array.unassigned && holdsIndicesUpTo(array, len(statuses)) {
 		for index, status := range statuses {
-			array.elements[index] = strconv.Itoa(status)
+			array.elements[int64(index)] = strconv.Itoa(status)
 		}
 		return
 	}
@@ -204,7 +204,7 @@ func holdsIndicesUpTo(array *indexedArray, count int) bool {
 	if len(array.elements) != count {
 		return false
 	}
-	for index := range count {
+	for index := range int64(count) {
 		if _, ok := array.elements[index]; !ok {
 			return false
 		}

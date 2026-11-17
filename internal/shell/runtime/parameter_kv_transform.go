@@ -71,7 +71,7 @@ func (r Runtime) arrayPairs(name string) ([]string, []string, bool, bool) {
 	indices := r.arrays.liveIndices(name)
 	keys := make([]string, len(indices))
 	for position, index := range indices {
-		keys[position] = strconv.Itoa(index)
+		keys[position] = strconv.FormatInt(index, 10)
 	}
 	return keys, r.arrays.liveValues(name), false, true
 }

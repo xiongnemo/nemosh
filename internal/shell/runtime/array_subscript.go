@@ -29,7 +29,7 @@ import (
 // expansion machinery and a context this path does not carry, and they are refused
 // below rather than quietly becoming zero, because zero is a valid index and would
 // silently read the wrong element.
-func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, error) {
+func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int64, error) {
 	text := strings.TrimSpace(withoutDoubleQuotes(subscript))
 	if inner, ok := unwrapSubscriptParameter(text); ok {
 		text = inner
@@ -59,7 +59,7 @@ func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int, e
 	// caller, which is the only place that knows how long the array is. bash does the
 	// same, and refuses one that reaches past the start rather than clamping it:
 	// `${a[-9]}` on three elements is `bad array subscript`, not the first element.
-	return int(value), nil
+	return value, nil
 }
 
 // withoutDoubleQuotes is an indexed subscript with its double quotes removed, which bash
@@ -112,7 +112,7 @@ func unwrapSubscriptParameter(text string) (string, bool) {
 
 // countFromEnd turns a negative subscript into a real one. `${a[-1]}` is the last
 // element; one that reaches past the start is not an element at all.
-func countFromEnd(index, length int) (int, bool) {
+func countFromEnd(index, length int64) (int64, bool) {
 	if index >= 0 {
 		return index, true
 	}

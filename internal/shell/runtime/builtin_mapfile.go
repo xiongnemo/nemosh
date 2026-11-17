@@ -73,7 +73,7 @@ func (r Runtime) mapfile(ctx context.Context, name string, args []string) int {
 	// replaced outright, so a second mapfile does not append to the first by accident.
 	if options.origin > 0 {
 		for offset, line := range lines {
-			r.arrays.setElement(options.name, options.origin+offset, line)
+			r.arrays.setElement(options.name, int64(options.origin+offset), line)
 		}
 	} else {
 		r.arrays.set(options.name, lines)

@@ -66,7 +66,7 @@ type jobState struct {
 // jobIndexedArray is an indexed array's elements, each value at the index beside it.
 type jobIndexedArray struct {
 	Values []string
-	Live   []int
+	Live   []int64
 	// Unassigned is an array declared and never assigned; see declareUnassigned.
 	Unassigned bool
 }

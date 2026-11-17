@@ -3,7 +3,6 @@ package runtime
 import (
 	"math"
 	"slices"
-	"sort"
 )
 
 // An indexed array's storage, split from array.go to stay under the 250-line ceiling.
@@ -13,17 +12,20 @@ import (
 // An array here was a slice grown to its largest index, with a map beside it saying which
 // slots were set. So `a[10000000]=x` took 160 MB, and that last assignment grew a slice
 // without end. Now an array is the elements it has, by index, and nothing else.
+//
+// An index is an int64 on every build, as bash's arrayind_t is an intmax_t: an int is 32 bits on
+// windows/386, where `a[0x7FFFFFFFFFFFFFFF]=x` went to a[-1] and `d[1000000000000]=x` failed.
 
 // indexedArray is one indexed array.
 type indexedArray struct {
-	elements map[int]string
+	elements map[int64]string
 	// sorted is the indices in order, and nil once a change has made it stale.
-	sorted []int
+	sorted []int64
 	// unassigned is an array declared and never given anything; see declareUnassigned.
 	unassigned bool
 }
 
-func newIndexedArray() *indexedArray { return &indexedArray{elements: map[int]string{}} }
+func newIndexedArray() *indexedArray { return &indexedArray{elements: map[int64]string{}} }
 
 func (array *indexedArray) clone() *indexedArray {
 	copied := newIndexedArray()
@@ -35,18 +37,18 @@ func (array *indexedArray) clone() *indexedArray {
 }
 
 // indices is the array's indices in order, which the caller must not change.
-func (array *indexedArray) indices() []int {
+func (array *indexedArray) indices() []int64 {
 	if array.sorted == nil {
-		array.sorted = make([]int, 0, len(array.elements))
+		array.sorted = make([]int64, 0, len(array.elements))
 		for index := range array.elements {
 			array.sorted = append(array.sorted, index)
 		}
-		sort.Ints(array.sorted)
+		slices.Sort(array.sorted)
 	}
 	return array.sorted
 }
 
-func (array *indexedArray) store(index int, value string) {
+func (array *indexedArray) store(index int64, value string) {
 	if _, exists := array.elements[index]; !exists {
 		array.sorted = nil
 	}
@@ -61,7 +63,7 @@ func (a *shellArrays) has(name string) bool {
 }
 
 // valueAt is one element, and whether that index is set.
-func (a *shellArrays) valueAt(name string, index int) (string, bool) {
+func (a *shellArrays) valueAt(name string, index int64) (string, bool) {
 	array, ok := a.indexed[name]
 	if !ok {
 		return "", false
@@ -85,7 +87,7 @@ func (a *shellArrays) indexedFor(name string) *indexedArray {
 
 // unsetElement removes one subscript, leaving a gap, as bash does: `unset a[1]` on `(x y z)`
 // leaves indices 0 and 2 holding x and z.
-func (a *shellArrays) unsetElement(name string, index int) {
+func (a *shellArrays) unsetElement(name string, index int64) {
 	if array, ok := a.indexed[name]; ok {
 		if _, exists := array.elements[index]; exists {
 			delete(array.elements, index)
@@ -96,7 +98,7 @@ func (a *shellArrays) unsetElement(name string, index int) {
 
 // span is one past the highest index set, which is what a negative subscript counts back
 // from and where `a+=(x)` begins, as bash counts.
-func (a *shellArrays) span(name string) int {
+func (a *shellArrays) span(name string) int64 {
 	array, ok := a.indexed[name]
 	if !ok {
 		return 0
@@ -105,21 +107,21 @@ func (a *shellArrays) span(name string) int {
 	if len(indices) == 0 {
 		return 0
 	}
-	if last := indices[len(indices)-1]; last < math.MaxInt {
+	if last := indices[len(indices)-1]; last < math.MaxInt64 {
 		return last + 1
 	}
-	return math.MaxInt
+	return math.MaxInt64
 }
 
 // isLive reports whether one index of a name is set.
-func (a *shellArrays) isLive(name string, index int) bool {
+func (a *shellArrays) isLive(name string, index int64) bool {
 	_, set := a.valueAt(name, index)
 	return set
 }
 
 // liveIndices is the set subscripts of a name, in order: what `${!a[@]}` answers and what
 // the `[@]` and `[*]` forms are built from.
-func (a *shellArrays) liveIndices(name string) []int {
+func (a *shellArrays) liveIndices(name string) []int64 {
 	array, ok := a.indexed[name]
 	if !ok {
 		return nil

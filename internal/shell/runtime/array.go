@@ -54,7 +54,7 @@ func newShellArrays() *shellArrays {
 func (a *shellArrays) set(name string, elements []string) {
 	array := newIndexedArray()
 	for index, value := range elements {
-		array.elements[index] = value
+		array.elements[int64(index)] = value
 	}
 	a.put(name, array)
 }
@@ -64,12 +64,12 @@ func (a *shellArrays) append(name string, elements []string) {
 	start := a.span(name)
 	array := a.indexedFor(name)
 	for offset, value := range elements {
-		array.store(start+offset, value)
+		array.store(start+int64(offset), value)
 	}
 }
 
 // setElement writes one index. `a[5]=x` on a three-element array leaves a gap, as in bash.
-func (a *shellArrays) setElement(name string, index int, value string) {
+func (a *shellArrays) setElement(name string, index int64, value string) {
 	a.indexedFor(name).store(index, value)
 }
 
@@ -169,7 +169,7 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 	var elements []string
 	// span is what a negative subscript counts back from: nothing, for a scalar, which is its
 	// element 0 alone -- `${s[-1]}` is a bad subscript in bash, and was s.
-	span := 0
+	span := int64(0)
 	if !isArray {
 		value, exists := r.vars[reference.name]
 		switch stack, isStack := r.callStackArray(reference.name); {
@@ -177,7 +177,7 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 			elements = []string{value}
 		case isStack:
 			// FUNCNAME, BASH_SOURCE, BASH_LINENO: computed, behind anything the script set.
-			elements, span = stack, len(stack)
+			elements, span = stack, int64(len(stack))
 		default:
 			return nil, false
 		}
@@ -212,7 +212,7 @@ func (r Runtime) elementsFor(ctx context.Context, reference arrayReference) ([]s
 			return []string{value}, true
 		}
 		return nil, true
-	case index >= len(elements):
+	case index >= int64(len(elements)):
 		return nil, true
 	}
 	return []string{elements[index]}, true
@@ -249,7 +249,7 @@ func (r Runtime) arrayIndices(name string) []string {
 	live := r.arrays.liveIndices(name)
 	indices := make([]string, 0, len(live))
 	for _, index := range live {
-		indices = append(indices, strconv.Itoa(index))
+		indices = append(indices, strconv.FormatInt(index, 10))
 	}
 	return indices
 }

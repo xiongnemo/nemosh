@@ -69,9 +69,9 @@ func (c *jobCodec) uvarint(value *uint64) {
 	*value, c.data = read, c.data[size:]
 }
 
-func (c *jobCodec) int(value *int) {
+func (c *jobCodec) int64(value *int64) {
 	if c.writing {
-		c.data = binary.AppendVarint(c.data, int64(*value))
+		c.data = binary.AppendVarint(c.data, *value)
 		return
 	}
 	read, size := binary.Varint(c.data)
@@ -79,7 +79,13 @@ func (c *jobCodec) int(value *int) {
 		c.fail(errors.New("truncated"))
 		return
 	}
-	*value, c.data = int(read), c.data[size:]
+	*value, c.data = read, c.data[size:]
+}
+
+func (c *jobCodec) int(value *int) {
+	wide := int64(*value)
+	c.int64(&wide)
+	*value = int(wide)
 }
 
 func (c *jobCodec) uint32(value *uint32) {
@@ -181,6 +187,6 @@ func codecMap[T any](c *jobCodec, entries *map[string]T, value func(*jobCodec, *
 
 func (c *jobCodec) strings(value *[]string) { codecSlice(c, value, (*jobCodec).string) }
 
-func (c *jobCodec) ints(value *[]int) { codecSlice(c, value, (*jobCodec).int) }
+func (c *jobCodec) int64s(value *[]int64) { codecSlice(c, value, (*jobCodec).int64) }
 
 func (c *jobCodec) stringMap(value *map[string]string) { codecMap(c, value, (*jobCodec).string) }

@@ -11,7 +11,7 @@ func jobStateWalk(c *jobCodec, s *jobState) {
 	c.stringMap(&s.Vars)
 	codecMap(c, &s.Indexed, func(c *jobCodec, array *jobIndexedArray) {
 		c.strings(&array.Values)
-		c.ints(&array.Live)
+		c.int64s(&array.Live)
 		c.bool(&array.Unassigned)
 	})
 	codecMap(c, &s.Associative, func(c *jobCodec, array *jobAssociativeArray) {

@@ -17,6 +17,9 @@ func fillEveryField(value reflect.Value, counter *int) {
 		value.SetString(fmt.Sprintf("s%d\xff\x00é", *counter))
 	case reflect.Int:
 		value.SetInt(int64(-*counter * 1000003))
+	case reflect.Int64:
+		// Past what 32 bits hold, which an array's index may be on every build.
+		value.SetInt(int64(*counter) << 40)
 	case reflect.Uint16, reflect.Uint32:
 		value.SetUint(uint64(*counter))
 	case reflect.Bool:
