@@ -17,8 +17,10 @@ API is called directly where one does the job, as busybox-w32 does.
 
 | Platform | Status | What that means |
 | --- | --- | --- |
-| `windows/amd64` | **Supported** | The target. Bugs here are bugs. Behavior corpus, differential suite against busybox-w32/ash, and native path, launch, device, and interrupt tests all run here. |
-| `windows/arm64` | **Untested** | Not built, not run, not claimed. |
+| `windows/amd64` | **Supported** | The target. Bugs here are bugs. Behavior corpus, differential suite against busybox-w32/ash, Oils spec suite, and native path, launch, device, and interrupt tests all run here. |
+| `windows/arm64` | **Supported** | Built, published, and the whole suite run natively on GitHub's Arm runner. Its ints and its Windows structs are amd64's. |
+| `windows/386` | **Supported** | Built, published, and the whole suite run under WOW64 on the x64 runner. Where an int is 32 bits: a count, an offset or an index the references keep in 64 bits is 64 bits here too. |
+| `windows/arm` | **Not a target** | Go has had no 32-bit Arm port for Windows since 1.26. |
 
 Until then `linux/amd64` and `darwin/arm64` ran the full suite on CI,
 `linux/arm64` and `darwin/amd64` were cross-compiled, and all four were published

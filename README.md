@@ -34,10 +34,12 @@ pipeline never receives paths the expression did not select.
 | Platform | Status | Binary published |
 | --- | --- | --- |
 | `windows/amd64` | **Supported** — the target | yes, `.zip` |
-| `windows/arm64` | Untested | no |
+| `windows/arm64` | **Supported** — tested natively on CI's Arm runner | yes, `.zip` |
+| `windows/386` | **Supported** — tested under WOW64 on CI's x64 runner | yes, `.zip` |
 
 Windows is the only platform. Nemosh calls Windows APIs directly where one does
-the job, as busybox-w32 does, and does not build for anything else. Until
+the job, as busybox-w32 does, and does not build for anything else; 32-bit Arm
+is no target Go has had since 1.26. Until
 2026-11-17 the Linux and macOS binaries were published as an unsupported
 convenience, along with `.deb`, `.rpm` and `.apk` packages; the release v1.4.0
 and the nightly `v1.4.66-master-b9608f763100` are the last that have them.

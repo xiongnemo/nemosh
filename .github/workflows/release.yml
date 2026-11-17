@@ -47,11 +47,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # windows/amd64 is the only target, from 2026-11-17. Binaries for linux and
-          # darwin, and the linux .deb, .rpm and .apk packages, were published as an
-          # unsupported convenience until then.
+          # Windows is the only platform, from 2026-11-17, as amd64, arm64 and 386: arm64 on
+          # the Arm runner so its tests run natively, 386 on the x64 one, where WOW64 runs
+          # them. Binaries for linux and darwin, and the linux .deb, .rpm and .apk packages,
+          # were published as an unsupported convenience until then.
           - goos: windows
             goarch: amd64
+            runner: windows-latest
+            extension: .exe
+          - goos: windows
+            goarch: arm64
+            runner: windows-11-arm
+            extension: .exe
+          - goos: windows
+            goarch: '386'
             runner: windows-latest
             extension: .exe
 
@@ -67,7 +76,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # As the build it tests: GOARCH=386 on the x64 runner makes 386 test binaries, which WOW64
+      # runs, and on the others it is the runner's own.
       - name: Test
+        env:
+          GOARCH: ${{ matrix.goarch }}
         run: go test -count=1 ./...
 
       - id: meta
@@ -260,7 +273,7 @@ jobs:
 
             ${{ steps.meta.outputs.headline }}
 
-            `windows/amd64` is the only target; see
+            Built for `windows/amd64`, `windows/arm64` and `windows/386`; see
             [`docs/support-matrix.md`](https://github.com/xiongnemo/nemosh/blob/master/docs/support-matrix.md)
             for what is implemented and what is refused, measured rather than
             claimed.

@@ -122,6 +122,12 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 
 ### Added
 
+- **windows/arm64 and windows/386 builds**, beside windows/amd64, each tested on CI as
+  itself: arm64 natively on GitHub's Arm runner, 386 under WOW64. A Snapdragon machine runs
+  nemosh without emulating x64, and a 32-bit Windows 10 runs it at all. Running the suite as
+  386 found what was right only because an int was 64 bits -- an array index, head's and
+  wc's counts, `date -D %s`, `expr substr`, `top`'s process table -- and each is 64 bits on
+  every build now. 32-bit Arm is no target Go has had since 1.26.
 - **wget reads its proxy from the shell**: `http_proxy` and `https_proxy`, as busybox's does,
   from what the shell exports rather than the environment nemosh started with, so
   `http_proxy=... wget URL` works; `no_proxy`, a CONNECT tunnel for https, and `-Y off` or
@@ -154,6 +160,14 @@ found. Oils: 2152 of the 2548 cases bash passes, 84.5%.
 
 ### Fixed
 
+- **`tail -n 1000000000000` of a pipe ended the shell**, and so did `head -n -1000000000000`:
+  each made room for that many lines before reading one, 16 TB. They hold what has arrived.
+- **`iconv -c` kept a `?` now and then** that it should have passed over: the flag Windows
+  sets when it puts in the default character was handed over as a number a statement before
+  the call, so a stack that grew moved the flag away from where Windows wrote it -- into stack
+  that had been given back. A test of the tree now refuses that shape anywhere.
+- **`${x:1:9223372036854775807}` was nothing**, the length added to the offset and wrapped;
+  it is the rest of the value.
 - **Ctrl-C in nano or micro left the editor at once, and the buffer with it**, unasked:
   tview stops an application on Ctrl-C by itself. It cancels a question now, and at the
   buffer says where the cursor is, as nano's `^C` does.

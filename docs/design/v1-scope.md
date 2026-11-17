@@ -185,7 +185,8 @@ and is the one item of this section that v0 delivered. The rest is new:
   elsewhere is a report rather than a release blocker. **Withdrawn 2026-11-17**:
   Windows is the only platform from then, nemosh builds for nothing else, and the
   archives and the Linux packages stopped with v1.4.0 and the nightly
-  `v1.4.66-master-b9608f763100`.
+  `v1.4.66-master-b9608f763100`. The same day `windows/arm64` and `windows/386`
+  joined `windows/amd64` as supported, each tested on CI as itself.
 - SBOM. **Declined 2026-08-14.** A Go binary already records its module graph, so
   `go version -m nemosh.exe` reports every dependency and its hash -- two of them,
   `golang.org/x/sys` and `golang.org/x/term`. A formal SPDX or CycloneDX document

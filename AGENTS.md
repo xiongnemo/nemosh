@@ -76,12 +76,15 @@ tags and a shallow clone silently yields the fallback.
   here documents that way of installing, and the release artifacts are unaffected.
 - The published artifact must be the same binary CI verified. No rebuild at
   release time.
-- **Windows is the only platform, from 2026-11-17.** windows/amd64 is the one
-  target built, tested and published. Nothing is written for another GOOS -- no
-  `_other` or `!windows` file, no `runtime.GOOS` branch -- and a Windows API is
-  called directly where one does the job, as busybox-w32 does. Until then Linux and
-  macOS were build-and-test checks on CI, with binaries published as an unsupported
-  convenience; the lessons that were only about them are gone from this file.
+- **Windows is the only platform, from 2026-11-17, in three architectures**:
+  windows/amd64, windows/arm64 and windows/386 are each built, tested and
+  published -- arm64 natively on GitHub's Arm runner, 386 under WOW64 on the x64
+  one. windows/arm, 32-bit, is no target Go has had since 1.26. Nothing is written
+  for another GOOS -- no `_other` or `!windows` file, no `runtime.GOOS` branch --
+  and a Windows API is called directly where one does the job, as busybox-w32
+  does. Until then Linux and macOS were build-and-test checks on CI, with binaries
+  published as an unsupported convenience; the lessons that were only about them
+  are gone from this file.
 - Distribution is Scoop, through
   [`xiongnemo/windows-binaries-scoop-bucket`](https://github.com/xiongnemo/windows-binaries-scoop-bucket).
   The publish job announces each release to
@@ -190,6 +193,18 @@ than against the ceiling. Time is never compared against a number, only against 
 base, interleaved, in rounds; see `docs/design/startup-and-footprint.md`. A scenario 10%
 and a floor slower in every round fails the build; a commit that is slower on purpose
 says why in a `Startup-Cost-Accepted: <why>` trailer and is reported instead.
+
+**windows/386 is where an int is 32 bits**, and the only place. Running the suite
+as 386 the first time, on 2026-11-17, found strptime's `%s` range a constant no int
+held, an array index that went to `a[-1]`, head's counts read to the largest int,
+and `top`'s thread and processor records read at Go's size where Windows lays them
+at C's -- C aligns a LARGE_INTEGER to 8, Go on 386 an int64 to 4 -- along with a
+command-line length WOW64 hands a 32-bit process as 0 minus 8. A count, an offset
+or an index the references keep in 64 bits is an int64 here whatever it is built
+for, and an array of a Windows struct is stepped at the size C gives it.
+`GOARCH=386 go test ./...` runs on this machine, WOW64 running it; arm64 runs only
+on the runner, and its ints and structs are amd64's. CI's `architectures` job runs
+both on every push.
 
 **Per-package coverage understates anything driven from another package.**
 `go test -coverprofile ./internal/applets/` reported `device_walk.go` at 14.3% and it

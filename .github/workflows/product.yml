@@ -4,7 +4,8 @@ name: Product
 # runs its tests, executes the behavior corpus against a freshly built binary,
 # and holds the repository's own rules -- formatting, vet, and the 250-pure-LOC
 # ceiling per production file. Windows is the only platform nemosh is built for, from
-# 2026-11-17; it ran on ubuntu and macos too until then.
+# 2026-11-17, as amd64, arm64 and 386 -- the job below runs the last two; it ran on ubuntu and
+# macos too until then.
 #
 # The research probe workflow next to this one exercises reference shells only
 # and is not evidence about Nemosh.
@@ -453,3 +454,57 @@ jobs:
             fi
           done
           exit $status
+
+  # The other two targets, from 2026-11-17: windows/arm64 on GitHub's Arm runner and windows/386
+  # under WOW64 on the x64 one, each the suite as that build and the release build made and asked
+  # its version. Neither has a race detector, so the suite runs without -race. Formatting, the
+  # corpus, the Oils baseline, the fuzz corpus and the ceilings are the same source whatever it is
+  # built for, and stay the job above's. What 386 is for is the width of an int, 32 bits there:
+  # the suite run as 386 the first time found a count, an index and two record strides that were
+  # right only because an int was 64 (AGENTS.md, Tests And Gates).
+  architectures:
+    name: ${{ matrix.runner }} ${{ matrix.goarch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goarch: arm64
+            runner: windows-11-arm
+          - goarch: '386'
+            runner: windows-latest
+    env:
+      GOARCH: ${{ matrix.goarch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install busybox
+        shell: bash
+        run: choco install busybox --version=6354.0.0 --no-progress -y || echo "busybox unavailable; the differential runner will skip it"
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -shuffle=on -count=1 ./...
+
+      - name: release build
+        shell: bash
+        run: |
+          mkdir -p dist
+          binary="dist/nemosh.exe"
+          CGO_ENABLED=0 go build -trimpath -tags tcell_minimal \
+            -ldflags "-s -w $(bash scripts/version.sh --ldflags)" \
+            -o "$binary" ./cmd/nemosh
+          "$binary" --version
+          applets=$("$binary" --list | wc -l)
+          echo "--list reports $applets applets"
+          [ "$applets" -gt 0 ] || { echo "--list reported nothing"; exit 1; }
+          echo "$binary is $(wc -c < "$binary") bytes"
