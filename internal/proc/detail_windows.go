@@ -140,11 +140,11 @@ func imagePath(handle windows.Handle) string {
 func commandLine(handle windows.Handle) string {
 	var needed uint32
 	status := windows.NtQueryInformationProcess(handle, processCommandLineInformation, nil, 0, &needed)
-	if needed == 0 {
+	size, ok := commandLineSize(status, needed)
+	if !ok {
 		return ""
 	}
-	_ = status
-	buffer := make([]byte, needed)
+	buffer := make([]byte, size)
 	if err := windows.NtQueryInformationProcess(handle, processCommandLineInformation,
 		unsafe.Pointer(&buffer[0]), needed, &needed); err != nil {
 		return ""
@@ -154,6 +154,19 @@ func commandLine(handle windows.Handle) string {
 		return ""
 	}
 	return text.String()
+}
+
+// commandLineSize is the length the first query answered, if it is one to size a buffer by: the
+// query has to say it is the length needed, and it has to be one a UNICODE_STRING can describe,
+// whose Length is 16 bits. A process that is exiting answers neither, and through WOW64, which
+// takes the 8 bytes a 32-bit header saves off whatever the 64-bit answer was, its 0 arrives as
+// 0xfffffff8; a 32-bit nemosh made a buffer of that and panicked.
+func commandLineSize(status error, needed uint32) (int, bool) {
+	header := uint32(unsafe.Sizeof(windows.NTUnicodeString{}))
+	if status != windows.STATUS_INFO_LENGTH_MISMATCH || needed <= header || needed > header+1<<16 {
+		return 0, false
+	}
+	return int(needed), true
 }
 
 // processUser is the account the process runs as, mapped the way `ls -l` maps a file's owner.

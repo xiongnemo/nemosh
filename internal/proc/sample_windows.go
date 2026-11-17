@@ -63,6 +63,14 @@ type systemProcessorPerformanceInformation struct {
 	InterruptCount uint32
 }
 
+// recordSize is how far apart Windows lays the records of an array of a struct holding a
+// LARGE_INTEGER: its size rounded up to 8, LARGE_INTEGER's alignment in C. Go aligns an int64 to 4
+// on windows/386, so its size for such a struct can end 4 bytes short of C's; where each field
+// falls is the same either way, and only the step from one record to the next differs.
+func recordSize(size uintptr) int {
+	return int((size + 7) &^ 7)
+}
+
 // Thread states, from the kernel's KTHREAD_STATE. Only the three a monitor acts on are named.
 const (
 	threadStateRunning  = 2

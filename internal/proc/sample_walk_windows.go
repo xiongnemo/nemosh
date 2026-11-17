@@ -132,7 +132,7 @@ func threadsFromRecord(record *windows.SYSTEM_PROCESS_INFORMATION, tail []byte) 
 		return nil
 	}
 	header := int(unsafe.Sizeof(*record))
-	size := int(unsafe.Sizeof(systemThreadInformation{}))
+	size := recordSize(unsafe.Sizeof(systemThreadInformation{}))
 	if header+count*size > len(tail) {
 		// A record that claims more threads than the buffer holds is a table that changed
 		// under the read. Report what fits rather than reading past the end.
@@ -221,7 +221,7 @@ func stateFromThreads(threads []Thread) State {
 // half-megabyte buffer for sixteen small records looked like the safe choice and was the reason
 // nothing worked. So this one is sized in whole records from the start.
 func (s *Sampler) processors() ([]CPUTime, error) {
-	size := int(unsafe.Sizeof(systemProcessorPerformanceInformation{}))
+	size := recordSize(unsafe.Sizeof(systemProcessorPerformanceInformation{}))
 	if len(s.processorBuffer) < size {
 		s.processorBuffer = make([]byte, size*max(runtime.NumCPU(), 1))
 	}
