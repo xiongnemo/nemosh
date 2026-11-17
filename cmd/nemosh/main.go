@@ -135,6 +135,9 @@ func (c command) run(ctx context.Context, args []string) error {
 		if handled, err := c.infoFlag(args[1]); handled {
 			return err
 		}
+		if args[1] == "--migrate" {
+			return c.migrate(args[2:])
+		}
 	}
 	parsed, err := parseInvocation(args[1:])
 	if err != nil {

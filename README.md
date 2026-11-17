@@ -96,6 +96,7 @@ $ nemosh script.sh arg1 arg2
 $ nemosh                       # interactive, when stdin is a terminal
 $ nemosh --version
 $ nemosh --list                # every bundled applet, one per line
+$ nemosh --migrate --dry-run   # what would move to the XDG layout; see Files
 $ nemosh --help
 ```
 
@@ -111,6 +112,29 @@ C:/Users
 An interactive session reads `$ENV`, or `~/.nemoshrc` when `ENV` is not set.
 [`docs/examples/nemoshrc`](docs/examples/nemoshrc) is one to copy: a prompt with
 the git branch and the last status, a few aliases, and gh's and git's completion.
+
+### Files
+
+What nemosh keeps of yours is under your home directory, in the XDG layout, on
+Windows too -- not in `%APPDATA%`:
+
+| What | Where | Kind | Up to 1.5 |
+| --- | --- | --- | --- |
+| history | `$XDG_STATE_HOME/nemosh/history`, by default `~/.local/state/nemosh/history` | state | `~/.nemosh_history` |
+| rc file | `$ENV`, or `~/.nemoshrc` when `ENV` is not set | -- | the same |
+
+`XDG_STATE_HOME` is honoured when it is an absolute path, as the XDG
+specification has it, and ignored otherwise. `HISTFILE` names a history file of
+your own and wins over all of it. The rc file stays where a shell's rc file is,
+as bash's and mksh's do.
+
+Where an item is only at its old place, it is used there, and an interactive
+session says so once, on stderr, before its first prompt. `nemosh --migrate`
+moves it: `--dry-run` prints the plan and touches nothing, the move never
+overwrites (the same file on both sides removes the old copy; a different one
+keeps both and ends with status 1), a second run has nothing to do, and it is
+refused while another nemosh is running, since that one would go on writing to
+the old place. The shell you run it from does the same until it exits.
 
 ### Diagnostics
 

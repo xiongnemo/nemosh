@@ -72,6 +72,11 @@ Options:
   - or --       end the options
   --version     print the version and exit
   --list        print every bundled applet, one per line, and exit
+  --migrate [--dry-run]
+                move history from where releases up to 1.5 kept it,
+                ~/.nemosh_history, to ~/.local/state/nemosh; with --dry-run,
+                say what would move and touch nothing. Refused while another
+                nemosh is running
   --help        print this and exit
 
 Nemosh is a multicall binary: invoked under an applet's name, directly or

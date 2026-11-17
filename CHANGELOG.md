@@ -8,6 +8,24 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## Unreleased
+
+### Changed
+
+- **History is kept in `~/.local/state/nemosh/history`**, or `$XDG_STATE_HOME/nemosh/history`,
+  the XDG layout under the home directory that every tool of the author's keeps to on Windows
+  too. `~/.nemosh_history` is still used when it is the only one there, and a session says so
+  once before its first prompt; `nemosh --migrate` moves it. A `HISTFILE` of your own wins as it
+  did, and `~/.nemoshrc` and `$ENV` stay where a shell's rc file is.
+
+### Added
+
+- **`nemosh --migrate [--dry-run]`** moves what a release up to 1.5 kept to where later ones keep
+  it. `--dry-run` prints the plan and touches nothing; a move never overwrites -- the same file on
+  both sides removes the old copy, a different one keeps both and ends with status 1 -- and is
+  copied, checked by size and SHA-256, and only then removed when it crosses volumes. A second run
+  has nothing to do, and it is refused while another nemosh is running.
+
 ## v1.5.0 - 2026-11-18
 
 Windows only, in three architectures, and built on Windows itself: TLS is Schannel's, sockets

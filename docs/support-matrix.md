@@ -93,8 +93,10 @@ Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.
 
 History survives the session. `HISTFILE` names the file, exported or not, and a
-prompt sets it to `~/.nemosh_history` once the rc file has run without setting it,
-as busybox sets `~/.ash_history`; `HISTFILESIZE` caps it at 500 lines by default; setting
+prompt sets it to `$XDG_STATE_HOME/nemosh/history`, `~/.local/state/nemosh/history`
+by default, once the rc file has run without setting it, as busybox sets
+`~/.ash_history`; `~/.nemosh_history`, where releases up to 1.5 kept it, is used
+and said when it is the only one there, and `nemosh --migrate` moves it; `HISTFILESIZE` caps it at 500 lines by default; setting
 either to nothing turns saving off, which is bash's rule and busybox's. Lines
 are appended one at a time in a single write, so a session that is killed still
 leaves what it ran and two windows interleave whole lines rather than
