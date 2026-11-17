@@ -37,7 +37,7 @@ func TestHistoryFile_isNamedAtAPromptAndNotInAScript(t *testing.T) {
 	// HOME as it is given, so the separator before the base is the host's, and the ones after
 	// are slashes, as busybox's `C:\Users\me/.ash_history` has it. Where in HOME is
 	// history_xdg_test.go's question.
-	if want := filepath.Base(home) + "/.local/state/nemosh/history]\n"; !strings.HasPrefix(got.stdout, "[") || !strings.HasSuffix(got.stdout, want) {
+	if want := filepath.Base(home) + "/.local/state/nemosh/nemosh_history]\n"; !strings.HasPrefix(got.stdout, "[") || !strings.HasSuffix(got.stdout, want) {
 		t.Fatalf("at a prompt HISTFILE is %q, want it under HOME, ending %q", got.stdout, want)
 	}
 	if script.String() != "[unset]\n" {

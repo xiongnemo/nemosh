@@ -33,7 +33,7 @@ func TestMigrate_movesHistoryToTheStateDirectory(t *testing.T) {
 	home := t.TempDir()
 	env := map[string]string{"HOME": home}
 	legacy := filepath.Join(home, ".nemosh_history")
-	current := filepath.Join(home, ".local", "state", "nemosh", "history")
+	current := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
 	writeFile(t, legacy, "echo old\n")
 
 	// A dry run touches nothing.
@@ -69,7 +69,7 @@ func TestMigrate_neverOverwrites(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			home := t.TempDir()
 			legacy := filepath.Join(home, ".nemosh_history")
-			current := filepath.Join(home, ".local", "state", "nemosh", "history")
+			current := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
 			writeFile(t, legacy, test.legacy)
 			writeFile(t, current, test.current)
 
@@ -104,8 +104,8 @@ func TestMigrate_followsXDGStateHome(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := readOrEmpty(filepath.Join(state, "nemosh", "history")); got != "echo old\n" {
-		t.Fatalf("XDG_STATE_HOME/nemosh/history holds %q", got)
+	if got := readOrEmpty(filepath.Join(state, "nemosh", "nemosh_history")); got != "echo old\n" {
+		t.Fatalf("XDG_STATE_HOME/nemosh/nemosh_history holds %q", got)
 	}
 }
 
@@ -146,7 +146,7 @@ func TestMigrate_copiesAcrossVolumes(t *testing.T) {
 		t.Fatalf("%v; %q %q", err, stdout.String(), stderr.String())
 	}
 
-	current := filepath.Join(home, ".local", "state", "nemosh", "history")
+	current := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
 	info, err := os.Stat(current)
 	if err != nil || readOrEmpty(current) != "echo old\n" || !info.ModTime().Equal(stamp) {
 		t.Fatalf("the copy: %v, %q, %v", err, readOrEmpty(current), info)

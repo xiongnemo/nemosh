@@ -12,7 +12,7 @@ patch number is the commits since that tag.
 
 ### Changed
 
-- **History is kept in `~/.local/state/nemosh/history`**, or `$XDG_STATE_HOME/nemosh/history`,
+- **History is kept in `~/.local/state/nemosh/nemosh_history`**, or `$XDG_STATE_HOME/nemosh/nemosh_history`,
   the XDG layout under the home directory that every tool of the author's keeps to on Windows
   too. `~/.nemosh_history` is still used when it is the only one there, and a session says so
   once before its first prompt; `nemosh --migrate` moves it. A `HISTFILE` of your own wins as it

@@ -120,7 +120,7 @@ Windows too -- not in `%APPDATA%`:
 
 | What | Where | Kind | Up to 1.5 |
 | --- | --- | --- | --- |
-| history | `$XDG_STATE_HOME/nemosh/history`, by default `~/.local/state/nemosh/history` | state | `~/.nemosh_history` |
+| history | `$XDG_STATE_HOME/nemosh/nemosh_history`, by default `~/.local/state/nemosh/nemosh_history` | state | `~/.nemosh_history` |
 | rc file | `$ENV`, or `~/.nemoshrc` when `ENV` is not set | -- | the same |
 
 `XDG_STATE_HOME` is honoured when it is an absolute path, as the XDG

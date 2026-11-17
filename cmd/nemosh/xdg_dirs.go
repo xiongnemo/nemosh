@@ -26,14 +26,17 @@ func xdgBase(lookup func(string) (string, bool), variable, home, fallback string
 	return strings.TrimRight(home, `/\`) + "/" + fallback
 }
 
-// historyPaths is where history is kept, $XDG_STATE_HOME/nemosh/history, and where every release
-// up to 1.5 kept it, ~/.nemosh_history. Both empty without a home.
+// historyPaths is where history is kept, $XDG_STATE_HOME/nemosh/nemosh_history, and where every
+// release up to 1.5 kept it, ~/.nemosh_history. Both empty without a home. The file is
+// nemosh_history and not history, as fish's is fish_history, so HISTFILE ends in _history as
+// bash's and busybox's do: Oils' interactive.test.sh asks exactly that, and a bare history
+// failed it on CI.
 func historyPaths(lookup func(string) (string, bool)) (current, legacy string) {
 	home, ok := lookup("HOME")
 	if !ok || home == "" {
 		return "", ""
 	}
-	return xdgBase(lookup, "XDG_STATE_HOME", home, ".local/state") + "/nemosh/history",
+	return xdgBase(lookup, "XDG_STATE_HOME", home, ".local/state") + "/nemosh/nemosh_history",
 		strings.TrimRight(home, `/\`) + "/.nemosh_history"
 }
 

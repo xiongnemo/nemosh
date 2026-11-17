@@ -37,11 +37,11 @@ func TestHistoryFile_isStateUnderTheHomeDirectory(t *testing.T) {
 		want                  string // relative to home, or "state" for the variable's
 		notice                bool
 	}{
-		{name: "a fresh home", want: ".local/state/nemosh/history"},
+		{name: "a fresh home", want: ".local/state/nemosh/nemosh_history"},
 		{name: "XDG_STATE_HOME", variable: "XDG_STATE_HOME", value: state, want: "state"},
-		{name: "a relative XDG_STATE_HOME is ignored", variable: "XDG_STATE_HOME", value: "rel/state", want: ".local/state/nemosh/history"},
+		{name: "a relative XDG_STATE_HOME is ignored", variable: "XDG_STATE_HOME", value: "rel/state", want: ".local/state/nemosh/nemosh_history"},
 		{name: "the old file alone is read, and said", legacy: true, want: ".nemosh_history", notice: true},
-		{name: "the new file wins over the old", legacy: true, current: true, want: ".local/state/nemosh/history"},
+		{name: "the new file wins over the old", legacy: true, current: true, want: ".local/state/nemosh/nemosh_history"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			home := withXDGHome(t, test.variable, test.value)
@@ -49,7 +49,7 @@ func TestHistoryFile_isStateUnderTheHomeDirectory(t *testing.T) {
 				writeFile(t, filepath.Join(home, ".nemosh_history"), "old\n")
 			}
 			if test.current {
-				writeFile(t, filepath.Join(home, ".local", "state", "nemosh", "history"), "new\n")
+				writeFile(t, filepath.Join(home, ".local", "state", "nemosh", "nemosh_history"), "new\n")
 			}
 
 			// When
@@ -58,7 +58,7 @@ func TestHistoryFile_isStateUnderTheHomeDirectory(t *testing.T) {
 			// Then
 			want := filepath.ToSlash(home) + "/" + test.want
 			if test.want == "state" {
-				want = state + "/nemosh/history"
+				want = state + "/nemosh/nemosh_history"
 			}
 			if hist := strings.TrimSuffix(strings.TrimPrefix(got.stdout, "["), "]\n"); filepath.ToSlash(hist) != want {
 				t.Errorf("HISTFILE is %q, want %q", hist, want)
@@ -91,7 +91,7 @@ func TestHistoryFile_makesItsDirectoryOnTheFirstWrite(t *testing.T) {
 	file.append("echo saved")
 
 	// Then
-	data, err := os.ReadFile(filepath.Join(directory, "history"))
+	data, err := os.ReadFile(filepath.Join(directory, "nemosh_history"))
 	if err != nil || string(data) != "echo saved\n" {
 		t.Fatalf("the history file holds %q, %v; want the line saved", data, err)
 	}

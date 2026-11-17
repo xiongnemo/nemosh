@@ -8,7 +8,7 @@ import (
 )
 
 // setDefaultHistoryFile is HISTFILE at a prompt: once the rc file has run, a session that
-// it left without one has it set to $XDG_STATE_HOME/nemosh/history, as busybox's ash sets
+// it left without one has it set to $XDG_STATE_HOME/nemosh/nemosh_history, as busybox's ash sets
 // ~/.ash_history after $ENV and bash ~/.bash_history; see xdg_dirs.go for the place, and for
 // ~/.nemosh_history, which is used and said when it is the only one there. The variable says
 // where history goes, so `echo $HISTFILE` answers and `history -w` with no FILE writes there;

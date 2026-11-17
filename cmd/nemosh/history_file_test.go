@@ -29,7 +29,7 @@ func TestNewHistoryFile(t *testing.T) {
 			// In HOME's spelling, a slash after it; history_xdg_test.go has the rest.
 			name: "the default under the home directory",
 			env:  map[string]string{"HOME": home},
-			path: home + "/.local/state/nemosh/history", limit: 500, enabled: true,
+			path: home + "/.local/state/nemosh/nemosh_history", limit: 500, enabled: true,
 		},
 		{
 			name: "somewhere else entirely",
@@ -46,12 +46,12 @@ func TestNewHistoryFile(t *testing.T) {
 		{
 			name: "a limit of zero also turns it off",
 			env:  map[string]string{"HOME": home, "HISTFILESIZE": "0"},
-			path: home + "/.local/state/nemosh/history", limit: 0, enabled: false,
+			path: home + "/.local/state/nemosh/nemosh_history", limit: 0, enabled: false,
 		},
 		{
 			name: "a limit that is not a number is ignored",
 			env:  map[string]string{"HOME": home, "HISTFILESIZE": "lots"},
-			path: home + "/.local/state/nemosh/history", limit: 500, enabled: true,
+			path: home + "/.local/state/nemosh/nemosh_history", limit: 500, enabled: true,
 		},
 		{
 			// Nowhere to put it. Not an error: a shell with no HOME still works,
