@@ -294,8 +294,8 @@ at a scratch directory. What is left for a person is marked.
 - **`wget` over https**: `wget -O - https://example.com/ | head -3` prints the page, and a
   name the certificate does not cover (`https://wrong.host.badssl.com/`), a self-signed, an
   expired and an untrusted root each fail with the certificate's reason. Found: `-S` prints
-  only the last response, not the redirects before it, and `-O /dev/null` is refused as an
-  archive entry's name would be; both are being fixed.
+  only the last response, not the redirects before it, which is being fixed; and `-O
+  /dev/null` was refused as an archive entry's name would be, fixed since.
 - **Through a proxy**: against xray on 127.0.0.1, https goes through a CONNECT and http as an
   absolute-form request. Cloudflare's `/cdn-cgi/trace` reported the proxy's country through
   it, and this machine's under `-Y off` and with `no_proxy` naming the host. A `socks5://`

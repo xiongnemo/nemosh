@@ -206,8 +206,8 @@ func parsePassiveReply(reply string) (string, error) {
 	return netio.JoinHostPort(host, strconv.Itoa(numbers[4]<<8|numbers[5])), nil
 }
 
-// retrieve downloads remote into local. The local name is checked the way an
-// archive entry is, because it may have come from the server's own listing.
+// retrieve downloads remote into local, which is opened as the user wrote it, as busybox's
+// ftpget opens LOCAL_FILE: both names come from the command line, never from the server.
 func (s *ftpSession) retrieve(ctx context.Context, remote, local string) error {
 	data, err := s.openData(ctx)
 	if err != nil {
@@ -217,23 +217,14 @@ func (s *ftpSession) retrieve(ctx context.Context, remote, local string) error {
 	if _, err := s.command(fmt.Sprintf("RETR %s", remote), 1); err != nil {
 		return err
 	}
-	safe, err := safeArchivePath(local)
+	file, remove, err := openDownload(ProcessViewFromContext(ctx), local)
 	if err != nil {
-		return err
-	}
-	view := ProcessViewFromContext(ctx)
-	native, err := resolveHostPath(view, safe)
-	if err != nil {
-		return operandFailure(safe, err)
-	}
-	file, err := createFile(view, native)
-	if err != nil {
-		return operandFailure(safe, err)
+		return cannotOpen(local, err)
 	}
 	_, copyErr := io.Copy(file, data)
 	closeErr := file.Close()
 	if copyErr != nil {
-		os.Remove(native)
+		remove()
 		return copyErr
 	}
 	if closeErr != nil {

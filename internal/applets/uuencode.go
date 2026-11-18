@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -185,22 +186,26 @@ func writeDecodedUu(ctx context.Context, stdout io.Writer, decoded []byte, name 
 	target := name
 	if options.has('o') {
 		target = options.value('o')
+	} else if name != "-" && name != "" {
+		// The begin line's name came from the sender, so it is checked the way an archive
+		// entry is -- `begin 644 ../../evil` is the same attack a tar entry would be. -o is
+		// the user's, and opened as written, as busybox's is.
+		safe, err := safeArchivePath(name)
+		if err != nil {
+			return err
+		}
+		target = safe
 	}
 	if target == "-" || target == "" {
 		_, err := stdout.Write(decoded)
 		return err
 	}
-	// The name came from the sender, so it is checked the way an archive entry is
-	// -- `begin 644 ../../evil` is the same attack a tar entry would be.
-	safe, err := safeArchivePath(target)
+	file, err := openProcessOutput(ProcessViewFromContext(ctx), target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
-		return err
+		return operandFailure(target, err)
 	}
-	native, err := resolveHostPath(ProcessViewFromContext(ctx), safe)
-	if err != nil {
-		return operandFailure(safe, err)
-	}
-	return os.WriteFile(native, decoded, 0o644)
+	_, writeErr := file.Write(decoded)
+	return errors.Join(writeErr, file.Close())
 }
 
 func uudecodeLine(line string) ([]byte, error) {

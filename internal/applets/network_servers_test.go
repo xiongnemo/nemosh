@@ -207,37 +207,6 @@ func TestFtpget_downloadsAFile(t *testing.T) {
 	}
 }
 
-// A name the server chose is checked like an archive entry, because a listing is
-// where such a name comes from.
-func TestFtpget_refusesALocalNameThatEscapes(t *testing.T) {
-	server := startFakeFTP(t, map[string][]byte{"r.txt": []byte("x")})
-	host, port := server.address()
-	outer := t.TempDir()
-	root := filepath.Join(outer, "root")
-	if err := os.Mkdir(root, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	ctx := WithProcessView(t.Context(), hostProcessView{cwd: root})
-
-	for _, name := range []string{"../escape.txt", "NUL", `C:\windows\evil`} {
-		var stdout, stderr strings.Builder
-		err := newFtpgetApplet().Run(ctx, []string{"-P", port, host, name, "r.txt"},
-			strings.NewReader(""), &stdout, &stderr)
-		if err == nil {
-			t.Errorf("ftpget accepted the local name %q", name)
-		}
-	}
-	entries, err := os.ReadDir(outer)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, entry := range entries {
-		if filepath.Join(outer, entry.Name()) != root {
-			t.Fatalf("ftpget created %s outside the working directory", entry.Name())
-		}
-	}
-}
-
 func TestFtpput_uploadsAFile(t *testing.T) {
 	server := startFakeFTP(t, nil)
 	host, port := server.address()

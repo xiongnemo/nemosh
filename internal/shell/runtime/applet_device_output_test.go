@@ -1,6 +1,9 @@
 package runtime_test
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -34,6 +37,28 @@ func TestRuntime_appletsOpenDevicesByName(t *testing.T) {
 		// seek= moves it from there, the standard output too; of= is cut at the seek point.
 		{"{ echo 12345; echo ab | dd seek=1 bs=1 2>/dev/null; } > f; od -An -tx1 f\n", " 31 32 33 34 35 0a 00 61 62 0a\n"},
 		{"{ echo 12345; echo ab | dd of=/dev/stdout seek=1 bs=1 2>/dev/null; } > f; od -An -tx1 f\n", " 31 00 00 00 00 00 00 61 62 0a\n"},
+	} {
+		t.Run(test.script, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			if stdout, status := runScriptCapturing(test.script); stdout != test.want || status != 0 {
+				t.Errorf("got %q, status %d; want %q", stdout, status, test.want)
+			}
+		})
+	}
+}
+
+// wget's -O and uudecode's -o open a device as busybox's xopen opens one: `wget -O /dev/null` is
+// how a URL is checked, and both were refused as an archive entry's absolute name from 2026-08-23.
+func TestRuntime_downloadsOpenDevicesByName(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "the body\n")
+	}))
+	defer server.Close()
+	for _, test := range []struct{ script, want string }{
+		{"wget -q -O /dev/null " + server.URL + "/a.txt && echo checked\n", "checked\n"},
+		{"wget -q -O /dev/stdout " + server.URL + "/a.txt\n", "the body\n"},
+		{"wget -q -O NUL " + server.URL + "/a.txt && ls\n", ""},
+		{"printf 'begin 644 sent\\n#:&D*\\n`\\nend\\n' | uudecode -o /dev/stdout\n", "hi\n"},
 	} {
 		t.Run(test.script, func(t *testing.T) {
 			t.Chdir(t.TempDir())

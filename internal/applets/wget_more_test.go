@@ -23,14 +23,16 @@ func TestWget_decidesWhereTheBodyGoes(t *testing.T) {
 
 	t.Run("-P into a directory", func(t *testing.T) {
 		root := t.TempDir()
+		if err := os.Mkdir(filepath.Join(root, "sub"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		ctx := WithProcessView(t.Context(), hostProcessView{cwd: root})
 		var stdout, stderr strings.Builder
 		if err := newWgetApplet().Run(ctx, []string{"-q", "-P", "sub", server.URL + "/a.txt"},
 			strings.NewReader(""), &stdout, &stderr); err != nil {
 			t.Fatalf("wget -P: %v (%s)", err, stderr.String())
 		}
-		// The directory is created, because -P names where to put things rather
-		// than requiring it to exist.
+		// The directory is one that is there, as busybox's is; TestWget_makesNoDirectoryForP.
 		got, err := os.ReadFile(filepath.Join(root, "sub", "a.txt"))
 		if err != nil {
 			t.Fatalf("-P did not save into the directory: %v", err)

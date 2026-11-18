@@ -43,6 +43,12 @@ patch number is the commits since that tag.
   at 1 MB/s. mv across volumes still copies by CopyFile2, which keeps a file's streams; when that
   fails and what it made cannot be removed, it says what CopyFile2 met rather than `No such file
   or directory`.
+- **`wget -O /dev/null`, `-O C:/dir/file` and an absolute `-P` were refused**, as `reserved
+  device name`, `drive-qualified entry name` or `absolute entry name`, and so were ftpget's
+  LOCAL_FILE and uudecode's `-o` spelled that way: a name the user typed was held to what an
+  archive entry may name, since 2026-08-23. They are opened as written, as busybox's are. The URL's
+  last element and a uuencoded file's begin line, which come from the other end, are still
+  checked. `-P` no longer makes its directory, and applies only without `-O`, as busybox's.
 
 ## v1.5.0 - 2026-11-18
 

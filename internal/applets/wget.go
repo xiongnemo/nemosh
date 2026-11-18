@@ -171,13 +171,14 @@ func (r wgetRequest) fetch(ctx context.Context, address string, stdout, stderr i
 	return r.save(ctx, fetched, stdout, stderr)
 }
 
-// save decides where the body goes.
+// save decides where the body goes, as busybox's wget does (networking/wget.c).
 //
-// `-O -` is stdout. Otherwise the name comes from the URL's last path element,
-// and **that name came from the server**, so it goes through the same containment
-// check an archive entry does: a redirect to `http://host/../../evil` must not
-// write outside the working directory, and a URL ending in `/NUL` must not reach
-// the device.
+// `-O -` is stdout, and any other -O is opened as the user wrote it -- a path anywhere, a
+// drive, /dev/null -- as busybox's xopen opens it. Without -O the name is the URL's last path
+// element, and **that name came from the server**, so it goes through the same containment
+// check an archive entry does: a URL ending in `/NUL` must not reach the device, nor `..`
+// climb out of the working directory. -P leads to that name only, never to -O's, and names a
+// directory that is there: busybox makes none, and fails to open the file.
 func (r wgetRequest) save(ctx context.Context, fetched *wgetFetched, stdout, stderr io.Writer) error {
 	if r.output == "-" {
 		_, err := io.Copy(stdout, fetched.body)
@@ -185,52 +186,54 @@ func (r wgetRequest) save(ctx context.Context, fetched *wgetFetched, stdout, std
 	}
 	name := r.output
 	if name == "" {
-		name = path.Base(fetched.location.Path)
-		if name == "" || name == "/" || name == "." {
+		base := path.Base(fetched.location.Path)
+		if base == "" || base == "/" || base == "." {
 			// Nothing usable in the URL, which is what index pages look like.
-			name = "index.html"
+			base = "index.html"
+		}
+		safe, err := safeArchivePath(base)
+		if err != nil {
+			return err
+		}
+		name = safe
+		if r.directory != "" {
+			name = path.Join(r.directory, name)
 		}
 	}
-	if r.directory != "" {
-		name = path.Join(r.directory, name)
-	}
-	safe, err := safeArchivePath(name)
+	file, remove, err := openDownload(ProcessViewFromContext(ctx), name)
 	if err != nil {
-		return err
-	}
-	view := ProcessViewFromContext(ctx)
-	native, err := resolveHostPath(view, safe)
-	if err != nil {
-		return operandFailure(safe, err)
-	}
-	if err := os.MkdirAll(pathDirOf(native), createMode(view, 0o755)); err != nil {
-		return err
-	}
-	file, err := createFile(view, native)
-	if err != nil {
-		return operandFailure(safe, err)
+		return cannotOpen(name, err)
 	}
 	written, copyErr := io.Copy(file, fetched.body)
 	closeErr := file.Close()
 	if copyErr != nil {
 		// The partial file is removed: a truncated download that looks complete
 		// is worse than no download.
-		os.Remove(native)
+		remove()
 		return copyErr
 	}
 	if closeErr != nil {
 		return closeErr
 	}
 	if !r.quiet {
-		if _, err := fmt.Fprintf(stderr, "'%s' saved [%d]\n", safe, written); err != nil {
+		if _, err := fmt.Fprintf(stderr, "'%s' saved [%d]\n", name, written); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func pathDirOf(native string) string {
-	if index := strings.LastIndexAny(native, `/\`); index > 0 {
-		return native[:index]
+
+// openDownload opens name to write a download into, as busybox's xopen does: a file wherever
+// the name says, or through the view a device such as /dev/null. remove takes a partial file
+// away again; a device has none to take.
+func openDownload(view ProcessView, name string) (io.WriteCloser, func(), error) {
+	file, err := openProcessOutput(view, name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, createMode(view, 0o666))
+	if err != nil {
+		return nil, nil, err
 	}
-	return "."
+	remove := func() {}
+	if resolved, err := ResolveProcessPath(view, name); err == nil && !resolved.Device {
+		remove = func() { _ = os.Remove(resolved.Native) }
+	}
+	return file, remove, nil
 }
