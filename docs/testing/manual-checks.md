@@ -303,8 +303,8 @@ at a scratch directory. What is left for a person is marked.
   proxy is refused by name, a closed port fails at once, and Ctrl-C during a download
   through the tunnel gave the prompt back in 5 ms with 130.
 - **Ctrl-C during a download**, of 1 GiB from a local httpd and of a 4 GB ISO from a mirror:
-  the prompt is back within 50 ms, `$?` is 130, and no partial file is left. Found: it says
-  `wget: use of closed network connection`, where busybox says nothing; being fixed.
+  the prompt is back within 50 ms, `$?` is 130, and no partial file is left. Found, and fixed
+  since: it said `wget: use of closed network connection`, where busybox says nothing.
 - **`httpd` in a browser**: the listing, Chinese names, `video/mp4`, 206 for an open-ended
   range, 304, and 200 once the file changed, all checked with curl. Headless Edge played a
   100 MB video whose index is at its end, seeking to 15 s, in five requests. Left for a
@@ -319,7 +319,7 @@ says.
 
 - **A large copy and Ctrl-C**: 1 GiB took 0.75 s, and Ctrl-C at 100, 200 or 300 ms gave the
   prompt back within 80 ms, with 130 and no partial copy. busybox's cp, interrupted the same
-  way, leaves its partial file. Found: it says `cp: context canceled`; being fixed.
+  way, leaves its partial file. Found, and fixed since: it said `cp: context canceled`.
 - **mv to another drive**: D: to C: interrupted at 60 or 150 ms leaves the source as it was
   (its SHA-256 checked) and nothing at the destination; a hidden file with an alternate data
   stream keeps both there and back, which `attrib` and `dir /r /a` show.

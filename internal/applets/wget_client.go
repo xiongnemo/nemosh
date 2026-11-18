@@ -110,7 +110,9 @@ func (r wgetRequest) exchange(ctx context.Context, method string, location *url.
 	}
 	plain, err := netio.Dial(ctx, dialHost, dialPort, r.timeout)
 	if err != nil {
-		return nil, fmt.Errorf("cannot fetch %s: %v", location, err)
+		// busybox's words, `can't connect to remote host (HOST)`, with the port, which busybox
+		// leaves out, and the reason netio gives.
+		return nil, fmt.Errorf("cannot connect to remote host (%s): %v", netio.JoinHostPort(dialHost, dialPort), err)
 	}
 	// From here the context closes the connection, so Ctrl-C ends a handshake or a CONNECT as
 	// surely as it ends the body; closing the plain connection ends TLS over it too.

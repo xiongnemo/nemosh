@@ -47,6 +47,15 @@ func contextStatus(ctx context.Context) int {
 	return 1
 }
 
+// endedBySignal is whether ctx ended by the shell's interrupt or by a signal sent to its job.
+func endedBySignal(ctx context.Context) bool {
+	if isShellInterrupt(ctx) {
+		return true
+	}
+	_, signalled := errors.AsType[jobSignal](context.Cause(ctx))
+	return signalled
+}
+
 func isShellInterrupt(ctx context.Context) bool {
 	return errors.Is(context.Cause(ctx), errShellInterrupt)
 }

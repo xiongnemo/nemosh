@@ -2,6 +2,7 @@ package applets
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -67,6 +68,22 @@ func TestWget_stillChecksTheNameAURLGives(t *testing.T) {
 		if _, _, err := runWget(t, dir, "-q", server.URL+tail); err == nil {
 			t.Errorf("wget of %s saved under the name it ends in", tail)
 		}
+	}
+}
+
+// A port nothing listens on is busybox's `can't connect to remote host (HOST)`, with the port and
+// the reason a POSIX system gives, and not Go's `dial tcp` and Windows' sentence about the target
+// machine.
+func TestWget_saysItCannotConnectAsBusyboxDoes(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	listener.Close()
+	_, _, err = runWget(t, t.TempDir(), "-q", "-O", "-", "http://"+address+"/")
+	if err == nil || err.Error() != "cannot connect to remote host ("+address+"): Connection refused" {
+		t.Errorf("wget to a closed port: %v", err)
 	}
 }
 

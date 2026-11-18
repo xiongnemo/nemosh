@@ -3,7 +3,6 @@ package netio
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 	"unsafe"
 
@@ -52,11 +51,44 @@ func Dial(ctx context.Context, host, port string, timeout time.Duration) (Conn, 
 	return nil, dialError(host, port, last)
 }
 
+// dialError is a dial's failure in a POSIX system's words: `Connection refused`, where Winsock
+// says the target machine actively refused it and Go's net package put `dial tcp ADDRESS:` in
+// front. The caller names the address, as busybox's `can't connect to remote host (HOST)` does.
 func dialError(host, port string, err error) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		err = ErrTimeout
 	}
-	return fmt.Errorf("dial tcp %s: %w", JoinHostPort(host, port), err)
+	return dialFailure{err: err}
+}
+
+type dialFailure struct{ err error }
+
+func (f dialFailure) Unwrap() error { return f.err }
+
+func (f dialFailure) Error() string {
+	var errno windows.Errno
+	if errors.As(f.err, &errno) {
+		switch errno {
+		case windows.WSAECONNREFUSED:
+			return "Connection refused"
+		case windows.WSAETIMEDOUT:
+			return "Connection timed out"
+		case windows.WSAENETUNREACH:
+			return "Network is unreachable"
+		case windows.WSAEHOSTUNREACH:
+			return "No route to host"
+		case windows.WSAENETDOWN:
+			return "Network is down"
+		case windows.WSAECONNRESET:
+			return "Connection reset by peer"
+		case windows.WSAEADDRNOTAVAIL:
+			return "Cannot assign requested address"
+		}
+	}
+	if errors.Is(f.err, ErrTimeout) {
+		return "Connection timed out"
+	}
+	return f.err.Error()
 }
 
 // connect is one address, by ConnectEx on a socket bound to the unspecified address.

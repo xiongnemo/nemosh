@@ -158,9 +158,13 @@ func (r *mvRun) writable(dest pathOperand) bool {
 	return err != nil || canWrite(dest.host, info)
 }
 
+// fail names a failure and makes mv's status 1; once Ctrl-C has ended the move, as cpRun.fail,
+// it names nothing.
 func (r *mvRun) fail(err error) {
 	r.failed = true
-	fmt.Fprintf(r.stderr, "mv: %v\n", err)
+	if r.ctx == nil || r.ctx.Err() == nil {
+		fmt.Fprintf(r.stderr, "mv: %v\n", err)
+	}
 }
 
 func (r *mvRun) status() error {

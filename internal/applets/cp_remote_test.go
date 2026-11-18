@@ -143,3 +143,24 @@ func TestMv_acrossVolumesToAShareStillKeepsStreams(t *testing.T) {
 }
 
 func errorText(err windows.Errno) string { return causeText(err) }
+
+// A cp or mv that Ctrl-C ended says nothing of it, as busybox's, which the signal ends, says
+// nothing: it printed `cp: context canceled` after the ^C. Its status is still a failure, which
+// the shell makes 130.
+func TestCp_saysNothingOnceCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, applet := range []string{"cp", "mv"} {
+		var stderr bytes.Buffer
+		run := &cpRun{ctx: ctx, applet: applet, stderr: &stderr}
+		run.fail(ctx.Err())
+		if stderr.Len() != 0 || !run.failed {
+			t.Errorf("%s cancelled said %q, failed %v; want nothing, and failed", applet, stderr.String(), run.failed)
+		}
+	}
+	var stderr bytes.Buffer
+	run := &cpRun{ctx: context.Background(), applet: "cp", stderr: &stderr}
+	if run.fail(errors.New("cannot open 'x'")); stderr.Len() == 0 {
+		t.Error("a failure of cp's own said nothing")
+	}
+}

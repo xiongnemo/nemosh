@@ -167,7 +167,7 @@ func queryWhois(ctx context.Context, name, server, port string, stdout io.Writer
 	}
 	connection, err := netio.Dial(ctx, server, port, netcatDialTimeout)
 	if err != nil {
-		return fmt.Errorf("cannot reach %s: %v", server, err)
+		return fmt.Errorf("cannot reach %s: %v", netio.JoinHostPort(server, port), err)
 	}
 	defer connection.Close()
 	if _, err := fmt.Fprintf(connection, "%s\r\n", name); err != nil {
@@ -229,7 +229,7 @@ func newSslClientApplet(name string) Applet {
 		}
 		plain, err := netio.Dial(ctx, host, port, netcatDialTimeout)
 		if err != nil {
-			return fmt.Errorf("cannot establish TLS to %s: %v", host, err)
+			return fmt.Errorf("cannot connect to %s: %v", netio.JoinHostPort(host, port), err)
 		}
 		// The certificate is verified. -e in busybox means "exit on error"; there is no option
 		// here to skip verification, because a TLS pipe that does not check the certificate is a

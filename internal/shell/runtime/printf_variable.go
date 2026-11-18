@@ -15,7 +15,10 @@ func (r Runtime) appletStatus(ctx context.Context, name string, err error) int {
 	if err == nil {
 		return 0
 	}
-	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+	// An applet a signal ended -- the shell's ^C, or one sent to its job -- says nothing of how
+	// its ending went, as a busybox applet the signal kills cannot: wget's connection, closed
+	// under it, came back as `use of closed network connection`, printed after the ^C.
+	if ctx.Err() != nil && (errors.Is(err, ctx.Err()) || endedBySignal(ctx)) {
 		return contextStatus(ctx)
 	}
 	// Normalized first, which is what this was missing: an applet returns the raw

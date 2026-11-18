@@ -94,10 +94,14 @@ func (r *cpRun) report(source, dest pathOperand) {
 	}
 }
 
-// fail names a failure and makes cp's status 1. It answers false, for a copy not made.
+// fail names a failure and makes cp's status 1. It answers false, for a copy not made. Once Ctrl-C
+// has ended the copy it names nothing, as busybox's cp, which the signal ends, cannot: it printed
+// `cp: context canceled` after the ^C. The shell makes the status 130.
 func (r *cpRun) fail(err error) bool {
 	r.failed = true
-	fmt.Fprintf(r.stderr, "%s: %v\n", r.name(), err)
+	if r.context().Err() == nil {
+		fmt.Fprintf(r.stderr, "%s: %v\n", r.name(), err)
+	}
 	return false
 }
 

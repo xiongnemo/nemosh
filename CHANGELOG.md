@@ -57,6 +57,13 @@ patch number is the commits since that tag.
 - **httpd's listing linked a name with `#` or `%` in it to nothing**: the name was the href as it
   stood, so `a#b.txt` asked for `a` and was not found, and `100%.txt` was a bad escape and a 400.
   Each link is the name percent-encoded, a directory's slash after it.
+- **Ctrl-C printed Go's own error text**: `cp: context canceled`, `mv: context canceled`, and
+  `wget: use of closed network connection`. An applet that Ctrl-C or a signal to its job ended
+  says nothing now, as a busybox applet the signal ends says nothing, and the status is still
+  130, or 128 and the signal. A refused connection is `cannot connect to remote host
+  (127.0.0.1:1): Connection refused`, busybox's words with the port, where it was `cannot fetch
+  URL: dial tcp 127.0.0.1:1:` and Windows' sentence about the target machine. nc, ssl_client and
+  whois give the same reason after the address.
 
 ## v1.5.0 - 2026-11-18
 
