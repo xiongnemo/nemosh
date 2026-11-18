@@ -34,6 +34,9 @@ patch number is the commits since that tag.
 - **cmp is ten times faster**: 92 MB alike in 58 ms, where it took 568 ms and busybox takes 1.4 s.
   What both files hold alike is passed over a block at a time; the byte where they part, `-l`'s
   list and the EOF are as before.
+- **grep holds 10 MB less**: a line it does not print is matched where the reader holds it, and is
+  never made a string. `grep -c func` over 92 MB collects once where it collected 36 times, peaks
+  at 14.6 MB where it peaked at 25, and takes 240 ms where it took 310.
 
 ### Added
 

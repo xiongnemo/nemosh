@@ -2,11 +2,11 @@ package applets
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"regexp"
-	"strings"
 )
 
 func newGrepApplet() Applet {
@@ -166,13 +166,15 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 	}
 	for scanner.Scan() {
 		lineNumber++
-		line := scanner.Text()
-		if !binary && flags.binary != grepBinaryText && strings.IndexByte(line, 0) >= 0 {
+		// The scanner's own bytes, matched where they lie: a line is made a string only to be
+		// printed or held for -B. It was made one to be matched, an allocation a line.
+		line := scanner.Bytes()
+		if !binary && flags.binary != grepBinaryText && bytes.IndexByte(line, 0) >= 0 {
 			if binary = true; flags.binary == grepBinarySkip {
 				break
 			}
 		}
-		hit := expr.MatchString(line)
+		hit := expr.Match(line)
 		if flags.invert {
 			hit = !hit
 		}
@@ -188,12 +190,14 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 				// cannot be printed a second time as another match's leading
 				// context.
 				after--
-				if err := printer.emit(name, lineNumber, line, false, withNames); err != nil {
+				if err := printer.emit(name, lineNumber, string(line), false, withNames); err != nil {
 					return matched, err
 				}
 				continue
 			}
-			before.push(lineNumber, line)
+			if before.limit > 0 {
+				before.push(lineNumber, string(line))
+			}
 			continue
 		}
 		matched = true
@@ -209,7 +213,7 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 			if err := printer.flushBefore(before, name, withNames); err != nil {
 				return matched, err
 			}
-			if err := grepEmitMatch(printer, expr, flags, name, lineNumber, line, withNames); err != nil {
+			if err := grepEmitMatch(printer, expr, flags, name, lineNumber, string(line), withNames); err != nil {
 				return matched, err
 			}
 			after = flags.afterContext
