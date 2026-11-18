@@ -52,6 +52,8 @@ patch number is the commits since that tag.
 - **wget named a file by where its redirects ended**, so a GitHub release asset was saved as
   `823ee083-9620-4fe0-bedf-fa097b85b694`. It is named by the URL asked for, as busybox names it
   before it sends a request: `nemosh-v1.5.0-windows-amd64.zip`.
+- **`wget -S` showed only the last response**, so a chain of redirects was invisible. It prints
+  each response's status line and fields as it arrives, a 301 or a 302 too, as busybox does.
 
 ## v1.5.0 - 2026-11-18
 

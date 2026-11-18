@@ -117,6 +117,24 @@ func TestWget_followsRedirectsAndSendsCredentials(t *testing.T) {
 	}
 }
 
+// -S is every response's status line and fields, a redirect's too, in the order they came, as
+// busybox prints them: it printed only the last, so a chain was invisible.
+func TestWget_showsEveryResponseOfARedirectChain(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			http.Redirect(w, r, "/final", http.StatusFound)
+			return
+		}
+		fmt.Fprint(w, "ok")
+	}))
+	defer server.Close()
+	_, stderr, err := runWget(t, t.TempDir(), "-q", "-S", "-O", "-", server.URL+"/start")
+	found, final := strings.Index(stderr, "  HTTP/1.1 302 Found\n"), strings.Index(stderr, "  HTTP/1.1 200 OK\n")
+	if err != nil || found < 0 || final < found || !strings.Contains(stderr[found:final], "  Location: /final\n") {
+		t.Errorf("-S over a redirect said %q, %v", stderr, err)
+	}
+}
+
 // -S is the status line and each header field; -T ends a read that waits longer, where the
 // whole fetch had thirty seconds.
 func TestWget_showsTheServerAndTimesOutAWaitingRead(t *testing.T) {

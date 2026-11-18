@@ -38,7 +38,9 @@ func (f *wgetFetched) Close() error {
 }
 
 // get asks for address, following redirects, and answers the last response with its body unread.
-func (r wgetRequest) get(ctx context.Context, address string) (*wgetFetched, error) {
+// heads, when not nil, is given every response's status line and fields as each arrives, a
+// redirect's too: -S, as busybox prints it.
+func (r wgetRequest) get(ctx context.Context, address string, heads io.Writer) (*wgetFetched, error) {
 	for _, header := range r.headers {
 		if !strings.Contains(header, ":") {
 			return nil, fmt.Errorf("bad header %q: a header is NAME: VALUE", header)
@@ -59,6 +61,12 @@ func (r wgetRequest) get(ctx context.Context, address string) (*wgetFetched, err
 		fetched, err := r.exchange(ctx, method, location, &authorization)
 		if err != nil {
 			return nil, err
+		}
+		if heads != nil {
+			fmt.Fprintf(heads, "  %s\n", fetched.line)
+			for _, field := range fetched.fields {
+				fmt.Fprintf(heads, "  %s\n", field)
+			}
 		}
 		target := fetched.headers["location"]
 		switch fetched.status {

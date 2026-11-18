@@ -142,19 +142,17 @@ func (r wgetRequest) fetch(ctx context.Context, address string, stdout, stderr i
 		// anyone typing `wget example.com/x` means.
 		address = "http://" + address
 	}
-	fetched, err := r.get(ctx, address)
+	// -S is each response's status line and every header field, as busybox prints them.
+	var heads io.Writer
+	if r.showServer {
+		heads = stderr
+	}
+	fetched, err := r.get(ctx, address, heads)
 	if err != nil {
 		return err
 	}
 	defer fetched.Close()
 	status := strings.TrimPrefix(fetched.line[strings.IndexByte(fetched.line, ' ')+1:], " ")
-	if r.showServer {
-		// -S is the status line and every header field, as busybox prints them.
-		fmt.Fprintf(stderr, "  %s\n", fetched.line)
-		for _, field := range fetched.fields {
-			fmt.Fprintf(stderr, "  %s\n", field)
-		}
-	}
 	if fetched.status >= 400 {
 		// A 404 is a failed download, not a file whose contents are the error
 		// page -- writing the body would leave a file that looks like a success.
