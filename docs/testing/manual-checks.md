@@ -282,40 +282,60 @@ These only exist off a GUI launch or a real clipboard, so no test reaches them.
 ## H. The network, against the real one
 
 Every network test runs against a server the test starts on loopback, so three things
-no test can reach are left to a hand: a certificate a public CA signed, a real proxy,
-and a browser. Not yet checked by hand; `wget` became its own client on 2026-11-17.
+no test can reach are left: a certificate a public CA signed, a real proxy, and a browser.
 
-- **`wget` over https**: `wget -O - https://example.com/ | head -3` prints the page,
-  and `wget -S -O /dev/null https://github.com/` lists the redirects' fields; a name
-  the certificate does not cover, `wget -O - https://wrong.host.badssl.com/`, fails
-  with the certificate's reason, and so does `https://self-signed.badssl.com/`.
-- **Through a proxy**, if one is to hand: `https_proxy=http://HOST:PORT wget -O -
-  https://example.com/ | head -3` goes through it (its log shows the CONNECT), and
-  `wget -Y off ...` does not. `no_proxy=example.com` sends that host direct.
-- **Ctrl-C during a download** of any large file, a Linux ISO say, gives the prompt
-  back at once and leaves no partial file.
-- **`httpd` in a browser**: `httpd -f -p 8080 -h .` and open `http://localhost:8080/`;
-  the listing links work, a video seeks (that is a Range request), and a reload
-  shows the browser's 304 in its network panel.
+All of this section and the next was checked on 2026-11-18 and 2026-11-19, against v1.5.0
+and v1.5.5-master-a7928c692987, by a program driving an interactive nemosh in a console of
+its own: it types each line with WriteConsoleInputW, sends Ctrl-C with
+GenerateConsoleCtrlEvent -- the event the console sends for the key -- and reads the screen
+back, so the times below are from the Ctrl-C to the next prompt. HOME and APPDATA pointed
+at a scratch directory. What is left for a person is marked.
+
+- **`wget` over https**: `wget -O - https://example.com/ | head -3` prints the page, and a
+  name the certificate does not cover (`https://wrong.host.badssl.com/`), a self-signed, an
+  expired and an untrusted root each fail with the certificate's reason. Found: `-S` prints
+  only the last response, not the redirects before it, and `-O /dev/null` is refused as an
+  archive entry's name would be; both are being fixed.
+- **Through a proxy**: against xray on 127.0.0.1, https goes through a CONNECT and http as an
+  absolute-form request. Cloudflare's `/cdn-cgi/trace` reported the proxy's country through
+  it, and this machine's under `-Y off` and with `no_proxy` naming the host. A `socks5://`
+  proxy is refused by name, a closed port fails at once, and Ctrl-C during a download
+  through the tunnel gave the prompt back in 5 ms with 130.
+- **Ctrl-C during a download**, of 1 GiB from a local httpd and of a 4 GB ISO from a mirror:
+  the prompt is back within 50 ms, `$?` is 130, and no partial file is left. Found: it says
+  `wget: use of closed network connection`, where busybox says nothing; being fixed.
+- **`httpd` in a browser**: the listing, Chinese names, `video/mp4`, 206 for an open-ended
+  range, 304, and 200 once the file changed, all checked with curl. Headless Edge played a
+  100 MB video whose index is at its end, seeking to 15 s, in five requests. Left for a
+  person: a video seeking in a real browser window, and the 304 in its network panel.
+  Found: a name with `#` or `%` in it is not escaped in the listing's link; being fixed.
 
 ## I. Files, against real disks and code pages
 
 The tests make their files in the temporary directory, on one volume, in sizes a test can
-afford. What needs a second drive, a share or a large file is here. Not yet checked by hand;
-measured with built binaries on 2026-11-17 where it says so.
+afford. What needs a second drive, a share or a large file is here, checked as section H
+says.
 
-- **A large copy and Ctrl-C**: `cp` of a file of a few GB (made with `fsutil file createnew
-  big.bin 4000000000`) runs at the disk's speed -- 512 MB took 160 ms here, by CopyFile2 --
-  and Ctrl-C during it gives the prompt back at once and leaves no partial copy.
-- **mv to another drive**: a file with a stream (`echo note > f.txt:side`) and the hidden bit
-  (`attrib +h f.txt`) moved from C: to D: keeps both, which `dir /r` and `attrib` show --
-  checked from C: to D: on 2026-11-17 through a script; by hand at a prompt, not yet. A large
-  one is CopyFile2's, and Ctrl-C ends it.
-- **A network share**: `cp`, `mv`, `tail -n1` and `chmod` on a path under `\\server\share`
-  behave as on a local disk; a share that goes away during a copy is an error, not a hang.
-- **iconv with real text**: `iconv -f GBK -t UTF-8` of a file saved as GBK by Notepad, and
-  `-f SHIFT_JIS`, `-f EUC-KR` and `-f BIG5` likewise, read as the text it is; `iconv -f UTF-8
-  -t GBK` of something GBK has not got says `conversion error`, and with `-c` leaves it out.
+- **A large copy and Ctrl-C**: 1 GiB took 0.75 s, and Ctrl-C at 100, 200 or 300 ms gave the
+  prompt back within 80 ms, with 130 and no partial copy. busybox's cp, interrupted the same
+  way, leaves its partial file. Found: it says `cp: context canceled`; being fixed.
+- **mv to another drive**: D: to C: interrupted at 60 or 150 ms leaves the source as it was
+  (its SHA-256 checked) and nothing at the destination; a hidden file with an alternate data
+  stream keeps both there and back, which `attrib` and `dir /r /a` show.
+- **A network share**: a Synology share over Tailscale, as `//host/share/...` and as a
+  mapped `Z:`. cp of 1 MiB and 8 MiB, mv each way and a rename, `tail`, `chmod 444` (an append
+  is then refused), `ls`, `du`, `find` and `cd` all behave as on a local disk. When the link
+  goes away, every operation on the share fails together about 63 s later -- Windows' SMB
+  timeout, the same for busybox -- with `No such file or directory`, busybox's word for it,
+  and Ctrl-C does nothing until then. Found, and being fixed: a cp onto the share that the
+  outage ended left a file of the full size whose last 5.5 MiB were zeros, because CopyFile2
+  sizes the file first and Windows closed it once the link came back; on a slow link Ctrl-C
+  during a copy from the share took 24 s, for the same reason; and `ls -l` names an owner
+  this machine cannot look up `root`, where busybox prints its number. Not the shell's: a file
+  that was open for reading when the link died could not be opened for its data by anything
+  for 18 minutes and more, so `ls -l` of its folder hangs in nemosh and busybox alike.
+- **iconv with real text**: GBK, SHIFT_JIS, EUC-KR, BIG5, EUC-JP and GB18030 read exactly,
+  and the conversion errors, `-c` and an unknown name come out byte for byte as busybox's.
 
 ## If something fails
 
