@@ -186,8 +186,7 @@ which raw mode clears -- this is half of what made `bc` look frozen.
 Since 2026-11-16 tcell links `third_party/gdamore-encoding`, whose character sets are
 generated tables rather than built at start; its tests hold every byte and rune to
 upstream's, but only a terminal shows the result. `top` and `less` should draw as before,
-box lines and all. On a Unix terminal, run `top` once more under `LANG=C` and once under
-an ISO-8859-1 locale, which are where tcell consults those tables at all.
+box lines and all.
 
 An applet is handed a frame since then (`applet_frame.go`), which is its context and its
 streams. Ctrl-C during `seq 1 100000000 > /dev/null` still has to stop it at once with

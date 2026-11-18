@@ -55,7 +55,7 @@ A hidden entry point in `cmd/nemosh`: `nemosh --job <handle>` reads a job descri
 from the inherited handle, rebuilds a Runtime from it, runs the job's program, and exits
 with its status. The description is written by the parent into an anonymous pipe whose
 read end is the one extra handle the child inherits; its number travels in argv, as
-busybox's `--fs` does. On other platforms the pipe is `ExtraFiles[0]`, fd 3.
+busybox's `--fs` does.
 
 A pipe rather than a file mapping, because the description is read once, front to back,
 and a pipe needs no size decided in advance and leaves nothing to unmap.
@@ -172,8 +172,7 @@ the foreground and not the background, as busybox arranges.
   that table, nor in busybox's.
 - The Job Object has no `KILL_ON_JOB_CLOSE`: with it, the shell exiting would take every
   job with it, where both references' jobs outlive the shell.
-- A job that dies by a signal it did not catch exits with `n << 24`, or re-raises the
-  signal off Windows. So the parent can tell a kill from `exit 143` and name the job
+- A job that dies by a signal it did not catch exits with `n << 24`. So the parent can tell a kill from `exit 143` and name the job
   `Terminated`, not `Done(143)`.
 
 ### 7. What stays a goroutine
@@ -222,6 +221,6 @@ suite under both launchers, so the way back keeps working.
 - ~~The grace period for a signal the child does not answer.~~ Settled in step three:
   there is none; see section 6.
 - ~~A signal sent to the shell itself, from outside it.~~ A script now gets one
-  (runtime.ReceiveSignals): a real SIGTERM, HUP or QUIT off Windows, and on Windows a
-  console close, which ends the script where it is, since Windows ends the process
+  (runtime.ReceiveSignals): a console closing, a logoff or a shutdown, which Go reports
+  as SIGTERM, and which ends the script where it is, since Windows ends the process
   within seconds. A prompt still ignores TERM, as bash's does.

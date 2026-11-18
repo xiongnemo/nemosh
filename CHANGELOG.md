@@ -148,8 +148,9 @@ the shell says when a name is not found. Oils: 2153 of the 2548 cases bash passe
   trims takes 111 ms where it took 135 (bash 139).
 - **Ctrl+Backspace deletes a word, and Ctrl+Delete the word after the cursor**, as in
   PowerShell, where Ctrl+Backspace deleted a character and Ctrl+Delete nothing; Shift+Left and
-  Shift+Right move a character, where they moved a word. Off Windows Ctrl+Backspace, which is
-  `^H`, is still a Backspace, and `NEMOSH_CTRL_H=word` or `backspace` chooses anywhere.
+  Shift+Right move a character, where they moved a word. Ctrl+Backspace arrives as `^H`, which
+  a terminal set to erase with `^H` sends for Backspace too; `NEMOSH_CTRL_H=backspace` makes it
+  one there.
 
 ### Added
 
@@ -164,7 +165,8 @@ the shell says when a name is not found. Oils: 2153 of the 2548 cases bash passe
   `http_proxy=... wget URL` works; `no_proxy`, a CONNECT tunnel for https, and `-Y off` or
   `--proxy off` to go direct. Only an `http://` proxy is spoken to.
 - **`title`**, busybox-w32's builtin: `title TEXT` sets the console's title, a tab's in Windows
-  Terminal, and `title` prints it. Off Windows it says there is none, with status 1.
+  Terminal, and `title` prints it. Where the console cannot be asked it says why, with status
+  1, where busybox's says nothing.
 - **Windows Terminal's shell integration**: in Windows Terminal a session marks each prompt,
   each command and how it ended (OSC 133), so the scrollbar shows them and a command and its
   output can be jumped to and selected, and says its directory (OSC 9;9), where a duplicated
@@ -187,7 +189,6 @@ the shell says when a name is not found. Oils: 2153 of the 2548 cases bash passe
 - `UID`, `EUID` and `OSTYPE`; `sh` and `bash` fall back to this shell when PATH has none;
   `env`, `xargs`, `find -exec` and awk run programs; `time` before a compound command;
   `#!/usr/bin/env NAME` scripts; `trap ... KILL` and bash's `trap -p` listing.
-- Linux builds are packaged as `.deb`, `.rpm` and `.apk`; see README.
 
 ### Fixed
 
@@ -227,10 +228,11 @@ the shell says when a name is not found. Oils: 2153 of the 2548 cases bash passe
 - **The start is timed in CI**, against the commit before, interleaved on one runner;
   `tools/startbench` reports it beside the package init allocations it holds to a
   ceiling.
-- **Package init does 40% of the work it did**: 1,101 allocations rather than 2,773. The
+- **Package init does a sixth of the work it did**: 414 allocations rather than 2,732. The
   applets' help text is built when asked for, the registry allocates once rather than per
-  applet, and tcell's `gdamore/encoding` is forked into `third_party/` with its character
-  sets generated as data. The ceiling CI holds it to is 1200, down from 2750.
+  applet, no package-level map literal is left -- a test refuses one -- and tcell's
+  `gdamore/encoding` is forked into `third_party/` with its character sets generated as data.
+  The ceiling CI holds it to is 780, down from 2750.
 
 ## v1.4.0 - 2026-10-07
 

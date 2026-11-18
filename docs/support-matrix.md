@@ -86,8 +86,7 @@ Both glob options are off by default, as they are in busybox.
 busybox-w32's `title` builtin is here: `title TEXT` sets the console's title, the tab's in
 Windows Terminal, and `title` alone prints it. Only the first operand is taken, and no option
 is read, `title -x` setting the title to `-x`, as busybox has it. Where busybox answers 0 and
-says nothing when the console cannot be asked, this says why and answers 1, and off Windows,
-where a terminal's title can be set but never read back, it always does.
+says nothing when the console cannot be asked, this says why and answers 1.
 
 Beyond POSIX, `history`, `which` and `set -o nocaseglob` are implemented, both
 following busybox.
@@ -121,7 +120,7 @@ the editor succeeds is said on standard error and run. On Windows `fc` was the f
 compare, `fc.exe`, which that name still runs.
 
 Tab completion and the inline suggestion offer host names for `ssh`, read from
-`~/.ssh/config` -- and `/etc/hosts` off Windows. See
+`~/.ssh/config`; the Windows hosts file is not read. See
 `docs/design/completion.md`, Host names, for what is read and what deliberately
 is not.
 
@@ -517,9 +516,9 @@ held one entry, the newest, until 2026-10-02.
     An editor that fails runs nothing.
 - The Windows keys: Ctrl+Backspace deletes the word before the cursor, into the kill ring as
   `^W` puts it, and Ctrl+Delete and Alt+Delete the word after it, as they do in PowerShell
-  and a Windows edit box. A terminal sends Ctrl+Backspace as `^H`, which a Unix terminal set
-  to erase with `^H` sends for Backspace too, so off Windows `^H` is still a Backspace;
-  `NEMOSH_CTRL_H=word` or `backspace` says which anywhere. Shift+Left and Shift+Right move a
+  and a Windows edit box. A terminal sends Ctrl+Backspace as `^H`, which a terminal set to
+  erase with `^H` -- an ssh client's, say -- sends for Backspace too, and the two cannot be told
+  apart, so `NEMOSH_CTRL_H=backspace` makes `^H` a Backspace. Shift+Left and Shift+Right move a
   character, where every modified arrow moved a word; Ctrl and Alt still do. busybox-w32's
   editor deletes a character on Ctrl+Backspace and ignores Ctrl+Delete and the Shift arrows.
   What a console sends for each was measured from one, by writing the key events into it.
@@ -751,9 +750,9 @@ loops record the whole command now, as the edited one always did.
   lines before it stopped. At a prompt, though not in a script, `not found` names up to
   three commands one or two edits away (``hint: did you mean `git`?``), and a `NAME.ps1` on
   PATH, or a `.ps1` run by its path, is named as a PowerShell script with how to run it.
-- On Windows, which gives a process no umask, a shell's starts at 0002, busybox-w32's
-  DEFAULT_UMASK, so `ls -l` and `stat` show a file 0664 and a directory 0775 as busybox's
-  do; Git for Windows's bash starts at 0022. Elsewhere it is the process's own.
+- Windows gives a process no umask, so a shell's starts at 0002, busybox-w32's
+  DEFAULT_UMASK, and `ls -l` and `stat` show a file 0664 and a directory 0775 as busybox's
+  do; Git for Windows's bash starts at 0022.
 - A name `type` or `command -V` does not find is `x: not found` on stdout and 127, and
   `command -v`'s is 127, as busybox answers them; bash says `type: x: not found` on
   stderr, with 1, and its options to type keep its answer. A read-only variable refused is
@@ -2136,8 +2135,7 @@ Four things here are not guessable:
   allocation will be refused. The `shared` column is always zero because Windows
   has no equivalent counter, and inventing one from working-set overlap would be a
   guess presented as a measurement. `free` reads the same sampler `top` draws its
-  meters from, so the two cannot disagree about the machine's memory — and it
-  refuses off Windows with `ErrListUnsupported` rather than reporting zeros.
+  meters from, so the two cannot disagree about the machine's memory.
 - **`tsort`'s order among independent items is unspecified, and all three
   implementations differ.** For `a b / b c / d e`, busybox answers `a b d e c`,
   GNU answers `a d b e c`, and this answers `a b c d e`. All three satisfy the

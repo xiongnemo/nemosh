@@ -353,11 +353,6 @@ Its contract:
   open-use-close sequence is pinned to one OS thread. Only one process may hold
   it at a time and Windows offers no way to wait, so an open retries.
 
-Off Windows the path still resolves as a device — the path model is
-platform-independent — and then reports that there is nothing behind it, rather
-than shelling out to `xclip` or `pbcopy` and pretending the promise is
-portable.
-
 `/dev/fd/N` should be supported once the shell-owned fd table is stable. It maps
 to Nemosh fd entries, not to a Windows filesystem path, and is only promised for
 shell operations, builtins, and bundled applets.

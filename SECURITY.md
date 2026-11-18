@@ -59,16 +59,23 @@ something the script did **not** say:
   non-zero status. A script asking for one fails; it does not get something
   else. `docs/support-matrix.md` records which is which, measured.
 - **`ulimit`, `fg`, `bg`, `set -b`/`-m`/`-v`.** Refused with a reason.
-- **Linux and macOS behaviour.** Build-and-test targets, not supported ones.
+- **Other operating systems.** Nemosh is built for Windows alone, from 2026-11-17;
+  the Linux and macOS binaries v1.4.0 and earlier carried were an unsupported
+  convenience and are not maintained.
 - **Terminal state after a crash.** Raw mode is restored on every path out
   including a panic; if you find one where it is not, that is an ordinary bug
   and welcome as an issue.
 
 ## Supply chain
 
-The binary links Go's standard library, `golang.org/x/term`, and
-`golang.org/x/sys/windows` — nothing else. `github.com/BurntSushi/toml` is used
-by the test harness and is not in the binary.
+The binary links Go's standard library and ten modules: `golang.org/x/sys`,
+`x/term` and `x/text`; `github.com/gdamore/tcell/v2`, `rivo/tview` and
+`rivo/uniseg`, which draw the editors, `less` and `top`, and tcell's own
+`gdamore/encoding` and `lucasb-eyer/go-colorful`; `dsnet/compress` for bzip2 and
+`ulikunitz/xz` for xz. Four of them -- x/sys, xz, encoding and go-colorful -- are forks under
+`third_party/`, which go.mod's `replace` links in place of upstream, each with a
+README saying what changed and why. `github.com/BurntSushi/toml` is used by the
+test harness and is not in the binary.
 
 `govulncheck` runs on every push and weekly, and reports only vulnerabilities
 this binary can actually reach.
@@ -87,8 +94,9 @@ $ gh attestation verify nemosh-v0.1.0-windows-amd64.zip --repo xiongnemo/nemosh
 ```
 
 The dependency list needs no separate document — a Go binary records it, so
-`go version -m nemosh.exe` reports every module and its hash. There are two:
-`golang.org/x/sys` and `golang.org/x/term`.
+`go version -m nemosh.exe` reports every module and its hash. A fork is
+recorded as `(devel)`, without one, since it is built from this repository's
+own tree, at the commit the attestation names.
 
 BusyBox is a behaviour reference and none of its code is here; see
 [`docs/design/reference-methodology.md`](docs/design/reference-methodology.md).

@@ -19,8 +19,8 @@ import (
 // case says which is followed and why; everywhere else, agreement is the assertion.
 //
 // A case still carries a literal `want`, because a differential test that only compares
-// against a reference cannot run where the reference is absent -- and CI's ubuntu and
-// macos runners have no busybox-w32. So `want` is what the run must produce, and the
+// against a reference cannot run where the reference is absent -- and CI's runners have
+// no busybox-w32. So `want` is what the run must produce, and the
 // reference comparison is an extra check that runs when the binary is there.
 
 // runAwk runs a program over an input and answers stdout, stderr and the status.
@@ -113,8 +113,8 @@ var busyboxIsTheReference = sync.OnceValue(func() bool {
 
 // checkAgainstReferences compares a result with gawk and busybox when they are installed.
 //
-// Not fatal when they are missing: this suite runs on ubuntu and macos in CI, where
-// busybox-w32 is not present. The literal expectation in each case is what holds there.
+// Not fatal when they are missing: CI's runners have no busybox-w32. The literal
+// expectation in each case is what holds there.
 func checkAgainstReferences(t *testing.T, program, input, got string, diverges ...string) {
 	t.Helper()
 	skip := map[string]bool{}

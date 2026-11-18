@@ -9,9 +9,9 @@ import (
 )
 
 // A nemosh whose script ignores SIGPIPE, or catches it, goes on past a write into its own
-// standard output once the reader has gone, which off Windows takes the process's SIGPIPE:
-// Go's runtime ends a process at the first such write otherwise. One that does neither ends
-// there, with SIGPIPE's 141, and so does one that put the default back.
+// standard output once the reader has gone. One that does neither ends there, with SIGPIPE's
+// 141, as a shell's process ends by the signal where there is one, and so does one that put
+// the default back.
 func TestPipeTrap_theProcessKeepsWhatItsShellMadeOfSIGPIPE(t *testing.T) {
 	binary := os.Getenv(jobBinaryVariable)
 	if binary == "" {

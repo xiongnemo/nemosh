@@ -36,9 +36,8 @@ func (r Runtime) setStartupVariables() {
 // shell acts as, which on Windows is the same token. A script that asks `[ "$EUID" -ne 0 ]`
 // before it needs root was comparing nothing, an error that read as false. OSTYPE is msys on
 // Windows, the value scripts test for Git Bash, which MSYS2's bash says and Git for Windows'
-// said for years; its bash 2.55 says cygwin. Elsewhere it is linux-gnu, or the GOOS, darwin
-// for macOS, whose bash adds a version a `darwin*` test passes over. An OSTYPE already set is
-// kept, as bash keeps one.
+// said for years; its bash 2.55 says cygwin. An OSTYPE already set is kept, as bash keeps
+// one.
 func (r Runtime) setIdentityVariables() {
 	uid := applets.CurrentUserID()
 	euid := os.Geteuid()

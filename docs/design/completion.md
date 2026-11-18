@@ -266,11 +266,9 @@ person curates on purpose, so its names are the ones they meant. `known_hosts` i
 *not* read — it is a machine-written cache, it is the file most likely to be
 enormous, and under `HashKnownHosts yes` its entries are hashed and unreadable by
 design, so it would answer richly on one machine and not at all on the next.
-`/etc/hosts` is read off Windows and not on it: measured, the Windows one ships
-with every line commented out and usually stays that way, and it is the file most
-likely to have been replaced wholesale with an ad-blocking list of tens of
-thousands of names. Entries pointing at `0.0.0.0` are skipped for the same
-reason — a name installed in order *not* to reach is not somewhere to connect.
+The Windows hosts file is not read: measured, it ships with every line commented
+out and usually stays that way, and it is the file most likely to have been
+replaced wholesale with an ad-blocking list of tens of thousands of names.
 
 Both `Host` and `HostName` are read. They answer different halves of one
 question: `Host` is the short alias someone wrote the file to have, `HostName` is

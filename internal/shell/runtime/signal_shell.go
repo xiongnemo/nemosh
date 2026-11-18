@@ -7,9 +7,8 @@ import (
 	"sync"
 )
 
-// The shell's own signals, from outside it. Off Windows that is a real `kill`. On
-// Windows it is the console closing, the user logging off or the machine shutting down,
-// which Go reports as SIGTERM. A script gets them as a job does (signal_inbox.go): a
+// The shell's own signals, from outside it: the console closing, the user logging off or
+// the machine shutting down, which Go reports as SIGTERM. A script gets them as a job does (signal_inbox.go): a
 // signal's trap runs when the command in progress finishes, and a signal nothing catches
 // ends the script, whose EXIT trap still runs, with 128+n. bash 5.3 answers the same for
 // a script it runs: `trap 'echo bye' EXIT; sleep 5` sent TERM says bye and exits 143.

@@ -276,8 +276,6 @@ func TestTopArgs_readsEveryOptionItAccepts(t *testing.T) {
 // A cancelled context stops a multi-sample run rather than sleeping through it,
 // which is what makes Ctrl-C work during the delay between samples.
 func TestTopBatch_stopsWhenCancelledBetweenSamples(t *testing.T) {
-	// Guarded like the rest: off Windows the first sample fails on its own and the
-	// test would pass without ever reaching the wait it is about.
 	ctx, cancel := context.WithCancel(t.Context())
 	var stdout strings.Builder
 	options, err := topArgs([]string{"-b", "-n", "50", "-d", "30"})

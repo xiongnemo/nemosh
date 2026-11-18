@@ -224,8 +224,8 @@ func TestQuoteWindowsArgument_survivesTheRoundTrip(t *testing.T) {
 	}
 }
 
-// A process with no console: every non-Windows one, and a Windows service or CI
-// runner. The elevated shell then has nowhere to join and takes a window.
+// A process with no console: a Windows service, or a CI runner. The elevated shell
+// then has nowhere to join and takes a window.
 type noConsole struct{}
 
 func (noConsole) usable() bool { return false }
