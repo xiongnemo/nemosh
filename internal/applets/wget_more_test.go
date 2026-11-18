@@ -13,8 +13,7 @@ import (
 // wget's options and its refusals, against a server the test starts.
 
 // -P saves into a directory, -O names the file, and -O - is stdout. Each decides
-// where the body goes, and the name a redirect chose is the one that has to be
-// checked -- so all three are worth pinning separately.
+// where the body goes, so all three are worth pinning separately.
 func TestWget_decidesWhereTheBodyGoes(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintf(writer, "body of %s", request.URL.Path)
@@ -104,8 +103,7 @@ func TestWget_treatsAnErrorStatusAsAFailure(t *testing.T) {
 			}
 		})
 	}
-	// A 3xx is followed rather than refused, which is what net/http does and what
-	// makes the *redirected* name the one that needs checking.
+	// A 3xx is followed rather than refused, as busybox follows it.
 	target := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(writer, "after the redirect")
 	}))
@@ -121,9 +119,8 @@ func TestWget_treatsAnErrorStatusAsAFailure(t *testing.T) {
 		strings.NewReader(""), &stdout, &stderr); err != nil {
 		t.Fatalf("a redirect was not followed: %v (%s)", err, stderr.String())
 	}
-	// Saved under the name the *server* chose at the end of the chain, which is
-	// exactly why that name goes through the containment check.
-	if got, err := os.ReadFile(filepath.Join(root, "final.txt")); err != nil || string(got) != "after the redirect" {
+	// Saved under the name asked for, as busybox saves it; TestWget_followsRedirectsAndSendsCredentials.
+	if got, err := os.ReadFile(filepath.Join(root, "start.txt")); err != nil || string(got) != "after the redirect" {
 		t.Fatalf("the redirected download landed as %q (%v)", got, err)
 	}
 }

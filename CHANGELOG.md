@@ -49,6 +49,9 @@ patch number is the commits since that tag.
   archive entry may name, since 2026-08-23. They are opened as written, as busybox's are. The URL's
   last element and a uuencoded file's begin line, which come from the other end, are still
   checked. `-P` no longer makes its directory, and applies only without `-O`, as busybox's.
+- **wget named a file by where its redirects ended**, so a GitHub release asset was saved as
+  `823ee083-9620-4fe0-bedf-fa097b85b694`. It is named by the URL asked for, as busybox names it
+  before it sends a request: `nemosh-v1.5.0-windows-amd64.zip`.
 
 ## v1.5.0 - 2026-11-18
 

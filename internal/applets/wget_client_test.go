@@ -71,8 +71,10 @@ func runWget(t *testing.T, dir string, args ...string) (string, string, error) {
 	return stdout.String(), stderr.String(), err
 }
 
-// Redirects are followed, sixteen at most, busybox's limit, and the file is named by where they
-// end; credentials in the URL go as Basic, and not to another host a redirect names.
+// Redirects are followed, sixteen at most, busybox's limit, and the file is named by the URL that
+// was asked for, as busybox names it before it sends a request (networking/wget.c): a release
+// asset GitHub redirects to an opaque name was saved as that name. Credentials in the URL go as
+// Basic, and not to another host a redirect names.
 func TestWget_followsRedirectsAndSendsCredentials(t *testing.T) {
 	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "authorization %q", r.Header.Get("Authorization"))
@@ -97,8 +99,11 @@ func TestWget_followsRedirectsAndSendsCredentials(t *testing.T) {
 	if _, _, err := runWget(t, dir, "-q", server.URL+"/start"); err != nil {
 		t.Fatal(err)
 	}
-	if data, err := os.ReadFile(filepath.Join(dir, "final.txt")); err != nil || string(data) != `arrived with ""` {
-		t.Errorf("final.txt holds %q, %v", data, err)
+	if data, err := os.ReadFile(filepath.Join(dir, "start")); err != nil || string(data) != `arrived with ""` {
+		t.Errorf("start holds %q, %v", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "final.txt")); err == nil {
+		t.Error("the file was named by where the redirects ended")
 	}
 	withUser := strings.Replace(server.URL, "://", "://who:secret@", 1)
 	if out, _, err := runWget(t, dir, "-q", "-O", "-", withUser+"/start"); err != nil || out != `arrived with "Basic d2hvOnNlY3JldA=="` {

@@ -22,12 +22,12 @@ import (
 
 const wgetRedirects = 16
 
-// wgetFetched is a response wget is reading: where it came from in the end, and its connection,
-// which closing the body closes.
+// wgetFetched is a response wget is reading: the URL asked for, where it came from in the end,
+// and its connection, which closing the body closes.
 type wgetFetched struct {
 	httpResponse
-	location *url.URL
-	conn     netio.Conn
+	requested, location *url.URL
+	conn                netio.Conn
 	// unwatch stops the context's closing the connection, which it does while the body is read.
 	unwatch func() bool
 }
@@ -54,6 +54,7 @@ func (r wgetRequest) get(ctx context.Context, address string) (*wgetFetched, err
 		method = "HEAD"
 	}
 	authorization := ""
+	requested := location
 	for redirects := 0; ; redirects++ {
 		fetched, err := r.exchange(ctx, method, location, &authorization)
 		if err != nil {
@@ -63,6 +64,7 @@ func (r wgetRequest) get(ctx context.Context, address string) (*wgetFetched, err
 		switch fetched.status {
 		case 301, 302, 303, 307, 308:
 		default:
+			fetched.requested = requested
 			return fetched, nil
 		}
 		fetched.Close()

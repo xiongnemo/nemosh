@@ -174,11 +174,12 @@ func (r wgetRequest) fetch(ctx context.Context, address string, stdout, stderr i
 // save decides where the body goes, as busybox's wget does (networking/wget.c).
 //
 // `-O -` is stdout, and any other -O is opened as the user wrote it -- a path anywhere, a
-// drive, /dev/null -- as busybox's xopen opens it. Without -O the name is the URL's last path
-// element, and **that name came from the server**, so it goes through the same containment
-// check an archive entry does: a URL ending in `/NUL` must not reach the device, nor `..`
-// climb out of the working directory. -P leads to that name only, never to -O's, and names a
-// directory that is there: busybox makes none, and fails to open the file.
+// drive, /dev/null -- as busybox's xopen opens it. Without -O the name is the last path element
+// of the URL that was asked for, which busybox takes before it sends a request, so a redirect
+// to an opaque name -- GitHub's release assets -- does not rename the file. It is still checked
+// as an archive entry's name is: a URL can end in `/NUL` or `..` as easily as a server's
+// answer can. -P leads to that name only, never to -O's, and names a directory that is there:
+// busybox makes none, and fails to open the file.
 func (r wgetRequest) save(ctx context.Context, fetched *wgetFetched, stdout, stderr io.Writer) error {
 	if r.output == "-" {
 		_, err := io.Copy(stdout, fetched.body)
@@ -186,7 +187,7 @@ func (r wgetRequest) save(ctx context.Context, fetched *wgetFetched, stdout, std
 	}
 	name := r.output
 	if name == "" {
-		base := path.Base(fetched.location.Path)
+		base := path.Base(fetched.requested.Path)
 		if base == "" || base == "/" || base == "." {
 			// Nothing usable in the URL, which is what index pages look like.
 			base = "index.html"
