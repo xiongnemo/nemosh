@@ -2,13 +2,14 @@ package applets
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"slices"
-	"strings"
+	"unsafe"
 )
 
 // sort is busybox's (coreutils/sort.c): `sort [-nghMVucszbrdfim] [-o FILE] [-k KEY]... [-t CHAR]
@@ -132,36 +133,80 @@ func readSortInputs(ctx context.Context, view ProcessView, paths []string, zero 
 		if err := errors.Join(readErr, closeErr); err != nil {
 			return nil, inputFailure(path, err)
 		}
+		// The first file's lines are kept as they are: appending them to nothing made a second
+		// slice of them, 46 MB for 92 MB of lines.
+		if lines == nil {
+			lines = fileLines
+			continue
+		}
 		lines = append(lines, fileLines...)
 	}
 	return lines, nil
 }
 
 // readSortLines splits input at newlines, a CR before one dropped, or with -z at NULs.
+//
+// The input is read whole into one block -- a file in one read of its size -- and each line is a
+// string that views its piece of the block, which is never written again. It was a string made
+// for every line, in a slice grown as they came: 92 MB of lines held 145 MB and peaked at 290,
+// where busybox's sort peaks at 188.
 func readSortLines(input io.Reader, zero bool) ([]string, error) {
 	delimiter := byte('\n')
 	if zero {
 		delimiter = 0
 	}
-	reader := bufio.NewReader(input)
-	var lines []string
-	for {
-		line, err := reader.ReadString(delimiter)
-		if line != "" {
-			line = strings.TrimSuffix(line, string(delimiter))
-			if !zero {
-				line = strings.TrimSuffix(line, "\r")
-			}
-			lines = append(lines, line)
-		}
-		if err == nil {
-			continue
-		}
-		if errors.Is(err, io.EOF) {
-			return lines, nil
-		}
+	block, err := readWhole(input)
+	if err != nil {
 		return nil, err
 	}
+	count := bytes.Count(block, []byte{delimiter})
+	if len(block) > 0 && block[len(block)-1] != delimiter {
+		count++
+	}
+	lines := make([]string, 0, count)
+	for len(block) > 0 {
+		end := bytes.IndexByte(block, delimiter)
+		next := end + 1
+		if end < 0 {
+			end, next = len(block), len(block)
+		}
+		line := block[:end]
+		if !zero && len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+		lines = append(lines, viewOf(line))
+		block = block[next:]
+	}
+	return lines, nil
+}
+
+// readWhole reads input to its end: a file in one read of the size it says it is, anything else
+// as io.ReadAll grows it.
+func readWhole(input io.Reader) ([]byte, error) {
+	if sized, ok := input.(interface{ Stat() (os.FileInfo, error) }); ok {
+		if info, err := sized.Stat(); err == nil && info.Mode().IsRegular() && info.Size() > 0 {
+			block := make([]byte, info.Size()+1)
+			read, err := io.ReadFull(input, block)
+			if errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {
+				return block[:read], nil
+			}
+			if err != nil {
+				return nil, err
+			}
+			// Longer than it said, which a file still being written is: the rest as it comes.
+			rest, err := io.ReadAll(input)
+			return append(block, rest...), err
+		}
+	}
+	return io.ReadAll(input)
+}
+
+// viewOf is text as a string that shares its bytes, which the caller must not change after.
+func viewOf(text []byte) string {
+	if len(text) == 0 {
+		return ""
+	}
+	return unsafe.String(&text[0], len(text))
 }
 
 func openSortOutput(ctx context.Context, path string) (io.WriteCloser, error) {

@@ -46,6 +46,9 @@ patch number is the commits since that tag.
   The binary is 15.9 KB smaller. The table is Unicode 15.0.0, which x/text answers for under the
   Go in go.mod, the one the release is built with, so a character is as wide as v1.5.0 said; x/text
   answers for 17.0.0 under go1.27, and the generator now refuses to run under any Go but go.mod's.
+- **sort holds half what it did**: 92 MB of lines peaks at 152 MB, where it peaked at over 270
+  and busybox's at 193. A file is read whole in one read of its size, each line is a view into
+  that block, and the first file's lines are not copied a second time.
 
 ### Added
 

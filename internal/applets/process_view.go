@@ -118,6 +118,15 @@ func (r *contextReadCloser) ReadContext(ctx context.Context, buffer []byte) (int
 	return readWithContext(ctx, r.input, buffer)
 }
 
+// Stat is the opened file's, for a reader that reads a file whole in one read of its size, as
+// sort's readWhole does; anything that is not a file has none.
+func (r *contextReadCloser) Stat() (os.FileInfo, error) {
+	if sized, ok := r.input.(interface{ Stat() (os.FileInfo, error) }); ok {
+		return sized.Stat()
+	}
+	return nil, errors.ErrUnsupported
+}
+
 func (r *contextReadCloser) Close() error {
 	r.close.Do(func() { r.closeErr = r.input.Close() })
 	return r.closeErr
