@@ -33,6 +33,11 @@ patch number is the commits since that tag.
   and only then removed when it crosses volumes. A second run has nothing to do, and it is
   refused while another nemosh is running.
 
+- **wget draws busybox's progress meter** on a console unless `-q` is given: the file's name,
+  how far through it is, a bar as wide as the console leaves, the size so far and the time left,
+  `- stalled -` when nothing has come for five seconds, redrawn once a second. busybox draws it
+  on a pipe too; this one only where somebody is watching.
+
 ### Fixed
 
 - **A cp onto a share that the link dropped under could leave a file of the full size whose end

@@ -1016,7 +1016,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `unzip` | `-l -v -t -p -j -n -o -q -K -d DIR -x`, an option anywhere, and after `-x` the members left out, as busybox reads them | refused by name |
 | `uudecode` | `-o`; `-o -` writes to stdout | refused by name |
 | `uuencode` | `[FILE] NAME`, and `-m` for busybox's `begin-base64` form, which `uudecode` reads back | refused by name |
-| `wget` | `-O -P -U -T -Y -q -S --header --proxy --spider`; `-c` and `-o` accepted; `http_proxy`, `https_proxy` and `no_proxy`. `-O` is opened as written, a device such as `/dev/null` too; without it the URL's last element names the file and is checked as an archive entry's name is, and `-P` leads to that name, in a directory that must be there, as busybox's | refused by name |
+| `wget` | `-O -P -U -T -Y -q -S --header --proxy --spider`; `-c` and `-o` accepted; `http_proxy`, `https_proxy` and `no_proxy`. `-O` is opened as written, a device such as `/dev/null` too; without it the URL's last element names the file and is checked as an archive entry's name is, and `-P` leads to that name, in a directory that must be there, as busybox's. busybox's progress meter is drawn on a console unless `-q`; busybox draws it on a pipe too | refused by name |
 | `wc` | `-c -l -w -m -L` | refused by name |
 | `watch` | `-n SEC -t -x`, and `-d` taken and ignored, as busybox's; every SEC seconds, two by default, it clears the screen, heads it `Every 2.0s: CMD` with the date at the right, and runs CMD, its words joined and read as shell text in a subshell, or with `-x` as the words they are, until it is interrupted. A builtin, since it runs a command line as the shell runs one | refused by name |
 | `whois` | `-h -p`; `-i` accepted | refused by name |

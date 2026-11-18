@@ -180,7 +180,9 @@ func (r wgetRequest) fetch(ctx context.Context, address string, stdout, stderr i
 // busybox makes none, and fails to open the file.
 func (r wgetRequest) save(ctx context.Context, fetched *wgetFetched, stdout, stderr io.Writer) error {
 	if r.output == "-" {
-		_, err := io.Copy(stdout, fetched.body)
+		sink, finish := r.withMeter(stdout, stderr, "-", fetched)
+		_, err := io.Copy(sink, fetched.body)
+		finish()
 		return err
 	}
 	name := r.output
@@ -203,7 +205,9 @@ func (r wgetRequest) save(ctx context.Context, fetched *wgetFetched, stdout, std
 	if err != nil {
 		return cannotOpen(name, err)
 	}
-	written, copyErr := io.Copy(file, fetched.body)
+	sink, finish := r.withMeter(file, stderr, name, fetched)
+	written, copyErr := io.Copy(sink, fetched.body)
+	finish()
 	closeErr := file.Close()
 	if copyErr != nil {
 		// The partial file is removed: a truncated download that looks complete
