@@ -24,32 +24,38 @@ func withXDGHome(t *testing.T, variable, value string) string {
 	return home
 }
 
-// History is state, so it goes in $XDG_STATE_HOME/nemosh, or ~/.local/state/nemosh, as the
-// user's tools keep theirs under the home directory on Windows as everywhere. A variable is
-// honoured only when it is absolute, as the XDG specification has it. ~/.nemosh_history, where
-// every release up to 1.5 kept it, is still read when it is the only one there, and said once;
-// `nemosh --migrate` moves it. A fresh home never touches it.
-func TestHistoryFile_isStateUnderTheHomeDirectory(t *testing.T) {
+// History is kept in ~/.nemosh_history, as busybox's ash keeps ~/.ash_history and bash
+// ~/.bash_history: a shell's own files stay where a shell's are, history as the rc file, and
+// XDG_STATE_HOME does not move it, as it does not move bash's. The nightlies 1.5.2 and 1.5.3 kept
+// it in $XDG_STATE_HOME/nemosh/nemosh_history, or ~/.local/state/nemosh/nemosh_history; a file
+// there is still read when it is the only one, and said once, and `nemosh --migrate` moves it
+// back. A home without one is given no ~/.local.
+func TestHistoryFile_isInTheHomeDirectory(t *testing.T) {
 	state := filepath.ToSlash(t.TempDir())
 	for _, test := range []struct {
 		name, variable, value string
-		legacy, current       bool
+		home, nightly         bool
 		want                  string // relative to home, or "state" for the variable's
 		notice                bool
 	}{
-		{name: "a fresh home", want: ".local/state/nemosh/nemosh_history"},
-		{name: "XDG_STATE_HOME", variable: "XDG_STATE_HOME", value: state, want: "state"},
-		{name: "a relative XDG_STATE_HOME is ignored", variable: "XDG_STATE_HOME", value: "rel/state", want: ".local/state/nemosh/nemosh_history"},
-		{name: "the old file alone is read, and said", legacy: true, want: ".nemosh_history", notice: true},
-		{name: "the new file wins over the old", legacy: true, current: true, want: ".local/state/nemosh/nemosh_history"},
+		{name: "a fresh home", want: ".nemosh_history"},
+		{name: "XDG_STATE_HOME does not move it", variable: "XDG_STATE_HOME", value: state, want: ".nemosh_history"},
+		{name: "a nightly's file alone is read, and said", nightly: true, want: ".local/state/nemosh/nemosh_history", notice: true},
+		{name: "a nightly's file under XDG_STATE_HOME alone is read, and said", variable: "XDG_STATE_HOME", value: state, nightly: true, want: "state", notice: true},
+		{name: "a relative XDG_STATE_HOME is ignored", variable: "XDG_STATE_HOME", value: "rel/state", nightly: true, want: ".local/state/nemosh/nemosh_history", notice: true},
+		{name: "the home's file wins over a nightly's", home: true, nightly: true, want: ".nemosh_history"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			home := withXDGHome(t, test.variable, test.value)
-			if test.legacy {
-				writeFile(t, filepath.Join(home, ".nemosh_history"), "old\n")
+			if test.home {
+				writeFile(t, filepath.Join(home, ".nemosh_history"), "home\n")
 			}
-			if test.current {
-				writeFile(t, filepath.Join(home, ".local", "state", "nemosh", "nemosh_history"), "new\n")
+			if test.nightly {
+				if test.want == "state" {
+					writeFile(t, filepath.Join(state, "nemosh", "nemosh_history"), "nightly\n")
+				} else {
+					writeFile(t, filepath.Join(home, ".local", "state", "nemosh", "nemosh_history"), "nightly\n")
+				}
 			}
 
 			// When
@@ -67,33 +73,34 @@ func TestHistoryFile_isStateUnderTheHomeDirectory(t *testing.T) {
 			if said != test.notice || strings.Count(got.stderr, "--migrate") > 1 {
 				t.Errorf("stderr %q, want the old location said %v, once", got.stderr, test.notice)
 			}
-			if !test.legacy {
-				if _, err := os.Stat(filepath.Join(home, ".nemosh_history")); err == nil {
-					t.Errorf("a home without the old file has one now")
+			notice, _, _ := strings.Cut(got.stderr, "\n")
+			if test.notice && !strings.HasSuffix(filepath.ToSlash(notice), " to move it to "+filepath.ToSlash(home)+"/.nemosh_history") {
+				t.Errorf("the notice is %q, want it to say history goes to ~/.nemosh_history", notice)
+			}
+			if !test.nightly {
+				if _, err := os.Stat(filepath.Join(home, ".local")); err == nil {
+					t.Errorf("a home without a nightly's file has a ~/.local now")
 				}
 			}
 		})
 	}
 }
 
-// The directory is made when the first line is saved, not when the shell starts, so a shell
-// that saves nothing leaves nothing behind. Only the default's: a HISTFILE of the user's in a
-// directory that is not there saves nothing, as bash's does.
-func TestHistoryFile_makesItsDirectoryOnTheFirstWrite(t *testing.T) {
+// Saving a line makes no directory. The default is in HOME, which is there or saves nothing, as
+// bash's does; a HISTFILE of the user's in a directory that is not there saves nothing too.
+func TestHistoryFile_makesNoDirectoryToSaveALine(t *testing.T) {
 	home := t.TempDir()
-	file := newHistoryFile(lookupFrom(map[string]string{"HOME": home}), nil)
-	directory := filepath.Join(home, ".local", "state", "nemosh")
-	if _, err := os.Stat(directory); err == nil {
-		t.Fatal("the directory is there before anything is saved")
-	}
 
 	// When
-	file.append("echo saved")
+	newHistoryFile(lookupFrom(map[string]string{"HOME": home}), nil).append("echo saved")
 
 	// Then
-	data, err := os.ReadFile(filepath.Join(directory, "nemosh_history"))
+	data, err := os.ReadFile(filepath.Join(home, ".nemosh_history"))
 	if err != nil || string(data) != "echo saved\n" {
-		t.Fatalf("the history file holds %q, %v; want the line saved", data, err)
+		t.Fatalf("~/.nemosh_history holds %q, %v; want the line saved", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".local")); err == nil {
+		t.Fatal("saving a line made ~/.local")
 	}
 	mine := filepath.Join(home, "missing", "hist")
 	newHistoryFile(lookupFrom(map[string]string{"HOME": home, "HISTFILE": mine}), nil).append("echo lost")

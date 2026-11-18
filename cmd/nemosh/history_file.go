@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -41,10 +40,6 @@ const (
 type historyFile struct {
 	path  string
 	limit int
-	// makeDirectory is whether the file's directory is made on the first write: for the place
-	// history is kept by default, $XDG_STATE_HOME/nemosh, and not for a HISTFILE of the user's,
-	// which saves nothing when its directory is missing, as bash's does.
-	makeDirectory bool
 	// lookup reads the shell's variables at the moment of writing, for HISTTIMEFORMAT, which
 	// has each command written with its time. Nil writes none.
 	lookup func(string) (string, bool)
@@ -76,19 +71,13 @@ func newHistoryFile(lookup func(string) (string, bool), toNative func(string) (s
 		// explicit empty value is a decision, not an oversight.
 		file.path = value
 	default:
+		// ~/.nemosh_history, or a nightly's file where only that is there (xdg_dirs.go). No
+		// directory is made for either: the one is in HOME, which saves nothing when it is not
+		// there, as bash's does, and the other is used only where it already is.
 		file.path, _ = resolveHistoryPath(lookup, func(path string) bool {
 			info, ok := statShellPath(path, toNative)
 			return ok && !info.IsDir()
 		})
-	}
-	// The directory under the base, and not the base itself unless XDG_STATE_HOME names it: a
-	// HOME that is not there is not made by saving a line.
-	current, _ := historyPaths(lookup)
-	if file.path != "" && file.path == current {
-		home, _ := lookup("HOME")
-		_, homeThere := statShellPath(home, toNative)
-		named := xdgBase(lookup, "XDG_STATE_HOME", home, ".local/state") != strings.TrimRight(home, `/\`)+"/.local/state"
-		file.makeDirectory = homeThere || named
 	}
 	if file.path != "" && toNative != nil {
 		native, ok := toNative(file.path)
@@ -187,10 +176,6 @@ func (h historyFile) append(line string) {
 	// recalling it. Under HISTTIMEFORMAT the time before it says where it ends.
 	if !h.writes(line) {
 		return
-	}
-	if h.makeDirectory {
-		// 0700, as the state of one account is that account's to read.
-		_ = os.MkdirAll(filepath.Dir(h.path), 0o700)
 	}
 	file, err := os.OpenFile(h.path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 	if err != nil {

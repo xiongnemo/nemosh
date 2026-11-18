@@ -39,7 +39,7 @@ func TestHistoryFile_writesAMultiLineCommandUnderHisttimeformat(t *testing.T) {
 	stamped.append("echo hi")
 	stamped.append(loop)
 
-	data, err := os.ReadFile(filepath.Join(home, ".local", "state", "nemosh", "nemosh_history"))
+	data, err := os.ReadFile(filepath.Join(home, ".nemosh_history"))
 	if err != nil {
 		t.Fatal(err)
 	}

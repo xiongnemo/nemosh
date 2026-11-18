@@ -12,23 +12,26 @@ patch number is the commits since that tag.
 
 ### Changed
 
-- **History is kept in `~/.local/state/nemosh/nemosh_history`**, or `$XDG_STATE_HOME/nemosh/nemosh_history`,
-  the XDG layout under the home directory that every tool of the author's keeps to on Windows
-  too. `~/.nemosh_history` is still used when it is the only one there, and a session says so
-  once before its first prompt; `nemosh --migrate` moves it. A `HISTFILE` of your own wins as it
-  did, and `~/.nemoshrc` and `$ENV` stay where a shell's rc file is.
 - **Your completion specs are kept in `~/.config/nemosh/completions`**, or
-  `$XDG_CONFIG_HOME/nemosh/completions`, and `%APPDATA%\nemosh\completions`, where releases up
+  `$XDG_CONFIG_HOME/nemosh/completions`, the XDG layout under the home directory, on Windows too,
+  where fish and bash-completion keep theirs. `%APPDATA%\nemosh\completions`, where releases up
   to 1.5 looked first, is looked in after it, so each spec is found where it is; a session says
   so once when one is there, and `nemosh --migrate` merges the directory into the new one.
+- History stays in `~/.nemosh_history`, and `~/.nemoshrc` and `$ENV` stay where they were: a
+  shell's own files are where a shell's are, as bash's and busybox's are. The nightlies 1.5.1 to
+  1.5.3 moved history to `~/.local/state/nemosh`; a file 1.5.2 or 1.5.3 left there is used when
+  there is no `~/.nemosh_history`, a session says so once before its first prompt, and
+  `nemosh --migrate` moves it back. 1.5.1 named it `history` and lasted under an hour; that file
+  is not looked for.
 
 ### Added
 
-- **`nemosh --migrate [--dry-run]`** moves what a release up to 1.5 kept to where later ones keep
-  it. `--dry-run` prints the plan and touches nothing; a move never overwrites -- the same file on
-  both sides removes the old copy, a different one keeps both and ends with status 1 -- and is
-  copied, checked by size and SHA-256, and only then removed when it crosses volumes. A second run
-  has nothing to do, and it is refused while another nemosh is running.
+- **`nemosh --migrate [--dry-run]`** moves what an older nemosh kept elsewhere to where this one
+  keeps it: the completion specs, and a nightly's history. `--dry-run` prints the plan and touches
+  nothing; a move never overwrites -- the same file on both sides removes the old copy, a
+  different one keeps both and ends with status 1 -- and is copied, checked by size and SHA-256,
+  and only then removed when it crosses volumes. A second run has nothing to do, and it is
+  refused while another nemosh is running.
 
 ## v1.5.0 - 2026-11-18
 

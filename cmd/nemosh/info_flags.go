@@ -73,11 +73,13 @@ Options:
   --version     print the version and exit
   --list        print every bundled applet, one per line, and exit
   --migrate [--dry-run]
-                move what releases up to 1.5 kept elsewhere to the XDG layout:
-                history from ~/.nemosh_history to ~/.local/state/nemosh, and
-                completion specs from %%APPDATA%%\nemosh\completions to
-                ~/.config/nemosh/completions; with --dry-run, say what would
-                move and touch nothing. Refused while another nemosh is running
+                move what an older nemosh kept elsewhere: completion specs
+                from %%APPDATA%%\nemosh\completions to
+                ~/.config/nemosh/completions, and history from
+                ~/.local/state/nemosh, where the 1.5.2 and 1.5.3 nightlies
+                kept it, back to ~/.nemosh_history; with --dry-run, say what
+                would move and touch nothing. Refused while another nemosh is
+                running
   --help        print this and exit
 
 Nemosh is a multicall binary: invoked under an applet's name, directly or

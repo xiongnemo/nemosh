@@ -13,16 +13,18 @@ import (
 	"github.com/xiongnemo/nemosh/internal/proc"
 )
 
-// `nemosh --migrate [--dry-run]` moves what a release up to 1.5 kept to where later ones keep
-// it, in the XDG layout under the home directory (xdg_dirs.go), as every tool of the author's has
-// a migrate of its own. --dry-run prints the plan and touches nothing. Nothing is overwritten:
-// the same file on both sides leaves the new one and removes the old, a different one keeps
-// both, says so, and ends with status 1. A second run finds nothing to do. ~/.nemoshrc is the rc
-// file, which stays where it is.
+// `nemosh --migrate [--dry-run]` moves what an older nemosh kept elsewhere to where this one
+// keeps it (xdg_dirs.go), as every tool of the author's has a migrate of its own: the completion
+// specs releases up to 1.5 kept in %APPDATA% to ~/.config/nemosh/completions, and the history the
+// nightlies 1.5.2 and 1.5.3 kept in the XDG state directory back to ~/.nemosh_history. --dry-run
+// prints the plan and touches nothing. Nothing is overwritten: the same file on both sides leaves
+// the new one and removes the old, a different one keeps both, says so, and ends with status 1.
+// A second run finds nothing to do. ~/.nemoshrc is the rc file, which stays where it is.
 
-// migrateItem is one thing that moves, from where an older release kept it to where it goes: a
+// migrateItem is one thing that moves, from where an older nemosh kept it to where it goes: a
 // file, or a directory merged into another a file at a time. owner is the directory of nemosh's
-// own the old one was made in, removed with it when the move leaves it empty, and empty for none.
+// own the old one was made in, removed with it when the move leaves it empty, and empty for none;
+// never one above it, such as %APPDATA% or ~/.local/state.
 type migrateItem struct {
 	what, from, to string
 	directory      bool
@@ -81,6 +83,10 @@ func (m *migrateRun) run(args []string) error {
 			continue
 		}
 		m.moveFile(item.what, item.from, item.to)
+		if !m.dryRun && item.owner != "" {
+			// os.Remove takes only an empty directory, so a conflict's old copy keeps its own.
+			_ = os.Remove(item.owner)
+		}
 	}
 	if !m.dryRun {
 		fmt.Fprintln(m.stdout, "nemosh: the shell this was run from goes on using the old places until it exits; a new one uses the new")
@@ -104,8 +110,9 @@ func (m *migrateRun) items() []migrateItem {
 		}
 		return m.lookup(name)
 	}
-	current, legacy := historyPaths(homed)
-	items := []migrateItem{{what: "history", from: filepath.FromSlash(legacy), to: filepath.FromSlash(current)}}
+	current, nightly := historyPaths(homed)
+	nightly = filepath.FromSlash(nightly)
+	items := []migrateItem{{what: "history", from: nightly, to: filepath.FromSlash(current), owner: filepath.Dir(nightly)}}
 	if current, legacy := specPaths(homed); current != "" && legacy != "" {
 		items = append(items, migrateItem{what: "completion specs", from: legacy, to: current, directory: true, owner: filepath.Dir(legacy)})
 	}

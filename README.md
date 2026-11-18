@@ -96,7 +96,7 @@ $ nemosh script.sh arg1 arg2
 $ nemosh                       # interactive, when stdin is a terminal
 $ nemosh --version
 $ nemosh --list                # every bundled applet, one per line
-$ nemosh --migrate --dry-run   # what would move to the XDG layout; see Files
+$ nemosh --migrate --dry-run   # what would move from where an older nemosh kept it; see Files
 $ nemosh --help
 ```
 
@@ -115,21 +115,25 @@ the git branch and the last status, a few aliases, and gh's and git's completion
 
 ### Files
 
-What nemosh keeps of yours is under your home directory, in the XDG layout, on
-Windows too -- not in `%APPDATA%`:
+What nemosh keeps of yours is under your home directory, not in `%APPDATA%`. A
+shell's own files stay where a shell's are, as bash's and busybox's do; the
+completion specs you write are configuration, in the XDG layout on Windows too,
+where fish and bash-completion keep theirs:
 
-| What | Where | Kind | Up to 1.5 |
-| --- | --- | --- | --- |
-| history | `$XDG_STATE_HOME/nemosh/nemosh_history`, by default `~/.local/state/nemosh/nemosh_history` | state | `~/.nemosh_history` |
-| completion specs | `$XDG_CONFIG_HOME/nemosh/completions/<cmd>.toml`, by default `~/.config/nemosh/completions` | config | `%APPDATA%\nemosh\completions` |
-| rc file | `$ENV`, or `~/.nemoshrc` when `ENV` is not set | -- | the same |
+| What | Where | Up to 1.5 |
+| --- | --- | --- |
+| rc file | `$ENV`, or `~/.nemoshrc` when `ENV` is not set | the same |
+| history | `~/.nemosh_history`, or the file `HISTFILE` names | the same |
+| completion specs | `$XDG_CONFIG_HOME/nemosh/completions/<cmd>.toml`, by default `~/.config/nemosh/completions` | `%APPDATA%\nemosh\completions` |
 
-`XDG_STATE_HOME` and `XDG_CONFIG_HOME` are honoured when they are absolute
-paths, as the XDG specification has it, and ignored otherwise; the home is
-`HOME`, or `USERPROFILE` without it. `HISTFILE` names a history file of your own
-and wins over all of it. The rc file stays where a shell's rc file is, as bash's
-and mksh's do. A completion spec is looked for in the new place first and the
-old one after, so each is found where it is.
+`XDG_CONFIG_HOME` is honoured when it is an absolute path, as the XDG
+specification has it, and ignored otherwise; the home is `HOME`, or
+`USERPROFILE` without it. `XDG_STATE_HOME` does not move history, as it does not
+move bash's. A completion spec is looked for in the new place first and the old
+one after, so each is found where it is. The nightlies 1.5.2 and 1.5.3 kept
+history in `~/.local/state/nemosh/nemosh_history`, or
+`$XDG_STATE_HOME/nemosh/nemosh_history`; a file there is used when there is no
+`~/.nemosh_history`, and `nemosh --migrate` moves it back.
 
 Where an item is only at its old place, it is used there, and an interactive
 session says so once, on stderr, before its first prompt. `nemosh --migrate`

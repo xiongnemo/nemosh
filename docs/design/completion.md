@@ -215,8 +215,7 @@ Each of these was listed here as not done, and each is now:
   `$HOME/` when it holds a directory.
 - **Completion inside an opened quote** (2026-11-15): `"My Do<TAB>` is completed
   inside the quote and closed after a file, zsh's rule and bash's.
-- **Persistent history** (`HISTFILE`, `~/.local/state/nemosh/nemosh_history` after
-  v1.5, `~/.nemosh_history` up to it), which the inline
+- **Persistent history** (`HISTFILE`, `~/.nemosh_history`), which the inline
   suggestion draws on first.
 - **Programmable completion**: bash's `complete`, `compgen` and `compopt`, so
   `source <(gh completion -s bash)` and git's script work (v1.4.0).

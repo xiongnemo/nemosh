@@ -26,20 +26,22 @@ func readOrEmpty(path string) string {
 	return string(data)
 }
 
-// `nemosh --migrate` moves what a release up to 1.5 kept to where later ones keep it; with
+// `nemosh --migrate` moves what an older nemosh kept elsewhere to where this one keeps it; with
 // --dry-run it says what it would do and touches nothing. Each test is the spec the author's
 // tools share: a plain move, the same file on both sides, a different one, and a second run.
-func TestMigrate_movesHistoryToTheStateDirectory(t *testing.T) {
+// History goes back to ~/.nemosh_history from where the nightlies 1.5.2 and 1.5.3 kept it, and the
+// directory of nemosh's they made goes with it when that leaves it empty -- never ~/.local/state.
+func TestMigrate_movesANightlysHistoryBackToTheHomeDirectory(t *testing.T) {
 	home := t.TempDir()
 	env := map[string]string{"HOME": home}
-	legacy := filepath.Join(home, ".nemosh_history")
-	current := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
-	writeFile(t, legacy, "echo old\n")
+	nightly := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
+	current := filepath.Join(home, ".nemosh_history")
+	writeFile(t, nightly, "echo old\n")
 
 	// A dry run touches nothing.
 	stdout, _, err := migrateIn(t, env, "--dry-run")
-	if err != nil || !strings.Contains(stdout, "would move") || readOrEmpty(legacy) != "echo old\n" || readOrEmpty(current) != "" {
-		t.Fatalf("--dry-run: %q, %v; the old file %q, the new %q", stdout, err, readOrEmpty(legacy), readOrEmpty(current))
+	if err != nil || !strings.Contains(stdout, "would move") || readOrEmpty(nightly) != "echo old\n" || readOrEmpty(current) != "" {
+		t.Fatalf("--dry-run: %q, %v; the old file %q, the new %q", stdout, err, readOrEmpty(nightly), readOrEmpty(current))
 	}
 
 	// The move.
@@ -47,8 +49,11 @@ func TestMigrate_movesHistoryToTheStateDirectory(t *testing.T) {
 	if err != nil || !strings.Contains(stdout, "moved") || readOrEmpty(current) != "echo old\n" {
 		t.Fatalf("migrate: %q, %v; the new file holds %q", stdout, err, readOrEmpty(current))
 	}
-	if _, err := os.Stat(legacy); err == nil {
-		t.Fatal("the old file is still there")
+	if _, err := os.Stat(filepath.Dir(nightly)); err == nil {
+		t.Fatal("the nightly's directory is still there, and empty")
+	}
+	if _, err := os.Stat(filepath.Join(home, ".local", "state")); err != nil {
+		t.Fatalf("~/.local/state went with it: %v", err)
 	}
 
 	// And again, which has nothing to do.
@@ -68,8 +73,8 @@ func TestMigrate_neverOverwrites(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			home := t.TempDir()
-			legacy := filepath.Join(home, ".nemosh_history")
-			current := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
+			legacy := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
+			current := filepath.Join(home, ".nemosh_history")
 			writeFile(t, legacy, test.legacy)
 			writeFile(t, current, test.current)
 
@@ -95,17 +100,24 @@ func TestMigrate_neverOverwrites(t *testing.T) {
 	}
 }
 
-// XDG_STATE_HOME, when absolute, is where history goes, as a session would look for it.
+// XDG_STATE_HOME, when absolute, is where a nightly kept history, as a session would look for
+// it; the directory of nemosh's goes, and the state directory stays.
 func TestMigrate_followsXDGStateHome(t *testing.T) {
 	home, state := t.TempDir(), t.TempDir()
-	writeFile(t, filepath.Join(home, ".nemosh_history"), "echo old\n")
+	writeFile(t, filepath.Join(state, "nemosh", "nemosh_history"), "echo old\n")
 
 	if _, _, err := migrateIn(t, map[string]string{"HOME": home, "XDG_STATE_HOME": state}); err != nil {
 		t.Fatal(err)
 	}
 
-	if got := readOrEmpty(filepath.Join(state, "nemosh", "nemosh_history")); got != "echo old\n" {
-		t.Fatalf("XDG_STATE_HOME/nemosh/nemosh_history holds %q", got)
+	if got := readOrEmpty(filepath.Join(home, ".nemosh_history")); got != "echo old\n" {
+		t.Fatalf("~/.nemosh_history holds %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(state, "nemosh")); err == nil {
+		t.Fatal("XDG_STATE_HOME/nemosh is still there, and empty")
+	}
+	if _, err := os.Stat(state); err != nil {
+		t.Fatalf("XDG_STATE_HOME went with it: %v", err)
 	}
 }
 
@@ -113,7 +125,7 @@ func TestMigrate_followsXDGStateHome(t *testing.T) {
 // refused while one is, and says which; the shell it was started from does not count.
 func TestMigrate_refusesWhileAnotherShellRuns(t *testing.T) {
 	home := t.TempDir()
-	legacy := filepath.Join(home, ".nemosh_history")
+	legacy := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
 	writeFile(t, legacy, "echo old\n")
 	var stdout, stderr bytes.Buffer
 	run := migrateRun{lookup: lookupFrom(map[string]string{"HOME": home}), stdout: &stdout, stderr: &stderr,
@@ -131,7 +143,7 @@ func TestMigrate_refusesWhileAnotherShellRuns(t *testing.T) {
 // then removed, keeping its time.
 func TestMigrate_copiesAcrossVolumes(t *testing.T) {
 	home := t.TempDir()
-	legacy := filepath.Join(home, ".nemosh_history")
+	legacy := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
 	writeFile(t, legacy, "echo old\n")
 	stamp := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
 	if err := os.Chtimes(legacy, stamp, stamp); err != nil {
@@ -146,7 +158,7 @@ func TestMigrate_copiesAcrossVolumes(t *testing.T) {
 		t.Fatalf("%v; %q %q", err, stdout.String(), stderr.String())
 	}
 
-	current := filepath.Join(home, ".local", "state", "nemosh", "nemosh_history")
+	current := filepath.Join(home, ".nemosh_history")
 	info, err := os.Stat(current)
 	if err != nil || readOrEmpty(current) != "echo old\n" || !info.ModTime().Equal(stamp) {
 		t.Fatalf("the copy: %v, %q, %v", err, readOrEmpty(current), info)
