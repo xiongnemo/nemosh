@@ -18,9 +18,13 @@ func TestJobs_listsTheShellsJobsInAStageOrASubstitution(t *testing.T) {
 }
 
 // A substitution that lists the shell's jobs does not take their news from it: the shell
-// still reports a finished job itself.
+// still reports a finished job itself. The substitutions are asked until one has seen the
+// job done, for ten seconds at most. A fixed `sleep 0.2` before a single one was a race the
+// job lost on the arm64 runner, which listed it still Running.
 func TestJobs_aSubstitutionConsumesNothingOfTheShells(t *testing.T) {
-	status, stdout, _ := runSetScript(t, "true &\nwait %1 2>/dev/null; sleep 0.1\nfalse &\nsleep 0.2\nseen=$(jobs)\njobs\n")
+	status, stdout, _ := runSetScript(t, "true &\nwait %1 2>/dev/null; sleep 0.1\nfalse &\n"+
+		"n=0\nuntil case $(jobs) in *Done*) true;; *) false;; esac || [ $n -ge 200 ]; do n=$((n+1)); sleep 0.05; done\n"+
+		"jobs\n")
 	// %1 again: the first job was reaped by its wait, and the second took its number.
 	if status != 0 || stdout != jobsLine("[1]+  Done(1)") {
 		t.Fatalf("status %d stdout %q", status, stdout)
