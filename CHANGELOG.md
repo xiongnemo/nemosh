@@ -64,6 +64,10 @@ patch number is the commits since that tag.
   (127.0.0.1:1): Connection refused`, busybox's words with the port, where it was `cannot fetch
   URL: dial tcp 127.0.0.1:1:` and Windows' sentence about the target machine. nc, ssl_client and
   whois give the same reason after the address.
+- **`ls -l` on a NAS called the owner `root`**: the files' owner is the NAS's own account,
+  S-1-5-21-<its domain>-1000, which this machine cannot name, and a name that could not be looked
+  up was root. It is its number, `1000`, as busybox prints it and as this build's `stat` and
+  `ls -n` already said.
 
 ## v1.5.0 - 2026-11-18
 

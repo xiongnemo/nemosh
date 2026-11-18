@@ -333,8 +333,8 @@ says.
   sizes the file first and Windows closed it once the link came back; on a slow link Ctrl-C
   during a copy from the share took 24 s, for the same reason. cp copies to and from a share
   itself now; a second outage under a copy is the check that its partial file is short. Found,
-  and being fixed: `ls -l` names an owner this machine cannot look up `root`, where busybox
-  prints its number. Not the shell's: a file
+  and fixed since: `ls -l` named an owner this machine cannot look up `root`, where busybox
+  prints its number, `1000` on that NAS. Not the shell's: a file
   that was open for reading when the link died could not be opened for its data by anything
   for 18 minutes and more, so `ls -l` of its folder hangs in nemosh and busybox alike.
 - **iconv with real text**: GBK, SHIFT_JIS, EUC-KR, BIG5, EUC-JP and GB18030 read exactly,

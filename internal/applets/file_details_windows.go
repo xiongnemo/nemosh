@@ -5,6 +5,7 @@ package applets
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -192,15 +193,21 @@ func fileOwnerName(path string) string {
 	return ownerAccountName(owner)
 }
 
-// ownerAccountName is the account an owner's SID names, as ls -l names it: root for anything
-// that is not a user's account.
+// ownerAccountName is the account an owner's SID names, as ls -l names it. An account this
+// machine cannot name -- a NAS's own user over SMB, S-1-5-21-<its domain>-1000 -- is its relative
+// ID, the uid busybox-w32 gives it and prints for want of a name; `root` there read as though
+// the administrator owned the NAS's files. Anything else that is not a user's account is root,
+// busybox's uid 0.
 func ownerAccountName(owner *windows.SID) string {
 	return cachedOwnerName(owner.String(), func() string {
 		account, _, kind, err := owner.LookupAccount("")
-		if err != nil || kind != windows.SidTypeUser {
-			return "root"
+		if err == nil && kind == windows.SidTypeUser {
+			return account
 		}
-		return account
+		if id, ok := accountRID(owner.String()); ok && id >= 500 && id < defaultWindowsUID {
+			return strconv.FormatUint(uint64(id), 10)
+		}
+		return "root"
 	})
 }
 
