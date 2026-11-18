@@ -31,6 +31,9 @@ patch number is the commits since that tag.
 - **tr is 18 times faster with ASCII sets**: `tr a-z A-Z` of 92 MB takes 0.12 s, where it took
   2.2 s and busybox takes 0.55. A byte table, 64 KiB at a time, answers what the character-at-a-time
   path answers, which UTF-8 sets and `-c` still take.
+- **cmp is ten times faster**: 92 MB alike in 58 ms, where it took 568 ms and busybox takes 1.4 s.
+  What both files hold alike is passed over a block at a time; the byte where they part, `-l`'s
+  list and the EOF are as before.
 
 ### Added
 
