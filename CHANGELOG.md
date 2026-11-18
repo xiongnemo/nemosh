@@ -37,6 +37,10 @@ patch number is the commits since that tag.
 - **grep holds 10 MB less**: a line it does not print is matched where the reader holds it, and is
   never made a string. `grep -c func` over 92 MB collects once where it collected 36 times, peaks
   at 14.6 MB where it peaked at 25, and takes 240 ms where it took 310.
+- **grep -i of a plain pattern is seven times faster**: `grep -ci error` of 92 MB takes 235 ms,
+  where it took 1.76 s and busybox takes 1.23. The line's ASCII is lowered and searched as bytes;
+  a pattern with a k or an s, whose case folds outside ASCII, still asks the regexp of a line
+  with anything but ASCII in it, so the answers are the same.
 
 ### Added
 

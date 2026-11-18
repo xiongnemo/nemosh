@@ -164,6 +164,7 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 	if flags.limited && flags.maxCount == 0 {
 		return false, nil
 	}
+	matcher := newGrepMatcher(flags, expr)
 	for scanner.Scan() {
 		lineNumber++
 		// The scanner's own bytes, matched where they lie: a line is made a string only to be
@@ -174,7 +175,7 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 				break
 			}
 		}
-		hit := expr.Match(line)
+		hit := matcher.match(line)
 		if flags.invert {
 			hit = !hit
 		}
@@ -224,7 +225,7 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 			// it. Measured. Then -c and -l answer for what was read, as without -m:
 			// returning here left `grep -c -m2` and `grep -l -m1` saying nothing.
 			// See grepDrainAfter for where the context ends.
-			if err := grepDrainAfter(scanner, printer, expr, flags.invert, name, &lineNumber, after, withNames); err != nil {
+			if err := grepDrainAfter(scanner, printer, matcher, flags.invert, name, &lineNumber, after, withNames); err != nil {
 				return matched, err
 			}
 			break
@@ -239,9 +240,9 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 // grepDrainAfter writes the trailing context still owed when -m stopped the scan.
 // It ends at a line that would have been selected, as busybox's and GNU's grep end it there:
 // `grep -A2 -m1 a` over banana, apple and cherry is banana alone. It went on through apple.
-func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, expr *regexp.Regexp, invert bool, name string, lineNumber *int, after int, withNames bool) error {
+func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, matcher *grepMatcher, invert bool, name string, lineNumber *int, after int, withNames bool) error {
 	for ; after > 0 && scanner.Scan(); after-- {
-		if expr.MatchString(scanner.Text()) != invert {
+		if matcher.match(scanner.Bytes()) != invert {
 			return nil
 		}
 		*lineNumber++
