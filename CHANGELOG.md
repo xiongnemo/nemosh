@@ -41,6 +41,9 @@ patch number is the commits since that tag.
   where it took 1.76 s and busybox takes 1.23. The line's ASCII is lowered and searched as bytes;
   a pattern with a k or an s, whose case folds outside ASCII, still asks the regexp of a line
   with anything but ASCII in it, so the answers are the same.
+- golang.org/x/text/width is no longer linked: which characters are wide is a table of 122
+  ranges generated from it (`go generate ./internal/textgrid`), which says the same of every rune.
+  The binary is 15.9 KB smaller.
 
 ### Added
 

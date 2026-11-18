@@ -14,9 +14,9 @@ package textgrid
 import (
 	"strings"
 	"unicode"
-
-	"golang.org/x/text/width"
 )
+
+//go:generate go run ../../tools/widthtable
 
 // RuneCells is how many terminal cells a rune occupies.
 //
@@ -57,13 +57,23 @@ func Cells(text string) int {
 	return total
 }
 
+// isWide is whether golang.org/x/text/width calls r East Asian Wide or Fullwidth, as the table
+// generated from it says (wide_table.go): a binary search of a few hundred ranges, where the
+// package linked 357 KB of trie to answer the same question.
 func isWide(r rune) bool {
-	switch width.LookupRune(r).Kind() {
-	case width.EastAsianWide, width.EastAsianFullwidth:
-		return true
-	default:
-		return false
+	low, high := 0, len(wideRanges)
+	for low < high {
+		middle := (low + high) / 2
+		switch span := wideRanges[middle]; {
+		case r < span[0]:
+			high = middle
+		case r > span[1]:
+			low = middle + 1
+		default:
+			return true
+		}
 	}
+	return false
 }
 
 // Item is a grid entry whose printed form is wider in bytes than it is on screen: a filename

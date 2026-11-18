@@ -36,6 +36,9 @@ var forbiddenInRelease = []string{
 	"golang.org/x/text/encoding/simplifiedchinese",
 	"golang.org/x/text/encoding/traditionalchinese",
 	"golang.org/x/text/encoding/unicode",
+	// textgrid's wide characters are a table generated from it, 357 KB of trie for one question;
+	// see internal/textgrid/wide_table.go.
+	"golang.org/x/text/width",
 	// httpd and wget are their own server and client over internal/netio.
 	"net/http",
 	// TLS is Schannel's, and a certificate is the system's chain engine's to judge; see
