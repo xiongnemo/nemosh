@@ -24,6 +24,11 @@ patch number is the commits since that tag.
   `nemosh --migrate` moves it back. 1.5.1 named it `history` and lasted under an hour; that file
   is not looked for.
 
+- **Every start is about 2.5 ms quicker and 1.3 MB smaller**: USER and LOGNAME come from
+  `%USERNAME%`, or GetUserNameW, and `$UID` from ntdll, where os/user and advapi32 loaded eight
+  DLLs into every process, `nemosh cat` and every job's included. A started shell has the nine a
+  bare Go program has. id and whoami name the same user as before.
+
 ### Added
 
 - **`nemosh --migrate [--dry-run]`** moves what an older nemosh kept elsewhere to where this one

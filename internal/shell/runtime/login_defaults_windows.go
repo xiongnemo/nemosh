@@ -26,8 +26,10 @@ import (
 // handed `/c/Users/...` and read it as `\c\Users\...` on the current drive. Hence the
 // spelling busybox-w32 uses, which every Windows program reads.
 //
-// The directory itself is busybox-w32's: GetUserProfileDirectory rather than
-// %USERPROFILE%, which os.UserHomeDir reads (win32/mingw.c, gethomedir).
+// The directory is %USERPROFILE%, which os.UserHomeDir reads. busybox-w32 asks
+// GetUserProfileDirectory (win32/mingw.c, gethomedir), which names the same directory and would
+// load userenv and profapi into every start to say so; the user's name is %USERNAME%, for the
+// same reason (applets.processAccountName).
 func loginDefaults(paths pathState) map[string]string {
 	defaults := map[string]string{}
 	if profile, err := os.UserHomeDir(); err == nil && profile != "" {

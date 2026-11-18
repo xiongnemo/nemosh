@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os/user"
 	"strings"
 )
 
@@ -115,16 +114,13 @@ func identityName(uid int, account string) string {
 }
 
 // accountName is what the operating system calls the logged-in user, empty when
-// it will not say.
+// it will not say; see processAccountName.
 func accountName() string {
-	current, err := user.Current()
-	if err != nil || current.Username == "" {
-		return ""
-	}
-	// Windows reports DOMAIN\user; the bare account name is what a prompt and a
+	name := processAccountName()
+	// A DOMAIN\user spelling is cut to the account, which is what a prompt and a
 	// comparison both want.
-	if _, bare, found := strings.Cut(current.Username, `\`); found {
+	if _, bare, found := strings.Cut(name, `\`); found {
 		return bare
 	}
-	return current.Username
+	return name
 }
