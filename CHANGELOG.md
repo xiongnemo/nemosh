@@ -33,6 +33,17 @@ patch number is the commits since that tag.
   and only then removed when it crosses volumes. A second run has nothing to do, and it is
   refused while another nemosh is running.
 
+### Fixed
+
+- **A cp onto a share that the link dropped under could leave a file of the full size whose end
+  was zeros**, which looks like a finished copy: CopyFile2 sizes the file before it copies, and
+  Windows closed it once the link came back. cp copies to and from a share itself now, a
+  megabyte at a time, so a copy cut short is a short file, as busybox's is, and Ctrl-C ends it at
+  the next megabyte rather than after the piece CopyFile2 had under way, which was 24 s on a link
+  at 1 MB/s. mv across volumes still copies by CopyFile2, which keeps a file's streams; when that
+  fails and what it made cannot be removed, it says what CopyFile2 met rather than `No such file
+  or directory`.
+
 ## v1.5.0 - 2026-11-18
 
 Windows only, in three architectures, and built on Windows itself: TLS is Schannel's, sockets

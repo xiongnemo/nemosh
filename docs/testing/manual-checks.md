@@ -327,11 +327,13 @@ says.
   is then refused), `ls`, `du`, `find` and `cd` all behave as on a local disk. When the link
   goes away, every operation on the share fails together about 63 s later -- Windows' SMB
   timeout, the same for busybox -- with `No such file or directory`, busybox's word for it,
-  and Ctrl-C does nothing until then. Found, and being fixed: a cp onto the share that the
+  and Ctrl-C does nothing until then. Found, and fixed since: a cp onto the share that the
   outage ended left a file of the full size whose last 5.5 MiB were zeros, because CopyFile2
   sizes the file first and Windows closed it once the link came back; on a slow link Ctrl-C
-  during a copy from the share took 24 s, for the same reason; and `ls -l` names an owner
-  this machine cannot look up `root`, where busybox prints its number. Not the shell's: a file
+  during a copy from the share took 24 s, for the same reason. cp copies to and from a share
+  itself now; a second outage under a copy is the check that its partial file is short. Found,
+  and being fixed: `ls -l` names an owner this machine cannot look up `root`, where busybox
+  prints its number. Not the shell's: a file
   that was open for reading when the link died could not be opened for its data by anything
   for 18 minutes and more, so `ls -l` of its folder hangs in nemosh and busybox alike.
 - **iconv with real text**: GBK, SHIFT_JIS, EUC-KR, BIG5, EUC-JP and GB18030 read exactly,
