@@ -184,9 +184,18 @@ func isTrDigit(c rune) bool { return c >= '0' && c <= '9' }
 func isTrUpper(c rune) bool { return c >= 'A' && c <= 'Z' }
 func isTrLower(c rune) bool { return c >= 'a' && c <= 'z' }
 
-// run reads the stream a rune at a time, because a translation is defined on
-// characters and a byte-wise pass would cut a multi-byte one in half.
+// run translates the stream: a byte at a time through a table when both sets are ASCII
+// (tr_bytes.go), and otherwise a rune at a time.
 func (t trTable) run(ctx context.Context, stdout io.Writer, stdin io.Reader) error {
+	if table, ok := t.byteTable(); ok {
+		return t.runBytes(ctx, stdout, stdin, table)
+	}
+	return t.runRunes(ctx, stdout, stdin)
+}
+
+// runRunes reads the stream a rune at a time, because a translation is defined on
+// characters and a byte-wise pass would cut a multi-byte one in half.
+func (t trTable) runRunes(ctx context.Context, stdout io.Writer, stdin io.Reader) error {
 	// Flushed when the input runs dry, so `tail -f log | tr a-z A-Z` shows a line when the
 	// line happens; see filter_output.go. It flushed at every newline into a pipe.
 	writer := newFilterOutput(stdout)

@@ -28,6 +28,9 @@ patch number is the commits since that tag.
   `%USERNAME%`, or GetUserNameW, and `$UID` from ntdll, where os/user and advapi32 loaded eight
   DLLs into every process, `nemosh cat` and every job's included. A started shell has the nine a
   bare Go program has. id and whoami name the same user as before.
+- **tr is 18 times faster with ASCII sets**: `tr a-z A-Z` of 92 MB takes 0.12 s, where it took
+  2.2 s and busybox takes 0.55. A byte table, 64 KiB at a time, answers what the character-at-a-time
+  path answers, which UTF-8 sets and `-c` still take.
 
 ### Added
 
