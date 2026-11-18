@@ -13,20 +13,41 @@ import (
 // length of its target. Anything else has the mode currentPermissions makes up. The change
 // time is the creation time, as Windows keeps no change time; the blocks are 512-byte ones, in
 // whole 4096-byte blocks of what the file holds.
+//
+// The size and the times are the handle's, which statHandleFacts opens whatever happens, and the
+// FileInfo's only when no handle can be had: so a stat made from what a directory listing already
+// says of an entry, hostStatRecordListed, is the same record, without the GetFileAttributesEx that
+// was a third of `ls -l`'s time over System32.
 func hostStatRecord(native string, follow bool, umask uint32) (statRecord, error) {
-	info, err := os.Lstat(native)
+	info, err := lstatOf(native)
 	if err == nil && follow {
 		info, err = os.Stat(native)
 	}
 	if err != nil {
 		return statRecord{}, err
 	}
+	return statRecordOf(native, info, nil, umask), nil
+}
+
+// lstatOf is how a stat asks GetFileAttributesEx of a path, which a test counts.
+var lstatOf = os.Lstat
+
+// hostStatRecordListed is hostStatRecord of an entry not followed, from what the listing that
+// found it says of it: its kind, its attributes, whether it is a link. An entry whose handle
+// cannot be had is asked GetFileAttributesEx for its size and times after all, since a listing
+// gives a directory none.
+func hostStatRecordListed(native string, umask uint32, listed os.FileInfo) (statRecord, error) {
+	return statRecordOf(native, listed, func() (os.FileInfo, bool) {
+		info, err := lstatOf(native)
+		return info, err == nil
+	}, umask), nil
+}
+
+// statRecordOf is the record of native, which info describes. fresh is how its size and times are
+// had again when no handle tells them, or nil when info's are fresh already.
+func statRecordOf(native string, info os.FileInfo, fresh func() (os.FileInfo, bool), umask uint32) statRecord {
 	record := statRecord{size: info.Size(), blockSize: 4096, links: 1}
-	if data, ok := info.Sys().(*syscall.Win32FileAttributeData); ok {
-		record.access = time.Unix(0, data.LastAccessTime.Nanoseconds())
-		record.modify = time.Unix(0, data.LastWriteTime.Nanoseconds())
-		record.change = time.Unix(0, data.CreationTime.Nanoseconds())
-	}
+	setTimesOf(&record, info)
 	target, link := linkTarget(native, info)
 	switch {
 	case link:
@@ -38,8 +59,17 @@ func hostStatRecord(native string, follow bool, umask uint32) (statRecord, error
 	}
 	// A link to a directory is counted as one, as busybox's count_subdirs counts whatever carries
 	// the directory attribute: scoop's `current`, a junction, has its version's links.
-	if statHandleFacts(native, link, &record) && hasDirectoryAttribute(info) {
+	known := statHandleFacts(native, link, &record)
+	if known && hasDirectoryAttribute(info) {
 		record.links = subdirectoryLinks(native)
+	}
+	if !known && fresh != nil {
+		if again, ok := fresh(); ok {
+			setTimesOf(&record, again)
+			if !link {
+				record.size = again.Size()
+			}
+		}
 	}
 	size := record.size
 	if held, ok := compressedSize(native, info); ok {
@@ -47,7 +77,16 @@ func hostStatRecord(native string, follow bool, umask uint32) (statRecord, error
 	}
 	record.blocks = (size + 4095) >> 12 << 3
 	record.owner, record.group = busyboxAccountName(record.uid), busyboxAccountName(record.gid)
-	return record, nil
+	return record
+}
+
+// setTimesOf is the record's times from info: access, modification, and creation for the change.
+func setTimesOf(record *statRecord, info os.FileInfo) {
+	if data, ok := info.Sys().(*syscall.Win32FileAttributeData); ok {
+		record.access = time.Unix(0, data.LastAccessTime.Nanoseconds())
+		record.modify = time.Unix(0, data.LastWriteTime.Nanoseconds())
+		record.change = time.Unix(0, data.CreationTime.Nanoseconds())
+	}
 }
 
 // statHandleFacts is what busybox-w32's lstat asks of the file opened (win32/mingw.c:793-822):
@@ -76,6 +115,13 @@ func statHandleFacts(native string, link bool, record *statRecord) bool {
 		record.device = uint64(data.VolumeSerialNumber)
 		record.inode = uint64(data.FileIndexHigh)<<32 | uint64(data.FileIndexLow)
 		record.links = uint64(data.NumberOfLinks)
+		record.access = time.Unix(0, data.LastAccessTime.Nanoseconds())
+		record.modify = time.Unix(0, data.LastWriteTime.Nanoseconds())
+		record.change = time.Unix(0, data.CreationTime.Nanoseconds())
+		if !link {
+			// A link's size is its target's length, which the caller has set.
+			record.size = int64(data.FileSizeHigh)<<32 | int64(data.FileSizeLow)
+		}
 	}
 	uid, shared, account := fileOwner(handle)
 	record.uid, record.gid, record.account = uid, uid, account

@@ -49,6 +49,9 @@ patch number is the commits since that tag.
 - **sort holds half what it did**: 92 MB of lines peaks at 152 MB, where it peaked at over 270
   and busybox's at 193. A file is read whole in one read of its size, each line is a view into
   that block, and the first file's lines are not copied a second time.
+- **ls -l is a quarter faster**: an entry the listing has described is not asked GetFileAttributesEx
+  again; its size and times come from the handle its owner is read through. `ls -l` of System32
+  takes 213 ms where it took 277, and `ls -lR` of Go's source 1.22 s where it took 1.58.
 
 ### Added
 

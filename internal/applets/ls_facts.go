@@ -3,6 +3,7 @@ package applets
 import (
 	"fmt"
 	"path/filepath"
+	"syscall"
 )
 
 // What the long form, -i, -s and the -c and -u times show of an entry beyond its FileInfo comes
@@ -29,7 +30,16 @@ func recordLsFacts(items []lsEntry, options lsOptions) {
 		if item.recorded || item.device {
 			continue
 		}
-		record, err := hostStatRecord(item.path, item.followed, options.umask)
+		// What the listing, or the operand's stat, already said of a file not followed is not
+		// asked again: GetFileAttributesEx of every entry was a third of the time over System32.
+		// A device the shell provides is described by no Windows file, and is asked as before.
+		var record statRecord
+		var err error
+		if _, onDisk := item.info.Sys().(*syscall.Win32FileAttributeData); onDisk && !item.followed {
+			record, err = hostStatRecordListed(item.path, options.umask, item.info)
+		} else {
+			record, err = hostStatRecord(item.path, item.followed, options.umask)
+		}
 		item.record, item.recorded = record, err == nil
 	}
 }
