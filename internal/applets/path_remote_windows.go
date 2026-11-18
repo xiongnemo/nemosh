@@ -23,23 +23,27 @@ var driveTypeOf = func(root string) uint32 {
 // `\\?\UNC\server\share\...`, or one on a drive Windows maps to a share, which GetDriveTypeW calls
 // DRIVE_REMOTE. A directory on a local drive that a link points at a share is not seen through;
 // finding that would cost an open of the path.
+//
+// The prefixes are read from the path itself, not from filepath.VolumeName, whose answer for
+// `\\?\UNC\server\share\file` is not the same in Go 1.26 as in 1.27: CI's 1.26 made it a local
+// path, and this machine's 1.27 did not.
 func isRemotePath(host string) bool {
-	volume := filepath.VolumeName(host)
+	host = filepath.FromSlash(host)
 	switch {
-	case hasPrefixFold(volume, `\\?\UNC\`):
+	case hasPrefixFold(host, `\\?\UNC\`):
 		return true
-	case strings.HasPrefix(volume, `\\?\`):
-		volume = volume[len(`\\?\`):]
-	case strings.HasPrefix(volume, `\\.\`):
+	case strings.HasPrefix(host, `\\.\`):
 		// The device namespace: pipes, NUL, a volume by its device name. None is a share.
 		return false
-	case strings.HasPrefix(volume, `\\`):
+	case strings.HasPrefix(host, `\\?\`):
+		host = host[len(`\\?\`):]
+	case strings.HasPrefix(host, `\\`):
 		return true
 	}
-	if len(volume) != 2 || volume[1] != ':' {
+	if len(host) < 2 || host[1] != ':' {
 		return false
 	}
-	return driveTypeOf(volume+`\`) == windows.DRIVE_REMOTE
+	return driveTypeOf(host[:2]+`\`) == windows.DRIVE_REMOTE
 }
 
 func hasPrefixFold(text, prefix string) bool {
