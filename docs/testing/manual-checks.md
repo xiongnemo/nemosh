@@ -309,7 +309,7 @@ at a scratch directory. What is left for a person is marked.
   range, 304, and 200 once the file changed, all checked with curl. Headless Edge played a
   100 MB video whose index is at its end, seeking to 15 s, in five requests. Left for a
   person: a video seeking in a real browser window, and the 304 in its network panel.
-  Found: a name with `#` or `%` in it is not escaped in the listing's link; being fixed.
+  Found, and fixed since: a name with `#` or `%` in it was not escaped in the listing's link.
 
 ## I. Files, against real disks and code pages
 

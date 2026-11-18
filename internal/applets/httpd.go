@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -158,7 +159,7 @@ func (h *httpdHandler) writeListing(out io.Writer, urlPath, target string, head 
 		var listing strings.Builder
 		fmt.Fprintf(&listing, "<html><body><h1>%s</h1>\n", htmlEscape(urlPath))
 		for _, name := range names {
-			fmt.Fprintf(&listing, "<a href=\"%s\">%s</a><br>\n", htmlEscape(name), htmlEscape(name))
+			fmt.Fprintf(&listing, "<a href=\"%s\">%s</a><br>\n", htmlEscape(listingHref(name)), htmlEscape(name))
 		}
 		listing.WriteString("</body></html>\n")
 		body = listing.String()
@@ -167,6 +168,16 @@ func (h *httpdHandler) writeListing(out io.Writer, urlPath, target string, head 
 	if writeHTTPHead(out, 200, fields) == nil && !head {
 		_, _ = io.WriteString(out, body)
 	}
+}
+
+// listingHref is a listed name as a link to it: the name percent-encoded as one path segment, a
+// directory's slash kept after it. A name is not a URL -- `#` in one began a fragment, `%` an
+// escape -- so the listing's links to such names led nowhere.
+func listingHref(name string) string {
+	if directory, isDirectory := strings.CutSuffix(name, "/"); isDirectory {
+		return url.PathEscape(directory) + "/"
+	}
+	return url.PathEscape(name)
 }
 
 func fileExists(path string) bool {

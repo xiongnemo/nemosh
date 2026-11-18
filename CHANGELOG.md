@@ -54,6 +54,9 @@ patch number is the commits since that tag.
   before it sends a request: `nemosh-v1.5.0-windows-amd64.zip`.
 - **`wget -S` showed only the last response**, so a chain of redirects was invisible. It prints
   each response's status line and fields as it arrives, a 301 or a 302 too, as busybox does.
+- **httpd's listing linked a name with `#` or `%` in it to nothing**: the name was the href as it
+  stood, so `a#b.txt` asked for `a` and was not found, and `100%.txt` was a bad escape and a 400.
+  Each link is the name percent-encoded, a directory's slash after it.
 
 ## v1.5.0 - 2026-11-18
 
