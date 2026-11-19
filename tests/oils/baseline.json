@@ -536,7 +536,6 @@
       "\\! for history number": "fail",
       "\\W is basename of working dir": "fail",
       "\\j for number of jobs": "fail",
-      "\\l for TTY device basename": "fail",
       "current working dir": "fail",
       "default PS1": "fail"
     },

@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`tput` and `tty`**: `tput setaf 1`, `tput sgr0`, `tput cols` and the rest of xterm-256color's
+  terminfo, the VT the Windows console speaks; `tty -s`, and `not a tty` from a pipe. A
+  terminal's name is refused for now, /dev/tty not yet being a device here.
+
 - **`file`**, in Debian's libmagic's words: text by encoding and line terminators, scripts by
   their `#!`, Windows executables in full, and ELF, archives, compressions, images, PDF and SQLite
   by their headers; `-b`, `-i`, `--mime-type`, `-L`, `-N`. There was no file.

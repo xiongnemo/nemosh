@@ -6,7 +6,17 @@ package capability
 // rest by usageText, so nothing that reads the table knows there is a split.
 func appletUsageTextDebian() map[string]Usage {
 	return map[string]Usage{
-		"file": {Summary: "Say what kind of file each FILE is.", Operands: "FILE...",
+		"tput": {Summary: "Write a terminal's control sequence, or say its size.", Operands: "CAPABILITY [PARAMETER]...",
+			Options: map[string]string{"T": "the terminal type, which must be xterm-256color or xterm"},
+			Notes: []string{
+				"ncurses' tput with xterm-256color's terminfo, the dialect the Windows console speaks: setaf, setab, bold, dim, smul, rmul, rev, sgr0, sitm, blink, smso, clear, el, ed, cup, hpa, vpa, home, civis, cnorm, smcup, rmcup, sc, rc, the cursor's moves, bel and longname.",
+				"cols and lines are COLUMNS and LINES, or the terminal's, or 80 by 24; colors is 256. An unknown capability is status 4.",
+			}},
+		"tty": {Summary: "Say whether standard input is a terminal.", Operands: "",
+			Options: map[string]string{"s": "say it by the status alone", "silent": "the same as -s", "quiet": "the same as -s"},
+			Notes: []string{
+				"From a file or a pipe it is `not a tty` and status 1. A terminal's name is refused, status 2: /dev/tty is not one of nemosh's devices yet, and a name that opens nothing is worse than none.",
+			}}, "file": {Summary: "Say what kind of file each FILE is.", Operands: "FILE...",
 			Options: map[string]string{"b": "leave the names out", "i": "say the MIME type and charset instead",
 				"L": "say what a link leads to rather than that it is one", "N": "do not line the answers up after the names",
 				"h": "say that a link is one, which is the default", "brief": "the same as -b", "mime": "the same as -i",

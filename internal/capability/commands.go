@@ -40,6 +40,8 @@ var commands = []Command{
 	{Name: "grep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "egrep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "fgrep", Short: "invrRlcqwxFoshHEmaIzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
+	{Name: "tput", Short: "T", ValueShort: "T", Operand: AnyPath},
+	{Name: "tty", Short: "s", Long: []string{"silent", "quiet"}, Operand: AnyPath},
 	{Name: "file", Short: "biLNh", Long: []string{"brief", "mime", "dereference", "no-pad", "mime-type"}, Operand: AnyPath},
 	{Name: "pstree", Short: "pacAUlnT", Operand: AnyPath},
 	{Name: "column", Short: "txLdsocRNl", ValueShort: "socRNl", Long: []string{"table", "fillrows", "keep-empty-lines", "table-noheadings", "separator", "input-separator", "output-separator", "output-width", "table-right", "table-columns", "table-columns-limit"}, ValueLong: []string{"separator", "input-separator", "output-separator", "output-width", "table-right", "table-columns", "table-columns-limit"}, Operand: AnyPath},

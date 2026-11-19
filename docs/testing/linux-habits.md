@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 73   |
-| partial | 6    |
+| works   | 74   |
+| partial | 7    |
 | refused | 6    |
-| missing | 21   |
+| missing | 20   |
 
 ## Existing commands
 
@@ -122,7 +122,8 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `column -t`, `-s,`, `-x`, `-N` | works | util-linux's |
 | `pstree`, `pstree -p`, `pstree PID` | works | psmisc's; threads folded |
 | `file NAME`, `file -i`, `file -b` | works | libmagic's words; past the first header fields left out |
-| `tput cols`, `tput setaf 1`, `tty` | missing | |
+| `tput cols`, `tput setaf 1`, `tput sgr0` | works | xterm-256color's |
+| `tty`, `tty -s` | partial | `-s` and `not a tty`; a terminal's name refused, /dev/tty not yet a device |
 | `man ls`, `info`, `apropos` | missing | `help ls` and `ls --help` answer |
 | `zip -r a.zip dir` | missing | `unzip` is here |
 | `nohup CMD &` | missing | jobs outlive the shell, not the console |

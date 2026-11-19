@@ -85,4 +85,5 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"columntable-columns", "NAMES"},
 	{"columnl", "NUMBER"},
 	{"columntable-columns-limit", "NUMBER"},
+	{"tputT", "TERM"},
 }
