@@ -16,25 +16,20 @@ type Watcher struct {
 }
 
 // Watch opens pid to learn when it ends. One that names no process has ended already, which is
-// the answer rather than an error. **The pid is checked against the process opened**: Windows
-// ignores a pid's low two bits, so OpenProcess of 13 opens 12, and `tail --pid=13` would have
-// followed whatever runs as 12. One this session may not open is refused, where GNU's tail takes
-// EPERM as alive and would follow until it was interrupted.
+// the answer rather than an error -- and that includes 13, which OpenProcess would have opened 12
+// for (see openProcess), so `tail --pid=13` followed whatever ran as 12. One this session may not
+// open is refused, where GNU's tail takes EPERM as alive and would follow until interrupted.
 func Watch(pid int) (*Watcher, error) {
 	// Widened, for on windows/386 no int is above MaxUint32 and the comparison would not compile.
 	if pid <= 0 || int64(pid) > math.MaxUint32 {
 		return nil, fmt.Errorf("invalid PID: '%d'", pid)
 	}
-	handle, err := windows.OpenProcess(windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	handle, err := openProcess(windows.SYNCHRONIZE, pid)
 	switch {
 	case errors.Is(err, windows.ERROR_INVALID_PARAMETER):
 		return &Watcher{}, nil
 	case err != nil:
 		return nil, fmt.Errorf("cannot watch process %d: %v", pid, killCause(err))
-	}
-	if opened, err := windows.GetProcessId(handle); err != nil || opened != uint32(pid) {
-		windows.CloseHandle(handle)
-		return &Watcher{}, nil
 	}
 	return &Watcher{handle: handle}, nil
 }

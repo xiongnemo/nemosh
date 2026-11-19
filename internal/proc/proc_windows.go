@@ -49,7 +49,7 @@ func Terminate(pid, signal int) error {
 		// kill can still be found alive.
 		access = windows.PROCESS_QUERY_LIMITED_INFORMATION
 	}
-	handle, err := windows.OpenProcess(access, false, uint32(pid))
+	handle, err := openProcess(access, pid)
 	if err != nil {
 		return killFailure(pid, err)
 	}
@@ -71,6 +71,23 @@ func Terminate(pid, signal int) error {
 		return killFailure(pid, err)
 	}
 	return nil
+}
+
+// openProcess is OpenProcess of the process pid names, and of no other. **Windows ignores a pid's
+// low two bits**, so OpenProcess of 13 opens 12, and `kill 13` ended whatever ran as 12; a pid
+// above 2^32 was cut to 32 bits on the way in. The process opened is checked against the pid, and
+// one that is not it is ERROR_INVALID_PARAMETER, which is what OpenProcess says of a pid naming
+// nothing. Asking its id needs the right to query, which is added to access.
+func openProcess(access uint32, pid int) (windows.Handle, error) {
+	handle, err := windows.OpenProcess(access|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	if err != nil {
+		return 0, err
+	}
+	if opened, err := windows.GetProcessId(handle); err != nil || int64(opened) != int64(pid) {
+		windows.CloseHandle(handle)
+		return 0, windows.ERROR_INVALID_PARAMETER
+	}
+	return handle, nil
 }
 
 // killCause words what OpenProcess answers as strerror would. A pid that names no process is

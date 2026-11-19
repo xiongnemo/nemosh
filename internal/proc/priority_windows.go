@@ -3,6 +3,7 @@
 package proc
 
 import (
+	"errors"
 	"fmt"
 
 	"golang.org/x/sys/windows"
@@ -61,7 +62,10 @@ func AdjustPriority(pid, step int) (string, error) {
 		return "", fmt.Errorf("%d: not a process this can change", pid)
 	}
 	const access = windows.PROCESS_SET_INFORMATION | windows.PROCESS_QUERY_LIMITED_INFORMATION
-	handle, err := windows.OpenProcess(access, false, uint32(pid))
+	handle, err := openProcess(access, pid)
+	if errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
+		return "", fmt.Errorf("%d: no such process", pid)
+	}
 	if err != nil {
 		// The common case on this platform, and worth naming rather than passing up a
 		// Win32 code: a process owned by SYSTEM or by another user cannot be opened for

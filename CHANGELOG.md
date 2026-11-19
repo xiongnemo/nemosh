@@ -118,6 +118,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`kill 13` ended process 12**: Windows ignores a pid's low two bits, so a pid no process has
+  opened its neighbour, and a typo was a different process killed -- by kill, pkill, killall,
+  timeout and top alike, and top's priority keys changed it. The process opened is checked against
+  the pid now, and one that is not it is `No such process`. busybox-w32's kill still does this.
+
 - **awk's `BEGINFILE` and `ENDFILE` rules never ran, and said nothing**: read as busybox reads
   them, a pattern on a variable nobody set, where the documentation said they were refused. A
   rule that begins with either is refused as the program is read now, `BEGINFILE is gawk's`;
