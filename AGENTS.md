@@ -327,7 +327,8 @@ survives both — and on the terminal path tcell already implements it
 
 After changing commands, flags, applet coverage, build scripts, release
 packaging, or versioning, check whether `README.md` and the support matrix need
-updating. Keep comments that explain intent; rewrite a stale one rather than
+updating. A change to what an everyday Debian invocation does updates its row in
+`docs/testing/linux-habits.md`, and the counts at the top of that page. Keep comments that explain intent; rewrite a stale one rather than
 deleting the context.
 
 ## Not Yet Applicable
