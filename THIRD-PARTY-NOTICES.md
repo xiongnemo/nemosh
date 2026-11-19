@@ -6,7 +6,8 @@ copyright notice and license text that redistribution of that component
 requires.
 
 The **binary** ships the Go standard library, `golang.org/x/term`,
-`golang.org/x/sys/windows`, `golang.org/x/text/width`, the bzip2 writer of
+`golang.org/x/sys/windows`, `golang.org/x/text`'s encoding and a table of wide
+characters generated from its `width` package, the bzip2 writer of
 `github.com/dsnet/compress`, and `github.com/ulikunitz/xz`, all 3-Clause BSD; the maths library `bc -l` loads, from
 `gavinhoward/bc`, 2-Clause BSD; and
 the terminal user interface behind `top` -- `github.com/rivo/tview`,

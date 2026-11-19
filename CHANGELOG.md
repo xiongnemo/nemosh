@@ -41,9 +41,11 @@ patch number is the commits since that tag.
   where it took 1.76 s and busybox takes 1.23. The line's ASCII is lowered and searched as bytes;
   a pattern with a k or an s, whose case folds outside ASCII, still asks the regexp of a line
   with anything but ASCII in it, so the answers are the same.
-- golang.org/x/text/width is no longer linked: which characters are wide is a table of 122
+- golang.org/x/text/width is no longer linked: which characters are wide is a table of 120
   ranges generated from it (`go generate ./internal/textgrid`), which says the same of every rune.
-  The binary is 15.9 KB smaller.
+  The binary is 15.9 KB smaller. The table is Unicode 15.0.0, which x/text answers for under the
+  Go in go.mod, the one the release is built with, so a character is as wide as v1.5.0 said; x/text
+  answers for 17.0.0 under go1.27, and the generator now refuses to run under any Go but go.mod's.
 
 ### Added
 
