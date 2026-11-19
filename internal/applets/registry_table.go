@@ -175,4 +175,5 @@ var defaultApplets = [...]appletEntry{
 	{"zegrep", newZegrepApplet},
 	{"zfgrep", newZfgrepApplet},
 	{"zgrep", newZgrepApplet},
+	{"zip", newZipApplet},
 }

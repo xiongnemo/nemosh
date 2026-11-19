@@ -40,6 +40,7 @@ var commands = []Command{
 	{Name: "grep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "egrep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "fgrep", Short: "invrRlcqwxFoshHEmaIzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
+	{Name: "zip", Short: "rqjDx0123456789", Operand: AnyPath},
 	{Name: "man", Short: "kf", Operand: AnyPath},
 	{Name: "apropos", Operand: AnyPath},
 	{Name: "whatis", Operand: AnyPath},

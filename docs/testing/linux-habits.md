@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 75   |
+| works   | 76   |
 | partial | 7    |
 | refused | 6    |
-| missing | 19   |
+| missing | 18   |
 
 ## Existing commands
 
@@ -125,7 +125,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `tput cols`, `tput setaf 1`, `tput sgr0` | works | xterm-256color's |
 | `tty`, `tty -s` | partial | `-s` and `not a tty`; a terminal's name refused, /dev/tty not yet a device |
 | `man ls`, `man -k`, `apropos`, `whatis`, `info` | works | this shell's help, in man-db's words |
-| `zip -r a.zip dir` | missing | `unzip` is here |
+| `zip -r a.zip dir`, `-x`, `-j`, `-q` | works | Info-ZIP's; percents this deflate's |
 | `nohup CMD &` | missing | jobs outlive the shell, not the console |
 | `nice`, `renice` | missing | top's F7 and F8 step a priority class |
 | `w`, `who`, `last` | missing | |

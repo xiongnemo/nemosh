@@ -6,7 +6,16 @@ package capability
 // rest by usageText, so nothing that reads the table knows there is a split.
 func appletUsageTextDebian() map[string]Usage {
 	return map[string]Usage{
-		"man": {Summary: "Show a command's manual, which is its help here.", Operands: "[SECTION] NAME...",
+		"zip": {Summary: "Put files into a zip archive, or update one.", Operands: "ARCHIVE NAME... [-x PATTERN...]",
+			Options: map[string]string{"r": "go into directories", "q": "say nothing", "j": "keep each name alone, without its directories",
+				"D": "make no entries for directories", "x": "leave out what these patterns match, up to the next option",
+				"0": "store, compressing nothing", "1": "compress fastest", "2": "compress at level 2", "3": "compress at level 3",
+				"4": "compress at level 4", "5": "compress at level 5", "6": "compress at level 6, the default", "7": "compress at level 7",
+				"8": "compress at level 8", "9": "compress best"},
+			Notes: []string{
+				"Info-ZIP's zip: each entry is `adding: NAME (deflated N%)`, or (stored 0%) where deflating would not make it smaller; the percent is this deflate's.",
+				"An ARCHIVE with no extension gets .zip; one that is there is updated, its other entries kept as they are. A NAME that matches nothing is warned of, and nothing to do is status 12.",
+			}}, "man": {Summary: "Show a command's manual, which is its help here.", Operands: "[SECTION] NAME...",
 			Options: map[string]string{"k": "search the names and summaries, as apropos does", "f": "say what NAME is in a line, as whatis does"},
 			Notes: []string{
 				"There are no man pages on Windows; what every command here takes is its help, so man ls is help ls, paged by less on a terminal.",

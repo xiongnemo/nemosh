@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`zip`, Info-ZIP's**: `zip -r a.zip dir -x '*.o'`, `-j`, `-q`, `-D`, `-0`...`-9`, and an existing
+  archive updated in place. There was unzip and no zip.
+
 - **`man`, `apropos`, `whatis` and `info`**: this shell's own help as man-db would put it.
   `man ls` is `help ls`, paged on a terminal; `man -k` and `apropos` search the commands'
   summaries. There are no man pages on Windows to format.
