@@ -23,10 +23,10 @@ func TestHostname_asDebiansDoes(t *testing.T) {
 			return map[uint32]string{hostnameShort: "box", hostnameFull: "box.example.com", hostnameDomain: "example.com"}[kind], nil
 		},
 		interfaces: func() ([]netio.Interface, error) {
-			prefixes := func(texts ...string) []netip.Prefix {
-				var out []netip.Prefix
+			prefixes := func(texts ...string) []netio.Address {
+				var out []netio.Address
 				for _, text := range texts {
-					out = append(out, netip.MustParsePrefix(text))
+					out = append(out, netio.Address{Prefix: netip.MustParsePrefix(text)})
 				}
 				return out
 			}

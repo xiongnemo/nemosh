@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`ip`, iproute2's, to read with**: `ip a`, `ip -br a`, `ip link`, `ip r`, `-4`, `-6`, `-o` and
+  `show dev NAME`, in iproute2's fields, from Windows' adapters and route table. A change is
+  refused with the PowerShell command that makes it. There was no ip.
+
 - **`tree`, tree(1)'s**: `-L`, `-a`, `-d`, `-I`, `-P`, `-h`, `-s`, `--dirsfirst` and the rest, in tree's
   UTF-8 lines. It ran Windows' tree.com, which answers `tree -L 2` with `Too many parameters`;
   that one still runs as `tree.com`.

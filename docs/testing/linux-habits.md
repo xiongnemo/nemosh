@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 67   |
+| works   | 68   |
 | partial | 6    |
 | refused | 6    |
-| missing | 27   |
+| missing | 26   |
 
 ## Existing commands
 
@@ -116,7 +116,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `hostname -I`, `hostname -f`, `-s`, `-d`, `-i`, `-A` | works | Debian's; Windows' still runs as `hostname.exe` |
 | `netstat -tulpn` | missing | Windows' netstat prints its usage; Debian's answer is `ss` |
 | `ss -tulpn` | missing | |
-| `ip a`, `ip r` | missing | |
+| `ip a`, `ip r`, `ip -br a`, `ip link`, `ip -4 -o a` | works | to read with; a change refused with the PowerShell for it |
 | `traceroute`, `dig`, `host` | missing | Windows has `tracert` and `nslookup` |
 | `lsof -i :80` | missing | |
 | `column -t` | missing | |

@@ -40,6 +40,7 @@ var commands = []Command{
 	{Name: "grep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "egrep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "fgrep", Short: "invrRlcqwxFoshHEmaIzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
+	{Name: "ip", Short: "46o", Long: []string{"brief", "oneline"}, Operand: AnyPath},
 	{Name: "tree", Short: "adfilFpugshDrULIP", ValueShort: "LIP", Long: []string{"dirsfirst", "noreport", "charset"}, ValueLong: []string{"charset"}, Operand: AnyPath},
 	{Name: "hostname", Short: "sfdiIAavbyF", ValueShort: "F", Long: []string{"short", "fqdn", "long", "domain", "ip-address", "all-ip-addresses", "all-fqdns", "alias", "verbose", "boot", "file", "yp", "nis"}, ValueLong: []string{"file"}, Operand: AnyPath},
 	{Name: "head", Short: "ncqv", ValueShort: "nc", Long: []string{"lines", "bytes", "quiet", "silent", "verbose"}, ValueLong: []string{"lines", "bytes"}, Operand: AnyPath},

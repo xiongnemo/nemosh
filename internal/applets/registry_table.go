@@ -65,6 +65,7 @@ var defaultApplets = [...]appletEntry{
 	{"iconv", newIconvApplet},
 	{"id", newIDApplet},
 	{"install", newInstallApplet},
+	{"ip", newIpApplet},
 	{"ipcalc", newIpcalcApplet},
 	{"join", newJoinApplet},
 	{"killall", newKillallApplet},

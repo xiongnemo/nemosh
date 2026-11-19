@@ -207,7 +207,7 @@ pointing at the same binary. It will not, and the reason is not effort.
 Scoop's shims share one flat directory, so a name belongs to whichever package
 wrote it last. BusyBox's own manifest shims every applet its `--list` reports; on
 the machine this was written on that is **171 shims** already pointing at
-`busybox.exe`, `cat`, `grep`, `find`, `sort` and `ls` among them. Nemosh has 158
+`busybox.exe`, `cat`, `grep`, `find`, `sort` and `ls` among them. Nemosh has 159
 applets and **148 of those names are busybox-w32's too**. Installing it with
 per-applet shims would silently repoint them at a different implementation, and
 uninstalling either package afterwards would take the other's names with it.
@@ -220,7 +220,7 @@ file -- so shadowing them breaks scripts that never asked for this shell. An
 install that changes what a name means is worse than one that makes you type
 `nemosh find`; `scoop shim add` covers the case where someone wants one anyway.
 
-**Applet parity with BusyBox.** 158 applets on Windows against busybox-w32's
+**Applet parity with BusyBox.** 159 applets on Windows against busybox-w32's
 179, 148 of them by the same name, and `flock`, `watch`, `which`, `time`,
 `timeout` and `kill` are builtins. The archivers, the compression formats but
 `lzop` and `compress`'s `.Z`, the text tools, `awk`, `bc` and the whole networking

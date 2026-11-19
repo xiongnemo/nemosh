@@ -123,8 +123,8 @@ func hostnameAddresses(source hostnameSource) ([]netip.Addr, error) {
 		if !adapter.Up || adapter.Loopback {
 			continue
 		}
-		for _, prefix := range adapter.Addresses {
-			switch address := prefix.Addr(); {
+		for _, entry := range adapter.Addresses {
+			switch address := entry.Prefix.Addr(); {
 			case address.Is4():
 				four = append(four, address)
 			case !address.IsLinkLocalUnicast() && !address.IsLinkLocalMulticast():
