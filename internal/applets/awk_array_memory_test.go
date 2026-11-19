@@ -73,10 +73,13 @@ func TestAwkArray_removesWithoutWalkingTheOrder(t *testing.T) {
 	}
 }
 
-// An awk value is 32 bytes: the order its fields were declared in padded it to 40, and an array
-// holds one an element.
-func TestAwkValue_isThirtyTwoBytes(t *testing.T) {
-	if size := unsafe.Sizeof(awkValue{}); size != 32 {
-		t.Fatalf("an awkValue is %d bytes, want 32", size)
+// An awk value is no larger than its fields, rounded to its alignment: 32 bytes where a word is
+// 64 bits and 20 on windows/386, where the order its fields were declared in padded it to 40 and
+// to 24. An array holds one an element.
+func TestAwkValue_isNoLargerThanItsFields(t *testing.T) {
+	align := unsafe.Alignof(awkValue{})
+	fields := unsafe.Sizeof(float64(0)) + unsafe.Sizeof("") + unsafe.Sizeof(awkValueKind(0)) + unsafe.Sizeof(false)
+	if size, want := unsafe.Sizeof(awkValue{}), (fields+align-1)/align*align; size != want {
+		t.Fatalf("an awkValue is %d bytes, want %d", size, want)
 	}
 }
