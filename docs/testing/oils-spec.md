@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2152 of the 2548 cases bash passes: 84.5%.**
+**nemosh passes 2154 of the 2548 cases bash passes: 84.5%.**
 
-Of the other 396, it does 117 the way the files record of ash, which may be busybox's
-way, and 279 neither way.
+Of the other 394, it does 117 the way the files record of ash, which may be busybox's
+way, and 277 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 279 neither way.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2152 |
+| that nemosh passes of those | 2154 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -147,7 +147,7 @@ of ash.
 | sh-options-bash.test.sh | 9 | 9 | 8 | 88.9% | 0 | 0 |
 | sh-options.test.sh | 39 | 39 | 33 | 84.6% | 0 | 12 |
 | sh-usage.test.sh | 23 | 22 | 20 | 90.9% | 0 | 18 |
-| smoke.test.sh | 18 | 18 | 16 | 88.9% | 0 | 16 |
+| smoke.test.sh | 18 | 18 | 17 | 94.4% | 0 | 16 |
 | strict-options.test.sh | 17 | 15 | 12 | 80.0% | 1 | 7 |
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
@@ -167,10 +167,10 @@ of ash.
 | var-sub-quote.test.sh | 41 | 41 | 40 | 97.6% | 0 | 37 |
 | var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
 | vars-bash.test.sh | 1 | 1 | 1 | 100.0% | 0 | 0 |
-| vars-special.test.sh | 41 | 39 | 33 | 84.6% | 0 | 19 |
+| vars-special.test.sh | 41 | 39 | 34 | 87.2% | 0 | 19 |
 | whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
 | word-eval.test.sh | 8 | 7 | 7 | 100.0% | 0 | 6 |
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2665 | 2548 | 2152 | 84.5% | 117 | 1447 |
+| all | 2665 | 2548 | 2154 | 84.5% | 117 | 1447 |

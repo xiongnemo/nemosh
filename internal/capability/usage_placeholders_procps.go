@@ -60,4 +60,6 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"diffwidth", "COLUMNS"},
 	{"difflabel", "LABEL"},
 	{"diffstarting-file", "FILE"},
+	{"hostnameF", "FILE"},
+	{"hostnamefile", "FILE"},
 }

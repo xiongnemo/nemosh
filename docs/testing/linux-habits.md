@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 65   |
+| works   | 66   |
 | partial | 6    |
 | refused | 6    |
-| missing | 29   |
+| missing | 28   |
 
 ## Existing commands
 
@@ -113,7 +113,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | --- | --- | --- |
 | `ping -c 4 HOST` | missing | Windows' PING.EXE: `Option -c requires administrative privileges` |
 | `tree -L 2` | missing | Windows' tree.com: `Too many parameters` |
-| `hostname -I`, `hostname -f` | missing | Windows' hostname.exe: `Use the Network Control Panel Applet` |
+| `hostname -I`, `hostname -f`, `-s`, `-d`, `-i`, `-A` | works | Debian's; Windows' still runs as `hostname.exe` |
 | `netstat -tulpn` | missing | Windows' netstat prints its usage; Debian's answer is `ss` |
 | `ss -tulpn` | missing | |
 | `ip a`, `ip r` | missing | |

@@ -60,6 +60,7 @@ var defaultApplets = [...]appletEntry{
 	{"hd", newHdApplet},
 	{"head", newHeadApplet},
 	{"hexdump", newHexdumpApplet},
+	{"hostname", newHostnameApplet},
 	{"httpd", newHttpdApplet},
 	{"iconv", newIconvApplet},
 	{"id", newIDApplet},

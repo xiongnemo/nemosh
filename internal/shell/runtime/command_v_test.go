@@ -9,10 +9,12 @@ import (
 )
 
 // hostProgram names something that is on PATH on this machine but is not a
-// Nemosh applet or builtin, so `command -v` has to reach PATH to answer.
+// Nemosh applet or builtin, so `command -v` has to reach PATH to answer. It was
+// hostname first, which is an applet now, and which, a builtin: `command -v` answered
+// their bare names and the test passed without reaching PATH at all.
 func hostProgram(t *testing.T) string {
 	t.Helper()
-	for _, name := range []string{"hostname", "where", "which", "git"} {
+	for _, name := range []string{"where", "cmd", "git"} {
 		if _, err := exec.LookPath(name); err == nil {
 			return name
 		}
@@ -37,8 +39,8 @@ func TestRuntime_reportsTheResolvedPath_whenCommandVNamesAProgramOnPath(t *testi
 	if strings.TrimSpace(stdout) == "" {
 		t.Fatalf("stdout = %q, want a path for %s", stdout, program)
 	}
-	if !strings.Contains(strings.ToLower(stdout), strings.ToLower(program)) {
-		t.Fatalf("stdout = %q, want it to name %s", stdout, program)
+	if !strings.Contains(strings.ToLower(stdout), strings.ToLower(program)) || !strings.Contains(stdout, "/") {
+		t.Fatalf("stdout = %q, want the path of %s", stdout, program)
 	}
 }
 

@@ -538,8 +538,7 @@
       "\\j for number of jobs": "fail",
       "\\l for TTY device basename": "fail",
       "current working dir": "fail",
-      "default PS1": "fail",
-      "hostname": "fail"
+      "default PS1": "fail"
     },
     "redirect-command.test.sh": {
       "Redirect in assignment": "ash-only",
@@ -590,8 +589,7 @@
       "sh - and sh -- stop flag processing": "fail"
     },
     "smoke.test.sh": {
-      "failed command": "fail",
-      "pipeline": "fail"
+      "failed command": "fail"
     },
     "strict-options.test.sh": {
       "Control flow must be static in YSH (strict_control_flow)": "fail",
@@ -677,7 +675,6 @@
     },
     "vars-special.test.sh": {
       "$BASHPID DOES change with subshell and command sub": "fail",
-      "$HOSTNAME": "fail",
       "$PATH is set if unset at startup": "fail",
       "$_ is not undefined on first use": "fail",
       "$_ with pipeline and subshell": "fail",

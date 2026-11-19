@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`hostname`, Debian's**: `-I` every address but the loopback's, `-f`, `-s`, `-d`, `-i`, `-A`.
+  It ran Windows' hostname.exe, which answers `-I` with `sethostname: Use the Network Control
+  Panel Applet`; that one still runs as `hostname.exe`. Setting the name is refused with the
+  reason.
+
 - **`less +F`, `+G`, `+/PATTERN`, `+N`, the `F` key, and `:n`/`:p`/`:x`**, GNU's: start at the
   end, a match or a line, or following a FILE as it grows until ^C; several FILEs are paged one
   at a time, each kept where it was, where they were run together. `+F` was opened as a FILE.
