@@ -16,6 +16,10 @@ import (
 //
 // A test that wants a startup file sets one explicitly, as startup_test.go does.
 //
+// Unsetting ENV stopped being enough on 2026-11-15, when a shell with no ENV came to read
+// ~/.nemoshrc: from then every -i test ran the developer's own rc file. So the run has a home
+// of its own as well; see isolateHome.
+//
 // The same for %APPDATA%, where releases up to 1.5 kept completion specs: a session says so when
 // one is there, so a prompt assertion would pass or fail by whose machine it ran on, and a test
 // would be looking in a real home. The session reads its environment through sessionSpecLookup,
@@ -25,13 +29,18 @@ func TestMain(m *testing.M) {
 	if err := os.Unsetenv("ENV"); err != nil {
 		panic(err)
 	}
+	home, owned := isolateHome()
 	sessionSpecLookup = func(name string) (string, bool) {
 		if name == "APPDATA" {
 			return "", false
 		}
 		return os.LookupEnv(name)
 	}
-	os.Exit(m.Run())
+	status := m.Run()
+	if owned {
+		os.RemoveAll(home)
+	}
+	os.Exit(status)
 }
 
 // withoutANSI strips colour so a prompt assertion can be about what the prompt
