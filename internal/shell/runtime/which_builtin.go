@@ -19,20 +19,27 @@ import (
 //
 // Windows has `where.exe`, which is neither the same name nor the same output:
 // it prints every match and speaks in backslashes. This prints the one the shell
-// would use, in the spelling the shell uses.
+// would use, in the spelling the shell uses, and with -a, busybox's and Debian's
+// option, every other after it.
 func (r Runtime) whichBuiltin(args []string) int {
-	if len(args) == 0 {
+	all, names, ok := r.whichOptions(args)
+	if !ok {
+		return 1
+	}
+	if len(names) == 0 {
 		// busybox exits 1 with no output, which is also what `which` on a name
 		// it cannot find does -- there is nothing to report either way.
 		return 1
 	}
 	status := 0
-	for _, name := range args {
-		// -a would list every match; this reports the one that would run, so an
-		// answer is never a list the reader has to choose from.
+	for _, name := range names {
+		found := false
 		if r.isKnownCommand(name) {
 			fmt.Fprintln(r.streams.Stdout, name)
-			continue
+			if !all {
+				continue
+			}
+			found = true
 		}
 		// Same reason as in commandV: dispatch refuses these before PATH, so a
 		// file of that name on PATH must not be offered as the answer.
@@ -40,14 +47,41 @@ func (r Runtime) whichBuiltin(args []string) int {
 			status = 1
 			continue
 		}
-		resolved, err := r.knownCommandPath(name)
-		if err != nil {
-			// Silent, as which is: the exit status is the answer, and a script
-			// testing `which foo >/dev/null` wants no noise on the way.
-			status = 1
-			continue
+		var paths []string
+		if all {
+			paths = r.everyCommandPath(name)
+		} else if resolved, err := r.knownCommandPath(name); err == nil {
+			paths = []string{resolved}
 		}
-		fmt.Fprintln(r.streams.Stdout, filepath.ToSlash(resolved))
+		for _, resolved := range paths {
+			fmt.Fprintln(r.streams.Stdout, filepath.ToSlash(resolved))
+		}
+		// Silent when there is nothing, as which is: the exit status is the answer,
+		// and a script testing `which foo >/dev/null` wants no noise on the way.
+		if !found && len(paths) == 0 {
+			status = 1
+		}
 	}
 	return status
+}
+
+// whichOptions reads -a and --. Anything else is busybox's `unknown option`: it was a name to
+// look for, so `which -a python` looked for a command called -a and said 1 with python on PATH.
+func (r Runtime) whichOptions(args []string) (bool, []string, bool) {
+	all := false
+	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
+		option := args[0]
+		args = args[1:]
+		if option == "--" {
+			break
+		}
+		for _, letter := range option[1:] {
+			if letter != 'a' {
+				fmt.Fprintf(r.streams.Stderr, "%swhich: unknown option -- %c\n", r.diagnosticPrefix(), letter)
+				return false, nil, false
+			}
+			all = true
+		}
+	}
+	return all, args, true
 }

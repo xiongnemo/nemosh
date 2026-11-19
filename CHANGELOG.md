@@ -41,6 +41,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`which -a` failed with what it was asked for on PATH**: `-a` was looked for as a command,
+  so `which -a python` printed one path and said 1. It lists every match now, the one that would
+  run first, as busybox's does -- a builtin or applet by its name, then each program PATH holds
+  under it -- and refuses any other option as busybox's does, `which: unknown option -- x`.
 - **`${v//old/new}` took seconds on a long value**: it tried the pattern from every place to every
   place after it, making both into runes each time, so replacing in 3,000 characters took 5.8 s and
   215 MiB, where busybox takes 39 ms. A pattern with nothing of a pattern's in it is searched for:

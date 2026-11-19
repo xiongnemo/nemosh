@@ -115,6 +115,40 @@ func (r Runtime) searchCommand(stat statFunc, pathValue, name string, previous h
 	return found, -1, err
 }
 
+// everyCommandPath is each program name names along PATH, in its order, the one that would run
+// first: `which -a`. A name with a separator in it names one file, or none. The table is neither
+// read nor added to, since it remembers only the first.
+func (r Runtime) everyCommandPath(name string) []string {
+	if name == "" || hasPathSeparator(name) {
+		if found, err := r.knownCommandPath(name); err == nil {
+			return []string{found}
+		}
+		return nil
+	}
+	pathValue := r.vars["PATH"]
+	if r.searchPath != "" {
+		pathValue = r.searchPath
+	}
+	if pathValue == "" {
+		return nil
+	}
+	stat := r.commands.statter()
+	var found []string
+	for _, dir := range filepath.SplitList(pathValue) {
+		if dir == "" {
+			dir = "."
+		}
+		resolved, err := r.ResolveNemoshPath(dir)
+		if err != nil || resolved.Device {
+			continue
+		}
+		if program, err := executableCandidateWith(stat, filepath.Join(resolved.Native, name)); err == nil {
+			found = append(found, program)
+		}
+	}
+	return found
+}
+
 // stillAProgram is whether what was found at native can still be run from there: it is there,
 // and it is no directory.
 func stillAProgram(stat statFunc, native string) bool {
