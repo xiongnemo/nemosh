@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **top bundles its letters and takes procps-ng's `-p`, `-u` and `-o FIELD`**: `top -bn1`, `top
+  -p 1234`, `top -u nemo`, `top -o %MEM`. Each was refused: the letters were matched a word at a
+  time, and `-o` is this top's column list. An upper-case procps field, `-o %MEM` or `-o -PID`,
+  is a sort now; a list of this top's lower-case columns is still the layout.
 - **`date -d` and `touch -d` read GNU's relative dates**: `date -d yesterday`, `date -d '2 days
   ago'`, `date -d 'next friday'`, `date -d 'tomorrow 09:00'`, `touch -d 'last monday' f`. Each was
   `invalid date`. busybox's formats are tried first and read as before; the relative items follow

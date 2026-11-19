@@ -36,4 +36,7 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"zgrepm", "COUNT"},
 	{"zegrepm", "COUNT"},
 	{"zfgrepm", "COUNT"},
+	{"topp", "PIDLIST"},
+	{"topu", "USERLIST"},
+	{"topU", "USERLIST"},
 }

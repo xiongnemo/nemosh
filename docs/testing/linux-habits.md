@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 42   |
+| works   | 45   |
 | partial | 7    |
-| refused | 24   |
+| refused | 21   |
 | missing | 29   |
 
 ## Existing commands
@@ -57,9 +57,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `uptime`, `uptime -s` | works | |
 | `uptime -p` | refused | |
 | `top -b -n 1`, `top -d 1` | works | |
-| `top -bn1` | refused | letters may not be bundled |
-| `top -o %MEM` | refused | `-o` is a column list here |
-| `top -p PID`, `top -u USER` | refused | |
+| `top -bn1` | works | letters bundle as getopt has them |
+| `top -o %MEM` | works | an upper-case procps field is the sort; lower-case columns the layout |
+| `top -p PID`, `top -u USER` | works | |
 | `date +%F`, `-u`, `-R`, `-I`, `+%s`, `-d @N` | works | |
 | `date -d yesterday`, `date -d '2 days ago'`, `touch -d '2 days ago'` | works | GNU's relative items, after busybox's formats |
 | `watch -n 1`, `watch -t` | works | |

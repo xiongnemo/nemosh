@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,6 +27,10 @@ type topModel struct {
 	Descending bool
 	// Filter narrows the list to names and command lines containing it, case-insensitively.
 	Filter string
+	// Pids and Users are procps' -p and -u: when given, only those processes, and only those an
+	// account named runs, which a process whose owner cannot be read is not.
+	Pids  map[int]bool
+	Users []string
 	// Search is the last thing searched for, which is what makes a repeat key possible: F3 and
 	// n walk to the next match without asking again. Searching leaves the list whole, unlike
 	// the filter -- htop is right to separate them, and this had them conflated.
@@ -111,8 +116,16 @@ func (m topModel) rows(snapshot proc.Snapshot, rates proc.Rates, details detailS
 	return m.withThreads(rows, rates)
 }
 
-// matches is the filter: a substring of the name or of the command line, case-insensitively.
+// matches is the filter: a substring of the name or of the command line, case-insensitively, and
+// -p's and -u's choices.
 func (m topModel) matches(row topRow) bool {
+	if len(m.Pids) > 0 && !m.Pids[row.Process.PID] {
+		return false
+	}
+	if len(m.Users) > 0 && (row.Details.User == "" ||
+		!slices.ContainsFunc(m.Users, func(name string) bool { return strings.EqualFold(name, row.Details.User) })) {
+		return false
+	}
 	if m.Filter == "" {
 		return true
 	}

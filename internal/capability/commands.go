@@ -56,7 +56,7 @@ var commands = []Command{
 	{Name: "printenv", Operand: AnyPath},
 	{Name: "printf", Operand: AnyPath},
 	{Name: "ps", Short: "eAfHNwopquUC", ValueShort: "opquUC", Long: []string{"pid", "ppid", "user", "User", "sort", "format", "no-headers", "no-heading", "forest", "deselect", "width", "cols", "columns"}, ValueLong: []string{"pid", "ppid", "user", "User", "sort", "format", "width", "cols", "columns"}, Operand: AnyPath},
-	{Name: "top", Short: "bndsfoHt", ValueShort: "ndsfo", Operand: AnyPath},
+	{Name: "top", Short: "bndsfoHtpuU", ValueShort: "ndsfopuU", Operand: AnyPath},
 	{Name: "pwd", Short: "LP", Operand: AnyPath},
 	{Name: "readlink", Short: "nfvsq", Operand: AnyPath},
 	{Name: "rev", Operand: AnyPath},
