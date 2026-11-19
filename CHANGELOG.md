@@ -42,6 +42,15 @@ patch number is the commits since that tag.
   one such diff had committed 9.4 GB when it was found eleven hours on. It takes 0.18 s and
   54 MiB, where busybox takes 0.56 s, and prints what busybox prints, byte for byte. Its output is
   written a buffer at a time, where a write a line took that diff 24 s.
+- **awk's `delete` walked the whole array**, so emptying one of 327,666 elements in a
+  `for (k in c) delete c[k]` had not finished after 90 s, where busybox's takes 3. It takes 2.
+- **awk's arrays held the lines their keys came from**: `c[$1]` kept the whole line `$1` was cut
+  from, two of them a key, as Go's map keeps the string it is handed. A key is copied once, an
+  element set again is written where it stands, and a value is 32 bytes where it was 40.
+  Counting 88 MB of Go source by first field peaks at 96 MiB where it peaked at 132, and keeping
+  19 MB of lines in `a[NR]` at 116 where it was 155; both run a little faster. busybox's take 39
+  and 75: Go lets its heap reach twice what it keeps before collecting, a setting of the whole
+  process.
 - **diff of many like lines wanted 2.6 GB**: a 19 MB file against its sorted copy peaked at
   2,661 MiB, where busybox's peaks at 701, as each of Hunt and McIlroy's candidates took 24 bytes
   in a list copied whole to grow. They are busybox's 12 bytes, in blocks never copied, and that

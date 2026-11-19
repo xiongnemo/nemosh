@@ -38,10 +38,12 @@ const (
 	awkStrnum
 )
 
+// awkValue is 32 bytes, the two small fields last: declared first, kind padded it to 40, and an
+// array holds one an element.
 type awkValue struct {
-	kind   awkValueKind
 	number float64
 	text   string
+	kind   awkValueKind
 	// looksNumeric is meaningful only for a strnum: whether the text is wholly a
 	// number, blanks aside. Computed once at construction because every comparison
 	// asks, and because the answer cannot change afterwards.
