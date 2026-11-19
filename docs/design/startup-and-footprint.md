@@ -132,6 +132,28 @@ crypto is `crypto/sha3`, which brings no entropy source. A session's commit,
 which `tools/startbench` reports, went from 45.4 MiB to 13.3 on 2026-11-17.
 `cmd/nemosh/release_deps_test.go` forbids every package that brought it back.
 
+### A tighter collector for an applet run alone, 2026-11-20
+
+Go lets the heap reach twice what it keeps before it collects, which is part of why an applet's
+peak stays above busybox's. The setting is the whole process's, so the shell leaves it alone; an
+applet run by itself, `nemosh awk ...` or under its own name, is the process, and could have it
+tighter. Measured with `GOGC` on a release build, peak commit read once the process ended, best of
+two:
+
+| command | GOGC=100 | GOGC=50 | GOGC=25 |
+| --- | --- | --- | --- |
+| `awk '{c[$1]++}'`, 88 MB | 1,993 ms, 95 MiB | 1,938 ms, 76 MiB | 2,127 ms, 68 MiB |
+| `awk '{a[NR]=$0}'`, 19 MB | 476 ms, 116 MiB | 507 ms, 117 MiB | 523 ms, 114 MiB |
+| `diff` of 19 MB against its sort | 24.6 s, 552 MiB | 24.3 s, 520 MiB | 25.6 s, 542 MiB |
+| `sort`, 88 MB | 2,171 ms, 149 MiB | 2,055 ms, 152 MiB | 2,061 ms, 151 MiB |
+| `tac`, 19 MB | 503 ms, 72 MiB | 506 ms, 63 MiB | 506 ms, 63 MiB |
+| `sed -E` with a group, 88 MB | 3,795 ms, 28 MiB | 4,006 ms, 28 MiB | 4,493 ms, 25 MiB |
+
+Not taken: the bar was a third off the peak for no more than a tenth on the time, and the best
+is a fifth, on one of six. Where an applet keeps its input -- sort, diff, `a[NR]` -- the peak is
+what it keeps, and the collector's slack is a small part of it. `GOGC` set in the environment is
+Go's own, and reaches a run as it is, for anyone who wants the trade.
+
 ## Memory footprint
 
 RSS tracks binary size closely enough to be treated as the same lever: removing
