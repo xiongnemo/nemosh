@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **awk has `gensub`**, which busybox's awk has and this one called an undefined function:
+  `gensub(/(a)(b)/, "\\2\\1", "g", s)` answers s with its matches replaced and leaves s as it was.
+  As busybox reads it, `"g"` and any other text are every match, N the Nth alone, `\0` to `\9`
+  and `&` the match and its groups.
 - **`ps` takes procps-ng's options**: `ps aux`, `ps -ef`, `ps -eo pid,etime,args --sort=-rss`,
   `ps axf`, `ps -p $$ -o comm=`, with procps' columns, headers, widths and time formats -- `-e -A
   -f -o -p -q -u -U -C -N -H -w`, BSD's `a x u f w h r o p U k`, a bare pid list, and `--pid

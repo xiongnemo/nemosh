@@ -2399,7 +2399,9 @@ range and that one seed gives one sequence.
 Refused by not being implemented: gawk's extensions — `asort`, `switch`,
 `@include`, true multidimensional arrays beyond `SUBSEP`, and a regular-expression
 `RS` (POSIX allows a single character or empty, and busybox agrees). `gensub` is
-one of them here and is not in busybox's: its awk has it. A rule that begins with
+busybox's as well, and is here as busybox's awk_sub has it: the third argument is
+read as a number, so `"g"` and any other text are every match and N the Nth alone,
+and `\0`-`\9` and `&` stand for the match and its groups. A rule that begins with
 gawk's `BEGINFILE` or `ENDFILE` is refused as the program is read, `BEGINFILE is
 gawk's`, status 2; busybox reads one as a pattern on a variable nobody set, so the
 rule never runs and nothing says so. Elsewhere either name is a variable, as in

@@ -26,6 +26,8 @@ func awkBuiltinArity(key string) ([2]int, bool) {
 		return [2]int{0, 1}, true
 	case "substr", "split", "sub", "gsub":
 		return [2]int{2, 3}, true
+	case "gensub":
+		return [2]int{3, 4}, true
 	case "index", "match", "atan2":
 		return [2]int{2, 2}, true
 	case "sprintf":
@@ -58,6 +60,8 @@ func (in *awkInterp) evalBuiltin(node awkBuiltinExpr) (awkValue, error) {
 		return in.builtinSub(node, false)
 	case "gsub":
 		return in.builtinSub(node, true)
+	case "gensub":
+		return in.builtinGensub(node)
 	case "match":
 		return in.builtinMatch(node)
 	case "sprintf":
