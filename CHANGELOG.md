@@ -25,6 +25,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A pattern with a character outside ASCII matched nothing** in grep's and sed's basic regular
+  expressions, in an escape of awk's and in `find -path`: `grep 中`, `grep -w 中文`, `sed s/中/X/`
+  and `sed -n '/测试/p'` found and changed nothing, `find -path '*文件*'` found no file, and
+  `awk '/caf\é/'` was `invalid UTF-8`. Each byte was copied as the character of that number, `中`
+  as `ä¸­`. They match as busybox-w32's do; `grep -E` and `-F` were right already.
 - **comm and paste read every operand whole first**, so neither wrote a line until its inputs
   ended, and `paste - -` of 19 MB peaked at 109 MiB, comm of two 4 MB files at 48, where busybox's
   peak at 1.1. Both read a line at a time now, at 20 MiB, and run in a third to a half of the time

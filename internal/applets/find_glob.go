@@ -36,7 +36,7 @@ func compileFindPathPattern(pattern string) (*regexp.Regexp, error) {
 			builder.WriteString(class)
 			index += width - 1
 		default:
-			builder.WriteString(regexp.QuoteMeta(string(character)))
+			builder.WriteString(quoteByte(character))
 		}
 	}
 	builder.WriteString("$")

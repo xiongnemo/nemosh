@@ -84,7 +84,7 @@ func awkTranslateRegex(pattern string) string {
 		}
 		// Anything else -- `\/` most often -- is the character alone. Escaped so that a
 		// character which happens to be a metacharacter in Go cannot change meaning.
-		out.WriteString(regexp.QuoteMeta(string(next)))
+		out.WriteString(quoteByte(next))
 	}
 	return out.String()
 }

@@ -105,11 +105,22 @@ func translateBasicRegex(pattern string) (string, error) {
 			}
 			atStart = false
 		default:
-			out.WriteString(regexp.QuoteMeta(string(char)))
+			out.WriteString(quoteByte(char))
 			atStart = false
 		}
 	}
 	return out.String(), nil
+}
+
+// quoteByte is one byte of a pattern as Go's syntax spells it: an ASCII character quoted where it
+// is a metacharacter, and a byte of a character outside ASCII as it is. QuoteMeta(string(char))
+// made the byte the character of that number, `中` three Latin-1 letters, so `grep 中` and
+// `sed s/é/E/` matched nothing, where busybox-w32 matches them.
+func quoteByte(char byte) string {
+	if char >= 0x80 {
+		return string([]byte{char})
+	}
+	return regexp.QuoteMeta(string(char))
 }
 
 // sedControlEscapes are the escapes busybox's sed turns into the characters they name before
@@ -152,7 +163,7 @@ func translateEscape(char byte) (string, bool, error) {
 			"backreference \\%c in a pattern: this build matches with RE2, which has none", char)
 	default:
 		// `\.`, `\*`, `\[`, `\\` and the rest: a literal, quoted for Go.
-		return regexp.QuoteMeta(string(char)), false, nil
+		return quoteByte(char), false, nil
 	}
 }
 
