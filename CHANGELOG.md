@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`file`**, in Debian's libmagic's words: text by encoding and line terminators, scripts by
+  their `#!`, Windows executables in full, and ELF, archives, compressions, images, PDF and SQLite
+  by their headers; `-b`, `-i`, `--mime-type`, `-L`, `-N`. There was no file.
+
 - **`pstree`, psmisc's**: `pstree`, `-p`, `-a`, `-A`, `-U`, `-l`, `-n`, `-T`, `-c` and a PID, with
   identical branches folded into `N*[...]` and threads as `{name}`. There was no pstree.
 

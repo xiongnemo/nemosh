@@ -6,7 +6,15 @@ package capability
 // rest by usageText, so nothing that reads the table knows there is a split.
 func appletUsageTextDebian() map[string]Usage {
 	return map[string]Usage{
-		"column": {Summary: "Lay lines out in columns, or as a table.", Operands: "[FILE]...",
+		"file": {Summary: "Say what kind of file each FILE is.", Operands: "FILE...",
+			Options: map[string]string{"b": "leave the names out", "i": "say the MIME type and charset instead",
+				"L": "say what a link leads to rather than that it is one", "N": "do not line the answers up after the names",
+				"h": "say that a link is one, which is the default", "brief": "the same as -b", "mime": "the same as -i",
+				"dereference": "the same as -L", "no-pad": "the same as -N", "mime-type": "say the MIME type alone"},
+			Notes: []string{
+				"file(1)'s, in the words of Debian's libmagic: text by its encoding and line terminators, a script by its #!, a Windows executable in full.",
+				"An ELF, the archives, the compressions and the images are named with the first fields of their headers; what libmagic says beyond those is left out rather than guessed at. A FILE that cannot be opened is said so of, and the status stays 0.",
+			}}, "column": {Summary: "Lay lines out in columns, or as a table.", Operands: "[FILE]...",
 			Options: map[string]string{"t": "a table: each line a row, split at runs of spaces and tabs", "x": "fill across and then down, rather than down and then across",
 				"L": "keep empty lines", "d": "no line of -N's names", "s": "split at each of these characters instead; an empty field stays one",
 				"o": "join a table's columns with this rather than two spaces", "c": "this many columns wide, or unlimited",

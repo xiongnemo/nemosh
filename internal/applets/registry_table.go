@@ -47,6 +47,7 @@ var defaultApplets = [...]appletEntry{
 	{"factor", newFactorApplet},
 	{"false", newFalseApplet},
 	{"fgrep", newFgrepApplet},
+	{"file", newFileApplet},
 	{"find", newFindApplet},
 	{"fold", newFoldApplet},
 	{"free", newFreeApplet},
