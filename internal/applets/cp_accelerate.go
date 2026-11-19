@@ -67,7 +67,7 @@ func (r *cpRun) copyAccelerated(source, dest pathOperand, info os.FileInfo) (boo
 		return false, false
 	}
 	if !r.flags.move {
-		if err := settleCopiedFile(dest.host, info.Mode(), r.flags.preserve); err != nil {
+		if err := settleCopiedFile(dest.host, info.Mode(), r.flags.keep.times); err != nil {
 			return true, r.fail(cannotOpen(dest.operand, err))
 		}
 	}

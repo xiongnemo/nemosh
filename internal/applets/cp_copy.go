@@ -12,10 +12,12 @@ import (
 
 // cpFlags are the FILEUTILS flags busybox's cp hands copy_file (include/libbb.h:535-562).
 type cpFlags struct {
-	preserve, recurse, dereference, derefTop bool
-	interactive, noClobber                   bool
-	hardLink, softLink, noTargetDir          bool
-	update, verbose, removeDest, parents     bool
+	// keep is what -p, -a and --preserve keep; see cp_preserve.go.
+	keep                                 cpKeep
+	recurse, dereference, derefTop       bool
+	interactive, noClobber               bool
+	hardLink, softLink, noTargetDir      bool
+	update, verbose, removeDest, parents bool
 	// move is mv's copy across volumes, which keeps what a rename keeps; see cp_accelerate.go.
 	move      bool
 	targetDir string
@@ -36,6 +38,9 @@ type cpRun struct {
 	// into itself is noticed rather than copied again inside its copy, for ever.
 	made   []os.FileInfo
 	failed bool
+	// linked is each file with more than one name copied so far and where its copy is, which
+	// --preserve=links links the next of its names to.
+	linked map[fileID]string
 }
 
 // copy is libbb's copy_file (libbb/copy_file.c): it copies source to dest and answers whether
@@ -95,6 +100,9 @@ func (r *cpRun) copy(source, dest pathOperand, top bool) bool {
 	if !deref && sourceInfo.Mode()&os.ModeSymlink != 0 || r.flags.recurse && !sourceInfo.Mode().IsRegular() {
 		return r.copyLink(source, dest, sourceInfo, destExists)
 	}
+	if r.flags.keep.links {
+		return r.copyKeepingLinks(source, dest, sourceInfo)
+	}
 	return r.copyRegular(source, dest, sourceInfo)
 }
 
@@ -134,7 +142,7 @@ func (r *cpRun) copyDirectory(source, dest pathOperand, sourceInfo, destInfo os.
 		into := pathOperand{host: filepath.Join(dest.host, name), operand: joinOperand(dest.operand, name)}
 		ok = r.copy(inner, into, false) && ok
 	}
-	if created && !r.flags.preserve {
+	if created && !r.flags.keep.mode {
 		_ = applyPermissions(dest.host, bitsOfFileMode(sourceInfo.Mode())&^r.umask, true)
 	}
 	r.finish(source, dest, sourceInfo)
@@ -197,7 +205,7 @@ func (r *cpRun) copyLink(source, dest pathOperand, info os.FileInfo, destExists 
 	if err := os.Symlink(target, dest.host); err != nil {
 		return r.fail(fmt.Errorf("cannot create symlink '%s' to '%s': %s", dest.operand, target, causeText(err)))
 	}
-	if r.flags.preserve {
+	if r.flags.keep.owner {
 		r.preserveOwner(dest, info)
 	}
 	r.report(source, dest)

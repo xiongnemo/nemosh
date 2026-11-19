@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`cp --preserve[=LIST]` and `--no-preserve=LIST`**, GNU's: mode, ownership, timestamps, links
+  or all, read in order with `-p` and `-a`, so `cp -a --no-preserve=timestamps` keeps the rest.
+  `links` keeps a file with two names one file in the copy, and `-a` now does too, as GNU's `-a`
+  is `-dR --preserve=all`. It was `unknown option`.
+
 - **`diff -y` and `diff --color`**, GNU's side-by-side format and colours, byte for byte against
   GNU diffutils 3.12, with `-W`, `--suppress-common-lines` and `--left-column`; and GNU's long
   names for diff's letters, `--brief`, `--recursive`, `--ignore-case` and the rest. Each was

@@ -44,7 +44,7 @@ func newInstallApplet() Applet {
 		if err != nil {
 			return err
 		}
-		run := &cpRun{applet: "install", flags: cpFlags{dereference: true, preserve: options.has('p'), verbose: options.has('v')},
+		run := &cpRun{applet: "install", flags: cpFlags{dereference: true, keep: cpKeep{mode: options.has('p'), owner: options.has('p'), times: options.has('p')}, verbose: options.has('v')},
 			view: view, stdin: stdin, stdout: stdout, stderr: stderr, umask: processFileModeMask(view)}
 		install := installRun{cpRun: run, view: view, options: options, mode: mode, owner: owner}
 		if options.has('d') {

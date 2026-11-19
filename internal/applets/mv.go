@@ -158,7 +158,7 @@ func (r *mvRun) move(source, dest pathOperand, destExists bool) {
 			return
 		}
 	}
-	copier := &cpRun{ctx: r.ctx, applet: "mv", flags: cpFlags{recurse: true, preserve: true, move: true}, stderr: r.stderr, stdout: io.Discard, umask: r.umask}
+	copier := &cpRun{ctx: r.ctx, applet: "mv", flags: cpFlags{recurse: true, keep: cpKeep{mode: true, owner: true, times: true}, move: true}, stderr: r.stderr, stdout: io.Discard, umask: r.umask}
 	remover := &rmRun{applet: "mv", recursive: true, force: true, stdout: io.Discard, stderr: r.stderr}
 	if !copier.copy(source, dest, true) || !remover.remove(source.host, source.operand) {
 		r.failed = true

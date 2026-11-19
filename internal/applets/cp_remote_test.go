@@ -124,7 +124,7 @@ func TestMv_acrossVolumesToAShareStillKeepsStreams(t *testing.T) {
 		}
 		return windows.ERROR_UNEXP_NET_ERR
 	}
-	run := &cpRun{ctx: context.Background(), applet: "mv", flags: cpFlags{move: true, recurse: true, preserve: true},
+	run := &cpRun{ctx: context.Background(), applet: "mv", flags: cpFlags{move: true, recurse: true, keep: cpKeep{mode: true, owner: true, times: true}},
 		stderr: &bytes.Buffer{}, stdout: &bytes.Buffer{}}
 	info, err := os.Stat(source)
 	if err != nil {

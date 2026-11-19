@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 59   |
+| works   | 60   |
 | partial | 8    |
-| refused | 10   |
+| refused | 9    |
 | missing | 29   |
 
 ## Existing commands
@@ -68,7 +68,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `cp -a`, `-r`, `-u`, `-l`; `rm -rf`; `ln -sfn` | works | |
 | `mv -u` | works | |
 | `rm -I` | works | |
-| `cp --preserve=all` | refused | |
+| `cp --preserve=all`, `--no-preserve=mode`, `-a` keeping hard links | works | ownership as Windows keeps it; `context`, `xattr` by name refused |
 | `tar xzvf`, `czf`, `tf`, `xf -C`, `--exclude`, `cJf` | works | |
 | `tar -I zstd` | refused | no zstd |
 | `sed -i`, `-i.bak`, `-n '10,20p'`, `-E`, `'/^#/d'` | works | |

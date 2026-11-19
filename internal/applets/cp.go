@@ -206,11 +206,30 @@ func cpArguments(ctx context.Context, args []string) (cpFlags, []string, error) 
 			flags.removeDest = true
 		case name == "parents" && !valued:
 			flags.parents = true
+		case name == "preserve" || name == "no-preserve":
+			// --preserve's list is optional, so it is attached or it is the default, as getopt
+			// has an optional value; --no-preserve's is not.
+			if !valued && name == "preserve" {
+				value = "mode,ownership,timestamps"
+			} else if !valued {
+				if index+1 >= len(args) {
+					return flags, nil, missingOptionArgument(name)
+				}
+				index++
+				value = args[index]
+			}
+			letters, err := cpPreserveLetters(name, value, name == "preserve")
+			if err != nil {
+				return flags, nil, err
+			}
+			if letters != "" {
+				words = append(words, letters)
+			}
 		default:
 			return flags, nil, unknownLongOption(arg)
 		}
 	}
-	options, operands, err := parseAppletOptions(ctx, words, "pdRrfinlsLHaPvuT", "t")
+	options, operands, err := parseAppletOptions(ctx, words, "pdRrfinlsLHaPvuT"+cpPreserveFlags, "t")
 	if err != nil {
 		return flags, nil, err
 	}
@@ -218,7 +237,7 @@ func cpArguments(ctx context.Context, args []string) (cpFlags, []string, error) 
 		return flags, nil, errors.New("-l and -s cannot both be given")
 	}
 	archive := options.has('a')
-	flags.preserve = archive || options.has('p')
+	flags.keep = cpKeepFrom(options.order)
 	flags.recurse = archive || options.has('R') || options.has('r')
 	flags.dereference = !(archive || options.has('d') || options.has('P')) || options.has('L')
 	flags.derefTop = options.has('H')

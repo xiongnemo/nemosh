@@ -68,11 +68,16 @@ func askYes(stdin io.Reader) bool {
 // preserve_mode_ugid_time and verb_and_exit. A copy whose times or mode cannot be kept is still
 // a copy, so that is said and the status is left alone.
 func (r *cpRun) finish(source, dest pathOperand, info os.FileInfo) {
-	if r.flags.preserve {
+	keep := r.flags.keep
+	if keep.times {
 		if err := os.Chtimes(dest.host, info.ModTime(), info.ModTime()); err != nil {
 			fmt.Fprintf(r.stderr, "%s: cannot preserve times of '%s': %s\n", r.name(), dest.operand, causeText(err))
 		}
+	}
+	if keep.owner {
 		r.preserveOwner(dest, info)
+	}
+	if keep.mode {
 		if err := applyPermissions(dest.host, bitsOfFileMode(info.Mode()), info.IsDir()); err != nil {
 			fmt.Fprintf(r.stderr, "%s: cannot preserve permissions of '%s': %s\n", r.name(), dest.operand, causeText(err))
 		}
