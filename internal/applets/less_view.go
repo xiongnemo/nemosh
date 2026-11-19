@@ -81,7 +81,7 @@ func (p *lessPager) draw() {
 		// The spans are found in the line itself and then shifted past the line number,
 		// so `-N` moves the highlight without changing what matched. A line is cut at the
 		// screen's edge, by the columns it takes rather than its bytes; see less_render.go.
-		p.drawLine(row, prefix, p.lines[index], p.matchSpans(p.lines[index], utf8.RuneCountInString(prefix)))
+		p.drawLine(row, prefix, p.lines[index], p.matchSpans(p.searched(p.lines[index]), utf8.RuneCountInString(prefix)))
 	}
 	p.drawText(0, p.height-1, p.prompt(), style.Reverse(true))
 	p.screen.Show()
@@ -242,7 +242,7 @@ func (p *lessPager) runSearch(forward bool, from int) {
 		step = -1
 	}
 	for index := from; index >= 0 && index < len(p.lines); index += step {
-		if compiled.MatchString(p.lines[index]) {
+		if compiled.MatchString(p.searched(p.lines[index])) {
 			p.top = index
 			p.clampTop()
 			return

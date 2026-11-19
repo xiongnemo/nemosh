@@ -53,7 +53,7 @@ func appletUsageTextMore() map[string]Usage {
 				"I": "ignore case when searching", "E": "quit at the end rather than waiting",
 				"F": "quit at once if it all fits on one screen", "h": "list the keys",
 				"M": "accepted; there is one prompt style", "m": "accepted; there is one prompt style",
-				"R": "take colour sequences out, as busybox's does; without it a control character is drawn as its letter, reversed",
+				"R": "draw colour sequences as colour, as GNU's does; without it a control character is drawn as its letter, reversed",
 				"~": "accepted; the tildes past the end are always drawn"},
 			Notes: []string{
 				"With nowhere to page to it is `cat`, so `less f | head -3` and `less f > out` copy their input through -- which is what makes it safe to write in a script.",

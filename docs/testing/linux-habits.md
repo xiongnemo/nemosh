@@ -21,8 +21,8 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 62   |
-| partial | 8    |
+| works   | 63   |
+| partial | 7    |
 | refused | 7    |
 | missing | 29   |
 
@@ -87,7 +87,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `diff -u`, `-r`, `-q`; `patch -p1` | works | |
 | `diff -y`, `diff --color`, `diff --brief` and GNU's other long names | works | GNU's layout and colours, byte for byte |
 | `less -N`, `less -S` | works | |
-| `less -R` | partial | strips colour rather than showing it |
+| `less -R` | works | colour drawn, as GNU's; busybox's strips it |
 | `less +F` | refused | opened as a file |
 | `less a b` | partial | one stream, no `:n` |
 | `chmod +x`, `-R 755`; `stat -c '%a %n'` | works | on Windows only write has an effect |

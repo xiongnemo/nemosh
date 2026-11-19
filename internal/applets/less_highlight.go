@@ -62,6 +62,14 @@ func (p *lessPager) matchSpans(text string, offset int) [][2]int {
 	return spans
 }
 
+// searched is a line as a search reads it: without its colours under -R, as is.
+func (p *lessPager) searched(line string) string {
+	if p.settings.raw {
+		return lessWithoutSGR(line)
+	}
+	return line
+}
+
 // styleForColumn picks the style for one cell.
 func styleForColumn(plain, highlighted tcell.Style, column int, spans [][2]int) tcell.Style {
 	for _, span := range spans {

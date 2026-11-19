@@ -119,6 +119,11 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **`less -R` draws colour**, as GNU's does: `git log --color | less -R` and `ls --color=always
+  | less -R` show their colours, the 16, 256 and RGB ones and the attributes, and a search finds
+  a coloured word. It took the sequences out, as busybox's `-R` does. With no terminal, `-R`
+  copies them through.
+
 - **`grep -w` of one plain pattern is 21 times as fast**: `grep -cw err` of 88 MB takes 151 ms,
   where it took 3.27 s and busybox's takes 0.98. The pattern is searched for and the bytes either
   side of it looked at, where the regexp -w made began with an alternation Go could not take a

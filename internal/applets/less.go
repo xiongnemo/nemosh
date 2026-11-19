@@ -31,7 +31,7 @@ type lessOptions struct {
 	ignoreCase bool
 	quitAtEOF  bool
 	quitIfOne  bool
-	// raw is -R, which takes colour sequences out as busybox's does; see lessStripColour.
+	// raw is -R, which draws colour sequences as colour, as GNU's does; see less_colour.go.
 	raw bool
 }
 
@@ -74,7 +74,7 @@ func newLessApplet() Applet {
 		if screen == nil {
 			return writeLessStreaming(ctx, stdout, sources, settings)
 		}
-		return runLess(ctx, screen, startLessFeed(ctx, sources, settings.raw), name, settings, stdout)
+		return runLess(ctx, screen, startLessFeed(ctx, sources), name, settings, stdout)
 	}}
 }
 
@@ -152,7 +152,8 @@ func openLessSources(ctx context.Context, operands []string, stdin io.Reader) ([
 // writeLessStreaming is the `cat` path, a line written when it is read and flushed when the
 // input goes quiet, as the text filters flush (filter_output.go): it read everything first, so
 // `tail -f log | less > out` wrote nothing. -N is still honoured, because a script may have
-// asked for the numbers rather than for the paging, and -R still takes the colour out.
+// asked for the numbers rather than for the paging. What it reads it writes as it is, colour
+// sequences too, as GNU's less copies them; busybox's -R took them out here as well.
 func writeLessStreaming(ctx context.Context, stdout io.Writer, sources []lessSource, settings lessOptions) error {
 	output := newFilterOutput(stdout)
 	number := 0
@@ -161,9 +162,6 @@ func writeLessStreaming(ctx context.Context, stdout io.Writer, sources []lessSou
 		if failure == nil {
 			failure = readLessSource(ctx, output.input(contextReader{ctx: ctx, reader: source.reader}), func(line string) {
 				number++
-				if settings.raw {
-					line = lessStripColour(line)
-				}
 				if settings.numbers {
 					fmt.Fprintf(output, "%6d  ", number)
 				}

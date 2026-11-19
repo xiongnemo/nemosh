@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,8 +36,6 @@ type lessFeed struct {
 	lines []string
 	ended bool
 	err   error
-	// raw is -R: colour sequences are taken out of a line as it is read, as busybox takes them.
-	raw bool
 	// changed is told of every line, for the -F wait before there is a screen; screen, once
 	// set, is woken instead, and waking says a wake is already on its way.
 	changed chan struct{}
@@ -55,9 +52,9 @@ type lessWake struct{ when time.Time }
 func (w *lessWake) When() time.Time { return w.when }
 
 // startLessFeed reads sources in order until they end or ctx does.
-func startLessFeed(ctx context.Context, sources []lessSource, raw bool) *lessFeed {
+func startLessFeed(ctx context.Context, sources []lessSource) *lessFeed {
 	readCtx, cancel := context.WithCancel(ctx)
-	feed := &lessFeed{raw: raw, changed: make(chan struct{}, 1), stop: cancel, done: make(chan struct{})}
+	feed := &lessFeed{changed: make(chan struct{}, 1), stop: cancel, done: make(chan struct{})}
 	go feed.read(readCtx, sources)
 	return feed
 }
@@ -94,9 +91,6 @@ func readLessSource(ctx context.Context, reader io.Reader, add func(string)) err
 }
 
 func (f *lessFeed) add(line string) {
-	if f.raw {
-		line = lessStripColour(line)
-	}
 	f.mu.Lock()
 	f.lines = append(f.lines, line)
 	f.mu.Unlock()
@@ -161,28 +155,4 @@ func (f *lessFeed) waitFor(ctx context.Context, count int) error {
 			return ctx.Err()
 		}
 	}
-}
-
-// lessStripColour is a line with its colour sequences taken out, as busybox's -R takes them
-// (miscutils/less.c:550-566): ESC starts one, and digits, `[`, `;` and `m` go with it until
-// the `m` that ends it. Any other byte ends it too, and is kept.
-func lessStripColour(line string) string {
-	if strings.IndexByte(line, 0x1b) < 0 {
-		return line
-	}
-	out := make([]byte, 0, len(line))
-	escape := false
-	for index := 0; index < len(line); index++ {
-		char := line[index]
-		switch {
-		case char == 0x1b:
-			escape = true
-		case escape && (char >= '0' && char <= '9' || char == '[' || char == ';' || char == 'm'):
-			escape = char != 'm'
-		default:
-			escape = false
-			out = append(out, char)
-		}
-	}
-	return string(out)
 }

@@ -29,6 +29,12 @@ func (p *lessPager) drawLine(row int, prefix, text string, spans [][2]int) {
 	runeIndex := len([]rune(prefix))
 	state := -1
 	for rest := text; rest != "" && column < p.width; {
+		// Under -R a colour sequence is the style of what follows, and neither a column nor a
+		// rune of what a search matched; see less_colour.go.
+		if length, params := lessSGRAt(rest); p.settings.raw && length > 0 {
+			plain, rest, state = lessSGR(plain, params), rest[length:], -1
+			continue
+		}
 		cluster, remaining, boundaries, newState := uniseg.StepString(rest, state)
 		rest, state = remaining, newState
 		style := styleForColumn(plain, plain.Reverse(true), runeIndex, spans)

@@ -196,8 +196,10 @@ the shell through the frame.
 `less` draws as its input arrives since 2026-11-16: `ping -t localhost | less` shows the
 first replies at once and the bottom line says it is waiting rather than (END); `q` leaves
 and the prompt comes back with ping gone. `ls --color=always | less` shows a reversed `[`
-where each colour starts, and `ls --color=always | less -R` the names alone. A file with
-Chinese in it lines up, the character after a wide one in its own column.
+where each colour starts, and since 2026-11-20 `ls --color=always | less -R` the names in
+their colours, as GNU's less draws them, as does `diff --color=always a b | less -R`; a search
+for a coloured word finds it and reverses it in its colours. A file with Chinese in it lines
+up, the character after a wide one in its own column.
 
 `cd D:` changes drive since 2026-11-16, on a machine with a second drive: `cd D:/somewhere`,
 `cd C:/Windows`, then `cd D:` is back at D:/somewhere, `cd C:` stays, and `cmd /c "cd D:"`

@@ -28,7 +28,7 @@ func pagerOnPipe(t *testing.T, settings lessOptions) (tcell.SimulationScreen, *o
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	screen := tcell.NewSimulationScreen("UTF-8")
-	feed := startLessFeed(ctx, []lessSource{{reader: reader, close: func() { reader.Close() }}}, settings.raw)
+	feed := startLessFeed(ctx, []lessSource{{reader: reader, close: func() { reader.Close() }}})
 	finished := make(chan error, 1)
 	go func() { finished <- runLess(ctx, screen, feed, "(standard input)", settings, io.Discard) }()
 	// Not read until runLess has started it: the simulation screen's Init is not locked
@@ -121,23 +121,6 @@ func TestLess_leavingStopsTheReader(t *testing.T) {
 	case <-feed.done:
 	case <-time.After(5 * time.Second):
 		t.Fatal("the reader was still reading five seconds after less left")
-	}
-}
-
-// -R takes colour sequences out, as busybox's does as it reads (miscutils/less.c:550-566), so
-// `ls --color | less -R` is the names. Without it they were drawn as they came.
-func TestLess_rawTakesColourSequencesOut(t *testing.T) {
-	for _, test := range []struct{ in, want string }{
-		{"\x1b[31mred\x1b[0m", "red"},
-		{"\x1b[1;32mbold green\x1b[m plain", "bold green plain"},
-		{"no colour", "no colour"},
-		// An escape that is not a colour ends the discarding at its first other byte, which
-		// is kept, as busybox keeps it.
-		{"\x1b]0;title\x07x", "]0;title\x07x"},
-	} {
-		if got := lessStripColour(test.in); got != test.want {
-			t.Errorf("lessStripColour(%q) = %q, want %q", test.in, got, test.want)
-		}
 	}
 }
 
