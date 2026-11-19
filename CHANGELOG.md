@@ -29,6 +29,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`${v//old/new}` took seconds on a long value**: it tried the pattern from every place to every
+  place after it, making both into runes each time, so replacing in 3,000 characters took 5.8 s and
+  215 MiB, where busybox takes 39 ms. A pattern with nothing of a pattern's in it is searched for:
+  6 ms. The other patterns are matched as before.
 - **A pattern with a character outside ASCII matched nothing** in grep's and sed's basic regular
   expressions, in an escape of awk's and in `find -path`: `grep 中`, `grep -w 中文`, `sed s/中/X/`
   and `sed -n '/测试/p'` found and changed nothing, `find -path '*文件*'` found no file, and
