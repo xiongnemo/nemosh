@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 57   |
+| works   | 58   |
 | partial | 8    |
-| refused | 12   |
+| refused | 11   |
 | missing | 29   |
 
 ## Existing commands
@@ -52,7 +52,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `ls -lah`, `-ltr`, `-lS`, `--color=auto`, `-d */`, `-i`, `-n` | works | |
 | `ls --time-style=long-iso` | works | GNU's styles and +FORMAT |
 | `tail -f`, `-F`, `-n +2`, `-f a b`; `head -n -5`, `head -c 100` | works | |
-| `tail --pid=N` | refused | |
+| `tail -f --pid=N`; `--lines=N`, `--follow=name` and GNU's other long options | works | stops once N has ended, as GNU's does |
 | `free -h`, `free -m` | works | |
 | `free -t`, `free -s N`, `free -w` | works | procps-ng's; buffers are zero, Windows keeping none apart |
 | `uptime`, `uptime -s` | works | |

@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/xiongnemo/nemosh/internal/proc"
 )
 
 // tailFollower is tail -f, busybox's `if (FOLLOW) while (1)`: every -s seconds each FILE's
@@ -25,8 +27,20 @@ type tailFollower struct {
 	last int
 }
 
+// run follows until it is interrupted, or with --pid until that process has ended, as GNU's
+// tail_forever does: whether it has is asked before each pass, so the pass after it ended reads
+// what it wrote, and then tail is done, status 0.
 func (f *tailFollower) run(ctx context.Context) error {
 	f.ctx = ctx
+	ended := func() bool { return false }
+	if f.follow.pid != 0 {
+		watcher, err := proc.Watch(f.follow.pid)
+		if err != nil {
+			return err
+		}
+		defer watcher.Close()
+		ended = watcher.Ended
+	}
 	buffer := make([]byte, 8192)
 	for {
 		select {
@@ -34,19 +48,28 @@ func (f *tailFollower) run(ctx context.Context) error {
 			return context.Cause(ctx)
 		case <-time.After(time.Duration(f.follow.period) * time.Second):
 		}
-		for index, file := range f.files {
-			var next *os.File
-			if f.follow.retry {
-				next = f.look(file)
-			}
-			if !file.open() {
-				continue
-			}
-			if err := f.drain(index, file, next, buffer); err != nil {
-				return err
-			}
+		last := ended()
+		if err := f.pass(buffer); err != nil || last {
+			return err
 		}
 	}
+}
+
+// pass is one look at every FILE.
+func (f *tailFollower) pass(buffer []byte) error {
+	for index, file := range f.files {
+		var next *os.File
+		if f.follow.retry {
+			next = f.look(file)
+		}
+		if !file.open() {
+			continue
+		}
+		if err := f.drain(index, file, next, buffer); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // drain writes what has been added to a FILE since the last look, and then what its

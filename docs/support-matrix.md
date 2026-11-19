@@ -968,7 +968,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input; zcat's data chooses gzip, bzip2 or xz by its first bytes, as busybox's does. A FILE that is not compressed is said and the next one read, status 1 at the end, as GNU's gzip does; busybox's stops at it | refused by name |
 | `hd`, `hexdump` | `-b -c -d -o -x -C -v -e -f -n -s`, each format added in the order given; `-e`'s units and every conversion busybox's dump takes, `%_a %_A %_c %_p %_u` among them; `hd` is `-C` first | refused by name |
 | `httpd` | `-p -h -a -v`; `-f` accepted, this always runs in the foreground | refused by name |
-| `head` | `-n -c -q -v`, the `-N` form, and an attached value (`-n2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's | refused by name |
+| `head` | `-n -c -q -v`, GNU's `--lines --bytes --quiet --silent --verbose`, the `-N` form, and an attached value (`-n2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's | refused by name |
 | `id` | `-u -g -G -n -r`, and their clusters; `-r` is the same id, Windows having no real one apart, and alone is refused as busybox refuses it | refused by name |
 | `install` | `-c -d -D -p -s -v -b -o -g -m -t` and busybox's long forms; the mode is 0755 or `-m`'s, whatever the umask. `-o` and `-g` take a number or a name, on Windows this session's account or root, and change nothing there, as busybox-w32's chown does not. `-s` runs strip, which is a program and no applet, so it is not found and the status is 1 | refused by name |
 | `ln` | `-s -f -n -b -S -v -T`; `TARGET... DIR`, and a lone `TARGET` linked into the working directory | refused by name |
@@ -1018,7 +1018,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `tac` | none | refused by name |
 | `tsort` | none; its words are paired across lines and an odd one out refused, and a cycle is said, `cycle at NAME`, and broken, the rest written with status 1, as busybox's does; one FILE. Items with no order between them come out in the order they were first read, an order of its own: busybox and GNU each have theirs | refused by name |
 | `tar` | `-c -t -x -v -z -j -J -a -O -f -C -k -m -o -h -T -X`, busybox's long options, `--lzma`, `--exclude`, `--strip-components`, `--no-recursion` and `--overwrite` among them, and a first argument without a dash as its letters, `tar cf a.tar dir`, as busybox's; `-f` a device too; the FILEs name what is listed or extracted, see **The archivers** | refused by name |
-| `tail` | `-n -c -q -v -f -F -s`, the `-N` form, `+N` as the first argument, and an attached value (`-n2`, `-n+2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's; every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
+| `tail` | `-n -c -q -v -f -F -s`, GNU's long options and `--pid` (see **`head` and `tail`**), the `-N` form, `+N` as the first argument, and an attached value (`-n2`, `-n+2`); a count may end in `b`, `k` or `m`, for 512, 1024 or 1048576, as busybox's; every FILE opened before any is printed, headers counted from the ones that opened, as busybox's tail_main has it; `-f` reads a FILE from its start again when it shrinks, and `-F` follows one replaced by its name | refused by name |
 | `test`, `[` | POSIX expressions; on Windows `-x` is busybox-w32's execute bit: a directory, a name ending `.com .exe .sh .bat .cmd`, or a file that begins `#!` or is a program image, and not a DLL whatever it is called | an operand, per the POSIX one-argument rule |
 | `tee` | `-a -i`; `-` is stdout, and a file that cannot be opened is named while the rest are written | refused by name |
 | `touch` | `-a -c -d -f -h -m -r -t` and busybox's long forms; DATE is read as `date -d` reads it, GNU's relative items with it; `-t`'s STAMP takes none, as GNU's does not | refused by name |
@@ -2632,6 +2632,17 @@ reopens one that its name has come to mean, reading the old one to its end first
 Windows the FILE is opened sharing delete, so the program writing a log can rotate it
 while tail follows; busybox-w32's open does not share delete, and `mv log log.1` under
 its `tail -F` is `Device or resource busy`.
+
+Both take GNU's long options, which busybox's have not: `--lines`, `--bytes`, `--quiet`,
+`--silent` and `--verbose`, and tail's `--follow`, `--retry`, `--sleep-interval` and
+`--pid`. `--follow` is `-f` and `--follow=name` is `-F`, which waits for a FILE that has gone
+as busybox's does, where GNU's `--follow=name` alone gives it up; `--retry` with `-f` is `-F`.
+**`tail -f --pid=PID`** follows until that process has ended, then reads what it wrote and
+stops with status 0, as GNU's does. The process is held open rather than its pid asked after
+each time, so a pid a new process takes is not mistaken for it, and the pid is checked
+against the process opened, for Windows ignores a pid's low two bits and `OpenProcess` of 13
+opens 12. One this session may not open is refused, where GNU's takes `EPERM` as alive.
+Without `-f`, `--pid` is said to be ignored, in GNU's words.
 
 ### `ls`
 

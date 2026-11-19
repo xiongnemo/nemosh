@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`tail -f --pid=PID`**, GNU's: following stops once that process has ended, after reading
+  what it wrote. head and tail take GNU's long options too, `--lines`, `--bytes`, `--quiet`,
+  `--silent`, `--verbose`, and tail's `--follow[=name]`, `--retry` and `--sleep-interval`. Each
+  was `unknown option`.
+
 - **awk has `systime`, `strftime`, `mktime`, `and`, `or`, `xor`, `compl`, `lshift` and
   `rshift`**, which busybox's awk has and this one called undefined functions: `awk '{ print
   strftime("%F %T"), $0 }'` stamps a log. strftime takes every conversion `date` does, and both

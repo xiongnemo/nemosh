@@ -50,4 +50,10 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"lstime-style", "STYLE"},
 	{"realpathrelative-to", "DIR"},
 	{"realpathrelative-base", "DIR"},
+	{"headlines", "LINES"},
+	{"headbytes", "BYTES"},
+	{"taillines", "LINES"},
+	{"tailbytes", "BYTES"},
+	{"tailsleep-interval", "SECONDS"},
+	{"tailpid", "PID"},
 }

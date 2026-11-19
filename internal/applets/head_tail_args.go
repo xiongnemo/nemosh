@@ -80,7 +80,11 @@ func headTailArgs(applet string, args []string, defaultCount int64, allowBytes, 
 			spec = countSpec{count: digits}
 			continue
 		}
-		consumed, err := readHeadTailFlags(arg, args, index, allowBytes, &spec, &headers, follow)
+		read := readHeadTailFlags
+		if arg[1] == '-' {
+			read = readHeadTailLong
+		}
+		consumed, err := read(arg, args, index, allowBytes, &spec, &headers, follow)
 		if err != nil {
 			return countSpec{}, headers, nil, err
 		}
@@ -111,11 +115,12 @@ func headTailSupported(allowBytes, follows bool) []string {
 	return supported
 }
 
-// tailFollow is tail's -f, -F and -s: whether to follow the FILEs as they grow, by name as
-// well with -F, and the seconds to sleep between looks.
+// tailFollow is tail's -f, -F, -s and --pid: whether to follow the FILEs as they grow, by name
+// as well with -F, the seconds to sleep between looks, and the process whose end ends it, 0 for
+// none.
 type tailFollow struct {
 	follow, retry bool
-	period        int
+	period, pid   int
 }
 
 // readHeadTailFlags reads one argument's worth of clustered letters, reporting

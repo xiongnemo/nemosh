@@ -148,6 +148,14 @@ func newTailApplet() Applet {
 		if err != nil {
 			return err
 		}
+		// GNU's words for what does nothing without -f.
+		if !follow.follow && follow.pid != 0 {
+			fmt.Fprintln(stderr, "tail: warning: PID ignored; --pid=PID is useful only when following")
+		}
+		if !follow.follow && follow.retry {
+			fmt.Fprintln(stderr, "tail: warning: --retry ignored; --retry is useful only when following")
+			follow.retry = false
+		}
 		return runTail(ctx, spec, headers, follow, paths, stdin, stdout, stderr)
 	}}
 }
