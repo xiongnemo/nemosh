@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`ss`, iproute2's**: `ss -tulpn` and the rest, every socket with the process that owns it,
+  from Windows' socket tables. Recv-Q and Send-Q are `-`, which Windows does not say. There was
+  no ss, and Windows' netstat answers `-tulpn` with its usage.
+
 - **`ip`, iproute2's, to read with**: `ip a`, `ip -br a`, `ip link`, `ip r`, `-4`, `-6`, `-o` and
   `show dev NAME`, in iproute2's fields, from Windows' adapters and route table. A change is
   refused with the PowerShell command that makes it. There was no ip.

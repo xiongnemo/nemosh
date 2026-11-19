@@ -116,6 +116,7 @@ var defaultApplets = [...]appletEntry{
 	{"sleep", newSleepApplet},
 	{"sort", newSortApplet},
 	{"split", newSplitApplet},
+	{"ss", newSsApplet},
 	{"ssl_client", func() Applet { return newSslClientApplet("ssl_client") }},
 	{"stat", newStatApplet},
 	{"strings", newStringsApplet},

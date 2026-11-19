@@ -40,6 +40,7 @@ var commands = []Command{
 	{Name: "grep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "egrep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "fgrep", Short: "invrRlcqwxFoshHEmaIzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
+	{Name: "ss", Short: "tulanp46Hs", Long: []string{"tcp", "udp", "listening", "all", "numeric", "processes", "ipv4", "ipv6", "no-header", "summary"}, Operand: AnyPath},
 	{Name: "ip", Short: "46o", Long: []string{"brief", "oneline"}, Operand: AnyPath},
 	{Name: "tree", Short: "adfilFpugshDrULIP", ValueShort: "LIP", Long: []string{"dirsfirst", "noreport", "charset"}, ValueLong: []string{"charset"}, Operand: AnyPath},
 	{Name: "hostname", Short: "sfdiIAavbyF", ValueShort: "F", Long: []string{"short", "fqdn", "long", "domain", "ip-address", "all-ip-addresses", "all-fqdns", "alias", "verbose", "boot", "file", "yp", "nis"}, ValueLong: []string{"file"}, Operand: AnyPath},
