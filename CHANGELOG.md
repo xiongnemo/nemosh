@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`diff -y` and `diff --color`**, GNU's side-by-side format and colours, byte for byte against
+  GNU diffutils 3.12, with `-W`, `--suppress-common-lines` and `--left-column`; and GNU's long
+  names for diff's letters, `--brief`, `--recursive`, `--ignore-case` and the rest. Each was
+  `unknown option`.
+
 - **`tail -f --pid=PID`**, GNU's: following stops once that process has ended, after reading
   what it wrote. head and tail take GNU's long options too, `--lines`, `--bytes`, `--quiet`,
   `--silent`, `--verbose`, and tail's `--follow[=name]`, `--retry` and `--sleep-interval`. Each

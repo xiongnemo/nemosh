@@ -18,13 +18,24 @@ import (
 
 func newDiffApplet() Applet {
 	return simpleApplet{name: "diff", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, _ io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "uqiwBNsrabdTt", "ULS")
+		when, args, err := diffColorOption(args)
+		if err != nil {
+			return err
+		}
+		options, operands, err := parseAppletLongOptions(ctx, args, diffLongOptions, "uqiwBNsrabdTty\x01\x02", "ULSW")
 		if err != nil {
 			return err
 		}
 		if len(operands) != 2 {
 			return fmt.Errorf("two file operands are required")
 		}
+		width, err := diffWidth(options)
+		if err != nil {
+			return err
+		}
+		side := newDiffSide(width, options.has('t'))
+		side.suppressCommon, side.leftColumn = options.has('\x01'), options.has('\x02')
+		side.color = colorEnabled(when, stdout)
 		context := 3
 		if options.has('U') {
 			parsed, err := parseGrepNumber(options.value('U'))
@@ -50,6 +61,8 @@ func newDiffApplet() Applet {
 			minimal:            options.has('d'),
 			recursive:          options.has('r'),
 			start:              options.value('S'),
+			sideBySide:         options.has('y'),
+			side:               side,
 		}
 		return request.diffOperands(ctx, stdin, stdout)
 	}}
@@ -77,6 +90,10 @@ type diffRequest struct {
 	recursive bool
 	start     string
 	absent    [2]bool
+	// sideBySide is -y, laid out by side, which carries --color's answer for unified output
+	// too. See diff_side.go.
+	sideBySide bool
+	side       diffSide
 }
 
 func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
@@ -109,6 +126,12 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 	if r.ignoreBlank {
 		hunks = slices.DeleteFunc(hunks, func(hunk diffHunk) bool { return onlyEmptyLinesChange(edits[hunk.from:hunk.to]) })
 	}
+	// -y writes both files whole, the same or not, as GNU's does.
+	if r.sideBySide && !r.brief {
+		if err := r.side.writeSideBySide(stdout, edits, right); err != nil {
+			return err
+		}
+	}
 	if len(hunks) == 0 {
 		if r.same {
 			if _, err := fmt.Fprintf(stdout, "Files %s and %s are identical\n", r.left, r.right); err != nil {
@@ -123,6 +146,9 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 		}
 		// Status 1 means "they differ", which is what a script tests. Only a
 		// failure to *compare* is status 2, and grepStatus is the precedent.
+		return ErrExitFalse
+	}
+	if r.sideBySide {
 		return ErrExitFalse
 	}
 	if err := r.writeUnified(stdout, edits, hunks); err != nil {

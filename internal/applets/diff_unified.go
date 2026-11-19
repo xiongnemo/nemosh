@@ -53,7 +53,7 @@ func (r diffRequest) writeUnifiedTo(stdout io.Writer, edits []diffEdit, hunks []
 	}
 	// No timestamps in the header: busybox omits them, and a timestamp would make
 	// the output differ between two runs over unchanged files.
-	if _, err := fmt.Fprintf(stdout, "--- %s\n+++ %s\n", left, right); err != nil {
+	if _, err := fmt.Fprintf(stdout, "%s\n%s\n", r.colored(diffColorHeader, "--- "+left), r.colored(diffColorHeader, "+++ "+right)); err != nil {
 		return err
 	}
 	for _, hunk := range hunks {
@@ -83,6 +83,15 @@ func (r diffRequest) diffLineText(text string) string {
 		return "\t" + text
 	}
 	return text
+}
+
+// colored is text in color and reset, under --color; a line of context, which has no color, and
+// everything without --color are text alone.
+func (r diffRequest) colored(color, text string) string {
+	if !r.side.color || color == "" {
+		return text
+	}
+	return color + text + diffColorReset
 }
 
 // diffHunk is a half-open range of the edit script.
@@ -125,22 +134,22 @@ func groupDiffHunks(edits []diffEdit, context int) []diffHunk {
 
 func (r diffRequest) writeDiffHunk(stdout io.Writer, edits []diffEdit) error {
 	leftStart, leftCount, rightStart, rightCount := hunkRanges(edits)
-	if _, err := fmt.Fprintf(stdout, "@@ -%s +%s @@\n",
-		hunkRange(leftStart, leftCount), hunkRange(rightStart, rightCount)); err != nil {
+	numbers := fmt.Sprintf("@@ -%s +%s @@", hunkRange(leftStart, leftCount), hunkRange(rightStart, rightCount))
+	if _, err := fmt.Fprintf(stdout, "%s\n", r.colored(diffColorNumber, numbers)); err != nil {
 		return err
 	}
 	for _, edit := range edits {
-		marker := " "
+		marker, color := " ", ""
 		switch edit.kind {
 		case editRemove:
-			marker = "-"
+			marker, color = "-", diffColorFor(true)
 		case editAdd:
-			marker = "+"
+			marker, color = "+", diffColorFor(false)
 		}
 		// A line keeps its newline, so a last line without one is said to have none, as
 		// busybox and every diff say it, and patch reads it.
 		text, ended := strings.CutSuffix(edit.text, "\n")
-		if _, err := fmt.Fprintf(stdout, "%s%s\n", marker, r.diffLineText(text)); err != nil {
+		if _, err := fmt.Fprintf(stdout, "%s\n", r.colored(color, marker+r.diffLineText(text))); err != nil {
 			return err
 		}
 		if !ended {

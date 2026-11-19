@@ -56,4 +56,8 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"tailbytes", "BYTES"},
 	{"tailsleep-interval", "SECONDS"},
 	{"tailpid", "PID"},
+	{"diffW", "COLUMNS"},
+	{"diffwidth", "COLUMNS"},
+	{"difflabel", "LABEL"},
+	{"diffstarting-file", "FILE"},
 }

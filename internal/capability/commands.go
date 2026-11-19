@@ -142,7 +142,7 @@ var commands = []Command{
 	{Name: "hd", Short: "bcdoxCvefns", ValueShort: "efns", FileShort: "f", Operand: AnyPath},
 	{Name: "uuencode", Short: "m", Operand: AnyPath},
 	{Name: "uudecode", Short: "o", ValueShort: "o", Operand: AnyPath},
-	{Name: "diff", Short: "uqiwBNsrabdTtULS", ValueShort: "ULS", Operand: AnyPath},
+	{Name: "diff", Short: "uqiwBNsrabdTtyULSW", ValueShort: "ULSW", Long: []string{"side-by-side", "width", "suppress-common-lines", "left-column", "color", "colour", "unified", "brief", "report-identical-files", "ignore-case", "ignore-all-space", "ignore-space-change", "ignore-blank-lines", "new-file", "label", "initial-tab", "expand-tabs", "text", "minimal", "recursive", "starting-file"}, ValueLong: []string{"width", "label", "starting-file"}, Operand: AnyPath},
 	{Name: "patch", Short: "RuNEfgpi", ValueShort: "pi", FileShort: "i", Long: []string{"reverse", "unified", "strip", "input", "forward", "remove-empty-files", "force", "get", "dry-run", "backup-if-mismatch", "no-backup-if-mismatch"}, ValueLong: []string{"strip", "input", "get"}, Operand: AnyPath},
 	{Name: "wget", Short: "cqSOoPUT", ValueShort: "OoPUT", Operand: AnyPath,
 		Long: []string{"header", "spider"}, ValueLong: []string{"header"}},

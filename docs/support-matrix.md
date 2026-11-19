@@ -956,7 +956,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `cp` | `-a -d -P -L -H -p -f -i -n -l -s -T -t -u -v -r -R`, and busybox's long forms; a file is never copied onto itself, and a destination that is there is replaced, read-only or not, as busybox-w32 replaces it. `-r` follows symbolic links, where busybox copies them. A file of 4 MiB or more is copied by CopyFile2 on local drives, and a megabyte at a time to or from a share, so that a copy a lost link cuts short is a short file, as busybox's is, and Ctrl-C ends it at the next megabyte | refused by name |
 | `cut` | `-b -c -f -F -d -O -s -D -n`, `--output-delimiter`, and GNU's `--complement`, what LIST does not name; `-c` counts bytes, as busybox's does, `-F` splits where an extended regular expression matches, and a `-d` of a newline cuts lines | refused by name |
 | `date` | `-d -D -I -r -R -u` and busybox's long forms; TIME in every form busybox's parse_datestr reads, and where none reads it GNU's relative items: `now`, `today`, `yesterday`, `tomorrow`, `N UNIT [ago]`, `+N UNIT`, `next`/`last`/`this` UNIT or day of the week, a day of the week alone (the next such day, or today, at midnight), and any of them after a date or time busybox reads, which they move; UNIT is a year, month, fortnight, week, day, hour, minute or second, as parse_datetime has them. `%N` in FORMAT, with glibc's flags and widths, `%-d %_H %^a %10Y`, and `%q`. Setting the clock, `-s` or a TIME operand, is refused | refused by name |
-| `diff` | `-u -U -q -s -i -w -b -B -d -N -L -T -t -a -r -S`; unified always; the edit script found as busybox's is, by its Unix diff of Hunt and McIlroy ported -- lines classed by its hash, stone trying at most max(256, √n) lines of a class but under `-d` -- so the output is busybox's, and memory is linear in the lines; `-i` lowers A to Z alone; two directories compared as busybox's diffdir does (`Only in`, `Common subdirectories`, `-r`, `-N`, `-S`), and a directory against a file as the file of that name in it; a last line without a newline is another line, and said to have none; files holding a NUL only `differ`, but under `-a`; `-w`, `-b` and `-B` read lines as busybox's read_token does, so `-w` passes over all white space, `-b` a change in how much of it there is, and `-B` a hunk of empty lines only | refused by name |
+| `diff` | `-u -U -q -s -i -w -b -B -d -N -L -T -t -a -r -S`, GNU's `-y` and `-W`, `--suppress-common-lines`, `--left-column`, `--color` and GNU's long names for the letters; unified unless `-y`; the edit script found as busybox's is, by its Unix diff of Hunt and McIlroy ported -- lines classed by its hash, stone trying at most max(256, √n) lines of a class but under `-d` -- so the output is busybox's, and memory is linear in the lines; `-i` lowers A to Z alone; two directories compared as busybox's diffdir does (`Only in`, `Common subdirectories`, `-r`, `-N`, `-S`), and a directory against a file as the file of that name in it; a last line without a newline is another line, and said to have none; files holding a NUL only `differ`, but under `-a`; `-w`, `-b` and `-B` read lines as busybox's read_token does, so `-w` passes over all white space, `-b` a change in how much of it there is, and `-B` a hunk of empty lines only | refused by name |
 | `dirname` | none needed; one NAME, a second refused | refused by name |
 | `dos2unix` | `-u -d`; converts **in place** with a file operand | refused by name |
 | `du` | `-a -s -d -c -h -k -m -b -l -x -H -L`; what the filesystem allocated, in kilobytes, each directory printed after what it holds and in the order it lists them. A directory and a file with several links are counted once unless `-l`, and a junction is a link as a symbolic link is. On Windows a plain file's size and identity are what its directory's listing says, with no stat, which can be behind a write still under way, as Explorer's are; busybox stats each. Of `-h -k -m`, `-H -L` and `-s -d` the last wins. GNU's long options as well: each letter's (`--max-depth=N`, `--summarize`, `--all`, `--total`, `--human-readable`, `--bytes`, `--count-links`, `--one-file-system`, `--dereference`, `--dereference-args`), and three busybox's has not got: `--apparent-size`, what files hold rather than what they take, rounded up to the unit at the end as GNU's is; `--exclude=PATTERN`, an entry whose name, or for a pattern with a slash the path printed, matches, counted nowhere; and `-X FILE` or `--exclude-from=FILE`, its patterns a line each | refused by name |
@@ -1379,7 +1379,7 @@ both directions with busybox's own `diff` and `patch`.
 `diff` completes a family that was already half here -- `cmp` compares bytes,
 `comm` compares sorted lines -- and is absent from stock Windows entirely.
 
-- **The output is unified always**, which is busybox's default and *not* GNU's:
+- **The output is unified unless `-y`**, which is busybox's default and *not* GNU's:
   GNU prints the older "normal" format unless asked. 8 of 8 measured forms agree
   with busybox byte for byte.
 - **No timestamps in the header**, again following busybox, so two runs over
@@ -1390,6 +1390,16 @@ both directions with busybox's own `diff` and `patch`.
   thousands, so without it a large pair costs gigabytes.
 - `-i`, `-w` and `-B` change what "the same line" *means* rather than how the diff
   is computed.
+- **`-y`, GNU's side-by-side format**, which busybox's has not got, as GNU's side.c lays it
+  out, byte for byte against GNU diffutils 3.12: the columns padded with tabs unless `-t`, the
+  gutter at `(half + column2 - 1) / 2`, `|` `<` `>`, and `\` or `/` where only one of two lines
+  ends with a newline; a line cut at the half width counted in columns, a wide character two.
+  `-W` is the width, 130 by default. Both files are written whole even when they are the same,
+  as GNU's are. Under `-B` a change of empty lines alone is still marked, where GNU's prints it
+  as the same and drops what has no partner.
+- **`--color[=WHEN]`** is GNU's palette: a header bold, `@@` cyan, removed red, added green,
+  reset before the newline, and under `-y` the `<` and `>` lines only, reset after it. Plain
+  `--color` is `auto`, as GNU's is, where `ls`'s is `always`.
 
 `patch` **refuses a hunk that does not match, naming the hunk, the line, and the
 text it found instead.** There is deliberately no fuzz: shifting a hunk up and

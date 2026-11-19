@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 58   |
+| works   | 59   |
 | partial | 8    |
-| refused | 11   |
+| refused | 10   |
 | missing | 29   |
 
 ## Existing commands
@@ -85,7 +85,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `uniq -c`; `cut -d: -f1,3`, `-c1-10`; `tr -d`, `-s`; `wc -l`; `nl`; `xargs -I{} -P4 -n1 -0` | works | |
 | `cut --complement` | works | |
 | `diff -u`, `-r`, `-q`; `patch -p1` | works | |
-| `diff -y`, `diff --color` | refused | |
+| `diff -y`, `diff --color`, `diff --brief` and GNU's other long names | works | GNU's layout and colours, byte for byte |
 | `less -N`, `less -S` | works | |
 | `less -R` | partial | strips colour rather than showing it |
 | `less +F` | refused | opened as a file |
