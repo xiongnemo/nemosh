@@ -671,9 +671,12 @@ a process, which the Ctrl-C ends in 17 ms; nemosh's runs in the shell, on a goro
 its thread while the command runs, and the interrupt cancels the call that thread is waiting in
 (`CancelSynchronousIo`), and each one after it that begins to wait, until the command returns.
 The command says nothing of the call, as a busybox applet the Ctrl-C ends says nothing, and a
-trap runs afterwards as before: a `read` in an INT trap waits for its answer. A goroutine an
-applet starts of its own is not held, and a call it makes waits as it did. `NEMOSH_PIN=off`
-leaves every call to wait for Windows.
+trap runs afterwards as before: a `read` in an INT trap waits for its answer, and `tee -i`,
+which goes on through the interrupt, is not cancelled. A goroutine an applet starts of its own
+is not held, and a call it makes waits as it did. Windows ends most such waits but not every
+one: on the CI runners a stat of the same dead share, cancelled a second in, ended in 10 ms on
+arm64 and 386 and went on waiting on amd64, and a wait Windows does not end lasts as it did.
+`NEMOSH_PIN=off` leaves every call to wait for Windows.
 
 **Under `NEMOSH_JOBS=goroutine` a job is a goroutine** in the shell's own process, the way
 every job was before the default changed, and it has no pid to report. `$!` is then a job

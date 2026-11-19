@@ -33,8 +33,10 @@ patch number is the commits since that tag.
   and each after it that begins to wait: the prompt is back 21 ms after it for that `ls`, whose
   stat waits in two calls in turn, and 5 ms for `cat` -- at the prompt, in a script, in a
   pipeline and for an applet run directly -- and the command says nothing of the call.
-  A script's INT trap runs afterwards, and a `read` in it waits for its answer. `NEMOSH_PIN=off`
-  leaves a call to wait for Windows, as it did.
+  A script's INT trap runs afterwards, and a `read` in it waits for its answer, and `tee -i` goes
+  on reading. Windows ends most such waits, not every one -- on one of three CI runners the same
+  stat went on waiting -- and one it does not end lasts as it did. `NEMOSH_PIN=off` leaves every
+  call to wait for Windows, as before.
 - **diff of two large files never finished**: it filled a table of every line of one against
   every line of the other, which for Go's ssa/opGen.go against rewriteAMD64.go is 103 GB, and
   one such diff had committed 9.4 GB when it was found eleven hours on. It takes 0.18 s and

@@ -96,9 +96,12 @@ func Covers(ctx context.Context) bool {
 }
 
 // Unpinned runs wait with the calling goroutine's pins suspended and its thread let go, and
-// afterwards holds them to whichever thread it is on: for a wait on other goroutines that does
-// no I/O of its own to cancel -- a pipeline's, whose stages are pinned each on its own. A loop of
-// 2000 pipelines took 24% longer with the shell's goroutine pinned through each wait.
+// afterwards holds them to whichever thread it is on. It is for two things:
+//   - a wait on other goroutines that does no I/O of its own to cancel: a pipeline's, whose
+//     stages are pinned each on its own. A loop of 2000 pipelines took 24% longer with the
+//     shell's goroutine pinned through each wait.
+//   - a command that goes on through the interrupt that ended the context it was pinned with:
+//     tee -i, whose read of a pipe the pin cancelled at the ^C.
 func Unpinned(wait func()) {
 	id := windows.GetCurrentThreadId()
 	held.Lock()
@@ -139,9 +142,6 @@ func resume(innermost *pin, depth int) {
 	for p := innermost; p != nil; p = p.outer {
 		p.mu.Lock()
 		p.thread, p.id = thread, id
-		if thread != 0 {
-			p.last, _ = cycleTime(thread)
-		}
 		p.suspended = false
 		p.mu.Unlock()
 	}

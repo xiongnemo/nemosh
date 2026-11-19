@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"os"
+
+	"github.com/xiongnemo/nemosh/internal/cancelio"
 )
 
 // ErrInterrupt is the cause the shell ends a command's context with for an interrupt: the ^C
@@ -50,38 +52,47 @@ func newTeeApplet() Applet {
 			var stop context.CancelFunc
 			ctx, stop = ignoringInterrupt(ctx)
 			defer stop()
-		}
-		flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-		if options.has('a') {
-			flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
-		}
-		writers := []io.Writer{stdout}
-		view := ProcessViewFromContext(ctx)
-		failed := false
-		for _, path := range paths {
-			if path == "-" {
-				writers = append(writers, stdout)
-				continue
-			}
-			file, err := openTeeFile(view, path, flags)
-			if err != nil {
-				failed = true
-				if failure := operandFailure(path, err); !reportOperand(ctx, failure) {
-					return failure
-				}
-				continue
-			}
-			defer file.Close()
-			writers = append(writers, file)
-		}
-		if _, err := copyWithContext(ctx, io.MultiWriter(writers...), stdin); err != nil {
+			// The shell's pin cancels what a command waits in once an interrupt has ended it,
+			// and an interrupt does not end this one; see cancelio.Unpinned.
+			cancelio.Unpinned(func() { err = runTee(ctx, options.has('a'), paths, stdin, stdout) })
 			return err
 		}
-		if failed {
-			return ExitStatus(1)
-		}
-		return nil
+		return runTee(ctx, options.has('a'), paths, stdin, stdout)
 	}}
+}
+
+// runTee copies stdin to stdout and to each of paths, appending to them if appending.
+func runTee(ctx context.Context, appending bool, paths []string, stdin io.Reader, stdout io.Writer) error {
+	flags := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	if appending {
+		flags = os.O_WRONLY | os.O_CREATE | os.O_APPEND
+	}
+	writers := []io.Writer{stdout}
+	view := ProcessViewFromContext(ctx)
+	failed := false
+	for _, path := range paths {
+		if path == "-" {
+			writers = append(writers, stdout)
+			continue
+		}
+		file, err := openTeeFile(view, path, flags)
+		if err != nil {
+			failed = true
+			if failure := operandFailure(path, err); !reportOperand(ctx, failure) {
+				return failure
+			}
+			continue
+		}
+		defer file.Close()
+		writers = append(writers, file)
+	}
+	if _, err := copyWithContext(ctx, io.MultiWriter(writers...), stdin); err != nil {
+		return err
+	}
+	if failed {
+		return ExitStatus(1)
+	}
+	return nil
 }
 
 // openTeeFile opens a FILE, a device among them: `tee /dev/stderr` is how a pipeline shows

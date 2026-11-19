@@ -370,11 +370,12 @@ Trap/signal support should be useful but honest on Windows:
   at the prompt, a script's commands, each stage of a pipeline, an applet run directly
   -- runs on a goroutine pinned to its thread, and the context ending cancels the call
   that thread waits in, with `CancelSynchronousIo` (`internal/cancelio`), at once and
-  then whenever the thread has not run for 10 ms, until the command returns. A pinned
-  goroutine's wait on a channel costs 11.8 us where a free one's costs 0.46, so the
-  shell lets its thread go while it waits for a pipeline's stages (`cancelio.Unpinned`),
-  and a pinned read needs no watcher of its own (`cancelio.Covers`); a pipe's reads cost
-  what they did. Traps run after, unpinned. `NEMOSH_PIN=off` pins nothing.
+  again every 10 ms until the command returns. A pinned goroutine's wait on a channel
+  costs 11.8 us where a free one's costs 0.46, so the shell lets its thread go while it
+  waits for a pipeline's stages (`cancelio.Unpinned`), and a pinned read needs no
+  watcher of its own (`cancelio.Covers`); a pipe's reads cost what they did. Traps run
+  after, unpinned, and `tee -i`, which goes on through the interrupt, runs unpinned too.
+  `NEMOSH_PIN=off` pins nothing.
 - Windows `CTRL_BREAK_EVENT` can target an isolated process group. On the tested
   Windows/Go toolchain it reaches Go's `os.Interrupt` notification channel.
   Automated acceptance uses this only as a production `signal.Notify` boundary
