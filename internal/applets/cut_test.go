@@ -212,7 +212,7 @@ func TestCutApplet_returnsStatusOneAndDiagnostic_whenRunWithUnsupportedOption(t 
 		wantStderr string
 	}{
 		{"unsupported -Z", []string{"-Z", "-f", "1"}, "cut: unknown option -- Z\n"},
-		{"unsupported long option", []string{"--complement", "-f", "1"}, "cut: unknown option -- complement\n"},
+		{"unsupported long option", []string{"--zero-terminated", "-f", "1"}, "cut: unknown option -- zero-terminated\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

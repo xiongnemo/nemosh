@@ -56,7 +56,7 @@ type cutSpec struct {
 }
 
 func parseCutArgs(ctx context.Context, args []string) (cutSpec, []string, error) {
-	options, operands, err := parseAppletLongOptions(ctx, args, "output-delimiter=O", "sDn", "bcfFdO")
+	options, operands, err := parseAppletLongOptions(ctx, args, "output-delimiter=O complement="+cutComplement, "sDn"+cutComplement, "bcfFdO")
 	if err != nil {
 		return cutSpec{}, nil, err
 	}
@@ -109,6 +109,12 @@ func parseCutArgs(ctx context.Context, args []string) (cutSpec, []string, error)
 	}
 	if spec.ranges, err = parseCutList(options.value(list), spec.noSort); err != nil {
 		return cutSpec{}, nil, err
+	}
+	if options.has(cutComplement[0]) {
+		// The ranges in order and joined, whatever -D asked, since what is left between them is
+		// the same either way.
+		ordered, _ := parseCutList(options.value(list), false)
+		spec.ranges = complementCutRanges(ordered)
 	}
 	return spec, operands, nil
 }

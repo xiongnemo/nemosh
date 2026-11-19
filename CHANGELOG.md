@@ -12,6 +12,8 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`cut --complement`**, GNU's: what LIST does not name, `cut -d: --complement -f2`. It was
+  `unknown option`.
 - **`ls --time-style`**, GNU's: `full-iso`, `long-iso`, `iso`, `locale` and `+FORMAT`, a newline
   parting the format for an old file from the one for a recent one. It was `unknown option`.
 - **df takes GNU's `-x`, `--output` and `-i`**: `df -hT -x tmpfs`, `df

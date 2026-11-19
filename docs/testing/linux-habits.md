@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 49   |
+| works   | 50   |
 | partial | 8    |
-| refused | 17   |
+| refused | 16   |
 | missing | 29   |
 
 ## Existing commands
@@ -80,7 +80,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `sort -h`, `-k2,2n`, `-t: -k3 -n`, `-u`, `-V`, `-o` | works | |
 | `sort -R` | refused | |
 | `uniq -c`; `cut -d: -f1,3`, `-c1-10`; `tr -d`, `-s`; `wc -l`; `nl`; `xargs -I{} -P4 -n1 -0` | works | |
-| `cut --complement` | refused | |
+| `cut --complement` | works | |
 | `diff -u`, `-r`, `-q`; `patch -p1` | works | |
 | `diff -y`, `diff --color` | refused | |
 | `less -N`, `less -S` | works | |

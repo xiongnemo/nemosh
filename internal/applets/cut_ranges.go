@@ -14,6 +14,34 @@ type cutRange struct {
 	start, end int
 }
 
+// cutComplement stands for GNU's --complement, which has no letter of its own; a control
+// character no one types.
+const cutComplement = "\x01"
+
+// complementCutRanges is what ranges, in order and joined, leave out: GNU's --complement. When
+// they leave nothing, a range that begins past any line selects nothing.
+func complementCutRanges(ranges []cutRange) []cutRange {
+	var complement []cutRange
+	next := 0
+	for _, r := range ranges {
+		if r.start > next {
+			complement = append(complement, cutRange{start: next, end: r.start - 1})
+		}
+		if r.end == math.MaxInt {
+			next = math.MaxInt
+			break
+		}
+		next = r.end + 1
+	}
+	if next != math.MaxInt {
+		complement = append(complement, cutRange{start: next, end: math.MaxInt})
+	}
+	if len(complement) == 0 {
+		complement = []cutRange{{start: math.MaxInt - 1, end: math.MaxInt - 1}}
+	}
+	return complement
+}
+
 // parseCutList is busybox's: N, N-, N-M and -M between commas, each N busybox's
 // xatoi_positive, so `invalid number 'x'`, and a range that begins at 0 or ends before it
 // begins `invalid range 3-1`. The ranges are sorted by where they begin unless -D, which

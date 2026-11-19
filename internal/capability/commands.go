@@ -26,7 +26,7 @@ var commands = []Command{
 	{Name: "cmp", Short: "sln", ValueShort: "n", Long: []string{"bytes", "quiet", "silent", "verbose"}, ValueLong: []string{"bytes"}, Operand: AnyPath},
 	{Name: "comm", Short: "123", Operand: AnyPath},
 	{Name: "cp", Short: "adfHiLlnPprRsTtuv", ValueShort: "t", Operand: AnyPath},
-	{Name: "cut", Short: "bcfFdOsDn", ValueShort: "bcfFdO", Long: []string{"output-delimiter"}, ValueLong: []string{"output-delimiter"}, Operand: AnyPath},
+	{Name: "cut", Short: "bcfFdOsDn", ValueShort: "bcfFdO", Long: []string{"output-delimiter", "complement"}, ValueLong: []string{"output-delimiter"}, Operand: AnyPath},
 	{Name: "date", Short: "dDIrRsu", ValueShort: "dDrs", Long: []string{"date", "set", "reference", "utc", "rfc-2822", "rfc-822"}, ValueLong: []string{"date", "set", "reference"}, Operand: AnyPath},
 	{Name: "dirname", Operand: AnyPath},
 	{Name: "echo", Short: "ne", Operand: AnyPath},
