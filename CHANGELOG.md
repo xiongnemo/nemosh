@@ -12,6 +12,8 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`uptime -p`**, procps-ng's pretty form that Ubuntu's uptime prints: `up 2 weeks, 3 days, 22
+  hours, 15 minutes`. It was `unknown option -- p`. `--pretty` and `--since` are taken too.
 - **top bundles its letters and takes procps-ng's `-p`, `-u` and `-o FIELD`**: `top -bn1`, `top
   -p 1234`, `top -u nemo`, `top -o %MEM`. Each was refused: the letters were matched a word at a
   time, and `-o` is this top's column list. An upper-case procps field, `-o %MEM` or `-o -PID`,

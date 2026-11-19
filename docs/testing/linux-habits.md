@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 45   |
+| works   | 46   |
 | partial | 7    |
-| refused | 21   |
+| refused | 20   |
 | missing | 29   |
 
 ## Existing commands
@@ -55,7 +55,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `free -h`, `free -m` | works | |
 | `free -t`, `free -s N`, `free -w` | refused | |
 | `uptime`, `uptime -s` | works | |
-| `uptime -p` | refused | |
+| `uptime -p` | works | procps-ng's pretty form |
 | `top -b -n 1`, `top -d 1` | works | |
 | `top -bn1` | works | letters bundle as getopt has them |
 | `top -o %MEM` | works | an upper-case procps field is the sort; lower-case columns the layout |
