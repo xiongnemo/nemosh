@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 50   |
+| works   | 51   |
 | partial | 8    |
-| refused | 16   |
+| refused | 15   |
 | missing | 29   |
 
 ## Existing commands
@@ -78,7 +78,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `awk PROCINFO["sorted_in"]` | partial | an ordinary array; orders nothing |
 | `awk -i inplace`, `awk --version`; `gawk` | refused | `gawk` missing |
 | `sort -h`, `-k2,2n`, `-t: -k3 -n`, `-u`, `-V`, `-o` | works | |
-| `sort -R` | refused | |
+| `sort -R` | works | equal keys kept together |
 | `uniq -c`; `cut -d: -f1,3`, `-c1-10`; `tr -d`, `-s`; `wc -l`; `nl`; `xargs -I{} -P4 -n1 -0` | works | |
 | `cut --complement` | works | |
 | `diff -u`, `-r`, `-q`; `patch -p1` | works | |

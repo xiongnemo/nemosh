@@ -1009,7 +1009,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `sleep` | duration operand | reported as an invalid duration |
 | `ssl_client` | `-s -h -n`; `-e` accepted; the certificate is always verified | refused by name |
 | `sha256sum`, `md5sum` | `-b -c -s -t -w`, as busybox's: `-b` marks a name with `*`, and `-c` reads the two-space, the `*` and the one-space spellings, counts every line, and ends a list with a failure with `WARNING: N of M computed checksums did NOT match`; `-s` and `-w` need `-c` | refused by name |
-| `sort` | busybox's `-n -g -h -M -V -u -c -s -z -b -r -d -f -i -o -k -t`, keys with character offsets and their own letters; `-m -S -T` taken and ignored | refused by name |
+| `sort` | busybox's `-n -g -h -M -V -u -c -s -z -b -r -d -f -i -o -k -t`, keys with character offsets and their own letters; `-m -S -T` taken and ignored; and GNU's `-R`, an order by a hash of each key seeded afresh each run, equal keys kept together, an ordering as `-n` is, so `-nR` is refused | refused by name |
 | `stat` | `-c -t -L -f`: busybox's layout, its terse line, and every letter of its `-c` and `-f` formats, each with printf's flags, width and precision. On Windows the values are busybox-w32's: the volume's serial number for the device, the file's index for the inode, 4095 for the account's own files and 0 for a system account's, the mode made up as `chmod` makes it up, and the creation time for the change time | refused by name |
 | `split` | `-l -b -a`, `-b` with `b k m g`; the bytes as they come, and as many letters as `-a` asks, `aa` upwards by default | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |

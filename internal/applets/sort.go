@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"os"
 	"slices"
 	"unsafe"
@@ -69,15 +70,18 @@ func runSort(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 // parseSortArgs reads busybox's options, `nghMVucszbrdfimS:T:o:k:*t:` with at most one -o and
 // one -t. sort has no long option.
 func parseSortArgs(ctx context.Context, args []string) (sortSpec, []string, error) {
-	options, paths, err := parseAppletOptions(ctx, args, "nghMVucszbrdfim", "STokt")
+	options, paths, err := parseAppletOptions(ctx, args, "nghMVucszbrdfimR", "STokt")
 	if err != nil {
 		return sortSpec{}, nil, err
 	}
-	var spec sortSpec
+	spec := sortSpec{seed: rand.Uint64()}
 	for index := range len(sortFlagLetters) {
 		if options.has(sortFlagLetters[index]) {
 			spec.flags |= 1 << index
 		}
+	}
+	if options.has('R') {
+		spec.flags |= sortRandom
 	}
 	// -b outside a key strips a key's trailing blanks as well as its leading ones.
 	if spec.flags&sortBlanks != 0 {

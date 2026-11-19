@@ -27,27 +27,44 @@ const (
 	sortPrintable
 	// sortTrailingBlanks strips a key's trailing blanks: b after a key's comma, and -b outside one.
 	sortTrailingBlanks
+	// sortRandom is GNU's -R, which busybox's sort has not got: an ordering by a hash of the key,
+	// seeded afresh each run, so the order differs from run to run and equal keys stay together.
+	sortRandom
 )
 
-// sortFlagLetters are the letters of the flags above, in their order.
+// sortFlagLetters are the letters of the flags above, in their order; R is sortRandom's, which
+// comes after one with no letter.
 const sortFlagLetters = "nghMVucszbrdfi"
 
+// sortFlagOf is a letter's flag, or 0.
+func sortFlagOf(letter byte) sortFlag {
+	if letter == 'R' {
+		return sortRandom
+	}
+	if bit := strings.IndexByte(sortFlagLetters, letter); bit >= 0 {
+		return 1 << bit
+	}
+	return 0
+}
+
 const (
-	sortOrderings  = sortNumeric | sortGeneral | sortHuman | sortMonth | sortVersion
-	sortKeyLetters = sortNumeric | sortGeneral | sortHuman | sortMonth | sortBlanks | sortReverse | sortDictionary | sortFold | sortPrintable
+	sortOrderings  = sortNumeric | sortGeneral | sortHuman | sortMonth | sortVersion | sortRandom
+	sortKeyLetters = sortNumeric | sortGeneral | sortHuman | sortMonth | sortBlanks | sortReverse | sortDictionary | sortFold | sortPrintable | sortRandom
 	sortTrimming   = sortBlanks | sortTrailingBlanks | sortDictionary | sortFold | sortPrintable
 )
 
 // sortOptionString is busybox's OPT_STR, which a key's letters are looked up in: one that is not
 // there is an unknown key option, and one that is there but does not order a key, -k2u, is an
-// unknown sort type.
-const sortOptionString = "nghMVucszbrdfimS:T:o:k:*t:"
+// unknown sort type. R is GNU's.
+const sortOptionString = "nghMVucszbrdfiRmS:T:o:k:*t:"
 
 type sortSpec struct {
 	flags     sortFlag
 	keys      []sortKey
 	separator byte
 	output    string
+	// seed is what -R hashes keys with, made once a run.
+	seed uint64
 }
 
 // sortKey is -k's POS1[,POS2], each a field and a character, one-based. A POS1 field of 0 starts
@@ -84,10 +101,7 @@ func parseSortKey(text string) (sortKey, error) {
 			if strings.IndexByte(sortOptionString, letter) < 0 {
 				return key, errors.New("unknown key option")
 			}
-			flag := sortFlag(0)
-			if bit := strings.IndexByte(sortFlagLetters, letter); bit >= 0 {
-				flag = 1 << bit
-			}
+			flag := sortFlagOf(letter)
 			if flag&sortKeyLetters == 0 {
 				return key, errors.New("unknown sort type")
 			}
@@ -221,7 +235,13 @@ func (spec sortSpec) compare(left, right string, tieBreak bool) int {
 		if flags = key.flags; flags == 0 {
 			flags = spec.flags
 		}
-		if result = compareSortKey(spec.keyOf(left, key, flags), spec.keyOf(right, key, flags), flags); result != 0 {
+		leftKey, rightKey := spec.keyOf(left, key, flags), spec.keyOf(right, key, flags)
+		if flags&sortRandom != 0 {
+			result = spec.compareRandom(leftKey, rightKey)
+		} else {
+			result = compareSortKey(leftKey, rightKey, flags)
+		}
+		if result != 0 {
 			break
 		}
 	}

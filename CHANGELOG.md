@@ -12,6 +12,8 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`sort -R`**, GNU's random sort: an order that differs from run to run, lines with the same
+  key kept together, `-k2,2R` as well. It was `unknown option -- R`.
 - **`cut --complement`**, GNU's: what LIST does not name, `cut -d: --complement -f2`. It was
   `unknown option`.
 - **`ls --time-style`**, GNU's: `full-iso`, `long-iso`, `iso`, `locale` and `+FORMAT`, a newline
