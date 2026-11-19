@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 48   |
+| works   | 49   |
 | partial | 8    |
-| refused | 18   |
+| refused | 17   |
 | missing | 29   |
 
 ## Existing commands
@@ -50,7 +50,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `df -x TYPE`, `df --output=...` | works | GNU's columns |
 | `df -i` | partial | GNU's columns, `-` for each count: Windows keeps none to read |
 | `ls -lah`, `-ltr`, `-lS`, `--color=auto`, `-d */`, `-i`, `-n` | works | |
-| `ls --time-style=long-iso` | refused | |
+| `ls --time-style=long-iso` | works | GNU's styles and +FORMAT |
 | `tail -f`, `-F`, `-n +2`, `-f a b`; `head -n -5`, `head -c 100` | works | |
 | `tail --pid=N` | refused | |
 | `free -h`, `free -m` | works | |

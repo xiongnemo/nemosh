@@ -12,6 +12,8 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`ls --time-style`**, GNU's: `full-iso`, `long-iso`, `iso`, `locale` and `+FORMAT`, a newline
+  parting the format for an old file from the one for a recent one. It was `unknown option`.
 - **df takes GNU's `-x`, `--output` and `-i`**: `df -hT -x tmpfs`, `df
   --output=source,size,pcent,target`, and `-t` more than once. `--output` and `-i` print GNU's
   columns; the inode fields are `-`, as GNU's df prints them for a filesystem with none, since

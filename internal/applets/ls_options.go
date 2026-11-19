@@ -78,7 +78,9 @@ type lsOptions struct {
 	quote, printable bool
 	timeKey          lsTimeKey
 	fullTime         bool
-	follow           lsFollow
+	// timeStyle is GNU's --time-style, "" for none; see ls_time_style.go.
+	timeStyle string
+	follow    lsFollow
 	// umask is the shell's, which the mode column is made up through; see lsModeString.
 	umask uint32
 }
@@ -145,6 +147,17 @@ func (o *lsOptions) word(args []string, index int) (int, error) {
 		case name == "group-directories-first" && !present:
 			o.dirsFirst = true
 			return 1, nil
+		case name == "time-style":
+			used := 1
+			if !present {
+				if index+1 >= len(args) {
+					return 0, missingOptionArgument(name)
+				}
+				value, used = args[index+1], 2
+			}
+			style, err := lsTimeStyle(value)
+			o.timeStyle = style
+			return used, err
 		}
 		return 0, unknownLongOption(arg)
 	}

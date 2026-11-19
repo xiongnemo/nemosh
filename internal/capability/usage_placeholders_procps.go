@@ -47,4 +47,5 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"dfexclude-type", "TYPE"},
 	{"dftype", "TYPE"},
 	{"dfblock-size", "SIZE"},
+	{"lstime-style", "STYLE"},
 }

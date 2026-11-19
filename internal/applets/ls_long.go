@@ -94,12 +94,7 @@ func formatLongEntry(entry lsEntry, options lsOptions) string {
 	default:
 		fmt.Fprintf(&line, "%9s ", size)
 	}
-	when := entry.when(options)
-	if options.fullTime {
-		line.WriteString(when.Format("2006-01-02 15:04:05 -0700"))
-	} else {
-		line.WriteString(lsTimeColumn(when, time.Now()))
-	}
+	line.WriteString(lsTimeText(entry.when(options), time.Now(), options))
 	line.WriteString(" " + name)
 	return line.String()
 }

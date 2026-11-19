@@ -200,7 +200,7 @@ func TestOptionsAreOfferedWithTheirDashes(t *testing.T) {
 	// Then
 	want := []string{"-a", "-A", "-l", "-h", "-C", "-1", "-x", "-t", "-S", "-r", "-R", "-d", "-F", "-p", "-g",
 		"-n", "-i", "-s", "-Q", "-q", "-c", "-u", "-X", "-v", "-L", "-H", "-k", "-w", "-T",
-		"--color", "--full-time", "--group-directories-first"}
+		"--color", "--full-time", "--group-directories-first", "--time-style"}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("Options(ls) = %v, want %v", got, want)
 	}
