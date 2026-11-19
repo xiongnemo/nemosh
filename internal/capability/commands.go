@@ -146,7 +146,7 @@ var commands = []Command{
 	{Name: "patch", Short: "RuNEfgpi", ValueShort: "pi", FileShort: "i", Long: []string{"reverse", "unified", "strip", "input", "forward", "remove-empty-files", "force", "get", "dry-run", "backup-if-mismatch", "no-backup-if-mismatch"}, ValueLong: []string{"strip", "input", "get"}, Operand: AnyPath},
 	{Name: "wget", Short: "cqSOoPUT", ValueShort: "OoPUT", Operand: AnyPath,
 		Long: []string{"header", "spider"}, ValueLong: []string{"header"}},
-	{Name: "nc", Short: "lpw", ValueShort: "pw", Operand: AnyPath},
+	{Name: "nc", Short: "lpwzv", ValueShort: "pw", Operand: AnyPath},
 	{Name: "whois", Short: "ihp", ValueShort: "hp", Operand: AnyPath},
 	{Name: "ssl_client", Short: "ensh", ValueShort: "nsh", Operand: AnyPath},
 	{Name: "httpd", Short: "fvpha", ValueShort: "pha", Operand: Directory},

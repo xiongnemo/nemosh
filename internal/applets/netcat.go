@@ -21,12 +21,9 @@ const netcatDialTimeout = 30 * time.Second
 
 func newNcApplet() Applet {
 	return simpleApplet{name: "nc", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "l", "pw")
+		options, operands, err := parseAppletOptions(ctx, args, "lzv", "pw")
 		if err != nil {
 			return err
-		}
-		if options.has('e') {
-			return fmt.Errorf("-e is not implemented: running a program on a connection is a remote shell, and this build does not offer one")
 		}
 		timeout := netcatDialTimeout
 		if options.has('w') {
@@ -42,16 +39,23 @@ func newNcApplet() Applet {
 		if len(operands) < 2 {
 			return fmt.Errorf("a host and a port are required")
 		}
-		return dialNetcat(ctx, operands[0], operands[1], timeout, stdin, stdout)
+		if options.has('z') {
+			return scanNetcat(ctx, operands[0], operands[1:], timeout, options.has('v'), stderr)
+		}
+		return dialNetcat(ctx, operands[0], operands[1], timeout, options.has('v'), stdin, stdout, stderr)
 	}}
 }
 
-func dialNetcat(ctx context.Context, host, port string, timeout time.Duration, stdin io.Reader, stdout io.Writer) error {
+// dialNetcat connects and pipes, and with -v says it connected, as netcat-openbsd says it.
+func dialNetcat(ctx context.Context, host, port string, timeout time.Duration, verbose bool, stdin io.Reader, stdout, stderr io.Writer) error {
 	connection, err := netio.Dial(ctx, host, port, timeout)
 	if err != nil {
 		return fmt.Errorf("cannot connect to %s: %v", netio.JoinHostPort(host, port), err)
 	}
 	defer connection.Close()
+	if verbose {
+		fmt.Fprintf(stderr, "Connection to %s %s port [tcp/*] succeeded!\n", host, port)
+	}
 	return pipeConnection(ctx, connection, stdin, stdout)
 }
 

@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 55   |
+| works   | 56   |
 | partial | 8    |
-| refused | 13   |
+| refused | 12   |
 | missing | 29   |
 
 ## Existing commands
@@ -98,7 +98,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `md5sum -c`, `sha256sum`, `base64 -d`, `xxd -r`, `od -c`, `strings -n 8` | works | |
 | `wget -qO- URL` | works | |
 | `wget -c` | partial | accepted, nothing resumed |
-| `nc -zv HOST PORT` | refused | |
+| `nc -zv HOST PORT` | works | netcat-openbsd's |
 | `nc -l -p 8080` | partial | 127.0.0.1 only, one connection |
 | `id -un`, `groups`, `whoami`, `uname -a`, `uname -r`, `nproc`, `arch` | works | |
 | `rev`, `tac`, `shuf -n`, `split -l`, `comm -12`, `join`, `paste -sd+`, `fold -w`, `expand`, `iconv`, `truncate -s 0`, `mktemp -d`, `install -D`, `readlink -f`, `basename -s`, `dirname` | works | |

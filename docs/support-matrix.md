@@ -980,7 +980,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
 | `mv` | `-f -i -n -T -t -v` and busybox's long forms, and GNU's `-u`/`--update`, which moves only over an older file or where there is none and says nothing of one it leaves, `-v` or not; of `-f -i -n` the last wins, and a read-only destination is replaced as busybox-w32 replaces one. Across volumes each file is copied by CopyFile2 with its alternate data streams, attributes and time, what a rename keeps, and Ctrl-C ends the copy | refused by name |
 | `nano` | `-H -R`, and `+LINE`, `+LINE,COLUMN` or `+,COLUMN` before the file, as nano's; one file at a time | refused by name, and `+/STRING` |
-| `nc` | `-l -p -w`; `-e` **refused by name** | refused by name |
+| `nc` | `-l -p -w`, and netcat-openbsd's `-z`, whether each PORT or range LOW-HIGH takes a connection, nothing sent, status 0 when any does, and `-v`, said on stderr in openbsd's words; `-e` **refused by name** | refused by name |
 | `nl` | `-b a\|t\|n\|pBRE -i -s -v -w -p` and their long forms; numbers carry on from one file to the next, and `pBRE` is GNU's | refused by name |
 | `od` | `-a -b -c -d -D -f -h -H -i -I -l -L -o -O -B -s -x -X -v`, `-t` of every kind and size busybox's has (`d o u x` of 1 2 4 8 bytes or `C S I L`, `f` of 4 or 8 or `F D`, `a`, `c`, and `z` after), `-A -N -j -S -w`, their long forms, and `--traditional`'s OFFSET and LABEL; each type a line of its own, several in columns as GNU od lays them out | refused by name |
 | `paste` | `-s -d`; the delimiter list cycles, its escapes read as busybox's (`\t`, `\n`, `\\`, and `\0` for no delimiter) | refused by name |

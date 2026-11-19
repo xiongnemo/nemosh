@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`nc -zv HOST PORT`**, netcat-openbsd's port check, which is Debian's nc: whether each port or
+  range takes a connection, said on stderr with -v, status 0 when any does. It was `unknown
+  option -- z`.
+
 - **`sed -z`**, GNU's `--null-data`: lines ended by a NUL, read and written, so `find -print0 |
   sed -z s/a/b/ | xargs -0` keeps names whole. It was `unknown option -- z`.
 
