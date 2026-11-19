@@ -3,6 +3,7 @@ package applets
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
@@ -20,6 +21,9 @@ func newFindApplet() Applet {
 		if err != nil {
 			return err
 		}
+		for _, warning := range expression.warnings {
+			fmt.Fprintf(stderr, "find: %s\n", warning)
+		}
 		run := findRunFor(ctx, stdin, stdout, stderr)
 		if expression.oneVolume {
 			run.volumes = findVolumes(view, paths)
@@ -34,7 +38,7 @@ func newFindApplet() Applet {
 				if path != root {
 					depth = 1
 				}
-				return expression.evaluate(findCandidate{display: path, entry: entry, depth: depth}, run)
+				return expression.evaluate(findCandidate{display: path, entry: entry, depth: depth, start: root}, run)
 			})
 			if errors.Is(err, errFindQuit) {
 				return nil
@@ -77,7 +81,7 @@ func walkFindPath(run *findRun, displayRoot, hostRoot string, expression findExp
 		if walkErr != nil {
 			return operandFailure(display, walkErr)
 		}
-		candidate := findCandidate{display: display, host: path, entry: entry, depth: depth}
+		candidate := findCandidate{display: display, host: path, entry: entry, depth: depth, start: filepath.ToSlash(displayRoot)}
 		run.pruned = false
 		if err := expression.evaluate(candidate, run); err != nil {
 			return err

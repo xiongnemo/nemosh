@@ -38,7 +38,7 @@ func walkFindNode(run *findRun, displayRoot, hostRoot, path string, entry fs.Dir
 			entry = fs.FileInfoToDirEntry(info)
 		}
 	}
-	candidate := findCandidate{display: display, host: path, entry: entry, depth: depth}
+	candidate := findCandidate{display: display, host: path, entry: entry, depth: depth, start: filepath.ToSlash(displayRoot)}
 	descend := entry.IsDir() && !expression.prunes(candidate) && !run.leavesVolume(expression, path)
 	if !expression.depthFirst {
 		run.pruned = false

@@ -30,6 +30,8 @@ func (p *findParser) parsePredicate() (findNode, error) {
 	case "-print":
 		p.hasAction = true
 		return findPrint{terminator: '\n'}, nil
+	case "-printf":
+		return p.printfPredicate(operand)
 	case "-print0":
 		// The pairing with `xargs -0`, and the reason it exists: a NUL is the
 		// one byte a path cannot contain.

@@ -963,7 +963,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `echo` | `-n -e` | treated as text, which is what `echo` does |
 | `env` | `-i -0 -u` and a lone `-`, their long forms, and `NAME=VALUE command`: an applet, or else a program, looked for on the PATH env gives it and launched by the shell, as a command is. A script's `#!/usr/bin/env NAME` does not come here: NAME is found as `#!/usr/bin/NAME` is, this shell for `sh`, an applet, then a program on PATH | refused by name |
 | `expr` | none; every argument is a term | read as a term, so a bad one is a syntax error |
-| `find` | `-name -iname -path -ipath -wholename -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -user -group -uid -gid -executable -prune -quit -print -print0 -exec -ok -delete -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
+| `find` | `-name -iname -path -ipath -wholename -regex -type f\|d\|l\|c -size -mtime -atime -ctime -mmin -amin -cmin -newer -empty -perm -inum -samefile -links -user -group -uid -gid -executable -prune -quit -print -print0 -printf -exec -ok -delete -maxdepth -mindepth -depth -xdev -follow`, `-H -L -P` before the PATHs, and the operators `-a -o ! -not -and -or ( )` | refused **before the walk** |
 | `zgrep`, `zegrep`, `zfgrep` | gzip's zgrep, which busybox has not got: grep's options but `-r`, which is refused as gzip's refuses it, over FILEs whose data, when it begins with gzip's, bzip2's or xz's magic, is read through zcat's decompressor and otherwise as it is, as `gzip -cdf` passes it; standard input as well. A fault in the data names its FILE | refused by name |
 | `grep`, `egrep`, `fgrep` | `-i -n -v -r -R -l -L -c -q -w -x -F -o -s -h -H -E -G -m -A -B -C -e -f -a -I`, and GNU's `--include`, `--exclude` and `--exclude-dir` for what `-r` reads, `--text`, and `--color[=WHEN]`, which colours as GNU's does, `auto` at a terminal only. A binary file -- a NUL in it -- that matches is said to on stderr, `grep: FILE: binary file matches`, as GNU 3.5 and later say it, rather than printed; `-a` prints it and `-I` reads it as holding no match. busybox has none of these. A pattern is a POSIX basic expression, with GNU's `\+ \? \| \w \s \b \< \>`, unless `-E`, or `-P`, Perl's syntax as RE2 reads it: `\d \w \s \b`, lazy quantifiers, `(?i)` and named groups, with lookaround and a backreference refused by name, status 2, since RE2 has neither. `--line-buffered` is taken: each line is written as it is found anyway. GNU's `-z`/`--null-data` reads and writes lines ended by a NUL, which then makes nothing binary, and `-b`/`--byte-offset` puts each line's offset, or with `-o` each match's, before it, a CRLF counted as the two bytes it is. `egrep` is `grep -E` and `fgrep` is `grep -F`, as in busybox | refused by name, and a backreference in a pattern |
 | `gzip`, `gunzip`, `zcat` | `-c -d -f -k -t -1`..`-9`, and `-` for standard input; zcat's data chooses gzip, bzip2 or xz by its first bytes, as busybox's does. A FILE that is not compressed is said and the next one read, status 1 at the end, as GNU's gzip does; busybox's stops at it | refused by name |
@@ -1299,6 +1299,16 @@ name, or a number, the uid `ls -n` prints. `-uid` and `-gid` take a number with 
 GNU's do. busybox's `-user` asks a getpwnam that knows only this account and root, so
 `-user Administrators` found nothing it could explain; a NAME that is no account is GNU's
 `'NAME' is not the name of a known user`, before the walk.
+
+**`-printf FORMAT`** is GNU's, which busybox's find has not got, measured against GNU
+findutils 4.11.0: `%p %f %h %P %H %d %y %Y %s %k %b %m %M %u %g %U %G %n %i %l %D`, the times
+`%t %a %c` in ctime's layout and `%Tk %Ak %Ck` as strftime's `%k`, `%T@`, `%TS`, `%TT` and `%T+`
+with GNU's ten digits of fraction; a width and a precision on each, as on a string, so `%-8.1s`
+of 5000 is `5`; and the escapes, `\c` ending the entry's output. An escape or a directive GNU
+does not know is written as it is, with GNU's warning. What stat would say is what `stat` says
+here -- `%u` the owner `ls -l` prints, `%M` its mode, the change time the creation time -- and
+`%F`, `%S` and `%Z`, the file system's type, a file's sparseness and its SELinux context, are
+refused before the walk, there being nothing true to print for them.
 `-name` matches the basename, not the path, because busybox
 uses `fnmatch` without `FNM_PATHNAME` and a basename carries no separator for
 `*` to cross; `-path` matches the whole path *with* the separator crossable, for

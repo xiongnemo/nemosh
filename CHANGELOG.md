@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`find -printf FORMAT`**, GNU's, measured against GNU findutils 4.11.0: the names, depth,
+  size, mode, owner and identity directives, the times in every form GNU has, widths,
+  precisions and escapes. `%F`, `%S` and `%Z` are refused. It was `unrecognized: -printf`.
+
 - **`find -user NAME`, `-group`, `-uid` and `-gid`**: NAME as `ls -l` prints the owner, in any
   case, or a number as `ls -n` prints it. A NAME that is no account is refused before the walk.
   It was `unrecognized: -user`.

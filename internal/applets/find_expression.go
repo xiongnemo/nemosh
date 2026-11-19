@@ -31,6 +31,8 @@ type findExpression struct {
 	oneVolume bool
 	// batches are the `-exec ... {} +` forms, whose last command runs after the walk.
 	batches []*findExec
+	// warnings are what reading the expression found to say, -printf's, said before the walk.
+	warnings []string
 }
 
 // findNode is one node of the expression tree. It reports whether the candidate
@@ -50,6 +52,8 @@ type findCandidate struct {
 	host  string
 	entry fs.DirEntry
 	depth int
+	// start is the PATH the walk began at, as spelled, which -printf's %H and %P need.
+	start string
 }
 
 func (c findCandidate) info() (fs.FileInfo, error) {
