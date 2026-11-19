@@ -25,6 +25,12 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **base64 and base32 read their whole input before writing a byte**: `base64 -d` of 26 MB
+  peaked at 161 MiB of commit, where busybox's peaks at 1.1, as the input was read, cleaned into a
+  copy and decoded into a third. Both stream now, at 13 MiB, the Go runtime's own, and faster:
+  that decode takes 131 ms where it took 246, and encoding 19 MB 33 ms where it took 216. A decode
+  that meets invalid input writes what it decoded before it, then says `invalid input`, as GNU's
+  does; it wrote nothing.
 - **`for f in <(echo a) <(echo b)` read only the first**: both files are made before the first
   turn, and the first command of that turn removed them both, so the second turn's `cat` said
   `No such file or directory`. They last the loop now, as bash's do.

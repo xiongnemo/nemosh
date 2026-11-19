@@ -8,7 +8,6 @@ import (
 	"hash"
 	"io"
 	"strconv"
-	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/digest"
 )
@@ -49,31 +48,11 @@ func newBase64Applet() Applet {
 	}}
 }
 
+// encodeBase64 streams, wrapping at width as base32 wraps; see encode_stream.go.
 func encodeBase64(reader io.Reader, stdout io.Writer, width int) error {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	return writeWrapped(stdout, base64.StdEncoding.EncodeToString(data), width)
-}
-
-// writeWrapped emits text in lines of at most width characters.
-//
-// Shared with base32, which wraps identically. Width zero means no newline at
-// all, matching GNU: `base64 -w0 | wc -l` is 0, and anyone piping the output
-// onward is relying on that.
-func writeWrapped(stdout io.Writer, encoded string, width int) error {
-	if width == 0 {
-		_, err := io.WriteString(stdout, encoded)
-		return err
-	}
-	for start := 0; start < len(encoded); start += width {
-		end := min(start+width, len(encoded))
-		if _, err := io.WriteString(stdout, encoded[start:end]+"\n"); err != nil {
-			return err
-		}
-	}
-	return nil
+	return encodeStream(reader, stdout, width, func(out io.Writer) io.WriteCloser {
+		return base64.NewEncoder(base64.StdEncoding, out)
+	})
 }
 
 // decodeBase64 ignores newlines, which is not politeness but necessity: the
@@ -84,26 +63,11 @@ func writeWrapped(stdout io.Writer, encoded string, width int) error {
 // truncated download that decodes to nearly the right bytes is worse than one
 // that says it is broken.
 func decodeBase64(reader io.Reader, stdout io.Writer, ignoreGarbage bool) error {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return err
+	text := &encodedText{reader: reader}
+	if ignoreGarbage {
+		text.keep = func(character byte) bool { return isBase64Rune(rune(character)) }
 	}
-	var cleaned strings.Builder
-	for _, r := range string(data) {
-		switch {
-		case r == '\n' || r == '\r':
-			continue
-		case ignoreGarbage && !isBase64Rune(r):
-			continue
-		}
-		cleaned.WriteRune(r)
-	}
-	decoded, err := base64.StdEncoding.DecodeString(cleaned.String())
-	if err != nil {
-		return fmt.Errorf("invalid input")
-	}
-	_, err = stdout.Write(decoded)
-	return err
+	return decodeStream(stdout, text, base64.NewDecoder(base64.StdEncoding, text))
 }
 
 func isBase64Rune(r rune) bool {

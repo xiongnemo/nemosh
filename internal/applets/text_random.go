@@ -39,41 +39,21 @@ func newBase32Applet() Applet {
 	}}
 }
 
+// encodeBase32 streams, wrapping at width as base64 wraps; see encode_stream.go.
 func encodeBase32(reader io.Reader, stdout io.Writer, width int) error {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	return writeWrapped(stdout, base32.StdEncoding.EncodeToString(data), width)
+	return encodeStream(reader, stdout, width, func(out io.Writer) io.WriteCloser {
+		return base32.NewEncoder(base32.StdEncoding, out)
+	})
 }
 
+// decodeBase32 pads a run that is short of a block, rather than refusing it: padding is optional
+// in the wild -- the same leniency base64 -i offers.
 func decodeBase32(reader io.Reader, stdout io.Writer, ignoreGarbage bool) error {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return err
+	text := &encodedText{reader: reader, padTo: 8}
+	if ignoreGarbage {
+		text.keep = func(character byte) bool { return isBase32Rune(rune(character)) }
 	}
-	var cleaned strings.Builder
-	for _, character := range string(data) {
-		switch {
-		case character == '\n' || character == '\r':
-			continue
-		case ignoreGarbage && !isBase32Rune(character):
-			continue
-		}
-		cleaned.WriteRune(character)
-	}
-	// Padding is optional in the wild, so a run that is short of a block is
-	// padded rather than refused -- the same leniency base64 -i offers.
-	text := cleaned.String()
-	if remainder := len(text) % 8; remainder != 0 {
-		text += strings.Repeat("=", 8-remainder)
-	}
-	decoded, err := base32.StdEncoding.DecodeString(text)
-	if err != nil {
-		return fmt.Errorf("invalid input")
-	}
-	_, err = stdout.Write(decoded)
-	return err
+	return decodeStream(stdout, text, base32.NewDecoder(base32.StdEncoding, text))
 }
 
 func isBase32Rune(character rune) bool {
