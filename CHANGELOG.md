@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **`grep -w` of one plain pattern is 21 times as fast**: `grep -cw err` of 88 MB takes 151 ms,
+  where it took 3.27 s and busybox's takes 0.98. The pattern is searched for and the bytes either
+  side of it looked at, where the regexp -w made began with an alternation Go could not take a
+  literal from; `-i` searches the line lowered, as it does without -w.
 - **diff chooses the edit script busybox's chooses**: it is busybox's Unix diff of Hunt and
   McIlroy, ported, where it was a longest common subsequence of its own, which on 17 of 400
   generated pairs removed and added other lines than busybox did. Lines are classed by
