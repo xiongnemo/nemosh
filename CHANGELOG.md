@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **awk has `systime`, `strftime`, `mktime`, `and`, `or`, `xor`, `compl`, `lshift` and
+  `rshift`**, which busybox's awk has and this one called undefined functions: `awk '{ print
+  strftime("%F %T"), $0 }'` stamps a log. strftime takes every conversion `date` does, and both
+  it and mktime take gawk's last argument for UTC.
+
 - **`nc -zv HOST PORT`**, netcat-openbsd's port check, which is Debian's nc: whether each port or
   range takes a connection, said on stderr with -v, status 0 when any does. It was `unknown
   option -- z`.

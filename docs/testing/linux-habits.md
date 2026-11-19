@@ -21,7 +21,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 56   |
+| works   | 57   |
 | partial | 8    |
 | refused | 12   |
 | missing | 29   |
@@ -76,7 +76,8 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `awk -F: '{print $1}'`, `-v`, `printf`, `tolower`, `length(arr)` | works | |
 | `awk gensub()` | works | busybox's awk has it (c23c5eb7) |
 | `awk BEGINFILE {...}`, `ENDFILE {...}` | refused | by name, as the program is read (d3c84b48) |
-| `awk strftime()`, `systime()`, `asort()` | refused | `call to undefined function` |
+| `awk strftime()`, `systime()`, `mktime()`, `and()`, `lshift()` | works | busybox's awk has them; gawk's UTC flag too |
+| `awk asort()` | refused | `call to undefined function`; gawk's alone |
 | `awk PROCINFO["sorted_in"]` | partial | an ordinary array; orders nothing |
 | `awk -i inplace`, `awk --version`; `gawk` | refused | `gawk` missing |
 | `sort -h`, `-k2,2n`, `-t: -k3 -n`, `-u`, `-V`, `-o` | works | |

@@ -2402,7 +2402,18 @@ Refused by not being implemented: gawk's extensions — `asort`, `switch`,
 `RS` (POSIX allows a single character or empty, and busybox agrees). `gensub` is
 busybox's as well, and is here as busybox's awk_sub has it: the third argument is
 read as a number, so `"g"` and any other text are every match and N the Nth alone,
-and `\0`-`\9` and `&` stand for the match and its groups. A rule that begins with
+and `\0`-`\9` and `&` stand for the match and its groups. So are `systime`,
+`strftime([FMT [, SECONDS [, UTC]]])` and `mktime("YYYY MM DD HH MM SS [DST]" [, UTC])`,
+the UTC flags gawk's: strftime is the one `date` uses, so `%F`, `%T` and the rest work,
+where busybox-w32's goes through MSVCRT and prints nothing for them, and an unknown
+conversion is left as written. The default format is busybox's, `%a %b %d %H:%M:%S %Z %Y`.
+mktime refuses fewer than six numbers, a month of 0 and a year from 0 to 1899 with -1,
+as busybox's does, carries anything else out of range into the next field, and reads
+DST as C's `tm_isdst`. `and`, `or`, `xor`, `compl`, `lshift` and `rshift` take their
+operands as unsigned integers, a negative one in two's complement, at gawk's 53 bits:
+busybox's C long is 32 bits on Windows, where `lshift(1, 40)` wraps to 256, and 64 on
+Linux, which a double cannot hold, so `compl(5)` there has lost its low bits.
+`compl(0)` is 9007199254740991, as gawk's is. A rule that begins with
 gawk's `BEGINFILE` or `ENDFILE` is refused as the program is read, `BEGINFILE is
 gawk's`, status 2; busybox reads one as a pattern on a variable nobody set, so the
 rule never runs and nothing says so. Elsewhere either name is a variable, as in

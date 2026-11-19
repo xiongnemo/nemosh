@@ -56,7 +56,8 @@ func awkKeywords(key string) bool {
 // both references confirm prints 0 on empty input.
 func awkBuiltins(key string) bool {
 	switch key {
-	case "length", "substr", "index", "split", "sub", "gsub", "gensub", "match", "sprintf", "sin", "cos", "atan2", "exp", "log", "sqrt", "int", "rand", "srand", "tolower", "toupper", "system", "close", "fflush":
+	case "length", "substr", "index", "split", "sub", "gsub", "gensub", "match", "sprintf", "sin", "cos", "atan2", "exp", "log", "sqrt", "int", "rand", "srand", "tolower", "toupper", "system", "close", "fflush",
+		"systime", "strftime", "mktime", "and", "or", "xor", "compl", "lshift", "rshift":
 		return true
 	}
 	return false

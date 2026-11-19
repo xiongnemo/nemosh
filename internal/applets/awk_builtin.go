@@ -34,8 +34,18 @@ func awkBuiltinArity(key string) ([2]int, bool) {
 		return [2]int{1, -1}, true
 	case "sin", "cos", "exp", "log", "sqrt", "int", "tolower", "toupper", "system", "close":
 		return [2]int{1, 1}, true
-	case "rand":
+	case "rand", "systime":
 		return [2]int{0, 0}, true
+	case "strftime":
+		return [2]int{0, 3}, true
+	case "mktime":
+		return [2]int{1, 2}, true
+	case "and", "or", "xor":
+		return [2]int{2, -1}, true
+	case "lshift", "rshift":
+		return [2]int{2, 2}, true
+	case "compl":
+		return [2]int{1, 1}, true
 	}
 	var zero [2]int
 	return zero, false
@@ -70,6 +80,10 @@ func (in *awkInterp) evalBuiltin(node awkBuiltinExpr) (awkValue, error) {
 		return in.evalMathBuiltin(node)
 	case "system":
 		return in.builtinSystem(node)
+	case "systime", "strftime", "mktime":
+		return in.evalTimeBuiltin(node)
+	case "and", "or", "xor", "compl", "lshift", "rshift":
+		return in.evalBitBuiltin(node)
 	case "close":
 		name, err := in.argText(node, 0)
 		if err != nil {
