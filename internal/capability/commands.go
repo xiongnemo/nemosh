@@ -31,7 +31,7 @@ var commands = []Command{
 	{Name: "dirname", Operand: AnyPath},
 	{Name: "echo", Short: "ne", Operand: AnyPath},
 	{Name: "env", Short: "i0u", ValueShort: "u", Long: []string{"ignore-environment", "null", "unset"}, ValueLong: []string{"unset"}, Operand: AnyPath},
-	{Name: "du", Short: "asdchkmblxHL", ValueShort: "d", Operand: AnyPath},
+	{Name: "du", Short: "asdchkmblxHLX", ValueShort: "dX", Long: []string{"all", "apparent-size", "bytes", "total", "max-depth", "human-readable", "count-links", "dereference", "dereference-args", "summarize", "one-file-system", "exclude", "exclude-from"}, ValueLong: []string{"max-depth", "exclude", "exclude-from"}, Operand: AnyPath},
 	{Name: "df", Short: "hkmHBPTta", ValueShort: "Bt", Operand: AnyPath},
 	{Name: "dd", Operand: AnyPath},
 	{Name: "stty", Short: "a", Operand: AnyPath},

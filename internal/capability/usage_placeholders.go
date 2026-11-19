@@ -8,7 +8,7 @@ package capability
 
 // valuePlaceholders name what an option's argument is, keyed by command and letter.
 // Without these the synopsis would read `-k VALUE`, which says nothing.
-var valuePlaceholderTable = [...]struct{ key, name string }{
+var valuePlaceholderTable = [...]placeholderRow{
 	{"fce", "EDITOR"},
 	{"historyd", "OFFSET"},
 	{"hexdumps", "OFFSET"},
@@ -29,28 +29,6 @@ var valuePlaceholderTable = [...]struct{ key, name string }{
 	{"dft", "TYPE"},
 	{"odt", "TYPE"},
 	{"odformat", "TYPE"},
-	{"pgrepP", "PPID"},
-	{"pkillP", "PPID"},
-	{"pgrepu", "USERLIST"},
-	{"pgrepU", "USERLIST"},
-	{"pgrepd", "DELIM"},
-	{"pkillu", "USERLIST"},
-	{"pkillU", "USERLIST"},
-	{"pso", "FORMAT"},
-	{"psformat", "FORMAT"},
-	{"psp", "PIDLIST"},
-	{"psq", "PIDLIST"},
-	{"pspid", "PIDLIST"},
-	{"psppid", "PIDLIST"},
-	{"psu", "USERLIST"},
-	{"psU", "USERLIST"},
-	{"psuser", "USERLIST"},
-	{"psUser", "USERLIST"},
-	{"psC", "CMDLIST"},
-	{"pssort", "SPEC"},
-	{"pswidth", "COLS"},
-	{"pscols", "COLS"},
-	{"pscolumns", "COLS"},
 	{"getopto", "OPTSTRING"},
 	{"getoptoptions", "OPTSTRING"},
 	{"getoptl", "LONGOPTS"},
@@ -248,10 +226,15 @@ var valuePlaceholderTable = [...]struct{ key, name string }{
 
 // valuePlaceholders is the name of key's argument, if the table has one.
 func valuePlaceholders(key string) (string, bool) {
-	for _, row := range valuePlaceholderTable {
+	for _, row := range valuePlaceholderRows() {
 		if row.key == key {
 			return row.name, true
 		}
 	}
 	return "", false
+}
+
+// valuePlaceholderRows is both tables, this file's and usage_placeholders_procps.go's, in turn.
+func valuePlaceholderRows() []placeholderRow {
+	return append(valuePlaceholderTable[:len(valuePlaceholderTable):len(valuePlaceholderTable)], valuePlaceholderTableProcps[:]...)
 }

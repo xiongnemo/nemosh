@@ -1,0 +1,36 @@
+package capability
+
+// The argument names of the options taken from Debian's tools -- procps-ng's ps, pgrep and pkill,
+// GNU du's -- split from usage_placeholders.go at the 250-line ceiling AGENTS.md sets. The same
+// two tests hold both tables: valuePlaceholderRows is what they read.
+
+type placeholderRow struct{ key, name string }
+
+var valuePlaceholderTableProcps = [...]placeholderRow{
+	{"pgrepP", "PPID"},
+	{"pkillP", "PPID"},
+	{"pgrepu", "USERLIST"},
+	{"pgrepU", "USERLIST"},
+	{"pgrepd", "DELIM"},
+	{"pkillu", "USERLIST"},
+	{"pkillU", "USERLIST"},
+	{"pso", "FORMAT"},
+	{"psformat", "FORMAT"},
+	{"psp", "PIDLIST"},
+	{"psq", "PIDLIST"},
+	{"pspid", "PIDLIST"},
+	{"psppid", "PIDLIST"},
+	{"psu", "USERLIST"},
+	{"psU", "USERLIST"},
+	{"psuser", "USERLIST"},
+	{"psUser", "USERLIST"},
+	{"psC", "CMDLIST"},
+	{"pssort", "SPEC"},
+	{"pswidth", "COLS"},
+	{"pscols", "COLS"},
+	{"pscolumns", "COLS"},
+	{"duX", "FILE"},
+	{"duexclude-from", "FILE"},
+	{"duexclude", "PATTERN"},
+	{"dumax-depth", "N"},
+}

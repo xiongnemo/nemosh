@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **du takes GNU's long options**: `du -h --max-depth=1`, `du -sh --exclude=node_modules .`, `du
+  --apparent-size`, `du -X patterns`. It took none, so each was `unknown option`. `--apparent-size`
+  counts what files hold and rounds the sum up to the unit, as GNU's does; `--exclude` matches an
+  entry's name, or with a slash in the pattern the path printed, and counts none of what it leaves
+  out.
 - **`pgrep -f` and `pkill -f` match the command line**, and pgrep and pkill take the rest of
   procps-ng's options that people type: `pgrep -af node`, `pkill -f 'node server.js'`, `pgrep -u
   nemo`, `pgrep -n`, `-o`, `-c`, `-d,`. `-f` was refused, as reading a command line needs a handle

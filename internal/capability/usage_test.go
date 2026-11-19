@@ -101,7 +101,7 @@ func TestUsage_namesTheArgumentOfEveryOptionThatTakesOne(t *testing.T) {
 // A placeholder for something that is not an option that takes a value is dead
 // weight, and dead weight is how a table stops being trustworthy.
 func TestUsage_hasNoUnusedPlaceholders(t *testing.T) {
-	for _, row := range valuePlaceholderTable {
+	for _, row := range valuePlaceholderRows() {
 		key := row.key
 		found := false
 		for _, command := range commands {

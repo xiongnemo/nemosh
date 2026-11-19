@@ -25,16 +25,23 @@ import (
 //
 // It took -s and -h, printed a tree's directories in the reverse of the order it found them,
 // and -h said 12K and 0.0K where busybox says 12.0K and 0.
+//
+// GNU's long options are taken as well, since they are what a Debian administrator types: each
+// letter's, and --apparent-size, --exclude=PATTERN and --exclude-from=FILE or -X FILE, which
+// busybox's has not got; see du_exclude.go.
 func newDuApplet() Applet {
 	return simpleApplet{name: "du", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		options, paths, err := parseAppletOptions(ctx, args, "aHkLsxlcbhm", "d")
+		options, paths, err := parseAppletLongOptions(ctx, args, duLongOptions, "aHkLsxlcbhm"+duApparent, "dX"+duExclude)
 		if err != nil {
 			return err
 		}
 		view := ProcessViewFromContext(ctx)
 		run := &duRun{ctx: ctx, stdout: stdout, stderr: stderr, all: options.has('a'), bytes: options.has('b'),
 			oneFS: options.has('x'), countLinks: options.has('l'), maxDepth: math.MaxInt, unit: 1024,
-			seen: map[fileID]bool{}}
+			seen: map[fileID]bool{}, apparent: options.has(duApparent[0])}
+		if run.exclude, err = duExcludePatterns(view, options); err != nil {
+			return err
+		}
 		if _, posix := view.LookupEnv("POSIXLY_CORRECT"); posix {
 			run.unit = 512
 		}
@@ -109,7 +116,11 @@ type duRun struct {
 	ctx                                   context.Context
 	stdout, stderr                        io.Writer
 	all, bytes, oneFS, countLinks, failed bool
-	maxDepth, depth, follow               int
+	// apparent counts what files hold rather than what they take, in bytes, as -b does, shown
+	// in the unit asked for.
+	apparent                bool
+	exclude                 []string
+	maxDepth, depth, follow int
 	// unit is what a size is shown in, bytes; 0 is -h's scaled form.
 	unit   int64
 	device uint64
@@ -210,7 +221,7 @@ func (r *duRun) counted(native string, info os.FileInfo) (bool, *fileID) {
 }
 
 func (r *duRun) size(native string, info os.FileInfo) int64 {
-	if r.bytes {
+	if r.inBytes() {
 		return entrySize(native, info)
 	}
 	allocated, ok := allocatedBytes(native, info)
@@ -222,12 +233,17 @@ func (r *duRun) size(native string, info os.FileInfo) int64 {
 
 // print is busybox's print(): a fixed unit rounds a size up, as coreutils does, by half a unit
 // before the division rounds it to the nearest.
+//
+// An apparent size is counted in bytes and rounded up to the unit, as GNU's is: 300 bytes are 1K.
 func (r *duRun) print(size int64, name string) {
 	blockSize := int64(512)
-	if r.bytes {
+	if r.inBytes() {
 		blockSize = 1
 	}
-	if r.unit != 0 {
+	switch {
+	case r.apparent && !r.bytes && r.unit > 1:
+		size += r.unit/2 - 1
+	case r.unit != 0:
 		size += (r.unit - 1) / (512 * 2)
 	}
 	fmt.Fprintf(r.stdout, "%s\t%s\n", humanReadable(uint64(size), uint64(blockSize), uint64(r.unit)), name)

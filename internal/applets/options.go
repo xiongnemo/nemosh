@@ -99,7 +99,7 @@ func readAppletOptions(args []string, flags, valued string, long string, permute
 			operands = append(operands, arg)
 			continue
 		}
-		// A long option an applet does not have was read as letters, `du --apparent-size` as
+		// A long option an applet does not have was read as letters, `du --si` as
 		// `-`, and refused as that.
 		if strings.HasPrefix(arg, "--") {
 			used, err := parsed.readLongOption(args, index, flags, valued, long)

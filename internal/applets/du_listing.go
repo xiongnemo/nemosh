@@ -28,8 +28,11 @@ func unlistedChildren(native string) ([]duChild, error) {
 func (r *duRun) children(native, shown string, entries []duChild) int64 {
 	var sum int64
 	for _, child := range entries {
-		r.depth++
 		path, name := filepath.Join(native, child.name), duSubpath(shown, child.name)
+		if r.excluded(child.name, name) {
+			continue
+		}
+		r.depth++
 		if child.listed {
 			sum += r.listedFile(child, path, name)
 		} else {
@@ -56,7 +59,7 @@ func (r *duRun) listedFile(child duChild, native, shown string) int64 {
 		}
 		r.seen[child.id] = true
 	}
-	sum := listedBlocks(native, child, r.bytes)
+	sum := listedBlocks(native, child, r.inBytes())
 	if r.all && r.depth <= r.maxDepth {
 		r.print(sum, shown)
 	}

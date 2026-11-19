@@ -126,7 +126,7 @@ func TestAppletOptions_nameAnUnknownLongOptionWhole(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"du", "--apparent-size"}, "unknown option -- apparent-size"},
+		{[]string{"du", "--si"}, "unknown option -- si"},
 		{[]string{"wc", "x", "--lines"}, "unknown option -- lines"},
 		{[]string{"xargs", "--max-args=1", "echo"}, "unknown option -- max-args=1"},
 		// sort says so itself, and ends 2, as for any other bad option.

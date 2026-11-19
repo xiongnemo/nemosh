@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 35   |
+| works   | 36   |
 | partial | 8    |
-| refused | 29   |
+| refused | 28   |
 | missing | 30   |
 
 ## Existing commands
@@ -45,7 +45,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `pkill -9 NAME`, `killall -9 NAME`, `killall -q` | works | `killall -q -9`: the signal must come first |
 | `kill -9 PID`, `kill -l`, `kill -s TERM` | works | |
 | `du -sh *`, `du -h -d 1`, `du -sch` | works | |
-| `du --max-depth=N`, `--exclude`, `--apparent-size` | refused | du takes no long option |
+| `du --max-depth=N`, `--exclude`, `--apparent-size`, `-X FILE` | works | GNU's long options |
 | `df -h`, `df -hT`, `df -T` | works | |
 | `df -i`, `df -x TYPE`, `df --output=...` | refused | |
 | `ls -lah`, `-ltr`, `-lS`, `--color=auto`, `-d */`, `-i`, `-n` | works | |
