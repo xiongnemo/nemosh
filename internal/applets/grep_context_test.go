@@ -284,8 +284,8 @@ func TestGrep_refusesABadContextValue(t *testing.T) {
 		{args: []string{"-A"}, wantWord: "A"},
 		{args: []string{"-e"}, wantWord: "e"},
 		{args: []string{"-f"}, wantWord: "f"},
-		// Still refused: busybox's usage text does not list these either.
-		{args: []string{"-z", "M", "g.txt"}, wantWord: "z"},
+		// Still refused: neither busybox nor GNU takes -Y.
+		{args: []string{"-Y", "M", "g.txt"}, wantWord: "Y"},
 		{args: []string{"-2", "M", "g.txt"}, wantWord: "2"},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {

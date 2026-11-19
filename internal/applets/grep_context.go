@@ -18,6 +18,7 @@ import (
 // grepPending is one line held back in case something below it matches.
 type grepPending struct {
 	number int
+	offset int64
 	text   string
 }
 
@@ -27,11 +28,11 @@ type grepRing struct {
 	limit int
 }
 
-func (r *grepRing) push(number int, text string) {
+func (r *grepRing) push(number int, offset int64, text string) {
 	if r.limit == 0 {
 		return
 	}
-	r.held = append(r.held, grepPending{number: number, text: text})
+	r.held = append(r.held, grepPending{number: number, offset: offset, text: text})
 	if len(r.held) > r.limit {
 		r.held = r.held[1:]
 	}
@@ -90,7 +91,9 @@ func (p *grepPrinter) needsSeparator(name string, number int) bool {
 // dash, for both the filename and the line number: `g.txt:2:M1` against
 // `g.txt-3-l3`. That is how a reader tells the two apart, and it is what both
 // references do.
-func (p *grepPrinter) emit(name string, number int, text string, isMatch, withNames bool) error {
+//
+// -b's offset follows the line number, as GNU orders them, and -z ends the line with a NUL.
+func (p *grepPrinter) emit(name string, number int, offset int64, text string, isMatch, withNames bool) error {
 	if p.needsSeparator(name, number) {
 		if _, err := fmt.Fprintln(p.stdout, p.paint(grepColorSeparator, "--")); err != nil {
 			return err
@@ -107,10 +110,13 @@ func (p *grepPrinter) emit(name string, number int, text string, isMatch, withNa
 	if p.flags.lineNumber {
 		prefix += p.paint(grepColorLine, strconv.Itoa(number)) + p.paint(grepColorSeparator, separator)
 	}
+	if p.flags.byteOffset {
+		prefix += p.paint(grepColorLine, strconv.FormatInt(offset, 10)) + p.paint(grepColorSeparator, separator)
+	}
 	if isMatch {
 		text = p.highlight(text)
 	}
-	if _, err := fmt.Fprintf(p.stdout, "%s%s\n", prefix, text); err != nil {
+	if _, err := fmt.Fprintf(p.stdout, "%s%s%c", prefix, text, p.flags.separator()); err != nil {
 		return err
 	}
 	p.wrote, p.lastName, p.lastNumber = true, name, number
@@ -120,7 +126,7 @@ func (p *grepPrinter) emit(name string, number int, text string, isMatch, withNa
 // flushBefore writes the held lines as leading context.
 func (p *grepPrinter) flushBefore(ring *grepRing, name string, withNames bool) error {
 	for _, pending := range ring.drain() {
-		if err := p.emit(name, pending.number, pending.text, false, withNames); err != nil {
+		if err := p.emit(name, pending.number, pending.offset, pending.text, false, withNames); err != nil {
 			return err
 		}
 	}

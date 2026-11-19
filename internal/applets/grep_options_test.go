@@ -73,7 +73,7 @@ func TestGrep_namesTheOptionItRefuses(t *testing.T) {
 	}{
 		{args: []string{"--nonsense", "x"}, want: "unknown option -- nonsense"},
 		{args: []string{"--colours=auto", "x"}, want: "unknown option -- colours=auto"},
-		{args: []string{"-z", "x"}, want: "unknown option -- z"},
+		{args: []string{"-Z", "x"}, want: "unknown option -- Z"},
 		{args: []string{"--color=purple", "x"}, want: "unsupported --color value: purple"},
 	} {
 		t.Run(strings.Join(test.args, " "), func(t *testing.T) {

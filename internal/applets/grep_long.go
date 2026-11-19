@@ -99,6 +99,12 @@ func parseGrepLongOption(args []string, index int, flags *grepFlags) (int, error
 	case "text":
 		flags.binary = grepBinaryText
 		return 1, nil
+	case "null-data":
+		flags.nullData = true
+		return 1, nil
+	case "byte-offset":
+		flags.byteOffset = true
+		return 1, nil
 	case "line-buffered":
 		// Each line is written as it is found, to whatever stdout is, so `tail -f log | grep
 		// --line-buffered x | ...` shows a line while the log is still open: asked for, and done.

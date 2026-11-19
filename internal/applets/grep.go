@@ -146,13 +146,18 @@ func grepOne(target grepTarget, expr *regexp.Regexp, flags grepFlags, withNames 
 func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames bool, name string, printer *grepPrinter) (bool, error) {
 	// A binary file is said to match rather than printed, or under -I read as holding no
 	// match; see grep_binary.go.
-	input, binary := probeBinary(input, flags.binary)
-	if binary && flags.binary == grepBinarySkip {
+	mode := flags.binaryMode()
+	input, binary := probeBinary(input, mode)
+	if binary && mode == grepBinarySkip {
 		return false, nil
 	}
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
+	scanner.Split(grepSplit(flags.separator()))
 	matched, count, lineNumber := false, 0, 0
+	// offset is where the line just read began in the input, and next where the one after it
+	// will: -b's.
+	var offset, next int64
 	// before holds the lines that were read and not printed, because -B cannot
 	// know a line is context until something below it matches. after counts the
 	// trailing lines still owed to the last match.
@@ -169,9 +174,11 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 		lineNumber++
 		// The scanner's own bytes, matched where they lie: a line is made a string only to be
 		// printed or held for -B. It was made one to be matched, an allocation a line.
-		line := scanner.Bytes()
-		if !binary && flags.binary != grepBinaryText && bytes.IndexByte(line, 0) >= 0 {
-			if binary = true; flags.binary == grepBinarySkip {
+		token := scanner.Bytes()
+		offset, next = next, next+int64(len(token))+1
+		line := flags.grepLine(token)
+		if !binary && mode != grepBinaryText && bytes.IndexByte(line, 0) >= 0 {
+			if binary = true; mode == grepBinarySkip {
 				break
 			}
 		}
@@ -179,7 +186,7 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 		if flags.invert {
 			hit = !hit
 		}
-		if hit && binary && flags.binary != grepBinaryText && flags.reportsPerLine() {
+		if hit && binary && mode != grepBinaryText && flags.reportsPerLine() {
 			return true, printer.binaryMatches(name)
 		}
 		if !hit {
@@ -191,13 +198,13 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 				// cannot be printed a second time as another match's leading
 				// context.
 				after--
-				if err := printer.emit(name, lineNumber, string(line), false, withNames); err != nil {
+				if err := printer.emit(name, lineNumber, offset, string(line), false, withNames); err != nil {
 					return matched, err
 				}
 				continue
 			}
 			if before.limit > 0 {
-				before.push(lineNumber, string(line))
+				before.push(lineNumber, offset, string(line))
 			}
 			continue
 		}
@@ -214,7 +221,7 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 			if err := printer.flushBefore(before, name, withNames); err != nil {
 				return matched, err
 			}
-			if err := grepEmitMatch(printer, expr, flags, name, lineNumber, string(line), withNames); err != nil {
+			if err := grepEmitMatch(printer, expr, flags, grepAt{name, lineNumber, offset}, string(line), withNames); err != nil {
 				return matched, err
 			}
 			after = flags.afterContext
@@ -225,7 +232,7 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 			// it. Measured. Then -c and -l answer for what was read, as without -m:
 			// returning here left `grep -c -m2` and `grep -l -m1` saying nothing.
 			// See grepDrainAfter for where the context ends.
-			if err := grepDrainAfter(scanner, printer, matcher, flags.invert, name, &lineNumber, after, withNames); err != nil {
+			if err := grepDrainAfter(scanner, printer, matcher, flags, name, &lineNumber, next, after, withNames); err != nil {
 				return matched, err
 			}
 			break
@@ -240,15 +247,18 @@ func grepScan(input io.Reader, expr *regexp.Regexp, flags grepFlags, withNames b
 // grepDrainAfter writes the trailing context still owed when -m stopped the scan.
 // It ends at a line that would have been selected, as busybox's and GNU's grep end it there:
 // `grep -A2 -m1 a` over banana, apple and cherry is banana alone. It went on through apple.
-func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, matcher *grepMatcher, invert bool, name string, lineNumber *int, after int, withNames bool) error {
+func grepDrainAfter(scanner *bufio.Scanner, printer *grepPrinter, matcher *grepMatcher, flags grepFlags, name string, lineNumber *int, next int64, after int, withNames bool) error {
 	for ; after > 0 && scanner.Scan(); after-- {
-		if matcher.match(scanner.Bytes()) != invert {
+		token := scanner.Bytes()
+		line := flags.grepLine(token)
+		if matcher.match(line) != flags.invert {
 			return nil
 		}
 		*lineNumber++
-		if err := printer.emit(name, *lineNumber, scanner.Text(), false, withNames); err != nil {
+		if err := printer.emit(name, *lineNumber, next, string(line), false, withNames); err != nil {
 			return err
 		}
+		next += int64(len(token)) + 1
 	}
 	return nil
 }

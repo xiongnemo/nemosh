@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`grep -z` and `grep -b`**, GNU's `--null-data` and `--byte-offset`: `find -print0 | grep -z
+  x | xargs -0` keeps a name with a newline in it whole, and a NUL ending a line does not make the
+  input binary; `grep -ob PATTERN` says where each match begins.
 - **`grep -P` and `grep --line-buffered`**: `-P` is Perl's syntax as RE2 reads it, which is
   most of what people write with it -- `\d`, `\w`, `\b`, lazy quantifiers, `(?i)`, named groups --
   and lookaround and backreferences, which RE2 has not got, are refused by name, status 2.

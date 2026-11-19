@@ -8,10 +8,17 @@ import (
 // What grep prints of a matching line, and of a file: -o's pieces, -w's words, and the answer -l,
 // -L and -c give instead of lines. Out of grep.go for the size ceiling.
 
-// grepEmitMatch writes a matching line, whole or in pieces under -o.
-func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, name string, lineNumber int, line string, withNames bool) error {
+// grepAt is where a line is: its file's name, its number and the offset of its first byte.
+type grepAt struct {
+	name   string
+	number int
+	offset int64
+}
+
+// grepEmitMatch writes a matching line, whole or in pieces under -o, each piece at its own offset.
+func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, at grepAt, line string, withNames bool) error {
 	if !flags.onlyMatching {
-		return printer.emit(name, lineNumber, line, true, withNames)
+		return printer.emit(at.name, at.number, at.offset, line, true, withNames)
 	}
 	// Each match on its own line, which is what makes -o useful for pulling
 	// values out.
@@ -22,17 +29,21 @@ func grepEmitMatch(printer *grepPrinter, expr *regexp.Regexp, flags grepFlags, n
 	if flags.invert {
 		return nil
 	}
-	matches := expr.FindAllString(line, -1)
+	var spans [][2]int
 	if flags.wordMatch {
-		matches = grepWords(expr, line)
+		spans = grepWordSpans(expr, line)
+	} else {
+		for _, span := range expr.FindAllStringIndex(line, -1) {
+			spans = append(spans, [2]int{span[0], span[1]})
+		}
 	}
-	for _, found := range matches {
+	for _, span := range spans {
 		// An empty match is not printed, as busybox's grep does not print one: `grep -o
 		// '[0-9]*'` is the numbers, where it was an empty line before each.
-		if found == "" {
+		if span[0] == span[1] {
 			continue
 		}
-		if err := printer.emit(name, lineNumber, found, true, withNames); err != nil {
+		if err := printer.emit(at.name, at.number, at.offset+int64(span[0]), line[span[0]:span[1]], true, withNames); err != nil {
 			return err
 		}
 	}
