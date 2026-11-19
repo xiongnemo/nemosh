@@ -2396,10 +2396,15 @@ references do, and `srand(x)` answers the previous seed. The numbers themselves
 are this generator's and are not gawk's or busybox's — what is promised is the
 range and that one seed gives one sequence.
 
-Refused by not being implemented: gawk's extensions — `gensub`, `asort`, `switch`,
-`@include`, `BEGINFILE`/`ENDFILE`, true multidimensional arrays beyond `SUBSEP`,
-and a regular-expression `RS` (POSIX allows a single character or empty, and
-busybox agrees). A plain `getline` reads only the file the record loop is reading
+Refused by not being implemented: gawk's extensions — `asort`, `switch`,
+`@include`, true multidimensional arrays beyond `SUBSEP`, and a regular-expression
+`RS` (POSIX allows a single character or empty, and busybox agrees). `gensub` is
+one of them here and is not in busybox's: its awk has it. A rule that begins with
+gawk's `BEGINFILE` or `ENDFILE` is refused as the program is read, `BEGINFILE is
+gawk's`, status 2; busybox reads one as a pattern on a variable nobody set, so the
+rule never runs and nothing says so. Elsewhere either name is a variable, as in
+busybox's. `PROCINFO` is an array like any other, so `PROCINFO["sorted_in"]`
+orders nothing. A plain `getline` reads only the file the record loop is reading
 and answers 0 at its end rather than advancing to the next operand; gawk advances.
 
 ### `sed`

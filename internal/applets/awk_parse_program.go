@@ -71,6 +71,20 @@ func (p *awkParser) parseFunction(program *awkProgram) error {
 	return nil
 }
 
+// atPerFileRule is whether a rule is gawk's BEGINFILE or ENDFILE: the name alone as the pattern.
+// busybox reads it as a variable nobody set, so the rule never runs and nothing says so; a program
+// that has it expects it to run once a file. Anywhere else the name is a variable, as busybox has it.
+func (p *awkParser) atPerFileRule() (string, bool) {
+	token := p.peek()
+	if token.kind != awkTokenName || (token.text != "BEGINFILE" && token.text != "ENDFILE") {
+		return "", false
+	}
+	next := p.peekAhead(1)
+	ends := next.kind == awkTokenNewline || next.kind == awkTokenEOF ||
+		next.kind == awkTokenOperator && (next.text == "{" || next.text == ";")
+	return token.text, ends
+}
+
 // parseItem reads one `pattern { action }` rule in any of its shapes.
 func (p *awkParser) parseItem() (awkItem, error) {
 	switch {
@@ -87,6 +101,9 @@ func (p *awkParser) parseItem() (awkItem, error) {
 	case p.atOperator("{"):
 		body, err := p.parseBlock()
 		return awkItem{kind: awkItemAlways, action: body}, err
+	}
+	if name, ok := p.atPerFileRule(); ok {
+		return awkItem{}, fmt.Errorf("line %d: %s is gawk's, a rule this awk does not have", p.peek().line, name)
 	}
 	pattern, err := p.parseExpression(awkExprNormal)
 	if err != nil {

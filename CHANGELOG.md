@@ -41,6 +41,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **awk's `BEGINFILE` and `ENDFILE` rules never ran, and said nothing**: read as busybox reads
+  them, a pattern on a variable nobody set, where the documentation said they were refused. A
+  rule that begins with either is refused as the program is read now, `BEGINFILE is gawk's`;
+  elsewhere the names are variables still, as they are in busybox's.
 - **`which -a` failed with what it was asked for on PATH**: `-a` was looked for as a command,
   so `which -a python` printed one path and said 1. It lists every match now, the one that would
   run first, as busybox's does -- a builtin or applet by its name, then each program PATH holds

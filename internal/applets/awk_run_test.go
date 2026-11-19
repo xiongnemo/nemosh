@@ -274,6 +274,29 @@ func TestAwkRun_expressionsAndControl(t *testing.T) {
 	}
 }
 
+// gawk's per-file rules are refused as the program is read. Read as busybox reads them, a pattern
+// on a variable nobody set, the rule never ran and nothing said so, where the documentation said
+// they were refused.
+func TestAwkParse_refusesGawksPerFileRules(t *testing.T) {
+	for _, test := range []struct{ program, says string }{
+		{program: `BEGINFILE { print FILENAME }`, says: "BEGINFILE is gawk's"},
+		{program: "{ n++ }\nENDFILE { print n }", says: "ENDFILE is gawk's"},
+		{program: "BEGINFILE\n{ print }", says: "BEGINFILE is gawk's"},
+	} {
+		if _, err := parseAwkProgram(test.program); err == nil || !strings.Contains(err.Error(), test.says) {
+			t.Errorf("%q: %v, want an error saying %q", test.program, err, test.says)
+		}
+	}
+}
+
+// The names are only refused where a rule begins with them: elsewhere they are a variable, as in
+// busybox's awk and POSIX's, and a program that has one keeps working.
+func TestAwkRun_beginfileIsAVariableOutsideARule(t *testing.T) {
+	if got, _, status := runAwk(t, "BEGIN { BEGINFILE = 3; ENDFILE = 4 }\n{ print BEGINFILE + ENDFILE }", "a\n"); got != "7\n" || status != 0 {
+		t.Fatalf("BEGINFILE as a variable: %q, status %d", got, status)
+	}
+}
+
 // What the interpreter refuses at run time, and what it has not got to yet.
 //
 // The unimplemented ones say so by name rather than doing something approximate, which is
