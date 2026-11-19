@@ -116,7 +116,7 @@ func TestDateApplet_returnsErrExitFalseAndDiagnostic_whenRunWithUnsupportedInput
 		diagnostic   string
 		exactMessage bool
 	}{
-		{name: "not a date", args: []string{"-u", "-d", "yesterday", "+%Y"}, diagnostic: "date: invalid date 'yesterday'"},
+		{name: "not a date", args: []string{"-u", "-d", "3 bananas ago", "+%Y"}, diagnostic: "date: invalid date '3 bananas ago'"},
 		{name: "setting the clock", args: []string{"-s", "@0"}, diagnostic: "date: cannot set date: Operation not permitted"},
 		{name: "a missing reference", args: []string{"-r", "nosuch.txt"}, diagnostic: "date: cannot stat 'nosuch.txt'"},
 		{name: "bad epoch", args: []string{"-u", "-d", "@bad", "+%s"}, diagnostic: "date:"},

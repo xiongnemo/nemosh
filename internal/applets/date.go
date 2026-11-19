@@ -76,7 +76,9 @@ func (a dateApplet) dateTime(ctx context.Context, request dateRequest) (time.Tim
 		return stamp, nil
 	}
 	midnight := time.Date(stamp.Year(), stamp.Month(), stamp.Day(), 0, 0, 0, 0, stamp.Location())
-	parsed, err := parseDateString(request.input, midnight)
+	// busybox's formats are read against midnight, as busybox reads them, and GNU's relative
+	// items move the time itself, as GNU's date has `yesterday` at this time of day.
+	parsed, err := parseDateInput(request.input, midnight, stamp)
 	if request.inputFormat != "" {
 		fields := fieldsOf(midnight)
 		_, ok := strptime(request.input, request.inputFormat, &fields)

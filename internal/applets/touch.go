@@ -73,7 +73,11 @@ func (touchApplet) Run(ctx context.Context, args []string, _ io.Reader, _ io.Wri
 		stamp = touchStamp{access: accessTime(native, info), modified: info.ModTime(), explicit: true}
 	}
 	if date := touchDate(options); date != "" {
+		// -d reads GNU's relative items too, `touch -d '2 days ago'`; -t is a stamp, as GNU's is.
 		when, err := parseDateString(date, now)
+		if err != nil && options.last("dt") == 'd' {
+			when, err = parseDateInput(date, now, now)
+		}
 		if err != nil {
 			return err
 		}

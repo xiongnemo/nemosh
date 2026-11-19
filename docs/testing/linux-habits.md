@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 40   |
-| partial | 8    |
-| refused | 25   |
+| works   | 42   |
+| partial | 7    |
+| refused | 24   |
 | missing | 29   |
 
 ## Existing commands
@@ -61,7 +61,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `top -o %MEM` | refused | `-o` is a column list here |
 | `top -p PID`, `top -u USER` | refused | |
 | `date +%F`, `-u`, `-R`, `-I`, `+%s`, `-d @N` | works | |
-| `date -d yesterday`, `date -d '2 days ago'`, `touch -d '2 days ago'` | refused | only fixed formats and `@N` |
+| `date -d yesterday`, `date -d '2 days ago'`, `touch -d '2 days ago'` | works | GNU's relative items, after busybox's formats |
 | `watch -n 1`, `watch -t` | works | |
 | `watch -d` | partial | accepted, highlights nothing |
 | `cp -a`, `-r`, `-u`, `-l`; `rm -rf`; `ln -sfn` | works | |
@@ -87,7 +87,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `less +F` | refused | opened as a file |
 | `less a b` | partial | one stream, no `:n` |
 | `chmod +x`, `-R 755`; `stat -c '%a %n'` | works | on Windows only write has an effect |
-| `touch -d` | partial | `date -d`'s formats only |
+| `touch -d` | works | `date -d`'s formats and relative items |
 | `dd ... status=progress` | partial | no progress shown |
 | `history`, `fc -l`, `env`, `printenv`, `export -p`, `type`, `command -v` | works | |
 | `which -a NAME` | works | every match, the one that runs first (bd3ce6a7) |

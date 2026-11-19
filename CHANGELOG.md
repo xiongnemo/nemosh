@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`date -d` and `touch -d` read GNU's relative dates**: `date -d yesterday`, `date -d '2 days
+  ago'`, `date -d 'next friday'`, `date -d 'tomorrow 09:00'`, `touch -d 'last monday' f`. Each was
+  `invalid date`. busybox's formats are tried first and read as before; the relative items follow
+  GNU's parse_datetime -- calendar days and months, a day of the week at midnight, `ago` turning
+  the item before it round.
 - **`zgrep`, `zegrep` and `zfgrep`**, gzip's, which busybox has not got: `zgrep error
   /var/log/syslog*` reads `syslog.2.gz` and `syslog` alike. Data that begins with gzip's, bzip2's
   or xz's magic is read through zcat's decompressor and any other as it is, as `gzip -cdf` passes
