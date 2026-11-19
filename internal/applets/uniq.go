@@ -66,23 +66,24 @@ func (uniqApplet) Run(ctx context.Context, args []string, stdin io.Reader, stdou
 		}
 		output = file
 	}
-	lines, err := readUniqLines(reader, input.zero)
+	target := stdout
+	if output != nil {
+		target = output
+	}
+	readErr, writeErr := input.stream(reader, target)
 	if opened != nil {
-		err = errors.Join(err, opened.Close())
+		readErr = errors.Join(readErr, opened.Close())
 	}
-	if err != nil {
-		if output != nil {
-			output.Close()
+	if output != nil {
+		writeErr = errors.Join(writeErr, output.Close())
+	}
+	if readErr != nil {
+		if errors.Is(readErr, context.Canceled) || errors.Is(readErr, context.DeadlineExceeded) {
+			return readErr
 		}
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return err
-		}
-		return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", inputFailure(input.path, err)))
+		return writeUniqDiagnostic(stderr, inputDiagnostic("uniq", inputFailure(input.path, readErr)))
 	}
-	if output == nil {
-		return input.write(stdout, lines)
-	}
-	return errors.Join(input.write(output, lines), output.Close())
+	return writeErr
 }
 
 type uniqInput struct {
@@ -145,15 +146,23 @@ func openUniqOutput(view ProcessView, path string) (io.WriteCloser, error) {
 	return file, nil
 }
 
-// readUniqLines splits input into lines at newlines, a CR before one dropped, and under -z at
-// NULs as well, as busybox's getline ends a line at either and its -z sets only what is written
-// after one: `sort -z | uniq -z` is one line per name. Under -z a NUL ended nothing, so
-// `printf 'a\0a\0b\0' | uniq -z` was a single line with a NUL added. busybox's getline ends a
-// line at a NUL without -z too; that is not copied, as cut does not copy it.
-func readUniqLines(input io.Reader, zero bool) ([]string, error) {
+// eachUniqLine hands on each line of input as it is read: split at newlines, a CR before one
+// dropped, and under -z at NULs as well, as busybox's getline ends a line at either and its -z
+// sets only what is written after one: `sort -z | uniq -z` is one line per name. Under -z a NUL
+// ended nothing, so `printf 'a\0a\0b\0' | uniq -z` was a single line with a NUL added. busybox's
+// getline ends a line at a NUL without -z too; that is not copied, as cut does not copy it.
+//
+// A line at a time, as busybox reads them: all of them were read first, so nothing was written
+// until the input ended, and `uniq -d` of 19 MB peaked at 67 MiB where busybox's peaked at 1.1.
+// waiting is called before a read that may wait, once what was read is used up.
+func eachUniqLine(input io.Reader, zero bool, each func(string) error, waiting func() error) error {
 	reader := bufio.NewReader(input)
-	var lines []string
 	for {
+		if reader.Buffered() == 0 {
+			if err := waiting(); err != nil {
+				return err
+			}
+		}
 		chunk, err := reader.ReadString('\n')
 		if chunk != "" {
 			ended := strings.HasSuffix(chunk, "\n")
@@ -166,45 +175,72 @@ func readUniqLines(input io.Reader, zero bool) ([]string, error) {
 					pieces = pieces[:len(pieces)-1]
 				}
 			}
-			lines = append(lines, pieces...)
+			for _, piece := range pieces {
+				if eachErr := each(piece); eachErr != nil {
+					return eachErr
+				}
+			}
 		}
 		if err == nil {
 			continue
 		}
 		if errors.Is(err, io.EOF) {
-			return lines, nil
+			return nil
 		}
-		return nil, err
+		return err
 	}
 }
 
-// write writes the first line of each run, as busybox's does: under -d only the runs that
-// repeated, under -u only the ones that did not, and under -c after the run's size in seven
-// columns and a blank, so a column of tallies lines up.
-func (input uniqInput) write(out io.Writer, lines []string) error {
+// stream writes the first line of each run, as busybox's does, once the next has begun: under -d
+// only the runs that repeated, under -u only the ones that did not, and under -c after the run's
+// size in seven columns and a blank, so a column of tallies lines up. A failure to read and one
+// to write are answered apart, as only the first is uniq's to name.
+func (input uniqInput) stream(in io.Reader, out io.Writer) (readErr, writeErr error) {
 	end := byte('\n')
 	if input.zero {
 		end = 0
 	}
 	writer := bufio.NewWriter(out)
-	for start := 0; start < len(lines); {
-		next := start + 1
-		for next < len(lines) && input.same(lines[start], lines[next]) {
-			next++
+	first, size := "", 0
+	emit := func() error {
+		repeated := size > 1
+		if input.onlyRepeated && !repeated || input.onlyUnique && repeated {
+			return nil
 		}
-		repeated := next-start > 1
-		if !(input.onlyRepeated && !repeated) && !(input.onlyUnique && repeated) {
-			if input.count {
-				fmt.Fprintf(writer, "%7d ", next-start)
-			}
-			writer.WriteString(lines[start])
-			if err := writer.WriteByte(end); err != nil {
-				return err
-			}
+		if input.count {
+			fmt.Fprintf(writer, "%7d ", size)
 		}
-		start = next
+		writer.WriteString(first)
+		return writer.WriteByte(end)
 	}
-	return writer.Flush()
+	readErr = eachUniqLine(in, input.zero, func(line string) error {
+		if size > 0 && input.same(first, line) {
+			size++
+			return nil
+		}
+		if size > 0 {
+			if writeErr = emit(); writeErr != nil {
+				return writeErr
+			}
+		}
+		first, size = line, 1
+		return nil
+	}, func() error {
+		// What is written is out before a read that may wait, so `tail -f log | uniq` shows a
+		// run as the next begins, and a file is written a buffer at a time, not a line.
+		writeErr = writer.Flush()
+		return writeErr
+	})
+	if writeErr != nil {
+		return nil, writeErr
+	}
+	if readErr == nil && size > 0 {
+		writeErr = emit()
+	}
+	if writeErr == nil {
+		writeErr = writer.Flush()
+	}
+	return readErr, writeErr
 }
 
 // same is whether two lines are one run: what they compare, past -f's fields and -s's

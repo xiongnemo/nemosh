@@ -25,6 +25,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **uniq wrote nothing until its input ended**, so `tail -f log | uniq` showed nothing, and
+  `uniq -d` of 19 MB peaked at 66 MiB where busybox's peaks at 1.1. It writes each run as the next
+  begins, its output going out before any read that may wait, and peaks at 19 MiB in 61 ms where
+  it took 102.
 - **base64 and base32 read their whole input before writing a byte**: `base64 -d` of 26 MB
   peaked at 161 MiB of commit, where busybox's peaks at 1.1, as the input was read, cleaned into a
   copy and decoded into a third. Both stream now, at 13 MiB, the Go runtime's own, and faster:
