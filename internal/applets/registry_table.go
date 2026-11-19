@@ -24,6 +24,7 @@ var defaultApplets = [...]appletEntry{
 	{"cksum", newCksumApplet},
 	{"clear", newClearApplet},
 	{"cmp", newCmpApplet},
+	{"column", newColumnApplet},
 	{"comm", newCommApplet},
 	{"cp", newCpApplet},
 	{"cpio", newCpioApplet},

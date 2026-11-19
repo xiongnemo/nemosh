@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`column`, util-linux's**: `mount | column -t`, `column -t -s,`, `-x`, `-o`, `-R`, `-N`, and the
+  columns of a list without `-t`. There was no column.
+
 - **`ping`, iputils'**: `ping -c 4 HOST`, `-i`, `-W`, `-w`, `-s`, `-t`, `-q`, `-n`, `-6`, in iputils'
   words, with no administrator. It ran Windows' PING.EXE, which answers `-c` with `Option -c
   requires administrative privileges`; that one still runs as `ping.exe`.
