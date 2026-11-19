@@ -8,7 +8,20 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
-## Unreleased
+## v1.6.0 - 2026-11-19
+
+Quicker, and wget and cp as busybox's are. A start loads the nine DLLs a bare Go program loads,
+where it loaded seventeen; on 92 MB of Go's source `tr a-z A-Z` takes 0.12 s, `grep -ci` 0.24 s
+and `cmp` 58 ms, where busybox-w32 takes 0.55, 1.23 and 1.4 s, sort peaks at 152 MB where
+busybox's peaks at 193, and `ls -l` of System32 takes 213 ms where it took 277. wget saves under
+the name asked for, shows every redirect under `-S`, opens `-O /dev/null` and draws busybox's
+progress meter; cp onto a network share copies by itself, so a link dropped mid-copy leaves a
+short file rather than one of the full size whose end is zeros; Ctrl-C no longer prints Go's
+error text; and completion specs are kept in the XDG layout, which `nemosh --migrate` moves them
+to. Against v1.5.0, both as CI built them and measured on one machine with tools/startbench:
+`nemosh -c true` takes 5.8 ms where it took 8.1, 2,000 commands 17.8 ms where they took 20.0, and
+a session waiting for input commits 13.3 MiB where it committed 13.7; the binary is 11,254,272
+bytes, 36 KB more than v1.5.0's. Oils: 2152 of the 2548 cases bash passes, 84.5%, as before.
 
 ### Changed
 
