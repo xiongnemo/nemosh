@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`tree`, tree(1)'s**: `-L`, `-a`, `-d`, `-I`, `-P`, `-h`, `-s`, `--dirsfirst` and the rest, in tree's
+  UTF-8 lines. It ran Windows' tree.com, which answers `tree -L 2` with `Too many parameters`;
+  that one still runs as `tree.com`.
+
 - **`hostname`, Debian's**: `-I` every address but the loopback's, `-f`, `-s`, `-d`, `-i`, `-A`.
   It ran Windows' hostname.exe, which answers `-I` with `sethostname: Use the Network Control
   Panel Applet`; that one still runs as `hostname.exe`. Setting the name is refused with the

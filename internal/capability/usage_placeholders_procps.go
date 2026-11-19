@@ -62,4 +62,8 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"diffstarting-file", "FILE"},
 	{"hostnameF", "FILE"},
 	{"hostnamefile", "FILE"},
+	{"treeL", "LEVEL"},
+	{"treeI", "PATTERN"},
+	{"treeP", "PATTERN"},
+	{"treecharset", "CHARSET"},
 }

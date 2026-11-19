@@ -130,6 +130,7 @@ var defaultApplets = [...]appletEntry{
 	{"top", newTopApplet},
 	{"touch", newTouchApplet},
 	{"tr", newTrApplet},
+	{"tree", newTreeApplet},
 	{"true", newTrueApplet},
 	{"truncate", newTruncateApplet},
 	{"ts", newTsApplet},
