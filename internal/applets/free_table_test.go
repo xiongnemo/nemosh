@@ -43,7 +43,7 @@ func TestFreeTable_isBusyboxs(t *testing.T) {
 			row("Swap:  ", "2048", "1024", "1024")},
 	} {
 		var out bytes.Buffer
-		if err := writeFreeTable(&out, memory, freeScaleFor(appletOptions{order: test.order})); err != nil {
+		if err := writeFreeTable(&out, memory, freeScaleFor(appletOptions{order: test.order}), freeLayout{}); err != nil {
 			t.Fatal(err)
 		}
 		if out.String() != test.want {

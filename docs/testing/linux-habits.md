@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 46   |
+| works   | 47   |
 | partial | 7    |
-| refused | 20   |
+| refused | 19   |
 | missing | 29   |
 
 ## Existing commands
@@ -53,7 +53,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `tail -f`, `-F`, `-n +2`, `-f a b`; `head -n -5`, `head -c 100` | works | |
 | `tail --pid=N` | refused | |
 | `free -h`, `free -m` | works | |
-| `free -t`, `free -s N`, `free -w` | refused | |
+| `free -t`, `free -s N`, `free -w` | works | procps-ng's; buffers are zero, Windows keeping none apart |
 | `uptime`, `uptime -s` | works | |
 | `uptime -p` | works | procps-ng's pretty form |
 | `top -b -n 1`, `top -d 1` | works | |

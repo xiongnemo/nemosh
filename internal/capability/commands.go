@@ -73,7 +73,7 @@ var commands = []Command{
 	{Name: "cksum", Operand: AnyPath},
 	{Name: "crc32", Operand: AnyPath},
 	{Name: "sum", Short: "rs", Operand: AnyPath},
-	{Name: "free", Short: "bkmgh", Operand: AnyPath},
+	{Name: "free", Short: "bkmghtwsc", ValueShort: "sc", Long: []string{"bytes", "kibi", "mebi", "gibi", "human", "total", "wide", "seconds", "count"}, ValueLong: []string{"seconds", "count"}, Operand: AnyPath},
 	{Name: "factor", Operand: AnyPath},
 	{Name: "dc", Short: "xef", ValueShort: "ef", FileShort: "f", Operand: AnyPath},
 	{Name: "bc", Short: "sqw", Long: []string{"standard", "quiet", "warn"}, Operand: AnyPath},

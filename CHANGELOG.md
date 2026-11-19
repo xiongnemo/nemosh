@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **free takes procps-ng's `-t`, `-w`, `-s` and `-c`**: a Total row, buffers and cache apart, and
+  the table again every so many seconds or so many times, `free -h -s 2`. Each was `unknown
+  option`. The unit is the first of `-b -k -m -g -h` given, so `free -th` is in -h's units; it
+  read the first letter alone, and `-t` there would have meant kilobytes.
 - **`uptime -p`**, procps-ng's pretty form that Ubuntu's uptime prints: `up 2 weeks, 3 days, 22
   hours, 15 minutes`. It was `unknown option -- p`. `--pretty` and `--since` are taken too.
 - **top bundles its letters and takes procps-ng's `-p`, `-u` and `-o FIELD`**: `top -bn1`, `top

@@ -39,4 +39,8 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"topp", "PIDLIST"},
 	{"topu", "USERLIST"},
 	{"topU", "USERLIST"},
+	{"frees", "SECONDS"},
+	{"freeseconds", "SECONDS"},
+	{"freec", "COUNT"},
+	{"freecount", "COUNT"},
 }
