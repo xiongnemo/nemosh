@@ -56,6 +56,8 @@ func (p *findParser) parsePredicate() (findNode, error) {
 		return p.samefilePredicate(operand)
 	case "-links":
 		return p.linksPredicate(operand)
+	case "-user", "-group", "-uid", "-gid":
+		return p.ownerPredicate(operand)
 	case "-executable":
 		return findExecutable{}, nil
 	case "-empty":

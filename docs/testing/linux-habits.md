@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 60   |
+| works   | 61   |
 | partial | 8    |
-| refused | 9    |
+| refused | 8    |
 | missing | 29   |
 
 ## Existing commands
@@ -38,7 +38,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `grep -z`, `grep -b` | works | GNU's --null-data and --byte-offset |
 | `zgrep`, `zegrep`, `zfgrep` | works | gzip, bzip2 and xz by their magic, plain files as they are |
 | `find -name -mtime +7 -delete`, `-type f -size +100M`, `-maxdepth -iname`, `-newer`, `-perm`, `-print0`, `-empty`, `-mmin`, `-regex` | works | |
-| `find -user NAME` | refused | |
+| `find -user NAME`, `-group`, `-uid`, `-gid` | works | NAME as `ls -l` prints the owner |
 | `find -printf` | refused | |
 | `pgrep -f`, `pkill -f` | works | a command line Windows will not show is matched by the name |
 | `pgrep -a`, `-u`, `-n`, `-o`, `-c`, `-d`; `pkill -u -n -o` | works | |

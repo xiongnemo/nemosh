@@ -27,7 +27,7 @@ func TestFind_saysWhatItCannotReadInBusyboxsWords(t *testing.T) {
 		{args: []string{".", "(", "-name", "a.txt"}, want: "unpaired '('"},
 		// What neither find takes is unrecognized.
 		{args: []string{".", "-fstype", "x"}, want: "unrecognized: -fstype"},
-		{args: []string{".", "-user", "x"}, want: "unrecognized: -user"},
+		{args: []string{".", "-fprint", "x"}, want: "unrecognized: -fprint"},
 		{args: []string{".", "-exec", "rm", "{}"}, want: "-exec requires an argument"},
 		{args: []string{".", "-exec", "echo", "{}", "{}", "+"}, want: "only one '{}' allowed for -exec +"},
 	} {

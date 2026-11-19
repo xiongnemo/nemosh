@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`find -user NAME`, `-group`, `-uid` and `-gid`**: NAME as `ls -l` prints the owner, in any
+  case, or a number as `ls -n` prints it. A NAME that is no account is refused before the walk.
+  It was `unrecognized: -user`.
+
 - **`cp --preserve[=LIST]` and `--no-preserve=LIST`**, GNU's: mode, ownership, timestamps, links
   or all, read in order with `-p` and `-a`, so `cp -a --no-preserve=timestamps` keeps the rest.
   `links` keeps a file with two names one file in the copy, and `-a` now does too, as GNU's `-a`
