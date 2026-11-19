@@ -11,13 +11,20 @@ import (
 
 func newRealpathApplet() Applet {
 	return simpleApplet{name: "realpath", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		if len(args) == 0 {
+		options, operands, err := parseAppletLongOptions(ctx, args, realpathLongOptions, "emsqz", realpathRelativeTo+realpathRelativeBase)
+		if err != nil {
+			return err
+		}
+		if len(operands) == 0 {
 			return ErrExitFalse
 		}
-
-		failed := false
 		view := ProcessViewFromContext(ctx)
-		for _, arg := range args {
+		run, err := newRealpathRun(view, options)
+		if err != nil {
+			return err
+		}
+		failed := false
+		for _, arg := range operands {
 			resolved, err := ResolveProcessPath(view, currentIfEmpty(arg))
 			if err == nil && resolved.Device {
 				// A device is a real path with a canonical spelling, which is exactly
@@ -25,7 +32,7 @@ func newRealpathApplet() Applet {
 				// is no host path to hand to realpath() below, and none is needed --
 				// the canonical form *is* the answer.
 				if info, statErr := statDeviceOperand(view, arg); statErr == nil && info != nil {
-					if _, writeErr := fmt.Fprintln(stdout, resolved.Canonical); writeErr != nil {
+					if _, writeErr := fmt.Fprint(stdout, resolved.Canonical, run.end); writeErr != nil {
 						return writeErr
 					}
 					continue
@@ -33,25 +40,21 @@ func newRealpathApplet() Applet {
 				// Under /dev and not a device this shell has. No such path, which is
 				// what the message should say rather than blaming the host for a name
 				// the host was never asked about.
-				err = fmt.Errorf("No such file or directory")
+				err = errRealpathNoDevice
 			}
 			native := resolved.Native
 			if err == nil {
-				native, err = realpath(native)
+				native, err = run.canonical(native)
 			}
 			if err != nil {
 				failed = true
-				// operandFailure rather than the error itself: a *fs.PathError prints
-				// the host path it failed on, which arrives with native separators
-				// mixed into an operand the caller spelled with slashes --
-				// `GetFileAttributesEx C:/Users\nemo\...` was the actual output. See
-				// diagnostic.go, which exists for this.
-				if _, writeErr := fmt.Fprintf(stderr, "realpath: %v\n", operandFailure(filepath.ToSlash(arg), err)); writeErr != nil {
+				if writeErr := run.report(stderr, arg, err); writeErr != nil {
 					return writeErr
 				}
 				continue
 			}
-			if _, err := fmt.Fprintln(stdout, canonicalizeGeneratedPath(view, resolved.Canonical, native)); err != nil {
+			shown := run.relative(native, canonicalizeGeneratedPath(view, resolved.Canonical, native))
+			if _, err := fmt.Fprint(stdout, shown, run.end); err != nil {
 				return err
 			}
 		}

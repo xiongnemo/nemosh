@@ -135,7 +135,7 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 	noOptionParsing := map[string]bool{
 		"echo": true, "printf": true, "yes": true, "true": true, "false": true,
 		"test": true, "[": true, "sleep": true, "printenv": true,
-		"posixpath": true, "realpath": true, "winpath": true,
+		"posixpath": true, "winpath": true,
 		"chmod": true, "pwd": true, "sed": true,
 		// find refuses it, but as an unsupported *expression* rather than an
 		// option, so the wording this test looks for is deliberately absent.

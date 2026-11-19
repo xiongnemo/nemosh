@@ -995,7 +995,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `pwd` | `-L -P` both accepted | accepted |
 | `readlink` | `-n -f -v`, and `-s -q`, the quiet that is the default; `-f` prints what `realpath` does, and FILE need not exist if its directory does | refused by name |
 | `rev` | none; reverses runes, not bytes | refused by name |
-| `realpath` | none | treated as a path operand |
+| `realpath` | GNU's `-e -m -s -q -z`, `--relative-to=DIR`, `--relative-base=DIR` and the long forms, which busybox's has not got: every word was a path. Without `-e` or `-m` a link's target need not be there and the FILE must, as busybox's has it | refused by name; `--` before a FILE that begins with a dash |
 | `rm` | `-f -i -r -R -v`, and GNU's `-I`, which asks once before removing more than three FILEs or removing recursively, `rm: remove 4 arguments?`, and removes nothing, status 0, unless told yes; of `-f`, `-i` and `-I` the last wins, `.` and `..` are refused, and a read-only file is removed as busybox-w32 removes one | refused by name |
 | `rmdir` | `-p -v`, `--ignore-fail-on-non-empty` and the other long forms; `-v` names each directory before it is removed | refused by name |
 | `sha1sum`, `sha256sum`, `sha384sum`, `sha512sum` | `-b -c -s -t -w`, as `md5sum` | refused by name |

@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 53   |
+| works   | 54   |
 | partial | 8    |
-| refused | 15   |
+| refused | 14   |
 | missing | 29   |
 
 ## Existing commands
@@ -102,7 +102,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `nc -l -p 8080` | partial | 127.0.0.1 only, one connection |
 | `id -un`, `groups`, `whoami`, `uname -a`, `uname -r`, `nproc`, `arch` | works | |
 | `rev`, `tac`, `shuf -n`, `split -l`, `comm -12`, `join`, `paste -sd+`, `fold -w`, `expand`, `iconv`, `truncate -s 0`, `mktemp -d`, `install -D`, `readlink -f`, `basename -s`, `dirname` | works | |
-| `realpath --relative-to=DIR` | refused | the option is read as a path |
+| `realpath --relative-to=DIR` | works | GNU's options |
 
 ## Names that are another program here, or nothing
 

@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **realpath takes GNU's options**: `--relative-to=DIR`, `--relative-base=DIR`, `-m`, `-e`, `-s`,
+  `-q` and `-z`. busybox's takes none, so every word was a path and `realpath --relative-to=. x`
+  looked for a file of that name.
+
 - **`rm -I`**, GNU's: one question before removing more than three files or removing
   recursively, `rm: remove 4 arguments?`. It was `unknown option -- I`.
 

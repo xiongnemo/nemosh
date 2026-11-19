@@ -48,4 +48,6 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"dftype", "TYPE"},
 	{"dfblock-size", "SIZE"},
 	{"lstime-style", "STYLE"},
+	{"realpathrelative-to", "DIR"},
+	{"realpathrelative-base", "DIR"},
 }
