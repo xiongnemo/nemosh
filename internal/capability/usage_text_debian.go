@@ -6,7 +6,17 @@ package capability
 // rest by usageText, so nothing that reads the table knows there is a split.
 func appletUsageTextDebian() map[string]Usage {
 	return map[string]Usage{
-		"tput": {Summary: "Write a terminal's control sequence, or say its size.", Operands: "CAPABILITY [PARAMETER]...",
+		"man": {Summary: "Show a command's manual, which is its help here.", Operands: "[SECTION] NAME...",
+			Options: map[string]string{"k": "search the names and summaries, as apropos does", "f": "say what NAME is in a line, as whatis does"},
+			Notes: []string{
+				"There are no man pages on Windows; what every command here takes is its help, so man ls is help ls, paged by less on a terminal.",
+				"A SECTION answers for 1 and 8, the commands; a page that is not here is `No manual entry for NAME`, status 16, as man-db says it.",
+			}},
+		"apropos": {Summary: "Search the commands' names and summaries.", Operands: "KEYWORD...",
+			Notes: []string{"Each KEYWORD is a regular expression, matched without regard to case, as man-db's apropos matches it."}},
+		"whatis": {Summary: "Say in a line what each command is.", Operands: "NAME..."},
+		"info": {Summary: "Show a command's manual, which is its help here.", Operands: "NAME...",
+			Notes: []string{"The same as man: GNU info falls back to a man page where there is no Info manual, and here there is none."}}, "tput": {Summary: "Write a terminal's control sequence, or say its size.", Operands: "CAPABILITY [PARAMETER]...",
 			Options: map[string]string{"T": "the terminal type, which must be xterm-256color or xterm"},
 			Notes: []string{
 				"ncurses' tput with xterm-256color's terminfo, the dialect the Windows console speaks: setaf, setab, bold, dim, smul, rmul, rev, sgr0, sitm, blink, smso, clear, el, ed, cup, hpa, vpa, home, civis, cnorm, smcup, rmcup, sc, rc, the cursor's moves, bel and longname.",

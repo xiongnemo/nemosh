@@ -6,6 +6,7 @@ package applets
 // builds them under PLATFORM_MINGW32.
 var defaultApplets = [...]appletEntry{
 	{"[", func() Applet { return newTestApplet("[") }},
+	{"apropos", func() Applet { return newManApplet("apropos") }},
 	{"ar", newArApplet},
 	{"arch", newArchApplet},
 	{"ascii", newAsciiApplet},
@@ -66,6 +67,7 @@ var defaultApplets = [...]appletEntry{
 	{"httpd", newHttpdApplet},
 	{"iconv", newIconvApplet},
 	{"id", newIDApplet},
+	{"info", func() Applet { return newManApplet("info") }},
 	{"install", newInstallApplet},
 	{"ip", newIpApplet},
 	{"ipcalc", newIpcalcApplet},
@@ -79,6 +81,7 @@ var defaultApplets = [...]appletEntry{
 	{"lsattr", newLsattrApplet},
 	{"lzcat", newLzcatApplet},
 	{"lzma", newLzmaApplet},
+	{"man", func() Applet { return newManApplet("man") }},
 	{"md5sum", newMd5sumApplet},
 	{"micro", newMicroApplet},
 	{"mkdir", newMkdirApplet},
@@ -159,6 +162,7 @@ var defaultApplets = [...]appletEntry{
 	{"uuidgen", newUUIDGenApplet},
 	{"wc", newWcApplet},
 	{"wget", newWgetApplet},
+	{"whatis", func() Applet { return newManApplet("whatis") }},
 	{"whoami", newWhoamiApplet},
 	{"whois", newWhoisApplet},
 	{"winpath", newWinpathApplet},

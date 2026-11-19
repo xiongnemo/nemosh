@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`man`, `apropos`, `whatis` and `info`**: this shell's own help as man-db would put it.
+  `man ls` is `help ls`, paged on a terminal; `man -k` and `apropos` search the commands'
+  summaries. There are no man pages on Windows to format.
+
 - **`tput` and `tty`**: `tput setaf 1`, `tput sgr0`, `tput cols` and the rest of xterm-256color's
   terminfo, the VT the Windows console speaks; `tty -s`, and `not a tty` from a pipe. A
   terminal's name is refused for now, /dev/tty not yet being a device here.
