@@ -21,7 +21,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 52   |
+| works   | 53   |
 | partial | 8    |
 | refused | 15   |
 | missing | 29   |
@@ -67,7 +67,8 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `watch -d` | partial | accepted, highlights nothing |
 | `cp -a`, `-r`, `-u`, `-l`; `rm -rf`; `ln -sfn` | works | |
 | `mv -u` | works | |
-| `cp --preserve=all`, `rm -I` | refused | |
+| `rm -I` | works | |
+| `cp --preserve=all` | refused | |
 | `tar xzvf`, `czf`, `tf`, `xf -C`, `--exclude`, `cJf` | works | |
 | `tar -I zstd` | refused | no zstd |
 | `sed -i`, `-i.bak`, `-n '10,20p'`, `-E`, `'/^#/d'` | works | |

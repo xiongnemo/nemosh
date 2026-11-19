@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`rm -I`**, GNU's: one question before removing more than three files or removing
+  recursively, `rm: remove 4 arguments?`. It was `unknown option -- I`.
+
 - **`mv -u`**, GNU's `--update`: a file is moved only over an older one, or where there is none.
   It was `unknown option -- u`; cp had it already.
 - **`sort -R`**, GNU's random sort: an order that differs from run to run, lines with the same

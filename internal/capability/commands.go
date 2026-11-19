@@ -61,7 +61,7 @@ var commands = []Command{
 	{Name: "readlink", Short: "nfvsq", Operand: AnyPath},
 	{Name: "rev", Operand: AnyPath},
 	{Name: "realpath", Operand: AnyPath},
-	{Name: "rm", Short: "fiRrv", Operand: AnyPath},
+	{Name: "rm", Short: "fiIRrv", Operand: AnyPath},
 	{Name: "rmdir", Short: "pv", Long: []string{"parents", "verbose", "ignore-fail-on-non-empty"}, Operand: Directory},
 	{Name: "md5sum", Short: "bcstw", Operand: AnyPath},
 	{Name: "sed", Operand: AnyPath},

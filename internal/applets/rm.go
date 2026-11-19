@@ -37,11 +37,11 @@ type rmRun struct {
 
 func newRmApplet() Applet {
 	return simpleApplet{name: "rm", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "fiRrv", "")
+		options, operands, err := parseAppletOptions(ctx, args, "fiIRrv", "")
 		if err != nil {
 			return err
 		}
-		last := options.last("fi")
+		last := options.last("fiI")
 		run := &rmRun{force: last == 'f', interactive: last == 'i', recursive: options.has('R') || options.has('r'),
 			verbose: options.has('v'), terminal: inputIsTerminal(ctx, stdin), stdin: stdin, stdout: stdout, stderr: stderr}
 		if len(operands) == 0 {
@@ -51,6 +51,9 @@ func newRmApplet() Applet {
 				return nil
 			}
 			return missingOperand()
+		}
+		if last == 'I' && !run.confirmOnce(len(operands)) {
+			return nil
 		}
 		view := ProcessViewFromContext(ctx)
 		for _, operand := range operands {
@@ -73,6 +76,24 @@ func newRmApplet() Applet {
 		}
 		return nil
 	}}
+}
+
+// confirmOnce is GNU's -I: before removing more than three FILEs, or removing recursively, it asks
+// once, `rm: remove 4 arguments? `, and anything but yes removes nothing, status 0, as GNU's does.
+// Fewer, not recursively, it asks nothing.
+func (r *rmRun) confirmOnce(count int) bool {
+	if count <= 3 && !r.recursive {
+		return true
+	}
+	plural, recursively := "s", ""
+	if count == 1 {
+		plural = ""
+	}
+	if r.recursive {
+		recursively = " recursively"
+	}
+	fmt.Fprintf(r.stderr, "rm: remove %d argument%s%s? ", count, plural, recursively)
+	return askYes(r.stdin)
 }
 
 // remove is libbb's remove_file: it removes native, shown as display, and everything under it,
