@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`grep -P` and `grep --line-buffered`**: `-P` is Perl's syntax as RE2 reads it, which is
+  most of what people write with it -- `\d`, `\w`, `\b`, lazy quantifiers, `(?i)`, named groups --
+  and lookaround and backreferences, which RE2 has not got, are refused by name, status 2.
+  `tail -f log | grep --line-buffered x` was `unknown option`; each line was written as it was
+  found already, and the option is taken now.
 - **du takes GNU's long options**: `du -h --max-depth=1`, `du -sh --exclude=node_modules .`, `du
   --apparent-size`, `du -X patterns`. It took none, so each was `unknown option`. `--apparent-size`
   counts what files hold and rounds the sum up to the unit, as GNU's does; `--exclude` matches an

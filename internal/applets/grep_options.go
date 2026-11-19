@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -44,8 +45,9 @@ type grepFlags struct {
 	lineMatch   bool
 	fixedString bool
 	// extended is -E. Without it a pattern is a POSIX basic regular expression, as it is
-	// in busybox, GNU and POSIX; see compile.
+	// in busybox, GNU and POSIX; see compile. perl is -P, Perl's syntax as RE2 reads it.
 	extended     bool
+	perl         bool
 	onlyMatching bool
 	noMessages   bool
 	noFilename   bool
@@ -85,6 +87,9 @@ type grepFlags struct {
 // still has to be anchored, so the escaping happens first and the anchors wrap
 // it.
 func (f grepFlags) compile() (*regexp.Regexp, error) {
+	if f.perl && f.fixedString {
+		return nil, errors.New("conflicting matchers specified")
+	}
 	if len(f.patterns) == 0 {
 		// No pattern matches nothing, which is what an empty -f file asks for.
 		// A regexp that cannot match is clearer here than a nil to guard at every
@@ -96,6 +101,10 @@ func (f grepFlags) compile() (*regexp.Regexp, error) {
 		switch {
 		case f.fixedString:
 			pattern = regexp.QuoteMeta(pattern)
+		case f.perl:
+			if err := perlPatternRefusal(pattern); err != nil {
+				return nil, err
+			}
 		case !f.extended:
 			// A basic expression, translated as sed's is. Handed to Go as it was, `a+b`
 			// needed a+ where every grep matches the three characters, `x|y` was an
@@ -173,7 +182,9 @@ func parseGrepFlags(flags string, into *grepFlags) error {
 		case 'E':
 			into.extended = true
 		case 'G':
-			into.extended = false
+			into.extended, into.perl = false, false
+		case 'P':
+			into.perl = true
 		case 'a':
 			into.binary = grepBinaryText
 		case 'I':

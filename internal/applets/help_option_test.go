@@ -145,9 +145,9 @@ func TestHelpOption_namesTheOptionsTheAppletActuallyTakes(t *testing.T) {
 			t.Fatalf("grep --help does not mention %q:\n%s", want, stdout)
 		}
 	}
-	// And it must not claim one it does not take: grep here has no -P.
-	if strings.Contains(stdout, "-P") {
-		t.Fatalf("grep --help mentions -P, which this build does not take:\n%s", stdout)
+	// And it must not claim one it does not take: grep here has no -Z, GNU's --null.
+	if strings.Contains(stdout, "-Z") {
+		t.Fatalf("grep --help mentions -Z, which this build does not take:\n%s", stdout)
 	}
 }
 

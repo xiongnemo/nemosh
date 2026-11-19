@@ -1,7 +1,9 @@
 package applets
 
 import (
+	"fmt"
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -46,6 +48,40 @@ func matchesAnyGlob(globs []string, base string) bool {
 	return false
 }
 
+// perlPatternRefusal is -P's pattern compiled as RE2 reads Perl's syntax, which takes \d, \w, \s,
+// \b, lazy quantifiers, (?i) and named groups as Perl does. What it refuses is said by name where
+// it is the Perl a -P pattern leans on most: lookaround and backreferences, which RE2 has not got
+// by design, since matching with them can take exponential time. Refused, status 2, rather than
+// matched some other way.
+func perlPatternRefusal(pattern string) error {
+	_, err := regexp.Compile(pattern)
+	switch {
+	case err == nil:
+		return nil
+	case strings.Contains(pattern, "(?=") || strings.Contains(pattern, "(?!") ||
+		strings.Contains(pattern, "(?<=") || strings.Contains(pattern, "(?<!"):
+		return fmt.Errorf("-P: %s: lookaround is Perl's, and this grep matches with RE2, which has none", pattern)
+	case hasBackreference(pattern):
+		return fmt.Errorf("-P: %s: a backreference is Perl's, and this grep matches with RE2, which has none", pattern)
+	}
+	return asBadRegex(pattern, err)
+}
+
+// hasBackreference is whether pattern holds a \1 to \9 that no backslash escapes. A scan rather
+// than a regular expression, which would be compiled before main on every start.
+func hasBackreference(pattern string) bool {
+	for index := 0; index+1 < len(pattern); index++ {
+		if pattern[index] != '\\' {
+			continue
+		}
+		if next := pattern[index+1]; next >= '1' && next <= '9' {
+			return true
+		}
+		index++
+	}
+	return false
+}
+
 // parseGrepLongOption reads one long option, and the next argument when it is the option's
 // value and was not joined to it with `=`, as getopt_long takes either. It answers how many
 // arguments it used.
@@ -62,6 +98,10 @@ func parseGrepLongOption(args []string, index int, flags *grepFlags) (int, error
 		return 1, err
 	case "text":
 		flags.binary = grepBinaryText
+		return 1, nil
+	case "line-buffered":
+		// Each line is written as it is found, to whatever stdout is, so `tail -f log | grep
+		// --line-buffered x | ...` shows a line while the log is still open: asked for, and done.
 		return 1, nil
 	case "include", "exclude", "exclude-dir":
 	default:

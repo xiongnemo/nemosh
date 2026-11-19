@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 36   |
+| works   | 38   |
 | partial | 8    |
-| refused | 28   |
+| refused | 26   |
 | missing | 30   |
 
 ## Existing commands
@@ -33,8 +33,8 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `ps aux`, `ps -ef`, `ps -eo pid,etime,args --sort=-rss`, `ps axf`, `ps -p $$ -o comm=` | works | procps-ng's; `?` for an owner Windows will not show (5d8ebc49) |
 | `ps -l`, `ps -elf` | refused | with the reason: F, PRI, NI, ADDR, WCHAN have nothing behind them |
 | `grep -rn`, `-C/-A/-B`, `-e a -e b`, `-f FILE`, `-L`, `-c`, `--exclude-dir` | works | |
-| `grep --line-buffered` | refused | breaks `tail -f \| grep --line-buffered` |
-| `grep -P` | refused | |
+| `grep --line-buffered` | works | each line is written as it is found |
+| `grep -P` | works | RE2's reading; lookaround and backreferences refused by name |
 | `grep -z`, `grep -b` | refused | |
 | `zgrep` | missing | |
 | `find -name -mtime +7 -delete`, `-type f -size +100M`, `-maxdepth -iname`, `-newer`, `-perm`, `-print0`, `-empty`, `-mmin`, `-regex` | works | |
