@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+
+	"github.com/xiongnemo/nemosh/internal/cancelio"
 )
 
 type pipelineStageRun func(context.Context, Runtime, int) lineResult
@@ -153,6 +155,33 @@ func closeTokenPipelineStages(stages []tokenPipelineStage) error {
 
 func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipeline, savedStatus int) lineResult {
 	results := make([]lineResult, len(pipeline.stages))
+	// The stages are pinned each on its own goroutine, and this one only waits for them, so it
+	// lets its thread go meanwhile; see cancelio.Unpinned.
+	cancelio.Unpinned(func() { r.runPipelineStages(ctx, pipeline, savedStatus, results) })
+	statuses := make([]int, 0, len(results))
+	for _, result := range results {
+		statuses = append(statuses, result.status)
+	}
+	r.recordPipeStatus(statuses...)
+	// An exit, return or break in a stage that ran in the shell is the shell's.
+	if last := results[len(results)-1]; last.control != flowNone && pipeline.stages[len(results)-1].inShell {
+		return last
+	}
+	status := results[len(results)-1].status
+	if r.options.pipefail {
+		for index := len(results) - 1; index >= 0; index-- {
+			if results[index].status != 0 {
+				status = results[index].status
+				break
+			}
+		}
+	}
+	return lineResult{status: status}
+}
+
+// runPipelineStages runs each stage on a goroutine of its own and waits for them all, closing the
+// pipes between them if ctx ends first.
+func (r Runtime) runPipelineStages(ctx context.Context, pipeline tokenPipeline, savedStatus int, results []lineResult) {
 	var wait sync.WaitGroup
 	wait.Add(len(pipeline.stages))
 	for index := range pipeline.stages {
@@ -166,6 +195,7 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 				stageCtx, stage.runtime, release = stage.runtime.ownStage(ctx, false)
 			}
 			result := stage.runtime.guardedRun("running a pipeline stage", func() lineResult {
+				defer cancelio.Pin(stageCtx)()
 				return stage.run(stageCtx, stage.runtime, savedStatus)
 			})
 			result.status = abandonedStatus(ctx, stageCtx, result.status)
@@ -194,23 +224,4 @@ func (r Runtime) executeTokenPipeline(ctx context.Context, pipeline tokenPipelin
 		<-done
 	case <-done:
 	}
-	statuses := make([]int, 0, len(results))
-	for _, result := range results {
-		statuses = append(statuses, result.status)
-	}
-	r.recordPipeStatus(statuses...)
-	// An exit, return or break in a stage that ran in the shell is the shell's.
-	if last := results[len(results)-1]; last.control != flowNone && pipeline.stages[len(results)-1].inShell {
-		return last
-	}
-	status := results[len(results)-1].status
-	if r.options.pipefail {
-		for index := len(results) - 1; index >= 0; index-- {
-			if results[index].status != 0 {
-				status = results[index].status
-				break
-			}
-		}
-	}
-	return lineResult{status: status}
 }

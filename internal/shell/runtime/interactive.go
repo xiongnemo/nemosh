@@ -52,7 +52,7 @@ func (r *Runtime) RunInteractive(ctx context.Context, script Script) Interactive
 	control := flowNone
 	if len(script.program) > 0 {
 		r.countCommand()
-		status, control = r.executeRead(ctx, script.program, status)
+		whilePinned(ctx, func() { status, control = r.executeRead(ctx, script.program, status) })
 		if status == 130 && isShellInterrupt(ctx) {
 			r.runInterruptTrap(context.WithoutCancel(ctx), status)
 		}

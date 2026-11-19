@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
+	"github.com/xiongnemo/nemosh/internal/cancelio"
 	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 	"golang.org/x/term"
 )
@@ -164,7 +165,11 @@ func (c command) runDirectApplet(ctx context.Context, controller *interruptContr
 	if err != nil {
 		return fmt.Errorf("nemosh: initialize direct applet state: %w", err)
 	}
-	err = applet.Run(applets.WithProcessView(executionCtx, view), args, c.stdin, c.stdout, c.stderr)
+	// Pinned, so that Ctrl-C ends a call the applet already waits in; see cancelio.Pin.
+	func() {
+		defer cancelio.Pin(executionCtx)()
+		err = applet.Run(applets.WithProcessView(executionCtx, view), args, c.stdin, c.stdout, c.stderr)
+	}()
 	if runtime.IsShellInterrupt(executionCtx) {
 		return exitStatus(130)
 	}

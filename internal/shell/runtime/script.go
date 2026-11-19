@@ -38,7 +38,7 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	// The script's own run, the one with an EXIT trap to run, is the top level; eval and
 	// `.` are not.
 	case parseErr == nil && runExitTrap:
-		status, control = r.executeTopLevel(ctx, prepared.program)
+		whilePinned(ctx, func() { status, control = r.executeTopLevel(ctx, prepared.program) })
 	case parseErr == nil && len(prepared.program) > 0:
 		status, control = r.executeRead(ctx, prepared.program, savedStatus)
 	}

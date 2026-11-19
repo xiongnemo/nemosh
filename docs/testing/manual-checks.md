@@ -327,8 +327,11 @@ says.
   mapped `Z:`. cp of 1 MiB and 8 MiB, mv each way and a rename, `tail`, `chmod 444` (an append
   is then refused), `ls`, `du`, `find` and `cd` all behave as on a local disk. When the link
   goes away, every operation on the share fails together about 63 s later -- Windows' SMB
-  timeout, the same for busybox -- with `No such file or directory`, busybox's word for it,
-  and Ctrl-C does nothing until then. Found, and fixed since: a cp onto the share that the
+  timeout, the same for busybox -- with `No such file or directory`, busybox's word for it.
+  Found, and fixed since: Ctrl-C did nothing until then. It ends the waiting call now: the
+  prompt is back 21 ms after it for `ls` and 5 ms for `cat`, measured on a share that never
+  answers, `//192.0.2.40/share`, where it took 102 s and busybox's took 17 ms. An outage of a
+  share that had answered is not checked again yet, and is the case to try. Found, and fixed since: a cp onto the share that the
   outage ended left a file of the full size whose last 5.5 MiB were zeros, because CopyFile2
   sizes the file first and Windows closed it once the link came back; on a slow link Ctrl-C
   during a copy from the share took 24 s, for the same reason. cp copies to and from a share

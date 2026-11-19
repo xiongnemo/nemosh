@@ -18,9 +18,23 @@ patch number is the commits since that tag.
   busybox's hash, so two lines that differ and share it are matched by neither; `-d`, which was
   taken and ignored, has stone try every line of a class, where it gives up after
   max(256, √n); and `-i` lowers A to Z alone, as busybox's does, so `Ä` and `ä` differ under it.
+- **`read` of a pipe the shell was handed is twice as fast**: `seq 1 20000 | nemosh -c 'while
+  read l; do ...; done'` takes 181 ms where it took 370. A read that could wait started a
+  goroutine to end it on Ctrl-C; a command's goroutine is held to its thread now, which Ctrl-C
+  reaches without one.
 
 ### Fixed
 
+- **Ctrl-C did nothing to a command waiting on a share that had stopped answering**: Ctrl-C
+  one second into `ls //192.0.2.30/share/x`, where nothing answers, gave the prompt back 102.4 s
+  later, when Windows gave up, and busybox-w32's back in 17 ms. An applet runs in the shell's
+  process, and the goroutine waiting in CreateFile did not see the interrupt. The goroutine
+  running a command is held to its thread now, and Ctrl-C cancels the call that thread waits in,
+  and each after it that begins to wait: the prompt is back 21 ms after it for that `ls`, whose
+  stat waits in two calls in turn, and 5 ms for `cat` -- at the prompt, in a script, in a
+  pipeline and for an applet run directly -- and the command says nothing of the call.
+  A script's INT trap runs afterwards, and a `read` in it waits for its answer. `NEMOSH_PIN=off`
+  leaves a call to wait for Windows, as it did.
 - **diff of two large files never finished**: it filled a table of every line of one against
   every line of the other, which for Go's ssa/opGen.go against rewriteAMD64.go is 103 GB, and
   one such diff had committed 9.4 GB when it was found eleven hours on. It takes 0.18 s and

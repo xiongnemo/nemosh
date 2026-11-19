@@ -3,6 +3,8 @@ package applets
 import (
 	"context"
 	"os"
+
+	"github.com/xiongnemo/nemosh/internal/cancelio"
 )
 
 // ReadInterruptibly reads from file, ending the read early if ctx is cancelled while it is
@@ -44,6 +46,19 @@ func ReadInterruptibly(ctx context.Context, file *os.File, buffer []byte) (int, 
 			return 0, err
 		}
 		return file.Read(buffer)
+	}
+	if cancelio.Covers(ctx) {
+		// The goroutine is pinned with ctx, and the pin ends a read blocked when ctx ends, so
+		// a watcher would be a second way to the same end -- and a pinned goroutine waiting on
+		// the watcher's channel paid 12.7 us a read for it. See cancelio.Covers.
+		if err := ctx.Err(); err != nil {
+			return 0, err
+		}
+		read, err := file.Read(buffer)
+		if read == 0 && ctx.Err() != nil {
+			return 0, ctx.Err()
+		}
+		return read, err
 	}
 	stop := make(chan struct{})
 	watching := make(chan struct{})

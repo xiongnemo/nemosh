@@ -11,9 +11,9 @@ import (
 	"runtime"
 
 	"golang.org/x/sys/windows"
-)
 
-var cancelSynchronousIO = windows.NewLazySystemDLL("kernel32.dll").NewProc("CancelSynchronousIo")
+	"github.com/xiongnemo/nemosh/internal/cancelio"
+)
 
 type windowsFileSource struct {
 	file     *os.File
@@ -118,8 +118,8 @@ func cancelWindowsSynchronousRead(thread windows.Handle, completed <-chan window
 			return nil
 		default:
 		}
-		result, _, callErr := cancelSynchronousIO.Call(uintptr(thread))
-		if result != 0 {
+		callErr := cancelio.Cancel(thread)
+		if callErr == nil {
 			<-completed
 			return nil
 		}

@@ -664,6 +664,17 @@ stops a script at once. `NEMOSH_CTRL_C=program` leaves the program to it in a sc
 `NEMOSH_CTRL_C=kill` ends it at the prompt as busybox does. A program not on the console, a GUI
 one, never had the Ctrl-C and is ended whatever is set.
 
+**Ctrl-C ends an applet waiting in a call Windows has not answered** -- an open or a read of a
+share that has stopped answering -- and the prompt is back 5 to 21 ms after it. It came back
+when Windows gave up: 102 s after the Ctrl-C, on a share that never answered. busybox-w32's applet is
+a process, which the Ctrl-C ends in 17 ms; nemosh's runs in the shell, on a goroutine held to
+its thread while the command runs, and the interrupt cancels the call that thread is waiting in
+(`CancelSynchronousIo`), and each one after it that begins to wait, until the command returns.
+The command says nothing of the call, as a busybox applet the Ctrl-C ends says nothing, and a
+trap runs afterwards as before: a `read` in an INT trap waits for its answer. A goroutine an
+applet starts of its own is not held, and a call it makes waits as it did. `NEMOSH_PIN=off`
+leaves every call to wait for Windows.
+
 **Under `NEMOSH_JOBS=goroutine` a job is a goroutine** in the shell's own process, the way
 every job was before the default changed, and it has no pid to report. `$!` is then a job
 specification, `%1`, which keeps the two things `$!` is used for working, since `kill $!`

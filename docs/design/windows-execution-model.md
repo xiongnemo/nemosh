@@ -363,6 +363,18 @@ Trap/signal support should be useful but honest on Windows:
   `NEMOSH_CTRL_C=kill` ends it everywhere. A program not attached to the console --
   a GUI one, which the Ctrl-C did not reach -- is ended whatever is set, as is one
   the shell stops for any other reason: `timeout`, a closed pipe, `kill`.
+- An applet is a goroutine of the shell, not a process the console's Ctrl-C ends, and a
+  goroutine waiting in a Windows call does not see its context end: Ctrl-C one second
+  into `ls //192.0.2.30/share/x`, a share that never answers, gave the prompt back
+  102.4 s later, where busybox-w32's came back in 17 ms. So what Ctrl-C ends -- the line
+  at the prompt, a script's commands, each stage of a pipeline, an applet run directly
+  -- runs on a goroutine pinned to its thread, and the context ending cancels the call
+  that thread waits in, with `CancelSynchronousIo` (`internal/cancelio`), at once and
+  then whenever the thread has not run for 10 ms, until the command returns. A pinned
+  goroutine's wait on a channel costs 11.8 us where a free one's costs 0.46, so the
+  shell lets its thread go while it waits for a pipeline's stages (`cancelio.Unpinned`),
+  and a pinned read needs no watcher of its own (`cancelio.Covers`); a pipe's reads cost
+  what they did. Traps run after, unpinned. `NEMOSH_PIN=off` pins nothing.
 - Windows `CTRL_BREAK_EVENT` can target an isolated process group. On the tested
   Windows/Go toolchain it reaches Go's `os.Interrupt` notification channel.
   Automated acceptance uses this only as a production `signal.Notify` boundary
