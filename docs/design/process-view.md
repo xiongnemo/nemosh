@@ -72,8 +72,11 @@ in the way a tty is, and there is nothing to report.
 nearest analogue is the *processor queue length* performance counter, which counts
 threads waiting for a processor at an instant rather than averaged over a minute.
 Publishing that under the name "load average" would be putting a different measure
-behind a familiar label, so the header shows none and `--help` says why. This is
-the same posture `ps` takes for TTY: an absent column beats a fabricated one.
+behind a familiar label, so the header shows none and `--help` says why. `ps`
+takes the same posture with what procps' formats ask of it: TTY is procps' `?` for
+a process with no terminal, which is every one here, and `-l` is refused rather
+than printing its F, PRI, NI, ADDR and WCHAN as guesses. A nice value is no column
+at all; a priority class is not one (see topPriority).
 
 **cgroups.** Job objects can limit a set of processes, but nothing enumerates
 "which job is this process in" the way a cgroup path does.

@@ -156,14 +156,10 @@ func TestStat(t *testing.T) {
 	})
 }
 
-// ps is a formatter over the process list internal/proc already keeps for pgrep, pkill and the
-// kill builtin. It printed two columns until the list moved onto the system table, which answers
-// with parents, thread counts, memory and CPU time for no more privilege than a name cost.
-//
-// Still absent, for two different reasons. TTY and the command line: Windows has no controlling
-// terminal, and a command line means opening the process, which is refused for anything this
-// session does not own. STAT: derivable from the process's threads, but an approximation belongs
-// in `top`, where a monitor's reader expects one, rather than in `ps`.
+// ps is a formatter over the system table internal/proc reads for pgrep, pkill and top. It printed
+// two columns until it moved onto the table, which answers with parents, thread counts, memory and
+// CPU time for no more privilege than a name cost. Without options it prints the columns this
+// holds it to; the options, procps-ng's, are held in process_list_format_test.go.
 func TestPs(t *testing.T) {
 	// When
 	applet, ok := applets.DefaultRegistry.Lookup("ps")

@@ -10,6 +10,18 @@ patch number is the commits since that tag.
 
 ## Unreleased
 
+### Added
+
+- **`ps` takes procps-ng's options**: `ps aux`, `ps -ef`, `ps -eo pid,etime,args --sort=-rss`,
+  `ps axf`, `ps -p $$ -o comm=`, with procps' columns, headers, widths and time formats -- `-e -A
+  -f -o -p -q -u -U -C -N -H -w`, BSD's `a x u f w h r o p U k`, a bare pid list, and `--pid
+  --ppid --user --sort --format --forest --deselect --no-headers --width`. USER is `?` and the
+  command its image name in brackets where Windows will not let the process be opened, which is
+  most of another account's; TTY is `?`. Nothing selected is status 1, so `ps -p $pid >/dev/null`
+  asks whether it runs, and ps now lists the process it runs in. `-l` is refused with the reason.
+  Without options it prints what it did. `ps aux` takes 90 ms over 524 processes, where
+  busybox-w32's plain `ps` takes 150.
+
 ### Changed
 
 - **`grep -w` of one plain pattern is 21 times as fast**: `grep -cw err` of 88 MB takes 151 ms,

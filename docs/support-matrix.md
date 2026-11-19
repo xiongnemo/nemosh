@@ -988,7 +988,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `patch` | `-R -u -p -i -N -E -f -g`, `--dry-run` and busybox's long forms; `[ORIGFILE [PATCHFILE]]`; a /dev/null side creates or empties a file, and without -p a name is its last component; no fuzz | refused by name |
 | `posixpath` | none | treated as a path operand |
 | `printenv` | none | treated as a variable name |
-| `ps` | none; `PID PPID THR RSS TIME COMMAND` | refused by name |
+| `ps` | procps-ng's: `-e -A -f -o -p -q -u -U -C -N -H -w`, BSD's `a x u f w h r o p U k` and a bare pid list (`ps aux`, `ps axf`, `ps 4`), `-aux` as `aux`, `--pid --ppid --user --User --sort --format --forest --deselect --no-headers --width`; procps' columns, headers, widths and time formats for `-o` and `--sort`, `NAME:WIDTH=HEADER` each; nothing selected is status 1. Without a format `PID PPID THR RSS TIME COMMAND` of every process, as before. USER is `?` and the command `[NAME]` where the process may not be opened, TTY is `?`, STAT is derived from the threads; a line is cut at a terminal's width, as procps cuts it | refused by name; `-l` refused with the reason, its F, PRI, NI, ADDR and WCHAN having nothing behind them |
 | `top` | `-b -n N -d SEC -s COL -f TEXT -o COLS -H -t` | refused by name |
 | `printf` | format string | treated as the format, which is correct |
 | `pwd` | `-L -P` both accepted | accepted |
@@ -1056,11 +1056,17 @@ Three of these diverge from GNU on purpose, and say so where it matters:
   says 6. Go cannot read allocation size portably, and a `du` that silently means
   something slightly different from the one in a script is worse than one that is
   documented to mean apparent size. GNU spells this `--apparent-size`.
-- **`ps` prints `PID` and `COMMAND` and nothing else.** No TTY, no STAT, no TIME,
-  not the command line: Windows has no controlling terminal in the POSIX sense,
-  and reading another process's command line means walking its PEB, which an
-  ordinary session may not do for anything it does not own. A column of `?` per
-  row would be worse than no column.
+- **`ps` prints `?` for what it may not read.** It printed `PID` and `COMMAND` and
+  nothing else once, on the grounds that a column of `?` would be worse than none;
+  the system table gave it every column but two since, and `ps aux` is what people
+  type. The two are the owner and the command line, which need a handle on the
+  process that Windows refuses an unelevated session for another account's:
+  measured, 180 of 524 processes. Those print as procps prints what it cannot
+  have, USER `?` and the command its image name in brackets, where busybox-w32
+  prints `root` for an owner it never read. Windows has no controlling terminal,
+  so TTY is `?` throughout, and a process has no state of its own, so STAT is
+  derived from its threads', as `top`'s S is. VSZ is the address space reserved,
+  as Linux's is, which for a 64-bit process on Windows is some 2 TiB.
 
 ### Line endings, and which applets keep them
 
