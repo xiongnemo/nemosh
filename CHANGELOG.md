@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`pgrep -f` and `pkill -f` match the command line**, and pgrep and pkill take the rest of
+  procps-ng's options that people type: `pgrep -af node`, `pkill -f 'node server.js'`, `pgrep -u
+  nemo`, `pgrep -n`, `-o`, `-c`, `-d,`. `-f` was refused, as reading a command line needs a handle
+  Windows will not give for another account's process; such a process is matched by its name
+  now, as procps matches one whose command line is empty, which is the rule `ps` follows.
 - **awk has `gensub`**, which busybox's awk has and this one called an undefined function:
   `gensub(/(a)(b)/, "\\2\\1", "g", s)` answers s with its matches replaced and leaves s as it was.
   As busybox reads it, `"g"` and any other text are every match, N the Nth alone, `\0` to `\9`

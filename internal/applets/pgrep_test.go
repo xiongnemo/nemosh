@@ -30,10 +30,7 @@ func TestPgrep_refusesWhatWouldMatchEverything(t *testing.T) {
 		{applet: "pkill", args: nil, want: "missing operand"},
 		{applet: "pgrep", args: []string{"a", "b"}, want: "extra operand"},
 		{applet: "pgrep", args: []string{"("}, want: "invalid pattern"},
-		// -f would have to read each process's command line, which needs
-		// privileges an ordinary session has not got, so it is refused rather
-		// than quietly matching the name instead.
-		{applet: "pgrep", args: []string{"-f", "x"}, want: "unknown option -- f"},
+		{applet: "pkill", args: []string{"-f", ""}, want: "every process"},
 		// A pause cannot be delivered on Windows, and delivered the way every other
 		// signal is it would terminate every match -- which `pkill -STOP` used to do.
 		{applet: "pkill", args: []string{"-STOP", "zzznosuchprocessname"}, want: "suspend"},
@@ -130,6 +127,37 @@ func TestPkill_stopsWhatItMatches(t *testing.T) {
 	case <-stopped:
 	case <-time.After(20 * time.Second):
 		t.Fatal("the process survived pkill")
+	}
+}
+
+// pgrep -f and -a read the command line of a process this session started, and pkill -f stops it
+// by what it was given: a word only its command line has.
+func TestPgrepF_findsAProcessByItsCommandLine(t *testing.T) {
+	binary := buildHelperShell(t)
+	marker := fmt.Sprintf("pgrepfprobe%d", os.Getpid())
+	child := exec.Command(binary, "-c", "sleep 60 # "+marker)
+	if err := child.Start(); err != nil {
+		t.Fatalf("starting the helper: %v", err)
+	}
+	defer func() { _ = child.Process.Kill() }()
+	pid := strconv.Itoa(child.Process.Pid)
+	waitFor(t, func() bool {
+		stdout, _, err := runAppletWithInput(t, "", "pgrep", "-f", marker)
+		return err == nil && strings.TrimSpace(stdout) == pid
+	}, "pgrep -f never found the helper by its command line")
+	if stdout, _, err := runAppletWithInput(t, "", "pgrep", "-a", "-f", marker); err != nil ||
+		!strings.HasPrefix(stdout, pid+" ") || !strings.Contains(stdout, marker) {
+		t.Fatalf("pgrep -a -f = %q, %v; want the pid and its command line", stdout, err)
+	}
+	if _, stderr, err := runAppletWithInput(t, "", "pkill", "-f", marker); err != nil {
+		t.Fatalf("pkill -f = %v, %q", err, stderr)
+	}
+	stopped := make(chan error, 1)
+	go func() { stopped <- child.Wait() }()
+	select {
+	case <-stopped:
+	case <-time.After(20 * time.Second):
+		t.Fatal("the process survived pkill -f")
 	}
 }
 

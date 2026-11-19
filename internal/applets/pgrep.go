@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -14,38 +13,60 @@ import (
 
 // pgrep and pkill find processes by name, which a clean Windows machine cannot
 // do at all: it ships `tasklist` and `taskkill`, neither of which takes a
-// pattern, and no `pgrep` under any name.
-//
-// The pattern is a regular expression matched against the executable's file
-// name, which is what busybox matches too. Not the full command line: reading
-// that on Windows means opening each process and walking its PEB, which needs
-// privileges an ordinary session has not got for anything it does not own -- so
-// `-f` is refused rather than silently matching the name instead.
+// pattern, and no `pgrep` under any name. Their options are procps-ng's, which
+// busybox's are a subset of; see pgrep_match.go for what they select.
 
 func newPgrepApplet() Applet {
 	return simpleApplet{name: "pgrep", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
-		matcher, err := parseProcessPattern(ctx, "pgrep", args, "lxve")
+		table, err := livePgrepTable()
 		if err != nil {
 			return err
 		}
-		matches, err := matcher.find()
-		if err != nil {
-			return err
-		}
-		if len(matches) == 0 {
-			// One, as pgrep everywhere: nothing matched is not an error, it is
-			// an answer, and a script tests the status for it.
-			return ExitStatus(1)
-		}
-		for _, process := range matches {
-			if matcher.long {
-				fmt.Fprintf(stdout, "%d %s\n", process.PID, process.Name)
-				continue
-			}
-			fmt.Fprintln(stdout, process.PID)
-		}
-		return nil
+		return writePgrep(ctx, args, table, stdout)
 	}}
+}
+
+// livePgrepTable is this machine's processes, but the one this runs in, which busybox's pgrep
+// leaves out too, and the cache that opens a process to ask about it.
+func livePgrepTable() (pgrepTable, error) {
+	processes, err := proc.List()
+	if err != nil {
+		return pgrepTable{}, err
+	}
+	return pgrepTable{processes: processes, details: proc.NewDetailCache()}, nil
+}
+
+// writePgrep prints what pgrep chose: ids, `id name` under -l and `id command-line` under -a,
+// between -d's delimiter, or under -c how many. Nothing chosen is status 1, as pgrep everywhere
+// has it: not an error but an answer, which a script tests the status for.
+func writePgrep(ctx context.Context, args []string, table pgrepTable, stdout io.Writer) error {
+	matcher, err := parseProcessPattern(ctx, "pgrep", args, pgrepLetters)
+	if err != nil {
+		return err
+	}
+	matches := matcher.choose(table)
+	if matcher.count {
+		fmt.Fprintln(stdout, len(matches))
+	}
+	if len(matches) == 0 {
+		return ExitStatus(1)
+	}
+	if matcher.count {
+		return nil
+	}
+	items := make([]string, len(matches))
+	for index := range matches {
+		match := &matches[index]
+		items[index] = strconv.Itoa(match.process.PID)
+		switch {
+		case matcher.argv:
+			items[index] += " " + printableCommand(match.commandLine(table.details))
+		case matcher.long:
+			items[index] += " " + match.process.Name
+		}
+	}
+	_, err = fmt.Fprintln(stdout, strings.Join(items, matcher.delimiter))
+	return err
 }
 
 func newPkillApplet() Applet {
@@ -56,25 +77,27 @@ func newPkillApplet() Applet {
 		}
 		// -l lists the signals instead, as kill -l does and busybox's pkill -l, whatever else
 		// was given.
-		if options, _, err := parseAppletOptions(ctx, rest, "xvel", "P"); err == nil && options.has('l') {
+		if options, _, err := parseAppletOptions(ctx, rest, pkillLetters+"l", "PuU"); err == nil && options.has('l') {
 			for _, known := range proc.Signals() {
 				fmt.Fprintf(stdout, "%2d) %s\n", known.Number, known.Name)
 			}
 			return nil
 		}
-		matcher, err := parseProcessPattern(ctx, "pkill", rest, "xve")
+		matcher, err := parseProcessPattern(ctx, "pkill", rest, pkillLetters)
 		if err != nil {
 			return err
 		}
-		matches, err := matcher.find()
+		table, err := livePgrepTable()
 		if err != nil {
 			return err
 		}
+		matches := matcher.choose(table)
 		if len(matches) == 0 {
 			return ExitStatus(1)
 		}
 		failed := false
-		for _, process := range matches {
+		for _, match := range matches {
+			process := match.process
 			if err := proc.Terminate(process.PID, signal); err != nil {
 				fmt.Fprintf(stderr, "pkill: %v\n", err)
 				failed = true
@@ -90,92 +113,6 @@ func newPkillApplet() Applet {
 		}
 		return nil
 	}}
-}
-
-// processMatcher is what pgrep and pkill select by: a pattern, the parent -P names, and -v to
-// take every process the two together do not match, as busybox's -v takes them.
-type processMatcher struct {
-	pattern            *regexp.Regexp
-	parent             int
-	long, invert, echo bool
-}
-
-// parseProcessPattern reads the options and the one pattern operand.
-//
-// An empty pattern is refused. `pkill ""` would match every process on the
-// machine, and a command that can do that by omission is a command that will.
-func parseProcessPattern(ctx context.Context, applet string, args []string, short string) (processMatcher, error) {
-	options, operands, err := parseAppletOptions(ctx, args, short, "P")
-	if err != nil {
-		return processMatcher{}, err
-	}
-	matcher := processMatcher{parent: -1, long: options.has('l'), invert: options.has('v'), echo: options.has('e')}
-	// -P PPID selects a parent's children, and with it the pattern may be left out, as
-	// busybox's takes them: `pgrep -P $$` is this shell's children.
-	if options.has('P') {
-		if matcher.parent, err = strconv.Atoi(options.value('P')); err != nil || matcher.parent < 0 {
-			return processMatcher{}, fmt.Errorf("invalid number '%s'", options.value('P'))
-		}
-		if len(operands) == 0 {
-			return matcher, nil
-		}
-	}
-	switch {
-	case len(operands) == 0:
-		return processMatcher{}, missingOperand()
-	case len(operands) > 1:
-		return processMatcher{}, fmt.Errorf("extra operand '%s'", operands[1])
-	case operands[0] == "":
-		return processMatcher{}, fmt.Errorf("%s: an empty pattern would match every process", applet)
-	}
-	expression := operands[0]
-	if options.has('x') {
-		expression = "^(?:" + expression + ")$"
-	}
-	// Case-insensitive, because the filesystem these names come from is: a
-	// process is `Notepad.exe` on disk and `notepad` in the hand.
-	compiled, err := regexp.Compile("(?i)" + expression)
-	if err != nil {
-		return processMatcher{}, fmt.Errorf("invalid pattern: %s", operands[0])
-	}
-	// -x is already in the pattern, anchored above; keeping a copy of the answer beside it
-	// invited the two to disagree.
-	matcher.pattern = compiled
-	return matcher, nil
-}
-
-// find lists the matches. The executable suffix is matched with or without,
-// since `pkill notepad` is what anyone types for `notepad.exe`.
-func (m processMatcher) find() ([]proc.Process, error) {
-	all, err := proc.List()
-	if err != nil {
-		return nil, err
-	}
-	var matches []proc.Process
-	for _, process := range all {
-		if m.matches(process) != m.invert {
-			matches = append(matches, process)
-		}
-	}
-	return matches, nil
-}
-
-// matches is whether a process is the one asked for: a child of -P's parent, if one was
-// named, whose name the pattern matches, if there is one.
-func (m processMatcher) matches(process proc.Process) bool {
-	if m.parent >= 0 && process.PPID != m.parent {
-		return false
-	}
-	return m.pattern == nil || m.pattern.MatchString(process.Name) || m.pattern.MatchString(trimExecutableSuffix(process.Name))
-}
-
-func trimExecutableSuffix(name string) string {
-	for _, suffix := range []string{".exe", ".com", ".bat", ".cmd"} {
-		if len(name) > len(suffix) && strings.EqualFold(name[len(name)-len(suffix):], suffix) {
-			return name[:len(name)-len(suffix)]
-		}
-	}
-	return name
 }
 
 // splitLeadingSignal reads pkill's optional `-SIG` or `-N`, which comes before

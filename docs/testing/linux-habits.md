@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 33   |
+| works   | 35   |
 | partial | 8    |
-| refused | 31   |
+| refused | 29   |
 | missing | 30   |
 
 ## Existing commands
@@ -40,8 +40,8 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `find -name -mtime +7 -delete`, `-type f -size +100M`, `-maxdepth -iname`, `-newer`, `-perm`, `-print0`, `-empty`, `-mmin`, `-regex` | works | |
 | `find -user NAME` | refused | |
 | `find -printf` | refused | |
-| `pgrep -f`, `pkill -f` | refused | |
-| `pgrep -a`, `-u`, `-n`, `-o`, `-c`; `pkill -u` | refused | |
+| `pgrep -f`, `pkill -f` | works | a command line Windows will not show is matched by the name |
+| `pgrep -a`, `-u`, `-n`, `-o`, `-c`, `-d`; `pkill -u -n -o` | works | |
 | `pkill -9 NAME`, `killall -9 NAME`, `killall -q` | works | `killall -q -9`: the signal must come first |
 | `kill -9 PID`, `kill -l`, `kill -s TERM` | works | |
 | `du -sh *`, `du -h -d 1`, `du -sch` | works | |
