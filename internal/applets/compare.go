@@ -3,6 +3,7 @@ package applets
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -36,20 +37,31 @@ func newCommApplet() Applet {
 			return fmt.Errorf("expected two operands, got %d", len(paths))
 		}
 		view := ProcessViewFromContext(ctx)
-		left, err := readOperandLines(ctx, view, paths[0], stdin)
+		out := bufio.NewWriterSize(stdout, 32<<10)
+		left, err := openOperandLines(ctx, view, paths[0], stdin, out)
 		if err != nil {
 			return err
 		}
-		right, err := readOperandLines(ctx, view, paths[1], stdin)
+		defer left.close()
+		// `comm - -`: the first takes all of standard input, and the second finds it ended.
+		rightStdin := stdin
+		if paths[0] == "-" && paths[1] == "-" {
+			rightStdin = strings.NewReader("")
+		}
+		right, err := openOperandLines(ctx, view, paths[1], rightStdin, out)
 		if err != nil {
 			return err
 		}
+		defer right.close()
 		show := [3]bool{!options.has('1'), !options.has('2'), !options.has('3')}
-		return writeCommColumns(stdout, left, right, show)
+		if err := writeCommColumns(out, left, right, show); err != nil {
+			return err
+		}
+		return errors.Join(out.Flush(), left.scanner.Err(), right.scanner.Err())
 	}}
 }
 
-func writeCommColumns(stdout io.Writer, left, right []string, show [3]bool) error {
+func writeCommColumns(stdout io.Writer, left, right *operandLines, show [3]bool) error {
 	// The tabs before a column count how many *shown* columns precede it, so
 	// suppressing one shifts everything after it left. GNU does the same.
 	indent := func(column int) string {
@@ -68,34 +80,35 @@ func writeCommColumns(stdout io.Writer, left, right []string, show [3]bool) erro
 		_, err := io.WriteString(stdout, indent(column)+line+"\n")
 		return err
 	}
-	i, j := 0, 0
-	for i < len(left) && j < len(right) {
+	l, leftOK := left.next()
+	r, rightOK := right.next()
+	for leftOK && rightOK {
 		switch {
-		case left[i] < right[j]:
-			if err := emit(0, left[i]); err != nil {
+		case l < r:
+			if err := emit(0, l); err != nil {
 				return err
 			}
-			i++
-		case left[i] > right[j]:
-			if err := emit(1, right[j]); err != nil {
+			l, leftOK = left.next()
+		case l > r:
+			if err := emit(1, r); err != nil {
 				return err
 			}
-			j++
+			r, rightOK = right.next()
 		default:
-			if err := emit(2, left[i]); err != nil {
+			if err := emit(2, l); err != nil {
 				return err
 			}
-			i++
-			j++
+			l, leftOK = left.next()
+			r, rightOK = right.next()
 		}
 	}
-	for ; i < len(left); i++ {
-		if err := emit(0, left[i]); err != nil {
+	for ; leftOK; l, leftOK = left.next() {
+		if err := emit(0, l); err != nil {
 			return err
 		}
 	}
-	for ; j < len(right); j++ {
-		if err := emit(1, right[j]); err != nil {
+	for ; rightOK; r, rightOK = right.next() {
+		if err := emit(1, r); err != nil {
 			return err
 		}
 	}
@@ -123,79 +136,107 @@ func newPasteApplet() Applet {
 			}
 			delimiters = pasteDelimiters(options.value('d'))
 		}
-		view := ProcessViewFromContext(ctx)
-		columns := make([][]string, 0, max(len(paths), 1))
 		if len(paths) == 0 {
 			paths = []string{"-"}
 		}
-		// Every `-` is the one standard input, read a line to a column in turn, as busybox and
-		// POSIX read it: `seq 5 | paste - -` is 1 2, 3 4 and 5. The first `-` took the whole
-		// input, so each line came out alone. -s reads each operand to its end, and so a second
-		// `-` finds nothing left there too.
-		dashes := 0
-		for _, path := range paths {
-			if path == "-" {
-				dashes++
+		out := bufio.NewWriterSize(stdout, 32<<10)
+		sources, err := openPasteSources(ctx, ProcessViewFromContext(ctx), paths, stdin, out)
+		defer func() {
+			for _, source := range sources {
+				source.close()
 			}
-		}
-		var shared []string
-		dash := 0
-		for _, path := range paths {
-			if path == "-" && dashes > 1 && !options.has('s') {
-				if dash == 0 {
-					if shared, err = readOperandLines(ctx, view, path, stdin); err != nil {
-						return err
-					}
-				}
-				columns = append(columns, everyNthLine(shared, dash, dashes))
-				dash++
-				continue
-			}
-			lines, err := readOperandLines(ctx, view, path, stdin)
-			if err != nil {
-				return err
-			}
-			columns = append(columns, lines)
+		}()
+		if err != nil {
+			return err
 		}
 		if options.has('s') {
-			for _, lines := range columns {
-				// An operand with no lines writes none, as busybox's paste_files_separate
-				// writes none, where this wrote an empty one.
-				if len(lines) == 0 {
-					continue
-				}
-				if _, err := io.WriteString(stdout, joinWithDelimiters(lines, delimiters)+"\n"); err != nil {
-					return err
-				}
-			}
-			return nil
+			err = pasteSerially(out, sources, delimiters)
+		} else {
+			err = pasteInParallel(out, sources, delimiters)
 		}
-		longest := 0
-		for _, lines := range columns {
-			longest = max(longest, len(lines))
+		if err != nil {
+			return err
 		}
-		for row := range longest {
-			fields := make([]string, len(columns))
-			for index, lines := range columns {
-				if row < len(lines) {
-					fields[index] = lines[row]
-				}
-			}
-			if _, err := io.WriteString(stdout, joinWithDelimiters(fields, delimiters)+"\n"); err != nil {
-				return err
-			}
+		errs := []error{out.Flush()}
+		for _, source := range sources {
+			errs = append(errs, source.scanner.Err())
 		}
-		return nil
+		return errors.Join(errs...)
 	}}
 }
 
-// everyNthLine is the lines one of several `-` columns gets: its own first, then every step-th.
-func everyNthLine(lines []string, start, step int) []string {
-	var picked []string
-	for index := start; index < len(lines); index += step {
-		picked = append(picked, lines[index])
+// openPasteSources opens each operand's lines, in order.
+//
+// Every `-` is the one standard input, read a line to a column in turn, as busybox and POSIX
+// read it: `seq 5 | paste - -` is 1 2, 3 4 and 5. The first `-` took the whole input, so each line
+// came out alone. -s reads each operand to its end, and so a second `-` finds nothing left there
+// too. One source of standard input serves every `-`, which is both.
+func openPasteSources(ctx context.Context, view ProcessView, paths []string, stdin io.Reader, out *bufio.Writer) ([]*operandLines, error) {
+	sources := make([]*operandLines, 0, len(paths))
+	var shared *operandLines
+	for _, path := range paths {
+		if path == "-" && shared != nil {
+			sources = append(sources, shared)
+			continue
+		}
+		source, err := openOperandLines(ctx, view, path, stdin, out)
+		if err != nil {
+			return sources, err
+		}
+		if path == "-" {
+			shared = source
+		}
+		sources = append(sources, source)
 	}
-	return picked
+	return sources, nil
+}
+
+// pasteInParallel writes a line of every source a row, until none has one.
+func pasteInParallel(out io.Writer, sources []*operandLines, delimiters []rune) error {
+	fields := make([]string, len(sources))
+	for {
+		any := false
+		for index, source := range sources {
+			line, ok := source.next()
+			fields[index], any = line, any || ok
+		}
+		if !any {
+			return nil
+		}
+		if _, err := io.WriteString(out, joinWithDelimiters(fields, delimiters)+"\n"); err != nil {
+			return err
+		}
+	}
+}
+
+// pasteSerially writes each source's lines as one, between the delimiters in turn. One with no
+// lines writes none, as busybox's paste_files_separate writes none, where this wrote an empty one.
+func pasteSerially(out io.Writer, sources []*operandLines, delimiters []rune) error {
+	for _, source := range sources {
+		line, ok := source.next()
+		if !ok {
+			continue
+		}
+		var err error
+		for gap := 0; ok && err == nil; gap++ {
+			if gap > 0 {
+				if delimiter := delimiters[(gap-1)%len(delimiters)]; delimiter != 0 {
+					_, err = io.WriteString(out, string(delimiter))
+				}
+			}
+			if err == nil {
+				_, err = io.WriteString(out, line)
+			}
+			line, ok = source.next()
+		}
+		if err == nil {
+			_, err = io.WriteString(out, "\n")
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // pasteDelimiters is -d's list, its escapes read as busybox's
@@ -231,34 +272,4 @@ func joinWithDelimiters(fields []string, delimiters []rune) string {
 		joined.WriteString(field)
 	}
 	return joined.String()
-}
-
-// readOperand reads a named file, or stdin for `-`, which is the convention every
-// one of these follows.
-func readOperand(ctx context.Context, view ProcessView, path string, stdin io.Reader) ([]byte, error) {
-	if path == "-" {
-		return io.ReadAll(stdin)
-	}
-	file, err := OpenProcessInput(ctx, view, path)
-	if err != nil {
-		// cmp, comm, join and paste open theirs as fopen_or_warn does, which names one it
-		// cannot `FILE: No such file or directory`.
-		return nil, operandFailure(path, err)
-	}
-	defer file.Close()
-	return io.ReadAll(file)
-}
-
-func readOperandLines(ctx context.Context, view ProcessView, path string, stdin io.Reader) ([]string, error) {
-	data, err := readOperand(ctx, view, path, stdin)
-	if err != nil {
-		return nil, err
-	}
-	scanner := bufio.NewScanner(strings.NewReader(string(data)))
-	scanner.Buffer(make([]byte, 0, 64*1024), maxTextLine)
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	return lines, scanner.Err()
 }

@@ -25,6 +25,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **comm and paste read every operand whole first**, so neither wrote a line until its inputs
+  ended, and `paste - -` of 19 MB peaked at 109 MiB, comm of two 4 MB files at 48, where busybox's
+  peak at 1.1. Both read a line at a time now, at 20 MiB, and run in a third to a half of the time
+  they took: that paste in 89 ms where it took 304, that comm in 45 where it took 205.
 - **uniq wrote nothing until its input ended**, so `tail -f log | uniq` showed nothing, and
   `uniq -d` of 19 MB peaked at 66 MiB where busybox's peaks at 1.1. It writes each run as the next
   begins, its output going out before any read that may wait, and peaks at 19 MiB in 61 ms where
