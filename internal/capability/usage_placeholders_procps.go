@@ -43,4 +43,8 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"freeseconds", "SECONDS"},
 	{"freec", "COUNT"},
 	{"freecount", "COUNT"},
+	{"dfx", "TYPE"},
+	{"dfexclude-type", "TYPE"},
+	{"dftype", "TYPE"},
+	{"dfblock-size", "SIZE"},
 }

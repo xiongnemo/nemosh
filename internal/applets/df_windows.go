@@ -65,6 +65,7 @@ func filesystemsForOperands(view ProcessView, operands []string, stderr io.Write
 			failed = true
 			continue
 		}
+		usage.file = operand
 		rows = append(rows, usage)
 	}
 	if failed {

@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **df takes GNU's `-x`, `--output` and `-i`**: `df -hT -x tmpfs`, `df
+  --output=source,size,pcent,target`, and `-t` more than once. `--output` and `-i` print GNU's
+  columns; the inode fields are `-`, as GNU's df prints them for a filesystem with none, since
+  Windows keeps no inode count an unelevated session may read.
 - **free takes procps-ng's `-t`, `-w`, `-s` and `-c`**: a Total row, buffers and cache apart, and
   the table again every so many seconds or so many times, `free -h -s 2`. Each was `unknown
   option`. The unit is the first of `-b -k -m -g -h` given, so `free -th` is in -h's units; it

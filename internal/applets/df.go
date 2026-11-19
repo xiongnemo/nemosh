@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 )
 
@@ -33,6 +32,8 @@ type filesystemUsage struct {
 	// capacity, for the reason above.
 	used      uint64
 	available uint64
+	// file is the FILE operand the row answers for, --output's file field; empty without one.
+	file string
 }
 
 func (f filesystemUsage) total() uint64 { return f.used + f.available }
@@ -48,9 +49,16 @@ func (f filesystemUsage) percentUsed() int {
 
 func newDfApplet() Applet {
 	return simpleApplet{name: "df", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "kmPThHa", "Bt")
+		fields, args, err := dfOutputFields(args)
 		if err != nil {
 			return err
+		}
+		options, operands, err := parseAppletLongOptions(ctx, args, dfLongOptions, "kmPThHai", "Btx")
+		if err != nil {
+			return err
+		}
+		if options.has('i') && fields == nil {
+			fields = dfInodeFields
 		}
 		view := ProcessViewFromContext(ctx)
 		layout, err := diskFreeLayoutOf(view, options)
@@ -58,10 +66,12 @@ func newDfApplet() Applet {
 			return err
 		}
 		rows, err := collectFilesystems(view, operands, stderr)
-		if layout.only != "" {
-			rows = slices.DeleteFunc(rows, func(row filesystemUsage) bool { return row.fsType != layout.only })
+		rows = selectFilesystems(rows, layout)
+		writeErr := writeDiskFree(stdout, rows, layout)
+		if fields != nil {
+			writeErr = writeDiskFreeFields(stdout, rows, layout, fields)
 		}
-		if writeErr := writeDiskFree(stdout, rows, layout); writeErr != nil {
+		if writeErr != nil {
 			return writeErr
 		}
 		return err
@@ -70,15 +80,20 @@ func newDfApplet() Applet {
 
 // diskFreeLayout is how df prints, busybox's options: the block it counts in -- -k's 1024, the
 // 512 POSIXLY_CORRECT asks for, -m's MiB, -B's SIZE, and 0 for -h's sizes -- -P's headings,
-// -T's type column, and -t's one type. -a is taken: every volume that is ready is listed.
+// -T's type column, -t's types and GNU's -x, the types left out. -a is taken: every volume that
+// is ready is listed.
 type diskFreeLayout struct {
-	unit        uint64
-	posix, kind bool
-	only        string
+	unit          uint64
+	posix, kind   bool
+	only, exclude []string
 }
 
+// dfLongOptions are GNU's long names for the letters df takes.
+const dfLongOptions = "all=a block-size=B human-readable=h si=H inodes=i portability=P type=t print-type=T exclude-type=x"
+
 func diskFreeLayoutOf(view ProcessView, options appletOptions) (diskFreeLayout, error) {
-	layout := diskFreeLayout{unit: 1024, posix: options.has('P'), kind: options.has('T'), only: options.value('t')}
+	layout := diskFreeLayout{unit: 1024, posix: options.has('P'), kind: options.has('T'),
+		only: options.all('t'), exclude: options.all('x')}
 	if _, strict := view.LookupEnv("POSIXLY_CORRECT"); strict {
 		layout.unit = 512
 	}
