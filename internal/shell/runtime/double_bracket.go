@@ -51,7 +51,7 @@ func (r Runtime) runDoubleBracket(ctx context.Context, command []word, operation
 // and then its expression.
 func (r Runtime) runConditionCommand(ctx context.Context, condition *conditionNode, operations []redirectOperation, savedStatus int) lineResult {
 	// A `<(command)` in an operand keeps its file until the test is done; see runParsedWords.
-	defer r.cleanUpProcessSubstitutions()
+	defer r.releaseSubstitutions(r.expansion.held())
 	expanded, ok := r.expandRedirectOperations(ctx, operations, savedStatus)
 	if r.shellErrorRaised() {
 		return r.shellErrorResult()

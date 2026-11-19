@@ -63,6 +63,9 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 }
 
 func (r Runtime) executeWithRedirects(ctx context.Context, operations []redirectOperation, savedStatus int, run func(Runtime) lineResult) lineResult {
+	// `done < <(cmd)`: the file is the command's input until it is done and the table that
+	// holds it closed; see heldSubstitutions.
+	defer r.releaseSubstitutions(r.expansion.held())
 	operations, ok := r.expandRedirectOperations(ctx, cloneRedirects(operations), savedStatus)
 	if !ok {
 		return lineResult{status: 1}

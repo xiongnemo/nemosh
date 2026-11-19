@@ -166,6 +166,43 @@ func TestProcessSubstitution_removesOneFilePerIteration(t *testing.T) {
 	}
 }
 
+// A loop reading a substitution through its own redirection leaves no file behind. The file is
+// open as the loop's input while the commands inside it run, and the first of them to end took
+// every file registered so far to remove: Windows will not remove a file that is open, the
+// failure was not reported, and the file was forgotten. 306 of them were in %TEMP% by 2026-11-19.
+func TestProcessSubstitution_aLoopsRedirectionLeavesNoFile(t *testing.T) {
+	before := countSubstitutionFiles(t)
+
+	// When
+	status, stdout, stderr := runSetScript(t, "while read l; do echo \"$l\"; done < <(printf 'a\\nb\\n')\n")
+
+	// Then
+	if status != 0 || stdout != "a\nb\n" {
+		t.Fatalf("status = %d stdout = %q, stderr = %q", status, stdout, stderr)
+	}
+	if after := countSubstitutionFiles(t); after != before {
+		t.Fatalf("%d temporary files before and %d after, want the loop's removed", before, after)
+	}
+}
+
+// Each word of a loop's list is there for the whole loop. Both are made before the first turn,
+// and the first command of the first turn removed both, so the second turn had none to read;
+// bash keeps them until the loop is done.
+func TestProcessSubstitution_aLoopsListLastsTheLoop(t *testing.T) {
+	before := countSubstitutionFiles(t)
+
+	// When
+	status, stdout, stderr := runSetScript(t, "for f in <(echo a) <(echo b); do cat \"$f\"; done\n")
+
+	// Then
+	if status != 0 || stdout != "a\nb\n" {
+		t.Fatalf("status = %d stdout = %q, stderr = %q; want both files read", status, stdout, stderr)
+	}
+	if after := countSubstitutionFiles(t); after != before {
+		t.Fatalf("%d temporary files before and %d after, want them removed", before, after)
+	}
+}
+
 func countSubstitutionFiles(t *testing.T) int {
 	t.Helper()
 	entries, err := os.ReadDir(os.TempDir())

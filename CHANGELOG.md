@@ -25,6 +25,14 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`for f in <(echo a) <(echo b)` read only the first**: both files are made before the first
+  turn, and the first command of that turn removed them both, so the second turn's `cat` said
+  `No such file or directory`. They last the loop now, as bash's do.
+- **`while read l; do ...; done < <(cmd)` left its file in %TEMP%**, one each time it ran: the
+  first command inside the loop removed every substitution so far, the loop's input among them,
+  which Windows refuses while it is open, and the file was forgotten. 306 had piled up on the
+  machine this was found on. Each construct removes its own substitutions when it is done, as
+  `>(cmd)`'s pipes are let go of.
 - **Ctrl-C did nothing to a command waiting on a share that had stopped answering**: Ctrl-C
   one second into `ls //192.0.2.30/share/x`, where nothing answers, gave the prompt back 102.4 s
   later, when Windows gave up, and busybox-w32's back in 17 ms. An applet runs in the shell's

@@ -1,6 +1,9 @@
 package runtime
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // expansionState carries a fatal expansion failure back out of expandWord.
 // expandWord returns fields rather than an error and has too many callers to
@@ -59,12 +62,32 @@ func (state *expansionState) registerProcessSubstitution(path string) {
 	state.processSubstitutions = append(state.processSubstitutions, path)
 }
 
-// takeProcessSubstitutions hands over the paths and forgets them, so a second command does
-// not try to remove the same files.
-func (state *expansionState) takeProcessSubstitutions() []string {
-	paths := state.processSubstitutions
-	state.processSubstitutions = nil
-	return paths
+// heldSubstitutions is where the next `<(cmd)` file and `>(cmd)` pipe will be registered. A
+// construct that expands words notes it as it begins, and lets go of what came after it as it
+// ends: a simple command, `[[ ]]`, a compound command's redirections, and the words of `for`,
+// `select` and `case`. Each let go of everything registered so far, so the first command to
+// end inside `while ... done < <(cmd)` took the loop's own input, which Windows would not
+// remove while it was open -- 306 were in %TEMP% by 2026-11-19 -- and the first turn of
+// `for f in <(a) <(b)` took both.
+type heldSubstitutions struct{ files, pipes int }
+
+func (state *expansionState) held() heldSubstitutions {
+	return heldSubstitutions{files: len(state.processSubstitutions), pipes: len(state.outputPipes)}
+}
+
+// takeSubstitutionsFrom hands over what was registered from mark on, and forgets it.
+func (state *expansionState) takeSubstitutionsFrom(mark heldSubstitutions) ([]string, []*substitutionPipe) {
+	return takeRegisteredFrom(&state.processSubstitutions, mark.files), takeRegisteredFrom(&state.outputPipes, mark.pipes)
+}
+
+func takeRegisteredFrom[T any](list *[]T, mark int) []T {
+	if mark >= len(*list) {
+		return nil
+	}
+	taken := slices.Clone((*list)[mark:])
+	clear((*list)[mark:])
+	*list = (*list)[:mark]
+	return taken
 }
 
 func newExpansionState() *expansionState {

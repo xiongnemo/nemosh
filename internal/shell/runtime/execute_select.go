@@ -35,6 +35,8 @@ const selectPrompt = "#? "
 func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus int) lineResult {
 	r.loops.enter()
 	defer r.loops.leave()
+	// A `<(command)` in the list lasts the whole loop; see heldSubstitutions.
+	defer r.releaseSubstitutions(r.expansion.held())
 
 	items, ok := r.selectItems(ctx, node, savedStatus)
 	if !ok {

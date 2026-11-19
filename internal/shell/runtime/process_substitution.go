@@ -163,14 +163,18 @@ func (r Runtime) runIntoFile(ctx context.Context, script Script, file *os.File, 
 	return errors.Join(table.closeAll(), file.Close())
 }
 
-// cleanUpProcessSubstitutions removes the files a command's substitutions left behind.
+// releaseSubstitutions lets go of what a construct's substitutions made after mark: each
+// `>(cmd)` pipe is abandoned, and each `<(cmd)` file removed.
 //
-// After the command rather than after the expansion, because the consumer reads the file in
-// between. Called from the one place that knows a command has finished, so a substitution
-// inside a loop does not leave one file per iteration.
-func (r Runtime) cleanUpProcessSubstitutions() {
-	r.abandonOutputPipes()
-	for _, path := range r.expansion.takeProcessSubstitutions() {
+// After the construct rather than after the expansion, because the consumer reads the file in
+// between; and only what came after the construct's own mark, which the constructs inside it
+// leave alone, so a loop's input stays until the loop is done. See heldSubstitutions.
+func (r Runtime) releaseSubstitutions(mark heldSubstitutions) {
+	files, pipes := r.expansion.takeSubstitutionsFrom(mark)
+	for _, pipe := range pipes {
+		pipe.abandon()
+	}
+	for _, path := range files {
 		// A failure to remove is not reported: the file is in the system temporary
 		// directory, the command has already run, and a diagnostic arriving after the
 		// output it belongs to explains nothing the reader can act on.

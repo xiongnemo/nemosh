@@ -106,8 +106,9 @@ func (r Runtime) runParsedWords(ctx context.Context, command []word, operations 
 	// `<(command)` left a temporary file behind, and this is the point that knows the
 	// consumer has finished reading it. Deferred from here rather than from the expansion
 	// so `cat <(echo hi)` still has a file to open; a snapshot carries its own expansion
-	// state, so a background job or a subshell removes its own and not another's.
-	defer r.cleanUpProcessSubstitutions()
+	// state, so a background job or a subshell removes its own and not another's. Only this
+	// command's own: see heldSubstitutions.
+	defer r.releaseSubstitutions(r.expansion.held())
 	// `[[ ]]` is handled here, before expansion, because that is the whole of
 	// what makes it different: inside it a word is not split and not globbed, and
 	// whether the right-hand side was quoted still matters. See double_bracket.go.

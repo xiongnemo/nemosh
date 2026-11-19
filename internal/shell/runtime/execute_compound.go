@@ -87,6 +87,8 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus int) lineResult {
 	r.loops.enter()
 	defer r.loops.leave()
+	// A `<(command)` in the list lasts the whole loop; see heldSubstitutions.
+	defer r.releaseSubstitutions(r.expansion.held())
 	status := 0
 	if node.overArguments {
 		return r.executeForOverArguments(ctx, node, savedStatus)
@@ -139,6 +141,8 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 
 func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatus int) lineResult {
 	r.enterLine(node.line)
+	// A `<(command)` in the word or a pattern lasts until the case is done; see heldSubstitutions.
+	defer r.releaseSubstitutions(r.expansion.held())
 	// Not split, and neither is a pattern (caseArmMatches): POSIX 2.9.4.3 gives the word
 	// and the patterns every expansion but field splitting. Both were split and cut to the
 	// first field, so `x="a b"; case $x in "a b")` matched nothing, where it matches in

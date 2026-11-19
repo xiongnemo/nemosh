@@ -83,12 +83,5 @@ func (child Runtime) readSubstitution(ctx context.Context, script Script, pipe *
 	child.executeTypedScriptFrom(ctx, script, savedStatus)
 }
 
-// abandonOutputPipes lets each pipe's command go on once the consumer is done with the
-// path, whether it opened it or not; see substitutionPipe.abandon.
-func (r Runtime) abandonOutputPipes() {
-	pipes := r.expansion.outputPipes
-	r.expansion.outputPipes = nil
-	for _, pipe := range pipes {
-		pipe.abandon()
-	}
-}
+// Each pipe is let go of once the construct that expanded it is done with the path, whether
+// the consumer opened it or not; see releaseSubstitutions and substitutionPipe.abandon.
