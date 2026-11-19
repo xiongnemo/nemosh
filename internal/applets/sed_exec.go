@@ -116,7 +116,7 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 	case 'y':
 		cycle.line = command.translate.apply(cycle.line)
 	case 'p':
-		return sedNext, cycle.write(cycle.line)
+		return sedNext, cycle.writeRecord(cycle.line)
 	case '=':
 		// The line number, on a line of its own, before the line itself.
 		return sedNext, cycle.write(fmt.Sprintf("%d", cycle.number))
@@ -140,21 +140,27 @@ func runSedCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
 	return sedNext, nil
 }
 
-// write writes text as a line of its own, ended whatever the input line was: p, P, =, i, c, a
-// and r's lines, and l's.
-func (c *sedCycle) write(text string) error { return c.emit(text, true) }
+// write writes text as a line of its own, ended with a newline whatever the input line was: =,
+// i, c, a and r's lines, and l's.
+func (c *sedCycle) write(text string) error { return c.printedIf(c.output.writeText(text)) }
+
+// writeRecord writes some of the pattern space as a line of its own, ended with the separator
+// whatever the input line was: p's and P's.
+func (c *sedCycle) writeRecord(text string) error { return c.printedIf(c.output.writeLine(text, true)) }
 
 // writePattern writes the pattern space with its input line's ending, as n, q and s///p do
 // and the print at the end of the cycle.
-func (c *sedCycle) writePattern() error { return c.emit(c.line, c.ended) }
+func (c *sedCycle) writePattern() error { return c.printedIf(c.output.writeLine(c.line, c.ended)) }
 
-func (c *sedCycle) emit(text string, ended bool) error {
-	if err := c.output.writeLine(text, ended); err != nil {
-		return err
+func (c *sedCycle) printedIf(err error) error {
+	if err == nil {
+		c.printed = true
 	}
-	c.printed = true
-	return nil
+	return err
 }
+
+// separator is what joins and parts lines in the pattern space, a newline or -z's NUL.
+func (c *sedCycle) separator() string { return string(c.output.separator) }
 
 // sedTranslate is the `y/from/to/` table.
 //

@@ -111,6 +111,7 @@ func appletUsageText() map[string]Usage {
 			"PATTERN is a POSIX basic regular expression, with the GNU \\+ \\? \\| extensions.",
 			"REPLACEMENT takes & for the whole match and \\1 to \\9 for a group.",
 			"A backreference in the PATTERN is refused: this build matches with RE2, which has none.",
+			"-z, GNU's --null-data, ends a line with a NUL, read and written; =, a, i, c and l end theirs with a newline still, as GNU's do.",
 		}},
 		"seq":        {Summary: "Print a sequence of numbers.", Operands: "[FIRST [INCREMENT]] LAST", Options: map[string]string{"w": "pad with leading zeros to an equal width", "s": "put this string between the numbers rather than a newline"}},
 		"sha256sum":  {Summary: "Print or check SHA-256 digests.", Operands: "[FILE]...", Options: map[string]string{"b": "read in binary mode, and mark it with a * in the output", "c": "read the operands as lists of digests and check them", "s": "with -c, print nothing and say only by the status", "t": "read in text mode, which is the default", "w": "with -c, warn about lines that are not a digest"}},

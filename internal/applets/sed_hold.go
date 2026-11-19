@@ -26,11 +26,11 @@ func runSedHoldCommand(command *sedCommand, cycle *sedCycle) sedControl {
 	case 'h':
 		cycle.hold = cycle.line
 	case 'H':
-		cycle.hold = cycle.hold + "\n" + cycle.line
+		cycle.hold = cycle.hold + cycle.separator() + cycle.line
 	case 'g':
 		cycle.line = cycle.hold
 	case 'G':
-		cycle.line = cycle.line + "\n" + cycle.hold
+		cycle.line = cycle.line + cycle.separator() + cycle.hold
 		cycle.ended = true
 	case 'x':
 		cycle.line, cycle.hold = cycle.hold, cycle.line
@@ -83,7 +83,7 @@ func runSedNextCommand(command *sedCommand, cycle *sedCycle) (sedControl, error)
 		}
 		return sedQuit, nil
 	}
-	cycle.line = cycle.line + "\n" + line
+	cycle.line = cycle.line + cycle.separator() + line
 	return sedNext, nil
 }
 
@@ -94,9 +94,9 @@ func runSedNextCommand(command *sedCommand, cycle *sedCycle) (sedControl, error)
 // newline left in the pattern space it deletes through it and begins again, and
 // otherwise it is `d`. That loop is what `N;P;D` is.
 func runSedFirstLineCommand(command *sedCommand, cycle *sedCycle) (sedControl, error) {
-	first, rest, multiline := strings.Cut(cycle.line, "\n")
+	first, rest, multiline := strings.Cut(cycle.line, cycle.separator())
 	if command.action == 'P' {
-		return sedNext, cycle.write(first)
+		return sedNext, cycle.writeRecord(first)
 	}
 	if !multiline {
 		return sedDeleted, nil

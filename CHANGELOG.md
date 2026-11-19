@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`sed -z`**, GNU's `--null-data`: lines ended by a NUL, read and written, so `find -print0 |
+  sed -z s/a/b/ | xargs -0` keeps names whole. It was `unknown option -- z`.
+
 - **realpath takes GNU's options**: `--relative-to=DIR`, `--relative-base=DIR`, `-m`, `-e`, `-s`,
   `-q` and `-z`. busybox's takes none, so every word was a path and `realpath --relative-to=. x`
   looked for a file of that name.

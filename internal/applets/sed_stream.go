@@ -2,7 +2,9 @@ package applets
 
 import (
 	"bufio"
+	"bytes"
 	"io"
+	"strings"
 )
 
 // Several files are ONE stream.
@@ -40,6 +42,8 @@ type sedStream struct {
 	// busybox-w32 reads a file in binary mode for it: `sed -b 's/$/X/'` puts the X
 	// after the CR, and `sed -b -i` writes a CRLF file back as CRLF.
 	binary bool
+	// nul is -z: a line ends with a NUL, and a carriage return is a character of it.
+	nul bool
 }
 
 // Next answers the line, whether that line was terminated in the input, and
@@ -77,6 +81,12 @@ func (s *sedStream) fill() error {
 				// only
 				// whether there *was* an ending is kept, not which one.
 				line, ending := splitLineEnding(s.scanner.Text())
+				if s.nul {
+					line, ending = s.scanner.Text(), ""
+					if trimmed, ok := strings.CutSuffix(line, "\x00"); ok {
+						line, ending = trimmed, "\x00"
+					}
+				}
 				if s.binary && ending == "\r\n" {
 					line += "\r"
 				}
@@ -108,7 +118,21 @@ func (s *sedStream) fill() error {
 		// The terminator stays in the token, so fill can tell an unterminated final
 		// line from a terminated one -- which is what sed's last newline turns on.
 		s.scanner.Split(scanLineWithEnding)
+		if s.nul {
+			s.scanner.Split(scanRecordWithNul)
+		}
 	}
+}
+
+// scanRecordWithNul is scanLineWithEnding for -z: a record ends with a NUL, which it keeps.
+func scanRecordWithNul(data []byte, atEOF bool) (int, []byte, error) {
+	if index := bytes.IndexByte(data, 0); index >= 0 {
+		return index + 1, data[:index+1], nil
+	}
+	if atEOF && len(data) > 0 {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }
 
 // AtLast reports whether the line just returned was the final one, which is what

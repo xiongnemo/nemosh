@@ -87,6 +87,7 @@ func editSedFileInPlace(program *sedProgram, operand, native, suffix string) err
 	var transformed bytes.Buffer
 	stream := &sedStream{
 		binary: program.binary,
+		nul:    program.nullData,
 		openers: []func() (io.ReadCloser, error){func() (io.ReadCloser, error) {
 			return io.NopCloser(decodeTextInput(bytes.NewReader(original))), nil
 		}},

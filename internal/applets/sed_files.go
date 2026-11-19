@@ -70,7 +70,7 @@ func (p *sedProgram) openWriteFiles(ctx context.Context) (func() error, error) {
 			if err != nil {
 				return nil, errors.Join(cannotOpen(name, err), closeAll())
 			}
-			target = &sedWriteFile{output: newSedOutput(file), file: file}
+			target = &sedWriteFile{output: p.newOutput(file), file: file}
 			opened[name] = target
 		}
 		command.writeTo = target

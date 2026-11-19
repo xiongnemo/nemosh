@@ -25,6 +25,8 @@ type sedProgram struct {
 	quiet bool
 	// binary is -b, busybox-w32's: a carriage return is kept as part of its line.
 	binary bool
+	// nullData is -z, GNU's: a line ends with a NUL, read and written; see sed_output.go.
+	nullData bool
 	// view is the process the run is in, which resolves a file command's FILE.
 	view ProcessView
 	// spaceLimit, when set, is how large the pattern or hold space may grow before the run

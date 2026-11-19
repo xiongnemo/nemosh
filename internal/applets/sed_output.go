@@ -24,13 +24,20 @@ import "io"
 //
 // One place busybox is not followed: its = prints with fprintf past the owed newline, so
 // after a FILE whose last line had none, `sed = f1 f2` runs that line into the next number.
+//
+// separator is what ends the pattern space, a newline, or under -z a NUL, as GNU's
+// buffer_delimiter; what is not the pattern space -- =, a, i, c and l -- ends with a newline
+// whichever, as GNU's does.
 type sedOutput struct {
 	out io.Writer
-	// owes is that the last thing written was text with no newline after it.
-	owes bool
+	// owes is that the last thing written was text with no ending after it, and owed the
+	// ending it would have had.
+	owes      bool
+	owed      byte
+	separator byte
 }
 
-func newSedOutput(out io.Writer) *sedOutput { return &sedOutput{out: out} }
+func newSedOutput(out io.Writer) *sedOutput { return &sedOutput{out: out, separator: '\n'} }
 
 // flush hands on what a buffered output holds, before a write elsewhere that may share its
 // destination: `w /dev/stdout`.
@@ -41,16 +48,24 @@ func (o *sedOutput) flush() error {
 	return nil
 }
 
-// writeLine writes the newline owed, text, and a newline if ended, as one write.
+// writeLine writes the ending owed, the pattern space's text, and the separator if ended, as
+// one write.
 func (o *sedOutput) writeLine(text string, ended bool) error {
+	return o.writeEnded(text, ended, o.separator)
+}
+
+// writeText writes text that is not the pattern space, ended with a newline.
+func (o *sedOutput) writeText(text string) error { return o.writeEnded(text, true, '\n') }
+
+func (o *sedOutput) writeEnded(text string, ended bool, ending byte) error {
 	line := text
 	if o.owes {
-		line = "\n" + line
+		line = string(o.owed) + line
 	}
 	if ended {
-		line += "\n"
+		line += string(ending)
 	}
-	o.owes = !ended && text != ""
+	o.owes, o.owed = !ended && text != "", ending
 	if line == "" {
 		return nil
 	}

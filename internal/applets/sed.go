@@ -33,7 +33,7 @@ func newSedApplet() Applet {
 		if err != nil {
 			return err
 		}
-		program.binary = options.binary
+		program.binary, program.nullData = options.binary, options.nullData
 		if options.inPlace {
 			return runSedInPlace(ctx, program, options.operands, options.suffix, stderr)
 		}
@@ -52,7 +52,7 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 	// filter_output.go. It wrote each line as it was made.
 	output := newFilterOutput(stdout)
 	failed := false
-	stream := &sedStream{binary: p.binary, onOpenError: func(err error) {
+	stream := &sedStream{binary: p.binary, nul: p.nullData, onOpenError: func(err error) {
 		_ = output.Flush()
 		fmt.Fprintf(stderr, "sed: %v\n", err)
 		failed = true
@@ -106,7 +106,7 @@ func (p *sedProgram) run(ctx context.Context, operands []string, stdin io.Reader
 // line is read, transformed, and either printed or not.
 func (p *sedProgram) execute(stream *sedStream, stdout io.Writer) error {
 	// The writer ends each line as the command writing it says; see sed_output.go.
-	output := newSedOutput(stdout)
+	output := p.newOutput(stdout)
 	number := 0
 	hold := ""
 	for {
@@ -295,4 +295,14 @@ func parseSedSubstituteFlags(flags string, into *sedSubstitute) (bool, error) {
 		index = end - 1
 	}
 	return ignoreCase, nil
+}
+
+// newOutput is a writer for the program's lines, ending the pattern space with -z's NUL when it
+// was given.
+func (p *sedProgram) newOutput(out io.Writer) *sedOutput {
+	output := newSedOutput(out)
+	if p.nullData {
+		output.separator = 0
+	}
+	return output
 }

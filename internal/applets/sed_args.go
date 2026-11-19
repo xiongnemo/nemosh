@@ -21,6 +21,8 @@ type sedOptions struct {
 	inPlace bool
 	suffix  string
 	binary  bool
+	// nullData is -z, GNU's --null-data: a line ends with a NUL.
+	nullData bool
 }
 
 // sedArgs reads sed's options, leaving the operands.
@@ -84,6 +86,8 @@ func readSedFlags(ctx context.Context, arg string, args []string, index int, opt
 			options.extended = true
 		case 'b':
 			options.binary = true
+		case 'z':
+			options.nullData = true
 		case 'i':
 			// The suffix is attached and never a separate word, which is what
 			// keeps `sed -i script file` from taking the script as a suffix.
@@ -118,7 +122,7 @@ func readSedFlags(ctx context.Context, arg string, args []string, index int, opt
 
 // sedLongOptions are busybox's long options for sed, each taken as getopt_long takes one: by
 // any prefix that names it alone, so `--expr` is --expression.
-var sedLongOptions = []string{"expression", "file", "in-place", "quiet", "regexp-extended", "silent"}
+var sedLongOptions = []string{"expression", "file", "in-place", "null-data", "quiet", "regexp-extended", "silent", "zero-terminated"}
 
 // readSedLongOption reads one of them, reporting how many arguments it used. --expression and
 // --file take their value after `=` or as the next argument, and --in-place its suffix after
@@ -155,6 +159,8 @@ func readSedLongOption(ctx context.Context, arg string, args []string, index int
 		options.quiet = true
 	case "regexp-extended":
 		options.extended = true
+	case "null-data", "zero-terminated":
+		options.nullData = true
 	case "in-place":
 		options.inPlace, options.suffix = true, value
 	case "expression":

@@ -21,9 +21,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 54   |
+| works   | 55   |
 | partial | 8    |
-| refused | 14   |
+| refused | 13   |
 | missing | 29   |
 
 ## Existing commands
@@ -72,7 +72,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `tar xzvf`, `czf`, `tf`, `xf -C`, `--exclude`, `cJf` | works | |
 | `tar -I zstd` | refused | no zstd |
 | `sed -i`, `-i.bak`, `-n '10,20p'`, `-E`, `'/^#/d'` | works | |
-| `sed -z` | refused | |
+| `sed -z` | works | GNU's --null-data |
 | `awk -F: '{print $1}'`, `-v`, `printf`, `tolower`, `length(arr)` | works | |
 | `awk gensub()` | works | busybox's awk has it (c23c5eb7) |
 | `awk BEGINFILE {...}`, `ENDFILE {...}` | refused | by name, as the program is read (d3c84b48) |
