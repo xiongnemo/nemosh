@@ -978,7 +978,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `micro` | `-H -R`; one file at a time | refused by name |
 | `mkdir` | `-m -p -v` and their long forms; `-v` names each directory made, a parent with its slash | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |
-| `mv` | `-f -i -n -T -t -v` and busybox's long forms; of `-f -i -n` the last wins, and a read-only destination is replaced as busybox-w32 replaces one. Across volumes each file is copied by CopyFile2 with its alternate data streams, attributes and time, what a rename keeps, and Ctrl-C ends the copy | refused by name |
+| `mv` | `-f -i -n -T -t -v` and busybox's long forms, and GNU's `-u`/`--update`, which moves only over an older file or where there is none and says nothing of one it leaves, `-v` or not; of `-f -i -n` the last wins, and a read-only destination is replaced as busybox-w32 replaces one. Across volumes each file is copied by CopyFile2 with its alternate data streams, attributes and time, what a rename keeps, and Ctrl-C ends the copy | refused by name |
 | `nano` | `-H -R`, and `+LINE`, `+LINE,COLUMN` or `+,COLUMN` before the file, as nano's; one file at a time | refused by name, and `+/STRING` |
 | `nc` | `-l -p -w`; `-e` **refused by name** | refused by name |
 | `nl` | `-b a\|t\|n\|pBRE -i -s -v -w -p` and their long forms; numbers carry on from one file to the next, and `pBRE` is GNU's | refused by name |

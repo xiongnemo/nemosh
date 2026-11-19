@@ -25,11 +25,13 @@ type mvRun struct {
 	// ctx ends a copy across volumes under way, as it ends cp's.
 	ctx                                                 context.Context
 	force, interactive, noClobber, noTargetDir, verbose bool
-	terminal                                            bool
-	umask                                               uint32
-	stdin                                               io.Reader
-	stdout, stderr                                      io.Writer
-	failed                                              bool
+	// update is GNU's -u: a destination no older than its source is left as it is.
+	update         bool
+	terminal       bool
+	umask          uint32
+	stdin          io.Reader
+	stdout, stderr io.Writer
+	failed         bool
 }
 
 func newMvApplet() Applet {
@@ -40,7 +42,7 @@ func newMvApplet() Applet {
 		}
 		view := ProcessViewFromContext(ctx)
 		last := options.last("fin")
-		run := &mvRun{ctx: ctx, force: last == 'f', interactive: last == 'i', noClobber: last == 'n', noTargetDir: options.has('T'),
+		run := &mvRun{ctx: ctx, force: last == 'f', interactive: last == 'i', noClobber: last == 'n', noTargetDir: options.has('T'), update: options.has('u'),
 			verbose: options.has('v'), terminal: inputIsTerminal(ctx, stdin), umask: processFileModeMask(view),
 			stdin: stdin, stdout: stdout, stderr: stderr}
 		target, sources := options.value('t'), operands
@@ -102,12 +104,23 @@ func newMvApplet() Applet {
 	}}
 }
 
+// newerThan is -u's question, as cp -u asks it: whether source was changed after dest. A stat
+// that fails leaves the move to say why.
+func newerThan(source, dest string) bool {
+	sourceInfo, sourceErr := os.Lstat(source)
+	destInfo, destErr := os.Stat(dest)
+	return sourceErr != nil || destErr != nil || sourceInfo.ModTime().After(destInfo.ModTime())
+}
+
 // moveRename is how mv renames; a test makes it say the volumes differ.
 var moveRename = renameForMove
 
 // move renames source to dest, and across volumes copies and removes it, as busybox's mv_main
 // does. -v's line is printed whatever became of it, as there.
 func (r *mvRun) move(source, dest pathOperand, destExists bool) {
+	if destExists && r.update && !newerThan(source.host, dest.host) {
+		return
+	}
 	if r.verbose {
 		defer fmt.Fprintf(r.stdout, "'%s' -> '%s'\n", source.operand, dest.operand)
 	}
@@ -175,7 +188,7 @@ func (r *mvRun) status() error {
 }
 
 // mvLongOptions are the long forms busybox's mv takes that stand for a letter.
-const mvLongOptions = "interactive=i force=f no-clobber=n no-target-directory=T verbose=v"
+const mvLongOptions = "interactive=i force=f no-clobber=n no-target-directory=T verbose=v update=u"
 
 // mvArguments reads mv's options, turning each long one into the letter it stands for.
 func mvArguments(ctx context.Context, args []string) (appletOptions, []string, error) {
@@ -206,7 +219,7 @@ func mvArguments(ctx context.Context, args []string) (appletOptions, []string, e
 			return appletOptions{}, nil, unknownLongOption(arg)
 		}
 	}
-	options, operands, err := parseAppletOptions(ctx, words, "finTv", "t")
+	options, operands, err := parseAppletOptions(ctx, words, "finTvu", "t")
 	if err == nil && options.has('t') && options.has('T') {
 		err = errors.New("-t and -T cannot both be given")
 	}
