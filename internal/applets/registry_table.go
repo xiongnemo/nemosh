@@ -158,4 +158,7 @@ var defaultApplets = [...]appletEntry{
 	{"xzcat", newXzcatApplet},
 	{"yes", newYesApplet},
 	{"zcat", newZcatApplet},
+	{"zegrep", newZegrepApplet},
+	{"zfgrep", newZfgrepApplet},
+	{"zgrep", newZgrepApplet},
 }

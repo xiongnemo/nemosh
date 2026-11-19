@@ -64,10 +64,10 @@ func grepTargets(ctx context.Context, flags grepFlags, paths []string, stdin io.
 		// A lone `-` is the stdin, decoded the same way a named file is:
 		// `grep -r pattern . | grep -v x -` is the same question either way.
 		if path == "-" {
-			targets = append(targets, grepTarget{name: path, opener: readerTarget(stdin)})
+			targets = append(targets, grepTarget{name: path, opener: readerTarget(stdin, flags.decompress)})
 			continue
 		}
-		targets = append(targets, namedTarget(ctx, view, path))
+		targets = append(targets, namedTarget(ctx, view, path, flags.decompress))
 	}
 	return targets, nil
 }
@@ -114,10 +114,18 @@ func walkGrepTargets(ctx context.Context, flags grepFlags, shown, native string,
 	return targets, err
 }
 
-func namedTarget(ctx context.Context, view ProcessView, path string) grepTarget {
+func namedTarget(ctx context.Context, view ProcessView, path string, decompress bool) grepTarget {
 	return grepTarget{name: path, opener: func() (io.ReadCloser, error) {
-		// A pattern is matched against characters, so a declared encoding is decoded.
-		return openProcessTextInput(ctx, view, path)
+		// A pattern is matched against characters, so a declared encoding is decoded, under
+		// zgrep once the data is decompressed.
+		if !decompress {
+			return openProcessTextInput(ctx, view, path)
+		}
+		file, err := OpenProcessInput(ctx, view, path)
+		if err != nil {
+			return nil, err
+		}
+		return grepOpened(path, file, file, true)
 	}}
 }
 

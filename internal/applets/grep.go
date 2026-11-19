@@ -11,7 +11,7 @@ import (
 
 func newGrepApplet() Applet {
 	return simpleApplet{name: "grep", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		return grepStatus(runGrep(ctx, args, stdin, stdout, stderr))
+		return grepStatus(runGrep(ctx, args, false, stdin, stdout, stderr))
 	}}
 }
 
@@ -22,7 +22,7 @@ func newFgrepApplet() Applet { return grepAs("fgrep", "-F") }
 
 func grepAs(name, option string) Applet {
 	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		return grepStatus(runGrep(ctx, append([]string{option}, args...), stdin, stdout, stderr))
+		return grepStatus(runGrep(ctx, append([]string{option}, args...), false, stdin, stdout, stderr))
 	}}
 }
 
@@ -45,10 +45,14 @@ func grepStatus(err error) error {
 	return ExitStatusMessage(2, err)
 }
 
-func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+// runGrep is grep, and with decompress zgrep: see zgrep.go.
+func runGrep(ctx context.Context, args []string, decompress bool, stdin io.Reader, stdout, stderr io.Writer) error {
 	flags, paths, err := grepArgs(ctx, args, stdin)
 	if err != nil {
 		return err
+	}
+	if flags.decompress = decompress; decompress && flags.recursive {
+		return errZgrepRecursive
 	}
 	expr, err := flags.compile()
 	if err != nil {
@@ -59,7 +63,7 @@ func runGrep(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 	// `--` belongs between the last group of one file and the first of the next.
 	printer := newGrepPrinter(stdout, stderr, flags, expr)
 	if len(paths) == 0 {
-		matched, err := grepOne(grepTarget{opener: readerTarget(stdin)}, expr, flags, false, printer)
+		matched, err := grepOne(grepTarget{opener: readerTarget(stdin, flags.decompress)}, expr, flags, false, printer)
 		if err != nil {
 			return err
 		}
@@ -123,11 +127,13 @@ func grepMatchStatus(flags grepFlags, matched bool, printer *grepPrinter) error 
 	return nil
 }
 
-func readerTarget(stdin io.Reader) func() (io.ReadCloser, error) {
+func readerTarget(stdin io.Reader, decompress bool) func() (io.ReadCloser, error) {
 	// Decoded here too: `grep hello < notepad.txt` and `type x | nemosh grep hello` are the
 	// same question as naming the file, and a BOM arrives down a pipe exactly as it does off
 	// a disk.
-	return func() (io.ReadCloser, error) { return io.NopCloser(decodeTextInput(stdin)), nil }
+	return func() (io.ReadCloser, error) {
+		return grepOpened("(standard input)", stdin, io.NopCloser(nil), decompress)
+	}
 }
 
 // grepOne searches one target and reports whether anything matched.

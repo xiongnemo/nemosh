@@ -33,4 +33,7 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"duexclude-from", "FILE"},
 	{"duexclude", "PATTERN"},
 	{"dumax-depth", "N"},
+	{"zgrepm", "COUNT"},
+	{"zegrepm", "COUNT"},
+	{"zfgrepm", "COUNT"},
 }

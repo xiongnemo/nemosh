@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 39   |
+| works   | 40   |
 | partial | 8    |
 | refused | 25   |
-| missing | 30   |
+| missing | 29   |
 
 ## Existing commands
 
@@ -36,7 +36,7 @@ Rows, not invocations: a row holds the invocations that share a status.
 | `grep --line-buffered` | works | each line is written as it is found |
 | `grep -P` | works | RE2's reading; lookaround and backreferences refused by name |
 | `grep -z`, `grep -b` | works | GNU's --null-data and --byte-offset |
-| `zgrep` | missing | |
+| `zgrep`, `zegrep`, `zfgrep` | works | gzip, bzip2 and xz by their magic, plain files as they are |
 | `find -name -mtime +7 -delete`, `-type f -size +100M`, `-maxdepth -iname`, `-newer`, `-perm`, `-print0`, `-empty`, `-mmin`, `-regex` | works | |
 | `find -user NAME` | refused | |
 | `find -printf` | refused | |

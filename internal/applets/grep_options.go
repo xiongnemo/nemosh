@@ -44,8 +44,10 @@ type grepFlags struct {
 	perl     bool
 	// nullData is -z, lines ended by a NUL rather than a newline, read and written; byteOffset
 	// is -b, each line's offset in its input before it. See grep_nul.go.
-	nullData     bool
-	byteOffset   bool
+	nullData   bool
+	byteOffset bool
+	// decompress is zgrep's: what an input holds is read through its decompressor.
+	decompress   bool
 	onlyMatching bool
 	noMessages   bool
 	noFilename   bool

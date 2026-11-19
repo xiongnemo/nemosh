@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`zgrep`, `zegrep` and `zfgrep`**, gzip's, which busybox has not got: `zgrep error
+  /var/log/syslog*` reads `syslog.2.gz` and `syslog` alike. Data that begins with gzip's, bzip2's
+  or xz's magic is read through zcat's decompressor and any other as it is, as `gzip -cdf` passes
+  it; grep's options all apply, but `-r`, which gzip's zgrep refuses too.
 - **`grep -z` and `grep -b`**, GNU's `--null-data` and `--byte-offset`: `find -print0 | grep -z
   x | xargs -0` keeps a name with a newline in it whole, and a NUL ending a line does not make the
   input binary; `grep -ob PATTERN` says where each match begins.
