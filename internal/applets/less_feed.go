@@ -24,10 +24,12 @@ import (
 // written again, and the reader only appends past the end the pager was given, so the two
 // touch different elements. The slice header is the one thing both write, under the lock.
 
-// lessSource is one input: a file or standard input, and how to let it go.
+// lessSource is one input: a file or standard input, how to let it go, and for a file where it
+// is, which F reads it from again; see less_follow.go.
 type lessSource struct {
 	reader io.Reader
 	close  func()
+	native string
 }
 
 // lessFeed is the lines read so far, and whether the reading has ended.
@@ -41,9 +43,14 @@ type lessFeed struct {
 	changed chan struct{}
 	screen  tcell.Screen
 	waking  atomic.Bool
-	// stop ends the reading, and done is closed once the reader has stopped.
+	// stop ends the reading, and done is closed once the first reading has stopped.
 	stop context.CancelFunc
 	done chan struct{}
+	// ctx is the reading's, following whether F has the reading wait at a FILE's end, and native
+	// where the FILE is, for a feed of one; see less_follow.go.
+	ctx       context.Context
+	following atomic.Bool
+	native    string
 }
 
 // lessWake is the event the reader wakes the pager with.
@@ -54,7 +61,10 @@ func (w *lessWake) When() time.Time { return w.when }
 // startLessFeed reads sources in order until they end or ctx does.
 func startLessFeed(ctx context.Context, sources []lessSource) *lessFeed {
 	readCtx, cancel := context.WithCancel(ctx)
-	feed := &lessFeed{changed: make(chan struct{}, 1), stop: cancel, done: make(chan struct{})}
+	feed := &lessFeed{changed: make(chan struct{}, 1), stop: cancel, done: make(chan struct{}), ctx: readCtx}
+	if len(sources) == 1 {
+		feed.native = sources[0].native
+	}
 	go feed.read(readCtx, sources)
 	return feed
 }
@@ -64,12 +74,21 @@ func (f *lessFeed) read(ctx context.Context, sources []lessSource) {
 	var failure error
 	for _, source := range sources {
 		if failure == nil {
-			failure = readLessSource(ctx, source.reader, f.add)
+			reader := source.reader
+			if source.native != "" {
+				reader = lessFollowReader{ctx: ctx, feed: f, reader: reader}
+			}
+			failure = readLessSource(ctx, reader, f.add)
 		}
 		if source.close != nil {
 			source.close()
 		}
 	}
+	f.finish(failure)
+}
+
+// finish says the reading has ended, and why if it failed.
+func (f *lessFeed) finish(failure error) {
 	// Stopped is not failed: a pager that leaves before its input ends stops its reader.
 	if errors.Is(failure, context.Canceled) {
 		failure = nil

@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`less +F`, `+G`, `+/PATTERN`, `+N`, the `F` key, and `:n`/`:p`/`:x`**, GNU's: start at the
+  end, a match or a line, or following a FILE as it grows until ^C; several FILEs are paged one
+  at a time, each kept where it was, where they were run together. `+F` was opened as a FILE.
+
 - **`find -printf FORMAT`**, GNU's, measured against GNU findutils 4.11.0: the names, depth,
   size, mode, owner and identity directives, the times in every form GNU has, widths,
   precisions and escapes. `%F`, `%S` and `%Z` are refused. It was `unrecognized: -printf`.

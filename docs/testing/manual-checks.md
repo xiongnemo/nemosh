@@ -199,7 +199,10 @@ and the prompt comes back with ping gone. `ls --color=always | less` shows a rev
 where each colour starts, and since 2026-11-20 `ls --color=always | less -R` the names in
 their colours, as GNU's less draws them, as does `diff --color=always a b | less -R`; a search
 for a coloured word finds it and reverses it in its colours. A file with Chinese in it lines
-up, the character after a wide one in its own column.
+up, the character after a wide one in its own column. `less +F log` while something appends
+to `log` shows each line as it comes under `Waiting for data... (interrupt to abort)`; ^C stops
+the following and leaves less on the screen, and `q` then leaves. `less a b` shows a alone with
+`(file 1 of 2)`, `:n` b, `:p` a again where it was left.
 
 `cd D:` changes drive since 2026-11-16, on a machine with a second drive: `cd D:/somewhere`,
 `cd C:/Windows`, then `cd D:` is back at D:/somewhere, `cd C:` stays, and `cmd /c "cd D:"`

@@ -30,7 +30,8 @@ func pagerOnPipe(t *testing.T, settings lessOptions) (tcell.SimulationScreen, *o
 	screen := tcell.NewSimulationScreen("UTF-8")
 	feed := startLessFeed(ctx, []lessSource{{reader: reader, close: func() { reader.Close() }}})
 	finished := make(chan error, 1)
-	go func() { finished <- runLess(ctx, screen, feed, "(standard input)", settings, io.Discard) }()
+	files := []*lessFile{{name: "(standard input)", feed: feed}}
+	go func() { finished <- runLess(ctx, screen, files, lessStart{}, settings, io.Discard) }()
 	// Not read until runLess has started it: the simulation screen's Init is not locked
 	// against its Size. attach comes after Init, under the feed's lock, which orders the two.
 	deadline := time.Now().Add(5 * time.Second)

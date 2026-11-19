@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -47,13 +46,17 @@ func newLessApplet() Applet {
 		if options.has('h') {
 			return writeLessHelp(stdout)
 		}
+		start, operands, err := lessStartCommand(operands)
+		if err != nil {
+			return err
+		}
 		if len(operands) == 0 && inputIsTerminal(ctx, stdin) {
 			// `less` with nothing to read would otherwise take the user's typing for the
 			// file's contents and never show anything -- a hang, in the shape bc and dc
 			// had. Every less refuses here instead.
 			return fmt.Errorf("missing filename (`less -h` for help)")
 		}
-		sources, name, err := openLessSources(ctx, operands, stdin)
+		files, err := openLessFiles(ctx, operands, stdin)
 		if err != nil {
 			return err
 		}
@@ -72,10 +75,29 @@ func newLessApplet() Applet {
 			screen, _ = tcell.NewScreen()
 		}
 		if screen == nil {
-			return writeLessStreaming(ctx, stdout, sources, settings)
+			return writeLessStreaming(ctx, stdout, lessSources(files), settings)
 		}
-		return runLess(ctx, screen, startLessFeed(ctx, sources), name, settings, stdout)
+		return runLess(ctx, screen, files, start, settings, stdout)
 	}}
+}
+
+// lessStartCommand takes the +CMD words out of the operands; the last one given is the one run.
+// A FILE whose name begins with + is ./+NAME, as in GNU's less.
+func lessStartCommand(operands []string) (lessStart, []string, error) {
+	var start lessStart
+	files := operands[:0:0]
+	for _, operand := range operands {
+		if len(operand) < 2 || operand[0] != '+' {
+			files = append(files, operand)
+			continue
+		}
+		parsed, err := parseLessStart(operand)
+		if err != nil {
+			return start, nil, err
+		}
+		start = parsed
+	}
+	return start, files, nil
 }
 
 // inputIsTerminal reports whether standard input is a terminal rather than a file or a
@@ -110,43 +132,6 @@ func inputIsTerminal(ctx context.Context, stdin io.Reader) bool {
 // paging it. See fd_stream.go, which exists for this question.
 func lessCanPage(stdout io.Writer) bool {
 	return stdoutIsTerminal(stdout)
-}
-
-// openLessSources opens what is to be read, the operands or standard input, before anything
-// is read: a file that cannot be opened stops less with the reason, as it did when the reading
-// came first, rather than turning up partway through the paging.
-func openLessSources(ctx context.Context, operands []string, stdin io.Reader) ([]lessSource, string, error) {
-	if len(operands) == 0 {
-		return []lessSource{{reader: stdin}}, "(standard input)", nil
-	}
-	view := ProcessViewFromContext(ctx)
-	var sources []lessSource
-	for _, operand := range operands {
-		if operand == "-" {
-			sources = append(sources, lessSource{reader: stdin})
-			continue
-		}
-		native, err := resolveHostPath(view, operand)
-		if err == nil {
-			var file *os.File
-			if file, err = os.Open(native); err == nil {
-				sources = append(sources, lessSource{reader: file, close: func() { file.Close() }})
-				continue
-			}
-			err = cannotOpen(operand, err)
-		}
-		for _, opened := range sources {
-			if opened.close != nil {
-				opened.close()
-			}
-		}
-		return nil, "", err
-	}
-	name := operands[0]
-	if len(operands) > 1 {
-		name = fmt.Sprintf("%s (and %d more)", operands[0], len(operands)-1)
-	}
-	return sources, name, nil
 }
 
 // writeLessStreaming is the `cat` path, a line written when it is read and flushed when the
@@ -206,8 +191,12 @@ func writeLessHelp(out io.Writer) error {
 		"  /PATTERN         search forward",
 		"  ?PATTERN         search backward",
 		"  n, N             repeat the search, forward or back",
+		"  F                follow: stay at the end as the text grows; ^C stops",
+		"  :n, :p, :x       the next FILE, the one before, the first",
 		"  -N               show line numbers",
 		"  q                quit",
+		"",
+		"  +G, +/PATTERN, +N and +F before the FILEs start at the end, a match, line N, or following.",
 		"",
 	}, "\n"))
 	return err

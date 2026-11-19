@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"fmt"
 	"unicode/utf8"
 
@@ -34,6 +35,16 @@ type lessPager struct {
 	pending   string
 	searching byte
 	quit      bool
+	// files are the FILEs and current the one shown, attached whether their feeds wake the
+	// screen yet; see less_files.go. start is +CMD, following is F, and colon is a `:` waiting
+	// for its letter; see less_start.go.
+	ctx       context.Context
+	files     []*lessFile
+	current   int
+	attached  bool
+	start     lessStart
+	following bool
+	colon     bool
 }
 
 // textRows is how many rows hold text: everything but the prompt at the bottom.
@@ -105,6 +116,9 @@ func (p *lessPager) prompt() string {
 	if p.message != "" {
 		return p.message
 	}
+	if p.following {
+		return "Waiting for data... (interrupt to abort)"
+	}
 	if p.atEnd() && p.waiting {
 		// What has arrived is all on the screen and more may come: not the end, which it
 		// would be wrong to announce while the input is still open.
@@ -168,6 +182,20 @@ func (p *lessPager) typeSearch(event *tcell.EventKey) {
 
 func (p *lessPager) command(event *tcell.EventKey) {
 	p.message = ""
+	// A key the reader presses takes over from +CMD, and ^C stops F rather than less.
+	p.start.kind = 0
+	if p.colon {
+		p.colon = false
+		p.colonCommand(event)
+		p.clampTop()
+		return
+	}
+	if p.following && (event.Key() == tcell.KeyCtrlC || event.Rune() != 'F' && event.Rune() != 'q') {
+		p.stopFollowing()
+		if event.Key() == tcell.KeyCtrlC {
+			return
+		}
+	}
 	switch event.Key() {
 	case tcell.KeyDown, tcell.KeyEnter:
 		p.top++
@@ -219,6 +247,10 @@ func (p *lessPager) runeCommand(key rune) {
 		p.runSearch(true, p.top+1)
 	case 'N':
 		p.runSearch(false, p.top-1)
+	case 'F':
+		p.startFollowing()
+	case ':':
+		p.colon = true
 	}
 }
 
@@ -232,21 +264,14 @@ func (p *lessPager) runSearch(forward bool, from int) {
 		p.message = "no previous pattern"
 		return
 	}
-	compiled, ok := p.compiledPattern()
-	if !ok {
+	if _, ok := p.compiledPattern(); !ok {
 		p.message = "bad pattern: " + p.pattern
 		return
 	}
-	step := 1
-	if !forward {
-		step = -1
-	}
-	for index := from; index >= 0 && index < len(p.lines); index += step {
-		if compiled.MatchString(p.searched(p.lines[index])) {
-			p.top = index
-			p.clampTop()
-			return
-		}
+	if index := p.find(forward, from); index >= 0 {
+		p.top = index
+		p.clampTop()
+		return
 	}
 	p.message = "pattern not found: " + p.pattern
 }

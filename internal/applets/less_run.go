@@ -11,16 +11,18 @@ import (
 // Running the pager: the screen, the loop, and what the feed has read; see less_feed.go. Its own
 // file for the size ceiling, which less_view.go reached when the feed came in.
 
-func runLess(ctx context.Context, screen tcell.Screen, feed *lessFeed, name string,
+func runLess(ctx context.Context, screen tcell.Screen, files []*lessFile, start lessStart,
 	settings lessOptions, stdout io.Writer) error {
-	// The reader stops when the pager does, whether or not its input has ended.
-	defer feed.stop()
+	pager := &lessPager{ctx: ctx, files: files, start: start, settings: settings, screen: screen}
+	// The readers stop when the pager does, whether or not their input has ended.
+	defer pager.stopFeeds()
 	if err := screen.Init(); err != nil {
 		return fmt.Errorf("cannot drive this terminal: %v", err)
 	}
 	defer screen.Fini()
-	pager := &lessPager{name: name, settings: settings, screen: screen, feed: feed}
 	pager.width, pager.height = screen.Size()
+	pager.switchTo(0)
+	feed := pager.feed
 	if settings.quitIfOne {
 		// -F: a text that fits needs no pager, so it is written out and left, which cannot be
 		// known until a screenful more has arrived or the input has ended. The screen goes
@@ -46,8 +48,10 @@ func runLess(ctx context.Context, screen tcell.Screen, feed *lessFeed, name stri
 		}
 	}()
 	feed.attach(screen)
+	pager.attached = true
 	for !pager.quit {
 		pager.pull()
+		pager.settle()
 		pager.draw()
 		event := screen.PollEvent()
 		if event == nil {
@@ -71,5 +75,9 @@ func (p *lessPager) pull() {
 	p.lines, p.waiting = lines, !ended
 	if err != nil {
 		p.message = err.Error()
+	}
+	if p.following {
+		// F keeps the last line on the screen as lines come.
+		p.top = len(p.lines)
 	}
 }
