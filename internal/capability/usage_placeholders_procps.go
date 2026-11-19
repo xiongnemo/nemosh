@@ -66,4 +66,10 @@ var valuePlaceholderTableProcps = [...]placeholderRow{
 	{"treeI", "PATTERN"},
 	{"treeP", "PATTERN"},
 	{"treecharset", "CHARSET"},
+	{"pingc", "COUNT"},
+	{"pingi", "SECONDS"},
+	{"pingW", "SECONDS"},
+	{"pingw", "SECONDS"},
+	{"pings", "SIZE"},
+	{"pingt", "TTL"},
 }

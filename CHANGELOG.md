@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`ping`, iputils'**: `ping -c 4 HOST`, `-i`, `-W`, `-w`, `-s`, `-t`, `-q`, `-n`, `-6`, in iputils'
+  words, with no administrator. It ran Windows' PING.EXE, which answers `-c` with `Option -c
+  requires administrative privileges`; that one still runs as `ping.exe`.
+
 - **`ss`, iproute2's**: `ss -tulpn` and the rest, every socket with the process that owns it,
   from Windows' socket tables. Recv-Q and Send-Q are `-`, which Windows does not say. There was
   no ss, and Windows' netstat answers `-tulpn` with its usage.

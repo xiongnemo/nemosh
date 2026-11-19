@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 69   |
+| works   | 70   |
 | partial | 6    |
 | refused | 6    |
-| missing | 25   |
+| missing | 24   |
 
 ## Existing commands
 
@@ -111,7 +111,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 
 | invocation | status | note |
 | --- | --- | --- |
-| `ping -c 4 HOST` | missing | Windows' PING.EXE: `Option -c requires administrative privileges` |
+| `ping -c 4 HOST`, `-i`, `-W`, `-q`, `-6` | works | iputils'; Windows' still runs as `ping.exe` |
 | `tree -L 2`, `-a`, `-d`, `-I`, `-h` | works | tree(1)'s; Windows' still runs as `tree.com` |
 | `hostname -I`, `hostname -f`, `-s`, `-d`, `-i`, `-A` | works | Debian's; Windows' still runs as `hostname.exe` |
 | `netstat -tulpn` | missing | Windows' netstat prints its usage; Debian's answer is `ss` |

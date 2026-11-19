@@ -91,6 +91,7 @@ var defaultApplets = [...]appletEntry{
 	{"patch", newPatchApplet},
 	{"pgrep", newPgrepApplet},
 	{"pidof", newPidofApplet},
+	{"ping", newPingApplet},
 	{"pipe_progress", func() Applet { return newPipeProgressApplet("pipe_progress") }},
 	{"pkill", newPkillApplet},
 	{"posixpath", newPosixpathApplet},
