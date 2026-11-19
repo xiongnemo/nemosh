@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 71   |
+| works   | 72   |
 | partial | 6    |
 | refused | 6    |
-| missing | 23   |
+| missing | 22   |
 
 ## Existing commands
 
@@ -120,7 +120,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `traceroute`, `dig`, `host` | missing | Windows has `tracert` and `nslookup` |
 | `lsof -i :80` | missing | |
 | `column -t`, `-s,`, `-x`, `-N` | works | util-linux's |
-| `pstree` | missing | `ps axf` draws the tree |
+| `pstree`, `pstree -p`, `pstree PID` | works | psmisc's; threads folded |
 | `file NAME` | missing | |
 | `tput cols`, `tput setaf 1`, `tty` | missing | |
 | `man ls`, `info`, `apropos` | missing | `help ls` and `ls --help` answer |

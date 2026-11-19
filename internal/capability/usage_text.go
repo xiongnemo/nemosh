@@ -21,6 +21,9 @@ var usageText = sync.OnceValue(func() map[string]Usage {
 	for name, more := range appletUsageTextMore() {
 		usage[name] = more
 	}
+	for name, more := range appletUsageTextDebian() {
+		usage[name] = more
+	}
 	return usage
 })
 

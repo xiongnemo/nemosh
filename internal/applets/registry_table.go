@@ -99,6 +99,7 @@ var defaultApplets = [...]appletEntry{
 	{"printenv", newPrintenvApplet},
 	{"printf", newPrintfApplet},
 	{"ps", newPsApplet},
+	{"pstree", newPstreeApplet},
 	{"pwd", newPwdApplet},
 	{"readlink", newReadlinkApplet},
 	{"realpath", newRealpathApplet},

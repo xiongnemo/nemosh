@@ -40,6 +40,7 @@ var commands = []Command{
 	{Name: "grep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "egrep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
 	{Name: "fgrep", Short: "invrRlcqwxFoshHEmaIzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
+	{Name: "pstree", Short: "pacAUlnT", Operand: AnyPath},
 	{Name: "column", Short: "txLdsocRNl", ValueShort: "socRNl", Long: []string{"table", "fillrows", "keep-empty-lines", "table-noheadings", "separator", "input-separator", "output-separator", "output-width", "table-right", "table-columns", "table-columns-limit"}, ValueLong: []string{"separator", "input-separator", "output-separator", "output-width", "table-right", "table-columns", "table-columns-limit"}, Operand: AnyPath},
 	{Name: "ping", Short: "qnO46ciWwst", ValueShort: "ciWwst", Operand: AnyPath},
 	{Name: "ss", Short: "tulanp46Hs", Long: []string{"tcp", "udp", "listening", "all", "numeric", "processes", "ipv4", "ipv6", "no-header", "summary"}, Operand: AnyPath},

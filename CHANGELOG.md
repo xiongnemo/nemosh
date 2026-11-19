@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`pstree`, psmisc's**: `pstree`, `-p`, `-a`, `-A`, `-U`, `-l`, `-n`, `-T`, `-c` and a PID, with
+  identical branches folded into `N*[...]` and threads as `{name}`. There was no pstree.
+
 - **`column`, util-linux's**: `mount | column -t`, `column -t -s,`, `-x`, `-o`, `-R`, `-N`, and the
   columns of a list without `-t`. There was no column.
 
