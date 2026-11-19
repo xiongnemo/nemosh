@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"strings"
@@ -24,7 +25,19 @@ import (
 // last of the others the second, as busybox takes them. -T puts a tab after each line's marker,
 // and -t writes a tab as the spaces to the next multiple of eight, counted from the line's start.
 // All three were taken and ignored.
-func (r diffRequest) writeUnified(stdout io.Writer, edits []diffEdit, hunks []diffHunk) error {
+//
+// It is written through a buffer, flushed once the file's diff is written, as busybox's stdio
+// writes it. A write a line, to a file, made the 6.8 MB diff of two of Go's ssa files take 24 s
+// where busybox takes 0.5; nothing else is said while it is written, so nothing is out of order.
+func (r diffRequest) writeUnified(under io.Writer, edits []diffEdit, hunks []diffHunk) error {
+	stdout := bufio.NewWriterSize(under, 32<<10)
+	if err := r.writeUnifiedTo(stdout, edits, hunks); err != nil {
+		return err
+	}
+	return stdout.Flush()
+}
+
+func (r diffRequest) writeUnifiedTo(stdout io.Writer, edits []diffEdit, hunks []diffHunk) error {
 	left, right := r.left, r.right
 	if r.absent[0] {
 		left = "/dev/null"
@@ -139,16 +152,21 @@ func (r diffRequest) writeDiffHunk(stdout io.Writer, edits []diffEdit) error {
 	return nil
 }
 
+// hunkRanges is where each side of a hunk starts and how many of its lines the hunk holds. A
+// side the hunk holds none of, which under -U0 a hunk of additions or of removals alone is,
+// starts at the line it follows, as busybox prints it: `@@ -2,0 +3,5 @@`. It was 0, `-0,0`,
+// which says the lines were added before the left's first.
 func hunkRanges(edits []diffEdit) (leftStart, leftCount, rightStart, rightCount int) {
+	leftStart, rightStart = edits[0].leftLine, edits[0].rightLine
 	for _, edit := range edits {
 		if edit.kind != editAdd {
-			if leftStart == 0 {
+			if leftCount == 0 {
 				leftStart = edit.leftLine
 			}
 			leftCount++
 		}
 		if edit.kind != editRemove {
-			if rightStart == 0 {
+			if rightCount == 0 {
 				rightStart = edit.rightLine
 			}
 			rightCount++

@@ -46,6 +46,7 @@ func newDiffApplet() Applet {
 			initialTab:         options.has('T'),
 			expandTabs:         options.has('t'),
 			text:               options.has('a'),
+			minimal:            options.has('d'),
 			recursive:          options.has('r'),
 			start:              options.value('S'),
 		}
@@ -67,6 +68,9 @@ type diffRequest struct {
 	// is -a, which diffs files that hold a NUL as text.
 	labels                       []string
 	initialTab, expandTabs, text bool
+	// minimal is -d, under which stone tries every line of a class rather than stopping
+	// after max(256, √n); see diff_stone.go. It was taken and ignored.
+	minimal bool
 	// recursive is -r and start -S; absent is, for -N in a directory, which side has no such
 	// file, which is read as empty and named /dev/null. See diff_dir.go.
 	recursive bool
@@ -95,7 +99,7 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 		}
 		return ErrExitFalse
 	}
-	edits := diffLines(left, right, r.compare)
+	edits := r.diffLines(left, right)
 	hunks := groupDiffHunks(edits, r.context)
 	if r.ignoreBlank {
 		hunks = slices.DeleteFunc(hunks, func(hunk diffHunk) bool { return onlyEmptyLinesChange(edits[hunk.from:hunk.to]) })
@@ -120,36 +124,6 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 		return err
 	}
 	return ErrExitFalse
-}
-
-// compare answers whether two lines count as equal, which is where -i, -w and -b
-// take effect: they change what "the same line" means rather than how the diff is
-// computed. A line is read as busybox's read_token reads it: -w passes over every
-// white space character, and -b reads a run of them as one space, the newline that
-// ends the line among them, so white space at a line's end is no difference and a
-// run at its start is one. -w read a run as one space, which is -b's meaning, so
-// `ab` and `a b` differed; -b was taken and ignored.
-func (r diffRequest) compare(left, right string) bool {
-	return r.normalise(left) == r.normalise(right)
-}
-
-func (r diffRequest) normalise(line string) string {
-	if r.ignoreCase {
-		line = strings.ToLower(line)
-	}
-	if !r.ignoreAll && !r.ignoreSpace {
-		return line
-	}
-	var kept strings.Builder
-	for index := 0; index < len(line); index++ {
-		switch {
-		case !diffSpace(line[index]):
-			kept.WriteByte(line[index])
-		case !r.ignoreAll && (index == 0 || !diffSpace(line[index-1])):
-			kept.WriteByte(' ')
-		}
-	}
-	return strings.TrimSuffix(kept.String(), " ")
 }
 
 // diffBinary is whether a file's lines hold a NUL.
@@ -220,82 +194,28 @@ const (
 type diffEdit struct {
 	kind editKind
 	text string
-	// leftLine and rightLine are one-based positions, zero where the line does
-	// not exist on that side.
+	// leftLine and rightLine are one-based positions. Where the line does not exist on a side,
+	// they are the line of that side it follows, 0 before the first: what a hunk with no line
+	// of that side is numbered by, as `@@ -2,0 +3,5 @@` under -U0 says five lines were added
+	// after the left's second.
 	leftLine, rightLine int
 }
 
-// diffLines computes an edit script.
-//
-// Common prefix and suffix are stripped first, then a longest-common-subsequence
-// table covers what is left. Stripping is not an optimisation for its own sake:
-// the table is O(n*m), and two versions of a real file usually differ in a few
-// lines out of thousands, so without it a large pair costs gigabytes.
-func diffLines(left, right []string, equal func(a, b string) bool) []diffEdit {
-	prefix := 0
-	for prefix < len(left) && prefix < len(right) && equal(left[prefix], right[prefix]) {
-		prefix++
-	}
-	suffix := 0
-	for suffix < len(left)-prefix && suffix < len(right)-prefix &&
-		equal(left[len(left)-1-suffix], right[len(right)-1-suffix]) {
-		suffix++
-	}
-	edits := make([]diffEdit, 0, len(left)+len(right))
-	for index := range prefix {
-		edits = append(edits, diffEdit{kind: editKeep, text: left[index], leftLine: index + 1, rightLine: index + 1})
-	}
-	middle := lcsEdits(left[prefix:len(left)-suffix], right[prefix:len(right)-suffix], equal, prefix)
-	edits = append(edits, middle...)
-	for index := range suffix {
-		leftAt := len(left) - suffix + index
-		rightAt := len(right) - suffix + index
-		edits = append(edits, diffEdit{kind: editKeep, text: left[leftAt], leftLine: leftAt + 1, rightLine: rightAt + 1})
-	}
-	return edits
-}
-
-// lcsEdits walks a longest-common-subsequence table backwards into an edit
-// script.
-//
-// Removals are emitted before additions at the same position, which is what makes
-// a changed line read as `-old` then `+new` rather than the reverse.
-func lcsEdits(left, right []string, equal func(a, b string) bool, offset int) []diffEdit {
-	rows, columns := len(left)+1, len(right)+1
-	table := make([][]int, rows)
-	for row := range table {
-		table[row] = make([]int, columns)
-	}
-	for row := len(left) - 1; row >= 0; row-- {
-		for column := len(right) - 1; column >= 0; column-- {
-			if equal(left[row], right[column]) {
-				table[row][column] = table[row+1][column+1] + 1
-				continue
-			}
-			table[row][column] = max(table[row+1][column], table[row][column+1])
+// diffLines is the edit script, found as busybox's diff finds it; see diff_stone.go. What -i,
+// -w and -b ignore is in each line's key, which is how they change what "the same line" means
+// rather than how the lines are compared: -w passes over every white space character, and -b
+// reads a run of them as one space, the newline that ends the line among them, so white space
+// at a line's end is no difference and a run at its start is one. It was a table of every line
+// of one file against every line of the other, which a diff of two large files never finished
+// filling.
+func (r diffRequest) diffLines(left, right []string) []diffEdit {
+	var keys [2][]string
+	var hashes [2][]int
+	for side, lines := range [2][]string{left, right} {
+		keys[side], hashes[side] = make([]string, len(lines)), make([]int, len(lines))
+		for index, line := range lines {
+			keys[side][index], hashes[side][index] = r.diffKey(line)
 		}
 	}
-	var edits []diffEdit
-	row, column := 0, 0
-	for row < len(left) && column < len(right) {
-		switch {
-		case equal(left[row], right[column]):
-			edits = append(edits, diffEdit{kind: editKeep, text: left[row],
-				leftLine: offset + row + 1, rightLine: offset + column + 1})
-			row, column = row+1, column+1
-		case table[row+1][column] >= table[row][column+1]:
-			edits = append(edits, diffEdit{kind: editRemove, text: left[row], leftLine: offset + row + 1})
-			row++
-		default:
-			edits = append(edits, diffEdit{kind: editAdd, text: right[column], rightLine: offset + column + 1})
-			column++
-		}
-	}
-	for ; row < len(left); row++ {
-		edits = append(edits, diffEdit{kind: editRemove, text: left[row], leftLine: offset + row + 1})
-	}
-	for ; column < len(right); column++ {
-		edits = append(edits, diffEdit{kind: editAdd, text: right[column], rightLine: offset + column + 1})
-	}
-	return edits
+	return diffEditsOf(diffMatches(keys, hashes, r.minimal), left, right)
 }

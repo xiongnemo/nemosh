@@ -8,6 +8,28 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## Unreleased
+
+### Changed
+
+- **diff chooses the edit script busybox's chooses**: it is busybox's Unix diff of Hunt and
+  McIlroy, ported, where it was a longest common subsequence of its own, which on 17 of 400
+  generated pairs removed and added other lines than busybox did. Lines are classed by
+  busybox's hash, so two lines that differ and share it are matched by neither; `-d`, which was
+  taken and ignored, has stone try every line of a class, where it gives up after
+  max(256, √n); and `-i` lowers A to Z alone, as busybox's does, so `Ä` and `ä` differ under it.
+
+### Fixed
+
+- **diff of two large files never finished**: it filled a table of every line of one against
+  every line of the other, which for Go's ssa/opGen.go against rewriteAMD64.go is 103 GB, and
+  one such diff had committed 9.4 GB when it was found eleven hours on. It takes 0.18 s and
+  54 MiB, where busybox takes 0.56 s, and prints what busybox prints, byte for byte. Its output is
+  written a buffer at a time, where a write a line took that diff 24 s.
+- **`diff -U0` numbered a hunk of additions alone `-0,0`**, which says before the first line,
+  and a hunk of removals alone `+0,0`. Each is numbered by the line it follows, `@@ -2,0 +3,2 @@`,
+  as busybox numbers it.
+
 ## v1.6.0 - 2026-11-19
 
 Quicker, and wget and cp as busybox's are. A start loads the nine DLLs a bare Go program loads,
