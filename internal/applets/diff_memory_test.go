@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -59,6 +61,45 @@ func TestDiff_comparesLargeFilesInLinearMemory(t *testing.T) {
 	}
 	if lines := strings.Count(out.String(), "\n"); counted.writes > 1+out.Len()/(16<<10) {
 		t.Errorf("%d lines, %d bytes, were written in %d writes", lines, out.Len(), counted.writes)
+	}
+}
+
+// The candidates Hunt and McIlroy's stone makes are most of what a diff of many like lines
+// holds: a file of 19 MB against its sorted copy peaked at 2,380 MiB, where busybox's peaked at
+// 701, its struct cand being three ints. Here 4,000 lines of forty against the same lines in
+// another order, which make hundreds of thousands of candidates: each is held in 12 bytes, and
+// in blocks no candidate is copied out of to grow, so 16 a candidate and 64 a line is enough.
+func TestDiff_holdsItsCandidatesInTwelveBytesEach(t *testing.T) {
+	// Given
+	random := rand.New(rand.NewPCG(2026, 1119))
+	left := make([]string, 4000)
+	for index := range left {
+		left[index] = fmt.Sprintf("line %d\n", random.IntN(40))
+	}
+	right := slices.Clone(left)
+	random.Shuffle(len(right), func(i, j int) { right[i], right[j] = right[j], right[i] })
+	var request diffRequest
+	var keys [2][]string
+	var hashes [2][]int
+	for side, lines := range [2][]string{left, right} {
+		keys[side], hashes[side] = make([]string, len(lines)), make([]int, len(lines))
+		for index, line := range lines {
+			keys[side][index], hashes[side][index] = request.diffKey(line)
+		}
+	}
+
+	// When
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	_, candidates := diffMatches(keys, hashes, false)
+	runtime.ReadMemStats(&after)
+
+	// Then
+	allocated := after.TotalAlloc - before.TotalAlloc
+	limit := uint64(16*candidates + 64*(len(left)+len(right)))
+	if candidates < 100000 || allocated > limit {
+		t.Fatalf("%d candidates took %d bytes, %.1f a candidate; want at most %d", candidates, allocated,
+			float64(allocated)/float64(max(candidates, 1)), limit)
 	}
 }
 

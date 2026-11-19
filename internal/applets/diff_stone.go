@@ -78,12 +78,17 @@ func (r diffRequest) diffKey(line string) (string, int) {
 }
 
 // diffLine is create_J's struct line: a line's place among the pruned lines, and its hash,
-// which equiv replaces with its class.
-type diffLine struct{ serial, value int }
+// which equiv replaces with its class. In busybox's ints, which hold a place and a hash masked
+// to 31 bits, and half of what sorting them moved.
+type diffLine struct{ serial, value int32 }
+
+// diffMaxLines is the most lines a side may have, places being kept in 32 bits.
+const diffMaxLines = math.MaxInt32 - 2
 
 // diffMatches is create_J's J: for each line of the left, one-based, the line of the right it
-// is matched with, or 0, with J[0] = 0 and J[n+1] = m+1 at either end.
-func diffMatches(keys [2][]string, hashes [2][]int, minimal bool) []int {
+// is matched with, or 0, with J[0] = 0 and J[n+1] = m+1 at either end. It answers too how many
+// candidates stone made, which a test holds the memory of the diff to.
+func diffMatches(keys [2][]string, hashes [2][]int, minimal bool) ([]int, int) {
 	n, m := len(hashes[0]), len(hashes[1])
 	prefix, suffix := 0, 0
 	for prefix < n && prefix < m && hashes[0][prefix] == hashes[1][prefix] {
@@ -97,7 +102,7 @@ func diffMatches(keys [2][]string, hashes [2][]int, minimal bool) []int {
 		count := len(hashes[side]) - prefix - suffix
 		lines := make([]diffLine, count+1)
 		for index := 1; index <= count; index++ {
-			lines[index] = diffLine{serial: index, value: hashes[side][prefix+index-1]}
+			lines[index] = diffLine{serial: int32(index), value: int32(hashes[side][prefix+index-1])}
 		}
 		slices.SortFunc(lines[1:], func(a, b diffLine) int {
 			return cmp.Or(cmp.Compare(a.value, b.value), cmp.Compare(a.serial, b.serial))
@@ -105,7 +110,7 @@ func diffMatches(keys [2][]string, hashes [2][]int, minimal bool) []int {
 		sorted[side] = lines
 	}
 	member := diffEquiv(sorted[0], sorted[1])
-	class := make([]int, len(sorted[0]))
+	class := make([]int32, len(sorted[0]))
 	for _, line := range sorted[0][1:] {
 		class[line.serial] = line.value
 	}
@@ -118,7 +123,7 @@ func diffMatches(keys [2][]string, hashes [2][]int, minimal bool) []int {
 			matches[index] = index + m - n
 		}
 	}
-	diffStone(class, member, matches, prefix, minimal)
+	candidates := diffStone(class, member, matches, prefix, minimal)
 	matches[n+1] = m + 1
 	// The lines are read again, a run of matched ones at a time, and a pair whose lines differ
 	// though their hashes agree is matched no more. busybox's loop steps past the line that
@@ -133,14 +138,14 @@ func diffMatches(keys [2][]string, hashes [2][]int, minimal bool) []int {
 			}
 		}
 	}
-	return matches
+	return matches, candidates
 }
 
 // diffEquiv is equiv: each left line's value becomes the place among the sorted right lines
 // of the first with its hash, or 0 where none has it, and member lists the right lines of each
 // class in order, the first of each negated and -1 after the last. busybox ends a class at a
 // sentinel of 0, which a line of hash 0 under -w would run past; this stops at the last line.
-func diffEquiv(a, b []diffLine) []int {
+func diffEquiv(a, b []diffLine) []int32 {
 	n, m := len(a)-1, len(b)-1
 	i, j := 1, 1
 	for i <= n && j <= m {
@@ -149,7 +154,7 @@ func diffEquiv(a, b []diffLine) []int {
 			a[i].value = 0
 			i++
 		case a[i].value == b[j].value:
-			a[i].value = j
+			a[i].value = int32(j)
 			i++
 		default:
 			j++
@@ -158,7 +163,7 @@ func diffEquiv(a, b []diffLine) []int {
 	for ; i <= n; i++ {
 		a[i].value = 0
 	}
-	member := make([]int, m+2)
+	member := make([]int32, m+2)
 	for j = 1; j <= m; j++ {
 		member[j] = -b[j].serial
 		for j < m && b[j+1].value == b[j].value {
@@ -168,90 +173,6 @@ func diffEquiv(a, b []diffLine) []int {
 	}
 	member[j] = -1
 	return member
-}
-
-// diffCandidate is stone's struct cand.
-type diffCandidate struct{ x, y, pred int }
-
-// diffStone is stone: the k-candidates of the left lines' classes, unravelled into J past the
-// prefix. Each line tries at most max(256, √n) of its class's lines unless minimal.
-func diffStone(class, member, matches []int, prefix int, minimal bool) {
-	n := len(class) - 1
-	bound := math.MaxInt
-	if !minimal {
-		bound = max(256, diffSquareRoot(n))
-	}
-	candidates := make([]diffCandidate, 1, 100)
-	klist := make([]int, n+2)
-	k := 0
-	for x := 1; x <= n; x++ {
-		j := class[x]
-		if j == 0 {
-			continue
-		}
-		previous, tries := 0, 0
-		candidate := diffCandidate{x: x, y: -member[j], pred: klist[0]}
-		for {
-			if candidate.y > candidates[candidate.pred].y {
-				l := diffSearch(klist, k, candidate.y, candidates)
-				if l != previous+1 {
-					candidate.pred = klist[l-1]
-				}
-				if l > k || candidates[klist[l]].y > candidate.y {
-					candidates = append(candidates, candidate)
-					displaced := klist[l]
-					klist[l] = len(candidates) - 1
-					if l > k {
-						k++
-						break
-					}
-					candidate.pred, previous = displaced, l
-					tries++
-				}
-			}
-			j++
-			if candidate.y = member[j]; candidate.y <= 0 || tries >= bound {
-				break
-			}
-		}
-	}
-	for q := candidates[klist[k]]; q.y != 0; q = candidates[q.pred] {
-		matches[q.x+prefix] = q.y + prefix
-	}
-}
-
-// diffSearch is search: where among the k-candidates one ending at y belongs.
-func diffSearch(c []int, k, y int, list []diffCandidate) int {
-	if list[c[k]].y < y {
-		return k + 1
-	}
-	i, j := 0, k+1
-	for {
-		l := (i + j) >> 1
-		if l <= i {
-			return l + 1
-		}
-		switch t := list[c[l]].y; {
-		case t > y:
-			j = l
-		case t < y:
-			i = l
-		default:
-			return l
-		}
-	}
-}
-
-// diffSquareRoot is libbb's isqrt, the floor of the square root.
-func diffSquareRoot(n int) int {
-	root := int(math.Sqrt(float64(n)))
-	for root*root > n {
-		root--
-	}
-	for (root+1)*(root+1) <= n {
-		root++
-	}
-	return root
 }
 
 // diffEditsOf walks J as diff does, into the blocks of lines one file has and the other has

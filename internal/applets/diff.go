@@ -2,6 +2,7 @@ package applets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -98,6 +99,10 @@ func (r diffRequest) run(ctx context.Context, stdin io.Reader, stdout io.Writer)
 			return err
 		}
 		return ErrExitFalse
+	}
+	// stone keeps a line's place in 32 bits, as busybox's keeps it in an int.
+	if len(left) > diffMaxLines || len(right) > diffMaxLines {
+		return ExitStatusMessage(2, errors.New("too many lines"))
 	}
 	edits := r.diffLines(left, right)
 	hunks := groupDiffHunks(edits, r.context)
@@ -217,5 +222,6 @@ func (r diffRequest) diffLines(left, right []string) []diffEdit {
 			keys[side][index], hashes[side][index] = r.diffKey(line)
 		}
 	}
-	return diffEditsOf(diffMatches(keys, hashes, r.minimal), left, right)
+	matches, _ := diffMatches(keys, hashes, r.minimal)
+	return diffEditsOf(matches, left, right)
 }

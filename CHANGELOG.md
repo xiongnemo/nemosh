@@ -42,6 +42,10 @@ patch number is the commits since that tag.
   one such diff had committed 9.4 GB when it was found eleven hours on. It takes 0.18 s and
   54 MiB, where busybox takes 0.56 s, and prints what busybox prints, byte for byte. Its output is
   written a buffer at a time, where a write a line took that diff 24 s.
+- **diff of many like lines wanted 2.6 GB**: a 19 MB file against its sorted copy peaked at
+  2,661 MiB, where busybox's peaks at 701, as each of Hunt and McIlroy's candidates took 24 bytes
+  in a list copied whole to grow. They are busybox's 12 bytes, in blocks never copied, and that
+  diff peaks at 564 MiB and takes 25 s, where it took 29 and busybox takes 42.
 - **`diff -U0` numbered a hunk of additions alone `-0,0`**, which says before the first line,
   and a hunk of removals alone `+0,0`. Each is numbered by the line it follows, `@@ -2,0 +3,2 @@`,
   as busybox numbers it.
