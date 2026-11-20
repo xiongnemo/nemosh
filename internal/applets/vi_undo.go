@@ -115,13 +115,13 @@ func (e *viEditor) isModified() bool {
 	if len(e.undo) > 0 {
 		current = e.undo[len(e.undo)-1].seq
 	}
-	return current != e.savedSeq
+	return current != e.savedSeq || e.file.crlf != e.savedCRLF
 }
 
 // markSaved records that the buffer is what the file now holds.
 func (e *viEditor) markSaved() {
 	e.closeChange()
-	e.savedSeq = 0
+	e.savedSeq, e.savedCRLF = 0, e.file.crlf
 	if len(e.undo) > 0 {
 		e.savedSeq = e.undo[len(e.undo)-1].seq
 	}

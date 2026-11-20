@@ -16,6 +16,8 @@ const viFeatures = `vi: busybox-w32's vi, with vim's ways where the two differ; 
 	registers     "a to "z, "A to "Z to append; marks m, ', the backtick, two quotes back
 	undoing       u ^R as often as there were changes, U for a line, and . to repeat one
 	inserting     i a I A, the Insert key; Escape or ^C to leave; Enter, Backspace, the arrows
+	addresses     . $ N 'a /pat/ ?pat?, +N -N, % , ;
+	ex commands   :N :d :y :s (g i I) :p :l := :set (ai bin et ff ffs fl ic nu sm ts)
 	writing       :w :w! :w FILE :wq :x ZZ
 	quitting      :q :q! ZQ
 	starting      vi [-R] [+LINE | +] [FILE]

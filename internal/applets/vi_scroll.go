@@ -21,8 +21,8 @@ func (e *viEditor) scrollToCursor() {
 	if column < e.left {
 		e.left = column
 	}
-	if column >= e.left+e.width {
-		e.left = column - e.width + 1
+	if width := e.textWidth(); column >= e.left+width {
+		e.left = column - width + 1
 	}
 	if e.col == 0 && len(e.line()) > 0 && e.line()[0] == '\t' {
 		e.left = 0

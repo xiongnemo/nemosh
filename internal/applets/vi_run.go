@@ -60,6 +60,9 @@ func (e *viEditor) handle(event tcell.Event) {
 // key is one key, read in the mode the editor is in, and kept for the dot when it is part of a
 // command that changes the buffer.
 func (e *viEditor) key(key rune) {
+	if e.dismissKey(key) {
+		return
+	}
 	if key == '.' && e.mode == viNormal && e.pending == 0 && e.op == 0 {
 		e.repeatChange()
 		e.count = 0

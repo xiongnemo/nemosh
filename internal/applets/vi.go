@@ -94,6 +94,14 @@ type viEditor struct {
 	searchCompiled                 *regexp.Regexp
 	ignoreCase, searchIgnoringCase bool
 	searchInput                    string
+	// The options :set sets, beside ignoreCase and tabstop; see vi_set.go. savedCRLF is the
+	// file's format when it was read or written, which :set ff changes from.
+	autoIndent, binary, expandTab bool
+	flash, number, showMatch      bool
+	fileFormats                   string
+	savedCRLF                     bool
+	// shown is lines shown at the foot of the screen until Enter; see vi_message.go.
+	shown []string
 	// lineRow and lineBefore are the line U puts back and what it was.
 	lineRow    int
 	lineBefore []rune
@@ -151,13 +159,14 @@ func viStartLine(operands []string) (int, []string, error) {
 
 // openVi reads the file, or starts an empty buffer, as busybox does before its first draw.
 func openVi(ctx context.Context, operands []string, readOnly bool) *viEditor {
-	editor := &viEditor{ctx: ctx, view: ProcessViewFromContext(ctx), tabstop: 8, register: viDefaultRegister}
+	editor := &viEditor{ctx: ctx, view: ProcessViewFromContext(ctx), tabstop: 8, register: viDefaultRegister,
+		fileFormats: "unix,dos"}
 	name := ""
 	if len(operands) > 0 {
 		name = operands[0]
 	}
 	editor.file, editor.lines, editor.message = viLoad(editor.view, name, readOnly)
-	editor.bold = editor.message != ""
+	editor.bold, editor.savedCRLF = editor.message != "", editor.file.crlf
 	editor.goToStartLine(0)
 	return editor
 }

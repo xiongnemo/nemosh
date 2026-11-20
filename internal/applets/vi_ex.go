@@ -1,9 +1,8 @@
 package applets
 
 import (
-	"errors"
-	"io/fs"
-	"os"
+	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -41,89 +40,130 @@ func (e *viEditor) commandLineKey(key rune) {
 	}
 }
 
-// exCommand runs one ex command: a name, a ! after it, and an argument. A name is matched as
-// a prefix, as busybox matches it, so :wr is :write.
+// viExCommands are the names an ex command is known by, and how much of each must be typed; a
+// shorter name is matched as a prefix, as busybox matches it. p is vim's print, where busybox's
+// was the previous file, :prev here.
+var viExCommands = [...]struct {
+	name  string
+	least int
+}{
+	{"delete", 1}, {"list", 1}, {"print", 1}, {"quit", 1}, {"substitute", 1}, {"set", 2},
+	{"write", 1}, {"wq", 2}, {"xit", 1}, {"yank", 1},
+}
+
+// exCommand runs one ex command: its addresses, a name, a ! after it, and an argument.
 func (e *viEditor) exCommand(line string) {
 	line = strings.TrimLeft(line, ": \t")
-	end := strings.IndexFunc(line, func(r rune) bool { return !unicode.IsLetter(r) })
-	if end < 0 {
-		end = len(line)
-	}
-	name, rest := line[:end], line[end:]
-	force := strings.HasPrefix(rest, "!")
-	if force {
-		rest = rest[1:]
-	}
-	argument := strings.TrimSpace(rest)
-	switch {
-	case line == "":
+	if line == "" || line[0] == '"' {
 		return
-	case name == "":
-		e.say(true, "'%s' is not implemented", line)
-	case strings.HasPrefix("quit", name):
+	}
+	first, last, given, rest, ok := e.exAddresses(line)
+	if !ok {
+		return
+	}
+	rest = strings.TrimLeft(rest, " \t")
+	end := strings.IndexFunc(rest, func(r rune) bool { return !unicode.IsLetter(r) })
+	switch {
+	case end < 0:
+		end = len(rest)
+	case end == 0 && rest != "":
+		end = 1
+	}
+	name, argument := rest[:end], rest[end:]
+	force := strings.HasPrefix(argument, "!") && end > 0 && unicode.IsLetter(rune(name[0]))
+	if force {
+		argument = argument[1:]
+	}
+	argument = strings.TrimLeft(argument, " \t")
+	if name == "" {
+		// :N goes to line N, the last when there are fewer, vim's; busybox's refused.
+		if given > 0 {
+			e.context = viMark{pos: e.cursor(), set: true}
+			e.row = max(1, min(last, len(e.lines))) - 1
+			e.col = e.firstNonBlank(e.row)
+		}
+		return
+	}
+	if given > 0 && (last < 0 || last > len(e.lines) || first < 0 || first > last) {
+		e.say(true, "Invalid range")
+		return
+	}
+	first, last = max(first, 1), max(last, 1)
+	full := name
+	for _, command := range viExCommands {
+		if len(name) >= command.least && strings.HasPrefix(command.name, name) {
+			full = command.name
+			break
+		}
+	}
+	switch full {
+	case "=":
+		// :=, vim's, is the last line; :.= the one given.
+		if given == 0 {
+			last = len(e.lines)
+		}
+		e.say(false, "%d", last)
+	case "delete", "yank":
+		e.exLines(full, first, last, argument)
+	case "print", "list":
+		e.printLines(full == "list", first, last)
+	case "substitute":
+		e.substitute(first, last, argument)
+	case "set":
+		e.setOptions(argument)
+	case "quit":
 		e.exQuit(name, force)
-	case name == "wq" || name == "x" || strings.HasPrefix("xit", name) && len(name) > 1:
+	case "wq", "xit":
 		// :x writes only a buffer that changed, :wq always; then each quits if that went well.
-		if (name == "wq" || e.isModified()) && !e.exWrite(argument, force) {
+		if (full == "wq" || e.isModified()) && !e.exWrite(argument, force) {
 			return
 		}
 		e.quit = true
-	case strings.HasPrefix("write", name):
+	case "write":
 		e.exWrite(argument, force)
 	default:
 		e.say(true, "'%s' is not implemented", name)
 	}
 }
 
-func (e *viEditor) exQuit(name string, force bool) {
-	if e.isModified() && !force {
-		e.say(true, "No write since last change (:%s! overrides)", name)
+// exLines is :d and :y over lines first to last, or as many lines as a count after them says,
+// from the last, vim's.
+func (e *viEditor) exLines(command string, first, last int, argument string) {
+	if count, err := strconv.Atoi(argument); err == nil && count > 0 {
+		first, last = last, min(last+count-1, len(e.lines))
+	}
+	text := e.linesText(first-1, last-1)
+	if command == "yank" {
+		e.store("", text, true)
+		e.say(false, "Yank %d lines (%d chars) into [%c]", last-first+1, len(text), registerName(e.register))
 		return
 	}
-	e.quit = true
+	e.store("", text, true)
+	e.replaceLines(first-1, last, nil)
+	e.row = min(first-1, len(e.lines)-1)
+	e.col = e.firstNonBlank(e.row)
 }
 
-// exWrite is :w [FILE], and answers whether it wrote. Writing to the buffer's own file is
-// refused when it is read-only, and to another that is there without !, in busybox's words;
-// a buffer with no name takes the one it is written to.
-func (e *viEditor) exWrite(name string, force bool) bool {
-	own := name == "" || name == e.file.name
-	if name == "" {
-		name = e.file.name
-	}
-	if name == "" {
-		e.say(true, "No current filename")
-		return false
-	}
-	native := e.file.native
-	if !own || native == "" {
-		resolved, err := resolveHostPath(e.view, name)
-		if err != nil {
-			e.say(true, "'%s' %s", name, causeText(err))
-			return false
+// printLines is :p and :l, the cursor going to the last: one line on the status line, more
+// above it until Enter. :l shows a tab as ^I, any control character as ^X, and the end as $.
+func (e *viEditor) printLines(list bool, first, last int) {
+	var shown []string
+	for _, line := range e.lines[first-1 : last] {
+		text := string(line)
+		if list {
+			var out strings.Builder
+			for _, r := range line {
+				if r < ' ' || r == 0x7f {
+					fmt.Fprintf(&out, "^%c", r^0x40)
+					continue
+				}
+				out.WriteRune(r)
+			}
+			text = out.String() + "$"
 		}
-		native = resolved
+		shown = append(shown, text)
 	}
-	if own && e.file.readOnly && !force {
-		e.say(true, "'%s' is read only", name)
-		return false
-	}
-	if _, err := os.Stat(native); !own && !force && !errors.Is(err, fs.ErrNotExist) {
-		e.say(true, "File exists (:w! overrides)")
-		return false
-	}
-	size, err := viWrite(e.view, native, e.lines, e.file.crlf)
-	if err != nil {
-		e.say(true, "'%s' %s", name, causeText(err))
-		return false
-	}
-	e.say(false, "'%s' %dL, %dC", name, len(e.lines), size)
-	if e.file.name == "" {
-		e.file.name, e.file.native = name, native
-		own = true
-	}
-	if own {
-		e.markSaved()
-	}
-	return true
+	e.row = last - 1
+	e.col = e.firstNonBlank(e.row)
+	e.showLines(shown)
 }

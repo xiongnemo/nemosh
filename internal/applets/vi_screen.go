@@ -47,22 +47,42 @@ func (e *viEditor) displayColumn(line []rune, col int) int {
 // textRows is the rows the buffer is drawn in: all but the status line.
 func (e *viEditor) textRows() int { return max(1, e.height-1) }
 
+// gutter is the columns :set nu takes for the line numbers, vim's: three digits or as many as
+// the last line's number has, and a space.
+func (e *viEditor) gutter() int {
+	if !e.number {
+		return 0
+	}
+	return max(3, len(fmt.Sprint(len(e.lines)))) + 1
+}
+
+// textWidth is the columns a line is drawn in.
+func (e *viEditor) textWidth() int { return max(1, e.width-e.gutter()) }
+
 func (e *viEditor) draw() {
 	e.scrollToCursor()
 	e.screen.Clear()
+	gutter := e.gutter()
 	for y := range e.textRows() {
 		index := e.top + y
 		if index >= len(e.lines) {
 			e.screen.SetContent(0, y, '~', nil, tcell.StyleDefault)
 			continue
 		}
-		e.drawLine(y, e.lines[index])
+		if gutter > 0 {
+			e.drawPlain(y, fmt.Sprintf("%*d ", gutter-1, index+1), tcell.StyleDefault)
+		}
+		e.drawLine(y, e.lines[index], gutter)
 	}
-	e.drawStatus()
+	if len(e.shown) > 0 {
+		e.drawShown()
+	} else {
+		e.drawStatus()
+	}
 	e.screen.Show()
 }
 
-func (e *viEditor) drawLine(y int, line []rune) {
+func (e *viEditor) drawLine(y int, line []rune, gutter int) {
 	column, previous := 0, -1
 	for _, r := range line {
 		shown, width := viGlyph(r, column, e.tabstop)
@@ -74,17 +94,17 @@ func (e *viEditor) drawLine(y int, line []rune) {
 			continue
 		}
 		for cell, glyph := range shown {
-			x := column - e.left + cell
+			x := column - e.left + cell + gutter
 			if width == 2 && len(shown) == 1 && cell == 0 && x+1 >= e.width {
 				break
 			}
-			if x >= 0 && x < e.width {
+			if x >= gutter && x < e.width {
 				e.screen.SetContent(x, y, glyph, nil, tcell.StyleDefault)
 				previous = x
 			}
 		}
 		column += width
-		if column-e.left >= e.width {
+		if column-e.left+gutter >= e.width {
 			return
 		}
 	}
@@ -118,7 +138,7 @@ func (e *viEditor) drawStatus() {
 		e.screen.ShowCursor(min(x, e.width-1), y)
 		return
 	}
-	e.screen.ShowCursor(e.displayColumn(e.line(), e.col)-e.left, e.row-e.top)
+	e.screen.ShowCursor(e.displayColumn(e.line(), e.col)-e.left+e.gutter(), e.row-e.top)
 }
 
 // status is busybox's format_edit_status.
