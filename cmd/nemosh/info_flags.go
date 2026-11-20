@@ -108,6 +108,8 @@ Environment:
   NEMOSH_SHELL_INTEGRATION=never|always
                                 Windows Terminal's prompt and command marks, on
                                 in Windows Terminal by default
+  NEMOSH_DEFAULTS=off           a session without Ubuntu's defaults: the aliases
+                                ll, la, l, and ls and grep in colour
 
 Home page: https://github.com/xiongnemo/nemosh
 `, len(applets.DefaultRegistry.Names()))

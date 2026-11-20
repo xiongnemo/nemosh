@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 78   |
+| works   | 79   |
 | partial | 7    |
 | refused | 6    |
-| missing | 16   |
+| missing | 15   |
 
 ## Existing commands
 
@@ -142,7 +142,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `bash script.sh`, `bash -c`, `#!/bin/bash`, `#!/usr/bin/env bash` | works | this shell, as busybox-w32's; WSL's System32\bash.exe ran them in Linux before |
 | `sh -c`, `#!/bin/sh` | works | |
 | `!!`, `!$`, `^old^new`, Ctrl-R | works | |
-| `ll`, `la`, `l`; `ls` and `grep` in colour | missing | no default aliases; `ls` colours only with `--color` |
+| `ll`, `la`, `l`; `ls` and `grep` in colour | works | Ubuntu's aliases in a session; `NEMOSH_DEFAULTS=off` for none |
 | `LS_COLORS`, `dircolors` | missing | |
 | `$BASH_VERSION`, `$BASH_VERSINFO` | works | bash 5.2's when run as bash; unset as sh or nemosh |
 | `$COLUMNS`, `$LINES` at the prompt | missing | `checkwinsize` is recorded only |

@@ -232,6 +232,7 @@ func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 	if err := c.startShell(ctx, rt, "is"); err != nil {
 		return err
 	}
+	rt.SetSessionDefaults()
 	if status, exited := c.sourceRCFile(ctx, rt); exited {
 		return startupExit(rt, status)
 	}
@@ -251,6 +252,7 @@ func (c command) runSessionCommand(ctx context.Context, controller *interruptCon
 	if err := c.startShell(ctx, rt, "ic"); err != nil {
 		return err
 	}
+	rt.SetSessionDefaults()
 	if status, exited := c.sourceRCFile(ctx, rt); exited {
 		return startupExit(rt, status)
 	}

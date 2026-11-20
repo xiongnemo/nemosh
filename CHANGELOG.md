@@ -165,6 +165,11 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **A session has Ubuntu's aliases**, which its `~/.bashrc` gives every account: `ll`, `la`, `l`,
+  and `ls`, `grep`, `egrep` and `fgrep` in colour on a terminal. A script has none; the rc file,
+  read after, can `unalias` any; `NEMOSH_DEFAULTS=off` in the environment is a session without
+  them. The example rc file's own three are gone.
+
 - **`bash` and `sh` are this shell**, as both are busybox-w32's: `bash build.sh`, `bash -c`, `sh
   -c`, and a script beginning `#!/bin/bash` or `#!/usr/bin/env bash`, whatever PATH holds. Git's
   bash ran where Git was installed, and where WSL was, its System32\bash.exe ran the script in
