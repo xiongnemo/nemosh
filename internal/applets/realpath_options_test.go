@@ -39,7 +39,9 @@ func TestRealpath_gnuOptions(t *testing.T) {
 		{args: []string{"-m", "a/nosuch/deeper"}, want: absolute("a") + "/nosuch/deeper\n"},
 		{args: []string{"--canonicalize-missing", "x/y"}, want: filepath.ToSlash(filepath.Dir(absolute("a"))) + "/x/y\n"},
 		{args: []string{"-z", "a"}, want: absolute("a") + "\x00"},
-		{args: []string{"-s", "a/./b/../b"}, want: absolute("a") + "/b\n"},
+		// -s resolves nothing, so the directory is as the working directory spells it: on a runner that
+		// is the 8.3 RUNNER~1 the temporary directory is given as, where the others answer runneradmin.
+		{args: []string{"-s", "a/./b/../b"}, want: filepath.ToSlash(dir) + "/a/b\n"},
 		{args: []string{"--", "a"}, want: absolute("a") + "\n"},
 	} {
 		stdout, stderr, err := runAppletWithInput(t, "", "realpath", test.args...)
