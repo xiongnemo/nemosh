@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 79   |
+| works   | 80   |
 | partial | 7    |
 | refused | 6    |
-| missing | 15   |
+| missing | 14   |
 
 ## Existing commands
 
@@ -145,7 +145,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `ll`, `la`, `l`; `ls` and `grep` in colour | works | Ubuntu's aliases in a session; `NEMOSH_DEFAULTS=off` for none |
 | `LS_COLORS`, `dircolors` | missing | |
 | `$BASH_VERSION`, `$BASH_VERSINFO` | works | bash 5.2's when run as bash; unset as sh or nemosh |
-| `$COLUMNS`, `$LINES` at the prompt | missing | `checkwinsize` is recorded only |
+| `$COLUMNS`, `$LINES` at the prompt | works | before each prompt, as `checkwinsize` has them |
 | `fg`, `bg`, Ctrl-Z | refused | will not be: nothing here can suspend a job |
 | `~/.bashrc`, `~/.bash_aliases` | missing | `~/.nemoshrc`, by design |
 | `/proc/cpuinfo`, `/etc/os-release`, `/dev/tty` | missing | `/dev/null`, `/dev/clipboard`, `/tmp` are here |

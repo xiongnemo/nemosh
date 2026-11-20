@@ -1,5 +1,7 @@
 package runtime
 
+import "strconv"
+
 // A session starts as Ubuntu's does, whose ~/.bashrc, copied from /etc/skel, gives every account
 // ll, la and l, and ls and the greps in colour on a terminal: what a Debian or Ubuntu
 // administrator types without thinking, and found `not found` here, or ls in no colour. Only a
@@ -19,6 +21,28 @@ var ubuntuAliases = [...][2]string{
 	{"ll", "ls -alF"},
 	{"la", "ls -A"},
 	{"l", "ls -CF"},
+}
+
+// NoteWindowSize is bash's checkwinsize, on in a new shell: a session sets COLUMNS and LINES to
+// the terminal's size before each prompt, so a prompt and what is run from one can read it. A
+// readonly one is left, and an exported one goes on being, with the new value. `shopt -u
+// checkwinsize` leaves both as they are.
+func (r Runtime) NoteWindowSize(columns, lines int) {
+	if columns <= 0 || lines <= 0 || !r.options.checkWinSize {
+		return
+	}
+	for _, size := range [...]struct {
+		name  string
+		value int
+	}{{"COLUMNS", columns}, {"LINES", lines}} {
+		if _, readonly := r.readonly[size.name]; readonly {
+			continue
+		}
+		r.vars[size.name] = strconv.Itoa(size.value)
+		if r.isExported(size.name) {
+			r.env.Set(size.name, r.vars[size.name])
+		}
+	}
 }
 
 // SetSessionDefaults gives a session what Ubuntu's gets, before its rc file is read.

@@ -61,6 +61,7 @@ sessionLoop:
 		// somebody to run `jobs`.
 		rt.ReportFinishedJobs()
 		if input.Len() == 0 {
+			c.noteWindowSize(rt)
 			if result := rt.RunPromptCommand(ctx); result.Exited {
 				return interactiveStatusError(result.Status)
 			}

@@ -68,7 +68,9 @@ at all, as mksh reads `~/.mkshrc`; an `ENV` set to nothing reads nothing, and
 start from. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
 every account: `ll='ls -alF'`, `la='ls -A'`, `l='ls -CF'`, and `ls`, `grep`, `egrep` and
 `fgrep` with `--color=auto`. A script has none, the rc file can `unalias` any, and
-`NEMOSH_DEFAULTS=off` in the environment is a session without them. `-n`
+`NEMOSH_DEFAULTS=off` in the environment is a session without them. Before each prompt a
+session sets `COLUMNS` and `LINES` to the terminal's size, as bash's `checkwinsize` does,
+which was recorded and did nothing; `shopt -u checkwinsize` leaves them alone. `-n`
 parses the script and runs none of it. `$-` has `c` for a command string, `s` for
 commands read from standard input, and `i` and `s` for a session, among the letters
 that are on in busybox's order, from the end of its option table: `set -eu` under `-c`

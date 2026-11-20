@@ -1,10 +1,40 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+// Before each prompt a session has COLUMNS and LINES, the terminal's size, as bash's checkwinsize
+// has them, so `echo $COLUMNS` answers at a prompt and a script started from one can read it.
+// `shopt -u checkwinsize` leaves them as they are, and a script has neither. checkwinsize was
+// recorded and did nothing.
+func TestSession_hasTheTerminalsSize(t *testing.T) {
+	t.Setenv("COLUMNS", "")
+	os.Unsetenv("COLUMNS")
+	t.Setenv("LINES", "")
+	os.Unsetenv("LINES")
+	run := func(stdin string, args ...string) string {
+		var stdout, stderr bytes.Buffer
+		cmd := command{stdin: strings.NewReader(stdin), stdout: &stdout, stderr: &stderr,
+			windowSize: func() (int, int, bool) { return 120, 40, true }}
+		if err := cmd.run(context.Background(), append([]string{"nemosh"}, args...)); err != nil {
+			t.Fatalf("nemosh %q: %v; stderr %q", args, err, stderr.String())
+		}
+		return stdout.String()
+	}
+
+	session := run("echo \"$COLUMNS $LINES\"\nshopt -u checkwinsize\nCOLUMNS=7\necho \"$COLUMNS\"\nshopt -s checkwinsize\necho \"$COLUMNS\"\n", "--norc", "-i")
+	script := run("", "-c", `echo "${COLUMNS-unset} ${LINES-unset}"`)
+
+	if session != "120 40\n7\n120\n" || script != "unset unset\n" {
+		t.Fatalf("session %q, script %q; want 120 40, 7, 120, and unset unset", session, script)
+	}
+}
 
 // A session has the aliases Ubuntu's ~/.bashrc gives one -- ll, la and l, and ls and the greps in
 // colour on a terminal -- before its rc file, which can take them away again. A script has none,

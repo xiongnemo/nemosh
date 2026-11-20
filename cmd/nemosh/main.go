@@ -82,6 +82,9 @@ type command struct {
 	invocation invocation
 	// name is sh or bash when this shell was run by that name; see shell_name.go.
 	name string
+	// windowSize is the terminal's columns and lines, for COLUMNS and LINES at a prompt; nil
+	// asks stderr's or stdout's console. See window_size.go.
+	windowSize func() (int, int, bool)
 }
 
 func run(ctx context.Context, args []string) error {

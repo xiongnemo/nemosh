@@ -165,6 +165,10 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **`COLUMNS` and `LINES` at a prompt**: a session sets them to the terminal's size before each
+  prompt, as bash's `checkwinsize` does, so `echo $COLUMNS` answers. `checkwinsize` was recorded
+  and did nothing; `shopt -u checkwinsize` leaves them alone.
+
 - **A session has Ubuntu's aliases**, which its `~/.bashrc` gives every account: `ll`, `la`, `l`,
   and `ls`, `grep`, `egrep` and `fgrep` in colour on a terminal. A script has none; the rc file,
   read after, can `unalias` any; `NEMOSH_DEFAULTS=off` in the environment is a session without
