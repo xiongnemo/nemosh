@@ -222,12 +222,13 @@ file -- so shadowing them breaks scripts that never asked for this shell. An
 install that changes what a name means is worse than one that makes you type
 `nemosh find`; `scoop shim add` covers the case where someone wants one anyway.
 
-**Applet parity with BusyBox.** 171 applets on Windows against busybox-w32's
-179, 149 of them by the same name, and `flock`, `watch`, `which`, `time`,
+**Applet parity with BusyBox.** 172 applets on Windows against busybox-w32's
+179, 150 of them by the same name, and `flock`, `watch`, `which`, `time`,
 `timeout` and `kill` are builtins. The archivers, the compression formats but
 `lzop` and `compress`'s `.Z`, the text tools, `awk`, `bc` and the whole networking
 group busybox-w32 keeps are all in now, and `man` is this shell's own help, there being no
-man pages on Windows to format; what stays out includes `vi`, `make`, `crond` and `crontab`, `dpkg` and `rpm`, `inotifyd`, and busybox-w32's
+man pages on Windows to format; `vi` is being written, busybox-w32's with vim's ways where
+they differ; what stays out includes `make`, `crond` and `crontab`, `dpkg` and `rpm`, `inotifyd`, and busybox-w32's
 `jn` and `drop`, whose names are left unregistered so PATH still finds a real one.
 What matters more than the count is that an option this shell does not implement is
 refused by name rather than doing something else, which `docs/support-matrix.md`

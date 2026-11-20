@@ -348,11 +348,15 @@ above:
   deferred**: checksums (nine applets), archiving (`tar`, `unzip`, and the gzip
   and bzip2 filters), the text tools, and all seven networking applets
   busybox-w32 keeps, `awk`, and the four interpreters — `bc`, `dc`, `ed` and
-  `less`. What remains out is `vi`, which `nano` and `micro` cover on busybox's
-  own reasoning, and the whole of `xz`, `lzma` and
+  `less`. What remains out is the whole of `xz`, `lzma` and
   the Linux package formats, whose reasons are in `support-matrix.md`. An editor
   was written (`nano`/`micro`), on the reading that busybox's own `vi` is a
-  from-scratch clone rather than the original.
+  from-scratch clone rather than the original. **`vi` was out on the same
+  reasoning, `nano` and `micro` covering it, until 2026-11-21**: the reasoning
+  shows that a vi of this shell's own is fair, not that nano's keys will do for a
+  Linux user, whose fingers type `vi`, and whom `fc` sends there with no `EDITOR`
+  set. It is busybox-w32's, with vim's behaviour where the two differ on a key such
+  a user knows.
 - Windows ACL tooling.
 
 ### Job control, and where the reference draws its line

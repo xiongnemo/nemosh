@@ -91,7 +91,7 @@ where it was right it is worth saying so.
 | Editors | `nano`, `micro` | one implementation under two names, keyed by `argv[0]`, on the reading that busybox's own `vi` is a from-scratch clone. Headless tests over a tcell simulation screen. | done |
 | Interpreters | `awk` | the POSIX language, built in ten staged commits with the value model first, because strnum cannot be retrofitted. Every rule measured against gawk and busybox-w32 before it was written; the differential harness hands each program to both through a *file*, since gawk on Windows collapses a doubled backslash in an argv-delivered program. | done |
 | Interpreters | `bc`, `dc`, `ed`, `less` | the calculator language and its reverse-polish sibling over one exact decimal core, the line editor a script can drive, and the pager that is `cat` when there is nowhere to page to. | done |
-| Interpreters | `vi` | covered by `nano`/`micro` on busybox's own reasoning: its `vi` is a from-scratch clone that says so in its header. | out |
+| Editors | `vi` | its own editor, busybox-w32's `editors/vi.c` with vim's behaviour where the two differ on a key a Debian user knows. It was out, covered by `nano`/`micro`, until 2026-11-21: the keys are what a Linux user wants, and nano's are not them. Headless tests over a tcell simulation screen, their status lines and messages read off busybox-w32's vi by a console robot. | partial: being built a command at a time |
 | No Go support | `xz`, `unxz`, `lzma`, `lzop`, `bzip2` (compressing) | **not implemented and deliberately not registered**, so PATH still finds a real one. The reasons are in `docs/support-matrix.md`. | out |
 
 ## Per-Applet Test File Rule

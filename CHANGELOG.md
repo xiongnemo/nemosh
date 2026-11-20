@@ -12,6 +12,13 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`vi`**, busybox-w32's, with vim's ways where the two differ on a key a Debian user knows;
+  `fc` with no `EDITOR` and `C-x C-e` in vi mode open it, where they found nothing. Being built
+  a command at a time: this first part moves (`h j k l`, the arrows, `0 $`), inserts (`i a I A`),
+  writes and quits (`:w :wq :x :q :q! ZZ ZQ`) with busybox's status line and messages, and keeps
+  a CRLF file CRLF. `vi -H` lists what it has; any other key says it is not implemented.
+  `NEMOSH_OVERRIDE_APPLETS=vi` runs PATH's.
+
 - **`zip`, Info-ZIP's**: `zip -r a.zip dir -x '*.o'`, `-j`, `-q`, `-D`, `-0`...`-9`, and an existing
   archive updated in place. There was unzip and no zip.
 

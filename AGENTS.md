@@ -308,7 +308,7 @@ guesses:
   `NewEventKey(KeyCtrlSpace+Key(r), 0, ModCtrl)`. `KeyCtrlSpace` is 64, so `0x1F`
   is `Key(95)` — `KeyCtrlUnderscore`, exactly as named. The `KeyCtrl*` names are
   correct here.
-- On Windows there is **no VT screen**, so input goes through `console_win.go`,
+- On Windows, where the terminal screen cannot start, input goes through `console_win.go`,
   which for a control character whose modifier mask is *exactly* Ctrl adds `0x60`
   back and posts a rune (`:725-736`). `^_` typed as Ctrl+`-` is therefore
   `0x1F + 0x60 = 0x7F`, which tcell reads as Backspace — it *deletes*. Typed as
@@ -322,6 +322,18 @@ Alt with a letter is reported by the Windows console with no character at all an
 the event is dropped (`:741-744`), so Escape-then-key is the meta spelling that
 survives both — and on the terminal path tcell already implements it
 (`input.go:104-110` sets `ModAlt` on the key after Escape).
+
+**Which path a Windows console takes was measured on 2026-11-21, and it is the
+terminal one.** tcell 2.13.10's `NewScreen` tries its terminal screen first
+(`screen.go:312-320`), which `tscreen_win.go` gives a Windows console as
+`xterm-truecolor`, and on Windows 10's conhost a probe logging every event got
+`*tcell.baseScreen`: keys written into the console by a robot arrived through
+`input.go`. So **Escape and a key typed within 50 ms of it are that key with
+`ModAlt`** -- a quick `<Esc>:wq` is Alt+`:` -- and a lone Escape arrives 50 ms
+later; Ctrl+K is `KeyCtrlK` with `ModCtrl`. `console_win.go` is the fallback, and
+the `^_` measurements above were taken on it, so both spellings stay bound. A robot
+writing key-*up* records as well doubles every key on the terminal path (Up then
+Ctrl+Space, Backtab then Tab); write key-down records alone.
 
 ## Documentation Hygiene
 
