@@ -33,9 +33,11 @@ PROMPT_COMMAND='__nemosh_status=$?; [ "$__nemosh_status" = 0 ] && __nemosh_statu
 PS1='\[\e[1;34m\]\u@\h\[\e[0m\] \[\e[33m\]\w\[\e[0m\]$(__nemosh_branch)${__nemosh_status:+ \[\e[31m\][$__nemosh_status]\[\e[0m\]}\n\$ '
 
 # Aliases. A session has Ubuntu's already, before this file is read: ll='ls -alF',
-# la='ls -A', l='ls -CF', and ls, grep, egrep and fgrep with --color=auto. Redefine one
-# here, or take it away; NEMOSH_DEFAULTS=off in the environment starts a session with none.
+# la='ls -A', l='ls -CF', and ls, grep, egrep and fgrep with --color=auto, and LS_COLORS
+# from dircolors' database. Redefine one here, or take it away; NEMOSH_DEFAULTS=off in the
+# environment starts a session with none.
 # unalias l
+# LS_COLORS="$LS_COLORS*.log=00;33:"; export LS_COLORS
 
 # Completion for programs that ship their own: gh, if it is installed, and git's script
 # from Git for Windows, wherever it was installed from. Git for Windows keeps it under

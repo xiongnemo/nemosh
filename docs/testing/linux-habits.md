@@ -22,9 +22,9 @@ Rows, not invocations: a row holds the invocations that share a status.
 | status  | rows |
 | ---     | ---  |
 | works   | 80   |
-| partial | 7    |
+| partial | 8    |
 | refused | 6    |
-| missing | 14   |
+| missing | 13   |
 
 ## Existing commands
 
@@ -143,7 +143,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `sh -c`, `#!/bin/sh` | works | |
 | `!!`, `!$`, `^old^new`, Ctrl-R | works | |
 | `ll`, `la`, `l`; `ls` and `grep` in colour | works | Ubuntu's aliases in a session; `NEMOSH_DEFAULTS=off` for none |
-| `LS_COLORS`, `dircolors` | missing | |
+| `LS_COLORS`, `dircolors` | partial | ls reads LS_COLORS, and a session has dircolors' database; no `dircolors` command |
 | `$BASH_VERSION`, `$BASH_VERSINFO` | works | bash 5.2's when run as bash; unset as sh or nemosh |
 | `$COLUMNS`, `$LINES` at the prompt | works | before each prompt, as `checkwinsize` has them |
 | `fg`, `bg`, Ctrl-Z | refused | will not be: nothing here can suspend a job |

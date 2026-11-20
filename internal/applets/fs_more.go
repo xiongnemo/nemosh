@@ -10,7 +10,7 @@ import (
 )
 
 func newLsApplet() Applet {
-	return simpleApplet{name: "ls", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "ls", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
 		options, paths, err := lsArgs(args, optionsPermute(ProcessViewFromContext(ctx)))
 		if err != nil {
 			return err
@@ -19,6 +19,9 @@ func newLsApplet() Applet {
 		// at parse time: that is what makes `alias ls='ls --color=auto'` safe to
 		// pipe, colouring a terminal and staying plain into grep.
 		options.colored = colorEnabled(options.color, stdout)
+		if options.colored {
+			stdout = options.readLsColors(ProcessViewFromContext(ctx), stdout, stderr)
+		}
 		// A terminal shows a `?` for what it cannot, as busybox's ls turns -q on for one.
 		options.printable = options.printable || stdoutIsTerminal(stdout)
 		options.umask = processFileModeMask(ProcessViewFromContext(ctx))

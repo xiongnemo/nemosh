@@ -67,7 +67,8 @@ at all, as mksh reads `~/.mkshrc`; an `ENV` set to nothing reads nothing, and
 `--rcfile FILE` and `--norc` take bash's meaning. `docs/examples/nemoshrc` is one to
 start from. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
 every account: `ll='ls -alF'`, `la='ls -A'`, `l='ls -CF'`, and `ls`, `grep`, `egrep` and
-`fgrep` with `--color=auto`. A script has none, the rc file can `unalias` any, and
+`fgrep` with `--color=auto`; and an exported `LS_COLORS`, what `eval "$(dircolors -b)"`
+leaves from coreutils 9.4's database, unless the environment had one. A script has none, the rc file can `unalias` any, and
 `NEMOSH_DEFAULTS=off` in the environment is a session without them. Before each prompt a
 session sets `COLUMNS` and `LINES` to the terminal's size, as bash's `checkwinsize` does,
 which was recorded and did nothing; `shopt -u checkwinsize` leaves them alone. `-n`
@@ -997,7 +998,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `ln` | `-s -f -n -b -S -v -T`; `TARGET... DIR`, and a lone `TARGET` linked into the working directory | refused by name |
 | `iconv` | `-f -t -l -c -o` | refused by name |
 | `join` | `-a -v -e -o -t -1 -2 -j`; two files sorted on their join fields, merged a key at a time as busybox's are, so lines out of order are not paired | refused by name |
-| `ls` | busybox-w32's: `-1AaCxdgLHRFplinshrSXvctuQqk`, `-w N` (0 for no limit), `-T N`, `--full-time`, `--group-directories-first`, `--color[=always\|never\|auto]`, and GNU's `--time-style=full-iso\|long-iso\|iso\|locale\|+FORMAT`, a newline in FORMAT parting the format of an old file from that of a recent one; of `-C -x -l` the last wins, columns are as wide as busybox's, `total` counts blocks, and a directory's links on Windows are two and its subdirectories. The mode column is made up as `stat`'s is, busybox-w32's: read and write for everyone less the umask's group and other write, and run for a directory or a program | refused by name |
+| `ls` | busybox-w32's: `-1AaCxdgLHRFplinshrSXvctuQqk`, `-w N` (0 for no limit), `-T N`, `--full-time`, `--group-directories-first`, `--color[=always\|never\|auto]` in busybox's three colours, or with `LS_COLORS` set in GNU's way, by type and by suffix (`tw`, `ow`, `st`, `su`, `sg`, `ca` taken and not applied, Windows having none of those bits), and GNU's `--time-style=full-iso\|long-iso\|iso\|locale\|+FORMAT`, a newline in FORMAT parting the format of an old file from that of a recent one; of `-C -x -l` the last wins, columns are as wide as busybox's, `total` counts blocks, and a directory's links on Windows are two and its subdirectories. The mode column is made up as `stat`'s is, busybox-w32's: read and write for everyone less the umask's group and other write, and run for a directory or a program | refused by name |
 | `micro` | `-H -R`; one file at a time | refused by name |
 | `mkdir` | `-m -p -v` and their long forms; `-v` names each directory made, a parent with its slash | refused by name |
 | `mktemp` | `-d -q -u`, and an `XXXXXX` template | refused by name |

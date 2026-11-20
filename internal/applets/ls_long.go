@@ -62,7 +62,7 @@ func formatLongEntry(entry lsEntry, options lsOptions) string {
 	// that target, which is POSIX and which busybox also prints, and its indicator is the
 	// target's, after it, which is what is stat'd for: -F's and -p's.
 	if linked {
-		name = paintLsName(lsNameText(entry.name, options), entry.info, options.colored) + " -> " + target
+		name = paintLsName(lsNameText(entry.name, options), entry, options) + " -> " + target
 		if options.classify || options.slash {
 			if followed, err := os.Stat(entry.path); err == nil {
 				name += classifyLsSuffix(followed, options)

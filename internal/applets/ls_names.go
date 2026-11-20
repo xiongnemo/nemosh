@@ -13,7 +13,7 @@ import (
 // Both the short form and the long form go through here, because the indicator applies to
 // every layout and two copies of "name plus indicator" is two answers eventually.
 func lsDisplayName(entry lsEntry, options lsOptions) string {
-	return paintLsName(lsNameText(entry.name, options), entry.info, options.colored) + classifyLsSuffix(entry.info, options)
+	return paintLsName(lsNameText(entry.name, options), entry, options) + classifyLsSuffix(entry.info, options)
 }
 
 // lsMeasuredName is the same text with no colour escapes, which is what the

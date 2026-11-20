@@ -165,6 +165,11 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **`ls` reads `LS_COLORS`**, as GNU's does, by type and by suffix, and **a session exports
+  dircolors' database**, as Ubuntu's `~/.bashrc` does with `eval "$(dircolors -b)"`: an archive is
+  red, a picture magenta, a sound cyan, a backup grey. Unset, ls keeps busybox's three colours;
+  `NEMOSH_DEFAULTS=off` sets none.
+
 - **`COLUMNS` and `LINES` at a prompt**: a session sets them to the terminal's size before each
   prompt, as bash's `checkwinsize` does, so `echo $COLUMNS` answers. `checkwinsize` was recorded
   and did nothing; `shopt -u checkwinsize` leaves them alone.

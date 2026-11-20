@@ -109,7 +109,8 @@ Environment:
                                 Windows Terminal's prompt and command marks, on
                                 in Windows Terminal by default
   NEMOSH_DEFAULTS=off           a session without Ubuntu's defaults: the aliases
-                                ll, la, l, and ls and grep in colour
+                                ll, la, l, and ls and grep in colour, and
+                                dircolors' LS_COLORS
 
 Home page: https://github.com/xiongnemo/nemosh
 `, len(applets.DefaultRegistry.Names()))

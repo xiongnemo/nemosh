@@ -9,6 +9,36 @@ import (
 	"testing"
 )
 
+// A session exports the LS_COLORS Ubuntu's ~/.bashrc gets from `eval "$(dircolors -b)"`, coreutils
+// 9.4's database, so `ls --color=auto` colours an archive red and a picture magenta as there. One
+// the environment set is kept; a script has none of its own; NEMOSH_DEFAULTS=off sets none.
+func TestSession_exportsDircolorsDatabase(t *testing.T) {
+	t.Setenv("LS_COLORS", "")
+	os.Unsetenv("LS_COLORS")
+	report := `printenv LS_COLORS | cut -c1-44; printenv LS_COLORS | tr : '\n' | grep -c .`
+	for _, test := range []struct {
+		name, defaults, inherited string
+		args                      []string
+		stdout                    string
+	}{
+		{name: "a session", args: []string{"--norc", "-i", "-c", report}, stdout: "rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;\n151\n"},
+		{name: "one inherited is kept", inherited: "di=01;31", args: []string{"--norc", "-i", "-c", report}, stdout: "di=01;31\n1\n"},
+		{name: "a script", args: []string{"-c", report}, stdout: "0\n"},
+		{name: "NEMOSH_DEFAULTS=off", defaults: "off", args: []string{"--norc", "-i", "-c", report}, stdout: "0\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("NEMOSH_DEFAULTS", test.defaults)
+			if test.inherited != "" {
+				t.Setenv("LS_COLORS", test.inherited)
+			}
+			result := runInvocation(t, "", test.args...)
+			if result.stdout != test.stdout {
+				t.Fatalf("nemosh %q = %q, want %q; stderr %q", test.args, result.stdout, test.stdout, result.stderr)
+			}
+		})
+	}
+}
+
 // Before each prompt a session has COLUMNS and LINES, the terminal's size, as bash's checkwinsize
 // has them, so `echo $COLUMNS` answers at a prompt and a script started from one can read it.
 // `shopt -u checkwinsize` leaves them as they are, and a script has neither. checkwinsize was

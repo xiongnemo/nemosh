@@ -3,8 +3,9 @@ package runtime
 import "strconv"
 
 // A session starts as Ubuntu's does, whose ~/.bashrc, copied from /etc/skel, gives every account
-// ll, la and l, and ls and the greps in colour on a terminal: what a Debian or Ubuntu
-// administrator types without thinking, and found `not found` here, or ls in no colour. Only a
+// ll, la and l, ls and the greps in colour on a terminal, and dircolors' LS_COLORS: what a Debian
+// or Ubuntu administrator types without thinking, and found `not found` here, or ls in no colour,
+// or in busybox's three, which colour an archive as any other file. Only a
 // session has them, as only a session reads ~/.bashrc, so a script is as it was; the rc file
 // comes after, and can take any away. NEMOSH_DEFAULTS=off in the environment is a session
 // without them, as one was until 2026-11-20.
@@ -52,5 +53,11 @@ func (r Runtime) SetSessionDefaults() {
 	}
 	for _, alias := range ubuntuAliases {
 		r.aliases[alias[0]] = alias[1]
+	}
+	// And LS_COLORS, exported, as `eval "$(dircolors -b)"` leaves it; one already set is kept,
+	// as Ubuntu's ~/.dircolors would be read in place of the database.
+	if _, set := r.vars["LS_COLORS"]; !set {
+		r.vars["LS_COLORS"] = dircolorsDatabase
+		r.markExported("LS_COLORS")
 	}
 }

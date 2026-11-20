@@ -91,10 +91,14 @@ func isExecutableEntry(info os.FileInfo) bool {
 	return false
 }
 
-// paintLsName wraps a name in its colour, or returns it unchanged.
-func paintLsName(name string, info os.FileInfo, colored bool) string {
-	if !colored {
-		return name
+// paintLsName wraps an entry's name, as text, in its colour, or returns it unchanged:
+// LS_COLORS's when it is set, and busybox's otherwise.
+func paintLsName(text string, entry lsEntry, options lsOptions) string {
+	switch {
+	case !options.colored:
+		return text
+	case options.palette != nil:
+		return options.palette.paint(text, entry.name, entry.path, entry.info)
 	}
-	return colorForEntry(info) + name + lsColorReset
+	return colorForEntry(entry.info) + text + lsColorReset
 }

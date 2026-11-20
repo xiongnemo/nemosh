@@ -48,6 +48,8 @@ type lsOptions struct {
 	human     bool
 	color     colorWhen
 	colored   bool
+	// palette is LS_COLORS read, when it is set, and colours in GNU's way; see ls_palette.go.
+	palette *lsPalette
 	// onePerLine is -1, forceColumns -C and across -x, columns filled a row at a time. None
 	// decides the layout on its own: the destination does, and these override it. Of -C, -x
 	// and -l the last given wins, and of -1 and -C or -x; see ls_columns.go.

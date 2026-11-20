@@ -113,7 +113,7 @@ An interactive session reads `$ENV`, or `~/.nemoshrc` when `ENV` is not set.
 [`docs/examples/nemoshrc`](docs/examples/nemoshrc) is one to copy: a prompt with
 the git branch and the last status, and gh's and git's completion. Before it, a
 session has Ubuntu's aliases -- `ll`, `la`, `l`, and `ls` and `grep` in colour --
-unless `NEMOSH_DEFAULTS=off`.
+and dircolors' `LS_COLORS`, unless `NEMOSH_DEFAULTS=off`.
 
 ### Files
 
