@@ -21,6 +21,8 @@ type viFile struct {
 	native   string
 	crlf     bool
 	readOnly bool
+	// isNew says there was no such file, which :e says.
+	isNew bool
 }
 
 // viLoad reads name into lines, busybox's file_insert at startup: a file that is not there is
@@ -40,6 +42,7 @@ func viLoad(view ProcessView, name string, readOnly bool) (viFile, [][]rune, str
 	info, err := os.Stat(native)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
+		file.isNew = true
 		return file, empty, ""
 	case err != nil:
 		return file, empty, fmt.Sprintf("'%s' %s", name, causeText(err))

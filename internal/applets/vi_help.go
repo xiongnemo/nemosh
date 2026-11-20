@@ -20,7 +20,9 @@ const viFeatures = `vi: busybox-w32's vi, with vim's ways where the two differ; 
 	ex commands   :N :d :y :s (g i I) :p :l := :set (ai bin et ff ffs fl ic nu sm ts)
 	writing       :w :w! :w FILE :wq :x ZZ
 	quitting      :q :q! ZQ
-	starting      vi [-R] [+LINE | +] [FILE]
+	files         :e[!] [FILE | #] :f [NAME] :r FILE :0r :n :N :prev :rew :wn, :ve
+	commands      :!COMMAND and :r !COMMAND through sh -c, % and # for the file names
+	starting      vi [-R] [-b] [-c COMMAND]... [+COMMAND]... [FILE]..., $EXINIT or ~/.exrc first
 
 Anything else says it is not implemented. A file whose every line ends in CRLF is written
 back with CRLF; a new one with LF.

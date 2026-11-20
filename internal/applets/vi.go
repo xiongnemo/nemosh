@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -102,6 +102,15 @@ type viEditor struct {
 	savedCRLF                     bool
 	// shown is lines shown at the foot of the screen until Enter; see vi_message.go.
 	shown []string
+	// files are the files given, fileIndex the one being edited, and alternate the one before,
+	// #; readOnlyMode is -R, which each file opens with. See vi_files.go.
+	files        []string
+	fileIndex    int
+	alternate    string
+	readOnlyMode bool
+	// stdin, stdout and stderr are vi's own, which :! gives the command it runs.
+	stdin          io.Reader
+	stdout, stderr io.Writer
 	// lineRow and lineBefore are the line U puts back and what it was.
 	lineRow    int
 	lineBefore []rune
@@ -113,7 +122,7 @@ type viEditor struct {
 
 func newViApplet() Applet {
 	return simpleApplet{name: "vi", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		options, operands, err := parseAppletOptions(ctx, args, "RH", "")
+		options, operands, err := parseAppletOptions(ctx, args, "RHb", "c")
 		if err != nil {
 			return err
 		}
@@ -121,54 +130,95 @@ func newViApplet() Applet {
 			_, err := io.WriteString(stdout, viFeatures)
 			return err
 		}
-		line, operands, err := viStartLine(operands)
-		if err != nil {
-			return err
+		startup, files := viStartup(operands)
+		editor := openVi(ctx, files, options.has('R'))
+		editor.stdin, editor.stdout, editor.stderr = stdin, stdout, stderr
+		for _, command := range options.all('c') {
+			startup = append(startup, strings.Split(command, "\n")...)
 		}
-		if len(operands) > 1 {
-			return fmt.Errorf("one file at a time, for now; there is no :next yet")
-		}
-		editor := openVi(ctx, operands, options.has('R'))
-		editor.goToStartLine(line)
+		editor.start(startup, options.has('b'))
 		return runViOnTerminal(ctx, editor, stdin)
 	}}
 }
 
-// viStartLine reads vim's `+LINE` and `+` before the file: the line to start on, 0 for none
-// and -1 for the last. busybox has neither, and read `+10` as a file's name.
-func viStartLine(operands []string) (int, []string, error) {
-	line := 0
-	var rest []string
-	for _, operand := range operands {
-		if !strings.HasPrefix(operand, "+") || len(rest) > 0 {
-			rest = append(rest, operand)
-			continue
+// viStartup parts the operands into vim's +COMMANDs before the files -- +LINE, + for the last
+// line, +/PATTERN, or any ex command -- and the files. busybox has none, and read +10 as a name.
+func viStartup(operands []string) ([]string, []string) {
+	var startup []string
+	for index, operand := range operands {
+		if !strings.HasPrefix(operand, "+") {
+			return startup, operands[index:]
 		}
-		if operand == "+" {
-			line = -1
-			continue
+		switch command := operand[1:]; command {
+		case "":
+			startup = append(startup, "$")
+		default:
+			startup = append(startup, command)
 		}
-		number, err := strconv.Atoi(operand[1:])
-		if err != nil || number < 0 {
-			return 0, nil, fmt.Errorf("%s: only +LINE and + are understood", operand)
-		}
-		line = number
 	}
-	return line, rest, nil
+	return startup, nil
 }
 
-// openVi reads the file, or starts an empty buffer, as busybox does before its first draw.
+// openVi reads the first file, or starts an empty buffer, as busybox does before its first draw.
 func openVi(ctx context.Context, operands []string, readOnly bool) *viEditor {
 	editor := &viEditor{ctx: ctx, view: ProcessViewFromContext(ctx), tabstop: 8, register: viDefaultRegister,
-		fileFormats: "unix,dos"}
+		fileFormats: "unix,dos", files: operands, readOnlyMode: readOnly}
 	name := ""
 	if len(operands) > 0 {
 		name = operands[0]
 	}
-	editor.file, editor.lines, editor.message = viLoad(editor.view, name, readOnly)
-	editor.bold, editor.savedCRLF = editor.message != "", editor.file.crlf
-	editor.goToStartLine(0)
+	editor.editFile(name)
+	if !editor.bold {
+		// Opening says nothing, as busybox's does; a file that cannot be read says why.
+		editor.message = ""
+	}
 	return editor
+}
+
+// start runs what busybox runs before the first key -- $EXINIT, or else ~/.exrc, a line a
+// command -- then -c's commands and vim's +COMMANDs, a /PATTERN among them searched for. -b,
+// busybox's binary, keeps a file's carriage returns in its lines and writes it as it was.
+func (e *viEditor) start(commands []string, binary bool) {
+	if binary {
+		e.binary = true
+		if e.file.crlf {
+			for index, line := range e.lines {
+				e.lines[index] = append(line, '\r')
+			}
+			e.file.crlf, e.savedCRLF = false, false
+		}
+	}
+	for _, command := range append(e.initCommands(), commands...) {
+		if pattern, ok := strings.CutPrefix(command, "/"); ok {
+			e.searchFor('/', pattern)
+			continue
+		}
+		e.exCommand(command)
+	}
+	e.closeChange()
+}
+
+// initCommands is $EXINIT, or ~/.exrc when it is not set.
+func (e *viEditor) initCommands() []string {
+	if text, set := e.view.LookupEnv("EXINIT"); set {
+		return strings.Split(text, "\n")
+	}
+	home, set := e.view.LookupEnv("HOME")
+	if !set {
+		home, set = e.view.LookupEnv("USERPROFILE")
+	}
+	if !set {
+		return nil
+	}
+	native, err := resolveHostPath(e.view, home+"/.exrc")
+	if err != nil {
+		return nil
+	}
+	data, err := os.ReadFile(native)
+	if err != nil {
+		return nil
+	}
+	return strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
 }
 
 // goToStartLine puts the cursor on the line it opens on, at its first character that is not a

@@ -8,9 +8,16 @@ import (
 
 // The ex commands that write and quit.
 
+// exQuit is :q, and :wq and :x once written: refused while the buffer has changes or files are
+// left to edit, which ! overrides, leaving them all, as busybox's does.
 func (e *viEditor) exQuit(name string, force bool) {
-	if e.isModified() && !force {
+	switch {
+	case force:
+	case e.isModified():
 		e.say(true, "No write since last change (:%s! overrides)", name)
+		return
+	case e.remaining() > 0:
+		e.say(true, "%d more file(s) to edit", e.remaining())
 		return
 	}
 	e.quit = true

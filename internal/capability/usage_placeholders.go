@@ -10,6 +10,7 @@ package capability
 // Without these the synopsis would read `-k VALUE`, which says nothing.
 var valuePlaceholderTable = [...]placeholderRow{
 	{"fce", "EDITOR"},
+	{"vic", "COMMAND"},
 	{"historyd", "OFFSET"},
 	{"hexdumps", "OFFSET"},
 	{"hds", "OFFSET"},

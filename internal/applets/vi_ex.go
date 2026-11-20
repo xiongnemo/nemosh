@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/xiongnemo/nemosh/internal/version"
 )
 
 // The line typed after :, busybox's colon(). Enter runs it; Escape abandons it, as in vim --
@@ -47,8 +49,9 @@ var viExCommands = [...]struct {
 	name  string
 	least int
 }{
-	{"delete", 1}, {"list", 1}, {"print", 1}, {"quit", 1}, {"substitute", 1}, {"set", 2},
-	{"write", 1}, {"wq", 2}, {"xit", 1}, {"yank", 1},
+	{"delete", 1}, {"edit", 1}, {"file", 1}, {"list", 1}, {"next", 1}, {"Next", 1}, {"print", 1},
+	{"previous", 4}, {"quit", 1}, {"read", 1}, {"rewind", 3}, {"substitute", 1}, {"set", 2},
+	{"version", 2}, {"write", 1}, {"wq", 2}, {"wnext", 2}, {"xit", 1}, {"yank", 1},
 }
 
 // exCommand runs one ex command: its addresses, a name, a ! after it, and an argument.
@@ -88,6 +91,8 @@ func (e *viEditor) exCommand(line string) {
 		e.say(true, "Invalid range")
 		return
 	}
+	// Line 0 is before the first, which only :0r reads into; to the rest it is the first.
+	after := last
 	first, last = max(first, 1), max(last, 1)
 	full := name
 	for _, command := range viExCommands {
@@ -111,14 +116,34 @@ func (e *viEditor) exCommand(line string) {
 		e.substitute(first, last, argument)
 	case "set":
 		e.setOptions(argument)
+	case "!":
+		e.shellCommand(given, argument)
+	case "edit":
+		e.exEdit(name, force, argument)
+	case "file":
+		e.exFile(given, argument)
+	case "read":
+		if given == 0 {
+			after = e.row + 1
+		}
+		e.exRead(after, argument)
+	case "next", "Next", "previous", "rewind":
+		e.exSwitch(full, name, force)
+	case "version":
+		e.say(false, "nemosh vi, busybox-w32's with vim's ways, %s", version.Describe())
 	case "quit":
 		e.exQuit(name, force)
-	case "wq", "xit":
-		// :x writes only a buffer that changed, :wq always; then each quits if that went well.
-		if (full == "wq" || e.isModified()) && !e.exWrite(argument, force) {
+	case "wq", "xit", "wnext":
+		// :x writes only a buffer that changed, :wq and :wn always; then each goes on if that
+		// went well, :wn to the next file.
+		if (full != "xit" || e.isModified()) && !e.exWrite(argument, force) {
 			return
 		}
-		e.quit = true
+		if full == "wnext" {
+			e.exSwitch(full, name, false)
+			return
+		}
+		e.exQuit(name, force)
 	case "write":
 		e.exWrite(argument, force)
 	default:

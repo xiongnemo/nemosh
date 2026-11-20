@@ -18,7 +18,8 @@ patch number is the commits since that tag.
   the screen, searches (`/ ? n N * #`), with counts, each landing where busybox's and vim's do --
   edits with the operators
   `d c y < >`, `x s D C r R J ~ p P o O`, registers and marks, undoes and redoes (`u ^R U`),
-  repeats (`.`), runs ex commands (`:s :d :y :p :set` and line addresses), inserts (`i a I A`),
+  repeats (`.`), runs ex commands (`:s :d :y :p :set` and line addresses), edits several files
+  (`:n :e :r`), runs commands (`:!` and `:r !`), reads `~/.exrc`, inserts (`i a I A`),
   writes and quits (`:w :wq :x :q :q! ZZ ZQ`) with busybox's status line and messages, and keeps
   a CRLF file CRLF. `vi -H` lists what it has; any other key says it is not implemented.
   `NEMOSH_OVERRIDE_APPLETS=vi` runs PATH's.
