@@ -71,7 +71,11 @@ shell. An interactive shell has `PS1` and `PS2` before any of them run, unexport
 default prompts it draws, as bash's has, so a file that asks `[ -z "${PS1-}" ]` whether
 it is interactive -- Ubuntu's `/etc/bash.bashrc` returns at once when it is empty, and its
 `/etc/profile` reads `/etc/bash.bashrc` only when it is not -- is told yes. A script has
-neither, as in bash. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
+neither, as in bash. `TERM` is not set, by design and as busybox-w32 sets none: it says what
+the terminal is, which only the terminal knows, and conhost and Windows Terminal set none;
+`docs/examples/nemoshrc` shows the line for one that draws xterm's sequences, and what it
+changes. And `[ -x /usr/bin/tput ]` is false, by design: `/usr/bin/NAME` is an applet only as
+a command's name or after `#!`, as in busybox-w32, `ls /usr/bin` listing nothing. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
 every account: `ll='ls -alF'`, `la='ls -A'`, `l='ls -CF'`, and `ls`, `grep`, `egrep` and
 `fgrep` with `--color=auto`; and an exported `LS_COLORS`, what `eval "$(dircolors -b)"`
 leaves from coreutils 9.4's database, unless the environment had one. A script has none, the rc file can `unalias` any, and

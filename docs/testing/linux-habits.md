@@ -167,8 +167,8 @@ measured with the built binary in a scratch HOME, a console robot reading the pr
 | `shopt -s checkwinsize` | works | on already |
 | `[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"` | missing | the test is false, as in busybox-w32: `/usr/bin/X` is an applet only as a command name or after `#!`; there is no lesspipe, and less reads no `LESSOPEN` |
 | `debian_chroot`, `/etc/debian_chroot` | works | no such file, so no chroot in the prompt, as on a machine that is not one |
-| `case "$TERM" in xterm-color\|*-256color)`, the title in `PS1` | partial | a Windows console sets no `TERM`, so no colour and no title; with `TERM=xterm-256color` both are drawn, which Git's bash sets |
-| `force_color_prompt=yes`, uncommented | partial | turns colour off: `[ -x /usr/bin/tput ]` is false, as above, though `tput setaf 1` works |
+| `case "$TERM" in xterm-color\|*-256color)`, the title in `PS1` | partial | a Windows console sets no `TERM`, and by design neither does this shell, as neither does busybox-w32: only the terminal knows what it is. So no colour and no title; `export TERM=xterm-256color` in `~/.nemoshrc` draws both, `docs/examples/nemoshrc` saying what else it changes |
+| `force_color_prompt=yes`, uncommented | partial | turns colour off: `[ -x /usr/bin/tput ]` is false, as above, by design, though `tput setaf 1` works; `docs/examples/nemoshrc` asks `command -v tput` instead |
 | `PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '` | works | in place of nemosh's two-line prompt |
 | `[ -x /usr/bin/dircolors ]`, `eval "$(dircolors -b)"`, the ls and grep aliases | works | the test is false and the block is skipped, but a session has those aliases and dircolors' `LS_COLORS` already |
 | `alias ll='ls -alF'`, `la`, `l` | works | |
