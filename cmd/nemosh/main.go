@@ -189,10 +189,13 @@ func (c command) runDirectApplet(ctx context.Context, controller *interruptContr
 	if err != nil {
 		return fmt.Errorf("nemosh: initialize direct applet state: %w", err)
 	}
-	// Pinned, so that Ctrl-C ends a call the applet already waits in; see cancelio.Pin.
+	// Pinned, so that Ctrl-C ends a call the applet already waits in; see cancelio.Pin. The
+	// runtime is the applet's ProgramRunner too, as it is in the shell, so `nemosh xargs prog`
+	// and vi's :! run programs; with the ProcessView alone every one was not found.
 	func() {
 		defer cancelio.Pin(executionCtx)()
-		err = applet.Run(applets.WithProcessView(executionCtx, view), args, c.stdin, c.stdout, c.stderr)
+		appletCtx := applets.WithProgramRunner(applets.WithProcessView(executionCtx, view), view)
+		err = applet.Run(appletCtx, args, c.stdin, c.stdout, c.stderr)
 	}()
 	if runtime.IsShellInterrupt(executionCtx) {
 		return exitStatus(130)

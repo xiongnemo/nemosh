@@ -219,6 +219,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **An applet run straight from the command line found no program**: `nemosh xargs prog`,
+  `nemosh env NAME=v prog`, awk's `system()` under `nemosh awk`, said not found for any program,
+  where the same command at a prompt ran it. They run as they do in the shell now.
+
 - **A `return` at an rc file's top level ended the shell**: Ubuntu's `/etc/bash.bashrc` opens
   with `[ -z "${PS1-}" ] && return`, and given it as the rc a session closed before its first
   prompt. The rc file, `~/.profile` and `/etc/profile` are read as `.` reads a file now, so the

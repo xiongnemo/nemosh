@@ -12,6 +12,25 @@ import (
 	shellruntime "github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
+// An applet run straight from the command line runs programs as it does in the shell: `nemosh
+// xargs prog`, `nemosh vi` with :!, `nemosh env NAME=v prog`. Its context held the shell's
+// ProcessView and not its ProgramRunner, so every program was `not found` there.
+func TestDirectApplet_runsPrograms(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "hello.cmd"), []byte("@echo ran\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	var stdout, stderr bytes.Buffer
+	cmd := command{stdin: bytes.NewBufferString(""), stdout: &stdout, stderr: &stderr}
+
+	err := cmd.run(context.Background(), []string{"nemosh", "xargs", "./hello.cmd"})
+
+	if err != nil || !bytes.Contains(stdout.Bytes(), []byte("ran")) {
+		t.Fatalf("stdout %q, stderr %q, error %v", stdout.String(), stderr.String(), err)
+	}
+}
+
 func TestDirectApplet_preservesProcessInputs_whenSelectedExplicitlyOrByInvocationName(t *testing.T) {
 	t.Setenv("NEMOSH_DIRECT_APPLET_TEST", "environment-value")
 	tests := []struct {
