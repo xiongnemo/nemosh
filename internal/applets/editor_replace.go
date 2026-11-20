@@ -38,8 +38,7 @@ type editorReplaceState struct {
 
 // askReplace runs the two prompts, then starts the confirmation loop.
 func (v *editorView) askReplace() {
-	if v.session.readOnly {
-		v.setMessage("[red]Read-only: the buffer cannot be changed[-]")
+	if v.refusesReadOnly() {
 		return
 	}
 	v.ask("Replace: ", func(needle string) {

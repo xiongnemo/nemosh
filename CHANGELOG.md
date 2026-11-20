@@ -218,6 +218,11 @@ patch number is the commits since that tag.
   `/etc/profile` never read it. A session has `PS1` and `PS2` before its startup files now, its
   default prompts, unexported, as bash's has; the prompt looks as it did.
 
+- **`nano -R` and `micro -R` could change the buffer**; only saving was refused. `^K` and `^U`
+  cut and pasted lines, and the keys the text area binds for itself, `^D ^K ^W ^U ^X ^V ^Z ^Y`
+  and Alt-Backspace, edited. Read-only lets through only the keys that move, scroll or select
+  now, Alt-B and Alt-F among them, which it had refused.
+
 - **`kill 13` ended process 12**: Windows ignores a pid's low two bits, so a pid no process has
   opened its neighbour, and a typo was a different process killed -- by kill, pkill, killall,
   timeout and top alike, and top's priority keys changed it. The process opened is checked against

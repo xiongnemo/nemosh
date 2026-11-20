@@ -181,8 +181,8 @@ func (v *editorView) handleKey(event *tcell.EventKey) *tcell.EventKey {
 		v.showLocation()
 		return nil
 	}
-	if v.session.readOnly && isEditingKey(event) {
-		v.setMessage("[red]Read-only: the buffer cannot be changed[-]")
+	if v.session.readOnly && !isViewingKey(event) {
+		v.setMessage(readOnlyMessage)
 		return nil
 	}
 	v.setMessage("")
@@ -212,19 +212,11 @@ func (v *editorView) runAction(action editorAction) {
 	}
 }
 
-// isEditingKey reports whether a key would change the buffer, which is what
-// read-only has to stop while still allowing movement.
-func isEditingKey(event *tcell.EventKey) bool {
-	switch event.Key() {
-	case tcell.KeyRune, tcell.KeyEnter, tcell.KeyTab,
-		tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete:
-		return true
-	}
-	return false
-}
-
 // cutLine takes the line the cursor is on, in the manner of nano's ^K.
 func (v *editorView) cutLine() {
+	if v.refusesReadOnly() {
+		return
+	}
 	lines, row := v.lines()
 	if row >= len(lines) {
 		return
@@ -236,6 +228,9 @@ func (v *editorView) cutLine() {
 }
 
 func (v *editorView) pasteLine() {
+	if v.refusesReadOnly() {
+		return
+	}
 	if v.cut == "" {
 		v.setMessage("Nothing to paste")
 		return
