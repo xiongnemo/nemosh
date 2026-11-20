@@ -63,8 +63,8 @@ func (e *viEditor) commandKey(key rune) {
 	case 'I':
 		// Before the first character that is not a blank, busybox's and vim's.
 		e.mode, e.col = viInsert, e.firstNonBlank(e.row)
-	case ':':
-		e.mode, e.command = viCommandLine, []rune{':'}
+	case ':', '/', '?':
+		e.mode, e.command = viCommandLine, []rune{key}
 	case 'Z', 'g', 'z', 'f', 'F', 't', 'T', '"', 'm', '\'', '`', 'r':
 		e.pending = key
 	case 'd', 'c', 'y', '<', '>', 'x', 'X', 's', 'S', 'D', 'C', 'Y':

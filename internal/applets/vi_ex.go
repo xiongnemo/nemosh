@@ -15,16 +15,26 @@ import (
 func (e *viEditor) commandLineKey(key rune) {
 	switch {
 	case key == viEnter || key == '\n':
-		line := string(e.command[1:])
+		prompt, line, before := e.command[0], string(e.command[1:]), e.cursor()
 		e.mode, e.command = viNormal, nil
-		e.exCommand(line)
-		e.clampColumn()
+		switch {
+		case prompt == ':':
+			e.exCommand(line)
+		case e.op != 0:
+			e.searchInput = line
+			e.operate(prompt, 0)
+		case e.searchFor(prompt, line) && e.cursor() != before:
+			e.context = viMark{pos: before, set: true}
+		}
+		if e.op == 0 {
+			e.afterCommand()
+		}
 	case key == viEscape || key == 3:
-		e.mode, e.command = viNormal, nil
+		e.mode, e.command, e.op = viNormal, nil, 0
 	case isViBackspace(key):
 		e.command = e.command[:len(e.command)-1]
 		if len(e.command) == 0 {
-			e.mode = viNormal
+			e.mode, e.op = viNormal, 0
 		}
 	case key >= ' ' || key == '\t':
 		e.command = append(e.command, key)

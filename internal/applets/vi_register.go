@@ -111,4 +111,4 @@ func (e *viEditor) goToMark(command, key rune) {
 
 // isJump is busybox's check_context list, vim's jumps: the motions after which a quote typed
 // twice goes back.
-func isJump(key rune) bool { return strings.ContainsRune("%{}'`GHLMnN/?", key) }
+func isJump(key rune) bool { return strings.ContainsRune("%{}'`GHLMnN/?*#", key) }

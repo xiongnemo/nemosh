@@ -55,6 +55,12 @@ func (e *viEditor) motionKey(key rune) bool {
 		e.findChar(e.lastFind)
 	case ',':
 		e.findChar(e.lastFind ^ 0x20)
+	case 'n':
+		e.searchAgain(e.lastDirection)
+	case 'N':
+		e.searchAgain(-e.lastDirection)
+	case '*', '#':
+		e.searchWord(key)
 	default:
 		return e.screenMotion(key)
 	}

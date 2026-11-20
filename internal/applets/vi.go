@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -85,6 +86,14 @@ type viEditor struct {
 	seq, savedSeq            int
 	changeOpen, undoing      bool
 	restoringLine, repeating bool
+	// lastPattern is the last search's, lastDirection 1 for / and -1 for ?, searchCompiled it
+	// translated and compiled as ignoreCase was then, and searchInput the pattern an operator's
+	// / was given. See vi_search.go.
+	lastPattern                    string
+	lastDirection                  int
+	searchCompiled                 *regexp.Regexp
+	ignoreCase, searchIgnoringCase bool
+	searchInput                    string
 	// lineRow and lineBefore are the line U puts back and what it was.
 	lineRow    int
 	lineBefore []rune

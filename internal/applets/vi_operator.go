@@ -10,7 +10,7 @@ import "strings"
 // including it. w, W, l and { } have rules of their own, below.
 const (
 	viLinewiseMotions  = "GHLM+-jk'g\r\n\x0e\x10"
-	viExclusiveMotions = "^0bBFTh|`\x08\x7f"
+	viExclusiveMotions = "^0bBFTh|`nN/?*#\x08\x7f"
 	viInclusiveMotions = "$eEft%"
 )
 
@@ -34,6 +34,9 @@ func (e *viEditor) operatorKey(key rune) {
 		e.operateOnLines()
 	case strings.ContainsRune("fFtT'`g", key):
 		e.pending = key
+	case key == '/' || key == '?':
+		// The pattern is typed first; commandLineKey finishes the operator with it.
+		e.mode, e.command = viCommandLine, []rune{key}
 	default:
 		e.operate(key, 0)
 	}
@@ -119,6 +122,8 @@ func (e *viEditor) runMotion(motion, arg rune) bool {
 		e.findChar(motion)
 	case '\'', '`':
 		e.goToMark(motion, arg)
+	case '/', '?':
+		e.searchFor(motion, e.searchInput)
 	case 'g':
 		if arg != 'g' {
 			return false
