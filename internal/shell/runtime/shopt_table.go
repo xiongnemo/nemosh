@@ -50,10 +50,17 @@ func fixed(name string, on bool, why string) shoptOption {
 	return shoptOption{name: name, kind: shoptFixed, on: on, why: why}
 }
 
+// What history does here whichever way its five shopts are set. They said "there is no history
+// here to change", from before history was kept; it is, in a file a command at a time
+// (cmd/nemosh/history_file.go), with bash's expansion.
 const (
-	noHistory    = "there is no history here to change"
-	noCompletion = "completion here follows nemosh's own specs, which this does not reach"
-	noCompat     = "there is one compatibility level, bash 5.3's where busybox is silent"
+	historyAppends  = "the history file is appended to a command at a time either way, so no session overwrites another's"
+	historyOneEntry = "a command of several lines is one entry either way"
+	historyAsTyped  = "a command of several lines is kept as it was typed, its newlines and all, either way"
+	historyNoReedit = "a history expansion that fails is reported and its line dropped, never given back to edit"
+	historyNoVerify = "an expanded line is shown and run at once, never given back to edit first"
+	noCompletion    = "completion here follows nemosh's own specs, which this does not reach"
+	noCompat        = "there is one compatibility level, bash 5.3's where busybox is silent"
 )
 
 // shoptOptions are in the order bash lists them, which is its Windows build's: that one adds
@@ -69,7 +76,7 @@ var shoptOptions = []shoptOption{
 		"a command is looked up afresh each time, so there is no remembered path to check"),
 	recorded("checkjobs", false, func(o *shellOptions) *bool { return &o.checkJobs }, "exit does not list jobs first"),
 	actsOn("checkwinsize", func(o *shellOptions) *bool { return &o.checkWinSize }),
-	recorded("cmdhist", true, func(o *shellOptions) *bool { return &o.cmdHist }, noHistory),
+	recorded("cmdhist", true, func(o *shellOptions) *bool { return &o.cmdHist }, historyOneEntry),
 	fixed("compat31", false, noCompat),
 	fixed("compat32", false, noCompat),
 	fixed("compat40", false, noCompat),
@@ -94,9 +101,9 @@ var shoptOptions = []shoptOption{
 	fixed("globskipdots", true, "a pattern never matches . or .."),
 	acts("globstar", func(o *shellOptions) *bool { return &o.globStar }),
 	fixed("gnu_errfmt", false, "an error message has one form"),
-	recorded("histappend", false, func(o *shellOptions) *bool { return &o.histAppend }, noHistory),
-	recorded("histreedit", false, func(o *shellOptions) *bool { return &o.histReedit }, noHistory),
-	recorded("histverify", false, func(o *shellOptions) *bool { return &o.histVerify }, noHistory),
+	recorded("histappend", false, func(o *shellOptions) *bool { return &o.histAppend }, historyAppends),
+	recorded("histreedit", false, func(o *shellOptions) *bool { return &o.histReedit }, historyNoReedit),
+	recorded("histverify", false, func(o *shellOptions) *bool { return &o.histVerify }, historyNoVerify),
 	recorded("hostcomplete", true, func(o *shellOptions) *bool { return &o.hostComplete }, noCompletion),
 	recorded("huponexit", false, func(o *shellOptions) *bool { return &o.hupOnExit },
 		"a job is not sent a hangup when the shell exits"),
@@ -104,7 +111,7 @@ var shoptOptions = []shoptOption{
 	recorded("interactive_comments", true, func(o *shellOptions) *bool { return &o.interactiveComments },
 		"a # at the start of a word always begins a comment"),
 	acts("lastpipe", func(o *shellOptions) *bool { return &o.lastPipe }),
-	recorded("lithist", false, func(o *shellOptions) *bool { return &o.litHist }, noHistory),
+	recorded("lithist", false, func(o *shellOptions) *bool { return &o.litHist }, historyAsTyped),
 	acts("localvar_inherit", func(o *shellOptions) *bool { return &o.localVarInherit }),
 	fixed("localvar_unset", true, "unsetting a caller's local leaves it unset until that function returns, as busybox has it"),
 	{name: "login_shell", kind: shoptStartup},
