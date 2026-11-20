@@ -82,6 +82,8 @@ func (e *viEditor) markPlace(key rune) (viPos, bool) {
 	switch {
 	case key == '\'' || key == '`':
 		mark = e.context
+	case key == '<' || key == '>':
+		mark = e.visualMarks[strings.IndexRune("<>", key)]
 	case key|0x20 >= 'a' && key|0x20 <= 'z':
 		mark = e.marks[key|0x20-'a']
 	}

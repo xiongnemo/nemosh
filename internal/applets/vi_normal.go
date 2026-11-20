@@ -18,6 +18,7 @@ func (e *viEditor) normalKey(key rune) {
 	case key >= '1' && key <= '9' || key == '0' && e.count > 0:
 		e.count = min(e.count*10+int(key-'0'), 1<<24)
 		return
+	case e.visual != 0 && e.visualKey(key):
 	case e.op != 0:
 		e.operatorKey(key)
 	case e.motionKey(key):
@@ -73,6 +74,8 @@ func (e *viEditor) commandKey(key rune) {
 		e.startOperator(key)
 	case 'p', 'P':
 		e.put(key)
+	case 'v', 'V':
+		e.visual, e.visualStart = key, e.cursor()
 	case 'J':
 		e.join()
 	case 'u':
@@ -126,6 +129,8 @@ func (e *viEditor) secondKey(first, key rune) {
 		e.mark(key)
 	case first == '\'' || first == '`':
 		e.goToMark(first, key)
+	case first == 'r' && e.visual != 0:
+		e.replaceSelection(key)
 	case first == 'r':
 		e.replaceChars(key)
 	case first == 'Z' && key == 'Z':

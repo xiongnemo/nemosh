@@ -12,7 +12,8 @@ const viRepeatable = "aAcCdDiIJoOpPrRsSxX<>~"
 
 // startRecording begins keeping keys at a command that changes the buffer.
 func (e *viEditor) startRecording(key rune) {
-	if e.repeating {
+	if e.repeating || e.visual != 0 {
+		// What a selection is cut from is not kept for the dot, which repeats only commands.
 		return
 	}
 	if e.recording == nil && e.mode == viNormal && e.pending == 0 && e.op == 0 && key != 0 &&

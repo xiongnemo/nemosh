@@ -103,6 +103,11 @@ type viEditor struct {
 	savedCRLF                     bool
 	// shown is lines shown at the foot of the screen until Enter; see vi_message.go.
 	shown []string
+	// visual is v or V while a selection is made, from visualStart to the cursor, and
+	// visualMarks '< and '>, where the last began and ended. See vi_visual.go.
+	visual      rune
+	visualStart viPos
+	visualMarks [2]viMark
 	// insertStart is where the insert began, which ^U and ^W stop at; replaceStart and replaced
 	// are where R began and what each character it typed took the place of, -1 for none;
 	// literalNext is a ^V waiting for its key; indentRow and indentLen the line autoindent gave

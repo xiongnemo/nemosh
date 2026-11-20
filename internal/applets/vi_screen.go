@@ -72,7 +72,7 @@ func (e *viEditor) draw() {
 		if gutter > 0 {
 			e.drawPlain(y, fmt.Sprintf("%*d ", gutter-1, index+1), tcell.StyleDefault)
 		}
-		e.drawLine(y, e.lines[index], gutter)
+		e.drawLine(y, index, gutter)
 	}
 	if len(e.shown) > 0 {
 		e.drawShown()
@@ -82,9 +82,13 @@ func (e *viEditor) draw() {
 	e.screen.Show()
 }
 
-func (e *viEditor) drawLine(y int, line []rune, gutter int) {
+func (e *viEditor) drawLine(y, row, gutter int) {
 	column, previous := 0, -1
-	for _, r := range line {
+	for index, r := range e.lines[row] {
+		style := tcell.StyleDefault
+		if e.selected(row, index) {
+			style = style.Reverse(true)
+		}
 		shown, width := viGlyph(r, column, e.tabstop)
 		if width == 0 {
 			if previous >= 0 {
@@ -99,7 +103,7 @@ func (e *viEditor) drawLine(y int, line []rune, gutter int) {
 				break
 			}
 			if x >= gutter && x < e.width {
-				e.screen.SetContent(x, y, glyph, nil, tcell.StyleDefault)
+				e.screen.SetContent(x, y, glyph, nil, style)
 				previous = x
 			}
 		}
@@ -117,6 +121,10 @@ func (e *viEditor) drawStatus() {
 	style := tcell.StyleDefault
 	text := e.status()
 	switch {
+	case e.visual == 'v' && e.message == "":
+		text = "-- VISUAL --"
+	case e.visual == 'V' && e.message == "":
+		text = "-- VISUAL LINE --"
 	case e.mode == viCommandLine:
 		text = string(e.command)
 	case e.message != "":
