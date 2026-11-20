@@ -47,25 +47,6 @@ func (e *viEditor) displayColumn(line []rune, col int) int {
 // textRows is the rows the buffer is drawn in: all but the status line.
 func (e *viEditor) textRows() int { return max(1, e.height-1) }
 
-// scrollToCursor moves the first line and the first column shown just far enough to show the
-// cursor.
-func (e *viEditor) scrollToCursor() {
-	rows := e.textRows()
-	if e.row < e.top {
-		e.top = e.row
-	}
-	if e.row >= e.top+rows {
-		e.top = e.row - rows + 1
-	}
-	column := e.displayColumn(e.line(), e.col)
-	if column < e.left {
-		e.left = column
-	}
-	if column >= e.left+e.width {
-		e.left = column - e.width + 1
-	}
-}
-
 func (e *viEditor) draw() {
 	e.scrollToCursor()
 	e.screen.Clear()

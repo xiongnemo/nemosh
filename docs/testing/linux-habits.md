@@ -131,7 +131,7 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `w`, `who`, `last` | missing | |
 | `lscpu`, `lsblk`, `mount`, `vmstat`, `iostat` | missing | `nproc`, `df`, `free`, `top` |
 | `envsubst`, `numfmt`, `fmt`, `pr`, `csplit`, `whereis` | missing | |
-| `vi`, `vim` | partial | `vi` is busybox-w32's, being built a command at a time: moving, inserting, `:w`, `:q`, `ZZ`; `vim` is PATH's, Git's |
+| `vi`, `vim` | partial | `vi` is busybox-w32's, being built a command at a time: moving with counts, inserting, `:w`, `:q`, `ZZ`; `vim` is PATH's, Git's |
 | `sudo` | missing | decided against: see the support matrix's Elevation |
 | `systemctl`, `journalctl`, `apt`, `jq`, `rsync`, `tmux`, `screen` | missing | not planned |
 

@@ -46,8 +46,15 @@ type viEditor struct {
 	// is scrolled rather than wrapped, as busybox draws it.
 	top, left int
 	mode      viMode
-	// pending is a command key that waits for the one after it, as Z does.
+	// pending is a command key that waits for the one after it, as Z does, and count the
+	// number typed before a command, 0 for none.
 	pending rune
+	count   int
+	// keepWant says the command just run chose want itself, as j, k and $ do.
+	keepWant bool
+	// lastFind and findTarget are the last f, F, t or T and the key it looked for, which ;
+	// and , look for again.
+	lastFind, findTarget rune
 	// command is the line typed after : or /, its first rune the prompt.
 	command []rune
 	// message is shown once on the status line, in reverse when bold, as busybox's.

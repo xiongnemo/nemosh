@@ -14,7 +14,8 @@ patch number is the commits since that tag.
 
 - **`vi`**, busybox-w32's, with vim's ways where the two differ on a key a Debian user knows;
   `fc` with no `EDITOR` and `C-x C-e` in vi mode open it, where they found nothing. Being built
-  a command at a time: this first part moves (`h j k l`, the arrows, `0 $`), inserts (`i a I A`),
+  a command at a time: so far it moves -- `h j k l`, words, lines, brackets, paragraphs, `f t`,
+  the screen, with counts, each landing where busybox's and vim's do -- inserts (`i a I A`),
   writes and quits (`:w :wq :x :q :q! ZZ ZQ`) with busybox's status line and messages, and keeps
   a CRLF file CRLF. `vi -H` lists what it has; any other key says it is not implemented.
   `NEMOSH_OVERRIDE_APPLETS=vi` runs PATH's.

@@ -1,31 +1,39 @@
 package applets
 
-import "math"
-
-// Command mode, busybox's do_cmd. A key it does not implement says so, `'K' is not
-// implemented`, as busybox's not_implemented does, rather than doing nothing.
+// Command mode, busybox's do_cmd. A count before a command is typed as digits, 0 among them once
+// one has begun. A key it does not implement says so, `'K' is not implemented`, as busybox's
+// not_implemented does, rather than doing nothing.
 
 func (e *viEditor) normalKey(key rune) {
 	if e.pending != 0 {
 		first := e.pending
 		e.pending = 0
 		e.secondKey(first, key)
+	} else if key >= '1' && key <= '9' || key == '0' && e.count > 0 {
+		e.count = min(e.count*10+int(key-'0'), 1<<24)
 		return
+	} else if !e.motionKey(key) {
+		e.commandKey(key)
 	}
+	if e.pending == 0 {
+		e.afterCommand()
+	}
+}
+
+// afterCommand is the end of busybox's do_cmd: the count is spent, the cursor kept off a
+// line's end in command mode, and the column j and k keep to is where the cursor now is,
+// unless the command was one of those or $.
+func (e *viEditor) afterCommand() {
+	e.count = 0
+	e.clampColumn()
+	if !e.keepWant {
+		e.want = e.displayColumn(e.line(), e.col)
+	}
+	e.keepWant = false
+}
+
+func (e *viEditor) commandKey(key rune) {
 	switch key {
-	case 'h', viKeyLeft, 8, viBackspace:
-		e.moveColumn(-1)
-	case 'l', ' ', viKeyRight:
-		e.moveColumn(1)
-	case 'j', viKeyDown, 10, 14:
-		e.moveRow(1)
-	case 'k', viKeyUp, 16:
-		e.moveRow(-1)
-	case '0', viKeyHome:
-		e.col, e.want = 0, 0
-	case '$', viKeyEnd:
-		e.col, e.want = len(e.line()), math.MaxInt
-		e.clampColumn()
 	case 'i', viKeyInsert:
 		e.mode = viInsert
 	case 'a':
@@ -37,14 +45,11 @@ func (e *viEditor) normalKey(key rune) {
 		e.mode, e.col = viInsert, len(e.line())
 	case 'I':
 		// Before the first character that is not a blank, busybox's and vim's.
-		e.mode, e.col = viInsert, 0
-		for e.col < len(e.line()) && (e.line()[e.col] == ' ' || e.line()[e.col] == '\t') {
-			e.col++
-		}
+		e.mode, e.col = viInsert, e.firstNonBlank(e.row)
 	case ':':
 		e.mode, e.command = viCommandLine, []rune{':'}
-	case 'Z':
-		e.pending = 'Z'
+	case 'Z', 'g', 'z', 'f', 'F', 't', 'T':
+		e.pending = key
 	case 7:
 		// ^G says where the cursor is, which the status line already does once a message has
 		// gone.
@@ -63,36 +68,29 @@ func (e *viEditor) normalKey(key rune) {
 	}
 }
 
-// secondKey is the key after one that waits for another: ZZ writes if the buffer changed and
-// quits, :x; ZQ quits without writing, :q!; any other Z is an error.
+// secondKey is the key after one that waits for another. ZZ writes if the buffer changed and
+// quits, :x, and ZQ quits without writing, :q!; gg is line count, or the first; z puts the
+// cursor's line somewhere on the screen; f, F, t and T look for the key. Escape abandons any of
+// them, as in vim.
 func (e *viEditor) secondKey(first, key rune) {
 	switch {
+	case key == viEscape:
 	case first == 'Z' && key == 'Z':
 		e.exCommand("x")
 	case first == 'Z' && key == 'Q':
 		e.exCommand("q!")
+	case first == 'g' && key == 'g':
+		e.goToLine(max(1, e.count))
+	case first == 'g':
+		e.say(true, "'g%s' is not implemented", viKeyName(key))
+	case first == 'z':
+		e.redrawAround(key)
+	case first == 'f' || first == 'F' || first == 't' || first == 'T':
+		e.lastFind, e.findTarget = first, key
+		e.findChar(first)
 	default:
 		e.beep()
 	}
-}
-
-// moveColumn moves along the line, stopping at either end.
-func (e *viEditor) moveColumn(by int) {
-	e.col += by
-	e.clampColumn()
-	e.want = e.displayColumn(e.line(), e.col)
-}
-
-// moveRow moves to another line, keeping the display column the cursor last chose.
-func (e *viEditor) moveRow(by int) {
-	row := e.row + by
-	if row < 0 || row >= len(e.lines) {
-		e.beep()
-		return
-	}
-	e.row = row
-	e.col = e.columnAt(e.want)
-	e.clampColumn()
 }
 
 // columnAt is the rune of the cursor's line that covers display column want, or its last.
