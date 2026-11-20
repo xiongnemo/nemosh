@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 80   |
-| partial | 8    |
+| works   | 92   |
+| partial | 12   |
 | refused | 6    |
-| missing | 13   |
+| missing | 14   |
 
 ## Existing commands
 
@@ -147,5 +147,33 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 | `$BASH_VERSION`, `$BASH_VERSINFO` | works | bash 5.2's when run as bash; unset as sh or nemosh |
 | `$COLUMNS`, `$LINES` at the prompt | works | before each prompt, as `checkwinsize` has them |
 | `fg`, `bg`, Ctrl-Z | refused | will not be: nothing here can suspend a job |
-| `~/.bashrc`, `~/.bash_aliases` | missing | `~/.nemoshrc`, by design |
+| `~/.bashrc`, `~/.bash_aliases` | missing | `~/.nemoshrc`, by design; Ubuntu's `~/.bashrc` runs there, below |
 | `/proc/cpuinfo`, `/etc/os-release`, `/dev/tty` | missing | `/dev/null`, `/dev/clipboard`, `/tmp` are here |
+
+## Ubuntu's .bashrc, line by line
+
+What an administrator gets by copying Ubuntu's `/etc/skel/.bashrc` into `~/.nemoshrc`, taken on
+2026-11-21 from the bash package's own copy (`cmd/nemosh/testdata/README.md` says where), and
+measured with the built binary in a scratch HOME, a console robot reading the prompt back.
+`TestSession_runsUbuntusStockStartupFiles` runs it, Ubuntu's `/etc/bash.bashrc` and its
+`~/.profile`. It runs to the end and says nothing.
+
+| line | status | note |
+| --- | --- | --- |
+| `case $- in *i*) ;; *) return;; esac` | works | a script reads no rc file; a `return` at an rc file's top level leaves only the file, as in bash, where it ended the shell until 2026-11-21 |
+| `HISTCONTROL=ignoreboth` | works | the history, the arrows and the file |
+| `shopt -s histappend` | works | the file is appended to a command at a time either way, and a prompt says so |
+| `HISTSIZE=1000`, `HISTFILESIZE=2000` | partial | the file keeps 2000; a session keeps at most 999, busybox's `MAX_HISTORY` |
+| `shopt -s checkwinsize` | works | on already |
+| `[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"` | missing | the test is false, as in busybox-w32: `/usr/bin/X` is an applet only as a command name or after `#!`; there is no lesspipe, and less reads no `LESSOPEN` |
+| `debian_chroot`, `/etc/debian_chroot` | works | no such file, so no chroot in the prompt, as on a machine that is not one |
+| `case "$TERM" in xterm-color\|*-256color)`, the title in `PS1` | partial | a Windows console sets no `TERM`, so no colour and no title; with `TERM=xterm-256color` both are drawn, which Git's bash sets |
+| `force_color_prompt=yes`, uncommented | partial | turns colour off: `[ -x /usr/bin/tput ]` is false, as above, though `tput setaf 1` works |
+| `PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '` | works | in place of nemosh's two-line prompt |
+| `[ -x /usr/bin/dircolors ]`, `eval "$(dircolors -b)"`, the ls and grep aliases | works | the test is false and the block is skipped, but a session has those aliases and dircolors' `LS_COLORS` already |
+| `alias ll='ls -alF'`, `la`, `l` | works | |
+| `alias alert='notify-send ...'` | partial | defined; running `alert` is `notify-send: not found`, 127 |
+| `[ -f ~/.bash_aliases ] && . ~/.bash_aliases` | works | when there is one |
+| `if ! shopt -oq posix; then . /usr/share/bash-completion/bash_completion` | works | posix is off; neither file is there, so nothing is read, and completion is nemosh's own |
+| Ubuntu's `/etc/bash.bashrc`: `[ -z "${PS1-}" ] && return` | works | an interactive shell has `PS1` before its startup files; until 2026-11-21 it had none and the session closed at this line |
+| Ubuntu's `~/.profile` under `bash -l` | works | `$BASH_VERSION` is set, so it reads `~/.bashrc` |
