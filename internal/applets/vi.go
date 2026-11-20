@@ -76,10 +76,22 @@ type viEditor struct {
 	// message is shown once on the status line, in reverse when bold, as busybox's.
 	message string
 	bold    bool
-	// modified counts the changes since the buffer was last written, busybox's modified_count.
-	modified int
-	tabstop  int
-	quit     bool
+	tabstop int
+	quit    bool
+	// undo and redo are the changes made and undone, seq numbers them, and savedSeq is the one
+	// the file holds; changeOpen says the command now running has begun one, undoing that undo
+	// or redo is putting one back, and restoringLine that U is. See vi_undo.go.
+	undo, redo               []viChange
+	seq, savedSeq            int
+	changeOpen, undoing      bool
+	restoringLine, repeating bool
+	// lineRow and lineBefore are the line U puts back and what it was.
+	lineRow    int
+	lineBefore []rune
+	// recording is the keys of a command that changes the buffer, kept as lastChange for the
+	// dot with the count it had. See vi_dot.go.
+	recording, lastChange  []rune
+	recordCount, lastCount int
 }
 
 func newViApplet() Applet {

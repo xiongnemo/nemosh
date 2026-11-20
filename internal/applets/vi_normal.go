@@ -6,6 +6,10 @@ package applets
 
 func (e *viEditor) normalKey(key rune) {
 	before := e.cursor()
+	if e.pending == 0 && e.op == 0 && !e.repeating {
+		// Each command is a change of its own to undo; see vi_undo.go.
+		e.closeChange()
+	}
 	switch {
 	case e.pending != 0:
 		first := e.pending
@@ -69,6 +73,16 @@ func (e *viEditor) commandKey(key rune) {
 		e.put(key)
 	case 'J':
 		e.join()
+	case 'u':
+		for range e.times() {
+			e.undoChange()
+		}
+	case 18:
+		for range e.times() {
+			e.redoChange()
+		}
+	case 'U':
+		e.restoreLine()
 	case 'R':
 		e.mode = viReplace
 	case '~':

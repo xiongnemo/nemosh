@@ -54,7 +54,7 @@ func (e *viEditor) exCommand(line string) {
 		e.exQuit(name, force)
 	case name == "wq" || name == "x" || strings.HasPrefix("xit", name) && len(name) > 1:
 		// :x writes only a buffer that changed, :wq always; then each quits if that went well.
-		if (name == "wq" || e.modified > 0) && !e.exWrite(argument, force) {
+		if (name == "wq" || e.isModified()) && !e.exWrite(argument, force) {
 			return
 		}
 		e.quit = true
@@ -66,7 +66,7 @@ func (e *viEditor) exCommand(line string) {
 }
 
 func (e *viEditor) exQuit(name string, force bool) {
-	if e.modified > 0 && !force {
+	if e.isModified() && !force {
 		e.say(true, "No write since last change (:%s! overrides)", name)
 		return
 	}
@@ -113,7 +113,7 @@ func (e *viEditor) exWrite(name string, force bool) bool {
 		own = true
 	}
 	if own {
-		e.modified = 0
+		e.markSaved()
 	}
 	return true
 }

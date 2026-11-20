@@ -13,6 +13,7 @@ const viFeatures = `vi: busybox-w32's vi, with vim's ways where the two differ; 
 	operators     d c y < > over a motion, doubled for lines: dd cc yy << >>, with counts
 	changing      x X s S D C Y, r R ~ J, p P, o O
 	registers     "a to "z, "A to "Z to append; marks m, ', the backtick, two quotes back
+	undoing       u ^R as often as there were changes, U for a line, and . to repeat one
 	inserting     i a I A, the Insert key; Escape or ^C to leave; Enter, Backspace, the arrows
 	writing       :w :w! :w FILE :wq :x ZZ
 	quitting      :q :q! ZQ

@@ -4,20 +4,20 @@ package applets
 // marks on the lines they were on, as vim's are kept; busybox's are pointers into its array that
 // an edit before them leaves pointing at whatever moved there.
 
-// replaceLines puts with in place of lines [from, to). A buffer never has no lines: emptied, it
-// is one empty line, as busybox adds one back.
+// replaceLines puts with in place of lines [from, to), and records it for undo. A buffer never
+// has no lines: emptied, it is one empty line, as busybox adds one back.
 func (e *viEditor) replaceLines(from, to int, with [][]rune) {
+	if len(e.lines)-(to-from)+len(with) == 0 {
+		with = [][]rune{{}}
+	}
+	e.record(from, copyLines(e.lines[from:to]), copyLines(with))
 	rest := append([][]rune(nil), e.lines[to:]...)
 	e.lines = append(append(e.lines[:from:from], with...), rest...)
-	if len(e.lines) == 0 {
-		e.lines = [][]rune{{}}
-	}
 	delta := len(with) - (to - from)
 	for index := range e.marks {
 		e.marks[index] = e.adjustMark(e.marks[index], from, to, delta, len(with))
 	}
 	e.context = e.adjustMark(e.context, from, to, delta, len(with))
-	e.changed()
 }
 
 // adjustMark is where a mark goes when lines [from, to) become count lines: on with the lines

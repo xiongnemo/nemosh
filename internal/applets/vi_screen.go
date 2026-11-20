@@ -138,7 +138,7 @@ func (e *viEditor) status() string {
 	if e.file.readOnly {
 		flags += " [Readonly]"
 	}
-	if e.modified > 0 {
+	if e.isModified() {
 		flags += " [Modified]"
 	}
 	current, total := e.row+1, len(e.lines)

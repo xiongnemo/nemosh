@@ -9,6 +9,7 @@ func (e *viEditor) insertKey(key rune) {
 	switch {
 	case key == viEscape || key == 3:
 		e.mode = viNormal
+		e.closeChange()
 		if e.col > 0 {
 			e.col--
 		}
@@ -70,6 +71,3 @@ func (e *viEditor) backspace() {
 		e.beep()
 	}
 }
-
-// changed counts a change, which marks the buffer [Modified].
-func (e *viEditor) changed() { e.modified++ }

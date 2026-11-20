@@ -57,8 +57,15 @@ func (e *viEditor) handle(event tcell.Event) {
 	}
 }
 
-// key is one key, read in the mode the editor is in.
+// key is one key, read in the mode the editor is in, and kept for the dot when it is part of a
+// command that changes the buffer.
 func (e *viEditor) key(key rune) {
+	if key == '.' && e.mode == viNormal && e.pending == 0 && e.op == 0 {
+		e.repeatChange()
+		e.count = 0
+		return
+	}
+	e.startRecording(key)
 	switch e.mode {
 	case viInsert, viReplace:
 		e.insertKey(key)
@@ -67,6 +74,7 @@ func (e *viEditor) key(key rune) {
 	default:
 		e.normalKey(key)
 	}
+	e.finishRecording()
 }
 
 // say puts a message on the status line, bold for an error, as busybox's status_line and
