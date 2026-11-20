@@ -43,13 +43,14 @@ PS1='\[\e[1;34m\]\u@\h\[\e[0m\] \[\e[33m\]\w\[\e[0m\]$(__nemosh_branch)${__nemos
 # differently, by design (docs/testing/linux-habits.md, "Ubuntu's .bashrc, line by line"):
 #
 # TERM is set by nothing on Windows -- not conhost, not Windows Terminal, and not this shell,
-# for TERM says what the terminal is and only the terminal knows; busybox-w32 sets none either,
-# and Git's bash sets it from its own runtime. So `case "$TERM" in xterm-color|*-256color)`
-# finds nothing and the prompt gets no colour and no title. In Windows Terminal, or another
-# that draws xterm's sequences, say so here. Every program run from the shell sees it too, and
+# for TERM says what the terminal is and only the terminal knows; busybox-w32 sets none either.
+# A session is the Windows console's even when the environment brought one, as Git's bash
+# exports xterm-256color: it sets that aside before this file runs, and says so if this file
+# sets none. So `case "$TERM" in xterm-color|*-256color)` finds nothing and the prompt gets no
+# colour and no title. In Windows Terminal, or another that draws xterm's sequences, say so
+# here, which keeps the warning away too. Every program run from the shell sees it, and
 # nemosh's own top, less, nano and vi, through tcell, then ask the terminal for xterm's
-# modifyOtherKeys and kitty's keyboard protocol beside win32-input-mode: their keys were
-# measured with TERM unset.
+# modifyOtherKeys and kitty's keyboard protocol beside win32-input-mode.
 # export TERM=xterm-256color
 #
 # A test of a path, `[ -x /usr/bin/tput ]` or `[ -x /usr/bin/dircolors ]`, is false here, as

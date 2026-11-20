@@ -72,9 +72,16 @@ default prompts it draws, as bash's has, so a file that asks `[ -z "${PS1-}" ]` 
 it is interactive -- Ubuntu's `/etc/bash.bashrc` returns at once when it is empty, and its
 `/etc/profile` reads `/etc/bash.bashrc` only when it is not -- is told yes. A script has
 neither, as in bash. `TERM` is not set, by design and as busybox-w32 sets none: it says what
-the terminal is, which only the terminal knows, and conhost and Windows Terminal set none;
-`docs/examples/nemoshrc` shows the line for one that draws xterm's sequences, and what it
-changes. And `[ -x /usr/bin/tput ]` is false, by design: `/usr/bin/NAME` is an applet only as
+the terminal is, which only the terminal knows, and conhost and Windows Terminal set none. A
+session is the Windows console's even when the environment brought one, as Git's bash
+exports xterm-256color: that is set aside before the startup files run -- so its children
+and nemosh's own full-screen applets take the console for what it is -- and, unless they set
+one again, the session says `nemosh: set aside inherited TERM=xterm-256color; export TERM in
+~/.nemoshrc to keep it`. `NEMOSH_DEFAULTS=off` keeps it, and a script passes its environment
+through as any shell does. tcell reads the process's `TERM` where the shell's is the one that
+counts, so a full-screen applet makes the two the same before it starts.
+`docs/examples/nemoshrc` shows the line for a terminal that draws xterm's sequences, and what
+it changes. And `[ -x /usr/bin/tput ]` is false, by design: `/usr/bin/NAME` is an applet only as
 a command's name or after `#!`, as in busybox-w32, `ls /usr/bin` listing nothing. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
 every account: `ll='ls -alF'`, `la='ls -A'`, `l='ls -CF'`, and `ls`, `grep`, `egrep` and
 `fgrep` with `--color=auto`; and an exported `LS_COLORS`, what `eval "$(dircolors -b)"`

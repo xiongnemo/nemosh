@@ -178,6 +178,13 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **A session sets aside a `TERM` it inherits**, as Git's bash exports `xterm-256color`: a
+  session is the Windows console's, which sets none, so its programs and nemosh's own vi, nano,
+  less and top take the console for what it is. It says so, `nemosh: set aside inherited
+  TERM=xterm-256color; export TERM in ~/.nemoshrc to keep it`, unless the rc file sets one;
+  `NEMOSH_DEFAULTS=off` keeps it, and a script's environment is passed through as it was. A
+  `TERM` set in the shell now reaches those applets, which read the process's.
+
 - **`ls` reads `LS_COLORS`**, as GNU's does, by type and by suffix, and **a session exports
   dircolors' database**, as Ubuntu's `~/.bashrc` does with `eval "$(dircolors -b)"`: an archive is
   red, a picture magenta, a sound cyan, a backup grey. Unset, ls keeps busybox's three colours;

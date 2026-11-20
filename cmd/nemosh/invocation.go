@@ -232,6 +232,7 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 // it is in both references, and `-s ARG...` gives the session its positional parameters.
 func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 	rt.SetArguments(c.scriptName(), c.invocation.operands)
+	term, aside := rt.SetAsideInheritedTERM()
 	if err := c.startShell(ctx, rt, "is"); err != nil {
 		return err
 	}
@@ -239,6 +240,7 @@ func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 	if status, exited := c.sourceRCFile(ctx, rt); exited {
 		return startupExit(rt, status)
 	}
+	c.sayTERMSetAside(rt, term, aside)
 	setDefaultHistoryFile(rt, c.stderr)
 	sayOldSpecs(c.stderr, sessionSpecLookup)
 	return nil
@@ -252,6 +254,7 @@ func (c command) runSessionCommand(ctx context.Context, controller *interruptCon
 	rt := c.newRuntime()
 	invocation := commandStringInvocation(c.scriptName(), args)
 	rt.SetArguments(invocation.name, invocation.args)
+	term, aside := rt.SetAsideInheritedTERM()
 	if err := c.startShell(ctx, rt, "ic"); err != nil {
 		return err
 	}
@@ -259,6 +262,7 @@ func (c command) runSessionCommand(ctx context.Context, controller *interruptCon
 	if status, exited := c.sourceRCFile(ctx, rt); exited {
 		return startupExit(rt, status)
 	}
+	c.sayTERMSetAside(rt, term, aside)
 	setDefaultHistoryFile(rt, c.stderr)
 	sayOldSpecs(c.stderr, sessionSpecLookup)
 	rt.MarkSession()

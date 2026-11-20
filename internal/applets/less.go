@@ -72,7 +72,7 @@ func newLessApplet() Applet {
 		if lessCanPage(stdout) {
 			// A terminal that cannot be driven is not a failure worth stopping for: the
 			// text is what was asked for, and the paging was the decoration.
-			screen, _ = tcell.NewScreen()
+			screen, _ = newConsoleScreen(ctx)
 		}
 		if screen == nil {
 			return writeLessStreaming(ctx, stdout, lessSources(files), settings)

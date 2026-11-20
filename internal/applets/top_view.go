@@ -52,7 +52,7 @@ func runTopInteractive(ctx context.Context, options topOptions, stdin io.Reader,
 	// console API through the process's own handles, and those are this terminal -- the fd
 	// table only sends fd 1 elsewhere when it was redirected, and a redirected top took the
 	// plain path above and never got here.
-	screen, err := tcell.NewScreen()
+	screen, err := newConsoleScreen(ctx)
 	if err != nil {
 		// tcell could not drive this terminal. Say so and fall back rather than failing:
 		// the numbers are worth having even without the drawing.

@@ -158,7 +158,7 @@ func runEditor(ctx context.Context, session *editorSession, keys editorKeyMap, s
 	if input == nil || !term.IsTerminal(int(input.Fd())) {
 		return fmt.Errorf("standard input is not a terminal, so no key can be read")
 	}
-	screen, err := tcell.NewScreen()
+	screen, err := newConsoleScreen(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot drive this terminal: %v", err)
 	}

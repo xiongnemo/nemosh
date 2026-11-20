@@ -271,7 +271,7 @@ func runViOnTerminal(ctx context.Context, editor *viEditor, stdin io.Reader) err
 	if input == nil || !term.IsTerminal(int(input.Fd())) {
 		return fmt.Errorf("standard input is not a terminal, so no key can be read")
 	}
-	screen, err := tcell.NewScreen()
+	screen, err := newConsoleScreen(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot drive this terminal: %v", err)
 	}

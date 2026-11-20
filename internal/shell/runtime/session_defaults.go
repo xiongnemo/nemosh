@@ -46,6 +46,20 @@ func (r Runtime) NoteWindowSize(columns, lines int) {
 	}
 }
 
+// SetAsideInheritedTERM is a session's TERM on Windows: the Windows console's, which is none,
+// whatever the environment brought -- Git's bash exports xterm-256color, and so may whatever
+// started this shell, and every program run from the session, nemosh's own full-screen applets
+// among them, would take the console for that terminal. It is unset before the rc file runs,
+// which can set one again, and answered, so the session can say so. NEMOSH_DEFAULTS=off keeps it.
+func (r Runtime) SetAsideInheritedTERM() (string, bool) {
+	term, set := r.vars["TERM"]
+	if !set || !r.isExported("TERM") || r.vars[sessionDefaultsVariable] == "off" {
+		return "", false
+	}
+	r.unsetName("TERM")
+	return term, true
+}
+
 // SetSessionDefaults gives a session what Ubuntu's gets, before its rc file is read.
 func (r Runtime) SetSessionDefaults() {
 	if r.vars[sessionDefaultsVariable] == "off" {
