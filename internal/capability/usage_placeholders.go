@@ -11,6 +11,7 @@ package capability
 var valuePlaceholderTable = [...]placeholderRow{
 	{"fce", "EDITOR"},
 	{"vic", "COMMAND"},
+	{"viewc", "COMMAND"},
 	{"historyd", "OFFSET"},
 	{"hexdumps", "OFFSET"},
 	{"hds", "OFFSET"},

@@ -220,6 +220,16 @@ question goes back to the buffer. `^O` then Enter writes and adds no blank line.
 the buffer must **not** leave -- it shows the cursor's line and column. The tests drive
 both spellings of Ctrl-C tcell can deliver; only a real console says which one it sends.
 
+`vi` since 2026-11-21, in Windows Terminal as well as a plain console. What a robot drove
+there is covered -- moving, editing, undo, searching, `:s`, files, `:!`, visual mode, each case
+against busybox-w32's vi and vim -- so look only at what a robot reads as characters: a `v`
+or `V` selection shows in reverse, and a `:s/x/y/gc` question too on the bottom line; `:set nu`
+puts the numbers in a column of their own; a file with Chinese in it keeps its columns, the
+cursor on a wide character's first cell; after `:!dir` the console shows dir's output and
+`[Hit return to continue]`, and Enter brings the buffer back as it was. Resize the window
+in the middle of a long file: the screen redraws and the status line is still at the bottom.
+On leaving with `:q`, the prompt echoes and Ctrl-C still works.
+
 `watch -n 1 date`, confirmed 2026-10-06: the screen clears every second under
 `Every 1.0s: date`, the date at its right edge. Widen or narrow the window and the
 date moves to the new edge at the next run; one that stays near column 60 means the

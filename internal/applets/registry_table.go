@@ -161,6 +161,7 @@ var defaultApplets = [...]appletEntry{
 	{"uuencode", newUuencodeApplet},
 	{"uuidgen", newUUIDGenApplet},
 	{"vi", newViApplet},
+	{"view", newViewApplet},
 	{"wc", newWcApplet},
 	{"wget", newWgetApplet},
 	{"whatis", func() Applet { return newManApplet("whatis") }},

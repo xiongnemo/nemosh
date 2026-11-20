@@ -22,7 +22,7 @@ func (e *viEditor) substitute(first, last int, argument string) {
 	}
 	pattern, rest := splitSearch(argument[size:], delimiter)
 	replacement, flags := splitSearch(rest, delimiter)
-	global, ignoreCase := false, e.ignoreCase
+	global, ignoreCase, confirm := false, e.ignoreCase, false
 	for _, flag := range flags {
 		switch flag {
 		case 'g':
@@ -32,8 +32,7 @@ func (e *viEditor) substitute(first, last int, argument string) {
 		case 'I':
 			ignoreCase = false
 		case 'c':
-			e.say(true, "the c flag of :s is not implemented yet")
-			return
+			confirm = true
 		default:
 			e.say(true, "Trailing characters: %s", flags)
 			return
@@ -56,6 +55,10 @@ func (e *viEditor) substitute(first, last int, argument string) {
 	}
 	if err != nil {
 		e.say(true, ":s bad search pattern")
+		return
+	}
+	if confirm {
+		e.startConfirm(re, replacement, global, first, last)
 		return
 	}
 	count, changed, row := 0, 0, last-1

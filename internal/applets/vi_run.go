@@ -63,6 +63,10 @@ func (e *viEditor) key(key rune) {
 	if e.dismissKey(key) {
 		return
 	}
+	if e.confirming != nil {
+		e.confirmKey(key)
+		return
+	}
 	if key == '.' && e.mode == viNormal && e.pending == 0 && e.op == 0 {
 		e.repeatChange()
 		e.count = 0

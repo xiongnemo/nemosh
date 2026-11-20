@@ -95,3 +95,15 @@ func TestFc_editsAndRuns(t *testing.T) {
 		t.Fatalf("stderr = %q, want %q", stderr, wantErr)
 	}
 }
+
+// With neither -e, FCEDIT nor EDITOR, fc edits in vi, which is this shell's own: the vi applet,
+// which refuses a standard input that is not a terminal. It found nothing before vi was here.
+func TestFc_editsInThisShellsVi(t *testing.T) {
+	script := "unset FCEDIT EDITOR\nhistory -s \"echo one\"\nfc -1 </dev/null; echo s=$?\n"
+
+	_, stdout, stderr := runSetScript(t, script)
+
+	if stdout != "s=1\n" || !strings.Contains(stderr, "vi: standard input is not a terminal") {
+		t.Fatalf("stdout %q, stderr %q", stdout, stderr)
+	}
+}

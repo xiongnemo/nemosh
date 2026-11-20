@@ -12,9 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
-- **`vi`**, busybox-w32's, with vim's ways where the two differ on a key a Debian user knows;
-  `fc` with no `EDITOR` and `C-x C-e` in vi mode open it, where they found nothing. Being built
-  a command at a time: so far it moves -- `h j k l`, words, lines, brackets, paragraphs, `f t`,
+- **`vi`** and **`view`**, busybox-w32's vi with vim's ways where the two differ on a key a
+  Debian user knows, every case measured against both; `fc` with no `EDITOR` and `C-x C-e` in
+  vi mode open it, where they found nothing. It moves -- `h j k l`, words, lines, brackets, paragraphs, `f t`,
   the screen, searches (`/ ? n N * #`), with counts, each landing where busybox's and vim's do --
   edits with the operators
   `d c y < >`, `x s D C r R J ~ p P o O`, registers and marks, undoes and redoes (`u ^R U`),

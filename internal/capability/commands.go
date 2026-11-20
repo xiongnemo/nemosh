@@ -150,6 +150,7 @@ var commands = []Command{
 	{Name: "unzip", Short: "lnojptqvKdx", ValueShort: "d", Operand: AnyPath},
 	{Name: "nano", Short: "HRl", Operand: AnyPath},
 	{Name: "vi", Short: "HRbc", ValueShort: "c", Operand: AnyPath},
+	{Name: "view", Short: "HRbc", ValueShort: "c", Operand: AnyPath},
 	{Name: "micro", Short: "HRl", Operand: AnyPath},
 	{Name: "ed", Short: "sp", ValueShort: "p", Operand: AnyPath},
 	{Name: "less", Short: "EFIMmNSRh~", Operand: AnyPath},

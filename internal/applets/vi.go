@@ -103,6 +103,8 @@ type viEditor struct {
 	savedCRLF                     bool
 	// shown is lines shown at the foot of the screen until Enter; see vi_message.go.
 	shown []string
+	// confirming is a :s with the c flag asking about a match; see vi_confirm.go.
+	confirming *viConfirm
 	// visual is v or V while a selection is made, from visualStart to the cursor, and
 	// visualMarks '< and '>, where the last began and ended. See vi_visual.go.
 	visual      rune
@@ -136,8 +138,13 @@ type viEditor struct {
 	recordCount, lastCount int
 }
 
-func newViApplet() Applet {
-	return simpleApplet{name: "vi", runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+func newViApplet() Applet { return newViEditorApplet("vi") }
+
+// newViewApplet is view, vim's vi -R.
+func newViewApplet() Applet { return newViEditorApplet("view") }
+
+func newViEditorApplet(name string) Applet {
+	return simpleApplet{name: name, runContext: func(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		options, operands, err := parseAppletOptions(ctx, args, "RHb", "c")
 		if err != nil {
 			return err
@@ -147,7 +154,7 @@ func newViApplet() Applet {
 			return err
 		}
 		startup, files := viStartup(operands)
-		editor := openVi(ctx, files, options.has('R'))
+		editor := openVi(ctx, files, options.has('R') || name == "view")
 		editor.stdin, editor.stdout, editor.stderr = stdin, stdout, stderr
 		for _, command := range options.all('c') {
 			startup = append(startup, strings.Split(command, "\n")...)
