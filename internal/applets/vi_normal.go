@@ -52,17 +52,19 @@ func (e *viEditor) afterCommand() {
 func (e *viEditor) commandKey(key rune) {
 	switch key {
 	case 'i', viKeyInsert:
-		e.mode = viInsert
+		e.enterInsert(viInsert)
 	case 'a':
-		e.mode = viInsert
 		if len(e.line()) > 0 {
 			e.col++
 		}
+		e.enterInsert(viInsert)
 	case 'A':
-		e.mode, e.col = viInsert, len(e.line())
+		e.col = len(e.line())
+		e.enterInsert(viInsert)
 	case 'I':
 		// Before the first character that is not a blank, busybox's and vim's.
-		e.mode, e.col = viInsert, e.firstNonBlank(e.row)
+		e.col = e.firstNonBlank(e.row)
+		e.enterInsert(viInsert)
 	case ':', '/', '?':
 		e.mode, e.command = viCommandLine, []rune{key}
 	case 'Z', 'g', 'z', 'f', 'F', 't', 'T', '"', 'm', '\'', '`', 'r':
@@ -84,7 +86,7 @@ func (e *viEditor) commandKey(key rune) {
 	case 'U':
 		e.restoreLine()
 	case 'R':
-		e.mode = viReplace
+		e.enterInsert(viReplace)
 	case '~':
 		e.toggleCase()
 	case 'o', 'O':

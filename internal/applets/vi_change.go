@@ -33,15 +33,19 @@ func (e *viEditor) applyOperator(p, q viPos, linewise bool) {
 			e.row = min(p.row, len(e.lines)-1)
 			e.col = e.firstNonBlank(e.row)
 		case 'c':
+			// With autoindent the line keeps its indent, busybox's newindent.
+			first := append([]rune(nil), e.lines[p.row]...)
 			e.replaceLines(p.row, q.row+1, [][]rune{{}})
-			e.row, e.col, e.mode = p.row, 0, viInsert
+			e.row, e.col = p.row, 0
+			e.enterInsert(viInsert)
+			e.giveIndent(p.row, first)
 		}
 	case e.charAt(p) == '\n' && p == q:
 		// busybox's yank_delete takes nothing from an empty line, or from a line's end; a
 		// change there only inserts.
 		if op == 'c' {
 			e.setCursor(p)
-			e.mode = viInsert
+			e.enterInsert(viInsert)
 		}
 	case op == 'y':
 		e.store(operation, e.textBetween(p, q), false)
@@ -50,7 +54,7 @@ func (e *viEditor) applyOperator(p, q viPos, linewise bool) {
 		e.store(operation, e.cutChars(p, q), false)
 		e.setCursor(p)
 		if op == 'c' {
-			e.mode = viInsert
+			e.enterInsert(viInsert)
 		}
 	}
 }
@@ -206,12 +210,15 @@ func (e *viEditor) toggleCase() {
 	e.col = end
 }
 
-// openLine is o and O: a new line below or above, and an insert on it.
+// openLine is o and O: a new line below or above, and an insert on it, with the cursor's line's
+// indent when autoindent is set, as busybox gives it.
 func (e *viEditor) openLine(key rune) {
-	row := e.row
+	row, from := e.row, append([]rune(nil), e.line()...)
 	if key == 'o' {
 		row++
 	}
 	e.replaceLines(row, row, [][]rune{{}})
-	e.row, e.col, e.mode = row, 0, viInsert
+	e.row, e.col = row, 0
+	e.enterInsert(viInsert)
+	e.giveIndent(row, from)
 }

@@ -1,9 +1,6 @@
 package applets
 
-import (
-	"math"
-	"strings"
-)
+import "math"
 
 // The motions, busybox's do_cmd, each run `count` times. Two are vim's where a console robot
 // found busybox's different (vi_motion_test.go): b from a line's start goes back over the
@@ -183,41 +180,6 @@ func (e *viEditor) paragraph(key rune) {
 		}
 	}
 	e.setCursor(p)
-}
-
-// matchBracket is busybox's %: the first of ()[]{} from the cursor to the line's end, then its
-// pair, nested pairs counted.
-func (e *viEditor) matchBracket() {
-	line := e.line()
-	for col := e.col; col < len(line); col++ {
-		at := strings.IndexRune("()[]{}", line[col])
-		if at < 0 {
-			continue
-		}
-		found, pair, dir := line[col], rune("()[]{}"[at^1]), 1
-		if at%2 == 1 {
-			dir = -1
-		}
-		p, level := viPos{e.row, col}, 1
-		for {
-			next, ok := e.step(p, dir)
-			if !ok {
-				e.beep()
-				return
-			}
-			p = next
-			switch e.charAt(p) {
-			case found:
-				level++
-			case pair:
-				if level--; level == 0 {
-					e.setCursor(p)
-					return
-				}
-			}
-		}
-	}
-	e.beep()
 }
 
 // findChar is busybox's dot_to_char: f and t forward, F and T back, count times, within the

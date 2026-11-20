@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"golang.org/x/term"
@@ -102,6 +103,16 @@ type viEditor struct {
 	savedCRLF                     bool
 	// shown is lines shown at the foot of the screen until Enter; see vi_message.go.
 	shown []string
+	// insertStart is where the insert began, which ^U and ^W stop at; replaceStart and replaced
+	// are where R began and what each character it typed took the place of, -1 for none;
+	// literalNext is a ^V waiting for its key; indentRow and indentLen the line autoindent gave
+	// an indent and how long, and matchPause how long showmatch shows a pair. See vi_insert.go.
+	insertStart          viPos
+	replaceStart         int
+	replaced             []rune
+	literalNext          bool
+	indentRow, indentLen int
+	matchPause           time.Duration
 	// files are the files given, fileIndex the one being edited, and alternate the one before,
 	// #; readOnlyMode is -R, which each file opens with. See vi_files.go.
 	files        []string
@@ -162,7 +173,8 @@ func viStartup(operands []string) ([]string, []string) {
 // openVi reads the first file, or starts an empty buffer, as busybox does before its first draw.
 func openVi(ctx context.Context, operands []string, readOnly bool) *viEditor {
 	editor := &viEditor{ctx: ctx, view: ProcessViewFromContext(ctx), tabstop: 8, register: viDefaultRegister,
-		fileFormats: "unix,dos", files: operands, readOnlyMode: readOnly}
+		fileFormats: "unix,dos", files: operands, readOnlyMode: readOnly, indentRow: -1,
+		matchPause: 400 * time.Millisecond}
 	name := ""
 	if len(operands) > 0 {
 		name = operands[0]
