@@ -67,7 +67,11 @@ at all, as mksh reads `~/.mkshrc`; an `ENV` set to nothing reads nothing, and
 `--rcfile FILE` and `--norc` take bash's meaning. `docs/examples/nemoshrc` is one to
 start from. Each of these files is read as `.` reads one, so a `return` at its top level
 leaves the file and the shell goes on, as bash and busybox's ash have it; it ended the
-shell. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
+shell. An interactive shell has `PS1` and `PS2` before any of them run, unexported, the
+default prompts it draws, as bash's has, so a file that asks `[ -z "${PS1-}" ]` whether
+it is interactive -- Ubuntu's `/etc/bash.bashrc` returns at once when it is empty, and its
+`/etc/profile` reads `/etc/bash.bashrc` only when it is not -- is told yes. A script has
+neither, as in bash. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
 every account: `ll='ls -alF'`, `la='ls -A'`, `l='ls -CF'`, and `ls`, `grep`, `egrep` and
 `fgrep` with `--color=auto`; and an exported `LS_COLORS`, what `eval "$(dircolors -b)"`
 leaves from coreutils 9.4's database, unless the environment had one. A script has none, the rc file can `unalias` any, and

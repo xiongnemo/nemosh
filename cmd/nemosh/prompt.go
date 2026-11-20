@@ -29,6 +29,19 @@ var (
 	defaultPS2 = promptDim + `>` + promptReset + ` `
 )
 
+// setDefaultPrompts gives an interactive shell PS1 and PS2 before its startup files run, as bash
+// gives one and busybox's ash gives every shell: a startup file asks `[ -z "${PS1-}" ]` whether
+// the shell is interactive, and Ubuntu's /etc/bash.bashrc returns at once when it is empty, as it
+// was here. They are the prompts drawn when none is set, so a prompt looks as it did; one the
+// environment brought is kept, and neither is exported.
+func setDefaultPrompts(rt runtime.Runtime) {
+	for _, prompt := range [...][2]string{{"PS1", defaultPS1}, {"PS2", defaultPS2}} {
+		if _, present := rt.LookupVariable(prompt[0]); !present {
+			rt.SetVariable(prompt[0], prompt[1])
+		}
+	}
+}
+
 func interactivePrompt(rt runtime.Runtime, continuation bool) string {
 	return interactivePromptWithStatus(context.Background(), rt, continuation, 0)
 }

@@ -204,6 +204,9 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 		}
 	}
 	rt.SetInvocationMode(mode)
+	if strings.ContainsRune(mode, 'i') {
+		setDefaultPrompts(rt)
+	}
 	rt.EnterShellLevel()
 	if c.name == "bash" {
 		rt.SetBashVersion()

@@ -213,6 +213,11 @@ patch number is the commits since that tag.
   prompt. The rc file, `~/.profile` and `/etc/profile` are read as `.` reads a file now, so the
   return leaves only the file, as in bash and busybox's ash.
 
+- **An interactive shell had no `PS1`**, so a startup file asking `[ -z "${PS1-}" ]` whether it
+  was interactive was told no: Ubuntu's `/etc/bash.bashrc` returned at its first line, and its
+  `/etc/profile` never read it. A session has `PS1` and `PS2` before its startup files now, its
+  default prompts, unexported, as bash's has; the prompt looks as it did.
+
 - **`kill 13` ended process 12**: Windows ignores a pid's low two bits, so a pid no process has
   opened its neighbour, and a typo was a different process killed -- by kill, pkill, killall,
   timeout and top alike, and top's priority keys changed it. The process opened is checked against

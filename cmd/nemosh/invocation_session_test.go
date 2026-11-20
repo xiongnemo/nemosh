@@ -53,6 +53,34 @@ func TestInvocation_sessionCommandAndRCFile(t *testing.T) {
 	}
 }
 
+// An interactive shell has PS1 and PS2 before its startup files run, as bash's has and busybox's
+// ash has in every shell, so Ubuntu's `[ -z "${PS1-}" ] && return`, /etc/bash.bashrc's first
+// line, and /etc/profile's `if [ "${PS1-}" ]` read it as interactive. They are this shell's
+// default prompts, which they were already drawn as, and not exported. A script has neither.
+func TestSession_hasPS1AndPS2BeforeItsStartupFiles(t *testing.T) {
+	t.Setenv("PS1", "")
+	t.Setenv("PS2", "")
+	os.Unsetenv("PS1")
+	os.Unsetenv("PS2")
+	rc := filepath.Join(t.TempDir(), "rc")
+	if err := os.WriteFile(rc, []byte("[ -z \"${PS1-}\" ] && return\necho rc-ran\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	report := `[ "$PS1" = "$want1" ] && [ "$PS2" = "$want2" ] && echo defaults; printenv PS1 PS2 || echo unexported`
+	t.Setenv("want1", defaultPS1)
+	t.Setenv("want2", defaultPS2)
+
+	session := runInvocation(t, "", "--rcfile", filepath.ToSlash(rc), "-i", "-c", report)
+	script := runInvocation(t, "", "-c", `echo "${PS1-unset} ${PS2-unset}"`)
+
+	if session.stdout != "rc-ran\ndefaults\nunexported\n" || session.status != 0 {
+		t.Errorf("a session: stdout %q, status %d, stderr %q", session.stdout, session.status, session.stderr)
+	}
+	if script.stdout != "unset unset\n" {
+		t.Errorf("a script: stdout %q, stderr %q", script.stdout, script.stderr)
+	}
+}
+
 // PROMPT_COMMAND runs before each primary prompt, with $? the last command's and $? and $_ as
 // they were after it; an error in it ends only it. bash's, measured; busybox has none.
 func TestSession_runsPromptCommand(t *testing.T) {
