@@ -5,26 +5,39 @@ package applets
 // not_implemented does, rather than doing nothing.
 
 func (e *viEditor) normalKey(key rune) {
-	if e.pending != 0 {
+	before := e.cursor()
+	switch {
+	case e.pending != 0:
 		first := e.pending
 		e.pending = 0
 		e.secondKey(first, key)
-	} else if key >= '1' && key <= '9' || key == '0' && e.count > 0 {
+	case key >= '1' && key <= '9' || key == '0' && e.count > 0:
 		e.count = min(e.count*10+int(key-'0'), 1<<24)
 		return
-	} else if !e.motionKey(key) {
+	case e.op != 0:
+		e.operatorKey(key)
+	case e.motionKey(key):
+		if isJump(key) && e.cursor() != before {
+			e.context = viMark{pos: before, set: true}
+		}
+	default:
 		e.commandKey(key)
 	}
-	if e.pending == 0 {
+	if e.prefix {
+		// A register named is for the command still to come, with its count.
+		e.prefix = false
+		return
+	}
+	if e.pending == 0 && e.op == 0 {
 		e.afterCommand()
 	}
 }
 
-// afterCommand is the end of busybox's do_cmd: the count is spent, the cursor kept off a
-// line's end in command mode, and the column j and k keep to is where the cursor now is,
-// unless the command was one of those or $.
+// afterCommand is the end of busybox's do_cmd: the count and the register named are spent, the
+// cursor kept off a line's end in command mode, and the column j and k keep to is where the
+// cursor now is, unless the command was one of those or $.
 func (e *viEditor) afterCommand() {
-	e.count = 0
+	e.count, e.register, e.appending = 0, viDefaultRegister, false
 	e.clampColumn()
 	if !e.keepWant {
 		e.want = e.displayColumn(e.line(), e.col)
@@ -48,8 +61,20 @@ func (e *viEditor) commandKey(key rune) {
 		e.mode, e.col = viInsert, e.firstNonBlank(e.row)
 	case ':':
 		e.mode, e.command = viCommandLine, []rune{':'}
-	case 'Z', 'g', 'z', 'f', 'F', 't', 'T':
+	case 'Z', 'g', 'z', 'f', 'F', 't', 'T', '"', 'm', '\'', '`', 'r':
 		e.pending = key
+	case 'd', 'c', 'y', '<', '>', 'x', 'X', 's', 'S', 'D', 'C', 'Y':
+		e.startOperator(key)
+	case 'p', 'P':
+		e.put(key)
+	case 'J':
+		e.join()
+	case 'R':
+		e.mode = viReplace
+	case '~':
+		e.toggleCase()
+	case 'o', 'O':
+		e.openLine(key)
 	case 7:
 		// ^G says where the cursor is, which the status line already does once a message has
 		// gone.
@@ -75,11 +100,24 @@ func (e *viEditor) commandKey(key rune) {
 func (e *viEditor) secondKey(first, key rune) {
 	switch {
 	case key == viEscape:
+		e.op = 0
+	case e.op != 0:
+		e.operate(first, key)
+	case first == '"':
+		e.chooseRegister(key)
+		e.prefix = true
+	case first == 'm':
+		e.mark(key)
+	case first == '\'' || first == '`':
+		e.goToMark(first, key)
+	case first == 'r':
+		e.replaceChars(key)
 	case first == 'Z' && key == 'Z':
 		e.exCommand("x")
 	case first == 'Z' && key == 'Q':
 		e.exCommand("q!")
 	case first == 'g' && key == 'g':
+		e.context = viMark{pos: e.cursor(), set: true}
 		e.goToLine(max(1, e.count))
 	case first == 'g':
 		e.say(true, "'g%s' is not implemented", viKeyName(key))

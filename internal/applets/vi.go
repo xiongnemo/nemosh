@@ -55,6 +55,22 @@ type viEditor struct {
 	// lastFind and findTarget are the last f, F, t or T and the key it looked for, which ;
 	// and , look for again.
 	lastFind, findTarget rune
+	// op is an operator waiting for its motion, and opCount the count typed before it; quiet
+	// says the operator was x or another of the one-key forms, which busybox does not report.
+	op      rune
+	opCount int
+	quiet   bool
+	// failed says the command could not do what it was asked: a motion that went nowhere.
+	failed bool
+	// registers are a to z and busybox's D; register is the one the command uses, which "x
+	// names, appending when it was "X, and prefix says one was just named.
+	registers [27]viRegister
+	register  int
+	appending bool
+	prefix    bool
+	// marks are a to z, and context where the last jump left from, for '' and ``.
+	marks   [26]viMark
+	context viMark
 	// command is the line typed after : or /, its first rune the prompt.
 	command []rune
 	// message is shown once on the status line, in reverse when bold, as busybox's.
@@ -114,16 +130,19 @@ func viStartLine(operands []string) (int, []string, error) {
 
 // openVi reads the file, or starts an empty buffer, as busybox does before its first draw.
 func openVi(ctx context.Context, operands []string, readOnly bool) *viEditor {
-	editor := &viEditor{ctx: ctx, view: ProcessViewFromContext(ctx), tabstop: 8}
+	editor := &viEditor{ctx: ctx, view: ProcessViewFromContext(ctx), tabstop: 8, register: viDefaultRegister}
 	name := ""
 	if len(operands) > 0 {
 		name = operands[0]
 	}
 	editor.file, editor.lines, editor.message = viLoad(editor.view, name, readOnly)
 	editor.bold = editor.message != ""
+	editor.goToStartLine(0)
 	return editor
 }
 
+// goToStartLine puts the cursor on the line it opens on, at its first character that is not a
+// blank, as vim does; busybox opens at the line's start.
 func (e *viEditor) goToStartLine(line int) {
 	switch {
 	case line < 0:
@@ -131,6 +150,9 @@ func (e *viEditor) goToStartLine(line int) {
 	case line > 0:
 		e.row = min(line, len(e.lines)) - 1
 	}
+	e.col = e.firstNonBlank(e.row)
+	e.clampColumn()
+	e.want = e.displayColumn(e.line(), e.col)
 }
 
 // runViOnTerminal is vi on the console it was started from. Like nano it refuses a standard

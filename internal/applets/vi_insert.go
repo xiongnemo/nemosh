@@ -27,14 +27,18 @@ func (e *viEditor) insertKey(key rune) {
 	}
 }
 
-// insertRune puts r before the cursor, which moves past it.
+// insertRune puts r before the cursor, which moves past it; in replace mode, R, it takes the
+// place of the character under the cursor, and goes on after the line's end.
 func (e *viEditor) insertRune(r rune) {
 	line := e.line()
 	grown := make([]rune, 0, len(line)+1)
-	grown = append(append(append(grown, line[:e.col]...), r), line[e.col:]...)
-	e.lines[e.row] = grown
+	rest := line[e.col:]
+	if e.mode == viReplace && len(rest) > 0 {
+		rest = rest[1:]
+	}
+	grown = append(append(append(grown, line[:e.col]...), r), rest...)
+	e.replaceLines(e.row, e.row+1, [][]rune{grown})
 	e.col++
-	e.changed()
 }
 
 // splitLine is Enter: the rest of the line goes onto a new one, and the cursor with it.
@@ -42,31 +46,29 @@ func (e *viEditor) splitLine() {
 	line := e.line()
 	head := append([]rune(nil), line[:e.col]...)
 	tail := append([]rune(nil), line[e.col:]...)
-	e.lines = append(e.lines[:e.row+1], append([][]rune{tail}, e.lines[e.row+1:]...)...)
-	e.lines[e.row] = head
+	e.replaceLines(e.row, e.row+1, [][]rune{head, tail})
 	e.row, e.col = e.row+1, 0
-	e.changed()
 }
 
 // backspace takes the character before the cursor, or at the start of a line joins it to the
-// one before.
+// one before. In replace mode it only moves back.
 func (e *viEditor) backspace() {
 	switch {
+	case e.mode == viReplace && e.col > 0:
+		e.col--
 	case e.col > 0:
 		line := e.line()
-		e.lines[e.row] = append(line[:e.col-1:e.col-1], line[e.col:]...)
+		e.replaceLines(e.row, e.row+1, [][]rune{append(line[:e.col-1:e.col-1], line[e.col:]...)})
 		e.col--
-	case e.row > 0:
+	case e.row > 0 && e.mode != viReplace:
 		previous := e.lines[e.row-1]
-		e.col = len(previous)
-		e.lines[e.row-1] = append(previous[:len(previous):len(previous)], e.line()...)
-		e.lines = append(e.lines[:e.row], e.lines[e.row+1:]...)
-		e.row--
+		col := len(previous)
+		joined := append(previous[:len(previous):len(previous)], e.line()...)
+		e.replaceLines(e.row-1, e.row+1, [][]rune{joined})
+		e.row, e.col = e.row-1, col
 	default:
 		e.beep()
-		return
 	}
-	e.changed()
 }
 
 // changed counts a change, which marks the buffer [Modified].

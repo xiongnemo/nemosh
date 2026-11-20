@@ -75,8 +75,10 @@ func (e *viEditor) say(bold bool, format string, args ...any) {
 	e.message, e.bold = fmt.Sprintf(format, args...), bold
 }
 
-// beep is busybox's indicate_error, for a key that does nothing where it is typed.
+// beep is busybox's indicate_error, for a key that does nothing where it is typed; a command it
+// is part of has failed, which an operator asks.
 func (e *viEditor) beep() {
+	e.failed = true
 	if e.screen != nil {
 		_ = e.screen.Beep()
 	}
