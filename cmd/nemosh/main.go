@@ -80,6 +80,8 @@ type command struct {
 	state             *runtime.State
 	// invocation is the command line as parseInvocation read it; see invocation.go.
 	invocation invocation
+	// name is sh or bash when this shell was run by that name; see shell_name.go.
+	name string
 }
 
 func run(ctx context.Context, args []string) error {
@@ -127,6 +129,15 @@ func (c command) run(ctx context.Context, args []string) error {
 	}
 
 	if len(args) > 1 {
+		if shellName(args[1]) {
+			c.name = args[1]
+			// bash's --help and --version, which a command named bash is launched with.
+			if len(args) > 2 && (args[2] == "--help" || args[2] == "--version") {
+				_, err := c.infoFlag(args[2])
+				return err
+			}
+			return c.runShell(ctx, controller, args[2:])
+		}
 		if applet, ok := registry.Lookup(args[1]); ok {
 			return c.runDirectApplet(ctx, controller, applet, args[2:])
 		}
@@ -140,7 +151,17 @@ func (c command) run(ctx context.Context, args []string) error {
 			return c.migrate(args[2:])
 		}
 	}
-	parsed, err := parseInvocation(args[1:])
+	// Named sh or bash, after all that: what this shell launches of itself is SELF NAME, and
+	// a nemosh named bash.exe launches itself as bash.exe too.
+	if name := applets.InvocationName(args); shellName(name) {
+		c.name = name
+	}
+	return c.runShell(ctx, controller, args[1:])
+}
+
+// runShell is the shell, its command line args.
+func (c command) runShell(ctx context.Context, controller *interruptController, args []string) error {
+	parsed, err := parseInvocation(args)
 	if err != nil {
 		fmt.Fprintf(c.stderr, "nemosh: %v\n", err)
 		if errors.Is(err, errInvalidOption) {

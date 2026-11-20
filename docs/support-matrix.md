@@ -444,10 +444,16 @@ busybox-w32's 4095 otherwise, so `[ "$EUID" -ne 0 ]` asks what it asks on Linux.
 `msys`, the value scripts test to know Git Bash (whose bash 2.55 says `cygwin`); one already
 set is kept. None is exported.
 
-**`sh` and `bash` that `PATH` has no program for are this shell**, as both are busybox-w32's
-names for its own: `sh -c ...`, `bash build.sh`, and a script that begins `#!/bin/bash` or
-`#!/usr/bin/env bash`. They were `not found`. One `PATH` holds still wins, so where Git is
-installed `bash` is Git's.
+**`sh` and `bash` are this shell**, as both are busybox-w32's names for its own, applets there
+and so run before `PATH` is asked: `sh -c ...`, `bash build.sh`, and a script that begins
+`#!/bin/bash` or `#!/usr/bin/env bash`. Until 2026-11-20 a `PATH` program won, so the same
+script ran under Git's bash, under WSL's `System32\bash.exe` in Linux, or here, by what was
+installed. Run as bash -- a command or a `#!` naming bash, `nemosh bash ARGS`, or this binary
+named `bash.exe` -- `BASH_VERSION` is `5.2.37(1)-release` and the read-only `BASH_VERSINFO`
+bash 5.2's, neither exported, so `[ -z "$BASH_VERSION" ] && exec bash "$0" "$@"` runs a script
+once more and then goes on. `$0` is `bash` or `sh` where it would be `nemosh`.
+`NEMOSH_OVERRIDE_APPLETS=bash`, or `sh`, runs `PATH`'s again; `command -v bash` names this
+binary otherwise.
 
 **`time` is busybox's command and, before a compound command, bash's keyword.** `time
 [-pa] [-f FMT] [-o FILE] PROG ARGS` times one command, as busybox-w32's does; `time {

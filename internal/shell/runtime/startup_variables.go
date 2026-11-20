@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"os"
+	goruntime "runtime"
 	"strconv"
 	"strings"
 
@@ -59,6 +60,28 @@ func (r Runtime) setIdentityVariables() {
 // operatingSystemType is OSTYPE for Windows, as Git for Windows' bash names it.
 func operatingSystemType() string {
 	return "msys"
+}
+
+// SetBashVersion is a shell run as bash saying so: BASH_VERSION, and BASH_VERSINFO read-only,
+// in the words of bash 5.2.37, Debian's, with the machine as Git for Windows' bash names it, as
+// OSTYPE is. Neither is exported, as in bash. A script asks `[ -n "$BASH_VERSION" ]` before it
+// uses what sh has not got, and, finding nothing, runs itself again under bash -- which is this
+// shell, so with nothing set it did that for ever.
+func (r Runtime) SetBashVersion() {
+	r.vars["BASH_VERSION"] = "5.2.37(1)-release"
+	r.arrays.set("BASH_VERSINFO", []string{"5", "2", "37", "1", "release", bashMachine() + "-pc-msys"})
+	r.readonly["BASH_VERSINFO"] = struct{}{}
+}
+
+// bashMachine is the processor as bash's MACHTYPE names it.
+func bashMachine() string {
+	switch goruntime.GOARCH {
+	case "386":
+		return "i686"
+	case "arm64":
+		return "aarch64"
+	}
+	return "x86_64"
 }
 
 // EnterShellLevel is a shell's start: SHLVL goes up by one and is exported, as in both

@@ -84,7 +84,9 @@ Options:
 
 Nemosh is a multicall binary: invoked under an applet's name, directly or
 through a shim, it runs that applet instead of the shell. %d applets are
-bundled; "nemosh --list" names them.
+bundled; "nemosh --list" names them. Under the name sh or bash, or as
+"nemosh bash", it is the shell by that name, which is what a command named
+sh or bash runs, and a #!/bin/bash script; as bash it sets BASH_VERSION.
 
 "NAME --help" describes an applet, and "help NAME" a builtin. An option an
 applet does not implement is refused by

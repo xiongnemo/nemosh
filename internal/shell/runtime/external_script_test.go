@@ -205,6 +205,20 @@ func TestPlanScriptLaunch_handsTheScriptToItsInterpreter(t *testing.T) {
 			args:       []string{"cat", "envcat", "x"},
 		},
 		{
+			label:      "#!/bin/bash is this shell, run as bash",
+			name:       "bashed",
+			content:    "#!/bin/bash -e\necho hi\n",
+			executable: self,
+			args:       []string{"bash", "-e", "bashed", "x"},
+		},
+		{
+			label:      "#!/usr/bin/env bash is this shell, run as bash",
+			name:       "envbash",
+			content:    "#!/usr/bin/env bash\necho hi\n",
+			executable: self,
+			args:       []string{"bash", "envbash", "x"},
+		},
+		{
 			label:      "an option to env is still env's",
 			name:       "envopt",
 			content:    "#!/usr/bin/env -i sh\necho hi\n",
@@ -287,8 +301,8 @@ func TestPlanScriptLaunch_stopsAfterFourInterpreters(t *testing.T) {
 	})
 }
 
-// #!/usr/bin/env NAME finds a NAME no applet has on PATH, as busybox-w32's env does: python3,
-// node, or bash, Git's where Git is installed. It was `env: NAME: not found`.
+// #!/usr/bin/env NAME finds a NAME no applet has on PATH, as busybox-w32's env does: python3 or
+// node. It was `env: NAME: not found`. bash is this shell; see the table above.
 func TestPlanScriptLaunch_findsAnEnvInterpreterOnPath(t *testing.T) {
 	dir := t.TempDir()
 	program := filepath.Join(dir, "nemosh-test-interpreter")

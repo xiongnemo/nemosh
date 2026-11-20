@@ -133,8 +133,12 @@ func unixInterpreterPath(path string) bool {
 
 // externalLaunchTarget rewrites a launch when the resolved file is a script.
 // Windows cannot run one directly, so the interpreter becomes the program and
-// the script becomes its first operand.
-func (r Runtime) externalLaunchTarget(executable string, args []string) (string, []string, error) {
+// the script becomes its first operand. A command named sh or bash that is this
+// binary is told which it is; see asShell.
+func (r Runtime) externalLaunchTarget(name, executable string, args []string) (string, []string, error) {
+	if named, ok := asShell(name, executable, args); ok {
+		return executable, named, nil
+	}
 	self, err := os.Executable()
 	if err != nil {
 		return "", nil, fmt.Errorf("locate the nemosh executable: %w", err)
@@ -215,6 +219,10 @@ func (r Runtime) interpreterExecutable(interp interpreter) (string, string, erro
 		// POSIX requires for a script executed as a command.
 		if interp.name == defaultInterpreterName || interp.name == shellExecutableName {
 			return "", "", nil
+		}
+		// bash is this shell too, run as bash, as a command named bash is.
+		if interp.name == "bash" && r.shellAnswers(interp.name) {
+			return "", interp.name, nil
 		}
 		if _, ok := r.lookupApplet(interp.name); ok {
 			return "", interp.name, nil

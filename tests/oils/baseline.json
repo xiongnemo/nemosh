@@ -65,26 +65,14 @@
       "non-index forms of element (BashAssoc)": "fail"
     },
     "array-sparse.test.sh": {
-      "${@:offset:length}": "fail",
-      "${sp[i]} with negative invalid index": "fail",
-      "((sp[i])) and ((sp[i]++)) with invalid negative index": "fail",
       "(YSH) $[bool(a)]": "fail",
       "(YSH) append v1 v2... (a)": "fail",
-      "Negative out-of-bound index with a[i]=v (1/2)": "fail",
-      "Negative out-of-bound index with a[i]=v (2/2)": "fail",
       "Performance demo": "fail",
-      "Regression: a[-1]=1": "fail",
-      "[[ -v a[i] ]] with invalid negative index": "fail",
-      "crash dump": "fail",
-      "unset -v a[i] with out-of-bound negative index": "fail"
+      "crash dump": "fail"
     },
     "array.test.sh": {
       "Length op, index op, then transform op is not allowed": "ash-only",
-      "Multiple subscripts not allowed": "ash-only",
-      "Regression: Assigning with out-of-range negative index": "fail",
-      "Regression: Negative out-of-range index in [[ -v a[index] ]]": "fail",
-      "Regression: silent out-of-bound negative index in ${a[-2]} and $((a[-2]))": "fail",
-      "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail"
+      "Multiple subscripts not allowed": "ash-only"
     },
     "assign-deferred.test.sh": {
       "export a[7]=8": "fail",
@@ -504,8 +492,7 @@
       "readonly var can't be assigned through nameref": "fail"
     },
     "nix-idioms.test.sh": {
-      "${!ref} to undefined string var is fatal, INCONSISTENT with array": "fail",
-      "export with dynamic var name +=": "fail"
+      "${!ref} to undefined string var is fatal, INCONSISTENT with array": "fail"
     },
     "nul-bytes.test.sh": {
       "NUL bytes with test -f": "ash-only",

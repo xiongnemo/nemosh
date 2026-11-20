@@ -79,7 +79,7 @@ func (r Runtime) runProgram(ctx context.Context, name string, args []string, vie
 	}
 	var launchArgs []string
 	if err == nil {
-		executable, launchArgs, err = r.externalLaunchTarget(executable, args)
+		executable, launchArgs, err = r.externalLaunchTarget(name, executable, args)
 	}
 	if errors.Is(err, errExternalNotFound) {
 		return fail(127, err)

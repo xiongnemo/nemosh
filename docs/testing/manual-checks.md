@@ -262,9 +262,10 @@ These only exist off a GUI launch or a real clipboard, so no test reaches them.
 - **A `#!/usr/bin/env` script**, not yet checked by hand. A file `t.py` holding
   `#!/usr/bin/env python` and `print("hi")`, run as `./t.py`, runs the Python PATH
   finds -- and a Python that is only Windows' Store alias may open the Store instead,
-  which is the thing to look for. With Git installed, a `#!/usr/bin/env bash` script
-  runs Git's bash, and `echo $BASH_VERSION` in it says so. Until 2026-10-07 both were
-  `env: NAME: not found`.
+  which is the thing to look for. Until 2026-10-07 it was `env: NAME: not found`. A
+  `#!/usr/bin/env bash` script is this shell run as bash, Git or WSL installed or not,
+  and `echo $BASH_VERSION` in it says `5.2.37(1)-release`; under
+  `NEMOSH_OVERRIDE_APPLETS=bash` it runs PATH's bash again, and says that one's.
 - **A path handed to a native editor**, not yet checked by hand at a prompt.
   `nvim ~/.ssh/config`, `code ~/.gitconfig` and `notepad "$(realpath README.md)"` open
   the file, and the prompt's `\w` still shortens home to `~`. Until 2026-10-19 the

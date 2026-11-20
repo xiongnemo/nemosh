@@ -165,6 +165,13 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **`bash` and `sh` are this shell**, as both are busybox-w32's: `bash build.sh`, `bash -c`, `sh
+  -c`, and a script beginning `#!/bin/bash` or `#!/usr/bin/env bash`, whatever PATH holds. Git's
+  bash ran where Git was installed, and where WSL was, its System32\bash.exe ran the script in
+  Linux. Run as bash, `BASH_VERSION` and `BASH_VERSINFO` are bash 5.2's, so a script's `[ -z
+  "$BASH_VERSION" ] && exec bash "$0" "$@"` runs it once more, not for ever.
+  `NEMOSH_OVERRIDE_APPLETS=bash` runs PATH's again.
+
 - **`less -R` draws colour**, as GNU's does: `git log --color | less -R` and `ls --color=always
   | less -R` show their colours, the 16, 256 and RGB ones and the attributes, and a search finds
   a coloured word. It took the sequences out, as busybox's `-R` does. With no terminal, `-R`

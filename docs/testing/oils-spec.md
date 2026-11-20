@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2155 of the 2548 cases bash passes: 84.6%.**
+**nemosh passes 2168 of the 2548 cases bash passes: 85.1%.**
 
-Of the other 393, it does 117 the way the files record of ash, which may be busybox's
-way, and 276 neither way.
+Of the other 380, it does 117 the way the files record of ash, which may be busybox's
+way, and 263 neither way.
 
 | | cases |
 |---|---:|
@@ -21,7 +21,7 @@ way, and 276 neither way.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2155 |
+| that nemosh passes of those | 2168 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -54,8 +54,8 @@ of ash.
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
 | array-compat.test.sh | 12 | 12 | 11 | 91.7% | 0 | 1 |
 | array-literal.test.sh | 19 | 16 | 16 | 100.0% | 0 | 0 |
-| array-sparse.test.sh | 40 | 40 | 28 | 70.0% | 0 | 0 |
-| array.test.sh | 78 | 78 | 72 | 92.3% | 2 | 7 |
+| array-sparse.test.sh | 40 | 40 | 36 | 90.0% | 0 | 0 |
+| array.test.sh | 78 | 78 | 76 | 97.4% | 2 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 7 | 77.8% | 0 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
 | assign-extended.test.sh | 39 | 34 | 25 | 73.5% | 1 | 0 |
@@ -127,7 +127,7 @@ of ash.
 | let.test.sh | 2 | 2 | 2 | 100.0% | 0 | 1 |
 | loop.test.sh | 29 | 28 | 23 | 82.1% | 2 | 23 |
 | nameref.test.sh | 32 | 32 | 29 | 90.6% | 0 | 2 |
-| nix-idioms.test.sh | 6 | 6 | 4 | 66.7% | 0 | 0 |
+| nix-idioms.test.sh | 6 | 6 | 5 | 83.3% | 0 | 0 |
 | nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 3 |
 | nul-bytes.test.sh | 16 | 16 | 14 | 87.5% | 1 | 12 |
 | paren-ambiguity.test.sh | 8 | 8 | 6 | 75.0% | 2 | 8 |
@@ -173,4 +173,4 @@ of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2665 | 2548 | 2155 | 84.6% | 117 | 1447 |
+| all | 2665 | 2548 | 2168 | 85.1% | 117 | 1447 |

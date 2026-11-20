@@ -243,9 +243,9 @@ for a Unix path, a `PATH` search by basename. argv is rebuilt busybox-style as
 and a chain of interpreters gives up at the fifth (busybox's `++level > 4` ELOOP
 guard), reported as status 126. An interpreter that cannot be found is 127.
 
-`#!/usr/bin/env NAME` is read as `#!/usr/bin/NAME`: `sh` is this shell, an applet
-is the applet, and anything else is NAME on `PATH`, so `#!/usr/bin/env python3`
-runs python3 and `#!/usr/bin/env bash` Git's bash where Git is installed. That is
+`#!/usr/bin/env NAME` is read as `#!/usr/bin/NAME`: `sh` and `bash` are this shell, an
+applet is the applet, and anything else is NAME on `PATH`, so `#!/usr/bin/env python3`
+runs python3. That is
 where busybox-w32's `env` finds the program it runs. Nemosh's `env` ran applets
 only (`internal/applets/env.go`), so this shebang was handed to it and reported
 `python3: not found` whatever `PATH` held. An option to `env`, or a NAME with more
@@ -253,11 +253,15 @@ words after it, still goes to `env`, which now runs a program too (see
 `internal/applets/program_runner.go`), and so does a NAME found nowhere, which `env`
 reports as before.
 
-A bare `sh` or `bash` that nothing on `PATH` answers to is this shell, whether it is a
-command, `sh -c ...` or `bash build.sh`, or the interpreter `#!/bin/bash` and
-`#!/usr/bin/env bash` name: busybox-w32 has both names for its own shell. One `PATH`
-holds still wins, so where Git is installed `bash` is Git's bash, as it was, and only what
-was `not found` changes. `command -v bash` names this binary then, since it is what runs
+A bare `sh` or `bash` is this shell, whether it is a command, `sh -c ...` or `bash
+build.sh`, or the interpreter `#!/bin/bash` and `#!/usr/bin/env bash` name: busybox-w32
+has both names for its own shell, as applets, which run before `PATH` is asked. The
+child is launched as `nemosh bash ARGS` (or `sh`), which the binary reads as that shell
+reading ARGS, as busybox reads `busybox bash`; run as bash it sets `BASH_VERSION` and
+`BASH_VERSINFO`, so a script's `exec bash "$0"` guard ends. Until 2026-11-20 a program on
+`PATH` won, which on a machine with WSL was `System32\bash.exe`, running the script in
+Linux. `NEMOSH_OVERRIDE_APPLETS=bash` puts `PATH` first again, and with nothing there the
+name is still this shell. `command -v bash` names this binary, since it is what runs
 (`internal/shell/runtime/shell_fallback.go`).
 
 As implemented: `internal/shell/runtime/external_script.go`, with end-to-end

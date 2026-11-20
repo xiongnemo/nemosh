@@ -58,7 +58,7 @@ func (r Runtime) runExternal(ctx context.Context, args []string) int {
 		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		return 1
 	}
-	executable, launchArgs, err := r.externalLaunchTarget(executable, args[1:])
+	executable, launchArgs, err := r.externalLaunchTarget(args[0], executable, args[1:])
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), args[0], err)
 		if errors.Is(err, errExternalNotFound) {

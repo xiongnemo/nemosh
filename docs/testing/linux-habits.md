@@ -21,10 +21,10 @@ Rows, not invocations: a row holds the invocations that share a status.
 
 | status  | rows |
 | ---     | ---  |
-| works   | 76   |
+| works   | 78   |
 | partial | 7    |
 | refused | 6    |
-| missing | 18   |
+| missing | 16   |
 
 ## Existing commands
 
@@ -139,12 +139,12 @@ A name in this table that Windows has runs Windows' program today, with Windows'
 
 | habit | status | note |
 | --- | --- | --- |
-| `bash script.sh`, `bash -c`, `#!/bin/bash`, `#!/usr/bin/env bash` | missing | PATH first: WSL's System32\bash.exe where WSL is installed |
+| `bash script.sh`, `bash -c`, `#!/bin/bash`, `#!/usr/bin/env bash` | works | this shell, as busybox-w32's; WSL's System32\bash.exe ran them in Linux before |
 | `sh -c`, `#!/bin/sh` | works | |
 | `!!`, `!$`, `^old^new`, Ctrl-R | works | |
 | `ll`, `la`, `l`; `ls` and `grep` in colour | missing | no default aliases; `ls` colours only with `--color` |
 | `LS_COLORS`, `dircolors` | missing | |
-| `$BASH_VERSION`, `$BASH_VERSINFO` | missing | |
+| `$BASH_VERSION`, `$BASH_VERSINFO` | works | bash 5.2's when run as bash; unset as sh or nemosh |
 | `$COLUMNS`, `$LINES` at the prompt | missing | `checkwinsize` is recorded only |
 | `fg`, `bg`, Ctrl-Z | refused | will not be: nothing here can suspend a job |
 | `~/.bashrc`, `~/.bash_aliases` | missing | `~/.nemoshrc`, by design |

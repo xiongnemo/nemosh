@@ -20,7 +20,9 @@ func (r Runtime) knownCommandPath(name string) (string, error) {
 	return r.commandPath(name, false)
 }
 
-func (r Runtime) commandPath(name string, remember bool) (string, error) {
+// programPath is commandPath without the shell's own names: the file name names, or PATH's
+// program by it.
+func (r Runtime) programPath(name string, remember bool) (string, error) {
 	// An empty name is no command anywhere. Joined to a PATH directory it named the directory,
 	// and `""` was refused as not executable, 126, where both references say not found.
 	if name == "" {
@@ -44,7 +46,7 @@ func (r Runtime) commandPath(name string, remember bool) (string, error) {
 		pathValue, present = r.searchPath, true
 	}
 	if !present || pathValue == "" {
-		return notOnPath(name)
+		return "", errExternalNotFound
 	}
 	stat := r.commands.statter()
 	if alternate || r.commands == nil {
@@ -111,13 +113,13 @@ func (r Runtime) searchCommand(stat statFunc, pathValue, name string, previous h
 	if firstCandidateErr != nil {
 		return "", -1, firstCandidateErr
 	}
-	found, err := notOnPath(name)
-	return found, -1, err
+	return "", -1, errExternalNotFound
 }
 
 // everyCommandPath is each program name names along PATH, in its order, the one that would run
 // first: `which -a`. A name with a separator in it names one file, or none. The table is neither
-// read nor added to, since it remembers only the first.
+// read nor added to, since it remembers only the first. This binary comes first for a name the
+// shell answers to.
 func (r Runtime) everyCommandPath(name string) []string {
 	if name == "" || hasPathSeparator(name) {
 		if found, err := r.knownCommandPath(name); err == nil {
@@ -125,15 +127,18 @@ func (r Runtime) everyCommandPath(name string) []string {
 		}
 		return nil
 	}
+	var found []string
+	if self, err := jobExecutable(); err == nil && r.shellAnswers(name) {
+		found = append(found, self)
+	}
 	pathValue := r.vars["PATH"]
 	if r.searchPath != "" {
 		pathValue = r.searchPath
 	}
 	if pathValue == "" {
-		return nil
+		return found
 	}
 	stat := r.commands.statter()
-	var found []string
 	for _, dir := range filepath.SplitList(pathValue) {
 		if dir == "" {
 			dir = "."

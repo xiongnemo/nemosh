@@ -169,7 +169,7 @@ func (c command) runInvocation(ctx context.Context, controller *interruptControl
 	case parsed.session(c.stdinIsTerminal):
 		return c.runInteractive(ctx, controller)
 	case parsed.command:
-		return c.runScriptAs(ctx, controller, parsed.operands[0], commandStringInvocation(parsed.operands[1:]))
+		return c.runScriptAs(ctx, controller, parsed.operands[0], commandStringInvocation(c.scriptName(), parsed.operands[1:]))
 	case parsed.stdin || len(parsed.operands) == 0:
 		data, err := readBoundedInput(c.stdin)
 		if err != nil {
@@ -179,7 +179,7 @@ func (c command) runInvocation(ctx context.Context, controller *interruptControl
 			}
 			return fmt.Errorf("nemosh: read stdin: %w", err)
 		}
-		return c.runScriptAs(ctx, controller, string(data), scriptInvocation{name: defaultScriptName, args: parsed.operands, mode: "s"})
+		return c.runScriptAs(ctx, controller, string(data), scriptInvocation{name: c.scriptName(), args: parsed.operands, mode: "s"})
 	}
 	return c.runScriptFile(ctx, controller, parsed.operands[0], parsed.operands[1:])
 }
@@ -205,6 +205,9 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 	}
 	rt.SetInvocationMode(mode)
 	rt.EnterShellLevel()
+	if c.name == "bash" {
+		rt.SetBashVersion()
+	}
 	if c.invocation.login {
 		rt.MarkLoginShell()
 	}
@@ -225,7 +228,7 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 // startSession is startShell for a prompt, followed by $ENV. $0 is the shell's name, as
 // it is in both references, and `-s ARG...` gives the session its positional parameters.
 func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
-	rt.SetArguments(defaultScriptName, c.invocation.operands)
+	rt.SetArguments(c.scriptName(), c.invocation.operands)
 	if err := c.startShell(ctx, rt, "is"); err != nil {
 		return err
 	}
@@ -243,7 +246,7 @@ func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
 // It was refused, as -i with -c.
 func (c command) runSessionCommand(ctx context.Context, controller *interruptController, script string, args []string) error {
 	rt := c.newRuntime()
-	invocation := commandStringInvocation(args)
+	invocation := commandStringInvocation(c.scriptName(), args)
 	rt.SetArguments(invocation.name, invocation.args)
 	if err := c.startShell(ctx, rt, "ic"); err != nil {
 		return err

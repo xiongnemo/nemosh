@@ -25,10 +25,10 @@ type scriptInvocation struct {
 
 // commandStringInvocation reads the operands after `-c command_string`. POSIX
 // spells this `sh -c command_string [command_name [argument...]]`, so the first
-// operand becomes $0 rather than $1.
-func commandStringInvocation(operands []string) scriptInvocation {
+// operand becomes $0 rather than $1, and with none $0 is name.
+func commandStringInvocation(name string, operands []string) scriptInvocation {
 	if len(operands) == 0 {
-		return scriptInvocation{name: defaultScriptName, mode: "c"}
+		return scriptInvocation{name: name, mode: "c"}
 	}
 	return scriptInvocation{name: operands[0], args: operands[1:], mode: "c"}
 }
