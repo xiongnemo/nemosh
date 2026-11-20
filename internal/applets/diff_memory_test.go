@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -89,18 +90,31 @@ func TestDiff_holdsItsCandidatesInTwelveBytesEach(t *testing.T) {
 	}
 
 	// When
-	var before, after runtime.MemStats
-	runtime.ReadMemStats(&before)
-	_, candidates := diffMatches(keys, hashes, false)
-	runtime.ReadMemStats(&after)
+	allocated, candidates := measureDiffMatches(keys, hashes)
 
 	// Then
-	allocated := after.TotalAlloc - before.TotalAlloc
 	limit := uint64(16*candidates + 64*(len(left)+len(right)))
 	if candidates < 100000 || allocated > limit {
 		t.Fatalf("%d candidates took %d bytes, %.1f a candidate; want at most %d", candidates, allocated,
 			float64(allocated)/float64(max(candidates, 1)), limit)
 	}
+}
+
+// measureDiffMatches is what diffMatches allocates, and the candidates it makes, as the least of
+// three runs. MemStats counts the whole process, so whatever a goroutine an earlier test left
+// running allocates in the meantime is counted too: on an arm64 runner a single measurement came
+// to 8.4 MB against a limit of 4.7, and the same shuffle seed passed here. Something else has to
+// allocate during all three runs to be counted.
+func measureDiffMatches(keys [2][]string, hashes [2][]int) (uint64, int) {
+	least, candidates := uint64(math.MaxUint64), 0
+	for range 3 {
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		_, candidates = diffMatches(keys, hashes, false)
+		runtime.ReadMemStats(&after)
+		least = min(least, after.TotalAlloc-before.TotalAlloc)
+	}
+	return least, candidates
 }
 
 type diffWriteCounter struct{ writes int }
