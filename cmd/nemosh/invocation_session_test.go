@@ -21,6 +21,9 @@ func TestInvocation_sessionCommandAndRCFile(t *testing.T) {
 	}
 	rc := write("rc", "echo RCFILE\n")
 	exiting := write("exiting", "echo one\nexit 42\necho two\n")
+	// Ubuntu's /etc/bash.bashrc opens with `[ -z "${PS1-}" ] && return`, skel.bashrc with
+	// `*) return;;`. Git's bash and busybox-w32's ash, measured, leave the file and go on.
+	returning := write("returning", "echo one\nreturn 3\necho two\n")
 	broken := write("broken", "echo RC; ( echo\n")
 	t.Setenv("ENV", write("env", "echo ENV\n"))
 	for _, test := range []struct {
@@ -35,6 +38,7 @@ func TestInvocation_sessionCommandAndRCFile(t *testing.T) {
 		{name: "--norc reads none", args: []string{"--norc", "-i", "-c", "echo 2"}, stdout: "2\n"},
 		{name: "not interactive reads none", args: []string{"--rcfile", rc, "-c", "echo C"}, stdout: "C\n"},
 		{name: "exit in the rc file ends it", args: []string{"--rcfile", exiting, "-i", "-c", "echo hello"}, stdout: "one\n", status: 42},
+		{name: "return in the rc file leaves only it", args: []string{"--rcfile", returning, "-i", "-c", "echo hello"}, stdout: "one\nhello\n"},
 		{name: "a broken rc file is reported and passed", args: []string{"--rcfile", broken, "-i", "-c", "echo flag"}, stdout: "flag\n"},
 		{name: "an error ends only its line", args: []string{"--norc", "-i", "-c", "echo $(( 1 / 0 ))\necho one\nexit 42"}, stdout: "one\n", status: 42},
 		{name: "interactive in $-", args: []string{"--norc", "-i", "-c", "case $- in *i*) echo yes;; esac"}, stdout: "yes\n"},

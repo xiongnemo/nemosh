@@ -65,7 +65,9 @@ option was "invalid". `-l` reads `/etc/profile` and `$HOME/.profile` first. A
 session then reads `$ENV`, as busybox does, or `~/.nemoshrc` where `ENV` is not set
 at all, as mksh reads `~/.mkshrc`; an `ENV` set to nothing reads nothing, and
 `--rcfile FILE` and `--norc` take bash's meaning. `docs/examples/nemoshrc` is one to
-start from. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
+start from. Each of these files is read as `.` reads one, so a `return` at its top level
+leaves the file and the shell goes on, as bash and busybox's ash have it; it ended the
+shell. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
 every account: `ll='ls -alF'`, `la='ls -A'`, `l='ls -CF'`, and `ls`, `grep`, `egrep` and
 `fgrep` with `--color=auto`; and an exported `LS_COLORS`, what `eval "$(dircolors -b)"`
 leaves from coreutils 9.4's database, unless the environment had one. A script has none, the rc file can `unalias` any, and

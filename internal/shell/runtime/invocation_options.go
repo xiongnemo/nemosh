@@ -81,6 +81,11 @@ func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, e
 		return 2, false, err
 	}
 	r.sayParseWarnings(prepared)
+	// A startup file is read as `.` reads one, so a `return` at its top level leaves the file
+	// and the shell goes on, as bash and busybox's ash read their rc files. It ended the shell,
+	// and Ubuntu's /etc/bash.bashrc, whose first line is `[ -z "${PS1-}" ] && return`, closed
+	// the session before its first prompt.
+	r.sourceDepth++
 	control := flowNone
 	status := r.guardedStatus("running a startup file", func() int {
 		status, flow := r.executeRead(ctx, prepared.program, 0)

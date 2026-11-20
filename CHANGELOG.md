@@ -208,6 +208,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A `return` at an rc file's top level ended the shell**: Ubuntu's `/etc/bash.bashrc` opens
+  with `[ -z "${PS1-}" ] && return`, and given it as the rc a session closed before its first
+  prompt. The rc file, `~/.profile` and `/etc/profile` are read as `.` reads a file now, so the
+  return leaves only the file, as in bash and busybox's ash.
+
 - **`kill 13` ended process 12**: Windows ignores a pid's low two bits, so a pid no process has
   opened its neighbour, and a typo was a different process killed -- by kill, pkill, killall,
   timeout and top alike, and top's priority keys changed it. The process opened is checked against
