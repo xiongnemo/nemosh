@@ -50,8 +50,8 @@ func (r Runtime) alias(args []string) int {
 		name, value, defines := strings.Cut(arg, "=")
 		if !defines {
 			if _, ok := r.aliases[name]; !ok {
-				// busybox's wording, with no colon after the name.
-				fmt.Fprintf(r.streams.Stderr, "%salias: %s not found\n", r.diagnosticPrefix(), name)
+				// busybox's wording, with no colon after the name; bash mode's has bash's colon.
+				fmt.Fprintf(r.streams.Stderr, "%salias: %s%s not found\n", r.diagnosticPrefix(), name, r.notFoundColon())
 				status = 1
 				continue
 			}
@@ -114,13 +114,22 @@ func (r Runtime) unalias(args []string) int {
 	status := 0
 	for _, name := range args {
 		if _, ok := r.aliases[name]; !ok {
-			fmt.Fprintf(r.streams.Stderr, "%sunalias: %s not found\n", r.diagnosticPrefix(), name)
+			fmt.Fprintf(r.streams.Stderr, "%sunalias: %s%s not found\n", r.diagnosticPrefix(), name, r.notFoundColon())
 			status = 1
 			continue
 		}
 		delete(r.aliases, name)
 	}
 	return status
+}
+
+// notFoundColon is what comes between a name alias or unalias does not know and `not found`:
+// nothing, busybox's `alias: x not found`, or bash's colon in bash mode, `alias: x: not found`.
+func (r Runtime) notFoundColon() string {
+	if r.BashMode() {
+		return ":"
+	}
+	return ""
 }
 
 func endsWithBlank(value string) bool {

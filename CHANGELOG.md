@@ -84,6 +84,11 @@ patch number is the commits since that tag.
     script goes on: an arithmetic error whatever `set -e` says, a bad substitution and `${1:=x}`
     unless `set -e` ends it there, in bash's words. `${x?}` and `set -u` still end the script,
     with bash's status 1. busybox ends the script, status 2, and nemosh and sh still do.
+  - **Builtins in bash mode say their failures as bash's do**, with bash's statuses: cd's
+    `cd: DIR: No such file or directory`, 1, and `too many arguments`; type's and command -V's
+    `not found` on stderr, 1; kill's usage and `not a pid or valid job spec`; `numeric argument
+    required` for exit, return, shift and break, exit going on with the line as bash 5.3's does;
+    alias's and unalias's colon; getopts's usage.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
