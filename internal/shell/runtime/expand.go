@@ -61,6 +61,11 @@ func mayHoldBrace(item word) bool {
 
 func (r Runtime) expandOneCommandWord(ctx context.Context, item word, savedStatus int) []string {
 	fields, patterns := r.expandWordFields(ctx, item, savedStatus)
+	return r.globFields(fields, patterns)
+}
+
+// globFields is a word's fields with each that is a pattern replaced by the paths it matches.
+func (r Runtime) globFields(fields, patterns []string) []string {
 	// One field that is no pattern, as $i is, is the list the builder made.
 	if len(fields) == 1 && (patterns[0] == "" || !isPathnamePattern(patterns[0])) {
 		return fields
@@ -107,7 +112,11 @@ func (r Runtime) expandWord(ctx context.Context, item word, savedStatus int) []s
 // field at all disappears rather than becoming one empty field -- which is what makes
 // `set -- $empty` leave no positional parameters.
 func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus int) ([]string, []string) {
-	build := r.newFieldBuilder()
+	return r.buildWordFields(ctx, item, savedStatus, r.newFieldBuilder())
+}
+
+// buildWordFields is expandWordFields into a builder of the caller's, which may split otherwise.
+func (r Runtime) buildWordFields(ctx context.Context, item word, savedStatus int, build *fieldBuilder) ([]string, []string) {
 	for _, part := range r.tildeParts(item) {
 		switch part.kind {
 		case wordPartLiteral:

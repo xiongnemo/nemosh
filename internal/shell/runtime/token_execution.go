@@ -273,7 +273,15 @@ func (r Runtime) expandRedirectOperations(ctx context.Context, operations []redi
 		// A word that came to more fields than one was bash's "ambiguous redirect" and the
 		// command did not run: `> $x` with a blank in x, which on Windows is `C:/Program
 		// Files`, and any Windows path once IFS held a colon. `"$@"` of two is joined, as
-		// busybox joins it.
+		// busybox joins it. Bash mode's is bash's, an argument's expansion; see bashRedirectPath.
+		if r.BashMode() && !r.options.posix {
+			path, ok := r.bashRedirectPath(ctx, operation.operand, savedStatus)
+			if !ok {
+				return nil, false
+			}
+			operations[index].path = path
+			continue
+		}
 		fields := r.expandingAssignment().expandWord(ctx, operation.operand, savedStatus)
 		operations[index].path = strings.Join(fields, " ")
 	}
