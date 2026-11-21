@@ -152,8 +152,8 @@ func (r Runtime) reportUnsetParameter(name string) {
 	}
 	r.expansion.shellError = true
 	if r.BashMode() {
-		// bash's words and status: the script ends with 1.
-		r.expansion.shellErrorStatus = 1
+		// bash's words and status: the script ends with 1, a command string with 127.
+		r.expansion.shellErrorStatus = r.bashFatalStatus()
 		fmt.Fprintf(r.streams.Stderr, "%s%s: unbound variable\n", r.diagnosticPrefix(), name)
 		return
 	}
