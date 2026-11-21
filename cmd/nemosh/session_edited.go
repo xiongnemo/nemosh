@@ -31,8 +31,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	}
 	// Tab asks the session's `complete` specifications first; rt is read when Tab is pressed,
 	// so the one in use then answers.
-	// Keys are read through what bind set first; see lineedit_bind.go.
+	// Keys are read through what bind set first, and a bind -x command runs in this session; see
+	// lineedit_bind.go.
 	editor.bindings = rt.MatchKeyBinding
+	editor.shellCommand = func(command, line string, point int) (string, int) {
+		return rt.RunKeyCommand(ctx, command, line, point)
+	}
 	editor.programmable = func(line string, point int) (runtime.ProgrammableCompletion, bool) {
 		return rt.CompleteLine(ctx, line, point)
 	}
@@ -252,13 +256,28 @@ func (c command) runEditedLine(ctx context.Context, rt *runtime.Runtime, control
 func readLineInRawMode(ctx context.Context, terminal *os.File, editor *lineEditor, prompt string) (string, error) {
 	raw := enterRawMode(terminal)
 	// Nil-safe, and deferred so a panic in the editor cannot leave the terminal raw.
-	defer raw.restore()
+	defer func() { raw.restore() }()
 	// Bracketed paste for the same span, on a terminal only: what is pasted then arrives
 	// marked, and goes into the line as it is (readPaste). A terminal without the mode ignores
 	// the request, and a paste arrives as it always did.
-	if raw != nil {
-		fmt.Fprint(editor.screen, "\033[?2004h")
-		defer fmt.Fprint(editor.screen, "\033[?2004l")
+	paste := func(on bool) {
+		if raw != nil && on {
+			fmt.Fprint(editor.screen, "\033[?2004h")
+		} else if raw != nil {
+			fmt.Fprint(editor.screen, "\033[?2004l")
+		}
 	}
+	paste(true)
+	defer func() { paste(false) }()
+	// A bind -x command gives the terminal back while it runs, as any command has it, and the
+	// line goes on being read after it.
+	editor.suspend = func(run func()) {
+		paste(false)
+		raw.restore()
+		run()
+		raw = enterRawMode(terminal)
+		paste(true)
+	}
+	defer func() { editor.suspend = nil }()
 	return editor.readLine(ctx, prompt)
 }

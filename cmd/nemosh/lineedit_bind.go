@@ -49,6 +49,8 @@ func (e *lineEditor) boundKey() (decoded key, done, wait bool) {
 		case runtime.BindMacro:
 			e.pending = append([]byte(binding.Text), e.pending...)
 			put += len(binding.Text)
+		case runtime.BindCommand:
+			return key{kind: keyBoundCommand, text: binding.Text}, true, false
 		default:
 			return key{kind: keyUnknown}, true, false
 		}
@@ -58,4 +60,24 @@ func (e *lineEditor) boundKey() (decoded key, done, wait bool) {
 	}
 	e.pending = e.pending[:0]
 	return key{kind: keyUnknown}, true, false
+}
+
+// runBoundCommand is a key bind -x bound to command: it runs with the terminal as a command
+// finds it, which suspend gives it, READLINE_LINE and READLINE_POINT the line and the cursor;
+// what it leaves in them is the line after, drawn again where it was, as bash redraws it. fzf's
+// Ctrl-T puts a file it picked into READLINE_LINE so.
+func (e *lineEditor) runBoundCommand(prompt, command string) {
+	if e.shellCommand == nil {
+		return
+	}
+	line, point := e.buffer.String(), e.buffer.cursor
+	run := func() { line, point = e.shellCommand(command, line, point) }
+	if e.suspend != nil {
+		e.suspend(run)
+	} else {
+		run()
+	}
+	e.buffer.runes = []rune(line)
+	e.buffer.cursor = max(0, min(point, len(e.buffer.runes)))
+	e.restorePrompt(prompt)
 }

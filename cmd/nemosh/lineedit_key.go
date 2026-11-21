@@ -74,6 +74,9 @@ const (
 	// keyCtrlH is 0x08: Ctrl+Backspace in Windows Terminal, and Backspace on a terminal set to
 	// erase with ^H. nextKey makes it one or the other; see lineedit_ctrlh.go.
 	keyCtrlH
+	// keyBoundCommand is keys bind -x bound to a shell command, which text holds; see
+	// lineedit_bind.go.
+	keyBoundCommand
 )
 
 type key struct {

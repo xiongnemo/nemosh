@@ -34,6 +34,29 @@ func TestBind_everyFunctionIsAKeyOfTheEditor(t *testing.T) {
 	}
 }
 
+// Keys bind -x bound run the command over the line, which then reads as the command left it,
+// the cursor where it put READLINE_POINT -- fzf's Ctrl-T so puts in the file picked. The
+// terminal is given back while the command runs.
+func TestBind_xRunsTheCommandOverTheLine(t *testing.T) {
+	rt := runtime.New(applets.DefaultRegistry, runtime.Streams{Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)})
+	ctx := context.Background()
+	script := `bind -x '"\C-t": READLINE_LINE="${READLINE_LINE:0:READLINE_POINT}picked ${READLINE_LINE:READLINE_POINT}"; READLINE_POINT=$((READLINE_POINT + 7))'` + "\n"
+	if status := rt.RunScript(ctx, script); status != 0 {
+		t.Fatalf("bind -x exited %d", status)
+	}
+	editor := newLineEditor(strings.NewReader("vi \x14x\r"), new(bytes.Buffer), t.TempDir())
+	editor.bindings = rt.MatchKeyBinding
+	suspended := 0
+	editor.suspend = func(run func()) { suspended++; run() }
+	editor.shellCommand = func(command, line string, point int) (string, int) {
+		return rt.RunKeyCommand(ctx, command, line, point)
+	}
+	line, err := editor.readLine(ctx, "$ ")
+	if err != nil || line != "vi picked x" || suspended != 1 {
+		t.Fatalf("line %q, %v, terminal given back %d times; want \"vi picked x\" and once", line, err, suspended)
+	}
+}
+
 // A sequence bound to a function is that function's key; one bound to a macro types the macro;
 // one bound as the start of a longer one waits for the next key. The bindings are a session's,
 // set by the bind builtin.

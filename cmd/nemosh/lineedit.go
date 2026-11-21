@@ -45,8 +45,13 @@ type lineEditor struct {
 	setting func(string) (string, bool)
 	// bindings answers what bind bound the keys pending begin with; see lineedit_bind.go.
 	bindings func(keymap string, pending []byte) (runtime.KeyBinding, int, bool)
-	buffer   *lineBuffer
-	pending  []byte
+	// shellCommand runs a bind -x command over the line and the cursor and answers them as it
+	// left them; suspend runs a function with the terminal out of raw mode. The session sets
+	// both, readLineInRawMode the second. See runBoundCommand.
+	shellCommand func(command, line string, point int) (string, int)
+	suspend      func(run func())
+	buffer       *lineBuffer
+	pending      []byte
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
 	// feed arriving in the next read is that Enter finishing rather than another one.
 	afterCarriageReturn bool
@@ -256,6 +261,8 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		case keyEditAndExecute:
 			fmt.Fprintln(e.screen)
 			return e.buffer.String(), errEditAndExecute
+		case keyBoundCommand:
+			e.runBoundCommand(prompt, key.text)
 		case keyRune:
 			e.buffer.insert(key.value)
 		case keyPaste:

@@ -12,7 +12,8 @@ patch number is the commits since that tag.
 
 ### Added
 
-- **`bind`**, bash's: `bind '"\C-o": beginning-of-line'`, macros, `-m KEYMAP`, `-r`, `-u`, `-q`,
+- **`bind`**, bash's: `bind '"\C-o": beginning-of-line'`, macros, `bind -x` with `READLINE_LINE`
+  and `READLINE_POINT`, as fzf's Ctrl-T uses it, `-m KEYMAP`, `-r`, `-u`, `-q`,
   `-f FILE`, `set VARIABLE VALUE`, and `-l -p -P -s -S -v -V -X` printing what bash prints. The
   line editor reads the keys it binds before its own; a key bound to a readline function this
   editor does not carry out is refused. It was refused outright, as not implemented.

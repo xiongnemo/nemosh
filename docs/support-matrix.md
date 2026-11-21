@@ -603,8 +603,11 @@ the keys above, and `self-insert`. A key bound to a function readline has and th
 not carry out is refused, status 1, since it would do nothing where bash's does something; one
 bound to no function at all binds nothing, status 0, as in bash. `-v` lists readline's variables
 with this editor's values, `completion-ignore-case on` and `show-all-if-ambiguous on` among them;
-`set editing-mode vi` is `set -o vi`, and the rest are kept and listed. `bind -x` keeps its
-commands, which `-X` lists; running one from its key comes in the next change. `^D` is left out
+`set editing-mode vi` is `set -o vi`, and the rest are kept and listed. A key `bind -x` bound
+runs its command in the session, the terminal given back while it runs, with `READLINE_LINE` the
+line and `READLINE_POINT` the cursor, in characters, and `READLINE_MARK`; what the command leaves
+in the first two is the line after, drawn again where it was, and all three are unset after it,
+as bash 5 unsets them. That is how fzf's Ctrl-T puts in the file it picked. `-X` lists them. `^D` is left out
 of `-p`: the editor ends input on it, where readline's `delete-char` ends input only on an empty
 line.
 
