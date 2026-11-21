@@ -40,6 +40,7 @@ func jobStateWalk(c *jobCodec, s *jobState) {
 	})
 	c.string(&s.ScriptFile)
 	c.stringMap(&s.Traps)
+	c.stringMap(&s.ListedTraps)
 	c.uint16(&s.Umask)
 	c.strings(&s.DirStack)
 	c.strings(&s.AliasChain)

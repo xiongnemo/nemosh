@@ -6,6 +6,8 @@ import (
 )
 
 func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, savedStatus int) lineResult {
+	jobTop := r.jobTop
+	r.jobTop = false
 	if value.timed != "" {
 		return r.executeTimedPipeline(ctx, value, savedStatus)
 	}
@@ -37,7 +39,7 @@ func (r Runtime) executeTypedPipeline(ctx context.Context, value pipeline, saved
 	// fails in the shell that ran it. An alias's commands have had theirs too, as
 	// the commands the references read in its place have.
 	if !value.negated && !isLoneBraceGroup(value) && !aliased {
-		if r.errTrapTriggers(result) {
+		if !jobTop && r.errTrapTriggers(result) {
 			r.runTrap(ctx, trapERR, result.status)
 		}
 		if r.errExitTriggers(result) {
