@@ -35,7 +35,7 @@ func (r Runtime) FileModeMask() uint16 {
 // the permissions it leaves, and with an operand sets it quietly. All as busybox's, which
 // reads the first operand and no other, and refuses any other option; see umask_symbolic.go
 // for the symbolic half, which was "invalid mask". -p is bash's: the mask printed as the
-// command that sets it.
+// command that sets it. bash mode's umask is bash's where the two part; see umask_bash.go.
 func (r Runtime) umask(args []string) int {
 	symbolic, reusable := false, false
 	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
@@ -52,6 +52,11 @@ func (r Runtime) umask(args []string) int {
 				reusable = true
 			default:
 				// `umask -rwx` too, which reads as options before it can read as a mode.
+				if r.BashMode() {
+					fmt.Fprintf(r.streams.Stderr, "%sumask: -%c: invalid option\n", r.diagnosticPrefix(), letter)
+					fmt.Fprintln(r.streams.Stderr, "umask: usage: umask [-p] [-S] [mode]")
+					return 2
+				}
 				fmt.Fprintf(r.streams.Stderr, "%sumask: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				return 2
 			}
@@ -60,6 +65,9 @@ func (r Runtime) umask(args []string) int {
 	if len(args) == 0 {
 		r.printUmask(symbolic, reusable)
 		return 0
+	}
+	if r.BashMode() {
+		return r.setBashUmask(args[0], symbolic)
 	}
 	mask, err := parseFileModeMask(args[0])
 	if err != nil {

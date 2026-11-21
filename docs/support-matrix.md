@@ -530,6 +530,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | a script, `-c` or stdin with a syntax error later in it, or over the parser's 1 MiB | refused before its first line runs, status 2 | read a command at a time, as bash reads it: what comes before the error runs, the error ends the script there, status 2, its EXIT trap run; text after an `exit` is never read, so an installer's archive after `exit 0` is no error; eval's text and a sourced file are read so too, what comes before their error running |
 | aliases in a script or `-c` | expanded, as in a session | not expanded until `shopt -s expand_aliases`, as bash's non-interactive shell; a session expands them from the start |
 | an alias that is syntax: `alias LEFT='{'`, a keyword, half a loop | a syntax error: an alias is substituted as its command runs, and has to be whole commands there | substituted as the text is read, before its structure is decided, as bash and busybox read it, so `alias e_='for i in 1 2 3; do echo '` and `e_ $i; done` is a loop; one defined is in force from the next command, the rest of the text read again from there, and a function's body keeps the aliases it was read with |
+| umask | starts at 0002, busybox-w32's; a symbolic mode is busybox's: a clause naming no class filtered through the mask, `u=g` copying what `=` cleared, X looking at the mode as it stands, s and t refused, an empty clause skipped, `illegal mode`, 2 | starts at 0022, Git for Windows' bash's; bash 5.3's: a clause naming no class means all three, `u=g` copies the class as the operand found it, X too, s and t taken and left out; `` `,': invalid symbolic mode operator ``, `08: octal number out of range`, 1; `-S` with a mode prints the new one |
 | a job a subshell, a `$(...)` or a pipeline stage puts in the background, at a prompt | announced, `[1] PID`, as busybox-w32 announces it | not announced, as bash announces only the session's own; atuin backgrounds one before every prompt |
 | what nemosh's rc file changes of bash's | -- | said on one line of stderr: `nemosh: ~/.nemoshrc changed what ~/.bashrc set: PS1, alias ll, function f`, the first five and how many more; a variable only added to, `PATH=$PATH:...`, is not counted |
 
@@ -888,7 +889,7 @@ loops record the whole command now, as the edited one always did.
   PATH, or a `.ps1` run by its path, is named as a PowerShell script with how to run it.
 - Windows gives a process no umask, so a shell's starts at 0002, busybox-w32's
   DEFAULT_UMASK, and `ls -l` and `stat` show a file 0664 and a directory 0775 as busybox's
-  do; Git for Windows's bash starts at 0022.
+  do; Git for Windows's bash starts at 0022, and so does bash mode.
 - A name `type` or `command -V` does not find is `x: not found` on stdout and 127, and
   `command -v`'s is 127, as busybox answers them; bash says `type: x: not found` on
   stderr, with 1, and its options to type keep its answer. A read-only variable refused is

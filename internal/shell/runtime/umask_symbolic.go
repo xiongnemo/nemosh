@@ -10,7 +10,8 @@ import (
 // `umask g-w`, `umask a+r`. Both were "invalid mask".
 //
 // The operand is read as chmod reads a mode, and applied to the permissions the mask leaves.
-// The rules are busybox's, measured, and where bash differs busybox is followed:
+// The rules are busybox's, measured, and where bash differs busybox is followed, except in bash
+// mode, which reads a mode as bash does (umask_bash.go):
 //   - A clause with no class letters is filtered through the mask, as POSIX has chmod
 //     filter it through the umask: under 0124, `umask =rx` is 0326. bash makes it 0222.
 //   - An empty clause is skipped, so `u-r,,u-r` is `u-r,u-r`. bash refuses it.

@@ -22,6 +22,9 @@ func (r Runtime) EnterBashMode() {
 	if !strings.ContainsRune(r.options.invocation, 'i') {
 		r.options.expandAliases = false
 	}
+	// Git for Windows' bash starts with a umask of 0022, busybox-w32 with 0002; see
+	// initialFileModeMask. A background job's process is given its shell's mask after this.
+	r.mask.set(0o022)
 }
 
 // BashMode is whether the shell is in bash mode.
