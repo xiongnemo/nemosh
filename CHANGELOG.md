@@ -63,6 +63,8 @@ patch number is the commits since that tag.
     illegal option, which ended the script, stays the answer as nemosh and sh.
   - **A double quote in `$((...))` is removed in bash mode**, as bash removes it -- starship's
     PS0 sets its timer with one -- where busybox, and nemosh and sh, call it a syntax error.
+  - **`eval --` ends eval's options in bash mode**, so starship's `eval -- "$(starship init bash
+    --print-full-init)"` runs no command named `--`, busybox's answer, which nemosh and sh keep.
 
 - **`vi`** and **`view`**, busybox-w32's vi with vim's ways where the two differ on a key a
   Debian user knows, every case measured against both; `fc` with no `EDITOR` and `C-x C-e` in

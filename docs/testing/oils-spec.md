@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2178 of the 2548 cases bash passes: 85.5%.**
+**nemosh passes 2182 of the 2548 cases bash passes: 85.6%.**
 
-Of the other 370, it does 117 the way the files record of ash, which may be busybox's
-way, and 253 neither way.
+Of the other 366, it does 116 the way the files record of ash, which may be busybox's
+way, and 250 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2114 of them and does 119 the way the
 files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2178 |
+| that nemosh passes of those | 2182 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -63,11 +63,11 @@ busybox does the way the file records of ash.
 | array.test.sh | 78 | 78 | 76 | 97.4% | 2 | 71 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 7 | 77.8% | 0 | 7 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 4 | 0 |
-| assign-extended.test.sh | 39 | 34 | 25 | 73.5% | 1 | 24 | 0 |
+| assign-extended.test.sh | 39 | 34 | 27 | 79.4% | 1 | 24 | 0 |
 | assign.test.sh | 48 | 45 | 36 | 80.0% | 2 | 36 | 28 |
 | background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 22 | 18 |
 | ble-features.test.sh | 9 | 9 | 4 | 44.4% | 5 | 4 | 9 |
-| ble-idioms.test.sh | 26 | 26 | 21 | 80.8% | 2 | 21 | 23 |
+| ble-idioms.test.sh | 26 | 26 | 22 | 84.6% | 1 | 21 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 5 | 0 | 5 |
 | blog1.test.sh | 9 | 9 | 8 | 88.9% | 1 | 8 | 8 |
 | blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 3 | 2 |
@@ -81,7 +81,7 @@ busybox does the way the file records of ash.
 | builtin-completion.test.sh | 51 | 50 | 48 | 96.0% | 0 | 43 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 7 | 38.9% | 0 | 7 | 2 |
 | builtin-echo.test.sh | 27 | 27 | 26 | 96.3% | 1 | 26 | 27 |
-| builtin-eval-source.test.sh | 23 | 21 | 14 | 66.7% | 0 | 14 | 13 |
+| builtin-eval-source.test.sh | 23 | 21 | 15 | 71.4% | 0 | 14 | 13 |
 | builtin-fc.test.sh | 14 | 14 | 14 | 100.0% | 0 | 3 | 2 |
 | builtin-getopts.test.sh | 31 | 31 | 24 | 77.4% | 7 | 24 | 31 |
 | builtin-history.test.sh | 17 | 15 | 12 | 80.0% | 0 | 5 | 1 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2178 | 85.5% | 117 | 2114 | 1447 |
+| all | 2665 | 2548 | 2182 | 85.6% | 116 | 2114 | 1447 |

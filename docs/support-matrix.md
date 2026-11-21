@@ -506,6 +506,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | PS4 | expanded | decoded and expanded, as bash's |
 | `export -a`, `export -A` | an illegal option, which ends the script, busybox's answer | bash's: a name is exported as any is, `=(...)` assigns an array, and with no names the exported arrays of the kind are listed |
 | a double quote in `$((...))` | a syntax error, busybox's answer | removed, so `$(("1+2"*3))` is 7; `(( ))`, `for (( ))` and a subscript remove it under both names, being bash's alone |
+| `eval -- CODE` | runs a command named `--`, status 127, busybox's answer | `--` ends eval's options, as starship's init writes it |
 | what nemosh's rc file changes of bash's | -- | said on one line of stderr: `nemosh: ~/.nemoshrc changed what ~/.bashrc set: PS1, alias ll, function f`, the first five and how many more; a variable only added to, `PATH=$PATH:...`, is not counted |
 
 `tests/oils/baseline-sh.json` holds the sh name to what it did, so a change made for bash

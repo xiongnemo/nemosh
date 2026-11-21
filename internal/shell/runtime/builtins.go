@@ -72,6 +72,11 @@ func (r Runtime) eval(ctx context.Context, args []string) int {
 }
 
 func (r Runtime) evalResult(ctx context.Context, args []string, savedStatus int) lineResult {
+	// bash's eval ends its options at --, as starship's init writes `eval -- "$(...)"`;
+	// busybox's runs a command named --.
+	if r.BashMode() && len(args) > 0 && args[0] == "--" {
+		args = args[1:]
+	}
 	if len(args) == 0 {
 		return lineResult{}
 	}
