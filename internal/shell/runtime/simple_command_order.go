@@ -43,6 +43,15 @@ func (r Runtime) runSimpleWords(ctx context.Context, command []word, operations 
 	if prefix == 0 || len(operations) == 0 || isExecCommand(arguments) {
 		return run(r, operations)
 	}
+	// Assignments with no command, in bash mode, are made whether their redirections can be or
+	// not, as bash makes them: `x=1 >/no/such/dir/f` sets x, status 1.
+	if len(arguments) == 0 && r.BashMode() {
+		result := run(r, nil)
+		if result.control != flowNone {
+			return result
+		}
+		return r.withAppliedRedirectsFor(false, operations, func(Runtime) lineResult { return result })
+	}
 	special := len(arguments) > 0 && isSpecialBuiltin(arguments[0].value)
 	return r.withAppliedRedirectsFor(special, operations, func(redirected Runtime) lineResult {
 		return run(redirected, nil)

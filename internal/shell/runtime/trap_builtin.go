@@ -102,8 +102,8 @@ func (r Runtime) printTraps(conditions []string) int {
 
 // listTraps lists the armed handlers as both references order them: EXIT, the signals by
 // number, then bash's DEBUG, ERR and RETURN, of which busybox has ERR, last. They were in
-// the order of their names, ERR before EXIT.
-func (r Runtime) listTraps() int { return r.writeTraps(false) }
+// the order of their names, ERR before EXIT. Bash mode lists them as bash's trap does, as -p.
+func (r Runtime) listTraps() int { return r.writeTraps(r.BashMode()) }
 
 func (r Runtime) writeTraps(bash bool) int {
 	shown := r.shownTraps()
