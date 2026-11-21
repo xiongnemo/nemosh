@@ -60,6 +60,28 @@ func TestSession_bashModeReadsBashsStartupFilesThenNemoshs(t *testing.T) {
 	}
 }
 
+// A session in bash mode reads ~/.inputrc before its startup files, so the bashrc's bind has the
+// last word over it; as nemosh it reads none.
+func TestSession_bashModeReadsInputrc(t *testing.T) {
+	home := t.TempDir()
+	for name, text := range map[string]string{".inputrc": "set mark-directories off\n\"\\C-o\": \"from inputrc\"\n", ".bashrc": "bind '\"\\C-o\": \"from bashrc\"'\n"} {
+		if err := os.WriteFile(filepath.Join(home, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("HOME", home)
+	t.Setenv("INPUTRC", "")
+	t.Setenv("PS1", "")
+	t.Setenv("PS2", "")
+	probe := "bind -v | grep mark-directories; bind -s\n"
+	if got := runInvocation(t, probe, "bash", "-i"); got.stdout != "set mark-directories off\n\"\\C-o\": \"from bashrc\"\n" {
+		t.Errorf("bash mode: %q, stderr %q", got.stdout, got.stderr)
+	}
+	if got := runInvocation(t, probe, "-i"); got.stdout != "set mark-directories on\n" {
+		t.Errorf("as nemosh: %q, stderr %q", got.stdout, got.stderr)
+	}
+}
+
 // Run as bash, a session keeps its history where bash does, in ~/.bash_history, which Git's bash
 // shares; and before the first prompt it reads ~/.nemosh_history after it, so a line typed under
 // either name can be recalled under the other.

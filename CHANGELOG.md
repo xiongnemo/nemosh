@@ -54,6 +54,8 @@ patch number is the commits since that tag.
     `~/.bash_history`, and `~/.nemosh_history` is read after it. What nemosh's file changes of
     what bash's set -- a variable, an alias, a function, an option, a completion -- is said on
     one line of stderr.
+  - **A session in bash mode reads readline's inputrc**, `~/.inputrc`, before its startup files,
+    with `set`, bindings, `set keymap`, `$if`/`$else`/`$endif` and `$include`; `bind -f` reads one so.
   - **A prompt in bash mode is decoded and then expanded**, bash's order, so a Windows path a
     `$(...)` in PS1 prints is drawn as printed, where busybox's order made a newline of its
     `\n`; PS4 is decoded too.

@@ -39,7 +39,7 @@ func (c command) prepareSession(ctx context.Context, rt runtime.Runtime, mode st
 	var beforeProfile, afterProfile runtime.Definitions
 	defaulted := false
 	c.beforeProfiles = func() {
-		rt.SetSessionDefaults()
+		c.sessionDefaults(rt)
 		defaulted = true
 		if rt.BashMode() {
 			beforeProfile = rt.Definitions()
@@ -52,7 +52,7 @@ func (c command) prepareSession(ctx context.Context, rt runtime.Runtime, mode st
 		afterProfile = rt.Definitions()
 	}
 	if !defaulted {
-		rt.SetSessionDefaults()
+		c.sessionDefaults(rt)
 	}
 	if status, exited := c.sourceRCFile(ctx, rt, beforeProfile, afterProfile); exited {
 		return startupExit(rt, status)
@@ -61,6 +61,16 @@ func (c command) prepareSession(ctx context.Context, rt runtime.Runtime, mode st
 	setDefaultHistoryFile(rt, c.stderr)
 	sayOldSpecs(c.stderr, sessionSpecLookup)
 	return nil
+}
+
+// sessionDefaults is what a session has before its startup files: Ubuntu's aliases and
+// LS_COLORS, and in bash mode readline's inputrc, as readline has read it by the time a bashrc's
+// bind runs.
+func (c command) sessionDefaults(rt runtime.Runtime) {
+	rt.SetSessionDefaults()
+	if rt.BashMode() {
+		rt.ReadInputrc()
+	}
 }
 
 // sourceRCFile is a session's rc file: $ENV, or bash's --rcfile FILE in its place, or none for

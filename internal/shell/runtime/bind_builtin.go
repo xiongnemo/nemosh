@@ -153,18 +153,12 @@ func (r Runtime) defaultKeymap() string {
 	return "emacs"
 }
 
-// bindFile is -f: each line of a file read as a line of ~/.inputrc is.
+// bindFile is -f: a file read as an inputrc is (inputrc.go).
 func (r Runtime) bindFile(keymap, prefix, path string) int {
 	data, err := os.ReadFile(r.resolvePath(path))
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%sbind: %s: cannot read: %s\n", r.diagnosticPrefix(), path, applets.CauseText(err))
 		return 1
 	}
-	status := 0
-	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
-		if err := r.bindLine(keymap, prefix, line); err != nil {
-			status = r.bindFailed(err)
-		}
-	}
-	return status
+	return r.bindInputrc(keymap, prefix, string(data), 0)
 }

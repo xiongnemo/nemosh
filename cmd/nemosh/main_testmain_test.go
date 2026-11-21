@@ -38,6 +38,10 @@ func TestMain(m *testing.M) {
 	if err := os.Unsetenv("NEMOSH_COMPAT"); err != nil {
 		panic(err)
 	}
+	// A session in bash mode reads $INPUTRC; a test that wants one sets it.
+	if err := os.Unsetenv("INPUTRC"); err != nil {
+		panic(err)
+	}
 	home, owned := isolateHome()
 	sessionSpecLookup = func(name string) (string, bool) {
 		if name == "APPDATA" {

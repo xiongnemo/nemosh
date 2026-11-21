@@ -500,6 +500,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | `BASH_VERSION`, `BASH_VERSINFO` | unset | bash 5.2.37's |
 | a session's rc file | `$ENV`, or `~/.nemoshrc` | `~/.bashrc`, or `--rcfile`'s, and then `$ENV` or `~/.nemoshrc` |
 | a login session's profile | `/etc/profile`, `~/.profile` | `/etc/profile`, then the first of `~/.bash_profile`, `~/.bash_login` and `~/.profile`; then nemosh's rc file |
+| readline's inputrc | not read | `$INPUTRC`, or `~/.inputrc`, or `/etc/inputrc`, read before the startup files, as readline has read it by the time a bashrc's `bind` runs |
 | history | `~/.nemosh_history` | `~/.bash_history`, which Git's bash shares; `~/.nemosh_history` is read after it before the first prompt, and written to no more |
 | PS1 and PS2 | expanded, then their escapes decoded, busybox's order, so a `\n` that `$(...)` prints is a newline | decoded, then expanded, bash's, so what `$(...)` prints stays as printed: a `C:\new` is drawn so |
 | PS4 | expanded | decoded and expanded, as bash's |
@@ -597,6 +598,10 @@ macro's keys, one that begins a longer bound sequence waits for the next key, an
 one away. The keymaps are emacs, vi-insert and vi-command, under bash's names for them
 (emacs-standard, emacs-meta, emacs-ctlx, vi, vi-move); with no `-m` the keymap is the one the
 editor is in.
+
+`bind -f FILE` reads a file as readline reads an inputrc: its lines, `set keymap NAME` for the
+lines after it, `$if mode=`, `term=`, `Bash`, `version` or a variable's value, `$else`, `$endif`
+and `$include`. In bash mode a session reads its inputrc so (see Bash mode).
 
 `bind -l` and `bind -p` name all of readline's functions; the ones this editor carries out are
 the keys above, `self-insert`, and readline's functions a macro reaches, each on bash's keys:
