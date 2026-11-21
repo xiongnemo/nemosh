@@ -237,6 +237,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A quote inside a prompt's `$(...)` was printed**: `PS1='[$(echo "hi")]'` drew `["hi"]`,
+  `${y:-"a b"}` kept its quotes and `$(echo ")")` came apart, in PS1, PS2, PS0 and `${x@P}`
+  alike. The quote is the substitution's now, as in busybox and bash: `[hi]`.
+
 - **An applet run straight from the command line found no program**: `nemosh xargs prog`,
   `nemosh env NAME=v prog`, awk's `system()` under `nemosh awk`, said not found for any program,
   where the same command at a prompt ran it. They run as they do in the shell now.

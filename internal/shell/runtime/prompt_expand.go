@@ -76,9 +76,16 @@ func (r Runtime) expandPromptText(ctx context.Context, text string, lastStatus i
 // escapeForPromptQuoting protects the quote that would end the wrapper, and
 // nothing else -- $, backtick and backslash all have to keep meaning what they
 // mean inside double quotes. keepEscapedDollar makes `\$` one that comes out whole.
+// A command substitution, an arithmetic expansion and a ${...} are copied whole,
+// since a quote in one is its own, as inside double quotes: `$(echo "hi")` is hi.
 func escapeForPromptQuoting(text string, keepEscapedDollar bool) string {
 	var escaped strings.Builder
 	for index := 0; index < len(text); index++ {
+		if end, ok := promptExpansionEnd(text, index); ok {
+			escaped.WriteString(text[index:end])
+			index = end - 1
+			continue
+		}
 		switch text[index] {
 		case '"':
 			escaped.WriteString(`\"`)
@@ -103,4 +110,19 @@ func escapeForPromptQuoting(text string, keepEscapedDollar bool) string {
 		}
 	}
 	return escaped.String()
+}
+
+// promptExpansionEnd is the end, exclusive, of the `$(...)`, `$((...))` or `${...}` at
+// index, and false when none begins there or it does not close.
+func promptExpansionEnd(text string, index int) (int, bool) {
+	if text[index] != '$' || index+1 >= len(text) {
+		return 0, false
+	}
+	if text[index+1] == '{' {
+		return bracedParameterEnd(text, index+1)
+	}
+	if end, ok := substitutionEnd(text, index); ok {
+		return end + 1, true
+	}
+	return 0, false
 }
