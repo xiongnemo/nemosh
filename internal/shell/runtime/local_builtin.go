@@ -22,6 +22,11 @@ import (
 // rather than quietly behaving like an assignment. busybox raises it, so it ends a script
 // with 2, local being special there; it was 1, and the script went on.
 func (r Runtime) local(ctx context.Context, args []string) int {
+	if (r.functionDepth == 0 || r.locals == nil) && r.BashMode() {
+		// bash's: status 1, and the line goes on.
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"local: can only be used in a function")
+		return 1
+	}
 	if r.functionDepth == 0 || r.locals == nil {
 		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"local: not in a function")
 		r.raiseShellError()

@@ -50,8 +50,11 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 		}
 		// Text eval or . reads that does not parse is a syntax error, which ends a script, `||
 		// echo handled` or not, as busybox ends it and POSIX 2.8.1 has it, and only the line at
-		// a prompt; see flowAbort. It went on with 2, as bash goes on outside its POSIX mode.
-		// Under command it ends only the eval; see plainResult.
+		// a prompt; see flowAbort. It went on with 2, as bash goes on outside its POSIX mode,
+		// which bash mode takes. Under command it ends only the eval; see plainResult.
+		if r.BashMode() {
+			return status, flowNone
+		}
 		return status, flowAbort
 	}
 	if runExitTrap && control != flowExec {
