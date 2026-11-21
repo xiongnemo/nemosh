@@ -280,6 +280,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`declare -f` printed `cmd < <(list)` as `cmd <<(list)`**, a here-document, so the function did
+  not read back; and a background job, started from the functions as printed, failed with a
+  syntax error once one such was defined -- carapace's completer has one, and atuin starts a job
+  before every prompt. A process substitution is set apart from its operator, as bash prints it.
+
 - **`bind '"KEYS": ""'` was refused** as an empty key sequence: an empty macro binds the keys to
   nothing, as atuin's init binds its chain key, three times over at every start.
 

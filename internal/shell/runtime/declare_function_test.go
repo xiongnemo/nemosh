@@ -30,7 +30,9 @@ func TestDeclareF_printsAnArithmeticCommandAsWritten(t *testing.T) {
 }
 
 // What declare -f prints reads back as the same function. Every construct the printer has
-// a case for is here, and the copy is run beside the original.
+// a case for is here, and the copy is run beside the original. A background job is started
+// from the printed form, so a function that does not read back breaks every job after it:
+// carapace's `mapfile ... < <(echo ...)` printed as a here-document, `<<(echo`.
 func TestDeclareF_readsBackAsTheSameFunction(t *testing.T) {
 	definition := `g() {
   if [ "$1" = a ]; then
@@ -55,6 +57,7 @@ RAW
   for ((j=0; j<2; j++)); do printf '%s,' "$j"; done; echo
   echo "$(echo cs)" ${v:-def} "a\"b" 2>&1
   echo bg & wait
+  cat < <(echo procsub)
 }
 `
 	script := definition + "copy=$(declare -f g | sed 's/^g ()/h ()/')\neval \"$copy\"\nfor arg in a b x z; do g $arg; done > one\nfor arg in a b x z; do h $arg; done > two\ncmp -s one two && echo same\n"

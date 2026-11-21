@@ -29,6 +29,11 @@ func (p *scriptPrinter) redirect(operation redirectOperation) string {
 		return strconv.Itoa(operation.target)
 	}
 	target := printWord(operation.operand)
+	// A process substitution is set apart from the operator, as bash prints it: `< <(cmd)` run
+	// together is a here-document, `<<(cmd`.
+	if strings.HasPrefix(target, "<(") || strings.HasPrefix(target, ">(") {
+		target = " " + target
+	}
 	switch operation.kind {
 	case redirectInput:
 		return descriptor(0) + "<" + target
