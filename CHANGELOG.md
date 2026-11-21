@@ -142,6 +142,9 @@ patch number is the commits since that tag.
     abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **An argument like an assignment has its tildes expanded in bash mode**, as bash expands
+    them outside its POSIX mode: `make PREFIX=~/x` and `echo x=~:~` give the home directory.
+    busybox and POSIX leave the tilde, and nemosh and sh still do.
   - **echo -e in bash mode decodes what bash's does**: an octal escape only with its 0, so `\1` and
     `\123` stay as written, and `\E` is escape. busybox's reads a bare `\NNN` too, and nemosh and
     sh still do.
