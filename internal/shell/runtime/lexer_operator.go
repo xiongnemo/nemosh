@@ -131,19 +131,28 @@ func redirectTokenWidth(input string) int {
 // not operators. Here rather than in the loop that calls it: lexer.go is at its line
 // ceiling, and this is the one question in it that is about a token rather than a byte.
 //
-// `[[` counts only at the start of a command, because `echo [[` is two ordinary words.
+// `[[` counts only at the start of a command, because `echo [[` is two ordinary words; a `!`
+// that begins a pipeline goes before it, `! [[ -f $p || -p $p ]]`, as direnv's stdlib has it.
 func conditionAfterToken(inCondition bool, token shellToken, tokens []shellToken) bool {
 	// Written plainly, as a reserved word is: `[[ x == "]]" ]]` is not over at its quotes.
-	if token.kind != tokenWord || token.parsed == nil || !isUnquotedLiteralWord(*token.parsed) {
+	if !plainWordToken(token) {
 		return inCondition
 	}
 	switch token.value {
 	case "[[":
+		for len(tokens) > 0 && plainWordToken(tokens[len(tokens)-1]) && tokens[len(tokens)-1].value == "!" {
+			tokens = tokens[:len(tokens)-1]
+		}
 		return len(tokens) == 0 || tokens[len(tokens)-1].kind != tokenWord
 	case "]]":
 		return false
 	}
 	return inCondition
+}
+
+// plainWordToken reports whether token is a word written with no quote or expansion in it.
+func plainWordToken(token shellToken) bool {
+	return token.kind == tokenWord && token.parsed != nil && isUnquotedLiteralWord(*token.parsed)
 }
 
 func isRedirectToken(value string) bool {

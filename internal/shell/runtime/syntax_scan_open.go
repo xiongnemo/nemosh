@@ -52,15 +52,20 @@ func (scanner *syntaxScanner) followCondition(line string, index int) {
 }
 
 // commandBegins reports whether a command begins at the end of the logical line so far, before:
-// at its start, after a separator, an opening bracket or `!`, after a reserved word that a
-// command follows, or after the `)` of a function's `()` or of a case pattern -- which is the
-// scanner's own question of the line, kept as it goes (syntax_scan_case.go).
+// at its start, after a separator or an opening bracket, after a reserved word that a command
+// follows, after a `!` that begins a pipeline where one of those could -- `echo ! [[` is three
+// words -- or after the `)` of a function's `()` or of a case pattern, which is the scanner's
+// own question of the line, kept as it goes (syntax_scan_case.go).
 func (scanner *syntaxScanner) commandBegins(before string) bool {
 	previous, found := previousNonBlank(before, len(before))
-	if previous == ')' {
+	switch previous {
+	case ')':
 		return strings.HasSuffix(strings.TrimRight(before, " \t"), "()") || scanner.caseOpen()
+	case '!':
+		bang := len(strings.TrimRight(before, " \t")) - 1
+		return (bang == 0 || strings.IndexByte(" \t\n;&|({", before[bang-1]) >= 0) && scanner.commandBegins(before[:bang])
 	}
-	return !found || strings.IndexByte(";&|({!\n", previous) >= 0 || afterCommandIntroducer(before, len(before))
+	return !found || strings.IndexByte(";&|({\n", previous) >= 0 || afterCommandIntroducer(before, len(before))
 }
 
 func (scanner *syntaxScanner) incompleteError() error {

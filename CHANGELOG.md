@@ -285,6 +285,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`! [[ A || B ]]` was refused**, `missing ]]`: after `!` the conditional's `||`, `&&` and `|`
+  were taken for the pipeline's, so direnv's whole stdlib failed to parse, and direnv run with
+  this shell as its bash loaded no `.envrc`. And `echo ! [[ x`, where `!` is an argument, opened a
+  conditional that nothing closed.
+
 - **`declare -f` printed `cmd < <(list)` as `cmd <<(list)`**, a here-document, so the function did
   not read back; and a background job, started from the functions as printed, failed with a
   syntax error once one such was defined -- carapace's completer has one, and atuin starts a job
