@@ -247,23 +247,15 @@
       "special builtins are called out": "ash-only"
     },
     "builtin-umask.test.sh": {
-      "'umask -S' prints symbolic umask": "fail",
-      "'umask -p' prints a form that can be eval'd": "fail",
       "'umask 0002' sets the umask": "fail",
-      "'umask' without args prints the umask": "fail",
       "set umask with symbolic mode: g-w,o-w": "fail",
-      "symbolic syntax error: empty clause u-r,,u-r": "fail",
       "umask X perm": "fail",
-      "umask bare op": "fail",
-      "umask default who": "fail",
-      "umask permcopy": "fail",
-      "umask permcopy running value": "fail",
-      "umask s perm": "fail",
+      "umask bare op": "ash-only",
+      "umask permcopy": "ash-only",
+      "umask permcopy running value": "ash-only",
+      "umask s perm": "ash-only",
       "umask sequential actions": "ash-only",
-      "umask t perm": "fail",
-      "umask with too many arguments (i.e. extra spaces)": "fail",
-      "usage: empty input, space input": "fail",
-      "usage: large octal number": "fail"
+      "umask t perm": "ash-only"
     },
     "builtin-vars.test.sh": {
       "Make an existing local variable readonly": "fail",

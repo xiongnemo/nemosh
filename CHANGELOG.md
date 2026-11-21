@@ -118,6 +118,9 @@ patch number is the commits since that tag.
     is followed by `hint: alias LEFT='{' is part of a command's syntax, which nemosh does not read
     on purpose; bash mode does`, in a script, eval's text and at a prompt. Oils refuses such an
     alias too, and ShellCheck warns of one.
+  - **umask in bash mode is bash 5.3's**: it starts at 0022, as Git's bash does; a symbolic mode
+    takes X, s, t and a class to copy as POSIX has them, `umask =rx` meaning all three classes;
+    and a mode refused is said in bash's words, status 1. nemosh and sh keep busybox's, 0002.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
