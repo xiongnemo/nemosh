@@ -109,6 +109,11 @@ patch number is the commits since that tag.
   - **A bash-mode script expands no aliases until `shopt -s expand_aliases`**, as bash's
     non-interactive shell; a session expands them from the start. busybox's expands them
     everywhere, and nemosh and sh still do.
+  - **An alias in bash mode is substituted as the text is read**, as bash reads it, so one for
+    `{`, `(`, a reserved word or half a loop is syntax: `alias e_='for i in 1 2 3; do echo '` and
+    then `e_ $i; done` is a loop. One defined is in force from the next command, the rest of the
+    text read again from there, and a function's body keeps the aliases it was read with, in a
+    session and an rc file as in a script. nemosh and sh substitute as the command runs, as before.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.

@@ -30,16 +30,20 @@ func (r Runtime) runScript(ctx context.Context, script string, runExitTrap bool)
 // begins: eval's and a sourced file's is the status before them, as both references have it.
 // It was 0, so `false; eval 'echo $?'` said 0. Text that runs nothing answers 0, as there.
 func (r Runtime) runScriptResult(ctx context.Context, script string, first int, runExitTrap bool, savedStatus int) (int, flowControl) {
-	prepared, parseErr := parseScriptAt(script, first)
-	r.sayParseWarnings(prepared)
+	var prepared Script
+	var parseErr error
+	if !r.BashMode() {
+		prepared, parseErr = parseScriptAt(script, first)
+		r.sayParseWarnings(prepared)
+	}
 	status := 0
 	control := flowNone
 	switch {
-	// A script that does not parse whole is read a command at a time in bash mode, as bash
-	// reads one, and so are eval's text and a sourced file; see script_chunks.go.
-	case parseErr != nil && runExitTrap && r.BashMode():
+	// In bash mode a script is read as bash reads one, a command at a time with the aliases then
+	// in force, and so are eval's text and a sourced file; see script_chunks.go.
+	case r.BashMode() && runExitTrap:
 		whilePinned(ctx, func() { status, control, parseErr = r.runChunks(ctx, script, first, 0, true) })
-	case parseErr != nil && r.BashMode():
+	case r.BashMode():
 		status, control, parseErr = r.runChunks(ctx, script, first, savedStatus, false)
 	// The script's own run, the one with an EXIT trap to run, is the top level; eval and
 	// `.` are not.

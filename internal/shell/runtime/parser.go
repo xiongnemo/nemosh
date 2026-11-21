@@ -35,6 +35,12 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 		}
 		budget.heredocsScanned = true
 	}
+	// In bash mode aliases are substituted as the text is read, before its structure is decided:
+	// after the heredocs are out of it, and before backquotes are rewritten, so a backquote in an
+	// alias's text is rewritten with the rest. Once, at the top: it reads into `$(...)` itself.
+	if depth == 0 && len(budget.aliases) > 0 {
+		source = readAliases(source, budget.aliases)
+	}
 	// After heredocs are collected, so a quoted-delimiter body keeps its
 	// backquotes as the literal text it is promised to be.
 	source, err := rewriteBackquotes(source)

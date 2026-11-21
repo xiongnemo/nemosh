@@ -145,5 +145,5 @@ func (r Runtime) currentLine() int {
 // a substitution met while expanding -- numbered from the running command's line, which is
 // what both references report inside them.
 func (r Runtime) parseHere(text string) (Script, error) {
-	return parseScriptAt(text, r.currentLine())
+	return parseReading(text, r.currentLine(), false, r.readingAliases())
 }
