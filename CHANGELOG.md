@@ -324,6 +324,9 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`cat <<\` at a prompt was a syntax error**: a here-document's operator continued onto the next
+  line takes its delimiter from it, at a prompt as in a script, as both references read it.
+
 - **fc in a `bind -x` command left out the newest entry**, taking it for the fc's own line as at a
   prompt, so fzf's Ctrl-R never offered the command just run; it lists through the newest there,
   as bash's does.
