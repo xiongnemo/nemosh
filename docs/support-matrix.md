@@ -518,6 +518,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | return outside a function or a sourced file | ends a script as exit does, and is said at a prompt | `` return: can only `return' from a function or sourced script ``, status 2, and the line goes on |
 | break or continue outside a loop | nothing, status 0 | ``break: only meaningful in a `for', `while', or `until' loop``, status 0 |
 | `. FILE ARGS` whose FILE sets the positional parameters | the caller's come back | a list FILE set with `set --` stays; after a shift alone the caller's come back |
+| echo -e's escapes | busybox's: `\1` and `\123` octal as well as `\0101`, no `\E` | bash's: octal only with its 0, `\0101`, `\1` left as written, `\E` escape as `\e` is |
 | test and `[` | busybox's: `[ -a / ]` and `[ -z -a ] ]` an unknown operand, 2; `a: bad number`, `x: unknown operand`, `missing ]` | bash 5.3's test.c: by how many arguments, -a and -o between two words their AND and OR, bash's grammar past four, unary -a for -e, -N; `a: integer expected`, `x: unary operator expected`, `y: binary operator expected`, `too many arguments`, `` missing `]' ``, after the shell's prefix |
 | `[[ A -eq B ]]` and the other numeric tests | A and B are numbers, `x+1: bad number` | A and B are arithmetic expressions, `[[ x+1 -eq 3 ]]` |
 | `trap` listing a signal | `trap -- 'cmd' INT` | `trap -- 'cmd' SIGINT`, as `trap -p` lists it under both |

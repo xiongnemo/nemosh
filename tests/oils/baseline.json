@@ -121,9 +121,6 @@
       "dirs to print using tilde-prefix format": "fail",
       "pushd/popd": "fail"
     },
-    "builtin-echo.test.sh": {
-      "\\0 \\1 \\8": "ash-only"
-    },
     "builtin-eval-source.test.sh": {
       "Eval in bash does tilde expansion in array": "fail",
       "Eval in does tilde expansion": "fail",
