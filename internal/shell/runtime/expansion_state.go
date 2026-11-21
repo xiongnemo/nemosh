@@ -121,6 +121,10 @@ func (r Runtime) reportExpansionError(err error) {
 		r.expansion.shellError, r.expansion.discard = true, true
 		return
 	}
+	if r.BashMode() {
+		r.reportExpansionErrorAsBash(err)
+		return
+	}
 	r.expansion.shellError = true
 	fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 }
@@ -147,6 +151,12 @@ func (r Runtime) reportUnsetParameter(name string) {
 		return
 	}
 	r.expansion.shellError = true
+	if r.BashMode() {
+		// bash's words and status: the script ends with 1.
+		r.expansion.shellErrorStatus = 1
+		fmt.Fprintf(r.streams.Stderr, "%s%s: unbound variable\n", r.diagnosticPrefix(), name)
+		return
+	}
 	fmt.Fprintf(r.streams.Stderr, "%s%s: parameter not set\n", r.diagnosticPrefix(), name)
 }
 

@@ -61,7 +61,7 @@ func (r Runtime) expandHeredocBody(ctx context.Context, body string, savedStatus
 			if end, ok := arithmeticExpansionEnd(body, index+3); ok {
 				value, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, body[index+3:end-1], savedStatus))
 				if err != nil {
-					r.reportExpansionError(err)
+					r.arithmeticExpansionFailed(err)
 				} else {
 					expanded.WriteString(strconv.FormatInt(value, 10))
 				}

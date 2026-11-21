@@ -20,24 +20,13 @@
       "$[ is a synonym for $((": "fail",
       "$[$undefined] is a synonym for $(($undefined (#2566)": "fail",
       "$[$var is a synonym for $(($var (#2426)": "fail",
-      "Ambiguous colon in slice": "fail",
-      "Empty expression a[]": "fail"
-    },
-    "arith-dynamic.test.sh": {
-      "Single quotes": "fail"
+      "Ambiguous colon in slice": "fail"
     },
     "arith.test.sh": {
-      "Comment not allowed in the middle of multiline arithmetic": "fail",
-      "Constant with quotes like '1'": "fail",
-      "Double subscript": "fail",
       "Dynamic parsing of arithmetic": "fail",
       "Increment undefined variables with nounset": "fail",
       "Integer constant validation": "fail",
-      "Invalid constant": "fail",
-      "Negative exponent": "fail",
-      "No floating point": "ash-only",
       "nounset with arithmetic": "fail",
-      "s[0] with string '12 34'": "fail",
       "undef[0] with nounset": "fail"
     },
     "array-assign.test.sh": {
@@ -66,10 +55,6 @@
       "Performance demo": "fail",
       "crash dump": "fail"
     },
-    "array.test.sh": {
-      "Length op, index op, then transform op is not allowed": "ash-only",
-      "Multiple subscripts not allowed": "ash-only"
-    },
     "assign-extended.test.sh": {
       "declare": "fail",
       "declare -F with shopt -s extdebug and main file": "fail",
@@ -77,14 +62,11 @@
       "declare -p": "fail",
       "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
       "declare -p arr": "fail",
-      "syntax error in array assignment": "ash-only",
       "unset and shell funcs": "fail"
     },
     "assign.test.sh": {
       "\"declare -a arr\" and \"readonly -a a\" creates an empty array (OSH)": "fail",
       "\"var d = {}; declare -p d\" does not print anything (OSH)": "ash-only",
-      "'local -a x' does not set variable": "fail",
-      "'local x' does not set variable": "fail",
       "Env binding in readonly/declare is NOT exported!  (pitfall)": "ash-only",
       "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
       "Test above without 'local' (which is not POSIX)": "fail",
@@ -106,7 +88,7 @@
     "ble-idioms.test.sh": {
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
       "is-array with ${var@a}": "fail",
-      "recursive arith: recursion": "ash-only",
+      "recursive arith: recursion": "fail",
       "shift unshift reverse": "fail"
     },
     "ble-unset.test.sh": {
@@ -115,9 +97,6 @@
       "[bash_unset] local-unset / dynamic-unset for localvar on nested-context": "ash-only",
       "[bash_unset] local-unset for nested tempenvs": "ash-only",
       "[bash_unset] nested context by tempenv-eval": "ash-only"
-    },
-    "blog1.test.sh": {
-      "${#1#'###'}": "ash-only"
     },
     "blog2.test.sh": {
       "-a -a": "fail",
@@ -135,8 +114,7 @@
     },
     "bugs.test.sh": {
       "Crash after changing $[] to be alias of $(( ))": "ash-only",
-      "file with NUL byte": "fail",
-      "process sub \u003c(echo 42 | tee PWNED) not allowed": "ash-only"
+      "file with NUL byte": "fail"
     },
     "builtin-bash.test.sh": {
       "help": "fail"
@@ -145,7 +123,6 @@
       "-a as unary operator (alias of -e)": "fail",
       "-k for sticky bit": "fail",
       "-ot and -nt": "fail",
-      "Looks like octal, but digit is too big": "fail",
       "[ -t invalid ]": "ash-only",
       "operator/operand ambiguity with -a": "fail",
       "operator/operand ambiguity with ]": "fail",
@@ -266,8 +243,7 @@
     "builtin-set.test.sh": {
       "'set' and 'eval' round trip": "fail",
       "A single + is an ignored flag; not an argument": "fail",
-      "set - leading single dash is ignored, turns off xtrace verbose (#2364)": "fail",
-      "set -eu (flag parsing)": "fail"
+      "set - leading single dash is ignored, turns off xtrace verbose (#2364)": "fail"
     },
     "builtin-special.test.sh": {
       "Prefix assignments persist after readonly, but NOT exported (set -o posix)": "ash-only",
@@ -333,7 +309,6 @@
       "usage: large octal number": "fail"
     },
     "builtin-vars.test.sh": {
-      "Local without variable is still unset!": "fail",
       "Make an existing local variable readonly": "fail",
       "Unset a function without -f": "fail",
       "Unset and scope (bug #653)": "ash-only",
@@ -388,11 +363,8 @@
       "Turning extglob on changes the meaning of [[ !(str) ]] in bash": "fail"
     },
     "fatal-errors.test.sh": {
-      "${undef} with nounset": "fail",
-      "Unrecoverable: ${undef?message}": "fail",
-      "Unrecoverable: divide by zero in case": "ash-only",
-      "Unrecoverable: divide by zero in conditional word": "ash-only",
-      "Unrecoverable: divide by zero in redirect word": "ash-only"
+      "${undef} with nounset": "ash-only",
+      "Unrecoverable: ${undef?message}": "ash-only"
     },
     "for-expr.test.sh": {
       "Accepts { } syntax too": "fail",
@@ -426,7 +398,6 @@
     },
     "introspect.test.sh": {
       "${BASH_SOURCE[@]} with line numbers": "fail",
-      "${FUNCNAME} and \"set -u\" (OSH regression)": "fail",
       "FUNCNAME with source (scalar or array)": "fail"
     },
     "known-differences.test.sh": {
@@ -440,11 +411,7 @@
       "too many args to continue": "fail"
     },
     "nameref.test.sh": {
-      "a[@] in nameref": "fail",
-      "name ref on Undef cell": "fail"
-    },
-    "nix-idioms.test.sh": {
-      "${!ref} to undefined string var is fatal, INCONSISTENT with array": "fail"
+      "a[@] in nameref": "fail"
     },
     "nul-bytes.test.sh": {
       "NUL bytes with test -f": "ash-only",
@@ -455,7 +422,6 @@
       "$((which example - command sub versus arith sub - gnunet-gtk package": "ash-only"
     },
     "parse-errors.test.sh": {
-      "Bad braced var sub -- not allowed": "ash-only",
       "Invalid for loop variable name": "ash-only",
       "Long Token - 65535 bytes": "fail",
       "Token that's too long for Oils - 65536 bytes": "fail",
@@ -505,14 +471,11 @@
       "set": "ash-only"
     },
     "sh-func.test.sh": {
-      "Scope of global variable when sourced in function (Shell Functions aren't Closures)": "fail",
       "return \"\" (a lot of disagreement)": "fail"
     },
     "sh-options.test.sh": {
       "$- with -c": "fail",
       "$- with pipefail": "fail",
-      "-u is nounset": "fail",
-      "nounset": "fail",
       "set without args lists variables": "fail",
       "stubbed out bash options": "fail"
     },
@@ -542,7 +505,6 @@
     "toysh-posix.test.sh": {
       "Evaluation order of redirect and ${undef?error}": "ash-only",
       "Failed redirect in assignment, vs. export": "ash-only",
-      "Fatal error": "ash-only",
       "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",
       "IFS 4": "ash-only",
       "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only"
@@ -565,42 +527,31 @@
       "printf / echo -e do NOT check surrogates at runtime": "fail"
     },
     "var-op-bash.test.sh": {
-      "-o nounset with var ops": "fail",
       "Case folding - multi code point": "fail"
     },
     "var-op-len.test.sh": {
-      "${#s} respects LC_ALL - length in bytes or code points": "fail",
-      "Length of undefined variable with nounset": "fail",
-      "Length operator can't be followed by test operator": "ash-only"
+      "${#s} respects LC_ALL - length in bytes or code points": "fail"
     },
     "var-op-patsub.test.sh": {
-      "Pattern replacement on unset variable": "ash-only",
       "When LC_ALL=C, pattern ? doesn't match multibyte character": "fail",
       "patsub with [^]]": "fail"
     },
     "var-op-slice.test.sh": {
-      "${array[@]:} vs ${array[@]: }  - bash and zsh inconsistent": "fail",
-      "Cannot take length of substring slice": "fail",
-      "Slice undefined": "fail"
+      "${array[@]:} vs ${array[@]: }  - bash and zsh inconsistent": "fail"
     },
     "var-op-test.test.sh": {
       "$@ (empty) and - and +": "fail",
-      "Error when empty": "fail",
-      "Error when unset": "fail",
       "array and - and +": "fail",
       "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "ash-only"
     },
     "var-ref.test.sh": {
       "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
-      "Array indirect expansion with suffix operators": "fail",
-      "Bizarre tilde expansion in array index": "fail",
-      "Var ref, then error with ${ ? }": "fail"
+      "Array indirect expansion with suffix operators": "fail"
     },
     "var-sub-quote.test.sh": {
       "Syntax error for single quote in double quote": "fail"
     },
     "var-sub.test.sh": {
-      "Bad var sub": "ash-only",
       "Braced block inside ${}": "fail"
     },
     "vars-special.test.sh": {
@@ -635,9 +586,6 @@
       "set -o verbose prints unevaluated code": "fail",
       "xtrace with unprintable chars": "fail",
       "xtrace with whitespace, quotes, and backslash": "fail"
-    },
-    "zsh-idioms.test.sh": {
-      "zsh var sub is rejected at runtime": "fail"
     }
   }
 }
