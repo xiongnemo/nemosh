@@ -356,6 +356,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A compound command whose redirection's word failed to expand opened the empty path**:
+  `{ echo in; } > ${x?oops}` said `x: oops` and then `cannot create : nonexistent directory`. The
+  error is answered alone now, as a simple command's is and as both references answer it.
+
 - **`trap - 99` said 99 was a signal this shell does not deliver**: a number below 1 or above 64 is
   no signal at all, an invalid signal specification, as both references say. In bash mode one
   operand that names no condition, `trap foo`, is bash's usage, status 2.

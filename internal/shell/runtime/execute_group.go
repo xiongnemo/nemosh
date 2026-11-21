@@ -76,6 +76,11 @@ func (r Runtime) executeWithRedirects(ctx context.Context, operations []redirect
 	// holds it closed; see heldSubstitutions.
 	defer r.releaseSubstitutions(r.expansion.held())
 	operations, ok := r.expandRedirectOperations(ctx, cloneRedirects(operations), savedStatus)
+	// A word that failed to expand, `> ${x?oops}`, is answered as its error is, as a simple
+	// command's is, and nothing is opened: the empty path it left was, and said so.
+	if r.shellErrorRaised() {
+		return r.shellErrorResult()
+	}
 	if !ok {
 		return lineResult{status: 1}
 	}
