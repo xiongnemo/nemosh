@@ -301,7 +301,7 @@ func (r Runtime) runTokensWithAssignments(ctx context.Context, assignments []ass
 	if len(assignments) == 0 {
 		return r.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)
 	}
-	if isSpecialBuiltin(commandTokens[0].value) {
+	if isSpecialBuiltin(commandTokens[0].value) && !r.bashTemporaryPrefix() {
 		if status := r.assignSpecialPrefix(assignments); status != 0 {
 			return status
 		}
