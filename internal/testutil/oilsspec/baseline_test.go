@@ -8,31 +8,46 @@ import (
 	"github.com/xiongnemo/nemosh/internal/testutil/oilsspec"
 )
 
-// baseline.json records only cases nemosh does not pass -- failing, done the way ash does,
-// or flaky -- and each is a vendored case measured where the baseline was taken.
+// Each baseline -- baseline.json for nemosh run as bash, baseline-sh.json for it run as sh --
+// records only cases nemosh does not pass -- failing, done the way ash does, or flaky -- and
+// each is a vendored case measured where the baseline was taken.
 func TestBaseline_namesMeasuredCasesNemoshDoesNotPass(t *testing.T) {
-	baseline, err := oilsspec.ReadBaseline(root)
-	if err != nil {
-		t.Fatal(err)
-	}
 	exclusions, err := oilsspec.ReadExclusions(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	specs := vendoredSpecs(t)
-	for file, cases := range baseline.Cases {
-		for id, standing := range cases {
-			if standing != oilsspec.Fails && standing != oilsspec.AshOnly && standing != oilsspec.Flaky {
-				t.Errorf("baseline.json has %s: %q as %q, want fail, ash-only or flaky", file, id, standing)
+	for _, as := range []string{"bash", "sh"} {
+		name := oilsspec.BaselineFile(as)
+		baseline, err := oilsspec.ReadBaseline(root, name)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		for file, cases := range baseline.Cases {
+			for id, standing := range cases {
+				if standing != oilsspec.Fails && standing != oilsspec.AshOnly && standing != oilsspec.Flaky {
+					t.Errorf("%s has %s: %q as %q, want fail, ash-only or flaky", name, file, id, standing)
+				}
+				index := slices.IndexFunc(specs[file].Cases, func(c oilsspec.Case) bool { return c.ID == id })
+				if index < 0 {
+					t.Errorf("%s names %s: %q, which is not a vendored case", name, file, id)
+					continue
+				}
+				if rule, excluded := exclusions.Excluded(file, specs[file].Cases[index], baseline.Platform); excluded {
+					t.Errorf("%s names %s: %q, which %q leaves out on %s", name, file, id, rule.Name, baseline.Platform)
+				}
 			}
-			index := slices.IndexFunc(specs[file].Cases, func(c oilsspec.Case) bool { return c.ID == id })
-			if index < 0 {
-				t.Errorf("baseline.json names %s: %q, which is not a vendored case", file, id)
-				continue
-			}
-			if rule, excluded := exclusions.Excluded(file, specs[file].Cases[index], baseline.Platform); excluded {
-				t.Errorf("baseline.json names %s: %q, which %q leaves out on %s", file, id, rule.Name, baseline.Platform)
-			}
+		}
+	}
+}
+
+// The two names keep two files: bash's is the headline's, and sh's holds busybox's name to
+// what it does while bash's learns bash's ways.
+func TestBaselineFile_isOnePerName(t *testing.T) {
+	for as, want := range map[string]string{"bash": "baseline.json", "": "baseline.json", "sh": "baseline-sh.json"} {
+		if got := oilsspec.BaselineFile(as); got != want {
+			t.Errorf("BaselineFile(%q) = %q, want %q", as, got, want)
 		}
 	}
 }

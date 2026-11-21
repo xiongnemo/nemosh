@@ -61,12 +61,12 @@ func confirmChanges(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject
 	return confirmed, flaky
 }
 
-// checkBaseline fails for every case that stands otherwise than baseline.json says, the one
-// that started passing as much as the one that stopped, so the baseline is always where
+// checkBaseline fails for every case that stands otherwise than the baseline file says, the
+// one that started passing as much as the one that stopped, so the baseline is always where
 // nemosh is. A flaky case is reported and does not fail.
-func checkBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject, work string, results map[string][]oilsspec.CaseResult) {
+func checkBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject, work, file string, results map[string][]oilsspec.CaseResult) {
 	t.Helper()
-	baseline, err := oilsspec.ReadBaseline(suite.Root)
+	baseline, err := oilsspec.ReadBaseline(suite.Root, file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,15 +81,16 @@ func checkBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject,
 	for i, change := range confirmed {
 		lines[i] = describe(change)
 	}
-	t.Errorf("%d cases stand otherwise than tests/oils/baseline.json says:\n%s\n"+
-		"Once each is understood, NEMOSH_OILS=update records them.", len(confirmed), strings.Join(lines, "\n"))
+	t.Errorf("%d cases stand otherwise than tests/oils/%s says:\n%s\n"+
+		"Once each is understood, NEMOSH_OILS=update records them.", len(confirmed), file, strings.Join(lines, "\n"))
 }
 
-// updateBaseline writes baseline.json from the run: a case that stands otherwise than it
-// says, every time it is run, is recorded as it now stands, and a flaky one as it was.
-func updateBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject, work, platform string, results map[string][]oilsspec.CaseResult) {
+// updateBaseline writes the baseline file from the run: a case that stands otherwise than
+// it says, every time it is run, is recorded as it now stands, and a flaky one as it was. A
+// file not there yet is written whole.
+func updateBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject, work, platform, file string, results map[string][]oilsspec.CaseResult) {
 	t.Helper()
-	baseline, err := oilsspec.ReadBaseline(suite.Root)
+	baseline, err := oilsspec.ReadBaseline(suite.Root, file)
 	if err != nil {
 		baseline = oilsspec.Baseline{Cases: map[string]map[string]string{}}
 	}
@@ -107,7 +108,7 @@ func updateBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject
 	for _, change := range flaky {
 		t.Logf("flaky, left as it was: %s", describe(change))
 	}
-	if err := baseline.Write(suite.Root); err != nil {
+	if err := baseline.Write(suite.Root, file); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(matrixPage, []byte(renderMatrix(t)), 0o644); err != nil {

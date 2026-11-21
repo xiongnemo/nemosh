@@ -41,9 +41,21 @@ type Baseline struct {
 	Cases    map[string]map[string]string `json:"cases"`
 }
 
-// ReadBaseline reads baseline.json from the vendored copy at root.
-func ReadBaseline(root string) (Baseline, error) {
-	data, err := os.ReadFile(filepath.Join(root, "baseline.json"))
+// BaselineFile is the file the baseline of nemosh run under a name is kept in. Run as bash,
+// which the headline is about, it is baseline.json. Run as sh, busybox's name for its ash, it
+// is baseline-sh.json, which holds what that name does while the bash name follows bash
+// where the two references part.
+func BaselineFile(as string) string {
+	if as == "sh" {
+		return "baseline-sh.json"
+	}
+	return "baseline.json"
+}
+
+// ReadBaseline reads the baseline file, one BaselineFile names, from the vendored copy at
+// root.
+func ReadBaseline(root, file string) (Baseline, error) {
+	data, err := os.ReadFile(filepath.Join(root, file))
 	if err != nil {
 		return Baseline{}, err
 	}
@@ -51,19 +63,19 @@ func ReadBaseline(root string) (Baseline, error) {
 	decoder.DisallowUnknownFields()
 	var baseline Baseline
 	if err := decoder.Decode(&baseline); err != nil {
-		return Baseline{}, fmt.Errorf("baseline.json: %w", err)
+		return Baseline{}, fmt.Errorf("%s: %w", file, err)
 	}
 	return baseline, nil
 }
 
-// Write writes the baseline to root/baseline.json, in order, so a new one reads as a diff
-// of the old.
-func (b Baseline) Write(root string) error {
+// Write writes the baseline to the file at root, in order, so a new one reads as a diff of
+// the old.
+func (b Baseline) Write(root, file string) error {
 	data, err := json.MarshalIndent(b, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(root, "baseline.json"), append(data, '\n'), 0o644)
+	return os.WriteFile(filepath.Join(root, file), append(data, '\n'), 0o644)
 }
 
 // NewBaseline records how each result stands.

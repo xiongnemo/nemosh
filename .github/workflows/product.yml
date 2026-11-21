@@ -124,6 +124,17 @@ jobs:
           NEMOSH_OILS: strict
         run: go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
 
+      # The same cases with nemosh run as sh, held to tests/oils/baseline-sh.json. Where bash
+      # and busybox part, the bash name follows bash and sh keeps busybox's way; this is what
+      # keeps a change made for the bash name from moving the sh one. A change that moves a
+      # case here records it with NEMOSH_OILS=update NEMOSH_OILS_AS=sh in the same commit.
+      - name: Oils spec suite, run as sh
+        shell: bash
+        env:
+          NEMOSH_OILS: strict
+          NEMOSH_OILS_AS: sh
+        run: go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
+
       # Fuzz seeds are run as ordinary tests on every platform: the corpus in
       # testdata holds the inputs that have already broken something, so a
       # regression is caught without spending CI time exploring.

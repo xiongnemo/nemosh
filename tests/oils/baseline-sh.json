@@ -1,0 +1,765 @@
+{
+  "platform": "windows",
+  "cases": {
+    "alias.test.sh": {
+      "List aliases by providing names": "fail",
+      "Loop split across alias in another way": "fail",
+      "Loop split across both iterative and recursive aliases": "fail",
+      "alias for left brace": "fail",
+      "alias for left paren": "fail",
+      "alias with keywords": "fail",
+      "alias with word of multiple lines": "fail",
+      "alias without args lists all aliases": "fail",
+      "here doc inside alias": "ash-only"
+    },
+    "arg-parse.test.sh": {
+      "continue 1 extra, break, etc.": "ash-only",
+      "shift 1 extra": "ash-only"
+    },
+    "arith-context.test.sh": {
+      "$[ is a synonym for $((": "fail",
+      "$[$undefined] is a synonym for $(($undefined (#2566)": "fail",
+      "$[$var is a synonym for $(($var (#2426)": "fail",
+      "Ambiguous colon in slice": "fail",
+      "Empty expression a[]": "fail"
+    },
+    "arith-dynamic.test.sh": {
+      "Double quotes": "fail",
+      "Single quotes": "fail",
+      "Substitutions": "fail"
+    },
+    "arith.test.sh": {
+      "Comment not allowed in the middle of multiline arithmetic": "fail",
+      "Constant with quotes like '1'": "fail",
+      "Double subscript": "fail",
+      "Dynamic parsing of arithmetic": "fail",
+      "Increment undefined variables with nounset": "fail",
+      "Integer constant validation": "fail",
+      "Invalid constant": "fail",
+      "Negative exponent": "fail",
+      "No floating point": "ash-only",
+      "nounset with arithmetic": "fail",
+      "s[0] with string '12 34'": "fail",
+      "undef[0] with nounset": "fail"
+    },
+    "array-assign.test.sh": {
+      "Are quotes allowed?": "fail",
+      "Tricky parsing - a[ a[0]=1 ]=X  a[ a[0]+=1 ]+=X": "fail",
+      "declare builtin doesn't allow spaces": "fail"
+    },
+    "array-assoc.test.sh": {
+      "BashAssoc ${a[@]@Q}": "fail",
+      "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
+      "Slice of associative array doesn't make sense in bash": "fail",
+      "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "ash-only",
+      "readonly associative array can't be modified": "fail",
+      "set associative array to indexed array literal (very surprising bash behavior)": "fail",
+      "setting key to itself (from bash-bug mailing list)": "ash-only"
+    },
+    "array-compat.test.sh": {
+      "Array Decay with IFS": "fail"
+    },
+    "array-literal.test.sh": {
+      "Tilde expansions in RHS of [k]=v (BashAssoc)": "ash-only",
+      "[k1]=v1 looking like brace expansions (BashArray)": "ash-only",
+      "non-index forms of element (BashAssoc)": "fail"
+    },
+    "array-sparse.test.sh": {
+      "${a[@]:BigInt}": "fail",
+      "${sp[i]} with negative invalid index": "fail",
+      "((sp[i])) and ((sp[i]++)) with invalid negative index": "fail",
+      "(YSH) $[a1 === a2]": "fail",
+      "(YSH) $[bool(a)]": "fail",
+      "(YSH) @[sp] and @sp": "fail",
+      "(YSH) append v1 v2... (a)": "fail",
+      "Negative out-of-bound index with a[i]=v (1/2)": "fail",
+      "Negative out-of-bound index with a[i]=v (2/2)": "fail",
+      "Performance demo": "fail",
+      "Regression: a[-1]=1": "fail",
+      "[[ -v a[i] ]] with invalid negative index": "fail",
+      "compadjust": "fail",
+      "crash dump": "fail",
+      "unset -v a[i] with out-of-bound negative index": "fail"
+    },
+    "array.test.sh": {
+      "Length op, index op, then transform op is not allowed": "ash-only",
+      "Multiple subscripts not allowed": "ash-only",
+      "Regression: Assigning with out-of-range negative index": "fail",
+      "Regression: Negative out-of-range index in [[ -v a[index] ]]": "fail",
+      "Regression: silent out-of-bound negative index in ${a[-2]} and $((a[-2]))": "fail",
+      "Regression: unset a[-2]: out-of-bound negative index should cause error": "fail",
+      "a+=() modifies existing instance of BashArray": "fail"
+    },
+    "assign-deferred.test.sh": {
+      "export a[7]=8": "fail",
+      "readonly a[7]=8": "fail"
+    },
+    "assign-extended.test.sh": {
+      "ble.sh: eval -- \"$(declare -p var arr)\"": "fail",
+      "declare": "fail",
+      "declare -F with shopt -s extdebug and main file": "fail",
+      "declare -F with shopt -s extdebug prints more info": "fail",
+      "declare -p": "fail",
+      "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
+      "declare -p arr": "fail",
+      "declare -p doesn't print binary data, but can be loaded into bash": "fail",
+      "eval -- \"$(declare -p arr)\" (restore arrays w/ unset elements)": "fail",
+      "syntax error in array assignment": "ash-only",
+      "typeset +r removes read-only attribute (TODO: documented in bash to do nothing)": "fail",
+      "typeset -ar makes it readonly": "fail",
+      "typeset -r makes a string readonly": "fail",
+      "unset and shell funcs": "fail"
+    },
+    "assign.test.sh": {
+      "\"declare -a arr\" and \"readonly -a a\" creates an empty array (OSH)": "fail",
+      "\"var d = {}; declare -p d\" does not print anything (OSH)": "ash-only",
+      "'local -a x' does not set variable": "fail",
+      "'local x' does not set variable": "fail",
+      "Env binding in readonly/declare is NOT exported!  (pitfall)": "ash-only",
+      "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
+      "Test above without 'local' (which is not POSIX)": "fail",
+      "Using ${x-default} after unsetting a temp binding shadowing a global": "fail",
+      "readonly $x where x='b c'": "fail",
+      "readonly a=(1 2) no_value c=(3 4) makes 'no_value' readonly": "fail",
+      "readonly array should not be modified by a+=(1)": "fail",
+      "redirect after bare assignment": "ash-only"
+    },
+    "background.test.sh": {
+      "YSH wait --all": "fail",
+      "YSH wait --verbose": "fail",
+      "wait -n with arguments - arguments are respected": "fail",
+      "wait for N parallel jobs and check failure": "flaky",
+      "wait with invalid arg": "ash-only"
+    },
+    "ble-features.test.sh": {
+      "[bash_unset] function call with tempenv vs tempenv-eval": "ash-only",
+      "[bash_unset] local-unset / dynamic-unset for localvar": "ash-only",
+      "[bash_unset] local-unset / dynamic-unset for localvar (mutated from tempenv)": "ash-only",
+      "[bash_unset] local-unset / dynamic-unset for tempenv": "ash-only",
+      "[bash_unset] localvar-inherit from tempenv": "ash-only"
+    },
+    "ble-idioms.test.sh": {
+      "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
+      "is-array with ${var@a}": "fail",
+      "recursive arith: recursion": "ash-only",
+      "shift unshift reverse": "fail",
+      "shopt -u expand_aliases and eval": "ash-only"
+    },
+    "ble-unset.test.sh": {
+      "[bash_unset] dynamic-unset for nested localvars": "ash-only",
+      "[bash_unset] dynamic-unset for nested tempenvs": "ash-only",
+      "[bash_unset] local-unset / dynamic-unset for localvar on nested-context": "ash-only",
+      "[bash_unset] local-unset for nested tempenvs": "ash-only",
+      "[bash_unset] nested context by tempenv-eval": "ash-only"
+    },
+    "blog1.test.sh": {
+      "${#1#'###'}": "ash-only"
+    },
+    "blog2.test.sh": {
+      "-a -a": "fail",
+      "-a -a -a -a": "fail",
+      "-a -a -a -a -a": "fail",
+      "-a -a -a -a -a -a -a": "fail",
+      "-a -a -a -a -a -a -a -a": "fail"
+    },
+    "brace-expansion.test.sh": {
+      "Mixed case char expansion is invalid": "fail",
+      "Two kinds of tilde expansion": "fail",
+      "double expansion with literal and simple var": "ash-only",
+      "double expansion with simple var -- bash bug": "ash-only",
+      "{ in expansion": "ash-only"
+    },
+    "bugs.test.sh": {
+      "Crash after changing $[] to be alias of $(( ))": "ash-only",
+      "assign readonly -- multiple lines": "ash-only",
+      "assign readonly -- multiple lines -- set -o posix": "ash-only",
+      "assign readonly -- one line": "ash-only",
+      "fastlex: PS1 format string that's incomplete / with NUL byte": "fail",
+      "file with NUL byte": "fail",
+      "process sub \u003c(echo 42 | tee PWNED) not allowed": "ash-only",
+      "unset readonly -- multiple lines": "ash-only",
+      "unset readonly -- one line": "ash-only"
+    },
+    "builtin-bash.test.sh": {
+      "help": "fail"
+    },
+    "builtin-bind.test.sh": {
+      "bind -X": "fail",
+      "bind -l should report readline functions": "fail",
+      "bind -m with bind -x/-X": "fail",
+      "bind -p -P to print function names and key bindings": "fail",
+      "bind -q": "fail",
+      "bind -r": "fail",
+      "bind -r of bind -x commands": "fail",
+      "bind -s -S accepted": "fail",
+      "bind -v -V accepted": "fail"
+    },
+    "builtin-bracket.test.sh": {
+      "-a as unary operator (alias of -e)": "fail",
+      "-k for sticky bit": "fail",
+      "-ot and -nt": "fail",
+      "Looks like octal, but digit is too big": "fail",
+      "[ -t invalid ]": "ash-only",
+      "operator/operand ambiguity with -a": "fail",
+      "operator/operand ambiguity with ]": "fail",
+      "test -p named pipe": "fail"
+    },
+    "builtin-cd.test.sh": {
+      "$OLDPWD": "fail",
+      "'unset PWD; pwd' before any cd (tickles a rare corner case)": "fail",
+      "Change directory in non-shell parent process (make or Python)": "fail",
+      "Survey of getcwd() syscall": "fail",
+      "What happens when inherited $PWD and current dir disagree?": "fail",
+      "cd BAD/..": "ash-only",
+      "cd and $PWD": "fail",
+      "cd permits double bare dash": "fail",
+      "cd to nonexistent dir": "ash-only",
+      "cd with 2 or more args - with strict_arg_parse": "ash-only",
+      "cd with 2 or more args is allowed (strict_arg_parse disabled)": "ash-only",
+      "lie about PWD; pwd before any cd": "fail",
+      "pwd": "fail"
+    },
+    "builtin-completion.test.sh": {
+      "compadjust with empty COMP_ARGV": "ash-only",
+      "compadjust with sparse COMP_ARGV": "fail",
+      "compgen -W words -X filter": "fail",
+      "compgen -f -X filter -- $cur": "fail",
+      "compgen -k shows the same keywords as bash": "fail",
+      "compgen doesn't respect -X for user-defined functions": "fail",
+      "compgen with action and suffix: helptopic": "fail"
+    },
+    "builtin-dirs.test.sh": {
+      "cd replaces the lowest entry on the directory stack!": "fail",
+      "dirs -c to clear the stack": "fail",
+      "dirs -l to print in long format, no tilde prefix": "fail",
+      "dirs -p to print one entry per line": "fail",
+      "dirs -v to print numbered stack, one entry per line": "fail",
+      "dirs builtin": "fail",
+      "dirs test converting true home directory to tilde": "fail",
+      "dirs test of path alias `..`": "fail",
+      "dirs tilde test when $HOME is exactly $PWD": "fail",
+      "dirs to print using tilde-prefix format": "fail",
+      "pushd/popd": "fail"
+    },
+    "builtin-echo.test.sh": {
+      "\\0 \\1 \\8": "ash-only"
+    },
+    "builtin-eval-source.test.sh": {
+      "Eval in bash does tilde expansion in array": "fail",
+      "Eval in does tilde expansion": "fail",
+      "Eval with syntax error": "fail",
+      "Source nonexistent": "fail",
+      "Source with syntax error": "fail",
+      "eval YSH block with 'break continue return error'": "fail",
+      "eval accepts/ignores --": "fail",
+      "eval usage": "fail",
+      "source doesn't crash when targeting a directory": "fail"
+    },
+    "builtin-fc.test.sh": {
+      "fc -l [first] [last] where first and last are indexes": "fail",
+      "fc -l [first] [last] where first and last are offsets from current command": "fail",
+      "fc -l [first] [last] where first and last are reversed indexes": "fail",
+      "fc -l [first] where first is an index": "fail",
+      "fc -l [first] where first is an offset from current command": "fail",
+      "fc -l lists history commands": "fail",
+      "fc -l lists history commands with default page size": "fail",
+      "fc -ln lists history commands without numbers": "fail",
+      "fc -lnr lists history commands without numbers in reverse order": "fail",
+      "fc -lr [first] [last] where first and last are reversed indexes does not undo reverse": "fail",
+      "fc -lr lists history commands in reverse order": "fail"
+    },
+    "builtin-getopts.test.sh": {
+      "More Smooshing 1": "ash-only",
+      "More Smooshing 2": "ash-only",
+      "OPTARG is empty (not unset) after parsing a flag doesn't take an arg": "ash-only",
+      "OPTIND after multiple getopts with different spec": "ash-only",
+      "OPTIND narrowed down": "ash-only",
+      "getopts with invalid variable name": "ash-only",
+      "two flags: -ab": "ash-only"
+    },
+    "builtin-history.test.sh": {
+      "HISTFILE is defined initially": "fail",
+      "HISTFILE must point to a file": "fail",
+      "HISTFILE set to array": "fail",
+      "HISTFILE unset": "fail",
+      "HISTFILESIZE shrinks the history file when changed": "fail",
+      "history -a": "fail",
+      "history -c clears in-memory history": "fail",
+      "history -d to delete history from end": "fail",
+      "history usage": "ash-only",
+      "recording history can be toggled with set -o/+o history": "fail",
+      "shopt histappend - osh ignores shopt and appends, bash sometimes overwrites": "fail",
+      "shopt histappend toggle check": "fail"
+    },
+    "builtin-kill.test.sh": {
+      "kill -L checks for invalid input": "fail",
+      "kill -l 10 TERM translates between names and numbers": "fail",
+      "kill -l with 128 is invalid": "fail",
+      "kill -l with exit code": "fail"
+    },
+    "builtin-meta.test.sh": {
+      "builtin": "fail",
+      "builtin ls not found": "fail",
+      "command -V": "ash-only",
+      "command -V nonexistent": "ash-only",
+      "command -v": "ash-only",
+      "command -v doesn't find executable dir": "fail",
+      "command -v executable, builtin": "fail",
+      "command -v with multiple names": "ash-only"
+    },
+    "builtin-misc.test.sh": {
+      "Invalid shift argument": "ash-only",
+      "Print shell strings with normal chars: set and printf %q and ${x@Q}": "fail",
+      "Print shell strings with weird chars: set and printf %q and ${x@Q}": "fail",
+      "history builtin usage": "ash-only"
+    },
+    "builtin-printf.test.sh": {
+      "%(strftime format)T": "fail",
+      "%(strftime format)T TZ in environ but not in shell's memory": "ash-only",
+      "%(strftime format)T doesn't respect TZ if not exported": "ash-only",
+      "%06s is no-op": "fail",
+      "Arbitrary base 64#a is rejected (unlike in shell arithmetic)": "ash-only",
+      "Invalid UTF-8": "fail",
+      "Runtime error for invalid integer": "ash-only",
+      "Too large": "fail",
+      "bash truncates long strftime string at 128": "ash-only",
+      "empty string (osh is more strict)": "ash-only",
+      "leading spaces are accepted in value given to %d %X, but not trailing spaces": "ash-only",
+      "printf negative integer overflow": "ash-only",
+      "printf negative numbers": "ash-only",
+      "printf octal backslash escapes": "fail",
+      "printf positive integer overflow": "ash-only"
+    },
+    "builtin-process.test.sh": {
+      "Exit builtin with too many args": "fail",
+      "exec -a sets argv[0]": "fail",
+      "time with brace group argument": "fail"
+    },
+    "builtin-read.test.sh": {
+      "mapfile from directory (bash doesn't handle errors)": "fail",
+      "read -n with invalid arg": "ash-only",
+      "read -r -d '' for NUL strings, e.g. find -print0": "fail",
+      "read -t -0.5 is invalid": "ash-only",
+      "read -u syntax error": "ash-only",
+      "read bash bug": "fail",
+      "read usage": "ash-only"
+    },
+    "builtin-set.test.sh": {
+      "'set' and 'eval' round trip": "fail",
+      "A single + is an ignored flag; not an argument": "fail",
+      "set - leading single dash is ignored, turns off xtrace verbose (#2364)": "fail",
+      "set -eu (flag parsing)": "fail"
+    },
+    "builtin-special.test.sh": {
+      "Prefix assignments persist after readonly, but NOT exported (set -o posix)": "ash-only",
+      "Special builtins can't be redefined as shell functions (set -o posix)": "fail",
+      "bash 'type' gets confused - says 'function', but runs builtin": "fail",
+      "exec without args is a special case of the special case in some shells": "ash-only"
+    },
+    "builtin-trap-bash.test.sh": {
+      "Combine DEBUG trap and USR1 trap": "fail",
+      "Combine ERR trap and USR1 trap": "fail"
+    },
+    "builtin-trap-err.test.sh": {
+      "set -o errtrace: trap ERR with \u0026": "ash-only",
+      "trap ERR pipelines without simple commands": "ash-only",
+      "trap ERR with YSH proc": "fail"
+    },
+    "builtin-trap.test.sh": {
+      "Register the same handler for multiple signals": "ash-only",
+      "Remove trap with an unsigned integer": "fail",
+      "exit codes for traps are isolated": "fail",
+      "print trap handler with multiple lines": "ash-only",
+      "trap '' sets handler to empty string (SIG_IGN)": "fail",
+      "trap '' with multiple signals": "fail",
+      "trap 'echo hi' KILL (regression test, caught by smoosh suite)": "fail",
+      "trap 0 is equivalent to trap EXIT": "ash-only",
+      "trap EXIT clears the EXIT trap": "ash-only",
+      "trap EXIT with PARSE error": "fail",
+      "trap EXIT with PARSE error and explicit exit": "fail",
+      "trap EXIT, sleep, SIGINT: non-interactively": "fail",
+      "trap USR1, sleep, SIGINT: non-interactively": "fail",
+      "traps are cleared in subshell (started with \u0026)": "fail"
+    },
+    "builtin-type-bash.test.sh": {
+      "type -P does not find directories (regression)": "fail",
+      "type -a -\u003e alias; prints alias definition": "fail",
+      "type -t -\u003e file": "fail",
+      "type -t -\u003e keyword": "fail",
+      "type -t -\u003e not found": "fail",
+      "type -t doesn't find non-executable (like command -v)": "ash-only",
+      "type prints function source code": "fail"
+    },
+    "builtin-type.test.sh": {
+      "more special builtins": "ash-only",
+      "special builtins are called out": "ash-only",
+      "type -\u003e not found": "ash-only"
+    },
+    "builtin-umask.test.sh": {
+      "'umask -S' prints symbolic umask": "fail",
+      "'umask -p' prints a form that can be eval'd": "fail",
+      "'umask 0002' sets the umask": "fail",
+      "'umask' without args prints the umask": "fail",
+      "set umask with symbolic mode: g-w,o-w": "fail",
+      "symbolic syntax error: empty clause u-r,,u-r": "fail",
+      "umask X perm": "fail",
+      "umask bare op": "fail",
+      "umask default who": "fail",
+      "umask permcopy": "fail",
+      "umask permcopy running value": "fail",
+      "umask s perm": "fail",
+      "umask sequential actions": "ash-only",
+      "umask t perm": "fail",
+      "umask with too many arguments (i.e. extra spaces)": "fail",
+      "usage: empty input, space input": "fail",
+      "usage: large octal number": "fail"
+    },
+    "builtin-vars.test.sh": {
+      "Local without variable is still unset!": "fail",
+      "Make an existing local variable readonly": "fail",
+      "Unset a function without -f": "fail",
+      "Unset and scope (bug #653)": "ash-only",
+      "Unset invalid variable name": "fail",
+      "Unset readonly variable": "fail",
+      "Unset wrong type": "fail",
+      "assign to readonly variable": "fail",
+      "assign to readonly variable - errexit": "fail",
+      "local after readonly": "fail"
+    },
+    "command-parsing.test.sh": {
+      "Prefix env on assignment": "ash-only"
+    },
+    "command-sub.test.sh": {
+      "Command Sub trailing newline removed": "fail",
+      "Command Sub trailing whitespace not removed": "fail",
+      "Syntax errors with double quotes within backticks": "ash-only"
+    },
+    "command_.test.sh": {
+      "Command block": "fail",
+      "Name too long": "ash-only",
+      "hash with args": "fail",
+      "hash without args prints the cache": "fail"
+    },
+    "dbracket.test.sh": {
+      "-eq coercion produces weird results": "fail",
+      "-eq does dynamic arithmetic parsing (not supported in OSH)": "fail",
+      "-eq on strings": "fail",
+      "Hex literals with -eq": "fail",
+      "Octal literals with -eq": "fail",
+      "negative numbers - zero, decimal, octal, hex, base N": "fail"
+    },
+    "dparen.test.sh": {
+      "(( )) with redirect": "fail",
+      "literal strings inside (( ))": "fail"
+    },
+    "errexit-osh.test.sh": {
+      "Regression": "fail",
+      "command_sub_errexit stops at first error": "fail",
+      "strict_errexit and command sub in export / readonly": "fail",
+      "strict_errexit and errexit disabled": "fail"
+    },
+    "errexit.test.sh": {
+      "brace group - redir failure checked": "ash-only",
+      "set -e in function #2": "ash-only",
+      "simple command that's an alias - redir failure checked": "ash-only",
+      "while loop - redirect failure checked": "ash-only"
+    },
+    "exit-status.test.sh": {
+      "subshell OverflowError https://github.com/oilshell/oil/issues/996": "fail"
+    },
+    "explore-parsing.test.sh": {
+      "readonly +": "fail"
+    },
+    "extglob-files.test.sh": {
+      "?() matches 0 or 1": "fail",
+      "Escaping of pipe (glibc bug, see demo/glibc_fnmatch.c)": "fail",
+      "Glob other punctuation chars (lexer mode)": "fail",
+      "More glob escaping": "fail",
+      "no match": "fail"
+    },
+    "extglob-match.test.sh": {
+      "Turning extglob on changes the meaning of [[ !(str) ]] in bash": "fail"
+    },
+    "fatal-errors.test.sh": {
+      "${undef} with nounset": "fail",
+      "Unrecoverable: ${undef?message}": "fail",
+      "Unrecoverable: divide by zero in case": "ash-only",
+      "Unrecoverable: divide by zero in conditional word": "ash-only",
+      "Unrecoverable: divide by zero in redirect word": "ash-only"
+    },
+    "for-expr.test.sh": {
+      "Accepts { } syntax too": "fail",
+      "Arith lexer mode": "fail"
+    },
+    "func-parsing.test.sh": {
+      "Function name with $": "ash-only",
+      "Function name with command sub": "ash-only",
+      "Unbraced function body.": "ash-only"
+    },
+    "glob.test.sh": {
+      "Glob ordering respects LC_COLLATE (zsh respects this too)": "ash-only",
+      "\\ in unquoted substitutions does not match a backslash": "fail",
+      "\\ in unquoted substitutions escapes globchars": "fail",
+      "glob double quotes": "fail",
+      "shopt -u globskipdots shows . and ..": "fail"
+    },
+    "globignore.test.sh": {
+      "Ignore .:..": "fail",
+      "Ignore globs with char patterns like [!ab]": "fail",
+      "When GLOBIGNORE is set, no_dash_glob isn't respected": "fail"
+    },
+    "here-doc.test.sh": {
+      "Here doc with bad comsub delimiter": "ash-only"
+    },
+    "interactive.test.sh": {
+      "Error message with bad oshrc file (currently ignored)": "fail",
+      "HISTFILE is written in interactive shell": "fail",
+      "HISTFILE=my-history loads history from that file, and writes back to it": "fail",
+      "HISTFILE=my-history with history -a": "fail",
+      "NO ASSERTIONS: Are startup files sourced before or after job control?": "fail",
+      "PROMPT_COMMAND can see $?, like bash": "fail",
+      "PROMPT_COMMAND that writes to BASH_REMATCH": "fail",
+      "interactive shell runs PROMPT_COMMAND after each command": "fail",
+      "nonexistent --rcdir is ignored": "fail",
+      "parse error in PROMPT_COMMAND": "fail",
+      "runtime error in PROMPT_COMMAND": "fail",
+      "shell doesn't load rcfile/rcdir if --norc is given": "fail"
+    },
+    "introspect.test.sh": {
+      "${BASH_SOURCE[@]} with line numbers": "fail",
+      "${FUNCNAME} and \"set -u\" (OSH regression)": "fail",
+      "FUNCNAME with source (scalar or array)": "fail"
+    },
+    "known-differences.test.sh": {
+      "`set` output format - ifupdown-ng": "ash-only"
+    },
+    "loop.test.sh": {
+      "bad arg to break": "fail",
+      "continue in subshell": "fail",
+      "continue in subshell aborts with errexit": "fail",
+      "for loop with invalid identifier": "ash-only",
+      "too many args to continue": "fail",
+      "top-level break/continue/return (without strict_control_flow)": "ash-only"
+    },
+    "nameref.test.sh": {
+      "a[@] in nameref": "fail",
+      "assign to invalid ref with strict_nameref": "fail",
+      "name ref on Undef cell": "fail",
+      "readonly var can't be assigned through nameref": "fail"
+    },
+    "nix-idioms.test.sh": {
+      "${!ref} to undefined string var is fatal, INCONSISTENT with array": "fail",
+      "export with dynamic var name +=": "fail"
+    },
+    "nul-bytes.test.sh": {
+      "NUL bytes with test -f": "ash-only",
+      "printf - literal NUL in format string": "fail"
+    },
+    "paren-ambiguity.test.sh": {
+      "$(( closed with ) ) after multiple lines is command - #2337": "ash-only",
+      "$((which example - command sub versus arith sub - gnunet-gtk package": "ash-only"
+    },
+    "parse-errors.test.sh": {
+      "Bad braced var sub -- not allowed": "ash-only",
+      "Invalid for loop variable name": "ash-only",
+      "Long Token - 65535 bytes": "fail",
+      "Token that's too long for Oils - 65536 bytes": "fail",
+      "array literal inside array is a parse error": "ash-only",
+      "bad var name in export": "fail",
+      "bad var name in local": "fail",
+      "} on the second line": "fail"
+    },
+    "pipeline.test.sh": {
+      "|\u0026": "flaky"
+    },
+    "posix.test.sh": {
+      "Command substitution in default": "fail"
+    },
+    "process-sub.test.sh": {
+      "process subs and pipelines together": "fail",
+      "shopt -s process_sub_fail": "fail",
+      "status code is available": "fail"
+    },
+    "prompt.test.sh": {
+      "PS1 evaluation order 2": "fail",
+      "\\! for history number": "fail",
+      "\\W is basename of working dir": "fail",
+      "\\j for number of jobs": "fail",
+      "\\s for shell, \\v for major.minor version, and \\V for full version": "fail",
+      "current working dir": "fail",
+      "default PS1": "fail"
+    },
+    "redirect-command.test.sh": {
+      "Redirect in assignment": "ash-only",
+      "redirect bash extensions:   [[  ((  for ((": "fail"
+    },
+    "redirect-multi.test.sh": {
+      "Extended glob that doesn't match anything": "fail",
+      "File redirect to $var with glob char": "fail",
+      "File redirect with extended glob": "fail",
+      "File redirect without matching any file": "fail",
+      "File redirects have word splitting too!": "ash-only",
+      "File redirects with glob args (bash and zsh only)": "fail",
+      "Non-file redirects don't respect glob args (we differe from bash)": "ash-only",
+      "Redirect with brace expansion isn't allowed": "ash-only",
+      "ysh behavior when glob doesn't match": "fail"
+    },
+    "redirect.test.sh": {
+      "2\u0026\u003e1 (is it a redirect or is it like a\u0026\u003e1)": "fail",
+      ": \u003e/dev/null 2\u003e / (OSH regression: fail to pop fd frame)": "fail",
+      "\u003c\u003e for read/write named pipes": "fail",
+      "Descriptor redirect with filename": "ash-only",
+      "Parsing of x={myvar} and related cases": "fail"
+    },
+    "regex.test.sh": {
+      "Operator chars ; \u0026 but not |": "fail"
+    },
+    "serialize.test.sh": {
+      "set": "ash-only"
+    },
+    "sh-func.test.sh": {
+      "Scope of global variable when sourced in function (Shell Functions aren't Closures)": "fail",
+      "return \"\" (a lot of disagreement)": "fail"
+    },
+    "sh-options-bash.test.sh": {
+      "If shopt --set xtrace is allowed, it should update SHELLOPTS, not BASHOPTS": "fail",
+      "SHELLOPTS is readonly": "fail"
+    },
+    "sh-options.test.sh": {
+      "$- with -c": "fail",
+      "$- with pipefail": "fail",
+      "-u is nounset": "fail",
+      "nounset": "fail",
+      "set without args lists variables": "fail",
+      "stubbed out bash options": "fail"
+    },
+    "sh-usage.test.sh": {
+      "LC_CTYPE=invalid": "fail",
+      "Set LC_ALL LC_CTYPE LC_COLLATE LANG - affects glob ?": "fail",
+      "osh --eval": "fail",
+      "sh - and sh -- stop flag processing": "fail"
+    },
+    "smoke.test.sh": {
+      "failed command": "fail"
+    },
+    "strict-options.test.sh": {
+      "Control flow must be static in YSH (strict_control_flow)": "fail",
+      "errexit and top-level control flow": "ash-only",
+      "return at top level is an error": "ash-only",
+      "shopt -s strict_binding: Persistent prefix bindings not allowed on special builtins": "fail",
+      "strict_parse_slice means you need explicit  length": "fail",
+      "top level control flow": "ash-only"
+    },
+    "temp-binding.test.sh": {
+      "Temp bindings with local": "ash-only",
+      "Temp bindings with unset": "ash-only"
+    },
+    "tilde.test.sh": {
+      "${x//~/~root}": "fail",
+      "No tilde expansion in word that looks like assignment but isn't": "ash-only",
+      "temp assignment x=~ env": "fail"
+    },
+    "toysh-posix.test.sh": {
+      "Evaluation order of redirect and ${undef?error}": "ash-only",
+      "Failed redirect in assignment, vs. export": "ash-only",
+      "Fatal error": "ash-only",
+      "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",
+      "IFS 4": "ash-only",
+      "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only",
+      "readonly with temp binding": "ash-only",
+      "setting readonly var (bash is only one where it's non-fatal)": "ash-only"
+    },
+    "toysh.test.sh": {
+      "Brace Expansion": "fail",
+      "{abc}\u003c\u003c\u003c - http://landley.net/notes-2019.html#09-12-2019": "fail"
+    },
+    "type-compat.test.sh": {
+      "append in arith context": "fail",
+      "declare array vs. associative array": "fail",
+      "declare array vs. string: mixing -a +a and () ''": "fail"
+    },
+    "unicode.test.sh": {
+      "$'' does NOT check that 0x110000 is too big at parse time": "fail",
+      "$'' does not check for surrogate range at parse time": "fail",
+      "Max code point U+10ffff can escaped with $''  printf  echo -e": "fail",
+      "OSH source code doesn't have to be valid Unicode (like other shells)": "fail",
+      "printf / echo -e do NOT check max code point at runtime": "fail",
+      "printf / echo -e do NOT check surrogates at runtime": "fail"
+    },
+    "var-op-bash.test.sh": {
+      "-o nounset with var ops": "fail",
+      "Case folding - multi code point": "fail"
+    },
+    "var-op-len.test.sh": {
+      "${#s} respects LC_ALL - length in bytes or code points": "fail",
+      "Length of undefined variable with nounset": "fail",
+      "Length operator can't be followed by test operator": "ash-only"
+    },
+    "var-op-patsub.test.sh": {
+      "Pattern replacement on unset variable": "ash-only",
+      "When LC_ALL=C, pattern ? doesn't match multibyte character": "fail",
+      "patsub with [^]]": "fail"
+    },
+    "var-op-slice.test.sh": {
+      "${array[@]:} vs ${array[@]: }  - bash and zsh inconsistent": "fail",
+      "Cannot take length of substring slice": "fail",
+      "Slice undefined": "fail"
+    },
+    "var-op-test.test.sh": {
+      "$@ (empty) and - and +": "fail",
+      "Error when empty": "fail",
+      "Error when unset": "fail",
+      "array and - and +": "fail",
+      "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "ash-only"
+    },
+    "var-ref.test.sh": {
+      "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
+      "Array indirect expansion with suffix operators": "fail",
+      "Bizarre tilde expansion in array index": "fail",
+      "Var ref, then error with ${ ? }": "fail"
+    },
+    "var-sub-quote.test.sh": {
+      "Syntax error for single quote in double quote": "fail"
+    },
+    "var-sub.test.sh": {
+      "Bad var sub": "ash-only",
+      "Braced block inside ${}": "fail"
+    },
+    "vars-special.test.sh": {
+      "$BASHPID DOES change with subshell and command sub": "fail",
+      "$PATH is set if unset at startup": "fail",
+      "$_ is not undefined on first use": "fail",
+      "$_ with pipeline and subshell": "fail",
+      "BASH_VERSION / OILS_VERSION": "fail",
+      "Some vars are set, even without startup file, or env: PATH, PWD": "fail",
+      "UID EUID PPID can't be changed": "fail"
+    },
+    "whitespace.test.sh": {
+      "Default IFS does not include \\r \\v \\f": "fail",
+      "Parsing shell words \\r \\v": "fail",
+      "\\r at end of line is not special": "fail",
+      "\\r in arith expression is allowed by some shells, but not most!": "fail",
+      "whitespace in string to integer conversion": "fail"
+    },
+    "word-split.test.sh": {
+      "IFS and joining arrays by assignments": "ash-only",
+      "IFS empty doesn't do splitting": "fail",
+      "IFS unset behaves like $' \\t\\n'": "fail",
+      "IFS='' with ${!a[@]} and ${!a[*]} (bug #627)": "fail",
+      "IFS=x and '' and $@ (#2)": "ash-only",
+      "IFS=x and '' and $@ (#3)": "ash-only",
+      "IFS=x and '' and $@ - same bug as spec/toysh-posix case #12": "ash-only",
+      "Unicode in IFS": "ash-only"
+    },
+    "xtrace.test.sh": {
+      "Assignments and assign builtins": "fail",
+      "Regression: xtrace for \"declare -a a+=(v)\"": "fail",
+      "set -o verbose prints unevaluated code": "fail",
+      "xtrace with unprintable chars": "fail",
+      "xtrace with whitespace, quotes, and backslash": "fail"
+    },
+    "zsh-idioms.test.sh": {
+      "zsh var sub is rejected at runtime": "fail"
+    }
+  }
+}

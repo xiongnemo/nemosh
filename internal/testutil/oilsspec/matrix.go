@@ -7,17 +7,17 @@ import (
 )
 
 // Matrix renders docs/testing/oils-spec.md from the data alone: the vendored cases, what
-// the baseline's platform leaves out, the references' calibration, and nemosh's baseline.
-// Nothing is run, so a test renders it again and fails when the committed page differs,
-// and the page cannot go stale.
-func Matrix(suite Suite, record Upstream, calibration Calibration, baseline Baseline) string {
+// the baseline's platform leaves out, the references' calibration, and nemosh's baselines,
+// run as bash and as sh. Nothing is run, so a test renders it again and fails when the
+// committed page differs, and the page cannot go stale.
+func Matrix(suite Suite, record Upstream, calibration Calibration, baseline, sh Baseline) string {
 	bash, busybox := calibration.Shells["bash"], calibration.Shells["busybox"]
 	files := make([]string, 0, len(suite.Specs))
 	for file := range suite.Specs {
 		files = append(files, file)
 	}
 	sort.Strings(files)
-	type row struct{ measured, bash, nemosh, ashOnly, busybox int }
+	type row struct{ measured, bash, nemosh, ashOnly, sh, shAshOnly, busybox int }
 	var total row
 	var rows []string
 	for _, file := range files {
@@ -37,13 +37,21 @@ func Matrix(suite Suite, record Upstream, calibration Calibration, baseline Base
 			case AshOnly:
 				r.ashOnly++
 			}
+			switch sh.Standing(file, c.ID) {
+			case Passes:
+				r.sh++
+			case AshOnly:
+				r.shAshOnly++
+			}
 		}
 		total.measured += r.measured
 		total.bash += r.bash
 		total.nemosh += r.nemosh
 		total.ashOnly += r.ashOnly
+		total.sh += r.sh
+		total.shAshOnly += r.shAshOnly
 		total.busybox += r.busybox
-		rows = append(rows, fmt.Sprintf("| %s | %d | %d | %d | %s | %d | %d |", file, r.measured, r.bash, r.nemosh, percent(r.nemosh, r.bash), r.ashOnly, r.busybox))
+		rows = append(rows, fmt.Sprintf("| %s | %d | %d | %d | %s | %d | %d | %d |", file, r.measured, r.bash, r.nemosh, percent(r.nemosh, r.bash), r.ashOnly, r.sh, r.busybox))
 	}
 	var left []string
 	leftTotal := 0
@@ -60,14 +68,18 @@ func Matrix(suite Suite, record Upstream, calibration Calibration, baseline Base
 
 	var page strings.Builder
 	fmt.Fprintf(&page, "# The Oils spec suite: how far nemosh is from bash\n\n")
-	fmt.Fprintf(&page, "This page is written from `tests/oils/baseline.json` and `tests/oils/calibration.json`\n")
-	fmt.Fprintf(&page, "by `NEMOSH_OILS=update`, and a test fails when it is out of date. What the suite is, and\n")
+	fmt.Fprintf(&page, "This page is written from `tests/oils/baseline.json`, `tests/oils/baseline-sh.json` and\n")
+	fmt.Fprintf(&page, "`tests/oils/calibration.json` by `NEMOSH_OILS=update`, and a test fails when it is out of date. What the suite is, and\n")
 	fmt.Fprintf(&page, "why none of its cases says what nemosh must do, is in `tests/oils/README.md`.\n\n")
 	fmt.Fprintf(&page, "Measured on %s, with the cases of Oils `%.7s` (%s), against\n\n", platform, record.Commit, record.Committed)
 	fmt.Fprintf(&page, "- bash: %s\n- busybox: %s\n\n", bash.Version, busybox.Version)
 	fmt.Fprintf(&page, "**nemosh passes %d of the %d cases bash passes: %s.**\n\n", total.nemosh, total.bash, percent(total.nemosh, total.bash))
 	fmt.Fprintf(&page, "Of the other %d, it does %d the way the files record of ash, which may be busybox's\n", total.bash-total.nemosh, total.ashOnly)
 	fmt.Fprintf(&page, "way, and %d neither way.\n\n", total.bash-total.nemosh-total.ashOnly)
+	fmt.Fprintf(&page, "Run as sh, busybox's name for its ash, it passes %d of them and does %d the way the\n", total.sh, total.shAshOnly)
+	fmt.Fprintf(&page, "files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares\n")
+	fmt.Fprintf(&page, "with, holds that name to what it does while the bash name follows bash where the two\n")
+	fmt.Fprintf(&page, "references part.\n\n")
 	fmt.Fprintf(&page, "| | cases |\n|---|---:|\n")
 	fmt.Fprintf(&page, "| in the vendored files | %d |\n", vendored)
 	fmt.Fprintf(&page, "| in files Oils itself does not run | %d |\n", suite.Disabled)
@@ -79,11 +91,11 @@ func Matrix(suite Suite, record Upstream, calibration Calibration, baseline Base
 	fmt.Fprintf(&page, "`tests/oils/exclusions.json` gives:\n\n%s\n\n", strings.Join(left, "\n"))
 	fmt.Fprintf(&page, "## File by file\n\n")
 	fmt.Fprintf(&page, "Of each file's measured cases: how many bash passes; how many of those nemosh passes,\n")
-	fmt.Fprintf(&page, "and does the way ash does instead; and how many busybox does the way the file records\n")
-	fmt.Fprintf(&page, "of ash.\n\n")
-	fmt.Fprintf(&page, "| file | measured | bash | nemosh | %% | as ash | busybox |\n|---|---:|---:|---:|---:|---:|---:|\n")
+	fmt.Fprintf(&page, "and does the way ash does instead; how many of them it passes run as sh; and how many\n")
+	fmt.Fprintf(&page, "busybox does the way the file records of ash.\n\n")
+	fmt.Fprintf(&page, "| file | measured | bash | nemosh | %% | as ash | as sh | busybox |\n|---|---:|---:|---:|---:|---:|---:|---:|\n")
 	fmt.Fprintf(&page, "%s\n", strings.Join(rows, "\n"))
-	fmt.Fprintf(&page, "| all | %d | %d | %d | %s | %d | %d |\n", total.measured, total.bash, total.nemosh, percent(total.nemosh, total.bash), total.ashOnly, total.busybox)
+	fmt.Fprintf(&page, "| all | %d | %d | %d | %s | %d | %d | %d |\n", total.measured, total.bash, total.nemosh, percent(total.nemosh, total.bash), total.ashOnly, total.sh, total.busybox)
 	return page.String()
 }
 

@@ -1,7 +1,7 @@
 # The Oils spec suite: how far nemosh is from bash
 
-This page is written from `tests/oils/baseline.json` and `tests/oils/calibration.json`
-by `NEMOSH_OILS=update`, and a test fails when it is out of date. What the suite is, and
+This page is written from `tests/oils/baseline.json`, `tests/oils/baseline-sh.json` and
+`tests/oils/calibration.json` by `NEMOSH_OILS=update`, and a test fails when it is out of date. What the suite is, and
 why none of its cases says what nemosh must do, is in `tests/oils/README.md`.
 
 Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
@@ -13,6 +13,11 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 
 Of the other 380, it does 117 the way the files record of ash, which may be busybox's
 way, and 263 neither way.
+
+Run as sh, busybox's name for its ash, it passes 2106 of them and does 119 the way the
+files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
+with, holds that name to what it does while the bash name follows bash where the two
+references part.
 
 | | cases |
 |---|---:|
@@ -38,139 +43,139 @@ Left out on Windows, as cases no shell can be measured on there, for the reasons
 ## File by file
 
 Of each file's measured cases: how many bash passes; how many of those nemosh passes,
-and does the way ash does instead; and how many busybox does the way the file records
-of ash.
+and does the way ash does instead; how many of them it passes run as sh; and how many
+busybox does the way the file records of ash.
 
-| file | measured | bash | nemosh | % | as ash | busybox |
-|---|---:|---:|---:|---:|---:|---:|
-| alias.test.sh | 48 | 47 | 39 | 83.0% | 0 | 42 |
-| append.test.sh | 20 | 20 | 20 | 100.0% | 0 | 1 |
-| arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 3 |
-| arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 4 |
-| arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 |
-| arith.test.sh | 74 | 74 | 62 | 83.8% | 1 | 44 |
-| array-assign.test.sh | 9 | 9 | 6 | 66.7% | 0 | 9 |
-| array-assoc.test.sh | 42 | 36 | 35 | 97.2% | 0 | 0 |
-| array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 0 |
-| array-compat.test.sh | 12 | 12 | 11 | 91.7% | 0 | 1 |
-| array-literal.test.sh | 19 | 16 | 16 | 100.0% | 0 | 0 |
-| array-sparse.test.sh | 40 | 40 | 36 | 90.0% | 0 | 0 |
-| array.test.sh | 78 | 78 | 76 | 97.4% | 2 | 7 |
-| assign-deferred.test.sh | 9 | 9 | 7 | 77.8% | 0 | 1 |
-| assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
-| assign-extended.test.sh | 39 | 34 | 25 | 73.5% | 1 | 0 |
-| assign.test.sh | 48 | 45 | 36 | 80.0% | 2 | 28 |
-| background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 18 |
-| ble-features.test.sh | 9 | 9 | 4 | 44.4% | 5 | 9 |
-| ble-idioms.test.sh | 26 | 26 | 21 | 80.8% | 2 | 23 |
-| ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 5 | 5 |
-| blog1.test.sh | 9 | 9 | 8 | 88.9% | 1 | 8 |
-| blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 2 |
-| bool-parse.test.sh | 8 | 8 | 8 | 100.0% | 0 | 8 |
-| brace-expansion.test.sh | 55 | 54 | 50 | 92.6% | 3 | 8 |
-| bugs.test.sh | 28 | 28 | 20 | 71.4% | 7 | 28 |
-| builtin-bash.test.sh | 13 | 13 | 12 | 92.3% | 0 | 10 |
-| builtin-bind.test.sh | 9 | 8 | 0 | 0.0% | 0 | 0 |
-| builtin-bracket.test.sh | 47 | 45 | 39 | 86.7% | 0 | 36 |
-| builtin-cd.test.sh | 25 | 22 | 12 | 54.5% | 3 | 11 |
-| builtin-completion.test.sh | 51 | 50 | 48 | 96.0% | 0 | 0 |
-| builtin-dirs.test.sh | 18 | 18 | 7 | 38.9% | 0 | 2 |
-| builtin-echo.test.sh | 27 | 27 | 26 | 96.3% | 1 | 27 |
-| builtin-eval-source.test.sh | 23 | 21 | 14 | 66.7% | 0 | 13 |
-| builtin-fc.test.sh | 14 | 14 | 14 | 100.0% | 0 | 2 |
-| builtin-getopts.test.sh | 31 | 31 | 24 | 77.4% | 7 | 31 |
-| builtin-history.test.sh | 17 | 15 | 12 | 80.0% | 0 | 1 |
-| builtin-kill.test.sh | 20 | 17 | 15 | 88.2% | 0 | 11 |
-| builtin-meta-assign.test.sh | 11 | 11 | 11 | 100.0% | 0 | 11 |
-| builtin-meta.test.sh | 15 | 15 | 7 | 46.7% | 4 | 13 |
-| builtin-misc.test.sh | 7 | 5 | 3 | 60.0% | 0 | 4 |
-| builtin-printf.test.sh | 63 | 55 | 48 | 87.3% | 7 | 57 |
-| builtin-process.test.sh | 10 | 9 | 7 | 77.8% | 0 | 6 |
-| builtin-read.test.sh | 64 | 63 | 57 | 90.5% | 4 | 60 |
-| builtin-set.test.sh | 24 | 24 | 20 | 83.3% | 0 | 20 |
-| builtin-special.test.sh | 12 | 11 | 8 | 72.7% | 2 | 10 |
-| builtin-times.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 |
-| builtin-trap-bash.test.sh | 23 | 23 | 21 | 91.3% | 0 | 4 |
-| builtin-trap-err.test.sh | 22 | 22 | 19 | 86.4% | 2 | 22 |
-| builtin-trap.test.sh | 33 | 33 | 19 | 57.6% | 4 | 25 |
-| builtin-type-bash.test.sh | 21 | 21 | 14 | 66.7% | 1 | 0 |
-| builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 2 | 4 |
-| builtin-umask.test.sh | 24 | 15 | 7 | 46.7% | 0 | 2 |
-| builtin-vars.test.sh | 41 | 39 | 31 | 79.5% | 1 | 23 |
-| case_.test.sh | 13 | 12 | 12 | 100.0% | 0 | 9 |
-| command-parsing.test.sh | 5 | 5 | 4 | 80.0% | 1 | 5 |
-| command-sub.test.sh | 30 | 28 | 27 | 96.4% | 1 | 28 |
-| command_.test.sh | 8 | 6 | 3 | 50.0% | 0 | 4 |
-| comments.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
-| dbracket.test.sh | 49 | 49 | 43 | 87.8% | 0 | 19 |
-| divergence.test.sh | 3 | 3 | 3 | 100.0% | 0 | 3 |
-| dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 0 |
-| empty-bodies.test.sh | 3 | 3 | 3 | 100.0% | 0 | 1 |
-| errexit-osh.test.sh | 35 | 35 | 32 | 91.4% | 0 | 35 |
-| errexit.test.sh | 35 | 34 | 31 | 91.2% | 3 | 35 |
-| exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 7 |
-| explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 |
-| extglob-files.test.sh | 23 | 23 | 18 | 78.3% | 0 | 0 |
-| extglob-match.test.sh | 29 | 29 | 28 | 96.6% | 0 | 0 |
-| fatal-errors.test.sh | 5 | 5 | 0 | 0.0% | 3 | 3 |
-| for-expr.test.sh | 9 | 8 | 7 | 87.5% | 0 | 0 |
-| func-parsing.test.sh | 15 | 15 | 12 | 80.0% | 3 | 13 |
-| glob-bash.test.sh | 8 | 8 | 8 | 100.0% | 0 | 8 |
-| glob.test.sh | 39 | 37 | 34 | 91.9% | 0 | 36 |
-| globignore.test.sh | 18 | 17 | 16 | 94.1% | 0 | 1 |
-| globstar.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
-| here-doc.test.sh | 32 | 32 | 31 | 96.9% | 1 | 32 |
-| if_.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
-| interactive.test.sh | 18 | 17 | 13 | 76.5% | 0 | 0 |
-| introspect.test.sh | 13 | 12 | 10 | 83.3% | 0 | 2 |
-| known-differences.test.sh | 2 | 2 | 1 | 50.0% | 1 | 2 |
-| let.test.sh | 2 | 2 | 2 | 100.0% | 0 | 1 |
-| loop.test.sh | 29 | 28 | 23 | 82.1% | 2 | 23 |
-| nameref.test.sh | 32 | 32 | 29 | 90.6% | 0 | 2 |
-| nix-idioms.test.sh | 6 | 6 | 5 | 83.3% | 0 | 0 |
-| nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 3 |
-| nul-bytes.test.sh | 16 | 16 | 14 | 87.5% | 1 | 12 |
-| paren-ambiguity.test.sh | 8 | 8 | 6 | 75.0% | 2 | 8 |
-| parse-errors.test.sh | 27 | 25 | 19 | 76.0% | 3 | 22 |
-| pipeline.test.sh | 26 | 26 | 25 | 96.2% | 0 | 17 |
-| posix.test.sh | 15 | 15 | 14 | 93.3% | 0 | 14 |
-| print-source-code.test.sh | 4 | 4 | 4 | 100.0% | 0 | 0 |
-| process-sub.test.sh | 9 | 9 | 9 | 100.0% | 0 | 5 |
-| prompt.test.sh | 31 | 24 | 23 | 95.8% | 0 | 0 |
-| quote.test.sh | 35 | 35 | 35 | 100.0% | 0 | 35 |
-| redirect-command.test.sh | 23 | 23 | 21 | 91.3% | 1 | 22 |
-| redirect-multi.test.sh | 13 | 13 | 4 | 30.8% | 3 | 7 |
-| redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 28 |
-| regex.test.sh | 37 | 36 | 36 | 100.0% | 0 | 10 |
-| serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 10 |
-| sh-func.test.sh | 12 | 12 | 10 | 83.3% | 0 | 10 |
-| sh-options-bash.test.sh | 9 | 9 | 8 | 88.9% | 0 | 0 |
-| sh-options.test.sh | 39 | 39 | 33 | 84.6% | 0 | 12 |
-| sh-usage.test.sh | 23 | 22 | 20 | 90.9% | 0 | 18 |
-| smoke.test.sh | 18 | 18 | 17 | 94.4% | 0 | 16 |
-| strict-options.test.sh | 17 | 15 | 12 | 80.0% | 1 | 7 |
-| subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 |
-| temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 4 |
-| tilde.test.sh | 14 | 12 | 11 | 91.7% | 1 | 10 |
-| toysh-posix.test.sh | 22 | 22 | 14 | 63.6% | 8 | 22 |
-| toysh.test.sh | 8 | 7 | 6 | 85.7% | 0 | 1 |
-| type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 0 |
-| unicode.test.sh | 7 | 2 | 1 | 50.0% | 0 | 2 |
-| var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 |
-| var-op-bash.test.sh | 27 | 26 | 25 | 96.2% | 0 | 2 |
-| var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 |
-| var-op-patsub.test.sh | 28 | 28 | 25 | 89.3% | 1 | 21 |
-| var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 6 |
-| var-op-strip.test.sh | 29 | 29 | 29 | 100.0% | 0 | 27 |
-| var-op-test.test.sh | 37 | 37 | 32 | 86.5% | 1 | 20 |
-| var-ref.test.sh | 30 | 30 | 26 | 86.7% | 0 | 0 |
-| var-sub-quote.test.sh | 41 | 41 | 40 | 97.6% | 0 | 37 |
-| var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 |
-| vars-bash.test.sh | 1 | 1 | 1 | 100.0% | 0 | 0 |
-| vars-special.test.sh | 41 | 39 | 34 | 87.2% | 0 | 19 |
-| whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 |
-| word-eval.test.sh | 8 | 7 | 7 | 100.0% | 0 | 6 |
-| word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 53 |
-| xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 9 |
-| zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 |
-| all | 2665 | 2548 | 2168 | 85.1% | 117 | 1447 |
+| file | measured | bash | nemosh | % | as ash | as sh | busybox |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| alias.test.sh | 48 | 47 | 39 | 83.0% | 0 | 39 | 42 |
+| append.test.sh | 20 | 20 | 20 | 100.0% | 0 | 20 | 1 |
+| arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 | 3 |
+| arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 11 | 4 |
+| arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 | 1 |
+| arith.test.sh | 74 | 74 | 62 | 83.8% | 1 | 62 | 44 |
+| array-assign.test.sh | 9 | 9 | 6 | 66.7% | 0 | 6 | 9 |
+| array-assoc.test.sh | 42 | 36 | 35 | 97.2% | 0 | 35 | 0 |
+| array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 | 0 |
+| array-compat.test.sh | 12 | 12 | 11 | 91.7% | 0 | 11 | 1 |
+| array-literal.test.sh | 19 | 16 | 16 | 100.0% | 0 | 16 | 0 |
+| array-sparse.test.sh | 40 | 40 | 36 | 90.0% | 0 | 25 | 0 |
+| array.test.sh | 78 | 78 | 76 | 97.4% | 2 | 71 | 7 |
+| assign-deferred.test.sh | 9 | 9 | 7 | 77.8% | 0 | 7 | 1 |
+| assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 4 | 0 |
+| assign-extended.test.sh | 39 | 34 | 25 | 73.5% | 1 | 24 | 0 |
+| assign.test.sh | 48 | 45 | 36 | 80.0% | 2 | 36 | 28 |
+| background.test.sh | 27 | 25 | 24 | 96.0% | 1 | 22 | 18 |
+| ble-features.test.sh | 9 | 9 | 4 | 44.4% | 5 | 4 | 9 |
+| ble-idioms.test.sh | 26 | 26 | 21 | 80.8% | 2 | 21 | 23 |
+| ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 5 | 0 | 5 |
+| blog1.test.sh | 9 | 9 | 8 | 88.9% | 1 | 8 | 8 |
+| blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 3 | 2 |
+| bool-parse.test.sh | 8 | 8 | 8 | 100.0% | 0 | 8 | 8 |
+| brace-expansion.test.sh | 55 | 54 | 50 | 92.6% | 3 | 50 | 8 |
+| bugs.test.sh | 28 | 28 | 20 | 71.4% | 7 | 19 | 28 |
+| builtin-bash.test.sh | 13 | 13 | 12 | 92.3% | 0 | 12 | 10 |
+| builtin-bind.test.sh | 9 | 8 | 0 | 0.0% | 0 | 0 | 0 |
+| builtin-bracket.test.sh | 47 | 45 | 39 | 86.7% | 0 | 39 | 36 |
+| builtin-cd.test.sh | 25 | 22 | 12 | 54.5% | 3 | 12 | 11 |
+| builtin-completion.test.sh | 51 | 50 | 48 | 96.0% | 0 | 43 | 0 |
+| builtin-dirs.test.sh | 18 | 18 | 7 | 38.9% | 0 | 7 | 2 |
+| builtin-echo.test.sh | 27 | 27 | 26 | 96.3% | 1 | 26 | 27 |
+| builtin-eval-source.test.sh | 23 | 21 | 14 | 66.7% | 0 | 14 | 13 |
+| builtin-fc.test.sh | 14 | 14 | 14 | 100.0% | 0 | 3 | 2 |
+| builtin-getopts.test.sh | 31 | 31 | 24 | 77.4% | 7 | 24 | 31 |
+| builtin-history.test.sh | 17 | 15 | 12 | 80.0% | 0 | 5 | 1 |
+| builtin-kill.test.sh | 20 | 17 | 15 | 88.2% | 0 | 15 | 11 |
+| builtin-meta-assign.test.sh | 11 | 11 | 11 | 100.0% | 0 | 11 | 11 |
+| builtin-meta.test.sh | 15 | 15 | 7 | 46.7% | 4 | 7 | 13 |
+| builtin-misc.test.sh | 7 | 5 | 3 | 60.0% | 0 | 3 | 4 |
+| builtin-printf.test.sh | 63 | 55 | 48 | 87.3% | 7 | 48 | 57 |
+| builtin-process.test.sh | 10 | 9 | 7 | 77.8% | 0 | 7 | 6 |
+| builtin-read.test.sh | 64 | 63 | 57 | 90.5% | 4 | 57 | 60 |
+| builtin-set.test.sh | 24 | 24 | 20 | 83.3% | 0 | 20 | 20 |
+| builtin-special.test.sh | 12 | 11 | 8 | 72.7% | 2 | 8 | 10 |
+| builtin-times.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 | 1 |
+| builtin-trap-bash.test.sh | 23 | 23 | 21 | 91.3% | 0 | 21 | 4 |
+| builtin-trap-err.test.sh | 22 | 22 | 19 | 86.4% | 2 | 19 | 22 |
+| builtin-trap.test.sh | 33 | 33 | 19 | 57.6% | 4 | 19 | 25 |
+| builtin-type-bash.test.sh | 21 | 21 | 14 | 66.7% | 1 | 14 | 0 |
+| builtin-type.test.sh | 4 | 4 | 2 | 50.0% | 2 | 1 | 4 |
+| builtin-umask.test.sh | 24 | 15 | 7 | 46.7% | 0 | 7 | 2 |
+| builtin-vars.test.sh | 41 | 39 | 31 | 79.5% | 1 | 31 | 23 |
+| case_.test.sh | 13 | 12 | 12 | 100.0% | 0 | 12 | 9 |
+| command-parsing.test.sh | 5 | 5 | 4 | 80.0% | 1 | 4 | 5 |
+| command-sub.test.sh | 30 | 28 | 27 | 96.4% | 1 | 27 | 28 |
+| command_.test.sh | 8 | 6 | 3 | 50.0% | 0 | 3 | 4 |
+| comments.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 | 2 |
+| dbracket.test.sh | 49 | 49 | 43 | 87.8% | 0 | 43 | 19 |
+| divergence.test.sh | 3 | 3 | 3 | 100.0% | 0 | 3 | 3 |
+| dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 13 | 0 |
+| empty-bodies.test.sh | 3 | 3 | 3 | 100.0% | 0 | 3 | 1 |
+| errexit-osh.test.sh | 35 | 35 | 32 | 91.4% | 0 | 31 | 35 |
+| errexit.test.sh | 35 | 34 | 31 | 91.2% | 3 | 31 | 35 |
+| exit-status.test.sh | 11 | 11 | 10 | 90.9% | 0 | 10 | 7 |
+| explore-parsing.test.sh | 5 | 5 | 4 | 80.0% | 0 | 4 | 4 |
+| extglob-files.test.sh | 23 | 23 | 18 | 78.3% | 0 | 18 | 0 |
+| extglob-match.test.sh | 29 | 29 | 28 | 96.6% | 0 | 28 | 0 |
+| fatal-errors.test.sh | 5 | 5 | 0 | 0.0% | 3 | 0 | 3 |
+| for-expr.test.sh | 9 | 8 | 7 | 87.5% | 0 | 7 | 0 |
+| func-parsing.test.sh | 15 | 15 | 12 | 80.0% | 3 | 12 | 13 |
+| glob-bash.test.sh | 8 | 8 | 8 | 100.0% | 0 | 8 | 8 |
+| glob.test.sh | 39 | 37 | 34 | 91.9% | 0 | 34 | 36 |
+| globignore.test.sh | 18 | 17 | 16 | 94.1% | 0 | 15 | 1 |
+| globstar.test.sh | 4 | 4 | 4 | 100.0% | 0 | 4 | 0 |
+| here-doc.test.sh | 32 | 32 | 31 | 96.9% | 1 | 31 | 32 |
+| if_.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 | 5 |
+| interactive.test.sh | 18 | 17 | 13 | 76.5% | 0 | 6 | 0 |
+| introspect.test.sh | 13 | 12 | 10 | 83.3% | 0 | 10 | 2 |
+| known-differences.test.sh | 2 | 2 | 1 | 50.0% | 1 | 1 | 2 |
+| let.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 | 1 |
+| loop.test.sh | 29 | 28 | 23 | 82.1% | 2 | 23 | 23 |
+| nameref.test.sh | 32 | 32 | 29 | 90.6% | 0 | 28 | 2 |
+| nix-idioms.test.sh | 6 | 6 | 5 | 83.3% | 0 | 4 | 0 |
+| nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 6 | 3 |
+| nul-bytes.test.sh | 16 | 16 | 14 | 87.5% | 1 | 14 | 12 |
+| paren-ambiguity.test.sh | 8 | 8 | 6 | 75.0% | 2 | 6 | 8 |
+| parse-errors.test.sh | 27 | 25 | 19 | 76.0% | 3 | 19 | 22 |
+| pipeline.test.sh | 26 | 26 | 25 | 96.2% | 0 | 25 | 17 |
+| posix.test.sh | 15 | 15 | 14 | 93.3% | 0 | 14 | 14 |
+| print-source-code.test.sh | 4 | 4 | 4 | 100.0% | 0 | 4 | 0 |
+| process-sub.test.sh | 9 | 9 | 9 | 100.0% | 0 | 6 | 5 |
+| prompt.test.sh | 31 | 24 | 23 | 95.8% | 0 | 22 | 0 |
+| quote.test.sh | 35 | 35 | 35 | 100.0% | 0 | 35 | 35 |
+| redirect-command.test.sh | 23 | 23 | 21 | 91.3% | 1 | 21 | 22 |
+| redirect-multi.test.sh | 13 | 13 | 4 | 30.8% | 3 | 4 | 7 |
+| redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 33 | 28 |
+| regex.test.sh | 37 | 36 | 36 | 100.0% | 0 | 36 | 10 |
+| serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 8 | 10 |
+| sh-func.test.sh | 12 | 12 | 10 | 83.3% | 0 | 10 | 10 |
+| sh-options-bash.test.sh | 9 | 9 | 8 | 88.9% | 0 | 7 | 0 |
+| sh-options.test.sh | 39 | 39 | 33 | 84.6% | 0 | 33 | 12 |
+| sh-usage.test.sh | 23 | 22 | 20 | 90.9% | 0 | 19 | 18 |
+| smoke.test.sh | 18 | 18 | 17 | 94.4% | 0 | 17 | 16 |
+| strict-options.test.sh | 17 | 15 | 12 | 80.0% | 1 | 11 | 7 |
+| subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 | 2 |
+| temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 2 | 4 |
+| tilde.test.sh | 14 | 12 | 11 | 91.7% | 1 | 11 | 10 |
+| toysh-posix.test.sh | 22 | 22 | 14 | 63.6% | 8 | 14 | 22 |
+| toysh.test.sh | 8 | 7 | 6 | 85.7% | 0 | 6 | 1 |
+| type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 4 | 0 |
+| unicode.test.sh | 7 | 2 | 1 | 50.0% | 0 | 1 | 2 |
+| var-num.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 | 5 |
+| var-op-bash.test.sh | 27 | 26 | 25 | 96.2% | 0 | 25 | 2 |
+| var-op-len.test.sh | 9 | 5 | 3 | 60.0% | 1 | 3 | 3 |
+| var-op-patsub.test.sh | 28 | 28 | 25 | 89.3% | 1 | 25 | 21 |
+| var-op-slice.test.sh | 22 | 22 | 19 | 86.4% | 0 | 19 | 6 |
+| var-op-strip.test.sh | 29 | 29 | 29 | 100.0% | 0 | 29 | 27 |
+| var-op-test.test.sh | 37 | 37 | 32 | 86.5% | 1 | 32 | 20 |
+| var-ref.test.sh | 30 | 30 | 26 | 86.7% | 0 | 26 | 0 |
+| var-sub-quote.test.sh | 41 | 41 | 40 | 97.6% | 0 | 40 | 37 |
+| var-sub.test.sh | 6 | 6 | 4 | 66.7% | 1 | 4 | 4 |
+| vars-bash.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 | 0 |
+| vars-special.test.sh | 41 | 39 | 34 | 87.2% | 0 | 34 | 19 |
+| whitespace.test.sh | 5 | 0 | 0 | - | 0 | 0 | 0 |
+| word-eval.test.sh | 8 | 7 | 7 | 100.0% | 0 | 7 | 6 |
+| word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 47 | 53 |
+| xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
+| zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 | 2 |
+| all | 2665 | 2548 | 2168 | 85.1% | 117 | 2106 | 1447 |

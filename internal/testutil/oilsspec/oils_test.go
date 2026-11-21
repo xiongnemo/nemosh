@@ -33,6 +33,10 @@ import (
 // tests/oils/calibration.json: bash's passes are the headline's denominator, and the
 // harness is faithful when bash run through it does what the files record of bash.
 // NEMOSH_OILS_OUT names a file to write every case's result to, as JSON.
+//
+// NEMOSH_OILS_AS=sh runs nemosh as sh instead, and strict and update compare with and
+// write tests/oils/baseline-sh.json: where bash and busybox part, the bash name follows
+// bash and sh keeps busybox's way, and that baseline is what holds it there.
 func TestOilsSpec(t *testing.T) {
 	mode := os.Getenv("NEMOSH_OILS")
 	switch mode {
@@ -63,10 +67,10 @@ func TestOilsSpec(t *testing.T) {
 		calibrate(t, suite, installed, work)
 		return
 	}
-	nemosh := oilsspec.Subject{
-		Label: "bash", Program: installed.Nemosh, Name: "bash",
-		Path: []string{installed.Helpers, filepath.Dir(installed.Nemosh)},
-		Env:  passedOn("SystemRoot", "NEMOSH_JOBS"),
+	as := os.Getenv("NEMOSH_OILS_AS")
+	nemosh, err := subjectAs(as, installed)
+	if err != nil {
+		t.Fatal(err)
 	}
 	results, err := suite.Run(context.Background(), nemosh, work, nil)
 	if err != nil {
@@ -81,10 +85,27 @@ func TestOilsSpec(t *testing.T) {
 	reportHeadline(t, calibration, results)
 	switch mode {
 	case "strict":
-		checkBaseline(t, suite, nemosh, work, results)
+		checkBaseline(t, suite, nemosh, work, oilsspec.BaselineFile(as), results)
 	case "update":
-		updateBaseline(t, suite, nemosh, work, runtime.GOOS, results)
+		updateBaseline(t, suite, nemosh, work, runtime.GOOS, oilsspec.BaselineFile(as), results)
 	}
+}
+
+// subjectAs is nemosh run under the name as names: bash, by default, held to what the files
+// record of bash, or sh, held to what they record of ash, each with its own directory on
+// PATH after the helpers.
+func subjectAs(as string, installed oilsspec.Installed) (oilsspec.Subject, error) {
+	subject := oilsspec.Subject{Env: passedOn("SystemRoot", "NEMOSH_JOBS")}
+	switch as {
+	case "", "bash":
+		subject.Label, subject.Program, subject.Name = "bash", installed.Nemosh, "bash"
+	case "sh":
+		subject.Label, subject.Program, subject.Name = "ash", installed.Sh, "sh"
+	default:
+		return oilsspec.Subject{}, fmt.Errorf("NEMOSH_OILS_AS=%s: want bash or sh", as)
+	}
+	subject.Path = []string{installed.Helpers, filepath.Dir(subject.Program)}
+	return subject, nil
 }
 
 // calibrate runs bash, held to what the files record of bash, and busybox, installed as

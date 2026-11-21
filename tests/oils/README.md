@@ -68,6 +68,15 @@ it, and one that does not stand the same way every time is reported as flaky ins
 case seen to stand more than one way from run to run is recorded as `flaky`, by hand, and
 then stands however it comes out.
 
+`baseline-sh.json` is the same record for nemosh run as `sh`, busybox's name for its ash,
+which `NEMOSH_OILS_AS=sh` runs and compares with: the harness installs a second copy of
+nemosh as `sh.exe` and holds it to what the files record of ash. Run as bash, nemosh follows
+bash where bash and busybox part; run as sh it keeps busybox's way, and this file is what
+keeps it there, since a change meant for the bash name that moves a case here fails strict
+mode as surely as one that moves a case in `baseline.json`. A change to the shell records
+both: `NEMOSH_OILS=update`, then `NEMOSH_OILS=update NEMOSH_OILS_AS=sh`. The first one was
+written on CI's runner on 2026-11-21, starting from a copy of `baseline.json`.
+
 `exclusions.json` leaves out the cases this harness cannot measure on a platform,
 whichever shell runs them: on Windows those that use `chmod`, `ln -s`, `ulimit` or
 `read_from_fd.py`; off Linux those that read `/proc`; and everywhere the one case about

@@ -33,11 +33,15 @@ func TestMatrix_pageIsCurrent(t *testing.T) {
 	}
 }
 
-// The page leads with the headline and holds a row for every file measured.
+// The page leads with the headline, says how the sh name stands beside it, and holds a row
+// for every file measured.
 func TestMatrix_headlinesTheShareOfBashPassesAndListsEveryFile(t *testing.T) {
 	page := renderMatrix(t)
 	if !strings.Contains(page, "**nemosh passes ") || !strings.Contains(page, " cases bash passes: ") {
 		t.Errorf("the page has no headline:\n%s", page)
+	}
+	if !strings.Contains(page, "Run as sh, ") || !strings.Contains(page, "| as sh |") {
+		t.Errorf("the page does not say how nemosh run as sh stands:\n%s", page)
 	}
 	for _, file := range []string{"alias.test.sh", "word-split.test.sh", "| all |"} {
 		if !strings.Contains(page, "| "+strings.TrimPrefix(file, "| ")) {
@@ -57,7 +61,11 @@ func renderMatrix(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	baseline, err := oilsspec.ReadBaseline(root)
+	baseline, err := oilsspec.ReadBaseline(root, oilsspec.BaselineFile("bash"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sh, err := oilsspec.ReadBaseline(root, oilsspec.BaselineFile("sh"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,5 +73,5 @@ func renderMatrix(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return oilsspec.Matrix(suite, record, calibration, baseline)
+	return oilsspec.Matrix(suite, record, calibration, baseline, sh)
 }

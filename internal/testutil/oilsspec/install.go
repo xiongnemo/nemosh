@@ -19,6 +19,9 @@ type Installed struct {
 	// Nemosh is nemosh, in a directory of its own under the name bash, because cases
 	// branch on $SH and nemosh is held to bash's answers.
 	Nemosh string
+	// Sh is the same nemosh in another directory under the name sh, busybox's name for its
+	// ash, which a run as sh holds to what it does there.
+	Sh string
 }
 
 // Install builds nemosh and spechelper into dir and lays them out as Installed says. The
@@ -28,8 +31,15 @@ func Install(dir string) (Installed, error) {
 	installed := Installed{
 		Helpers: filepath.Join(dir, "helpers"),
 		Nemosh:  filepath.Join(dir, "nemosh", "bash"+executableSuffix()),
+		Sh:      filepath.Join(dir, "nemosh-sh", "sh"+executableSuffix()),
 	}
 	if err := build("github.com/xiongnemo/nemosh/cmd/nemosh", installed.Nemosh); err != nil {
+		return Installed{}, err
+	}
+	if err := os.MkdirAll(filepath.Dir(installed.Sh), 0o755); err != nil {
+		return Installed{}, err
+	}
+	if err := copyFile(installed.Nemosh, installed.Sh, 0o755); err != nil {
 		return Installed{}, err
 	}
 	helper := filepath.Join(dir, "spechelper"+executableSuffix())

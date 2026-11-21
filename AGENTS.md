@@ -143,8 +143,14 @@ the shell now stands, and commit the baseline and the page it renders with the c
 
 ```bash
 NEMOSH_OILS=update go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
-git add tests/oils/baseline.json docs/testing/oils-spec.md
+NEMOSH_OILS=update NEMOSH_OILS_AS=sh go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
+git add tests/oils/baseline.json tests/oils/baseline-sh.json docs/testing/oils-spec.md
 ```
+
+The second run is nemosh as `sh`, held to `tests/oils/baseline-sh.json`. Run as bash --
+`nemosh bash`, or a `#!/bin/bash` script -- the shell is to follow bash where bash and
+busybox part, and as sh keep busybox's way; that baseline is what proves a change made for
+the bash name left the sh name where it was.
 
 It takes about a minute here. `NEMOSH_OILS=strict` is what CI runs, and a case that
 differs is run twice more, alone, before either mode believes it. The headline -- of the
