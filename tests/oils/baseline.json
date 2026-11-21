@@ -23,7 +23,6 @@
       "Ambiguous colon in slice": "fail"
     },
     "arith.test.sh": {
-      "Dynamic parsing of arithmetic": "fail",
       "Increment undefined variables with nounset": "fail",
       "Integer constant validation": "fail",
       "nounset with arithmetic": "fail",
@@ -61,8 +60,7 @@
       "declare -F with shopt -s extdebug prints more info": "fail",
       "declare -p": "fail",
       "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
-      "declare -p arr": "fail",
-      "unset and shell funcs": "fail"
+      "declare -p arr": "fail"
     },
     "assign.test.sh": {
       "\"declare -a arr\" and \"readonly -a a\" creates an empty array (OSH)": "fail",
@@ -70,8 +68,7 @@
       "Env binding in readonly/declare is NOT exported!  (pitfall)": "ash-only",
       "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
       "Test above without 'local' (which is not POSIX)": "fail",
-      "Using ${x-default} after unsetting a temp binding shadowing a global": "fail",
-      "redirect after bare assignment": "ash-only"
+      "Using ${x-default} after unsetting a temp binding shadowing a global": "fail"
     },
     "background.test.sh": {
       "wait -n with arguments - arguments are respected": "fail",
@@ -87,9 +84,7 @@
     },
     "ble-idioms.test.sh": {
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
-      "is-array with ${var@a}": "fail",
-      "recursive arith: recursion": "fail",
-      "shift unshift reverse": "fail"
+      "recursive arith: recursion": "fail"
     },
     "ble-unset.test.sh": {
       "[bash_unset] dynamic-unset for nested localvars": "ash-only",
@@ -165,6 +160,7 @@
       "Eval in bash does tilde expansion in array": "fail",
       "Eval in does tilde expansion": "fail",
       "Eval with syntax error": "ash-only",
+      "Source from a function, mutating argv and defining a local var": "fail",
       "Source with syntax error": "ash-only",
       "eval YSH block with 'break continue return error'": "fail",
       "eval usage": "fail"
@@ -257,15 +253,12 @@
       "trap ERR with YSH proc": "fail"
     },
     "builtin-trap.test.sh": {
-      "Register the same handler for multiple signals": "ash-only",
       "Remove trap with an unsigned integer": "fail",
       "exit codes for traps are isolated": "fail",
-      "print trap handler with multiple lines": "ash-only",
+      "print trap handler with multiple lines": "fail",
       "trap '' sets handler to empty string (SIG_IGN)": "fail",
       "trap '' with multiple signals": "fail",
       "trap 'echo hi' KILL (regression test, caught by smoosh suite)": "fail",
-      "trap 0 is equivalent to trap EXIT": "ash-only",
-      "trap EXIT clears the EXIT trap": "ash-only",
       "trap EXIT with PARSE error": "fail",
       "trap EXIT with PARSE error and explicit exit": "fail",
       "trap EXIT, sleep, SIGINT: non-interactively": "fail",
@@ -305,7 +298,6 @@
     },
     "builtin-vars.test.sh": {
       "Make an existing local variable readonly": "fail",
-      "Unset a function without -f": "fail",
       "Unset and scope (bug #653)": "ash-only",
       "Unset invalid variable name": "fail",
       "Unset wrong type": "fail"
@@ -323,14 +315,6 @@
       "Name too long": "ash-only",
       "hash with args": "fail",
       "hash without args prints the cache": "fail"
-    },
-    "dbracket.test.sh": {
-      "-eq coercion produces weird results": "fail",
-      "-eq does dynamic arithmetic parsing (not supported in OSH)": "fail",
-      "-eq on strings": "fail",
-      "Hex literals with -eq": "fail",
-      "Octal literals with -eq": "fail",
-      "negative numbers - zero, decimal, octal, hex, base N": "fail"
     },
     "dparen.test.sh": {
       "(( )) with redirect": "fail",
@@ -438,7 +422,6 @@
       "default PS1": "fail"
     },
     "redirect-command.test.sh": {
-      "Redirect in assignment": "ash-only",
       "redirect bash extensions:   [[  ((  for ((": "fail"
     },
     "redirect-multi.test.sh": {
@@ -495,8 +478,7 @@
       "temp assignment x=~ env": "fail"
     },
     "toysh-posix.test.sh": {
-      "Evaluation order of redirect and ${undef?error}": "ash-only",
-      "Failed redirect in assignment, vs. export": "ash-only",
+      "Failed redirect in assignment, vs. export": "fail",
       "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",
       "IFS 4": "ash-only",
       "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only"

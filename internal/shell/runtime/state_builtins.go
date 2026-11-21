@@ -151,7 +151,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 			return r.refuseReadonly("unset: ", base)
 		}
 		if !hasSubscript {
-			r.unsetName(name)
+			r.unsetFallingBackToFunction(name, variables)
 			continue
 		}
 		// `a[@]` and `a[*]` remove the whole array, as bash does. Spelling it this way
@@ -200,6 +200,18 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 		r.markVarMutation(base)
 	}
 	return refused
+}
+
+// unsetFallingBackToFunction unsets a variable, and in bash mode, given no -v, the function of
+// the name where no variable has it, as bash's unset does; busybox's reaches no function.
+func (r Runtime) unsetFallingBackToFunction(name string, variables bool) {
+	_, set := r.vars[name]
+	if r.BashMode() && !variables && !set && !r.isArrayName(name) {
+		if parsed, ok := newFunctionName(name); ok {
+			delete(r.functions, parsed)
+		}
+	}
+	r.unsetName(name)
 }
 
 // splitSubscriptedName separates `a[1]` into its name and its subscript.
