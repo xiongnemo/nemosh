@@ -9,9 +9,9 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2338 of the 2548 cases bash passes: 91.8%.**
+**nemosh passes 2340 of the 2548 cases bash passes: 91.8%.**
 
-Of the other 210, it does 59 the way the files record of ash, which may be busybox's
+Of the other 208, it does 57 the way the files record of ash, which may be busybox's
 way, and 151 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2116 of them and does 119 the way the
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2338 |
+| that nemosh passes of those | 2340 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -50,7 +50,7 @@ busybox does the way the file records of ash.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | alias.test.sh | 48 | 47 | 46 | 97.9% | 0 | 39 | 42 |
 | append.test.sh | 20 | 20 | 20 | 100.0% | 0 | 20 | 1 |
-| arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 | 3 |
+| arg-parse.test.sh | 3 | 3 | 2 | 66.7% | 0 | 1 | 3 |
 | arith-context.test.sh | 16 | 16 | 12 | 75.0% | 0 | 11 | 4 |
 | arith-dynamic.test.sh | 4 | 4 | 4 | 100.0% | 0 | 1 | 1 |
 | arith.test.sh | 74 | 74 | 70 | 94.6% | 0 | 62 | 44 |
@@ -130,7 +130,7 @@ busybox does the way the file records of ash.
 | introspect.test.sh | 13 | 12 | 11 | 91.7% | 0 | 10 | 2 |
 | known-differences.test.sh | 2 | 2 | 1 | 50.0% | 1 | 1 | 2 |
 | let.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 | 1 |
-| loop.test.sh | 29 | 28 | 24 | 85.7% | 1 | 23 | 23 |
+| loop.test.sh | 29 | 28 | 25 | 89.3% | 1 | 23 | 23 |
 | nameref.test.sh | 32 | 32 | 31 | 96.9% | 0 | 28 | 2 |
 | nix-idioms.test.sh | 6 | 6 | 6 | 100.0% | 0 | 4 | 0 |
 | nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 6 | 3 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 51 | 96.2% | 1 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 3 | 100.0% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2338 | 91.8% | 59 | 2116 | 1447 |
+| all | 2665 | 2548 | 2340 | 91.8% | 57 | 2116 | 1447 |

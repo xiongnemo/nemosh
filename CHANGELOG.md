@@ -136,6 +136,12 @@ patch number is the commits since that tag.
     joins it: in an assignment, a case word, `[[ ]]`, a here-string and an operator's word, so with
     IFS=: `s="$@"` is `x y`. busybox joins it by IFS's first character, as `$*`, and nemosh and sh
     still do.
+  - **The operands of break, continue, exit, return and shift in bash mode are bash 5.3's**:
+    `break x` ends the script, status 2, where it said so twice and went on; `--` before an
+    operand is passed over; a second operand is `too many arguments`, the rest of the line
+    abandoned, status 2; `break 0` leaves every loop, status 1; `shift -1` is out of range,
+    status 1; and break or continue in a function no longer reaches its caller's loop. busybox
+    reads them otherwise, and nemosh and sh still do.
   - **A redirection's word in bash mode is expanded as an argument is**, as bash expands it:
     braces, splitting and globbing too, so `> one-*` writes the one file it matches, and a word
     that comes to none or several, `> $f` with a blank in f, is `$f: ambiguous redirect`, status 1,

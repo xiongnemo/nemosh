@@ -6,8 +6,7 @@
       "here doc inside alias": "ash-only"
     },
     "arg-parse.test.sh": {
-      "continue 1 extra, break, etc.": "ash-only",
-      "shift 1 extra": "ash-only"
+      "continue 1 extra, break, etc.": "fail"
     },
     "arith-context.test.sh": {
       "$[ is a synonym for $((": "fail",
@@ -330,11 +329,10 @@
       "`set` output format - ifupdown-ng": "ash-only"
     },
     "loop.test.sh": {
-      "bad arg to break": "ash-only",
+      "bad arg to break": "fail",
       "continue in subshell": "fail",
       "continue in subshell aborts with errexit": "fail",
-      "for loop with invalid identifier": "ash-only",
-      "too many args to continue": "fail"
+      "for loop with invalid identifier": "ash-only"
     },
     "nameref.test.sh": {
       "a[@] in nameref": "fail"
