@@ -110,9 +110,43 @@ func (r Runtime) promptDirectory(last bool) string {
 	case last && directory != "/" && directory != "//":
 		return directory[strings.LastIndexByte(directory, '/')+1:]
 	case inHome:
-		return "~" + rest
+		directory = "~" + rest
+	}
+	if keep, err := strconv.Atoi(r.vars["PROMPT_DIRTRIM"]); err == nil && keep > 0 {
+		return trimPromptPath(directory, keep)
 	}
 	return directory
+}
+
+// trimPromptPath is \w under PROMPT_DIRTRIM, bash's trim_pathname: the last keep directories,
+// and ... for the ones before them, after a ~/ at the front. A path with no more than keep is
+// itself, and so is one where what would be put as ... is three characters or fewer: ~/x/y/z/w
+// kept to 2 is ~/x/y/z/w, and ~/a/b/c/d/e is ~/.../d/e. busybox has no PROMPT_DIRTRIM.
+func trimPromptPath(name string, keep int) string {
+	begin := 0
+	if strings.HasPrefix(name, "~") {
+		slash := strings.IndexByte(name, '/')
+		if slash < 0 {
+			return name
+		}
+		begin = slash + 1
+	}
+	if begin >= len(name) || strings.Count(name[begin:], "/") < keep {
+		return name
+	}
+	tail := len(name) - 1
+	for ; tail > begin; tail-- {
+		if name[tail] == '/' {
+			keep--
+			if keep == 0 {
+				break
+			}
+		}
+	}
+	if tail == begin || tail-begin <= 3 {
+		return name
+	}
+	return name[:begin] + "..." + name[tail:]
 }
 
 // samePromptPath is whether two paths are one, as Windows folds their case.

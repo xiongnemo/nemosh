@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`PROMPT_DIRTRIM`**, bash's: `\w` keeps that many trailing directories and puts `...` for the
+  rest, `~/.../d/e`, by bash's own rule for when a path is left whole.
+
 - **`declare -t`**, bash's trace attribute: `declare -ft f` has f inherit the DEBUG and RETURN
   traps, as every function does under `set -T`, and keep the attribute when it is defined again;
   `declare -F` lists it as `declare -ft f`, and on a variable `declare -p` shows it. It was an
