@@ -42,8 +42,7 @@
     },
     "array-assign.test.sh": {
       "Are quotes allowed?": "fail",
-      "Tricky parsing - a[ a[0]=1 ]=X  a[ a[0]+=1 ]+=X": "fail",
-      "declare builtin doesn't allow spaces": "fail"
+      "Tricky parsing - a[ a[0]=1 ]=X  a[ a[0]+=1 ]+=X": "fail"
     },
     "array-assoc.test.sh": {
       "BashAssoc ${a[@]@Q}": "fail",
@@ -70,10 +69,6 @@
     "array.test.sh": {
       "Length op, index op, then transform op is not allowed": "ash-only",
       "Multiple subscripts not allowed": "ash-only"
-    },
-    "assign-deferred.test.sh": {
-      "export a[7]=8": "fail",
-      "readonly a[7]=8": "fail"
     },
     "assign-extended.test.sh": {
       "declare": "fail",
@@ -387,9 +382,6 @@
     "exit-status.test.sh": {
       "subshell OverflowError https://github.com/oilshell/oil/issues/996": "fail"
     },
-    "explore-parsing.test.sh": {
-      "readonly +": "fail"
-    },
     "extglob-files.test.sh": {
       "?() matches 0 or 1": "fail",
       "Escaping of pipe (glibc bug, see demo/glibc_fnmatch.c)": "fail",
@@ -474,8 +466,6 @@
       "Long Token - 65535 bytes": "fail",
       "Token that's too long for Oils - 65536 bytes": "fail",
       "array literal inside array is a parse error": "ash-only",
-      "bad var name in export": "fail",
-      "bad var name in local": "fail",
       "} on the second line": "fail"
     },
     "pipeline.test.sh": {

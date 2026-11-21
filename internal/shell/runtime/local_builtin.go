@@ -37,6 +37,7 @@ func (r Runtime) local(ctx context.Context, args []string) int {
 		r.raiseShellError()
 		return 2
 	}
+	refused := 0
 	for _, arg := range names {
 		if arg == "-" {
 			r.locals.saveOptions(r.options)
@@ -44,13 +45,17 @@ func (r Runtime) local(ctx context.Context, args []string) int {
 		}
 		target, _, _ := cutAssignment(arg)
 		if name, _ := splitAssignmentTarget(target); !isVariableName(assignedName(name)) {
+			if r.BashMode() {
+				refused = r.notIdentifier("local", arg)
+				continue
+			}
 			return r.refuseName("local: ", name)
 		}
 		if status := r.declareLocal(ctx, "local", options, arg); status != 0 {
 			return status
 		}
 	}
-	return 0
+	return refused
 }
 
 // declareLocal makes one `name` or `name=value` the running call's own and then declares
