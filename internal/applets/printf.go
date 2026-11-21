@@ -170,10 +170,16 @@ func printfSpecification(rest string) (string, byte, int) {
 	if index < len(rest) && rest[index] == '.' {
 		index = printfNumberOrStar(rest, index+1)
 	}
+	// C's length modifiers are passed over, as both references pass over them -- h, l, L and z
+	// in busybox, those and j and t in bash -- and left out of the specification Go is given.
+	spec := rest[:index]
+	for index < len(rest) && strings.IndexByte("hjlLtz", rest[index]) >= 0 {
+		index++
+	}
 	if index >= len(rest) {
 		return "", 0, 0
 	}
-	return rest[:index], rest[index], index + 1
+	return spec, rest[index], index + 1
 }
 
 // printfNext hands a conversion its operand, and says whether there was one: one that is
