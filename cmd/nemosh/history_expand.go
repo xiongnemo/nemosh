@@ -224,6 +224,8 @@ const (
 	historyPrinted
 	// historyRefused: an expansion failed, and it neither runs nor is recorded.
 	historyRefused
+	// historyVerify: under histverify the expanded line is given back to edit, unrun.
+	historyVerify
 )
 
 // applyHistoryExpansion rewrites a typed line and says what becomes of it.
@@ -236,6 +238,13 @@ const (
 // The line's own terminator is put back afterwards, because the plain loop accumulates
 // lines with their newlines and the edited one does not.
 func applyHistoryExpansion(source historySource, expander *historyExpander, stderr io.Writer, line string) (string, historyOutcome) {
+	return applyHistoryExpansionVerifying(source, expander, stderr, line, false)
+}
+
+// applyHistoryExpansionVerifying is applyHistoryExpansion with verify, `shopt -s histverify` in
+// the edited loop: a line expansion changed is given back to edit, historyVerify, and not echoed,
+// since it is there on the line to be read -- what bash's readline does. A :p prints as before.
+func applyHistoryExpansionVerifying(source historySource, expander *historyExpander, stderr io.Writer, line string, verify bool) (string, historyOutcome) {
 	// `set +H` turns it off, as in bash.
 	if !source.HistoryExpansion() {
 		return line, historyRun
@@ -251,6 +260,9 @@ func applyHistoryExpansion(source historySource, expander *historyExpander, stde
 	}
 	if !changed {
 		return line, historyRun
+	}
+	if verify && !printOnly {
+		return expanded, historyVerify
 	}
 	// Echoed so the user sees what will run, which is what bash does -- on stderr, so a
 	// redirected stdout still holds only what the command wrote.
