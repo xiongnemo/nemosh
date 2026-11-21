@@ -155,6 +155,11 @@ proves a change made for bash mode left the sh name where it was. A difference t
 conflict between the two references -- a defect both agree on, or something only bash has --
 is not put behind the mode.
 
+Where the suite is not to be run on the development machine, run it on CI instead: a pre-check
+branch whose strict run fails uploads the baselines it would record as the `oils-proposed`
+artifact (`tests/oils/README.md` has the two commands that take them), and those go into the
+commit that moved the cases.
+
 It takes about a minute here. `NEMOSH_OILS=strict` is what CI runs, and a case that
 differs is run twice more, alone, before either mode believes it. The headline -- of the
 cases bash passes, how many nemosh passes -- is in `docs/testing/oils-spec.md`.

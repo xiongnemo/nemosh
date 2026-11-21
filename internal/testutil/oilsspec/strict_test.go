@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -64,6 +65,10 @@ func confirmChanges(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject
 // checkBaseline fails for every case that stands otherwise than the baseline file says, the
 // one that started passing as much as the one that stopped, so the baseline is always where
 // nemosh is. A flaky case is reported and does not fail.
+//
+// NEMOSH_OILS_PROPOSED names a directory to write the baseline to as the run would record it,
+// under the same name, when it fails: CI uploads it, so a change that moves cases takes the
+// file the runner measured, not one written by hand or from a run on another machine.
 func checkBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject, work, file string, results map[string][]oilsspec.CaseResult) {
 	t.Helper()
 	baseline, err := oilsspec.ReadBaseline(suite.Root, file)
@@ -83,6 +88,16 @@ func checkBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject,
 	}
 	t.Errorf("%d cases stand otherwise than tests/oils/%s says:\n%s\n"+
 		"Once each is understood, NEMOSH_OILS=update records them.", len(confirmed), file, strings.Join(lines, "\n"))
+	if dir := os.Getenv("NEMOSH_OILS_PROPOSED"); dir != "" {
+		baseline.Record(confirmed)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := baseline.Write(dir, file); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("the baseline as this run would record it is %s", filepath.Join(dir, file))
+	}
 }
 
 // updateBaseline writes the baseline file from the run: a case that stands otherwise than
@@ -96,13 +111,8 @@ func updateBaseline(t *testing.T, suite oilsspec.Suite, subject oilsspec.Subject
 	}
 	baseline.Platform = platform
 	confirmed, flaky := confirmChanges(t, suite, subject, work, baseline, results)
+	baseline.Record(confirmed)
 	for _, change := range confirmed {
-		standing := change.Now
-		if standing == "" {
-			// Not measured any more, so there is nothing to record of it.
-			standing = oilsspec.Passes
-		}
-		baseline.Set(change.File, change.ID, standing)
 		t.Logf("recorded: %s", describe(change))
 	}
 	for _, change := range flaky {

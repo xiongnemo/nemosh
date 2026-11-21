@@ -83,6 +83,28 @@ func TestBaseline_changesAreEveryDifferenceBothWays(t *testing.T) {
 	}
 }
 
+// Recording changes is what update writes and what strict proposes: a case that now passes
+// leaves the baseline, one that stands otherwise is set as it stands, and one no longer
+// measured has nothing left to record.
+func TestBaseline_recordsChangesAsTheyNowStand(t *testing.T) {
+	baseline := oilsspec.Baseline{Platform: "windows", Cases: map[string]map[string]string{
+		"a.test.sh": {"started passing": oilsspec.Fails, "now ash-only": oilsspec.Fails, "unchanged": oilsspec.Fails},
+		"b.test.sh": {"no longer measured": oilsspec.Fails},
+	}}
+	baseline.Record([]oilsspec.Change{
+		{File: "a.test.sh", ID: "started passing", Was: oilsspec.Fails, Now: oilsspec.Passes},
+		{File: "a.test.sh", ID: "now ash-only", Was: oilsspec.Fails, Now: oilsspec.AshOnly},
+		{File: "a.test.sh", ID: "stopped passing", Was: oilsspec.Passes, Now: oilsspec.Fails},
+		{File: "b.test.sh", ID: "no longer measured", Was: oilsspec.Fails},
+	})
+	want := map[string]map[string]string{
+		"a.test.sh": {"now ash-only": oilsspec.AshOnly, "unchanged": oilsspec.Fails, "stopped passing": oilsspec.Fails},
+	}
+	if !reflect.DeepEqual(baseline.Cases, want) {
+		t.Errorf("recorded\n got %v\nwant %v", baseline.Cases, want)
+	}
+}
+
 // A result stands by what it matched: bash's expectations, else ash's, else neither. A
 // timeout matches nothing.
 func TestStanding_isBashFirstThenAsh(t *testing.T) {

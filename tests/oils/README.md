@@ -77,6 +77,15 @@ mode as surely as one that moves a case in `baseline.json`. A change to the shel
 both: `NEMOSH_OILS=update`, then `NEMOSH_OILS=update NEMOSH_OILS_AS=sh`. The first one was
 written on CI's runner on 2026-11-21, starting from a copy of `baseline.json`.
 
+A strict run given `NEMOSH_OILS_PROPOSED`, a directory, writes the baseline there as the run
+would record it when it fails, and CI uploads that as the `oils-proposed` artifact. So a
+change can take the files the runner measured without the suite being run anywhere else:
+
+```bash
+gh run download RUN -n oils-proposed -D tests/oils
+NEMOSH_OILS_MATRIX=write go test ./internal/testutil/oilsspec/ -run TestMatrix
+```
+
 `exclusions.json` leaves out the cases this harness cannot measure on a platform,
 whichever shell runs them: on Windows those that use `chmod`, `ln -s`, `ulimit` or
 `read_from_fd.py`; off Linux those that read `/proc`; and everywhere the one case about

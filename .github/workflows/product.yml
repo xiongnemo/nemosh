@@ -118,22 +118,39 @@ jobs:
       # it with NEMOSH_OILS=update in the same commit. The first CI run under it, not
       # gating, differed from a local run in two cases; one was the runner's account
       # and is excluded now, the other hangs on timing and is recorded as flaky.
+      #
+      # A run that differs writes the baseline as it would record it to
+      # NEMOSH_OILS_PROPOSED, uploaded below as the oils-proposed artifact: the file the
+      # runner measured, for the commit that moved the cases to take.
       - name: Oils spec suite
+        id: oils
         shell: bash
         env:
           NEMOSH_OILS: strict
+          NEMOSH_OILS_PROPOSED: ${{ runner.temp }}/oils-proposed
         run: go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
 
       # The same cases with nemosh run as sh, held to tests/oils/baseline-sh.json. Where bash
       # and busybox part, the bash name follows bash and sh keeps busybox's way; this is what
       # keeps a change made for the bash name from moving the sh one. A change that moves a
       # case here records it with NEMOSH_OILS=update NEMOSH_OILS_AS=sh in the same commit.
+      # It runs when the step above failed too, so one run proposes both baselines.
       - name: Oils spec suite, run as sh
+        if: success() || steps.oils.outcome == 'failure'
         shell: bash
         env:
           NEMOSH_OILS: strict
           NEMOSH_OILS_AS: sh
+          NEMOSH_OILS_PROPOSED: ${{ runner.temp }}/oils-proposed
         run: go test ./internal/testutil/oilsspec/ -run TestOilsSpec -count=1 -timeout 30m -v
+
+      - name: Upload the proposed Oils baselines
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: oils-proposed
+          path: ${{ runner.temp }}/oils-proposed
+          if-no-files-found: ignore
 
       # Fuzz seeds are run as ordinary tests on every platform: the corpus in
       # testdata holds the inputs that have already broken something, so a

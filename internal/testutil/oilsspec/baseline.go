@@ -118,6 +118,18 @@ type Change struct {
 	File, ID, Was, Now string
 }
 
+// Record sets each changed case as it now stands: one that passes leaves the baseline, and
+// one no longer measured has nothing left to record.
+func (b Baseline) Record(changes []Change) {
+	for _, change := range changes {
+		standing := change.Now
+		if standing == "" {
+			standing = Passes
+		}
+		b.Set(change.File, change.ID, standing)
+	}
+}
+
 // Changes lists, in order, the cases the results stand otherwise for than the baseline
 // says, and the ones it records that the results do not have. A case it records as flaky
 // stands however it comes out.
