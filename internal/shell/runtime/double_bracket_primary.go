@@ -40,9 +40,9 @@ func (r Runtime) evaluateConditionTest(ctx context.Context, node *conditionNode,
 		case "-o":
 			return r.ShellOptionIsOn(operand), nil
 		case "-a":
-			return applets.EvaluateConditionPrimary(r, "-e", operand, "")
+			return applets.EvaluateConditionPrimary(r, r.conditionStreams(), "-e", operand, "")
 		}
-		return applets.EvaluateConditionPrimary(r, node.operator, operand, "")
+		return applets.EvaluateConditionPrimary(r, r.conditionStreams(), node.operator, operand, "")
 	}
 	left := conditionTerm{}
 	left.text, left.quoted = r.expandConditionWord(ctx, node.operands[0], savedStatus)
@@ -129,5 +129,11 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 // the operand, `x: bad number`, as busybox's [[ does; and `[[ " 3" -eq 3 ]]`, which `[` and
 // both references take, was refused.
 func (r Runtime) evaluateConditionComparison(operator, left, right string) (bool, error) {
-	return applets.EvaluateConditionPrimary(r, operator, left, right)
+	return applets.EvaluateConditionPrimary(r, r.conditionStreams(), operator, left, right)
+}
+
+// conditionStreams is what `-t` asks of: the shell's standard input, output and error, the
+// streams `[` is handed.
+func (r Runtime) conditionStreams() [3]any {
+	return [3]any{r.streams.Stdin, r.streams.Stdout, r.streams.Stderr}
 }

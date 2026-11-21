@@ -285,6 +285,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`[[ -t 1 ]]` said no on a console**, where `[ -t 1 ]` said yes: `[[` asked none of the shell's
+  streams. bash-preexec's DEBUG hook returns at once when `[[ ! -t 1 ]]`, so no preexec ever ran,
+  and atuin, which carries bash-preexec, recorded no history.
+
 - **`! [[ A || B ]]` was refused**, `missing ]]`: after `!` the conditional's `||`, `&&` and `|`
   were taken for the pipeline's, so direnv's whole stdlib failed to parse, and direnv run with
   this shell as its bash loaded no `.envrc`. And `echo ! [[ x`, where `!` is an argument, opened a

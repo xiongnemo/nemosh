@@ -218,9 +218,10 @@ func (e *testEvaluator) descriptorFile(descriptor int64) *os.File {
 // that differ.
 //
 // `right` is ignored for a unary operator, which is what makes one entry point
-// serve both shapes.
-func EvaluateConditionPrimary(view ProcessView, operator, left, right string) (bool, error) {
-	evaluator := &testEvaluator{view: view}
+// serve both shapes. streams are the shell's standard input, output and error, which
+// -t asks of as `[` asks of its own; without them `[[ -t 1 ]]` said no on a console.
+func EvaluateConditionPrimary(view ProcessView, streams [3]any, operator, left, right string) (bool, error) {
+	evaluator := &testEvaluator{view: view, streams: streams}
 	if IsUnaryConditionOperator(operator) {
 		return evaluator.unaryPrimary(operator, left)
 	}
