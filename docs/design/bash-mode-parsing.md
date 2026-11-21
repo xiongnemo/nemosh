@@ -1,90 +1,127 @@
-# Bash mode: reading a script a command at a time
+# Bash mode: reading a text a command at a time, and aliases that are syntax
 
-Status: proposed, 2026-11-21. Milestone M6 of the Git bash compatibility plan; nothing here is
-built yet.
+Status: built, 2026-11-22. Milestone M6 of the Git bash compatibility plan. Run as bash --
+`nemosh bash`, a `#!/bin/bash` script, `NEMOSH_COMPAT=bash` -- the shell reads as bash reads;
+run as nemosh or sh it reads as it always has, and says so when an alias it will not read is why
+a line is refused.
 
 ## What differs
 
-nemosh reads a script whole before it runs any of it, and substitutes aliases after a command
-is parsed. Both references read a command, run it, and read the next -- bash's
-`parse_and_execute`, busybox's `cmdloop` -- and substitute an alias as the lexer meets its
-name. That is nemosh's own design, not either reference's, and the plan's E class: run as bash,
-the shell is to follow bash; run as nemosh or sh it keeps what it does.
-
-What a script sees of the difference:
+nemosh reads a script whole before it runs any of it, and substitutes an alias as its command
+runs, into a command already parsed. Both references read a command, run it, and read the next
+-- bash's `parse_and_execute`, busybox's `cmdloop` -- and substitute an alias as their reader
+meets its name, before the line's structure is decided. What a script sees of the difference:
 
 - **A syntax error later in the file stops nothing before it.** bash runs every command up to
-  the line it cannot parse, and says the error there; nemosh refuses the whole file before the
-  first line runs, `incomplete script: missing fi`. A self-extracting installer, `exit 0` and
-  then an archive, runs in bash and is refused here.
-- **An alias can expand into syntax.** `alias ll='{'`, an alias whose text is `if`, `for x in`,
-  or the first half of a loop, changes how the rest of the line parses in bash. Here the line
-  is parsed first and the alias substituted into a command already parsed, so none of them
-  works: Oils' alias.test.sh has six such cases failing.
-- **expand_aliases is off in a non-interactive bash** unless the script turns it on; nemosh
-  substitutes in a script as at a prompt.
+  the line it cannot parse and says the error there, status 2, with its EXIT trap; nemosh
+  refused the whole file before its first line ran. A self-extracting installer, `exit 0` and
+  then an archive, runs in bash and was refused here, and so was any file over the parser's
+  1 MiB.
+- **eval's text and a sourced file are read so too**: `eval $'echo a\nif then'` says a.
+- **An alias can be syntax.** `alias LEFT='{'`, an alias for `if`, or one for the first half
+  of a loop changes how the rest of the line parses in bash and in busybox, as POSIX 2.3.1
+  allows. nemosh parsed the line first, so none of them worked.
+- **expand_aliases is off in a bash that is not interactive** until the script turns it on.
 
-What it does not change: an alias defined on a line is not in force on that line, nor inside
-the compound it is in, nor in a function body defined before it -- nemosh already gives each
-line a copy of the aliases as it begins (alias_view.go), and keeps that.
+## What the community makes of aliases that are syntax
 
-## The machinery already there
+They are a wart, by wide agreement: bash's manual says to use functions instead, Greg's wiki
+calls aliases a hazard in scripts, ShellCheck warns of one used in the script that defines it
+(SC2262), and Oils refuses an alias that is not a whole command on purpose. The other shells
+read them: bash and busybox, measured, and dash, mksh and zsh by their documentation.
 
-A session reads this way. `ParseSessionInput` parses what has been read so far and answers
-`ErrIncompleteScript` while a command is still open -- a quote, a here-document, a compound,
-a `\` at a line's end -- and the session reads another line and tries again. Line numbers
-carry on from the lines before (`parseSessionAt`, `interactive.linesRead`). A here-document's
-body is read with the command it belongs to, since the command is incomplete until its
-delimiter.
+So the decision, 2026-11-22: bash mode reads them as bash does, since a script for bash may rely
+on them, and nemosh and sh go on refusing them, as Oils does, with a hint on the line after the
+syntax error that names the alias and bash mode.
 
-So the change is to feed a script to that loop a line at a time instead of to `parseScriptAt`
-whole, in bash mode only.
+## Reading a text in bash mode
 
-## The design
+`runScriptResult` hands every text bash mode runs to `runChunks` (script_chunks.go): a script,
+`-c`, stdin, eval's text, a sourced file and an rc file (`SourceStartup`).
 
-1. **Chunks.** `runScriptResult`, in bash mode, cuts the source into lines and keeps a buffer:
-   a line is appended, the buffer parsed with the session's parser, numbered from the first
-   line not yet run. `ErrIncompleteScript` reads the next line; any other error is said with
-   the line number it names and ends the script, status 2, the commands before it having run,
-   as bash ends it -- measured 2026-11-21, a file and `-c` alike: `echo before; if then`
-   says before, then the syntax error, and exits 2; a complete parse is executed with
-   `executeStatements`, and the buffer emptied. At the end of the source an incomplete buffer
-   is the unterminated-construct error, said there.
-2. **Flow.** `exit`, `return` from a sourced file, `exec`, and a fatal error end the loop:
-   nothing after them is read, which is what lets the installer's archive go unparsed.
-   `set -n` reads and parses each chunk without running it.
-3. **The same for eval, `.`, `-c` and a trap's action.** bash runs all of them through
-   `parse_and_execute`, a command at a time. They share `runScriptResult`, so they share the
-   loop.
-4. **Aliases while reading.** With the buffer parsed as it grows, the lexer can substitute an
-   alias where a command word begins, as both references do: the alias's text replaces the
-   word in the input, and lexing goes on through it, so `{`, `(`, a reserved word or half a
-   loop in the text is syntax. The aliases consulted are the ones in force when the chunk is
-   read, alias_view.go's copy. A trailing blank makes the next word a candidate too, as now.
-   Recursion is stopped by the alias being substituted, as bash stops it.
-5. **expand_aliases.** In bash mode a shell that is not interactive starts with it off, as
-   bash does; `shopt -s expand_aliases` turns it on, and a session has it on.
+1. **Whole first.** The text is parsed whole and, when that succeeds, run as it always was, a
+   line at a time: almost every script, at the cost it always had -- five thousand lines in
+   31 ms before and after.
+2. **A command at a time when it does not parse whole.** From the first line not yet run, the
+   session's parser is asked whether the lines so far end in a whole command, at one line, two,
+   four and so on rather than at every line (a session asks again from a command's first line
+   at each line, which for a three-thousand-line loop took six seconds); an error narrows the
+   question to the lines it took (`chunkWithin`). A whole command runs, `$?` carried on; any
+   other error is said and ends the text, status 2 -- a script's EXIT trap run, eval and `.`
+   going on as bash goes on outside its POSIX mode. The end of the input is parsed as a
+   script's end, for a here-document's warning and a final `\`. Nothing after an `exit`, an
+   `exec` or a fatal error is read.
+3. **Raw lines.** The text is cut at `\n` before anything else, so a CRLF is never split; each
+   chunk is parsed as text of its own, numbered from where it starts, so `$LINENO` is the line
+   bash reports.
 
-Run as nemosh or sh, none of this applies: the whole-file parse, its up-front refusal and
-runtime substitution stay, and the 3,000-odd existing tests hold them there.
+## Aliases read as the text is read
 
-## To measure before building
+nemosh decides a text's structure in passes over its lines before any word is lexed
+(`parseScript`: `collectHeredocs`, `numberedLogicalLines`, `compoundSpans`), so there is no
+lexer to substitute into. In bash mode an alias is substituted by one more pass instead,
+alias_read.go, over the text the heredoc pass leaves, which reads only as much of the grammar as
+says where a command's name goes:
 
-- Where bash's `$LINENO` and the error's line number fall for a command spanning lines, and
-  for a here-document.
-- Whether bash parses a function body's aliases when the definition is read (it does, by its
-  documentation) -- and so whether alias_view.go's per-definition copy is still right once the
-  lexer substitutes.
-- The cost: parsing a 10,000-line script as 10,000 chunks, against one parse today. The session
-  path re-parses its buffer from the start of the open command only, so a long compound is the
-  case to time.
+- after a newline or an operator, after the reserved words a command follows, after
+  assignments and redirections, after a function header's `()` and a case pattern's `)`, and
+  inside `$(...)`, backquotes and process substitutions;
+- not in a case pattern, for's words, a `[[ ]]` or an arithmetic command, nor inside quotes,
+  comments or a here-document's body;
+- an alias's text is read on with the rest, its first word a command's name if the alias was in
+  that place; text ending in a blank makes the next word an alias too, wherever it is -- for's
+  name and words included, as bash reads them; an alias is not substituted again inside its
+  own text.
 
-## Steps, each a commit with its Oils cases
+The pass is made wherever bash mode parses with expand_aliases on and aliases defined: the text
+read whole, each chunk, each line a session reads, and what is parsed as it runs -- a trap's
+action, a here-document's `$(...)`. The substitution a command used to get as it ran is off in
+bash mode, which would have read `alias ls='ls -F'` twice.
 
-1. expand_aliases off in a non-interactive bash-mode shell.
-2. Chunked execution of a script file and `-c` in bash mode, with the end-of-input and
-   line-number behaviour measured first; Oils' 13 whole-parse cases as acceptance.
-3. eval, `.` and trap actions through the same loop.
-4. Alias substitution in the lexer in bash mode; Oils' alias.test.sh cases as acceptance.
+**An alias is in force from the next command.** bash reads a command, runs it, and reads the
+next, so `alias x=...` is not in force on its own line and is on the next. nemosh reads the text
+whole, so it runs what it read a line at a time (`runRead`, script_reread.go) and, when the
+aliases the text was read with have changed, reads the rest again from where the command just
+run ends -- the first line after it that the lines from the last known command boundary parse
+whole at; none before the next statement, and that statement is part of the command just run,
+as `x` in `fi; x` is. It is read again only when a changed alias is written in the rest where a
+command's name could be, or in some alias's text: a `.bashrc` defining forty aliases and using
+none of them is read once. A file defining alias after alias, each used further on, read its
+rest again for every one -- fifty in a six-hundred-line file took 114 ms where it took 13 -- so
+the rest is read whole again only while the lines parsed stay within three times the text's,
+and a command at a time after that: 21 ms.
 
-Each moves only bash-name cases; `tests/oils/baseline-sh.json` holds the sh name where it is.
+A function's body is read when its definition is, with the aliases of that moment, as bash
+reads it; the copy of the aliases a definition kept for its body (alias_view.go) is what nemosh
+and sh still use.
+
+## As nemosh and sh
+
+Nothing above applies. The text is parsed whole and refused whole, and an alias is substituted
+as its command runs. When an alias is why a text is refused -- the aliases defined, with those
+the text defines itself with `alias NAME=VALUE` found without running it, read as bash reads
+them, make the text parse -- or when an alias's text does not parse as its command runs, the
+syntax error is followed by
+
+    hint: alias LEFT='{' is part of a command's syntax, which nemosh does not read on purpose;
+    bash mode does: nemosh bash, or NEMOSH_COMPAT=bash
+
+(alias_warning.go), in a script, eval's text and at a prompt.
+
+## Known limits
+
+- A here-document in an alias's text is taken out of that text as the alias is substituted,
+  as the text's own were before the alias pass, and is one when its body is in the alias too --
+  `hi`, as bash 5.3 and busybox say; Oils' case records an old bash's defect as bash's answer.
+  One whose body is written after the alias's use, in the text, is not.
+- An alias whose text holds a newline puts the line numbers after it out by as many lines.
+- A syntax error's words are nemosh's: `incomplete script: missing fi`, where bash says
+  `syntax error near unexpected token`.
+
+## How it was measured
+
+Against Git for Windows' bash 5.3 and busybox-w32, a script per case, and Oils' spec suite: 14
+cases that need a text read a command at a time, among them trap EXIT with a parse error and
+`exit` before code that does not parse, and the five of alias.test.sh whose alias is syntax.
+eval's text and expand_aliases have no Oils case and were measured directly. Each step moved
+only bash-name cases; `tests/oils/baseline-sh.json` holds the sh name where it was.
