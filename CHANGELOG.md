@@ -401,6 +401,9 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`complete -I` was recorded and never asked**: Tab in a command's name now runs it, as bash's
+  does, its function given `_InitialWorD_`, the word, and the word again for the one before it.
+
 - **A compound command's redirection that failed was said on the wrong line**: `{ cat; } <
   nofile` on line 2 said `line 1`, the line of the command before it. It is said on the line
   the compound begins on, as busybox-w32 says it.
