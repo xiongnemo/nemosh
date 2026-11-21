@@ -54,9 +54,7 @@
       "Using ${x-default} after unsetting a temp binding shadowing a global": "fail"
     },
     "background.test.sh": {
-      "wait -n with arguments - arguments are respected": "fail",
-      "wait for N parallel jobs and check failure": "flaky",
-      "wait with invalid arg": "ash-only"
+      "wait for N parallel jobs and check failure": "flaky"
     },
     "ble-features.test.sh": {
       "[bash_unset] function call with tempenv vs tempenv-eval": "ash-only",
@@ -192,12 +190,8 @@
     },
     "builtin-read.test.sh": {
       "mapfile from directory (bash doesn't handle errors)": "fail",
-      "read -n with invalid arg": "ash-only",
       "read -r -d '' for NUL strings, e.g. find -print0": "fail",
-      "read -t -0.5 is invalid": "ash-only",
-      "read -u syntax error": "ash-only",
-      "read bash bug": "fail",
-      "read usage": "ash-only"
+      "read bash bug": "fail"
     },
     "builtin-set.test.sh": {
       "'set' and 'eval' round trip": "fail",

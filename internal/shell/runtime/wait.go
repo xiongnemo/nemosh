@@ -98,11 +98,20 @@ func (r Runtime) waitTarget(operand string) (jobID, int) {
 				return id, 0
 			}
 			// Otherwise no number names a child of this shell, and busybox says nothing of
-			// it; see wait. It said bash's `pid N is not a child of this shell`.
+			// it; see wait. It said bash's `pid N is not a child of this shell`, which bash mode
+			// says, the operand's status 127 as bash has it.
+			if r.BashMode() {
+				fmt.Fprintf(r.streams.Stderr, "%swait: pid %d is not a child of this shell\n", r.diagnosticPrefix(), pid)
+				return 0, 127
+			}
 			return 0, waitNoChild
 		}
 		// As the ash family says it, and as exit and shift do here; it was bash's "`abc': not a
-		// pid or valid job spec".
+		// pid or valid job spec", status 1, which bash mode says.
+		if r.BashMode() {
+			fmt.Fprintf(r.streams.Stderr, "%swait: `%s': not a pid or valid job spec\n", r.diagnosticPrefix(), operand)
+			return 0, 1
+		}
 		fmt.Fprintf(r.streams.Stderr, "%swait: Illegal number: %s\n", r.diagnosticPrefix(), operand)
 		return 0, 2
 	}

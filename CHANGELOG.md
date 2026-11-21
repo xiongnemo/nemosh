@@ -142,6 +142,10 @@ patch number is the commits since that tag.
     abandoned, status 2; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **read and wait in bash mode refuse what they cannot take as bash's do**: read's bad `-n`,
+    `-u` or `-t` value is status 1, an option it has not got comes with its usage, and a bad name
+    is `not a valid identifier`; `wait zzz` is `not a pid or valid job spec`, 1, and a pid that is
+    no child is said, 127. `wait -f`, bash's, is taken under every name, where it was refused.
   - **A redirection's word in bash mode is expanded as an argument is**, as bash expands it:
     braces, splitting and globbing too, so `> one-*` writes the one file it matches, and a word
     that comes to none or several, `> $f` with a blank in f, is `$f: ambiguous redirect`, status 1,
