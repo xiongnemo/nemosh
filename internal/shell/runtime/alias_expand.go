@@ -42,6 +42,7 @@ func (r Runtime) runAlias(ctx context.Context, command simpleCommand, savedStatu
 	script, err := r.parseHere(text)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
+		r.hintAliasSyntax(names[0], r.aliasesInForce()[names[0]])
 		return lineResult{status: 2, control: flowAbort}, true
 	}
 	for _, name := range names {
