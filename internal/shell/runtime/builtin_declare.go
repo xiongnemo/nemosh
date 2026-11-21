@@ -191,6 +191,10 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 			if appended {
 				value = r.appendedValue(name, value)
 			}
+			// bash says which builtin refused, `declare: x: readonly variable`.
+			if r.BashMode() && r.isReadonly(name) {
+				return r.refuseReadonly("declare: ", name)
+			}
 			if status := r.assignVar(name, value); status != 0 {
 				return status
 			}

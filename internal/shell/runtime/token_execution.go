@@ -294,7 +294,7 @@ func (r Runtime) runTokensWithAssignments(ctx context.Context, assignments []ass
 		return r.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)
 	}
 	if isSpecialBuiltin(commandTokens[0].value) {
-		if status := r.assignVars(assignments); status != 0 {
+		if status := r.assignSpecialPrefix(assignments); status != 0 {
 			return status
 		}
 		return r.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)

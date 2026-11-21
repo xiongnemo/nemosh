@@ -161,7 +161,11 @@ func (r Runtime) assignReadResult(options readOptions, line readLineResult) int 
 		targets = []string{"REPLY"}
 	}
 	for _, name := range targets {
-		if r.isReadonly(name) {
+		switch {
+		case r.isReadonly(name) && r.BashMode():
+			// bash's: `x: readonly variable`, status 1.
+			return r.refuseReadonly("", name)
+		case r.isReadonly(name):
 			fmt.Fprintf(r.streams.Stderr, "%sread: %s: is read only\n", r.diagnosticPrefix(), name)
 			return 2
 		}

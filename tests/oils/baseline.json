@@ -50,7 +50,6 @@
       "Can initialize assoc array with the \"(key value ...)\" sequence": "fail",
       "Slice of associative array doesn't make sense in bash": "fail",
       "bash bug: (( A[\"$key\"] = 1 )) doesn't work": "ash-only",
-      "readonly associative array can't be modified": "fail",
       "set associative array to indexed array literal (very surprising bash behavior)": "fail",
       "setting key to itself (from bash-bug mailing list)": "ash-only"
     },
@@ -84,9 +83,6 @@
       "declare -p UNDEF (and typeset) -- prints something to stderr": "fail",
       "declare -p arr": "fail",
       "syntax error in array assignment": "ash-only",
-      "typeset +r removes read-only attribute (TODO: documented in bash to do nothing)": "fail",
-      "typeset -ar makes it readonly": "fail",
-      "typeset -r makes a string readonly": "fail",
       "unset and shell funcs": "fail"
     },
     "assign.test.sh": {
@@ -98,9 +94,6 @@
       "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
       "Test above without 'local' (which is not POSIX)": "fail",
       "Using ${x-default} after unsetting a temp binding shadowing a global": "fail",
-      "readonly $x where x='b c'": "fail",
-      "readonly a=(1 2) no_value c=(3 4) makes 'no_value' readonly": "fail",
-      "readonly array should not be modified by a+=(1)": "fail",
       "redirect after bare assignment": "ash-only"
     },
     "background.test.sh": {
@@ -147,13 +140,8 @@
     },
     "bugs.test.sh": {
       "Crash after changing $[] to be alias of $(( ))": "ash-only",
-      "assign readonly -- multiple lines": "ash-only",
-      "assign readonly -- multiple lines -- set -o posix": "ash-only",
-      "assign readonly -- one line": "ash-only",
       "file with NUL byte": "fail",
-      "process sub \u003c(echo 42 | tee PWNED) not allowed": "ash-only",
-      "unset readonly -- multiple lines": "ash-only",
-      "unset readonly -- one line": "ash-only"
+      "process sub \u003c(echo 42 | tee PWNED) not allowed": "ash-only"
     },
     "builtin-bash.test.sh": {
       "help": "fail"
@@ -357,11 +345,7 @@
       "Unset a function without -f": "fail",
       "Unset and scope (bug #653)": "ash-only",
       "Unset invalid variable name": "fail",
-      "Unset readonly variable": "fail",
-      "Unset wrong type": "fail",
-      "assign to readonly variable": "fail",
-      "assign to readonly variable - errexit": "fail",
-      "local after readonly": "fail"
+      "Unset wrong type": "fail"
     },
     "command-parsing.test.sh": {
       "Prefix env on assignment": "ash-only"
@@ -471,8 +455,7 @@
     },
     "nameref.test.sh": {
       "a[@] in nameref": "fail",
-      "name ref on Undef cell": "fail",
-      "readonly var can't be assigned through nameref": "fail"
+      "name ref on Undef cell": "fail"
     },
     "nix-idioms.test.sh": {
       "${!ref} to undefined string var is fatal, INCONSISTENT with array": "fail"
@@ -541,9 +524,6 @@
       "Scope of global variable when sourced in function (Shell Functions aren't Closures)": "fail",
       "return \"\" (a lot of disagreement)": "fail"
     },
-    "sh-options-bash.test.sh": {
-      "SHELLOPTS is readonly": "fail"
-    },
     "sh-options.test.sh": {
       "$- with -c": "fail",
       "$- with pipefail": "fail",
@@ -582,9 +562,7 @@
       "Fatal error": "ash-only",
       "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",
       "IFS 4": "ash-only",
-      "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only",
-      "readonly with temp binding": "ash-only",
-      "setting readonly var (bash is only one where it's non-fatal)": "ash-only"
+      "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only"
     },
     "toysh.test.sh": {
       "Brace Expansion": "fail",
