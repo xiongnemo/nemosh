@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
-	"github.com/xiongnemo/nemosh/internal/shellquote"
 )
 
 func (r Runtime) pwd() int { return r.printDirectory(r.WorkingDirectory()) }
@@ -33,9 +31,12 @@ func (r Runtime) export(args []string) int {
 	// No operands, or -p, lists what is exported. POSIX specifies the -p form;
 	// busybox lists for both, and a shell that prints nothing leaves a user no
 	// way to see the environment at all (nemosh issue #10).
-	unexport, args, status, done := r.exportOptions(args)
+	unexport, arrays, args, status, done := r.exportOptions(args)
 	if done {
 		return status
+	}
+	if len(args) == 0 && arrays != 0 {
+		return r.listExportedArrays(arrays)
 	}
 	if len(args) == 0 {
 		return r.listExported()
@@ -347,28 +348,4 @@ func (r Runtime) setDirectoryVariable(name, value string) {
 	r.vars[name] = value
 	r.env.Set(name, value)
 	r.markVarMutation(name)
-}
-
-// listExported writes every exported variable as `export NAME='value'`.
-//
-// Quoted for reuse, which is what POSIX means by writing them "in a form that
-// can be reused as input" -- singleQuoteForReuse is the same helper `alias`
-// uses, so a value carrying a quote comes back correct from either.
-//
-// Sorted by name, so two runs of the same script produce the same output and a
-// difference between them means something.
-func (r Runtime) listExported() int {
-	entries := r.env.Environ()
-	sort.Strings(entries)
-	for _, entry := range entries {
-		name, value, found := strings.Cut(entry, "=")
-		if !found || name == "" {
-			continue
-		}
-		fmt.Fprintf(r.streams.Stdout, "export %s=%s\n", name, shellquote.Ash(value))
-	}
-	for _, name := range r.pendingExports() {
-		fmt.Fprintf(r.streams.Stdout, "export %s\n", name)
-	}
-	return 0
 }

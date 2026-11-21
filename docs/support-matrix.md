@@ -504,6 +504,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | history | `~/.nemosh_history` | `~/.bash_history`, which Git's bash shares; `~/.nemosh_history` is read after it before the first prompt, and written to no more |
 | PS1 and PS2 | expanded, then their escapes decoded, busybox's order, so a `\n` that `$(...)` prints is a newline | decoded, then expanded, bash's, so what `$(...)` prints stays as printed: a `C:\new` is drawn so |
 | PS4 | expanded | decoded and expanded, as bash's |
+| `export -a`, `export -A` | an illegal option, which ends the script, busybox's answer | bash's: a name is exported as any is, `=(...)` assigns an array, and with no names the exported arrays of the kind are listed |
 | a double quote in `$((...))` | a syntax error, busybox's answer | removed, so `$(("1+2"*3))` is 7; `(( ))`, `for (( ))` and a subscript remove it under both names, being bash's alone |
 | what nemosh's rc file changes of bash's | -- | said on one line of stderr: `nemosh: ~/.nemoshrc changed what ~/.bashrc set: PS1, alias ll, function f`, the first five and how many more; a variable only added to, `PATH=$PATH:...`, is not counted |
 

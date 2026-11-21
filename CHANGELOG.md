@@ -36,6 +36,8 @@ patch number is the commits since that tag.
   - **A prompt in bash mode is decoded and then expanded**, bash's order, so a Windows path a
     `$(...)` in PS1 prints is drawn as printed, where busybox's order made a newline of its
     `\n`; PS4 is decoded too.
+  - **`export -a` and `export -A` in bash mode**, bash's, which mise's hook runs; busybox's
+    illegal option, which ended the script, stays the answer as nemosh and sh.
   - **A double quote in `$((...))` is removed in bash mode**, as bash removes it -- starship's
     PS0 sets its timer with one -- where busybox, and nemosh and sh, call it a syntax error.
 

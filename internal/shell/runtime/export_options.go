@@ -19,26 +19,30 @@ import (
 // `-A` declare a read-only array, as bash's do.
 
 // exportOptions reads export's leading options: -n to take names out of the environment, -p
-// to list. done reports that export has answered, with status.
-func (r Runtime) exportOptions(args []string) (unexport bool, operands []string, status int, done bool) {
+// to list. done reports that export has answered, with status. In bash mode -a and -A are
+// bash's: a name is exported as any is, and with none the exported arrays of that kind are
+// listed (listExportedArrays); busybox's illegal option stays the answer as nemosh or sh.
+func (r Runtime) exportOptions(args []string) (unexport bool, arrays rune, operands []string, status int, done bool) {
 	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
 		if args[0] == "--" {
-			return unexport, args[1:], 0, false
+			return unexport, arrays, args[1:], 0, false
 		}
 		for _, letter := range args[0][1:] {
-			switch letter {
-			case 'n':
+			switch {
+			case letter == 'n':
 				unexport = true
-			case 'p':
+			case letter == 'p':
+			case (letter == 'a' || letter == 'A') && r.BashMode():
+				arrays = letter
 			default:
 				fmt.Fprintf(r.streams.Stderr, "%sexport: illegal option -%c\n", r.diagnosticPrefix(), letter)
 				r.raiseShellError()
-				return false, nil, 2, true
+				return false, 0, nil, 2, true
 			}
 		}
 		args = args[1:]
 	}
-	return unexport, args, 0, false
+	return unexport, arrays, args, 0, false
 }
 
 // readonlyOptions reads readonly's leading options: -p to list, -a and -A for an array, as
