@@ -36,9 +36,11 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	control := flowNone
 	switch {
 	// A script that does not parse whole is read a command at a time in bash mode, as bash
-	// reads one; see script_chunks.go.
+	// reads one, and so are eval's text and a sourced file; see script_chunks.go.
 	case parseErr != nil && runExitTrap && r.BashMode():
-		whilePinned(ctx, func() { status, control, parseErr = r.runChunks(ctx, script, first, 0) })
+		whilePinned(ctx, func() { status, control, parseErr = r.runChunks(ctx, script, first, 0, true) })
+	case parseErr != nil && r.BashMode():
+		status, control, parseErr = r.runChunks(ctx, script, first, savedStatus, false)
 	// The script's own run, the one with an EXIT trap to run, is the top level; eval and
 	// `.` are not.
 	case parseErr == nil && runExitTrap:

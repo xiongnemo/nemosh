@@ -19,8 +19,9 @@ import (
 // An error found that way narrows the question to the lines it took; see chunkWithin.
 
 // runChunks runs source a command at a time, its first line numbered first, `$?` beginning as
-// savedStatus. It answers as executeTopLevel does, and the syntax error that ended it, if one did.
-func (r Runtime) runChunks(ctx context.Context, source string, first, savedStatus int) (int, flowControl, error) {
+// savedStatus: a script's as the top level runs it, and eval's text or a sourced file's, topLevel
+// false, as executeRead does. It answers as they do, and the syntax error that ended it, if any.
+func (r Runtime) runChunks(ctx context.Context, source string, first, savedStatus int, topLevel bool) (int, flowControl, error) {
 	lines := strings.SplitAfter(source, "\n")
 	if last := len(lines) - 1; last >= 0 && lines[last] == "" {
 		lines = lines[:last]
@@ -33,7 +34,7 @@ func (r Runtime) runChunks(ctx context.Context, source string, first, savedStatu
 		}
 		r.sayParseWarnings(prepared)
 		var control flowControl
-		status, control = r.executeStatements(ctx, prepared.program, status, true, true)
+		status, control = r.executeStatements(ctx, prepared.program, status, topLevel, true)
 		if control != flowNone || r.lifecycle.exitSuppressed {
 			return status, control, nil
 		}

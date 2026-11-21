@@ -3,6 +3,8 @@ package runtime
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -44,6 +46,33 @@ func TestScript_bashModeReadsACommandAtATimeWhenItDoesNotParseWhole(t *testing.T
 				}
 			}
 		})
+	}
+	// eval's text and a sourced file are read so too: `eval $'echo a\nif then'` says a, where
+	// one line, `echo a; if then`, is one command bash cannot parse and runs nothing of. The
+	// script goes on after either, status 2, as M5 has it. As nemosh, nothing runs and the
+	// script ends there.
+	source := filepath.Join(t.TempDir(), "late.sh")
+	if err := os.WriteFile(source, []byte("echo a\nif then\necho c\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct{ script, bash string }{
+		{script: "eval $'echo a\\nif then'; echo after=$?\n", bash: "a\nafter=2\n"},
+		{script: "eval 'echo a; if then'; echo after=$?\n", bash: "after=2\n"},
+		{script: ". '" + filepath.ToSlash(source) + "'; echo after=$?\n", bash: "a\nafter=2\n"},
+	} {
+		for _, bash := range []bool{false, true} {
+			var stdout bytes.Buffer
+			rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: new(bytes.Buffer)})
+			want := ""
+			if bash {
+				rt.EnterBashMode()
+				want = test.bash
+			}
+			rt.RunScript(context.Background(), test.script)
+			if stdout.String() != want {
+				t.Errorf("%q, bash mode %v: stdout %q, want %q", test.script, bash, stdout.String(), want)
+			}
+		}
 	}
 	// A long loop before a late error is read once, not again for every line of it.
 	var stdout bytes.Buffer
