@@ -193,7 +193,12 @@ func (r Runtime) shellErrorResult() lineResult {
 			control = flowSkipLine
 		}
 		r.expansion.discard, r.expansion.skipLine = false, false
-		return lineResult{status: 1, control: control}
+		status := 1
+		if r.expansion.shellErrorStatus != 0 {
+			// bash mode's shift with too many operands, which abandons the line with 2.
+			status, r.expansion.shellErrorStatus = r.expansion.shellErrorStatus, 0
+		}
+		return lineResult{status: status, control: control}
 	}
 	status := 2
 	if r.expansion.shellErrorStatus != 0 {

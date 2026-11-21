@@ -10,9 +10,10 @@ import (
 )
 
 // Where bash's builtins and busybox's say a failure differently, bash mode says it as bash does,
-// with bash's status: cd's, type's and command's, kill's, the numeric operand of exit, return,
-// shift and break, alias's and getopts's. Measured 2026-11-21, a script per case, with Git for
-// Windows' bash 5.3 and busybox-w32; nemosh and sh keep busybox's.
+// with bash's status: cd's, type's and command's, kill's, the numeric operand of exit, return
+// and shift, alias's and getopts's; break's and continue's are control_operands_bash_mode_test.go's.
+// Measured 2026-11-21, a script per case, with Git for Windows' bash 5.3 and busybox-w32; nemosh
+// and sh keep busybox's.
 func TestBuiltinMessages_bashModeSaysThemAsBash(t *testing.T) {
 	for _, test := range []struct {
 		code, stdout, said string
@@ -27,7 +28,6 @@ func TestBuiltinMessages_bashModeSaysThemAsBash(t *testing.T) {
 		{code: "exit x", stdout: "next=2\n", said: "line 1: exit: x: numeric argument required\n"},
 		{code: "f() { return x; echo in-f; }; f", stdout: "next=2\n", said: "line 1: return: x: numeric argument required\n"},
 		{code: "shift x", stdout: "next=2\n", said: "line 1: shift: x: numeric argument required\n"},
-		{code: "for i in 1 2; do break x; echo in-loop; done; echo same", stdout: "next=1\n", said: "line 1: break: x: numeric argument required\n"},
 		{code: "alias nosuch", stdout: "next=1\n", said: "line 1: alias: nosuch: not found\n"},
 		{code: "unalias nosuch", stdout: "next=1\n", said: "line 1: unalias: nosuch: not found\n"},
 		{code: "getopts", stdout: "next=2\n", said: "getopts: usage: getopts optstring name [arg ...]\n"},

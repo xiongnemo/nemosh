@@ -90,18 +90,13 @@ func parseLoopLevel(word string, name string) (int, error) {
 }
 
 // loopControlResult turns `break`/`continue` and their operand into the result the
-// dispatcher returns.
+// dispatcher returns, as busybox reads them; bash mode's are bashLoopControl's.
 func (r Runtime) loopControlResult(name string, args []string) lineResult {
 	operand := ""
 	if len(args) > 0 {
 		operand = args[0]
 	}
 	count, err := parseLoopLevel(operand, name)
-	if _, numeric := strconv.Atoi(operand); err != nil && numeric != nil && r.BashMode() {
-		// bash's words, and the rest of the line abandoned, as bash abandons it.
-		fmt.Fprintf(r.streams.Stderr, "%s%s: %s: numeric argument required\n", r.diagnosticPrefix(), name, operand)
-		return lineResult{status: 1, control: flowDiscard}
-	}
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		// A count that cannot be read is a special builtin's error, and it ends a script
@@ -114,11 +109,9 @@ func (r Runtime) loopControlResult(name string, args []string) lineResult {
 	// busybox ash, dash and bash all continue and all exit 0, bash after printing
 	// a note. Silence follows the primary reference. Before the depth was tracked
 	// there was nothing to test, and the break escaped to the top of the script
-	// instead -- `break; echo after` printed nothing at all. Bash mode prints bash's note.
+	// instead -- `break; echo after` printed nothing at all. Bash mode's note is
+	// bashLoopControl's.
 	if r.loops.depth == 0 {
-		if r.BashMode() {
-			fmt.Fprintf(r.streams.Stderr, "%s%s: only meaningful in a `for', `while', or `until' loop\n", r.diagnosticPrefix(), name)
-		}
 		return lineResult{status: 0}
 	}
 	r.loops.request(count)
