@@ -910,6 +910,11 @@ loops record the whole command now, as the edited one always did.
   to its own command's place: in `x | wc -l` all of x's commands are piped, where
   theirs pipe only the last. In bash mode it is substituted as the text is read, as both
   references read it; see Bash mode.
+- So an alias that is part of a command's syntax -- `alias LEFT='{'`, a reserved word, half
+  a loop -- is a syntax error where it is used, on purpose, as Oils has it: POSIX allows
+  reading one so, and bash's manual and ShellCheck's SC2262 counsel against relying on it.
+  The error is followed by a hint naming the alias and bash mode, which reads it as bash
+  and busybox do.
 - `${#@}` is not pinned; POSIX leaves it unspecified and the references disagree.
 - A command name with a slash is a path, as busybox and POSIX have it, so a function
   defined with one -- ble.sh's `ble/is-array` -- is never what runs, and `type` and

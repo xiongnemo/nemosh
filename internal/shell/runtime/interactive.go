@@ -28,6 +28,9 @@ type interactiveState struct {
 	keyCommand bool
 	// linesRead is how many lines the session has parsed, which its $LINENO counts on from.
 	linesRead int
+	// refused is the input whose parse failed last, which the report of it says more of; see
+	// sayAliasSyntax.
+	refused string
 }
 
 // ParseSessionInput parses what a session has read so far, numbering it on from the lines
@@ -38,6 +41,10 @@ func (r *Runtime) ParseSessionInput(source string) (Script, error) {
 	script, err := parseReading(source, r.interactive.linesRead+1, true, r.readingAliases())
 	if !errors.Is(err, ErrIncompleteScript) {
 		r.interactive.linesRead += strings.Count(strings.TrimSuffix(source, "\n"), "\n") + 1
+	}
+	r.interactive.refused = ""
+	if err != nil {
+		r.interactive.refused = source
 	}
 	return script, err
 }
@@ -69,6 +76,7 @@ func (r *Runtime) RunInteractive(ctx context.Context, script Script) Interactive
 
 func (r *Runtime) ReportInteractiveParseError(err error) {
 	fmt.Fprintf(r.streams.Stderr, "%s: %v\n", r.diagnosticName(), err)
+	r.sayAliasSyntax(r.interactive.refused)
 	r.interactive.status = 2
 }
 

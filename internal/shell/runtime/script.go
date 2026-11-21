@@ -54,6 +54,7 @@ func (r Runtime) runScriptResult(ctx context.Context, script string, first int, 
 	}
 	if parseErr != nil && control == flowNone {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", r.diagnosticName(), parseErr)
+		r.sayAliasSyntax(script)
 		status = 2
 		if runExitTrap {
 			return r.runExitTrap(context.WithoutCancel(ctx), status), flowNone

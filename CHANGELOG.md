@@ -114,6 +114,10 @@ patch number is the commits since that tag.
     then `e_ $i; done` is a loop. One defined is in force from the next command, the rest of the
     text read again from there, and a function's body keeps the aliases it was read with, in a
     session and an rc file as in a script. nemosh and sh substitute as the command runs, as before.
+  - **As nemosh and sh an alias that is syntax is refused with a hint**: the syntax error it makes
+    is followed by `hint: alias LEFT='{' is part of a command's syntax, which nemosh does not read
+    on purpose; bash mode does`, in a script, eval's text and at a prompt. Oils refuses such an
+    alias too, and ShellCheck warns of one.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
