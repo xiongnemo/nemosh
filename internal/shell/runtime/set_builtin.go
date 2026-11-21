@@ -97,9 +97,21 @@ func (r Runtime) applySetOptions(args []string) (int, bool, int) {
 	return len(args), false, 0
 }
 
+// setUsage is bash's line after an option set has not got, which bash mode says.
+const setUsage = "set: usage: set [-abefhkmnptuvxBCEHPT] [-o option-name] [--] [-] [arg ...]"
+
 func (r Runtime) setLetterOptions(letters string, enable bool) int {
 	for index := 0; index < len(letters); index++ {
 		if err := r.setOptionLetter(letters[index], enable); err != nil {
+			// In bash mode, bash's: the letter and the usage, status 2, and the line goes on.
+			if errors.Is(err, ErrUnknownOption) && r.BashMode() {
+				sign := "+"
+				if enable {
+					sign = "-"
+				}
+				fmt.Fprintf(r.streams.Stderr, "%sset: %s%c: invalid option\n%s\n", r.diagnosticPrefix(), sign, letters[index], setUsage)
+				return 2
+			}
 			// A letter set has not got ends a script, as busybox's setoption raises it, where
 			// a -o name it has not got is only 1; see setNamedOption. One it has and cannot
 			// honour here is refused, and the script goes on.

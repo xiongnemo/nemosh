@@ -75,6 +75,11 @@ patch number is the commits since that tag.
     `unset 1x` is no error and `unset -v 1x` is. busybox's `bad variable name` ends the script,
     and still does as nemosh and sh. `declare` says it so under every name, and declares its
     other operands, where it stopped at the first.
+  - **A special builtin's error in bash mode is bash's, which the script survives**: `.` of a
+    file not there, a syntax error in eval's text, `set -Z` and local outside a function answer
+    with bash's words and status and the line goes on; return outside a function says so,
+    status 2, where it ended the script as exit does; and break or continue outside a loop says
+    so. busybox ends the script, or says nothing, and nemosh and sh still do.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/xiongnemo/nemosh/internal/applets"
 )
 
 // dot and eval run text as part of the current shell, so whatever that text does to the
@@ -43,6 +45,11 @@ func (r Runtime) dotResult(ctx context.Context, args []string, savedStatus int, 
 	var data []byte
 	if err == nil {
 		data, err = r.readDotSource(native, device)
+	}
+	if err != nil && r.BashMode() {
+		// bash's, outside its POSIX mode: `FILE: No such file or directory`, status 1, and on.
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %s\n", r.diagnosticPrefix(), args[0], applets.CauseText(err))
+		return lineResult{status: 1}
 	}
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, redirectFailure{path: args[0], err: err})

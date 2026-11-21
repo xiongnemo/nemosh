@@ -100,7 +100,12 @@ func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
 			// busybox-w32 reads it: `return 3` ends a script with 3, the EXIT trap seeing 3, and
 			// ends the subshell or $(...) it is in. It was reported, and the script went on.
 			// At a prompt, and in a trap's action, it is still only reported, as bash reports
-			// it everywhere: `trap 'return 42' DEBUG` is bash's alone, and bash goes on.
+			// it everywhere: `trap 'return 42' DEBUG` is bash's alone, and bash goes on. Bash
+			// mode says it as bash does, in a script, a subshell and at a prompt, status 2.
+			if r.BashMode() && len(r.trapRunning) == 0 {
+				fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"return: can only `return' from a function or sourced script")
+				return lineResult{status: 2}
+			}
 			if r.interactive.session && r.subshellDepth == 0 || len(r.trapRunning) > 0 {
 				fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"return: not in a sourced script")
 				return lineResult{status: status}
