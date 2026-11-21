@@ -162,15 +162,21 @@ func (b *fieldBuilder) quotedList(values []string) {
 }
 
 // unquotedList adds `$@` or `${a[@]}` unquoted: each element split in turn, with a field
-// boundary between elements even when IFS is empty, and an empty element vanishing. In an
-// assignment, which does not split, they are one value, joined by joiner.
-func (b *fieldBuilder) unquotedList(values []string, joiner string) {
+// boundary between elements even when IFS is empty, and an empty element vanishing, as busybox
+// has them. bash's, with byIFS, are the elements joined by IFS's first character and split, so
+// with IFS=x the elements `ax` and `b` are a, an empty field and b, and an empty element between
+// two is an empty field; with IFS empty there is nothing to join by, and bash's are busybox's. In
+// an assignment, which does not split, they are one value, joined by joiner.
+func (b *fieldBuilder) unquotedList(values []string, joiner string, byIFS bool) {
 	if b.assignment {
 		b.text(strings.Join(values, joiner), false)
 		return
 	}
 	for index, value := range values {
-		if index > 0 && b.open {
+		switch {
+		case index > 0 && byIFS && b.separators != "":
+			b.split(b.separators[:1])
+		case index > 0 && b.open:
 			b.close()
 		}
 		b.split(value)
