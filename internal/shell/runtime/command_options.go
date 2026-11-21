@@ -45,6 +45,11 @@ func parseCommandArgs(args []string) (commandRequest, []string, error) {
 // commandVerbose is `command -V name`.
 func (r Runtime) commandVerbose(name string) int {
 	kinds := r.commandKinds(name)
+	if len(kinds) == 0 && r.BashMode() {
+		// bash's, which bash mode takes: on stderr, status 1.
+		fmt.Fprintf(r.streams.Stderr, "%scommand: %s: not found\n", r.diagnosticPrefix(), name)
+		return 1
+	}
 	if len(kinds) == 0 {
 		fmt.Fprintf(r.streams.Stdout, "%s: not found\n", name)
 		return 127

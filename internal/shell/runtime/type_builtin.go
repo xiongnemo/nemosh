@@ -27,17 +27,23 @@ func (r Runtime) typeBuiltin(args []string) int {
 	}
 	// A name not found is busybox's answer with no option, `x: not found` on stdout and 127,
 	// as `command -V` gives it; with one of bash's options it is bash's, 1 and on stderr. It
-	// was bash's for both.
+	// was bash's for both. Bash mode's is bash's always.
 	status := 0
 	for _, name := range names {
 		if !r.describeFor(mode, noFunctions, name) {
 			status = 1
-			if mode == 0 && !noFunctions {
+			if r.busyboxNotFound(mode, noFunctions) {
 				status = 127
 			}
 		}
 	}
 	return status
+}
+
+// busyboxNotFound is whether a name type finds nothing for is answered as busybox answers it, on
+// stdout and 127: with no option, and not in bash mode.
+func (r Runtime) busyboxNotFound(mode byte, noFunctions bool) bool {
+	return mode == 0 && !noFunctions && !r.BashMode()
 }
 
 func parseTypeOptions(args []string) (byte, bool, []string, error) {
@@ -80,7 +86,7 @@ func (r Runtime) describeFor(mode byte, noFunctions bool, name string) bool {
 	}
 	if len(kinds) == 0 {
 		switch {
-		case mode == 0 && !noFunctions:
+		case r.busyboxNotFound(mode, noFunctions):
 			// busybox's describe_command: on stdout, with no prefix; see typeBuiltin.
 			fmt.Fprintf(r.streams.Stdout, "%s: not found\n", name)
 		case mode == 0 || mode == 'a':

@@ -240,6 +240,11 @@ func (r Runtime) changeDirectory(as string, args []string) int {
 	if !ok {
 		return 2
 	}
+	// bash takes one operand, and refuses two; busybox goes to the first.
+	if as == "cd" && len(args) > 1 && r.BashMode() {
+		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"cd: too many arguments")
+		return 2
+	}
 	target, printResult, ok := r.cdTarget(as, args)
 	if !ok {
 		return 1
@@ -277,7 +282,14 @@ func (r Runtime) cdFailure(as, target, reason string, quiet bool) int {
 		reportCD(r, quiet, "%s%s: %s: %s\n", r.diagnosticPrefix(), as, target, reason)
 		return 1
 	}
-	reportCD(r, quiet, "%scd: cannot cd to %s: %s\n", r.diagnosticPrefix(), target, reason)
+	// bash mode's are bash's words and status, `cd: DIR: No such file or directory` and 1.
+	status := 2
+	if r.BashMode() {
+		reportCD(r, quiet, "%scd: %s: %s\n", r.diagnosticPrefix(), target, reason)
+		status = 1
+	} else {
+		reportCD(r, quiet, "%scd: cannot cd to %s: %s\n", r.diagnosticPrefix(), target, reason)
+	}
 	// `cd C:\Users` unquoted reaches cd as C:Users, the backslash taken as an escape, which is a
 	// drive-relative path and goes somewhere else or nowhere. It was refused outright before
 	// drive-relative paths worked, which at least said something was odd. At a prompt only, as
@@ -286,7 +298,7 @@ func (r Runtime) cdFailure(as, target, reason string, quiet bool) int {
 		reportCD(r, quiet, "hint: a backslash outside quotes is an escape, so %s may have been typed %s:\\%s; quote it, or write %s:/%s\n",
 			target, target[:1], target[2:], target[:1], target[2:])
 	}
-	return 2
+	return status
 }
 
 // looksLikeEatenBackslash reports a drive-relative path with something after the drive, which is

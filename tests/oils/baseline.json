@@ -137,9 +137,7 @@
       "cd BAD/..": "ash-only",
       "cd and $PWD": "fail",
       "cd permits double bare dash": "fail",
-      "cd to nonexistent dir": "ash-only",
-      "cd with 2 or more args - with strict_arg_parse": "ash-only",
-      "cd with 2 or more args is allowed (strict_arg_parse disabled)": "ash-only",
+      "cd with 2 or more args is allowed (strict_arg_parse disabled)": "fail",
       "lie about PWD; pwd before any cd": "fail",
       "pwd": "fail"
     },
@@ -196,9 +194,7 @@
     "builtin-meta.test.sh": {
       "builtin": "fail",
       "builtin ls not found": "fail",
-      "command -V": "ash-only",
-      "command -V nonexistent": "ash-only",
-      "command -v": "ash-only",
+      "command -V": "fail",
       "command -v doesn't find executable dir": "fail",
       "command -v executable, builtin": "fail",
       "command -v with multiple names": "ash-only"
@@ -286,8 +282,7 @@
       "type prints function source code": "fail"
     },
     "builtin-type.test.sh": {
-      "special builtins are called out": "ash-only",
-      "type -\u003e not found": "ash-only"
+      "special builtins are called out": "ash-only"
     },
     "builtin-umask.test.sh": {
       "'umask -S' prints symbolic umask": "fail",
@@ -404,7 +399,7 @@
       "`set` output format - ifupdown-ng": "ash-only"
     },
     "loop.test.sh": {
-      "bad arg to break": "fail",
+      "bad arg to break": "ash-only",
       "continue in subshell": "fail",
       "continue in subshell aborts with errexit": "fail",
       "for loop with invalid identifier": "ash-only",
@@ -469,9 +464,6 @@
     },
     "serialize.test.sh": {
       "set": "ash-only"
-    },
-    "sh-func.test.sh": {
-      "return \"\" (a lot of disagreement)": "fail"
     },
     "sh-options.test.sh": {
       "$- with -c": "fail",

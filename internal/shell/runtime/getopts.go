@@ -24,7 +24,11 @@ import (
 // on from where the last one ended, and an OPTIND past the words stayed there.
 func (r Runtime) getopts(args []string) int {
 	if len(args) < 2 {
-		fmt.Fprintln(r.streams.Stderr, "getopts: usage: getopts optstring var [arg]")
+		usage := "getopts: usage: getopts optstring var [arg]"
+		if r.BashMode() {
+			usage = "getopts: usage: getopts optstring name [arg ...]"
+		}
+		fmt.Fprintln(r.streams.Stderr, usage)
 		return 2
 	}
 	optstring, name := args[0], args[1]
