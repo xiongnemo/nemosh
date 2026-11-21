@@ -424,10 +424,7 @@
       "temp assignment x=~ env": "fail"
     },
     "toysh-posix.test.sh": {
-      "Failed redirect in assignment, vs. export": "fail",
-      "IFS - http://landley.net/notes.html#05-03-2020": "ash-only",
-      "IFS 4": "ash-only",
-      "IFS=x and '' and unquoted $@ - reduction of case above - copied into spec/word-split": "ash-only"
+      "Failed redirect in assignment, vs. export": "fail"
     },
     "toysh.test.sh": {
       "Brace Expansion": "fail",
@@ -492,9 +489,6 @@
       "IFS empty doesn't do splitting": "fail",
       "IFS unset behaves like $' \\t\\n'": "fail",
       "IFS='' with ${!a[@]} and ${!a[*]} (bug #627)": "fail",
-      "IFS=x and '' and $@ (#2)": "ash-only",
-      "IFS=x and '' and $@ (#3)": "ash-only",
-      "IFS=x and '' and $@ - same bug as spec/toysh-posix case #12": "ash-only",
       "Unicode in IFS": "ash-only"
     },
     "xtrace.test.sh": {
