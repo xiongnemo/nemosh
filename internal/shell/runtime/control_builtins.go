@@ -115,14 +115,15 @@ func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
 // throughCommandPrefix is the command a bare `command` or `builtin` in front names, when that
 // is one of the builtins that transfer control: `command continue` continues, as it does in
 // both references, and `builtin break` breaks, as it does in bash. Run as ordinary builtins,
-// their control was lost and only a status came back.
+// their control was lost and only a status came back. fc is answered here too, and `builtin fc
+// -lnr`, as fzf's Ctrl-R reads the history, ran Windows' fc.exe.
 func throughCommandPrefix(args []string) []string {
 	rest := args
 	for len(rest) > 1 && (rest[0] == "command" || rest[0] == "builtin") {
 		rest = rest[1:]
 	}
 	switch rest[0] {
-	case "exit", "logout", "exec", "return", "break", "continue", "eval", ".", "source":
+	case "exit", "logout", "exec", "return", "break", "continue", "eval", ".", "source", "fc":
 		return rest
 	}
 	return args

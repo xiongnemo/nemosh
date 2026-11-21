@@ -285,6 +285,9 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`builtin fc` and `command fc` ran Windows' `fc.exe`**, so fzf's Ctrl-R, which reads the history
+  with `builtin fc -lnr`, found none; both run the shell's fc now.
+
 - **`[[ -t 1 ]]` said no on a console**, where `[ -t 1 ]` said yes: `[[` asked none of the shell's
   streams. bash-preexec's DEBUG hook returns at once when `[[ ! -t 1 ]]`, so no preexec ever ran,
   and atuin, which carries bash-preexec, recorded no history.

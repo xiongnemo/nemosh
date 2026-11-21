@@ -27,6 +27,9 @@ func TestFc_listsAsBashsDoes(t *testing.T) {
 		{name: "0 is the newest", script: load + "fc -l 0\n", want: "3\t printf %s\\n three\n"},
 		{name: "a word nothing starts with", script: load + "fc -l nomatch; echo s=$?\n", want: "s=1\n", fragment: "nemosh: line 2: fc: no command found"},
 		{name: "an empty list", script: "fc -l; echo s=$?\n", want: "s=0\n"},
+		// fzf's Ctrl-R reads the history so, and `builtin fc` ran Windows' fc.exe.
+		{name: "through builtin, as fzf asks", script: load + "builtin fc -lnr -2147483648\n", want: "\t printf %s\\n three\n\t echo two\n\t echo one\n"},
+		{name: "through command", script: load + "command fc -l 2\n", want: "2\t echo two\n3\t printf %s\\n three\n"},
 		{name: "an option it does not take", script: "fc -x; echo s=$?\n", want: "s=2\n", fragment: "fc: -x: invalid option\nfc: usage: "},
 		{name: "-e with no editor", script: "fc -e; echo s=$?\n", want: "s=2\n", fragment: "fc: -e: option requires an argument"},
 	}
