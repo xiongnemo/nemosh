@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2168 of the 2548 cases bash passes: 85.1%.**
+**nemosh passes 2170 of the 2548 cases bash passes: 85.2%.**
 
-Of the other 380, it does 117 the way the files record of ash, which may be busybox's
-way, and 263 neither way.
+Of the other 378, it does 117 the way the files record of ash, which may be busybox's
+way, and 261 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2106 of them and does 119 the way the
 files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2168 |
+| that nemosh passes of those | 2170 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -52,7 +52,7 @@ busybox does the way the file records of ash.
 | append.test.sh | 20 | 20 | 20 | 100.0% | 0 | 20 | 1 |
 | arg-parse.test.sh | 3 | 3 | 1 | 33.3% | 2 | 1 | 3 |
 | arith-context.test.sh | 16 | 16 | 11 | 68.8% | 0 | 11 | 4 |
-| arith-dynamic.test.sh | 4 | 4 | 1 | 25.0% | 0 | 1 | 1 |
+| arith-dynamic.test.sh | 4 | 4 | 3 | 75.0% | 0 | 1 | 1 |
 | arith.test.sh | 74 | 74 | 62 | 83.8% | 1 | 62 | 44 |
 | array-assign.test.sh | 9 | 9 | 6 | 66.7% | 0 | 6 | 9 |
 | array-assoc.test.sh | 42 | 36 | 35 | 97.2% | 0 | 35 | 0 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 2 | 66.7% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2168 | 85.1% | 117 | 2106 | 1447 |
+| all | 2665 | 2548 | 2170 | 85.2% | 117 | 2106 | 1447 |

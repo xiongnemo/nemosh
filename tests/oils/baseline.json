@@ -24,9 +24,7 @@
       "Empty expression a[]": "fail"
     },
     "arith-dynamic.test.sh": {
-      "Double quotes": "fail",
-      "Single quotes": "fail",
-      "Substitutions": "fail"
+      "Single quotes": "fail"
     },
     "arith.test.sh": {
       "Comment not allowed in the middle of multiline arithmetic": "fail",

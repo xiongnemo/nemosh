@@ -36,6 +36,8 @@ patch number is the commits since that tag.
   - **A prompt in bash mode is decoded and then expanded**, bash's order, so a Windows path a
     `$(...)` in PS1 prints is drawn as printed, where busybox's order made a newline of its
     `\n`; PS4 is decoded too.
+  - **A double quote in `$((...))` is removed in bash mode**, as bash removes it -- starship's
+    PS0 sets its timer with one -- where busybox, and nemosh and sh, call it a syntax error.
 
 - **`vi`** and **`view`**, busybox-w32's vi with vim's ways where the two differ on a key a
   Debian user knows, every case measured against both; `fc` with no `EDITOR` and `C-x C-e` in

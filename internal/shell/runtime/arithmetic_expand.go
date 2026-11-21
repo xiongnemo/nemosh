@@ -33,6 +33,17 @@ func (r Runtime) expandArithmeticText(ctx context.Context, text string, savedSta
 	return r.expandEmbeddedParameters(ctx, text, savedStatus)
 }
 
+// arithmeticExpansionText is a $((...))'s expression ready to evaluate. In bash mode its own
+// double quotes are removed first, as bash removes them -- $(("1+2"*3)) is 7 -- where busybox
+// calls any quote there a syntax error, which nemosh and sh keep. (( )), for (( )) and a
+// subscript are bash's alone and remove them under every name (withoutArithmeticQuotes).
+func (r Runtime) arithmeticExpansionText(ctx context.Context, text string, savedStatus int) string {
+	if r.BashMode() {
+		text = withoutArithmeticQuotes(text)
+	}
+	return r.expandArithmeticText(ctx, text, savedStatus)
+}
+
 // expandEmbeddedParameters replaces each parameter reference in a piece of text with
 // its value, leaving everything else alone.
 //
@@ -65,7 +76,7 @@ func (r Runtime) expandEmbeddedParametersIn(ctx context.Context, text string, sa
 		// 1+1. Evaluated here and written as its number, which is what both references do.
 		if strings.HasPrefix(text[index:], "$((") {
 			if end, ok := arithmeticExpansionEnd(text, index+3); ok {
-				value, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, text[index+3:end-1], savedStatus))
+				value, err := r.evaluateArithmetic(r.arithmeticExpansionText(ctx, text[index+3:end-1], savedStatus))
 				if err != nil {
 					r.reportExpansionError(err)
 				} else {
