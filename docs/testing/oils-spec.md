@@ -9,9 +9,9 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2320 of the 2548 cases bash passes: 91.1%.**
+**nemosh passes 2321 of the 2548 cases bash passes: 91.1%.**
 
-Of the other 228, it does 73 the way the files record of ash, which may be busybox's
+Of the other 227, it does 72 the way the files record of ash, which may be busybox's
 way, and 155 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2115 of them and does 119 the way the
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2320 |
+| that nemosh passes of those | 2321 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -96,7 +96,7 @@ busybox does the way the file records of ash.
 | builtin-special.test.sh | 12 | 11 | 8 | 72.7% | 2 | 8 | 10 |
 | builtin-times.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 21 | 91.3% | 0 | 21 | 4 |
-| builtin-trap-err.test.sh | 22 | 22 | 20 | 90.9% | 2 | 19 | 22 |
+| builtin-trap-err.test.sh | 22 | 22 | 21 | 95.5% | 1 | 19 | 22 |
 | builtin-trap.test.sh | 33 | 33 | 25 | 75.8% | 0 | 19 | 25 |
 | builtin-type-bash.test.sh | 21 | 21 | 16 | 76.2% | 1 | 14 | 0 |
 | builtin-type.test.sh | 4 | 4 | 3 | 75.0% | 1 | 1 | 4 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 3 | 100.0% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2320 | 91.1% | 73 | 2115 | 1447 |
+| all | 2665 | 2548 | 2321 | 91.1% | 72 | 2115 | 1447 |

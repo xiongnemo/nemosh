@@ -118,6 +118,9 @@ patch number is the commits since that tag.
     is followed by `hint: alias LEFT='{' is part of a command's syntax, which nemosh does not read
     on purpose; bash mode does`, in a script, eval's text and at a prompt. Oils refuses such an
     alias too, and ShellCheck warns of one.
+  - **A background job in bash mode lists the shell's traps, and runs ERR under `set -E`**, as
+    bash's does: `{ trap; } &` shows them, without running them, and `{ false; } &` runs the ERR
+    trap for the false, though `false &` does not. busybox's job lists only what it ignores.
   - **umask in bash mode is bash 5.3's**: it starts at 0022, as Git's bash does; a symbolic mode
     takes X, s, t and a class to copy as POSIX has them, `umask =rx` meaning all three classes;
     and a mode refused is said in bash's words, status 1. nemosh and sh keep busybox's, 0002.

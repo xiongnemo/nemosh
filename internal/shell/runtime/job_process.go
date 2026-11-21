@@ -58,9 +58,13 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 		state.Line = line
 	}
 	// A job starts with the traps jobTraps gives it, as the goroutine's worker does.
-	state.Traps = map[string]string{}
-	for name, action := range r.jobTraps() {
+	traps, listed := r.jobTraps()
+	state.Traps, state.ListedTraps = map[string]string{}, map[string]string{}
+	for name, action := range traps {
 		state.Traps[string(name)] = action
+	}
+	for name, action := range listed {
+		state.ListedTraps[string(name)] = action
 	}
 	executable, err := jobExecutable()
 	if err != nil {
@@ -234,7 +238,9 @@ func (r *Runtime) RunJob(ctx context.Context, data []byte) int {
 	if control != nil {
 		go r.receiveSignals(control, end)
 	}
-	status, _ := r.executePrepared(ctx, program)
+	job := *r
+	job.jobTop = true
+	status, _ := job.executePrepared(ctx, program)
 	status = r.CloseBatch(status)
 	if signal, ok := errors.AsType[jobSignal](context.Cause(ctx)); ok {
 		endBySignal(int(signal))
