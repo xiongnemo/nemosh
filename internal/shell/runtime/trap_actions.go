@@ -12,6 +12,7 @@ func (r Runtime) printTrapActions(conditions []string) int {
 		return 2
 	}
 	status := 0
+	shown := r.shownTraps()
 	for _, condition := range conditions {
 		name, ok := trapConditionName(condition)
 		if !ok {
@@ -19,7 +20,7 @@ func (r Runtime) printTrapActions(conditions []string) int {
 			status = 1
 			continue
 		}
-		if action, set := r.traps[name]; set && name != "" {
+		if action, set := shown[name]; set && name != "" {
 			fmt.Fprintln(r.streams.Stdout, action)
 		}
 	}

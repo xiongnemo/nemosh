@@ -191,7 +191,7 @@ func (r Runtime) launchBackground(run func(Runtime) lineResult) lineResult {
 func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) lineResult) lineResult {
 	// Its traps and inbox are its own, whatever worker shares; see shellState.
 	worker.detach()
-	worker.traps = map[trapName]string{}
+	worker.traps, worker.listedTraps = map[trapName]string{}, nil
 	// A job's table is its own, as a subshell's is.
 	worker.jobScope.outer = nil
 	// A job is addressed by `kill` on its own, so it has an inbox of its own.

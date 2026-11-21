@@ -22,6 +22,7 @@ var jobStateCoverage = map[string]string{
 	"fds":               "rebuilt: the child's descriptors are its own handles",
 	"vars":              "encoded: Vars",
 	"traps":             "encoded: Traps",
+	"listedTraps":       "not inherited: a job starts with no traps, and lists none",
 	"trapRunning":       "not inherited: nothing is running a trap in a new process",
 	"signals":           "not inherited: a job starts with no traps, so its inbox is new; its signals come over Control",
 	"params":            "encoded: Name, Positional, Function, Getopts",

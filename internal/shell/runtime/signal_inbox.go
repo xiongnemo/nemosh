@@ -124,6 +124,9 @@ func (b *signalInbox) take() []int {
 
 // setTrap arms or resets a trap. An action of "-" resets it.
 func (r Runtime) setTrap(name trapName, action string) {
+	// A trap set or reset here is this shell's own from now on, and no longer the one a
+	// subshell lists for its parent; see trap_listed.go.
+	delete(r.listedTraps, name)
 	if action == "-" {
 		delete(r.traps, name)
 	} else {

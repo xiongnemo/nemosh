@@ -77,12 +77,14 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 	} else {
 		lifecycle, signals = r.lifecycle, r.signals
 	}
+	traps := r.inheritedTraps()
 	state := &shellState{
 		initErr:     r.initErr,
 		registry:    r.registry,
 		functions:   cloneMap(r.functions),
 		vars:        cloneMap(r.vars),
-		traps:       r.inheritedTraps(),
+		traps:       traps,
+		listedTraps: r.droppedTraps(traps),
 		trapRunning: r.runningInSnapshot(),
 		signals:     signals,
 		options:     r.options.clone(),

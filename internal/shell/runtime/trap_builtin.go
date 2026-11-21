@@ -89,10 +89,11 @@ func (r Runtime) printTraps(conditions []string) int {
 	if len(conditions) == 0 {
 		return r.writeTraps(true)
 	}
+	shown := r.shownTraps()
 	for _, condition := range conditions {
 		if name, ok := trapConditionName(condition); ok && name != "" {
-			if _, set := r.traps[name]; set {
-				r.writeTrap(name, true)
+			if action, set := shown[name]; set {
+				r.writeTrap(name, action, true)
 			}
 		}
 	}
@@ -105,9 +106,10 @@ func (r Runtime) printTraps(conditions []string) int {
 func (r Runtime) listTraps() int { return r.writeTraps(false) }
 
 func (r Runtime) writeTraps(bash bool) int {
-	names := slices.SortedFunc(maps.Keys(r.traps), func(a, b trapName) int { return trapRank(a) - trapRank(b) })
+	shown := r.shownTraps()
+	names := slices.SortedFunc(maps.Keys(shown), func(a, b trapName) int { return trapRank(a) - trapRank(b) })
 	for _, name := range names {
-		r.writeTrap(name, bash)
+		r.writeTrap(name, shown[name], bash)
 	}
 	return 0
 }
@@ -115,10 +117,10 @@ func (r Runtime) writeTraps(bash bool) int {
 // writeTrap writes one handler as busybox's `trap` lists it, or with bash set as bash's `trap
 // -p` does: a signal with SIG in front, `trap -- 'echo INT' SIGINT`, and the action quoted as
 // `${x@Q}` quotes it. -p wrote busybox's bare names, which neither reference does for it.
-func (r Runtime) writeTrap(name trapName, bash bool) {
-	action, label := shellquote.Ash(r.traps[name]), string(name)
+func (r Runtime) writeTrap(name trapName, command string, bash bool) {
+	action, label := shellquote.Ash(command), string(name)
 	if bash {
-		action = shellquote.Single(r.traps[name])
+		action = shellquote.Single(command)
 		switch name {
 		case trapExit, trapERR, trapDEBUG, trapRETURN:
 		default:

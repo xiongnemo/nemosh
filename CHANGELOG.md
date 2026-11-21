@@ -237,6 +237,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`$(trap -p DEBUG)` was empty**: a subshell listed the shell's signal traps but not its DEBUG
+  and ERR traps, which it does not run, so `saved=$(trap)` lost them and starship and
+  bash-preexec could not find a DEBUG trap already set to run beside theirs. A subshell lists
+  them until it sets or resets its own, as bash's does.
+
 - **A trap's own commands set `$PIPESTATUS`**: with a DEBUG trap, `true | false; echo
   ${PIPESTATUS[*]}` said 0, and an ERR trap left its own status where the failed pipeline's
   should be. A trap leaves it as the command before it set it, as bash does -- starship's and

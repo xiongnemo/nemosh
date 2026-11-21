@@ -12,11 +12,14 @@ import (
 // assignments their own variables, a background job its own traps -- detaches first, which is
 // what copying the Runtime did for these when they were on it.
 type shellState struct {
-	initErr     error
-	registry    applets.Registry
-	functions   map[functionName]functionDefinition
-	vars        map[string]string
-	traps       map[trapName]string
+	initErr   error
+	registry  applets.Registry
+	functions map[functionName]functionDefinition
+	vars      map[string]string
+	traps     map[trapName]string
+	// listedTraps are the shell's traps a subshell does not inherit, DEBUG and ERR, which it
+	// lists all the same until it sets or resets them; see trap_listed.go.
+	listedTraps map[trapName]string
 	trapRunning map[trapName]bool
 	// signals holds what `kill` sent this shell until a command boundary runs the trap;
 	// see signal_inbox.go. Nil in a subshell, which a signal is never addressed to.
