@@ -527,6 +527,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | alias listing | `a='it'"'"'s'` | `alias a='it'\''s'`, all or one |
 | getopts | busybox's: OPTIND past a word as its first letter is read, a flag's OPTARG empty, `set --` and shift starting the parse again, a parse past the words starting again, `Illegal option -z` | bash's sh_getopt: OPTIND names the word until its last letter is read, a flag's OPTARG unset, `set --` and shift leaving the parse where it was, a parse past the words ending with OPTIND one past them, `$0: illegal option -- z`, a name that is no variable's status 1 |
 | type and command -V of an alias and a function | `ll is an alias for ls -l`; `f is a function` | ``ll is aliased to `ls -l'``; `f is a function` and its definition, as declare -f prints it |
+| aliases in a script or `-c` | expanded, as in a session | not expanded until `shopt -s expand_aliases`, as bash's non-interactive shell; a session expands them from the start |
 | a job a subshell, a `$(...)` or a pipeline stage puts in the background, at a prompt | announced, `[1] PID`, as busybox-w32 announces it | not announced, as bash announces only the session's own; atuin backgrounds one before every prompt |
 | what nemosh's rc file changes of bash's | -- | said on one line of stderr: `nemosh: ~/.nemoshrc changed what ~/.bashrc set: PS1, alias ll, function f`, the first five and how many more; a variable only added to, `PATH=$PATH:...`, is not counted |
 

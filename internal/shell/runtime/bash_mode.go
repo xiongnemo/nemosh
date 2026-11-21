@@ -1,5 +1,7 @@
 package runtime
 
+import "strings"
+
 // Bash mode is this shell run as bash: named bash, as `nemosh bash`, a nemosh called
 // bash.exe, a command named bash and a `#!/bin/bash` script run it, or named nemosh with
 // NEMOSH_COMPAT=bash in its environment. Where bash and busybox part, a shell in bash mode
@@ -14,6 +16,12 @@ package runtime
 func (r Runtime) EnterBashMode() {
 	r.SetBashVersion()
 	r.options.bashMode = true
+	// bash expands aliases in a shell that is not interactive only under `shopt -s
+	// expand_aliases`, a session from the start; busybox always does. The invocation is set by
+	// now (SetInvocationMode), so a session's `i` is in it.
+	if !strings.ContainsRune(r.options.invocation, 'i') {
+		r.options.expandAliases = false
+	}
 }
 
 // BashMode is whether the shell is in bash mode.
