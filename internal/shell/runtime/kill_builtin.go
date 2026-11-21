@@ -37,6 +37,11 @@ func (r Runtime) killBuiltin(args []string) int {
 	if signal == listSignals {
 		return r.listKillSignals(operands)
 	}
+	if len(operands) == 0 && r.BashMode() {
+		// bash's usage, status 2, which bash mode takes.
+		fmt.Fprintln(r.streams.Stderr, "kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]")
+		return 2
+	}
 	if len(operands) == 0 {
 		fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"kill: expected a job or a process id")
 		return 1
@@ -67,6 +72,9 @@ func (r Runtime) killOne(operand string, signal int) error {
 		return r.killJob(operand, signal)
 	}
 	pid, err := strconv.Atoi(operand)
+	if err != nil && r.BashMode() {
+		return fmt.Errorf("`%s': not a pid or valid job spec", operand)
+	}
 	if err != nil {
 		// The operand, quoted, as busybox names it.
 		return fmt.Errorf("invalid pid '%s'", operand)

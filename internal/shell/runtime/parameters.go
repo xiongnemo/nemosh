@@ -30,6 +30,11 @@ func (r Runtime) shift(args []string) int {
 	count := 1
 	if len(args) > 0 {
 		parsed, err := strconv.Atoi(args[0])
+		if err != nil && r.BashMode() {
+			// bash's, status 2, and the line goes on.
+			fmt.Fprintf(r.streams.Stderr, "%sshift: %s: numeric argument required\n", r.diagnosticPrefix(), args[0])
+			return 2
+		}
 		if err != nil || parsed < 0 {
 			// It ends a script, as busybox's number() raises it, and is said as the ash family
 			// says it: shift is a special builtin.

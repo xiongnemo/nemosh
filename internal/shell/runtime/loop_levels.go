@@ -97,6 +97,11 @@ func (r Runtime) loopControlResult(name string, args []string) lineResult {
 		operand = args[0]
 	}
 	count, err := parseLoopLevel(operand, name)
+	if _, numeric := strconv.Atoi(operand); err != nil && numeric != nil && r.BashMode() {
+		// bash's words, and the rest of the line abandoned, as bash abandons it.
+		fmt.Fprintf(r.streams.Stderr, "%s%s: %s: numeric argument required\n", r.diagnosticPrefix(), name, operand)
+		return lineResult{status: 1, control: flowDiscard}
+	}
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 		// A count that cannot be read is a special builtin's error, and it ends a script

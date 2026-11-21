@@ -21,6 +21,9 @@ func (r Runtime) command(ctx context.Context, args []string) int {
 	switch {
 	case len(operands) == 0:
 		return 0
+	case request.describe == 'v' && r.BashMode():
+		// Not found is bash's 1 in bash mode, busybox's 127 otherwise.
+		return min(r.commandV(operands), 1)
 	case request.describe == 'v':
 		return r.commandV(operands)
 	case request.describe == 'V':
