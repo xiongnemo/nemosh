@@ -142,6 +142,11 @@ patch number is the commits since that tag.
     abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **unset of a caller's local in bash mode takes the local away**, as bash's does with
+    `localvar_unset` off, its default: the value the local hid is the variable's again. Unset in
+    the function that made it local leaves it unset there, as before. `shopt localvar_unset`
+    acts now, where it was fixed on: nemosh and sh start with it on, busybox's way, and bash mode
+    with it off.
   - **cd in bash mode checks the directory before a `..`**, as bash's does: `cd nonexistent/..` is
     `No such file or directory`, 1. busybox takes the `..` away first, and nemosh and sh still do.
   - **Brace expansion in bash mode passes a stray `{` over**, as bash's does: `{{a,b}` is `{a {b`.

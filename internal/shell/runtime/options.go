@@ -68,6 +68,9 @@ type shellOptions struct {
 	// localVarInherit is `shopt -s localvar_inherit`: a new local starts as the caller's
 	// variable was; see local_inherit.go.
 	localVarInherit bool
+	// localVarUnset is `shopt -s localvar_unset`: unset of a caller's local leaves it unset,
+	// as busybox has it, rather than taking it away; on but in bash mode. See dynamic_unset.go.
+	localVarUnset bool
 	// sourcePath is `shopt -s sourcepath`, on in a new shell: `. name` looks on PATH; see
 	// dot_source.go.
 	sourcePath bool

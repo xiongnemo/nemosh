@@ -107,6 +107,7 @@ func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefini
 	// caller's parameters, so a local OPTIND restored is where the caller's getopts starts
 	// over, as busybox has it.
 	scope := &record.scope
+	scope.outer = r.locals
 	for _, name := range assigned {
 		scope.save(name, r.variableAsItIs(name))
 	}

@@ -54,9 +54,8 @@
     },
     "ble-features.test.sh": {
       "[bash_unset] function call with tempenv vs tempenv-eval": "ash-only",
-      "[bash_unset] local-unset / dynamic-unset for localvar": "ash-only",
-      "[bash_unset] local-unset / dynamic-unset for localvar (mutated from tempenv)": "ash-only",
-      "[bash_unset] local-unset / dynamic-unset for tempenv": "ash-only",
+      "[bash_unset] local-unset / dynamic-unset for localvar (mutated from tempenv)": "fail",
+      "[bash_unset] local-unset / dynamic-unset for tempenv": "fail",
       "[bash_unset] localvar-inherit from tempenv": "ash-only"
     },
     "ble-idioms.test.sh": {
@@ -64,8 +63,8 @@
       "recursive arith: recursion": "fail"
     },
     "ble-unset.test.sh": {
-      "[bash_unset] dynamic-unset for nested localvars": "ash-only",
-      "[bash_unset] dynamic-unset for nested tempenvs": "ash-only",
+      "[bash_unset] dynamic-unset for nested localvars": "fail",
+      "[bash_unset] dynamic-unset for nested tempenvs": "fail",
       "[bash_unset] local-unset / dynamic-unset for localvar on nested-context": "ash-only",
       "[bash_unset] local-unset for nested tempenvs": "ash-only",
       "[bash_unset] nested context by tempenv-eval": "ash-only"
@@ -220,7 +219,6 @@
     },
     "builtin-vars.test.sh": {
       "Make an existing local variable readonly": "fail",
-      "Unset and scope (bug #653)": "ash-only",
       "Unset invalid variable name": "fail",
       "Unset wrong type": "fail"
     },
