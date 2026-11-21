@@ -45,11 +45,15 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 		switch condition.control {
 		case flowNone:
 		case flowBreak, flowContinue:
+			carried := 0
+			if condition.control == flowBreak {
+				carried = condition.status
+			}
 			if !r.loops.consume() {
-				return lineResult{status: 0, control: condition.control}
+				return lineResult{status: carried, control: condition.control}
 			}
 			if condition.control == flowBreak {
-				return lineResult{status: 0}
+				return lineResult{status: carried}
 			}
 			continue
 		default:
@@ -74,10 +78,11 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 			}
 			status, savedStatus = 0, 0
 		case flowBreak:
+			// The break's own status: 0, but for bash mode's count out of range, 1.
 			if !r.loops.consume() {
-				return lineResult{status: 0, control: flowBreak}
+				return lineResult{status: status, control: flowBreak}
 			}
-			return lineResult{status: 0}
+			return lineResult{status: status}
 		default:
 			return lineResult{status: status, control: control}
 		}
@@ -128,10 +133,11 @@ func (r Runtime) executeTypedFor(ctx context.Context, node loopNode, savedStatus
 			}
 			status, savedStatus = 0, 0
 		case flowBreak:
+			// The break's own status: 0, but for bash mode's count out of range, 1.
 			if !r.loops.consume() {
-				return lineResult{status: 0, control: flowBreak}
+				return lineResult{status: status, control: flowBreak}
 			}
-			return lineResult{status: 0}
+			return lineResult{status: status}
 		default:
 			return lineResult{status: status, control: control}
 		}
@@ -244,10 +250,11 @@ func (r Runtime) executeForOverArguments(ctx context.Context, node loopNode, sav
 			}
 			status, savedStatus = 0, 0
 		case flowBreak:
+			// The break's own status: 0, but for bash mode's count out of range, 1.
 			if !r.loops.consume() {
-				return lineResult{status: 0, control: flowBreak}
+				return lineResult{status: status, control: flowBreak}
 			}
-			return lineResult{status: 0}
+			return lineResult{status: status}
 		default:
 			return lineResult{status: status, control: control}
 		}

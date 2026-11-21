@@ -119,6 +119,13 @@ func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefini
 	r.aliasView = definition.aliases
 	hidden, wasSet := r.hideReturnTrap(definition.traced)
 	debug, debugSet := r.hideDebugTrap(definition.traced)
+	// bash's function sees none of its caller's loops, so a break or continue in it is only
+	// bash's note; busybox's breaks the caller's loop, as nemosh and sh do.
+	if r.BashMode() {
+		depth := r.loops.depth
+		r.loops.depth = 0
+		defer func() { r.loops.depth = depth }()
+	}
 	result := r.executeCommandNode(ctx, definition.body, savedStatus)
 	r.finishReturnTrap(ctx, hidden, wasSet, result)
 	r.restoreDebugTrap(debug, debugSet)
