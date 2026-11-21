@@ -142,6 +142,8 @@ patch number is the commits since that tag.
     abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **cd in bash mode checks the directory before a `..`**, as bash's does: `cd nonexistent/..` is
+    `No such file or directory`, 1. busybox takes the `..` away first, and nemosh and sh still do.
   - **Brace expansion in bash mode passes a stray `{` over**, as bash's does: `{{a,b}` is `{a {b`.
     nemosh and sh leave the word as written from the stray `{` on, as busybox prints it.
   - **An assignment in front of a special builtin is the builtin's alone in bash mode**, as bash
