@@ -706,9 +706,6 @@
       "Bizarre tilde expansion in array index": "fail",
       "Var ref, then error with ${ ? }": "fail"
     },
-    "var-sub-quote.test.sh": {
-      "Syntax error for single quote in double quote": "fail"
-    },
     "var-sub.test.sh": {
       "Bad var sub": "ash-only",
       "Braced block inside ${}": "fail"

@@ -347,6 +347,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`"${X-it's}"` was printed as written**: an apostrophe that closes nothing in a double-quoted
+  default is a character of it, `it's`, as busybox reads it; after a pattern operator,
+  `"${foo%d'}"`, it is the syntax error both references make of it.
+
 - **printf refused C's length modifiers**: `%ld`, `%zu`, `%hhd`, `%Lf` printed nothing from there on,
   status 1; they are passed over, as both references pass them over, and j and t with them, as bash
   does.

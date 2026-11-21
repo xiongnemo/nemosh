@@ -48,6 +48,12 @@ func containsError(err, target error) bool {
 // ends the expansion, in busybox-w32 and bash alike -- `${x:-{b}}` with x set is a and a }.
 // Every `{` was counted, so that ran on to the second `}` and the } after it was lost.
 func bracedParameterEnd(text string, start int) (int, bool) {
+	return bracedParameterEndQuoting(text, start, true)
+}
+
+// bracedParameterEndQuoting is bracedParameterEnd, with an apostrophe a quote or, without
+// apostrophes, a character like any other; see apostropheParameterEnd.
+func bracedParameterEndQuoting(text string, start int, apostrophes bool) (int, bool) {
 	depth := 0
 	quote := byte(0)
 	dollar := -1
@@ -75,7 +81,9 @@ func bracedParameterEnd(text string, start int) (int, bool) {
 		}
 		switch char {
 		case '\'', '"':
-			quote = char
+			if char == '"' || apostrophes {
+				quote = char
+			}
 		case '$':
 			dollar = index
 			// A command substitution or an arithmetic expansion is stepped over whole, so a

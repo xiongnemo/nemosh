@@ -279,7 +279,10 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			return nil, nil, errors.New("syntax error: missing '}'")
 		}
 		if char == '$' && !inSingle {
-			end := parameterEnd(line, index+1)
+			end, err := quotedParameterEnd(line, index+1, inDouble)
+			if err != nil {
+				return nil, nil, err
+			}
 			if end > index+1 {
 				text := line[index:end]
 				buffer.WriteString(text)

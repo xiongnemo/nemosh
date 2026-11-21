@@ -468,9 +468,6 @@
       "${!array_ref:-set} and ${!array_ref:=assign}": "fail",
       "Array indirect expansion with suffix operators": "fail"
     },
-    "var-sub-quote.test.sh": {
-      "Syntax error for single quote in double quote": "fail"
-    },
     "var-sub.test.sh": {
       "Braced block inside ${}": "fail"
     },
