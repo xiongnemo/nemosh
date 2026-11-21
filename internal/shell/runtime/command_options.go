@@ -9,7 +9,8 @@ import (
 // command's options, which are busybox's: -v answers what a name is briefly, -V in type's
 // words, and -p looks the command up on a default PATH rather than the shell's. -V and -p
 // were taken for command names, so `command -V cd` was "-V: not found". As in busybox, -v
-// and -V answer only the first name, and the last of them given wins. A name that is not
+// and -V answer only the first name, and the last of them given wins; bash mode answers every
+// name, as bash does. A name that is not
 // found is 127, as busybox answers it for both and for type, -V saying `x: not found` on
 // stdout as type does; it was bash's 1, and bash's words on stderr.
 

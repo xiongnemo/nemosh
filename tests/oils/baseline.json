@@ -161,8 +161,7 @@
       "builtin": "fail",
       "builtin ls not found": "fail",
       "command -v doesn't find executable dir": "fail",
-      "command -v executable, builtin": "fail",
-      "command -v with multiple names": "ash-only"
+      "command -v executable, builtin": "fail"
     },
     "builtin-misc.test.sh": {
       "Invalid shift argument": "ash-only",
@@ -227,9 +226,6 @@
       "type -t -\u003e keyword": "fail",
       "type -t -\u003e not found": "fail",
       "type -t doesn't find non-executable (like command -v)": "ash-only"
-    },
-    "builtin-type.test.sh": {
-      "special builtins are called out": "ash-only"
     },
     "builtin-umask.test.sh": {
       "'umask 0002' sets the umask": "fail",

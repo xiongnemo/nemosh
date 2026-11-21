@@ -157,9 +157,15 @@ func (r Runtime) commandKinds(name string) []commandKind {
 		kinds = append(kinds, commandKind{word: "keyword", description: name + " is a shell keyword"})
 	}
 	// A special builtin is called one, as busybox calls POSIX's and its own local and times:
-	// "eval is a special shell builtin". It was "a shell builtin", bash's words for both.
+	// "eval is a special shell builtin". It was "a shell builtin", bash's words for both, which
+	// bash mode says; under `set -o posix` bash calls POSIX's special, which ash's local and
+	// source are not.
+	special := name + " is a special shell builtin"
+	if r.BashMode() && (!r.options.posix || name == "local" || name == "source") {
+		special = name + " is a shell builtin"
+	}
 	if isRuntimeBuiltin(name) && isSpecialBuiltin(name) {
-		kinds = append(kinds, commandKind{word: "builtin", description: name + " is a special shell builtin"})
+		kinds = append(kinds, commandKind{word: "builtin", description: special})
 	}
 	// The function dispatch would call, which a name with a slash never is: it is a path, by
 	// busybox's rule and POSIX's. `f/g() { ...; }` was called a function, and running f/g
@@ -175,7 +181,7 @@ func (r Runtime) commandKinds(name string) []commandKind {
 	if isRuntimeBuiltin(name) && !isSpecialBuiltin(name) {
 		description := name + " is a shell builtin"
 		switch {
-		case errorEndsShell(name):
+		case errorEndsShell(name) && !r.BashMode():
 			description = name + " is a special shell builtin"
 		case appletBuiltins(name):
 			description = name + " is a builtin applet"
