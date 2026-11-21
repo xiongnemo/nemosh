@@ -74,10 +74,11 @@ func fixedOptionRefusal(spec shellOptionSpec, enable bool) error {
 	return fmt.Errorf("%co %s: always %s here: %s", optionSign(enable), spec.name, state, why)
 }
 
-// braceWords is brace expansion, unless `set +B` turned it off.
+// braceWords is brace expansion, unless `set +B` turned it off; bash mode's passes a stray `{`
+// over, as bash's does.
 func (r Runtime) braceWords(item word) []word {
 	if !r.options.braceExpand {
 		return []word{item}
 	}
-	return expandBraceWord(item)
+	return expandBraceWordAs(item, r.BashMode())
 }

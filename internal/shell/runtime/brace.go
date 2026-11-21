@@ -43,9 +43,13 @@ func (a braceAtom) is(r rune) bool { return a.opaque == nil && a.literal == r }
 
 // expandBraceWord turns one word into the words its braces produce, in order.
 // A word with no brace group comes back as itself.
-func expandBraceWord(item word) []word {
+func expandBraceWord(item word) []word { return expandBraceWordAs(item, false) }
+
+// expandBraceWordAs is expandBraceWord, with bash as bash mode's: a stray `{` is passed over for
+// the next one; see firstBraceGroup.
+func expandBraceWordAs(item word, bash bool) []word {
 	atoms := braceAtomsOf(item)
-	expanded := expandBraceAtoms(atoms)
+	expanded := expandBraceAtoms(atoms, bash)
 	if len(expanded) == 1 && sameBraceAtoms(expanded[0], atoms) {
 		// Nothing was expanded, so the original word is returned untouched --
 		// including its quotedEmpty and expandTilde flags, which a rebuild would
@@ -130,8 +134,8 @@ func startsWithTilde(item word) bool {
 // expandBraceAtoms is the expansion itself: find the first group, expand it, and
 // recurse on what each alternative produced so nesting and several groups in one
 // word both come out right.
-func expandBraceAtoms(atoms []braceAtom) [][]braceAtom {
-	open, close, ok := firstBraceGroup(atoms)
+func expandBraceAtoms(atoms []braceAtom, bash bool) [][]braceAtom {
+	open, close, ok := firstBraceGroup(atoms, bash)
 	if !ok {
 		return [][]braceAtom{atoms}
 	}
@@ -141,7 +145,7 @@ func expandBraceAtoms(atoms []braceAtom) [][]braceAtom {
 		// A group with neither a comma nor a range is not a group: bash prints
 		// `{a}` and `{}` unchanged. Scanning continues after it rather than
 		// stopping, so `{a}{b,c}` still expands the second.
-		rest := expandBraceAtoms(atoms[close+1:])
+		rest := expandBraceAtoms(atoms[close+1:], bash)
 		results := make([][]braceAtom, 0, len(rest))
 		for _, tail := range rest {
 			results = append(results, concatAtoms(atoms[:close+1], tail))
@@ -153,9 +157,9 @@ func expandBraceAtoms(atoms []braceAtom) [][]braceAtom {
 		// The alternative is expanded too, which is what makes `{a,b{c,d}}`
 		// work, and then the suffix, which is what makes `{a,b}{1,2}` a product
 		// rather than a concatenation.
-		for _, expandedAlternative := range expandBraceAtoms(alternative) {
+		for _, expandedAlternative := range expandBraceAtoms(alternative, bash) {
 			head := concatAtoms(atoms[:open], expandedAlternative)
-			for _, tail := range expandBraceAtoms(atoms[close+1:]) {
+			for _, tail := range expandBraceAtoms(atoms[close+1:], bash) {
 				results = append(results, concatAtoms(head, tail))
 			}
 		}
@@ -170,7 +174,7 @@ func concatAtoms(left, right []braceAtom) []braceAtom {
 }
 
 // firstBraceGroup finds the first `{` that has a matching `}`, counting nesting.
-func firstBraceGroup(atoms []braceAtom) (int, int, bool) {
+func firstBraceGroup(atoms []braceAtom, bash bool) (int, int, bool) {
 	for index := range atoms {
 		if !atoms[index].is('{') {
 			continue
@@ -187,9 +191,12 @@ func firstBraceGroup(atoms []braceAtom) (int, int, bool) {
 				}
 			}
 		}
-		// An unmatched `{` is literal, and so is everything after it: bash leaves
-		// `echo {a,b` alone entirely.
-		return 0, 0, false
+		// An unmatched `{` is literal, and so is everything after it: `echo {a,b` is left
+		// alone entirely, and `{{a,b}` as well, what busybox prints of it. bash passes the stray
+		// one over and goes on to the next, `{a {b`, which bash mode does.
+		if !bash {
+			return 0, 0, false
+		}
 	}
 	return 0, 0, false
 }
