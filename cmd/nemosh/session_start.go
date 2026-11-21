@@ -33,10 +33,14 @@ func (c command) runSessionCommand(ctx context.Context, controller *interruptCon
 // one's profiles read, the session's defaults, the rc files, and what is said of them.
 func (c command) prepareSession(ctx context.Context, rt runtime.Runtime, mode string) error {
 	term, aside := rt.SetAsideInheritedTERM()
-	// A login shell in bash mode reads bash's profile inside startShell, before the session's
-	// defaults; what it set is told from what it found by these two, for the notice.
+	// The session's defaults come before every startup file, a login shell's profiles too,
+	// which startShell reads, so any of them can take one away or define it otherwise. In bash
+	// mode what the profile set is told from what it found by these two, for the notice.
 	var beforeProfile, afterProfile runtime.Definitions
+	defaulted := false
 	c.beforeProfiles = func() {
+		rt.SetSessionDefaults()
+		defaulted = true
 		if rt.BashMode() {
 			beforeProfile = rt.Definitions()
 		}
@@ -47,7 +51,9 @@ func (c command) prepareSession(ctx context.Context, rt runtime.Runtime, mode st
 	if beforeProfile != nil {
 		afterProfile = rt.Definitions()
 	}
-	rt.SetSessionDefaults()
+	if !defaulted {
+		rt.SetSessionDefaults()
+	}
 	if status, exited := c.sourceRCFile(ctx, rt, beforeProfile, afterProfile); exited {
 		return startupExit(rt, status)
 	}

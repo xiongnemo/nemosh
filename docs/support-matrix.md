@@ -82,7 +82,7 @@ through as any shell does. tcell reads the process's `TERM` where the shell's is
 counts, so a full-screen applet makes the two the same before it starts.
 `docs/examples/nemoshrc` shows the line for a terminal that draws xterm's sequences, and what
 it changes. And `[ -x /usr/bin/tput ]` is false, by design: `/usr/bin/NAME` is an applet only as
-a command's name or after `#!`, as in busybox-w32, `ls /usr/bin` listing nothing. **Before it, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
+a command's name or after `#!`, as in busybox-w32, `ls /usr/bin` listing nothing. **Before its startup files, a login shell's profiles among them, a session has Ubuntu's aliases**, which its `~/.bashrc` gives
 every account: `ll='ls -alF'`, `la='ls -A'`, `l='ls -CF'`, and `ls`, `grep`, `egrep` and
 `fgrep` with `--color=auto`; and an exported `LS_COLORS`, what `eval "$(dircolors -b)"`
 leaves from coreutils 9.4's database, unless the environment had one. A script has none, the rc file can `unalias` any, and

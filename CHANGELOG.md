@@ -257,6 +257,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A login profile's alias was replaced by the session's default**: `alias ll='...'` in
+  `~/.profile` gave way to Ubuntu's `ll`, which a login session set after its profiles. The
+  defaults come before every startup file now, so any of them can redefine one.
+
 - **`shopt -u promptvars` changed nothing**: a prompt, PS0 and `${x@P}` were expanded
   whichever way it was set, so a prompt drawn through `${PS1@P}` ran any command substitution a
   directory's name held. Off, a prompt is decoded and nothing in it expanded, as in bash.
