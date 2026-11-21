@@ -142,6 +142,10 @@ patch number is the commits since that tag.
     abandoned, status 2; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **test and `[` in bash mode read their arguments as bash's do**: `[ -a file ]` is -e, `[ -z
+    -a ] ]` the AND of two words, four or more arguments bash's grammar, and a refusal bash's words,
+    `a: integer expected`, `x: unary operator expected`, `` missing `]' ``. busybox refuses the
+    first two, and nemosh and sh still do.
   - **type and command -v in bash mode describe as bash's do**: `eval is a shell builtin`, POSIX's
     special ones `special` only under `set -o posix`; and command -v and -V describe every name
     they are given, 0 when any was found, where busybox's stop at the first.
