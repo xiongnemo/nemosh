@@ -36,6 +36,9 @@ func (r Runtime) getopts(args []string) int {
 	if len(args) > 2 {
 		words = args[2:]
 	}
+	if r.BashMode() {
+		return r.getoptsAsBash(optstring, name, words)
+	}
 	// Past the end of the words it starts again from the first, as busybox's getoptscmd does.
 	place := r.params.getopts
 	if place.word() > len(words)+1 {

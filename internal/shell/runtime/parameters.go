@@ -58,6 +58,9 @@ func (r Runtime) shift(args []string) int {
 		return 1
 	}
 	r.params.values = r.params.values[count:]
-	r.params.getopts = getoptsState{}
+	// bash's shift leaves getopts where it was, as it leaves OPTIND; busybox's starts it again.
+	if !r.BashMode() {
+		r.params.getopts = getoptsState{}
+	}
 	return 0
 }

@@ -98,6 +98,9 @@ patch number is the commits since that tag.
     `-h` and `-B` and in bash's order, `set -o` by name with bash's tab, and `alias a='it'\''s'`.
   - **type and command -V in bash mode describe an alias and a function as bash's do**: "ll is
     aliased to `ls -l'", and a function's definition after `is a function`.
+  - **getopts in bash mode is bash's**: OPTIND names the word until its last letter is read, a
+    flag leaves OPTARG unset, `set --` and shift leave the parse where it was, and the
+    diagnostics are bash's, `$0: illegal option -- z`. busybox's getopts stays nemosh's and sh's.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
