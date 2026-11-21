@@ -522,6 +522,9 @@ Where bash mode follows bash, one place at a time as each is measured:
 | `unset f` with no variable f | the function f stays | the function f is unset |
 | `x=1 >/no/such/dir/f`, assignments and a redirection that fails | nothing is assigned | x is assigned, status 1 |
 | a function whose name holds a slash, `a/b() { ...; }` | defined, and `a/b` is a path, never the function | `a/b` calls it |
+| `$-` | busybox's letters, its table backwards: `set -eu` under -c is `uce` | bash's: every short option on, `-h` and `-B` on from the start, in bash's order: `hBc`, `set -eu` makes `ehuBc`; a session `hiBHs` |
+| `set -o`, `set +o` listings | busybox's table, in its order, rows `%-15s %s` | bash's names by name, rows `%-15s\t%s`; busybox-w32's glob options left out of them |
+| alias listing | `a='it'"'"'s'` | `alias a='it'\''s'`, all or one |
 | a job a subshell, a `$(...)` or a pipeline stage puts in the background, at a prompt | announced, `[1] PID`, as busybox-w32 announces it | not announced, as bash announces only the session's own; atuin backgrounds one before every prompt |
 | what nemosh's rc file changes of bash's | -- | said on one line of stderr: `nemosh: ~/.nemoshrc changed what ~/.bashrc set: PS1, alias ll, function f`, the first five and how many more; a variable only added to, `PATH=$PATH:...`, is not counted |
 

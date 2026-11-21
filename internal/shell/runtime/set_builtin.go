@@ -215,6 +215,16 @@ func inertShellOptions(key byte) (string, bool) {
 // unset parameter (execute_pipeline.go, expansion_state.go), -f turns pathname
 // expansion off (pathname_expansion.go), and -x traces commands (trace.go).
 
+// bashListedOptions is what bash mode's `set -o` lists, as bash lists it: the options in the
+// order of their names, busybox-w32's own glob ones, which bash has not got, left out.
+func bashListedOptions() []shellOptionSpec {
+	specs := slices.DeleteFunc(slices.Clone(shellOptionSpecs), func(spec shellOptionSpec) bool {
+		return spec.name == "nocaseglob" || spec.name == "nohiddenglob" || spec.name == "nohidsysglob"
+	})
+	slices.SortFunc(specs, func(a, b shellOptionSpec) int { return strings.Compare(a.name, b.name) })
+	return specs
+}
+
 func optionSign(enable bool) byte {
 	if enable {
 		return '-'
@@ -226,14 +236,18 @@ func optionSign(enable bool) byte {
 // that recreate the same state when read back as input, which is what POSIX
 // asks the `+o` form for.
 func (r Runtime) listShellOptions(long bool) {
-	for _, spec := range shellOptionSpecs {
+	specs, line := shellOptionSpecs, setOptionLine
+	if r.BashMode() {
+		specs, line = bashListedOptions(), "%-15s\t%s\n"
+	}
+	for _, spec := range specs {
 		enabled := *spec.field(r.options)
 		if long {
 			state := "off"
 			if enabled {
 				state = "on"
 			}
-			fmt.Fprintf(r.streams.Stdout, setOptionLine, spec.name, state)
+			fmt.Fprintf(r.streams.Stdout, line, spec.name, state)
 			continue
 		}
 		sign := "+o"
