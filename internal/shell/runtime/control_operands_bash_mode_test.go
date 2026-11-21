@@ -52,6 +52,27 @@ func TestControlOperands_bashModeReadsThemAsBash(t *testing.T) {
 			t.Errorf("%q: status %d, stdout %q, stderr %q; want %d, %q and %q", test.code, status, stdout.String(), said, test.status, test.stdout, test.said)
 		}
 	}
+	// From a `-c` command string, outside a subshell, a second operand ends the shell, status 1,
+	// as bash's parse_and_execute ends the string it discards from; in a subshell the line is
+	// abandoned, as in a script.
+	for _, test := range []struct {
+		code, stdout string
+		status       int
+	}{
+		{code: "for i in foo; do\n  continue 1 extra\ndone\necho status=$?", status: 1},
+		{code: "set -- a b c\nshift 1 extra; echo same=$?\necho next=$?", status: 1},
+		{code: "f() { return 1 2; }; f\necho next=$?", status: 1},
+		{code: "(shift 1 2; echo same)\necho next=$?", stdout: "next=2\n"},
+	} {
+		var stdout, stderr bytes.Buffer
+		rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
+		rt.EnterBashMode()
+		rt.SetInvocationMode("c")
+		status := rt.RunScript(context.Background(), test.code+"\n")
+		if status != test.status || stdout.String() != test.stdout || !strings.Contains(stderr.String(), ": too many arguments\n") {
+			t.Errorf("-c %q: status %d, stdout %q, stderr %q; want %d and %q", test.code, status, stdout.String(), stderr.String(), test.status, test.stdout)
+		}
+	}
 	// As nemosh, busybox's: a count that is no number ends the script, and continue in a function
 	// continues the caller's loop.
 	for code, want := range map[string]string{
