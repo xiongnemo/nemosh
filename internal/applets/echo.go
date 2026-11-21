@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"io"
 	"strconv"
 	"strings"
@@ -15,12 +16,12 @@ import (
 // Nemosh printed `-n abc` for `echo -n abc`, which is what an echo with no
 // option handling at all does.
 func newEchoApplet() Applet {
-	return simpleApplet{name: "echo", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
+	return simpleApplet{name: "echo", runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, _ io.Writer) error {
 		newline, escapes, operands := echoOptions(args)
 		text := strings.Join(operands, " ")
 		if escapes {
 			var cancelled bool
-			text, cancelled = expandEchoEscapes(text)
+			text, cancelled = expandEchoEscapesAs(text, printfDialectOf(ctx).bash)
 			newline = newline && !cancelled
 		}
 		if newline {
@@ -60,7 +61,12 @@ func echoOptions(args []string) (bool, bool, []string) {
 // expandEchoEscapes handles the sequences XSI echo lists, plus the `\e` busybox
 // adds. The second result reports `\c`, which cancels the trailing newline and
 // everything after it.
-func expandEchoEscapes(text string) (string, bool) {
+func expandEchoEscapes(text string) (string, bool) { return expandEchoEscapesAs(text, false) }
+
+// expandEchoEscapesAs is expandEchoEscapes as busybox's echo -e decodes, or with bash as bash's
+// does, in bash mode: an octal escape only with its 0, so `\1` and `\123` stay as written, and
+// `\E` as well as `\e` is escape. Measured against Git for Windows' bash 5.3.
+func expandEchoEscapesAs(text string, bash bool) (string, bool) {
 	var out strings.Builder
 	for index := 0; index < len(text); index++ {
 		if text[index] != '\\' || index+1 >= len(text) {
@@ -74,6 +80,15 @@ func expandEchoEscapes(text string) (string, bool) {
 		if value, width, ok := unicodeEscape(text[index:]); ok {
 			out.WriteString(value)
 			index += width - 1
+			continue
+		}
+		if bash && text[index] == 'E' {
+			out.WriteByte(0x1b)
+			continue
+		}
+		if bash && text[index] >= '1' && text[index] <= '7' {
+			out.WriteByte('\\')
+			out.WriteByte(text[index])
 			continue
 		}
 		if value, width, ok := numericEscape(text[index:], true); ok {
