@@ -101,6 +101,9 @@ patch number is the commits since that tag.
   - **getopts in bash mode is bash's**: OPTIND names the word until its last letter is read, a
     flag leaves OPTARG unset, `set --` and shift leave the parse where it was, and the
     diagnostics are bash's, `$0: illegal option -- z`. busybox's getopts stays nemosh's and sh's.
+  - **A bash-mode script expands no aliases until `shopt -s expand_aliases`**, as bash's
+    non-interactive shell; a session expands them from the start. busybox's expands them
+    everywhere, and nemosh and sh still do.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
