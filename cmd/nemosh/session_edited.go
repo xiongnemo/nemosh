@@ -31,6 +31,8 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	}
 	// Tab asks the session's `complete` specifications first; rt is read when Tab is pressed,
 	// so the one in use then answers.
+	// Keys are read through what bind set first; see lineedit_bind.go.
+	editor.bindings = rt.MatchKeyBinding
 	editor.programmable = func(line string, point int) (runtime.ProgrammableCompletion, bool) {
 		return rt.CompleteLine(ctx, line, point)
 	}

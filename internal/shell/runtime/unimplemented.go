@@ -39,9 +39,6 @@ func unimplementedBuiltins(key string) (unimplementedBuiltin, bool) {
 		return unimplementedBuiltin{reason: noSuspensionReason, permanent: true}, true
 	case "suspend":
 		return unimplementedBuiltin{reason: "nothing here can suspend a process, this shell included", permanent: true}, true
-	case "bind":
-		return unimplementedBuiltin{reason: "the line editor's keys are its own: it reads no inputrc, and nothing rebinds them. " +
-			"busybox-w32 has no bind either"}, true
 	}
 	var zero unimplementedBuiltin
 	return zero, false

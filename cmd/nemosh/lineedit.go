@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/xiongnemo/nemosh/internal/completionspec"
+	"github.com/xiongnemo/nemosh/internal/shell/runtime"
 )
 
 // errLineAbandoned is Ctrl-C: the line is discarded and the prompt returns,
@@ -42,8 +43,10 @@ type lineEditor struct {
 	variableValue func(string) (string, bool)
 	// setting reads a variable that configures the editor, such as NEMOSH_CTRL_Z.
 	setting func(string) (string, bool)
-	buffer  *lineBuffer
-	pending []byte
+	// bindings answers what bind bound the keys pending begin with; see lineedit_bind.go.
+	bindings func(keymap string, pending []byte) (runtime.KeyBinding, int, bool)
+	buffer   *lineBuffer
+	pending  []byte
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
 	// feed arriving in the next read is that Enter finishing rather than another one.
 	afterCarriageReturn bool

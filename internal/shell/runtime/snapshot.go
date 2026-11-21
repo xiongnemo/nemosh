@@ -93,6 +93,7 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		childCPU:    r.childCPU,
 		history:     r.history,
 		completions: r.completions,
+		bindings:    r.bindings,
 		commands:    commands,
 		// A subshell starts with no pending break: `(break)` inside a loop does
 		// not break the loop outside it, because the loop is not in the subshell.

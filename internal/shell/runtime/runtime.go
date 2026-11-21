@@ -177,6 +177,8 @@ func (r Runtime) runBuiltinOrProgram(ctx context.Context, args []string) int {
 		return r.unalias(args[1:])
 	case "compgen", "complete", "compopt":
 		return r.completionBuiltin(ctx, args)
+	case "bind":
+		return r.bindBuiltin(args[1:])
 	case "_get_comp_words_by_ref", "_init_completion", "_filedir", "__ltrim_colon_completions":
 		return r.completionHelper(args)
 	case "local":

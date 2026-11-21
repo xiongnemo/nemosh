@@ -215,6 +215,7 @@ var commands = []Command{
 	{Name: "cd", Operand: Directory, Builtin: true},
 	{Name: "coproc", Operand: AnyPath, Builtin: true},
 	{Name: "command", Operand: AnyPath, Builtin: true},
+	{Name: "bind", Short: "lpsvPSVXmfqurx", ValueShort: "mfqurx", Operand: AnyPath, Builtin: true},
 	{Name: "compgen", Operand: AnyPath, Builtin: true},
 	{Name: "complete", Short: "abcdefgjksuvprDEIoAGWFCXPS", ValueShort: "oAGWFCXPS", Operand: AnyPath, Builtin: true},
 	{Name: "compopt", Short: "DEIo", ValueShort: "o", Operand: AnyPath, Builtin: true},

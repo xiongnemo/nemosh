@@ -35,6 +35,7 @@ var jobStateCoverage = map[string]string{
 	"childCPU":          "not inherited: a process counts its own children",
 	"history":           "not inherited: a job does not read a prompt",
 	"completions":       "not inherited: a job completes no line",
+	"bindings":          "not inherited: a job reads no line",
 	"commands":          "rebuilt: the child finds its commands itself, as a new process does",
 	"shadowed":          "not inherited: a command's own, put back when it returns",
 	"dirStack":          "encoded: DirStack",

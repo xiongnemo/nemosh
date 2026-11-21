@@ -183,17 +183,6 @@
     "builtin-bash.test.sh": {
       "help": "fail"
     },
-    "builtin-bind.test.sh": {
-      "bind -X": "fail",
-      "bind -l should report readline functions": "fail",
-      "bind -m with bind -x/-X": "fail",
-      "bind -p -P to print function names and key bindings": "fail",
-      "bind -q": "fail",
-      "bind -r": "fail",
-      "bind -r of bind -x commands": "fail",
-      "bind -s -S accepted": "fail",
-      "bind -v -V accepted": "fail"
-    },
     "builtin-bracket.test.sh": {
       "-a as unary operator (alias of -e)": "fail",
       "-k for sticky bit": "fail",

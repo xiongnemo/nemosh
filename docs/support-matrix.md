@@ -48,7 +48,6 @@ these names why, and names what busybox-w32 does with the same name.
 | Name | Status | Why |
 | --- | --- | --- |
 | `ulimit` | 126 | Windows has no `getrlimit`. busybox-w32 does not implement it either — it keeps the name and returns 1 with no message. |
-| `bind` | 126 | The line editor's keys are its own: it reads no inputrc, and nothing rebinds them. busybox-w32 has no `bind` either, and says `not found`, 127, which reads as a program to install. `command -v bind` answers no, so a bashrc that asks first skips it. |
 | `fg`, `bg` | 126 | They resume a *suspended* job and nothing here can suspend one — see **Process control** below, which is the long answer. busybox-w32 compiles both out under `#if JOBS`. These two say **"not implemented, and will not be"** where the rows above say only "not implemented", because they are settled rather than pending. |
 | `suspend` | 126 | bash's, which stops the shell itself; nothing here can suspend a process, this shell included. It said `not found`, 127. |
 | `enable -n`, `-f`, `-d` | 2 | A builtin here is part of the shell, so there is none to switch off and none to load; a program of the same name runs when it is named by its path. `enable` itself lists the builtins as bash does, `-s` the special ones, and says `not a shell builtin` of a name that is not one. |
@@ -585,6 +584,29 @@ held one entry, the newest, until 2026-10-02.
   character, where every modified arrow moved a word; Ctrl and Alt still do. busybox-w32's
   editor deletes a character on Ctrl+Backspace and ignores Ctrl+Delete and the Shift arrows.
   What a console sends for each was measured from one, by writing the key events into it.
+
+### `bind`
+
+bash's, which busybox has not got: `bind [-lpsvPSVX] [-m KEYMAP] [-f FILE] [-q NAME] [-u NAME]
+[-r KEYS] [-x KEYS:COMMAND] [LINE ...]`, each form printing what bash 5.3's prints. A LINE is
+readline's init syntax -- `"\C-o": beginning-of-line`, `"\C-x\C-y": "a macro"`, `Control-o:
+...`, `set completion-ignore-case off` -- and the key sequences are readline's notation, `\C-x`,
+`\M-x` and `\e`, the C escapes, octal and hex. The line editor reads the keys bind set before
+its own: a sequence bound to a function is that function's key, one bound to a macro types the
+macro's keys, one that begins a longer bound sequence waits for the next key, and `-r` takes
+one away. The keymaps are emacs, vi-insert and vi-command, under bash's names for them
+(emacs-standard, emacs-meta, emacs-ctlx, vi, vi-move); with no `-m` the keymap is the one the
+editor is in.
+
+`bind -l` and `bind -p` name all of readline's functions; the ones this editor carries out are
+the keys above, and `self-insert`. A key bound to a function readline has and this editor does
+not carry out is refused, status 1, since it would do nothing where bash's does something; one
+bound to no function at all binds nothing, status 0, as in bash. `-v` lists readline's variables
+with this editor's values, `completion-ignore-case on` and `show-all-if-ambiguous on` among them;
+`set editing-mode vi` is `set -o vi`, and the rest are kept and listed. `bind -x` keeps its
+commands, which `-X` lists; running one from its key comes in the next change. `^D` is left out
+of `-p`: the editor ends input on it, where readline's `delete-char` ends input only on an empty
+line.
 
 ### The line editor's vi mode
 

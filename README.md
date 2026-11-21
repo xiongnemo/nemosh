@@ -177,7 +177,7 @@ project.
 Two rules govern the implementation:
 
 - **A capability that is absent must fail loudly.** `ulimit`, `fg`, `bg`,
-  `suspend`, `bind`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero
+  `suspend`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero
   status rather than approximating. An applet option that is not implemented is refused, not
   swallowed.
 - **Parse before effects.** A script is parsed in full before any of it runs, so

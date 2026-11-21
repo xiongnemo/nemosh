@@ -36,6 +36,9 @@ type shellState struct {
 	history *shellHistory
 	// completions is what complete was told; see complete_builtin.go. Shared as history is.
 	completions *completionTable
+	// bindings is what bind set, which the line editor reads keys through; see
+	// readline_bindings.go. Shared as completions is.
+	bindings *keyBindings
 	// commands is where the commands that ran were found; see command_hash.go. A subshell
 	// starts with the shell's and keeps its own.
 	commands *commandTable

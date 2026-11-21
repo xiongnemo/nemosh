@@ -33,12 +33,17 @@ func (e *lineEditor) nextTypedKey() (key, error) {
 		if e.vi.on {
 			decode = decodeViKey
 		}
+		// What bind bound is read before the editor's own keys; see lineedit_bind.go.
+		bound, done, wait := e.boundKey()
+		if done {
+			return bound, nil
+		}
 		// An Escape nothing follows soon is the key itself, in vi mode.
-		if e.vi.on && len(e.pending) == 1 && e.pending[0] == 0x1b && (e.inputWaiting == nil || !e.inputWaiting(escapeWait)) {
+		if !wait && e.vi.on && len(e.pending) == 1 && e.pending[0] == 0x1b && (e.inputWaiting == nil || !e.inputWaiting(escapeWait)) {
 			e.pending = e.pending[:0]
 			return key{kind: keyEscape}, nil
 		}
-		if decoded, consumed := decode(e.pending); decoded.kind != keyIncomplete {
+		if decoded, consumed := decode(e.pending); !wait && decoded.kind != keyIncomplete {
 			e.afterCarriageReturn = decoded.kind == keyEnter && consumed == 1 && e.pending[0] == '\r'
 			e.enterFromPair = decoded.kind == keyEnter && consumed == 2
 			e.pending = e.pending[consumed:]

@@ -286,7 +286,7 @@ process inspection, and the first draft of that guard banned them and was wrong.
 See `docs/design/windows-execution-model.md`.
 
 **A capability that is absent must fail loudly.** `ulimit`, `fg`, `bg`, `suspend`,
-`bind`, `enable -n`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero status
+`enable -n`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero status
 rather than approximating. Anything landing partially refuses the part it cannot do.
 
 **A fixture must not depend on where the machine puts things.** `dirs` abbreviates the

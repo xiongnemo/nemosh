@@ -88,7 +88,7 @@ work may be written.
 
 - **A capability that is absent must fail loudly.** This is the rule the v0
   readiness audit was corrected under, and it is why `ulimit`, `fg`, `bg`,
-  `suspend`, `bind`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero
+  `suspend`, and `set -b`/`-m`/`-v` refuse with a reason and a non-zero
   status rather than approximating. A release does not get to soften this into
   silence. (`hash` and `set -n` were on this list and have since been
   implemented.)
