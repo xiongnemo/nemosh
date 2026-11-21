@@ -63,10 +63,11 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 	if err != nil {
 		return r.jobLaunchFailure(err)
 	}
-	// Under the scope's context, so a scope that is torn down -- a subshell ending with a
-	// job still running -- ends its process as it ends a goroutine. The root scope is not
-	// cancelled when the shell exits, so a job started at the top can outlive it, as both
-	// references' jobs do.
+	// Under the scope's context, so a scope that is torn down -- an interrupt, or a command
+	// substitution ending with a job still running -- ends its process as it ends a goroutine.
+	// A subshell that ends lets its jobs run on (letRun), and the root scope is not cancelled
+	// when the shell exits, so a job started at the top can outlive it, as both references'
+	// jobs do.
 	command := exec.CommandContext(r.jobScope.ctx, executable)
 	prepareJobCommand(command)
 	tree := &jobTree{}

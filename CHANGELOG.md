@@ -237,6 +237,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`(cmd &)` ran nothing**: a job a subshell started was ended with the subshell, or with the
+  script once it had ended, so `( long-task & )`, the idiom for starting something nothing waits
+  for, did nothing. It runs on now, as in busybox and bash; a Ctrl-C still ends it.
+
 - **A prompt that failed to expand ran nothing typed at it**: with `PS1='${y?boom}> '` every
   command was abandoned for the error, `PS1=` too, so the session could not be put right; a
   failing PS0 cost the command it came before. The error is said, the prompt drawn as written,

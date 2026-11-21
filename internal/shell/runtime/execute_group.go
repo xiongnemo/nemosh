@@ -34,10 +34,19 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 			return lineResult{status: 1}
 		}
 		// A subshell's job table is its own, and starts empty: `( jobs )` lists nothing in
-		// both references. See listedJobs.
-		commandRuntime.jobScope.outer = nil
+		// both references. See listedJobs. It is under the shell's job scope rather than this
+		// command's context, which ends with the run, since a job it starts runs on once it
+		// has ended (letRun below).
+		commandRuntime.jobScope.cancel()
+		commandRuntime.jobScope = newPrivateJobScope(r.jobScope.ctx, r.jobScope.supervisor)
 		defer func() {
-			commandRuntime.jobScope.cancelAndDrain()
+			// A job it started runs on once it has ended, as in both references; an
+			// interrupt that ended it ends them too, busybox's answer to a Ctrl-C.
+			if ctx.Err() != nil {
+				commandRuntime.jobScope.cancelAndDrain()
+			} else {
+				commandRuntime.jobScope.letRun()
+			}
 			_ = commandRuntime.fds.closeAll()
 		}()
 	}
