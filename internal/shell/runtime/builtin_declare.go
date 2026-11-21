@@ -40,12 +40,18 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 	if options.print {
 		return r.printDeclarations(names)
 	}
+	// Every operand is declared, an earlier one's failure answered in the status, as bash's
+	// declare goes on; one that raised a shell error ends it there.
+	failed := 0
 	for _, name := range names {
 		if status := r.declareInFunction(ctx, options, name); status != 0 {
-			return status
+			if r.expansion.shellError {
+				return status
+			}
+			failed = status
 		}
 	}
-	return 0
+	return failed
 }
 
 // declareInFunction is declare's scope rule, bash's: inside a function a name it declares
@@ -161,8 +167,7 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		return r.assignElementByKind(ctx, reference, value)
 	}
 	if !isValidVariableName(name) {
-		fmt.Fprintf(r.streams.Stderr, "%sdeclare: %s: not a valid name\n", r.diagnosticPrefix(), name)
-		return 1
+		return r.notIdentifier("declare", argument)
 	}
 	if !r.declareArrayKind(name, options) {
 		return 1
@@ -287,35 +292,6 @@ func (r Runtime) declarationText(name string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("declare -%s %s=%s", flags, name, shellquote.Double(value)), true
-}
-
-// arrayLiteralText is an array as the compound value that recreates it, `([0]="a" [2]="c")`
-// or `([k]="v" )`: what declare -p writes after the name, and a bare `set` after the `=`.
-func (r Runtime) arrayLiteralText(name string) (string, bool) {
-	if r.arrays == nil {
-		return "", false
-	}
-	var out strings.Builder
-	out.WriteString("(")
-	switch {
-	case r.arrays.isAssociative(name):
-		for _, key := range r.arrays.keysOf(name) {
-			value, _ := r.arrays.lookupKey(name, key)
-			fmt.Fprintf(&out, "[%s]=%s ", shellquote.Key(key), shellquote.Double(value))
-		}
-		// bash leaves the blank before the closing parenthesis for this kind and not
-		// the other, and output meant to be read back is worth matching exactly.
-		return out.String() + ")", true
-	case r.arrays.has(name):
-		// The set indices only: every slot used to be printed, so a gap came out as
-		// `[1]=""` and an element removed with unset came back with its old value.
-		for _, index := range r.arrays.liveIndices(name) {
-			value, _ := r.arrays.valueAt(name, index)
-			fmt.Fprintf(&out, "[%d]=%s ", index, shellquote.Double(value))
-		}
-		return strings.TrimSuffix(out.String(), " ") + ")", true
-	}
-	return "", false
 }
 
 // parenthesisedList reports the inside of a `(one two)` array literal.

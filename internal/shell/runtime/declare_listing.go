@@ -101,3 +101,32 @@ func (r Runtime) printBareDeclaration(name string) {
 		fmt.Fprintln(r.streams.Stdout, parts[2])
 	}
 }
+
+// arrayLiteralText is an array as the compound value that recreates it, `([0]="a" [2]="c")`
+// or `([k]="v" )`: what declare -p writes after the name, and a bare `set` after the `=`.
+func (r Runtime) arrayLiteralText(name string) (string, bool) {
+	if r.arrays == nil {
+		return "", false
+	}
+	var out strings.Builder
+	out.WriteString("(")
+	switch {
+	case r.arrays.isAssociative(name):
+		for _, key := range r.arrays.keysOf(name) {
+			value, _ := r.arrays.lookupKey(name, key)
+			fmt.Fprintf(&out, "[%s]=%s ", shellquote.Key(key), shellquote.Double(value))
+		}
+		// bash leaves the blank before the closing parenthesis for this kind and not
+		// the other, and output meant to be read back is worth matching exactly.
+		return out.String() + ")", true
+	case r.arrays.has(name):
+		// The set indices only: every slot used to be printed, so a gap came out as
+		// `[1]=""` and an element removed with unset came back with its old value.
+		for _, index := range r.arrays.liveIndices(name) {
+			value, _ := r.arrays.valueAt(name, index)
+			fmt.Fprintf(&out, "[%d]=%s ", index, shellquote.Double(value))
+		}
+		return strings.TrimSuffix(out.String(), " ") + ")", true
+	}
+	return "", false
+}

@@ -44,8 +44,7 @@
     },
     "array-assign.test.sh": {
       "Are quotes allowed?": "fail",
-      "Tricky parsing - a[ a[0]=1 ]=X  a[ a[0]+=1 ]+=X": "fail",
-      "declare builtin doesn't allow spaces": "fail"
+      "Tricky parsing - a[ a[0]=1 ]=X  a[ a[0]+=1 ]+=X": "fail"
     },
     "array-assoc.test.sh": {
       "BashAssoc ${a[@]@Q}": "fail",
