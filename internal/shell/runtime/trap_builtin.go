@@ -120,7 +120,7 @@ func (r Runtime) writeTraps(bash bool) int {
 func (r Runtime) writeTrap(name trapName, command string, bash bool) {
 	action, label := shellquote.Ash(command), string(name)
 	if bash {
-		action = shellquote.Single(command)
+		action = shellquote.SingleQuoted(command)
 		switch name {
 		case trapExit, trapERR, trapDEBUG, trapRETURN:
 		default:

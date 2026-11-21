@@ -158,7 +158,6 @@
       "Eval in bash does tilde expansion in array": "fail",
       "Eval in does tilde expansion": "fail",
       "Eval with syntax error": "ash-only",
-      "Source from a function, mutating argv and defining a local var": "fail",
       "Source with syntax error": "ash-only",
       "eval YSH block with 'break continue return error'": "fail",
       "eval usage": "fail"
@@ -252,7 +251,6 @@
     "builtin-trap.test.sh": {
       "Remove trap with an unsigned integer": "fail",
       "exit codes for traps are isolated": "fail",
-      "print trap handler with multiple lines": "fail",
       "trap '' sets handler to empty string (SIG_IGN)": "fail",
       "trap '' with multiple signals": "fail",
       "trap 'echo hi' KILL (regression test, caught by smoosh suite)": "fail",
