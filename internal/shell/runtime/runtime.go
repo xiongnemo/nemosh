@@ -58,6 +58,10 @@ type Runtime struct {
 	// errExitSuppressed, so it cannot leak past the word it was set for.
 	noFieldSplit      bool
 	errExitSuppressed bool
+	// jobTop marks a background job's own commands, the outermost pipelines of what it runs,
+	// whose failure runs no ERR trap in it; see jobTraps. On the value, and dropped by the
+	// first pipeline it reaches, so the commands inside those run theirs.
+	jobTop bool
 	// plainAssignment marks the writes of an assignment statement, which abandon the command
 	// when they cannot be made; see failAssignment. On the value for the same reason.
 	plainAssignment bool

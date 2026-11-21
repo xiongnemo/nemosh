@@ -97,6 +97,10 @@ func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus 
 	if r.readsWithoutExecuting() {
 		return lineResult{control: flowExec}
 	}
+	// A compound command is inside a job, not the job's own; see jobTop.
+	if _, list := node.(listNode); !list {
+		r.jobTop = false
+	}
 	switch value := node.(type) {
 	case backgroundNode:
 		body := jobBody(value.value)
@@ -197,9 +201,11 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 	// A job is addressed by `kill` on its own, so it has an inbox of its own, which knows what
 	// it catches.
 	worker.signals = newSignalInbox()
-	for name, action := range r.jobTraps() {
+	traps, listed := r.jobTraps()
+	for name, action := range traps {
 		worker.setTrap(name, action)
 	}
+	worker.listedTraps = listed
 	if err := worker.fds.bindBorrowedReader(0, bytes.NewReader(nil)); err != nil {
 		worker.jobScope.cancelAndDrain()
 		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), errors.Join(err, worker.fds.closeAll()))
@@ -234,10 +240,12 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		// not deferred, so a panic in run left the parent's wait with nobody to
 		// answer it -- a hang, not a crash.
 		result := worker.guardedRun("running a background job", func() lineResult {
-			result := run(worker)
-			// A job starts with no trap that runs anything, so an EXIT trap it has is one it
-			// set, and it runs as the job ends, as a subshell's does -- in both references.
-			// It never ran; the process launcher found that by running it.
+			top := worker
+			top.jobTop = true
+			result := run(top)
+			// A job starts with no EXIT trap that runs anything, so one it has is one it set,
+			// and it runs as the job ends, as a subshell's does -- in both references. It
+			// never ran; the process launcher found that by running it.
 			if result.control != flowExec {
 				result.status = worker.runOwnExitTrap(worker.jobScope.ctx, "", result.status)
 			}

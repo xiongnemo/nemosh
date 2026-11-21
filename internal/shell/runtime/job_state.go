@@ -36,6 +36,8 @@ type jobState struct {
 	Frames      []jobFrame
 	ScriptFile  string
 	Traps       map[string]string
+	// ListedTraps are the shell's traps the job lists without running them; see jobTraps.
+	ListedTraps map[string]string
 	Umask       uint16
 	DirStack    []string
 	// AliasChain is the aliases whose text the job is part of, which it does not substitute
@@ -199,6 +201,12 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 	r.params.getopts = getoptsState{next: state.Getopts[0], sub: state.Getopts[1]}
 	for name, action := range state.Traps {
 		r.setTrap(trapName(name), action)
+	}
+	if len(state.ListedTraps) > 0 {
+		r.listedTraps = map[trapName]string{}
+		for name, action := range state.ListedTraps {
+			r.listedTraps[trapName(name)] = action
+		}
 	}
 	for index := len(state.Frames) - 1; index >= 0; index-- {
 		frame := state.Frames[index]
