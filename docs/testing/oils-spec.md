@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2284 of the 2548 cases bash passes: 89.6%.**
+**nemosh passes 2286 of the 2548 cases bash passes: 89.7%.**
 
-Of the other 264, it does 80 the way the files record of ash, which may be busybox's
-way, and 184 neither way.
+Of the other 262, it does 80 the way the files record of ash, which may be busybox's
+way, and 182 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2115 of them and does 119 the way the
 files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2284 |
+| that nemosh passes of those | 2286 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -81,7 +81,7 @@ busybox does the way the file records of ash.
 | builtin-completion.test.sh | 51 | 50 | 48 | 96.0% | 0 | 43 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 7 | 38.9% | 0 | 7 | 2 |
 | builtin-echo.test.sh | 27 | 27 | 26 | 96.3% | 1 | 26 | 27 |
-| builtin-eval-source.test.sh | 23 | 21 | 16 | 76.2% | 0 | 14 | 13 |
+| builtin-eval-source.test.sh | 23 | 21 | 17 | 81.0% | 0 | 14 | 13 |
 | builtin-fc.test.sh | 14 | 14 | 14 | 100.0% | 0 | 3 | 2 |
 | builtin-getopts.test.sh | 31 | 31 | 24 | 77.4% | 7 | 24 | 31 |
 | builtin-history.test.sh | 17 | 15 | 12 | 80.0% | 0 | 5 | 1 |
@@ -97,7 +97,7 @@ busybox does the way the file records of ash.
 | builtin-times.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 21 | 91.3% | 0 | 21 | 4 |
 | builtin-trap-err.test.sh | 22 | 22 | 19 | 86.4% | 2 | 19 | 22 |
-| builtin-trap.test.sh | 33 | 33 | 22 | 66.7% | 0 | 19 | 25 |
+| builtin-trap.test.sh | 33 | 33 | 23 | 69.7% | 0 | 19 | 25 |
 | builtin-type-bash.test.sh | 21 | 21 | 16 | 76.2% | 1 | 14 | 0 |
 | builtin-type.test.sh | 4 | 4 | 3 | 75.0% | 1 | 1 | 4 |
 | builtin-umask.test.sh | 24 | 15 | 7 | 46.7% | 0 | 7 | 2 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 3 | 100.0% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2284 | 89.6% | 80 | 2115 | 1447 |
+| all | 2665 | 2548 | 2286 | 89.7% | 80 | 2115 | 1447 |

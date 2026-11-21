@@ -15,6 +15,9 @@ type parameters struct {
 	// getopts is where getopts is in these parameters, so replacing them starts it again;
 	// see getopts.go.
 	getopts getoptsState
+	// replaced counts the times `set` replaced the list, not shift, which bash mode's `. FILE
+	// ARGS` asks after; see withDotArguments.
+	replaced int
 }
 
 // SetArguments seeds $0 and the positional parameters. POSIX gives the name and

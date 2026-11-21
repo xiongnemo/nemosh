@@ -52,12 +52,19 @@ func backslashed(value string, index int) bool {
 // that ends them, a backslashed quote, and a quote that opens them again. One quote and
 // nothing else is \'.
 func Single(value string) string {
-	switch {
-	case value == "":
-		return "''"
-	case needsANSIC(value):
+	if needsANSIC(value) {
 		return ANSIC(value)
-	case value == "'":
+	}
+	return SingleQuoted(value)
+}
+
+// SingleQuoted is bash's sh_single_quote, which trap -p and alias write with: Single's quoting,
+// and never $'...', a newline or a control character kept in the quotes as it is.
+func SingleQuoted(value string) string {
+	switch value {
+	case "":
+		return "''"
+	case "'":
 		return `\'`
 	}
 	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
