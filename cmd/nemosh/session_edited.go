@@ -37,6 +37,15 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	editor.shellCommand = func(command, line string, point int) (string, int) {
 		return rt.RunKeyCommand(ctx, command, line, point)
 	}
+	editor.expandLine = func(line string) (string, bool) { return rt.ExpandLine(ctx, line) }
+	editor.editingMode = func(vi bool) {
+		if vi {
+			_ = rt.SetOption(0, "vi", true)
+			return
+		}
+		_ = rt.SetOption(0, "emacs", true)
+	}
+	editor.bashMode = rt.BashMode()
 	editor.programmable = func(line string, point int) (runtime.ProgrammableCompletion, bool) {
 		return rt.CompleteLine(ctx, line, point)
 	}

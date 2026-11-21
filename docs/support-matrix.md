@@ -580,7 +580,7 @@ held one entry, the newest, until 2026-10-02.
   `^W` puts it, and Ctrl+Delete and Alt+Delete the word after it, as they do in PowerShell
   and a Windows edit box. A terminal sends Ctrl+Backspace as `^H`, which a terminal set to
   erase with `^H` -- an ssh client's, say -- sends for Backspace too, and the two cannot be told
-  apart, so `NEMOSH_CTRL_H=backspace` makes `^H` a Backspace. Shift+Left and Shift+Right move a
+  apart, so `NEMOSH_CTRL_H=backspace` makes `^H` a Backspace. In bash mode it is a Backspace unless `NEMOSH_CTRL_H=word`, as Git's bash has it. Shift+Left and Shift+Right move a
   character, where every modified arrow moved a word; Ctrl and Alt still do. busybox-w32's
   editor deletes a character on Ctrl+Backspace and ignores Ctrl+Delete and the Shift arrows.
   What a console sends for each was measured from one, by writing the key events into it.
@@ -599,7 +599,11 @@ one away. The keymaps are emacs, vi-insert and vi-command, under bash's names fo
 editor is in.
 
 `bind -l` and `bind -p` name all of readline's functions; the ones this editor carries out are
-the keys above, and `self-insert`. A key bound to a function readline has and this editor does
+the keys above, `self-insert`, and readline's functions a macro reaches, each on bash's keys:
+`set-mark` (`C-@`, `M-SPC`), `exchange-point-and-mark` (`C-x C-x`), `shell-expand-line` (`M-C-e`,
+the line's parameters and substitutions expanded as the inside of double quotes is),
+`redraw-current-line`, `vi-editing-mode` (`M-C-j`), `emacs-editing-mode`, `vi-movement-mode` and
+`vi-insertion-mode`. fzf's Alt-C is a macro of these, run as bash runs it. A key bound to a function readline has and this editor does
 not carry out is refused, status 1, since it would do nothing where bash's does something; one
 bound to no function at all binds nothing, status 0, as in bash. `-v` lists readline's variables
 with this editor's values, `completion-ignore-case on` and `show-all-if-ambiguous on` among them;

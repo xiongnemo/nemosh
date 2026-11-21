@@ -50,8 +50,15 @@ type lineEditor struct {
 	// both, readLineInRawMode the second. See runBoundCommand.
 	shellCommand func(command, line string, point int) (string, int)
 	suspend      func(run func())
-	buffer       *lineBuffer
-	pending      []byte
+	// expandLine is shell-expand-line's expansion and editingMode sets set -o vi or emacs, both
+	// the session's; mark is set-mark's place in the line, and bashMode whether the session is
+	// in bash mode. See lineedit_bind_functions.go and lineedit_ctrlh.go.
+	expandLine  func(string) (string, bool)
+	editingMode func(vi bool)
+	mark        int
+	bashMode    bool
+	buffer      *lineBuffer
+	pending     []byte
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
 	// feed arriving in the next read is that Enter finishing rather than another one.
 	afterCarriageReturn bool
@@ -236,7 +243,7 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 		}
 		// What the key before began ends here unless this one goes on with it; see beforeKey.
 		killing, before := e.beforeKey(key)
-		if e.vi.on && e.viKey(key) {
+		if e.readlineOnlyKey(prompt, key) || e.vi.on && e.viKey(key) {
 			e.redraw(prompt)
 			continue
 		}

@@ -25,3 +25,16 @@ func (r *Runtime) RunKeyCommand(ctx context.Context, command, line string, point
 	}
 	return line, point
 }
+
+// ExpandLine is readline's shell-expand-line, M-C-e: the line with its parameters, command
+// substitutions and arithmetic expanded as the inside of double quotes is, so a quote of its
+// own stays where bash's expansion would take it away. fzf's Alt-C puts `__fzf_cd__` in
+// backquotes into the line and expands it so before it accepts the line. An expansion that
+// fails is said, and leaves the line as it was.
+func (r Runtime) ExpandLine(ctx context.Context, line string) (string, bool) {
+	expanded := r.expandPromptText(ctx, line, r.interactive.status, false)
+	if r.promptExpansionFailed() {
+		return line, false
+	}
+	return expanded, true
+}

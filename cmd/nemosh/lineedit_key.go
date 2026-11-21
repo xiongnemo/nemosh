@@ -154,6 +154,9 @@ func decodeKey(buffer []byte) (key, int) {
 		return key{kind: keyDeleteWord}, 1
 	case 0x1f:
 		return key{kind: keyUndo}, 1
+	case 0x00:
+		// C-@, which Ctrl+Space sends: readline's set-mark.
+		return key{kind: keySetMark}, 1
 	case 0x18:
 		return decodeControlX(buffer)
 	case 0x1b:
@@ -196,6 +199,8 @@ func decodeControlX(buffer []byte) (key, int) {
 		return key{kind: keyUndo}, 2
 	case 0x05:
 		return key{kind: keyEditAndExecute}, 2
+	case 0x18:
+		return key{kind: keyExchangeMark}, 2
 	}
 	return key{kind: keyUnknown}, 2
 }
@@ -227,6 +232,12 @@ func decodeEscapeSequence(buffer []byte) (key, int) {
 			return key{kind: keyRevertLine}, 2
 		case 'u', 'l', 'c':
 			return key{kind: keyWordCase, value: rune(buffer[1])}, 2
+		case ' ':
+			return key{kind: keySetMark}, 2
+		case 0x05:
+			return key{kind: keyShellExpandLine}, 2
+		case '\n':
+			return key{kind: keyViEditingMode}, 2
 		}
 		// Anything else Meta is skipped whole rather than inserted, so an
 		// unbound Alt key cannot leave its letter in the line.

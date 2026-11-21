@@ -16,7 +16,11 @@ patch number is the commits since that tag.
   and `READLINE_POINT`, as fzf's Ctrl-T uses it, `-m KEYMAP`, `-r`, `-u`, `-q`,
   `-f FILE`, `set VARIABLE VALUE`, and `-l -p -P -s -S -v -V -X` printing what bash prints. The
   line editor reads the keys it binds before its own; a key bound to a readline function this
-  editor does not carry out is refused. It was refused outright, as not implemented.
+  editor does not carry out is refused. readline's `set-mark` (`C-@`, `M-SPC`),
+  `exchange-point-and-mark` (`C-x C-x`), `shell-expand-line` (`M-C-e`), `vi-editing-mode`
+  (`M-C-j`), `redraw-current-line`, `emacs-editing-mode`, `vi-movement-mode` and
+  `vi-insertion-mode` came with it, which fzf's Alt-C macro runs; in bash mode `^H` is
+  readline's backward-delete-char, as in Git's bash. It was refused outright, as not implemented.
 
 - **`stty -g`**: the console's state as one word, which `stty WORD` puts back, as atuin's init
   saves the terminal and restores it around its search.
