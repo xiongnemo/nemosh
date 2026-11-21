@@ -189,13 +189,17 @@ func (r Runtime) launchBackground(run func(Runtime) lineResult) lineResult {
 }
 
 func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) lineResult) lineResult {
-	// Its traps and inbox are its own, whatever worker shares; see shellState.
+	// Its traps and inbox are its own, whatever worker shares; see shellState and jobTraps.
 	worker.detach()
 	worker.traps, worker.listedTraps = map[trapName]string{}, nil
 	// A job's table is its own, as a subshell's is.
 	worker.jobScope.outer = nil
-	// A job is addressed by `kill` on its own, so it has an inbox of its own.
+	// A job is addressed by `kill` on its own, so it has an inbox of its own, which knows what
+	// it catches.
 	worker.signals = newSignalInbox()
+	for name, action := range r.jobTraps() {
+		worker.setTrap(name, action)
+	}
 	if err := worker.fds.bindBorrowedReader(0, bytes.NewReader(nil)); err != nil {
 		worker.jobScope.cancelAndDrain()
 		fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), errors.Join(err, worker.fds.closeAll()))
@@ -231,9 +235,9 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 		// answer it -- a hang, not a crash.
 		result := worker.guardedRun("running a background job", func() lineResult {
 			result := run(worker)
-			// A job starts with no traps, so an EXIT trap it has is one it set, and it
-			// runs as the job ends, as a subshell's does -- in both references. It never
-			// ran; the process launcher found that by running it.
+			// A job starts with no trap that runs anything, so an EXIT trap it has is one it
+			// set, and it runs as the job ends, as a subshell's does -- in both references.
+			// It never ran; the process launcher found that by running it.
 			if result.control != flowExec {
 				result.status = worker.runOwnExitTrap(worker.jobScope.ctx, "", result.status)
 			}

@@ -341,6 +341,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A background job forgot what the shell ignores**: after `trap '' TERM` a job lists the trap and
+  a `kill` of it is ignored, as POSIX has a subshell keep it and bash keeps it; the job started with
+  no traps at all, and the TERM ended it.
+
 - **`cat <<\` at a prompt was a syntax error**: a here-document's operator continued onto the next
   line takes its delimiter from it, at a prompt as in a script, as both references read it.
 

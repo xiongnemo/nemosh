@@ -57,8 +57,11 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 	if line := firstCommandLine(node); line > 0 {
 		state.Line = line
 	}
-	// A job starts with no traps, as the goroutine's worker does.
+	// A job starts with the traps jobTraps gives it, as the goroutine's worker does.
 	state.Traps = map[string]string{}
+	for name, action := range r.jobTraps() {
+		state.Traps[string(name)] = action
+	}
 	executable, err := jobExecutable()
 	if err != nil {
 		return r.jobLaunchFailure(err)
