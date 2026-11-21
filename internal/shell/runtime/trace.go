@@ -48,7 +48,8 @@ func (r Runtime) traceLine(ctx context.Context, text string, savedStatus int) {
 // how a trace says where each command is, and it was printed as written. The trace is off
 // while it expands, or a PS4 that runs a command would trace that command, and that trace
 // would expand PS4 again. What the expansion leaves behind is put back, so tracing a
-// command cannot change its status: an assignment's status is its last substitution's.
+// command cannot change its status: an assignment's status is its last substitution's. In
+// bash mode it is decoded first, as bash decodes it; busybox only expands it.
 func (r Runtime) tracePrefix(ctx context.Context, ps4 string, savedStatus int) string {
 	state := *r.expansion
 	r.options.xtrace = false
@@ -57,6 +58,9 @@ func (r Runtime) tracePrefix(ctx context.Context, ps4 string, savedStatus int) s
 		r.expansion.shellError = state.shellError
 		r.expansion.substitutionStatus, r.expansion.substitutions = state.substitutionStatus, state.substitutions
 	}()
+	if r.BashMode() {
+		return r.promptTransform(ctx, ps4, savedStatus)
+	}
 	return r.ExpandPromptString(ctx, ps4, savedStatus)
 }
 

@@ -45,15 +45,27 @@ func (r Runtime) ExpandPromptString(ctx context.Context, text string, lastStatus
 //
 // `shopt -u promptvars`, bash's, draws it decoded and not expanded, as bash does, under every
 // name: busybox has no such option.
+//
+// In bash mode it is bash's order, decoded and then expanded, so what a command substitution
+// prints is not decoded again: a C:\new it prints is drawn so, where busybox's order makes a
+// newline of the \n.
 func (r Runtime) Prompt(ctx context.Context, text string, lastStatus int) string {
+	now, facts := time.Now(), r.promptFacts(true)
 	if !r.options.promptVars {
-		return decodePrompt(text, time.Now(), r.promptFacts(true), false)
+		return decodePrompt(text, now, facts, false)
+	}
+	if r.BashMode() {
+		expanded := r.expandPromptText(ctx, decodePrompt(text, now, facts, true), lastStatus, false)
+		if r.promptExpansionFailed() {
+			return decodePrompt(text, now, facts, false)
+		}
+		return expanded
 	}
 	expanded := r.expandPromptText(ctx, text, lastStatus, true)
 	if r.promptExpansionFailed() {
 		expanded = text
 	}
-	return decodePrompt(expanded, time.Now(), r.promptFacts(true), false)
+	return decodePrompt(expanded, now, facts, false)
 }
 
 // promptExpansionFailed is whether expanding a prompt raised a shell error, and clears it. The
