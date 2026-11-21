@@ -117,6 +117,21 @@ func TestRuntime_reportsAnInvalidCondition_whenTheNameIsNotASignal(t *testing.T)
 	}
 }
 
+// A number no signal has -- below 1, or above 64, the last bash knows -- is an invalid
+// specification, as both references say, and not a signal this shell does not deliver, which
+// it said of every number. 64 is a real one Windows has not got.
+func TestRuntime_reportsAnInvalidCondition_whenTheNumberIsNoSignals(t *testing.T) {
+	for _, operand := range []string{"-99", "65", "99"} {
+		status, _, stderr := runSetScript(t, "trap - "+operand+"\n")
+		if status != 1 || !strings.Contains(stderr, "trap: "+operand+": invalid signal specification") {
+			t.Errorf("trap - %s: status %d, stderr %q; want 1 and an invalid signal specification", operand, status, stderr)
+		}
+	}
+	if _, _, stderr := runSetScript(t, "trap - 64\n"); !strings.Contains(stderr, "64: not supported by this shell") {
+		t.Errorf("trap - 64: stderr %q; want a signal this shell does not deliver", stderr)
+	}
+}
+
 func TestRuntime_saysSoPlainly_whenTheSignalIsRealButUnsupported(t *testing.T) {
 	// USR1 is a real signal and a typo is not what happened, so the diagnostic
 	// must not claim the name is invalid. (TERM was the example until a job could be

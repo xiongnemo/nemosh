@@ -347,6 +347,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`trap - 99` said 99 was a signal this shell does not deliver**: a number below 1 or above 64 is
+  no signal at all, an invalid signal specification, as both references say. In bash mode one
+  operand that names no condition, `trap foo`, is bash's usage, status 2.
+
 - **`"${X-it's}"` was printed as written**: an apostrophe that closes nothing in a double-quoted
   default is a character of it, `it's`, as busybox reads it; after a pattern operator,
   `"${foo%d'}"`, it is the syntax error both references make of it.

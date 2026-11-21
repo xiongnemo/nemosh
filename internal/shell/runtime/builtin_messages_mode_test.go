@@ -31,6 +31,7 @@ func TestBuiltinMessages_bashModeSaysThemAsBash(t *testing.T) {
 		{code: "alias nosuch", stdout: "next=1\n", said: "line 1: alias: nosuch: not found\n"},
 		{code: "unalias nosuch", stdout: "next=1\n", said: "line 1: unalias: nosuch: not found\n"},
 		{code: "getopts", stdout: "next=2\n", said: "getopts: usage: getopts optstring name [arg ...]\n"},
+		{code: "trap foo", stdout: "next=2\n", said: "trap: usage: trap [-Plp] [[action] signal_spec ...]\n"},
 	} {
 		var stdout, stderr bytes.Buffer
 		rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
@@ -43,7 +44,7 @@ func TestBuiltinMessages_bashModeSaysThemAsBash(t *testing.T) {
 	// As nemosh, busybox's, a few of them.
 	for code, want := range map[string]string{
 		"cd /no/such/dir": "next=2\n", "type nosuchcmd": "nosuchcmd: not found\nnext=127\n",
-		"command -v nosuchcmd": "next=127\n", "alias nosuch": "next=1\n",
+		"command -v nosuchcmd": "next=127\n", "alias nosuch": "next=1\n", "trap foo": "next=1\n",
 	} {
 		var stdout, stderr bytes.Buffer
 		rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
