@@ -285,6 +285,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **fc in a `bind -x` command left out the newest entry**, taking it for the fc's own line as at a
+  prompt, so fzf's Ctrl-R never offered the command just run; it lists through the newest there,
+  as bash's does.
+
 - **`builtin fc` and `command fc` ran Windows' `fc.exe`**, so fzf's Ctrl-R, which reads the history
   with `builtin fc -lnr`, found none; both run the shell's fc now.
 

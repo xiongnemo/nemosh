@@ -23,6 +23,9 @@ type interactiveState struct {
 	session bool
 	// stage marks a pipeline stage's shell, which is not the session's own; see announcesJobs.
 	stage bool
+	// keyCommand marks a bind -x command running, which no line of its own in the history
+	// stands for; see fcNewest.
+	keyCommand bool
 	// linesRead is how many lines the session has parsed, which its $LINENO counts on from.
 	linesRead int
 }

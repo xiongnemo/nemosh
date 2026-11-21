@@ -15,7 +15,9 @@ func (r *Runtime) RunKeyCommand(ctx context.Context, command, line string, point
 	r.vars["READLINE_LINE"] = line
 	r.vars["READLINE_POINT"] = strconv.Itoa(point)
 	r.vars["READLINE_MARK"] = "0"
+	r.interactive.keyCommand = true
 	r.runScriptResult(ctx, command, r.currentLine(), false, r.interactive.status)
+	r.interactive.keyCommand = false
 	line = r.vars["READLINE_LINE"]
 	if moved, err := strconv.ParseInt(r.vars["READLINE_POINT"], 0, 64); err == nil {
 		point = int(min(max(moved, 0), int64(utf8.RuneCountInString(line))))

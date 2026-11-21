@@ -194,10 +194,11 @@ func (r Runtime) fcSpan(entries []string, operands []string, listing bool) (int,
 }
 
 // fcNewest is bash's last_hist: the newest entry fc deals in, the one before the fc now
-// running when that was recorded. It can be -1, when the fc is all there is.
+// running when that was recorded. It can be -1, when the fc is all there is. In a bind -x
+// command no line was recorded for it, and fc deals in the newest, as fzf's Ctrl-R needs.
 func (r Runtime) fcNewest(count int) int {
 	newest := count
-	if r.options.history {
+	if r.options.history && !r.interactive.keyCommand {
 		newest--
 	}
 	if r.history.lineWasAdded() {
