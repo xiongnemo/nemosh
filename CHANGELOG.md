@@ -139,7 +139,7 @@ patch number is the commits since that tag.
   - **The operands of break, continue, exit, return and shift in bash mode are bash 5.3's**:
     `break x` ends the script, status 2, where it said so twice and went on; `--` before an
     operand is passed over; a second operand is `too many arguments`, the rest of the line
-    abandoned, status 2; `break 0` leaves every loop, status 1; `shift -1` is out of range,
+    abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
   - **test and `[` in bash mode read their arguments as bash's do**: `[ -a file ]` is -e, `[ -z

@@ -5,9 +5,6 @@
       "alias with word of multiple lines": "fail",
       "here doc inside alias": "ash-only"
     },
-    "arg-parse.test.sh": {
-      "continue 1 extra, break, etc.": "fail"
-    },
     "arith-context.test.sh": {
       "$[ is a synonym for $((": "fail",
       "$[$undefined] is a synonym for $(($undefined (#2566)": "fail",

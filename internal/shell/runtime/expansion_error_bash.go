@@ -41,7 +41,7 @@ func (r Runtime) reportExpansionErrorAsBash(err error) {
 // from its command string, and from a function it calls, where a script, standard input, a
 // subshell and a `$(...)` end with 1.
 func (r Runtime) bashFatalStatus() int {
-	if strings.ContainsRune(r.options.invocation, 'c') && r.subshellDepth == 0 {
+	if r.inBashCommandString() {
 		return 127
 	}
 	return 1

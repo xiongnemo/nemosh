@@ -38,10 +38,20 @@ func bashLegalNumber(text string) (int64, bool) {
 	return value, err == nil
 }
 
-// bashTooMany says a control builtin's second operand as bash says it, and abandons the line.
+// bashTooMany says a control builtin's second operand as bash says it, and abandons the line --
+// or, from a `-c` command string outside a subshell, ends the shell, status 1, as bash's
+// parse_and_execute ends the string it is told to discard from.
 func (r Runtime) bashTooMany(name string) lineResult {
 	fmt.Fprintf(r.streams.Stderr, "%s%s: too many arguments\n", r.diagnosticPrefix(), name)
+	if r.inBashCommandString() {
+		return lineResult{status: 1, control: flowAbort}
+	}
 	return lineResult{status: 2, control: flowSkipLine}
+}
+
+// inBashCommandString is whether what runs is a `-c` command string's own, outside a subshell.
+func (r Runtime) inBashCommandString() bool {
+	return strings.ContainsRune(r.options.invocation, 'c') && r.subshellDepth == 0
 }
 
 // bashLoopControl is break or continue in bash mode. Outside a loop it is bash's note, status 0,
@@ -114,6 +124,10 @@ func (r Runtime) bashShiftCount(args []string) (int, int, bool) {
 		return 0, 2, true
 	case len(operands) > 1:
 		fmt.Fprintf(r.streams.Stderr, "%sshift: too many arguments\n", r.diagnosticPrefix())
+		if r.inBashCommandString() {
+			r.raiseShellErrorWith(1)
+			return 0, 1, true
+		}
 		r.expansion.shellError, r.expansion.discard, r.expansion.skipLine = true, true, true
 		r.expansion.shellErrorStatus = 2
 		return 0, 2, true
