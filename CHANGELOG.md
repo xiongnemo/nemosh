@@ -344,6 +344,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **printf read a floating operand as Go reads a number**: `1_0` was 10, `0x1.8` and `0x10` were no
+  number, and `'3.5 '` was 3.5 with status 0. It reads one as C's strtod does, as both references
+  read it, and a blank before the end is no number. And a format that ends inside a conversion,
+  `a%` or `%5`, writes what came before it and fails there, status 1; it was written as it stood.
+
 - **A background job forgot what the shell ignores**: after `trap '' TERM` a job lists the trap and
   a `kill` of it is ignored, as POSIX has a subshell keep it and bash keeps it; the job started with
   no traps at all, and the TERM ended it.

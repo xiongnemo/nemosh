@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/xiongnemo/nemosh/internal/shellquote"
@@ -114,8 +113,13 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 		}
 		spec, verb, width := printfSpecification(format[index:])
 		if verb == 0 {
-			text.WriteByte('%')
-			continue
+			// A conversion the format ends inside of, `a%` or `%5`, is none: what came before it
+			// is written and printf fails there, as both references fail. It was written as it
+			// stood, status 0.
+			if _, err := io.WriteString(out, text.String()); err != nil {
+				return used, failed, err
+			}
+			return used, failed, fmt.Errorf("%s: invalid format", format[index:])
 		}
 		spec, err := resolvePrintfStars(spec, next)
 		rendered, renderErr := renderPrintfConversion(spec, verb, next)
@@ -205,11 +209,11 @@ func renderPrintfConversion(spec string, verb byte, next printfNext) (string, er
 		if code, ok := printfCharacterCode(strings.TrimSpace(operand)); ok {
 			return cFloat(layout, verb, float64(code)), nil
 		}
-		value, err := strconv.ParseFloat(strings.TrimSpace(operand), 64)
-		if err != nil && strings.TrimSpace(operand) != "" {
-			return cFloat(layout, verb, 0), errPrintfNumber{operand: operand}
+		value, err := printfFloat(operand)
+		if err != nil {
+			value = 0
 		}
-		return cFloat(layout, verb, value), nil
+		return cFloat(layout, verb, value), err
 	case 'c':
 		if operand == "" {
 			// The empty string's first character is its end, a NUL, which both references
