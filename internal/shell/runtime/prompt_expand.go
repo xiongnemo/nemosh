@@ -42,7 +42,13 @@ func (r Runtime) ExpandPromptString(ctx context.Context, text string, lastStatus
 //
 // An expansion that fails is said, and the prompt is drawn as written, its escapes decoded, as
 // both references draw it; the error goes no further, so the command typed at it runs.
+//
+// `shopt -u promptvars`, bash's, draws it decoded and not expanded, as bash does, under every
+// name: busybox has no such option.
 func (r Runtime) Prompt(ctx context.Context, text string, lastStatus int) string {
+	if !r.options.promptVars {
+		return decodePrompt(text, time.Now(), r.promptFacts(true), false)
+	}
 	expanded := r.expandPromptText(ctx, text, lastStatus, true)
 	if r.promptExpansionFailed() {
 		expanded = text
@@ -65,7 +71,11 @@ func (r Runtime) promptExpansionFailed() bool {
 // stands for quoted, and then expanded as double-quoted text -- the other order from the drawn
 // prompt's, which bash has for both. So `x='\'; y=h; v='$x$y'` is \h, and not the host. It was
 // refused, as a half of prompt expansion the line editor held.
+// With promptvars off it is decoded alone, as bash's is.
 func (r Runtime) promptTransform(ctx context.Context, value string, savedStatus int) string {
+	if !r.options.promptVars {
+		return decodePrompt(value, time.Now(), r.promptFacts(false), false)
+	}
 	return r.expandPromptText(ctx, decodePrompt(value, time.Now(), r.promptFacts(false), true), savedStatus, false)
 }
 

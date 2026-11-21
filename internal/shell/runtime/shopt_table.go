@@ -124,8 +124,8 @@ var shoptOptions = []shoptOption{
 	fixed("patsub_replacement", false, "& in a replacement stands for itself, as it does in busybox"),
 	recorded("progcomp", true, func(o *shellOptions) *bool { return &o.progComp }, noCompletion),
 	recorded("progcomp_alias", false, func(o *shellOptions) *bool { return &o.progCompAlias }, noCompletion),
-	recorded("promptvars", true, func(o *shellOptions) *bool { return &o.promptVars },
-		"the prompt's parameters are expanded either way"),
+	// Off, a prompt is decoded and not expanded, PS0 and ${x@P} too; see prompt_expand.go.
+	actsOn("promptvars", func(o *shellOptions) *bool { return &o.promptVars }),
 	{name: "restricted_shell", kind: shoptStartup},
 	acts("shift_verbose", func(o *shellOptions) *bool { return &o.shiftVerbose }),
 	actsOn("sourcepath", func(o *shellOptions) *bool { return &o.sourcePath }),
