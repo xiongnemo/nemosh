@@ -121,6 +121,9 @@ patch number is the commits since that tag.
   - **A background job in bash mode lists the shell's traps, and runs ERR under `set -E`**, as
     bash's does: `{ trap; } &` shows them, without running them, and `{ false; } &` runs the ERR
     trap for the false, though `false &` does not. busybox's job lists only what it ignores.
+  - **printf in bash mode writes what it read of a number**, as bash's does: `printf %d 3abc` is 3,
+    and one too large is the largest the conversion holds, each said in bash's words, status 1.
+    busybox writes zero, and nemosh and sh still do.
   - **umask in bash mode is bash 5.3's**: it starts at 0022, as Git's bash does; a symbolic mode
     takes X, s, t and a class to copy as POSIX has them, `umask =rx` meaning all three classes;
     and a mode refused is said in bash's words, status 1. nemosh and sh keep busybox's, 0002.

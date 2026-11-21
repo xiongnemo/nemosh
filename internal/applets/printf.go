@@ -1,6 +1,7 @@
 package applets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -23,21 +24,31 @@ import (
 // written in its place, the rest processed, and a status that is not zero. This stopped at
 // the first one and wrote nothing after it.
 func newPrintfApplet() Applet {
-	return simpleApplet{name: "printf", run: func(args []string, _ io.Reader, stdout, stderr io.Writer) error {
+	return simpleApplet{name: "printf", quiet: true, runContext: func(ctx context.Context, args []string, _ io.Reader, stdout, stderr io.Writer) error {
+		dialect := printfDialectOf(ctx)
 		if len(args) > 0 && args[0] == "--" {
 			args = args[1:]
 		}
 		if len(args) == 0 {
-			// A usage error, 2, as busybox's printf answers it.
+			// A usage error, 2, as both printfs answer it.
+			if dialect.bash {
+				return ExitStatusMessage(2, errors.New("usage: printf [-v var] format [arguments]"))
+			}
 			return ExitStatusMessage(2, missingOperand())
 		}
 		format, operands := args[0], args[1:]
 		invalid := false
 		for pass := 0; ; pass++ {
-			consumed, failed, err := writePrintfPass(stdout, stderr, format, operands)
+			consumed, failed, err := writePrintfPass(stdout, stderr, format, operands, dialect)
 			invalid = invalid || failed
 			if errors.Is(err, errPrintfStop) {
 				break
+			}
+			var unfinished errPrintfUnfinished
+			var conversion errPrintfConversion
+			if dialect.bash && (errors.As(err, &unfinished) || errors.As(err, &conversion)) {
+				dialect.say(stderr, err)
+				return ExitStatus(1)
 			}
 			if err != nil {
 				return err
@@ -58,7 +69,8 @@ func newPrintfApplet() Applet {
 
 // errPrintfNumber is an operand a numeric conversion could not read. It is reported in
 // busybox's words, multiconvert's, and written as zero, which is busybox's answer -- bash
-// writes the digits it managed to read, so `12abc` is 12 there and 0 here.
+// writes the digits it managed to read, so `12abc` is 12 there and 0 here, which bash mode
+// takes; see printf_dialect.go.
 type errPrintfNumber struct{ operand string }
 
 func (e errPrintfNumber) Error() string { return fmt.Sprintf("invalid number '%s'", e.operand) }
@@ -69,7 +81,7 @@ var errPrintfStop = errors.New("stopped by \\c")
 
 // writePrintfPass walks the format once and reports how many operands it used, and whether
 // one of them was not the number its conversion wanted.
-func writePrintfPass(out, diagnostics io.Writer, format string, operands []string) (int, bool, error) {
+func writePrintfPass(out, diagnostics io.Writer, format string, operands []string, dialect printfDialect) (int, bool, error) {
 	used, failed := 0, false
 	next := func() (string, bool) {
 		if used < len(operands) {
@@ -104,7 +116,7 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			operand, _ := next()
 			rendered, err := renderPrintfTime(spec, layout, operand)
 			if err != nil {
-				fmt.Fprintf(diagnostics, "printf: %v\n", err)
+				dialect.say(diagnostics, err)
 				failed = true
 			}
 			text.WriteString(rendered)
@@ -119,10 +131,10 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			if _, err := io.WriteString(out, text.String()); err != nil {
 				return used, failed, err
 			}
-			return used, failed, fmt.Errorf("%s: invalid format", format[index:])
+			return used, failed, errPrintfUnfinished{spec: format[index:]}
 		}
 		spec, err := resolvePrintfStars(spec, next)
-		rendered, renderErr := renderPrintfConversion(spec, verb, next)
+		rendered, renderErr := renderPrintfConversion(spec, verb, next, dialect.bash)
 		if err == nil {
 			err = renderErr
 		}
@@ -131,9 +143,10 @@ func writePrintfPass(out, diagnostics io.Writer, format string, operands []strin
 			return used, failed, writePrintfStop(out, text.String())
 		}
 		var number errPrintfNumber
-		if errors.As(err, &number) {
+		var ranged errPrintfRange
+		if errors.As(err, &number) || errors.As(err, &ranged) {
 			// Said now, in order with the output, and processing goes on.
-			fmt.Fprintf(diagnostics, "printf: %v\n", err)
+			dialect.say(diagnostics, err)
 			failed, err = true, nil
 		}
 		if err != nil {
@@ -186,9 +199,10 @@ func printfSpecification(rest string) (string, byte, int) {
 // missing is zero to a number, where one given empty is a number neither reference reads.
 type printfNext func() (string, bool)
 
-func renderPrintfConversion(spec string, verb byte, next printfNext) (string, error) {
+// renderPrintfConversion renders one conversion; bash is bash mode's reading of a number.
+func renderPrintfConversion(spec string, verb byte, next printfNext, bash bool) (string, error) {
 	if strings.IndexByte("diouxXeEfFgGcsbq", verb) < 0 {
-		return "", fmt.Errorf("invalid conversion specification %%%c", verb)
+		return "", errPrintfConversion{verb: verb}
 	}
 	operand, given := next()
 	switch verb {
@@ -196,9 +210,17 @@ func renderPrintfConversion(spec string, verb byte, next printfNext) (string, er
 		// The zero an unreadable operand stands for is rendered with the operand's own
 		// width and flags, and the error goes back beside it for the caller to report.
 		value, err := printfSigned(operand, given)
+		if bash {
+			var bits uint64
+			bits, err = bashPrintfInteger(operand, given, false)
+			value = int64(bits)
+		}
 		return fmt.Sprintf(spec+"d", value), err
 	case 'o', 'x', 'X', 'u':
 		value, err := printfUnsigned(operand, given)
+		if bash {
+			value, err = bashPrintfInteger(operand, given, true)
+		}
 		if verb == 'u' {
 			return fmt.Sprintf(spec+"d", value), err
 		}
@@ -212,6 +234,10 @@ func renderPrintfConversion(spec string, verb byte, next printfNext) (string, er
 		// says, where Go's has as many as read back, so `printf %g 123456789` was
 		// 1.23456789e+08 where both references say 1.23457e+08; and inf is inf, not +Inf.
 		layout := parseCSpec(strings.TrimPrefix(spec, "%"))
+		if bash {
+			value, err := bashPrintfFloat(operand, given)
+			return cFloat(layout, verb, value), err
+		}
 		if code, ok := printfCharacterCode(strings.TrimSpace(operand)); ok {
 			return cFloat(layout, verb, float64(code)), nil
 		}
@@ -243,7 +269,7 @@ func renderPrintfConversion(spec string, verb byte, next printfNext) (string, er
 		// space or a quote in it survives being written into a command line.
 		return fmt.Sprintf(spec+"s", shellquote.Backslash(operand)), nil
 	default:
-		return "", fmt.Errorf("invalid conversion specification %%%c", verb)
+		return "", errPrintfConversion{verb: verb}
 	}
 }
 

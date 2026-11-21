@@ -181,17 +181,13 @@
       "%(strftime format)T TZ in environ but not in shell's memory": "ash-only",
       "%(strftime format)T doesn't respect TZ if not exported": "ash-only",
       "%06s is no-op": "fail",
-      "Arbitrary base 64#a is rejected (unlike in shell arithmetic)": "ash-only",
       "Invalid UTF-8": "fail",
-      "Runtime error for invalid integer": "ash-only",
       "Too large": "fail",
       "bash truncates long strftime string at 128": "ash-only",
       "empty string (osh is more strict)": "ash-only",
-      "leading spaces are accepted in value given to %d %X, but not trailing spaces": "ash-only",
-      "printf negative integer overflow": "ash-only",
-      "printf negative numbers": "ash-only",
+      "printf negative integer overflow": "fail",
       "printf octal backslash escapes": "fail",
-      "printf positive integer overflow": "ash-only"
+      "printf positive integer overflow": "fail"
     },
     "builtin-process.test.sh": {
       "Exit builtin with too many args": "fail",

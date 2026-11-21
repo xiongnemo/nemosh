@@ -32,6 +32,16 @@ func (r Runtime) BashMode() bool {
 	return r.options.bashMode
 }
 
+// BashBuiltinPrefix is what an applet that is a builtin in bash says a diagnostic after in
+// bash mode, as bash's builtins say theirs, `script: line 3: `; false outside bash mode. printf
+// asks it, through the view the shell runs an applet with.
+func (r Runtime) BashBuiltinPrefix() (string, bool) {
+	if !r.BashMode() {
+		return "", false
+	}
+	return r.diagnosticPrefix(), true
+}
+
 // announcesJobs is whether a job put in the background is announced, `[1] PID`: at a session's
 // own command line. bash says nothing for one in a subshell, a command substitution or a
 // pipeline stage, and busybox-w32 says it there too.
