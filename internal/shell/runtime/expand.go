@@ -12,6 +12,8 @@ import (
 // there the pattern is the whole point, and globbing `*)` against the
 // filesystem would take the default arm away.
 func (r Runtime) expandCommandWord(ctx context.Context, item word, savedStatus int) []string {
+	// bash's tildes in an argument like an assignment; see argument_tilde_bash.go.
+	item = r.bashArgumentTilde(item)
 	if text, ok := plainWord(item); ok {
 		return []string{text}
 	}
