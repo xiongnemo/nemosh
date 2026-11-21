@@ -237,6 +237,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A trap's own commands set `$PIPESTATUS`**: with a DEBUG trap, `true | false; echo
+  ${PIPESTATUS[*]}` said 0, and an ERR trap left its own status where the failed pipeline's
+  should be. A trap leaves it as the command before it set it, as bash does -- starship's and
+  bash-preexec's pipe statuses read it from such a trap.
+
 - **A quoted newline in a `${...}` inside double quotes was a syntax error**:
   `a="${X-"one<newline>two"}"` refused the whole script as missing a `}`, fzf's `completion.bash`
   among them; the same without the outer quotes worked. It is one word across the line now, as in

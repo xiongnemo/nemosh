@@ -124,6 +124,7 @@ func (r Runtime) runTrap(ctx context.Context, name trapName, savedStatus int) li
 	}
 	r.trapRunning[name] = true
 	defer delete(r.trapRunning, name)
+	defer r.savePipeStatus()()
 	prepared, err := r.parseHere(command)
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "trap %s: %v\n", name, err)
