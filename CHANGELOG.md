@@ -237,6 +237,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A quoted newline in a `${...}` inside double quotes was a syntax error**:
+  `a="${X-"one<newline>two"}"` refused the whole script as missing a `}`, fzf's `completion.bash`
+  among them; the same without the outer quotes worked. It is one word across the line now, as in
+  busybox and bash.
+
 - **`(cmd &)` ran nothing**: a job a subshell started was ended with the subshell, or with the
   script once it had ended, so `( long-task & )`, the idiom for starting something nothing waits
   for, did nothing. It runs on now, as in busybox and bash; a Ctrl-C still ends it.

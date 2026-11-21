@@ -70,7 +70,7 @@ func (scanner *syntaxScanner) incompleteError() error {
 	if scanner.continued {
 		return fmt.Errorf("%w: trailing line continuation", ErrIncompleteScript)
 	}
-	if scanner.quote() == braceParameterMarker {
+	if scanner.inBraceParameter() {
 		return fmt.Errorf("%w: missing '}'", ErrIncompleteScript)
 	}
 	if scanner.quote() != 0 {

@@ -100,7 +100,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 			scanner.logical.WriteByte(char)
 			continue
 		}
-		if char == '}' && scanner.quote() == braceParameterMarker {
+		if char == '}' && scanner.inBraceParameter() {
 			scanner.popQuote()
 			scanner.logical.WriteByte(char)
 			continue
@@ -108,7 +108,7 @@ func (scanner *syntaxScanner) scanLine(line string) {
 		// A `${...}` holds quotes of its own, and what they quote is no operator or comment:
 		// `"${u:-"a ( b"}"`. Its `}` is no group's either, after a `;` as in `s=${s%;}`. Stepped
 		// over whole when it closes on this line.
-		if char == '$' && (scanner.quote() == '"' || scanner.bare()) && index+1 < len(line) && line[index+1] == '{' {
+		if char == '$' && (scanner.quote() == '"' || scanner.bare() || scanner.inBraceParameter()) && index+1 < len(line) && line[index+1] == '{' {
 			if end, ok := bracedParameterEnd(line, index+1); ok {
 				scanner.logical.WriteString(line[index:end])
 				index = end - 1
@@ -273,7 +273,7 @@ func (scanner *syntaxScanner) toggleDoubleQuote() {
 	switch scanner.quote() {
 	case '"':
 		scanner.popQuote()
-	case 0, braceParameterMarker:
+	case 0, braceParameterMarker, quotedBraceParameterMarker:
 		scanner.quotes = append(scanner.quotes, '"')
 	}
 }
