@@ -115,6 +115,11 @@ the git branch and the last status, and gh's and git's completion. Before it, a
 session has Ubuntu's aliases -- `ll`, `la`, `l`, and `ls` and `grep` in colour --
 and dircolors' `LS_COLORS`, unless `NEMOSH_DEFAULTS=off`.
 
+Run as bash -- `nemosh bash`, a `#!/bin/bash` script, or `nemosh` with
+`NEMOSH_COMPAT=bash` in the environment -- the shell is in bash mode, and where
+bash and busybox part it follows Git for Windows' bash; see the support matrix,
+Bash mode, for what that covers so far.
+
 ### Files
 
 What nemosh keeps of yours is under your home directory, not in `%APPDATA%`. A

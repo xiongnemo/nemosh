@@ -86,6 +86,9 @@ type shellOptions struct {
 	// login is whether the shell was started as a login shell, which `shopt login_shell`
 	// reports.
 	login bool
+	// bashMode is the shell run as bash, which follows bash where bash and busybox part; see
+	// bash_mode.go. No option sets it: the name the shell was started by does.
+	bashMode bool
 	// invocation is how the shell was started, as `$-` spells it after the options:
 	// c for a command string, s for commands read from standard input, i for an
 	// interactive session. Not options -- `set` cannot change them -- but kept here so

@@ -86,7 +86,8 @@ Nemosh is a multicall binary: invoked under an applet's name, directly or
 through a shim, it runs that applet instead of the shell. %d applets are
 bundled; "nemosh --list" names them. Under the name sh or bash, or as
 "nemosh bash", it is the shell by that name, which is what a command named
-sh or bash runs, and a #!/bin/bash script; as bash it sets BASH_VERSION.
+sh or bash runs, and a #!/bin/bash script; as bash it sets BASH_VERSION and
+is in bash mode, following bash where bash and busybox part.
 
 "NAME --help" describes an applet, and "help NAME" a builtin. An option an
 applet does not implement is refused by
@@ -111,6 +112,10 @@ Environment:
   NEMOSH_DEFAULTS=off           a session without Ubuntu's defaults: the aliases
                                 ll, la, l, and ls and grep in colour, and
                                 dircolors' LS_COLORS
+  NEMOSH_COMPAT=bash            the nemosh name in bash mode, as "nemosh bash" is,
+                                so a session can follow Git for Windows' bash
+                                with no bash.exe of its own on PATH; sh is not
+                                changed
 
 Home page: https://github.com/xiongnemo/nemosh
 `, len(applets.DefaultRegistry.Names()))

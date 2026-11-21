@@ -238,7 +238,7 @@ func shellOptionFields(o *shellOptions) map[string]*bool {
 		"histVerify": &o.histVerify, "hostComplete": &o.hostComplete, "hupOnExit": &o.hupOnExit,
 		"interactiveComments": &o.interactiveComments, "litHist": &o.litHist, "mailWarn": &o.mailWarn,
 		"noEmptyCmdCompletion": &o.noEmptyCmdCompletion, "progComp": &o.progComp,
-		"progCompAlias": &o.progCompAlias, "promptVars": &o.promptVars,
+		"progCompAlias": &o.progCompAlias, "promptVars": &o.promptVars, "bashMode": &o.bashMode,
 	}
 }
 

@@ -478,6 +478,31 @@ once more and then goes on. `$0` is `bash` or `sh` where it would be `nemosh`.
 `NEMOSH_OVERRIDE_APPLETS=bash`, or `sh`, runs `PATH`'s again; `command -v bash` names this
 binary otherwise.
 
+### Bash mode
+
+Run as bash, the shell is in **bash mode**, and where bash and busybox part it follows bash,
+as Git for Windows' bash 5.3 does, measured; run as nemosh or sh it keeps busybox's way. The
+nemosh name is in bash mode too with **`NEMOSH_COMPAT=bash`** in the environment, read once as
+the shell starts, so a terminal's profile can run `nemosh` that way with no `bash.exe` of this
+shell's on PATH, where it would stand in front of Git's own; `$0` stays `nemosh`, and `sh` is
+not changed by the variable. A value it does not know is said on stderr. A subshell and a
+background job are in the mode their shell is in.
+
+Three other kinds of difference are not a question of mode, and are the same under every name:
+a defect both references agree on is fixed; what only bash has -- arrays, `[[ ]]`, the DEBUG
+trap, `PS0` -- is bash's; and what Windows cannot do, or only MSYS's runtime does, stays out
+under both. In particular bash mode converts no arguments, as MSYS does for a program it
+starts, so `uname -s` says `Windows_NT` and a path is spelled `C:/Users` in it as elsewhere.
+
+Where bash mode follows bash, one place at a time as each is measured:
+
+| | nemosh and sh | bash mode |
+| --- | --- | --- |
+| `BASH_VERSION`, `BASH_VERSINFO` | unset | bash 5.2.37's |
+
+`tests/oils/baseline-sh.json` holds the sh name to what it did, so a change made for bash
+mode that moves sh fails the build.
+
 **`time` is busybox's command and, before a compound command, bash's keyword.** `time
 [-pa] [-f FMT] [-o FILE] PROG ARGS` times one command, as busybox-w32's does; `time {
 make; make test; }`, `time ( ... )`, `time for ...`, `time if ...`, `time case ...` and

@@ -148,9 +148,12 @@ git add tests/oils/baseline.json tests/oils/baseline-sh.json docs/testing/oils-s
 ```
 
 The second run is nemosh as `sh`, held to `tests/oils/baseline-sh.json`. Run as bash --
-`nemosh bash`, or a `#!/bin/bash` script -- the shell is to follow bash where bash and
-busybox part, and as sh keep busybox's way; that baseline is what proves a change made for
-the bash name left the sh name where it was.
+`nemosh bash`, a `#!/bin/bash` script, or nemosh with `NEMOSH_COMPAT=bash` -- the shell is in
+bash mode and follows bash where bash and busybox part (`r.BashMode()`, and the table in
+`docs/support-matrix.md`, Bash mode), and as sh keeps busybox's way; that baseline is what
+proves a change made for bash mode left the sh name where it was. A difference that is not a
+conflict between the two references -- a defect both agree on, or something only bash has --
+is not put behind the mode.
 
 It takes about a minute here. `NEMOSH_OILS=strict` is what CI runs, and a case that
 differs is run twice more, alone, before either mode believes it. The headline -- of the

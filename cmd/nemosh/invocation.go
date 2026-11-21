@@ -208,8 +208,8 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 		setDefaultPrompts(rt)
 	}
 	rt.EnterShellLevel()
-	if c.name == "bash" {
-		rt.SetBashVersion()
+	if c.bashMode(rt) {
+		rt.EnterBashMode()
 	}
 	if c.invocation.login {
 		rt.MarkLoginShell()
