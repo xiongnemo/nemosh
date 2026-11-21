@@ -21,10 +21,13 @@ patch number is the commits since that tag.
   the shell run as bash -- `nemosh bash`, a `#!/bin/bash` script, a command named bash -- is in
   it, and so is the nemosh name with **`NEMOSH_COMPAT=bash`** in the environment, so a Windows
   Terminal profile can have it without a `bash.exe` on PATH standing in front of Git's own.
-  `sh` keeps busybox's way whatever the variable says. Nothing consults the mode yet but bash's
-  version, which the nemosh name now sets under the variable; what follows bash in it is in
+  `sh` keeps busybox's way whatever the variable says. What follows bash in it is in
   `docs/support-matrix.md`, Bash mode, as each place moves. A value the variable does not know
   is said on stderr.
+  - **A session in bash mode reads bash's startup files and then nemosh's**: `~/.bashrc`, or a
+    login's `~/.bash_profile`, `~/.bash_login` or `~/.profile`, and then `$ENV` or
+    `~/.nemoshrc`, so one `~/.bashrc` serves Git's bash and this shell. Its history is
+    `~/.bash_history`, and `~/.nemosh_history` is read after it.
 
 - **`vi`** and **`view`**, busybox-w32's vi with vim's ways where the two differ on a key a
   Debian user knows, every case measured against both; `fc` with no `EDITOR` and `C-x C-e` in

@@ -45,23 +45,51 @@ func sourceStartupFile(ctx context.Context, rt runtime.Runtime, stderr io.Writer
 // then $HOME/.profile (shell/ash.c, read_profile), each through the shell's own path
 // model, so /etc/profile is the file `cat /etc/profile` shows. `-l` was an invalid option,
 // and it is the one a terminal profile adds to start a login shell.
+//
+// In bash mode the profile in the home directory is bash's: the first of ~/.bash_profile,
+// ~/.bash_login and ~/.profile there is, as bash reads one.
 func sourceLoginProfiles(ctx context.Context, rt runtime.Runtime, stderr io.Writer) (int, bool) {
 	if status, exited := sourceProfile(ctx, rt, stderr, "/etc/profile", rt.ResolvePath("/etc/profile")); exited {
 		return status, true
 	}
+	if rt.BashMode() {
+		for _, name := range [...]string{".bash_profile", ".bash_login"} {
+			if homeFileExists(rt, name) {
+				return sourceHomeFile(ctx, rt, stderr, name)
+			}
+		}
+	}
 	return sourceHomeFile(ctx, rt, stderr, ".profile")
 }
 
-// sourceHomeFile runs a startup file in the home directory, and nothing when there is no home.
-func sourceHomeFile(ctx context.Context, rt runtime.Runtime, stderr io.Writer, name string) (int, bool) {
+// homeFileExists is whether the home directory has a file by the name.
+func homeFileExists(rt runtime.Runtime, name string) bool {
+	path, ok := homeFile(rt, name)
+	if !ok {
+		return false
+	}
+	info, err := os.Stat(rt.ResolvePath(path))
+	return err == nil && !info.IsDir()
+}
+
+// homeFile is a file in the home directory in the shell's spelling, and false without a home.
+func homeFile(rt runtime.Runtime, name string) (string, bool) {
 	home, present := rt.LookupVariable("HOME")
 	if !present {
 		home, present = rt.LookupEnv("HOME")
 	}
 	if !present || home == "" {
+		return "", false
+	}
+	return strings.TrimRight(home, `/\`) + "/" + name, true
+}
+
+// sourceHomeFile runs a startup file in the home directory, and nothing when there is no home.
+func sourceHomeFile(ctx context.Context, rt runtime.Runtime, stderr io.Writer, name string) (int, bool) {
+	path, ok := homeFile(rt, name)
+	if !ok {
 		return 0, false
 	}
-	path := strings.TrimRight(home, `/\`) + "/" + name
 	return sourceProfile(ctx, rt, stderr, path, rt.ResolvePath(path))
 }
 

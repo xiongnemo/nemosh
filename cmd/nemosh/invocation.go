@@ -270,13 +270,30 @@ func (c command) runSessionCommand(ctx context.Context, controller *interruptCon
 }
 
 // sourceRCFile is a session's rc file: $ENV, or bash's --rcfile FILE in its place, or none for
-// --norc.
+// --norc. In bash mode an interactive shell that is not a login one reads ~/.bashrc, or the
+// --rcfile, first, and then nemosh's, as the user chose: one ~/.bashrc serves Git's bash and
+// this shell, and nemosh's has the last word. A login one has read bash's profile already.
 func (c command) sourceRCFile(ctx context.Context, rt runtime.Runtime) (int, bool) {
 	switch {
 	case c.invocation.norc:
 		return 0, false
+	case rt.BashMode():
+		if !c.invocation.login {
+			if status, exited := c.sourceBashRC(ctx, rt); exited {
+				return status, true
+			}
+		}
+		return sourceStartupFile(ctx, rt, c.stderr)
 	case c.invocation.rcfile != "":
 		return sourceProfile(ctx, rt, c.stderr, c.invocation.rcfile, rt.ResolvePath(c.invocation.rcfile))
 	}
 	return sourceStartupFile(ctx, rt, c.stderr)
+}
+
+// sourceBashRC is bash's rc file: --rcfile's, or ~/.bashrc.
+func (c command) sourceBashRC(ctx context.Context, rt runtime.Runtime) (int, bool) {
+	if c.invocation.rcfile != "" {
+		return sourceProfile(ctx, rt, c.stderr, c.invocation.rcfile, rt.ResolvePath(c.invocation.rcfile))
+	}
+	return sourceHomeFile(ctx, rt, c.stderr, ".bashrc")
 }

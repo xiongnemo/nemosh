@@ -499,6 +499,9 @@ Where bash mode follows bash, one place at a time as each is measured:
 | | nemosh and sh | bash mode |
 | --- | --- | --- |
 | `BASH_VERSION`, `BASH_VERSINFO` | unset | bash 5.2.37's |
+| a session's rc file | `$ENV`, or `~/.nemoshrc` | `~/.bashrc`, or `--rcfile`'s, and then `$ENV` or `~/.nemoshrc` |
+| a login session's profile | `/etc/profile`, `~/.profile` | `/etc/profile`, then the first of `~/.bash_profile`, `~/.bash_login` and `~/.profile`; then nemosh's rc file |
+| history | `~/.nemosh_history` | `~/.bash_history`, which Git's bash shares; `~/.nemosh_history` is read after it before the first prompt, and written to no more |
 
 `tests/oils/baseline-sh.json` holds the sh name to what it did, so a change made for bash
 mode that moves sh fails the build.

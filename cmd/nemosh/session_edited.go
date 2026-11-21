@@ -37,13 +37,19 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	// After the rc file, so a `HISTFILE=...` in it is honoured, exported or not, as
 	// both references honour it, and before the first prompt, so the first thing
 	// typed already has yesterday to suggest from. Only an exported one was.
-	saved := newHistoryFile(rt.LookupVariable, func(path string) (string, bool) { return nativePath(rt, path) })
-	loaded, held := saved.loadCounted()
-	for _, record := range loaded {
-		editor.remember(record.Line)
-		rt.RecordHistoryAt(record.Line, record.When)
+	// In bash mode ~/.nemosh_history is read after bash's; see historySources.
+	sources := historySources(rt.LookupVariable, rt.BashMode(), func(path string) (string, bool) { return nativePath(rt, path) })
+	for index, source := range sources {
+		loaded, held := source.loadCounted()
+		for _, record := range loaded {
+			editor.remember(record.Line)
+			rt.RecordHistoryAt(record.Line, record.When)
+		}
+		if index == 0 {
+			rt.NoteHistoryFile(held)
+		}
 	}
-	rt.NoteHistoryFile(held)
+	saved := sources[0]
 
 	lastStatus := 0
 	ignoredEOFs := 0
