@@ -35,6 +35,10 @@ func (r Runtime) expandCommandArguments(ctx context.Context, words []word, saved
 	declaration := false
 	for index, item := range words {
 		assignment := declaration && isAssignmentWord(item)
+		// bash's tildes in an argument like an assignment; see argument_tilde_bash.go.
+		if !assignment {
+			item = r.bashArgumentTilde(item)
+		}
 		// A plain word is its own token, with no list of one field made to carry it there.
 		if text, ok := plainWord(item); ok && !assignment {
 			declaration = declaration || index == 0 && isDeclarationUtility(item)
