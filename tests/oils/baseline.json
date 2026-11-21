@@ -189,12 +189,10 @@
     "builtin-eval-source.test.sh": {
       "Eval in bash does tilde expansion in array": "fail",
       "Eval in does tilde expansion": "fail",
-      "Eval with syntax error": "fail",
-      "Source nonexistent": "fail",
-      "Source with syntax error": "fail",
+      "Eval with syntax error": "ash-only",
+      "Source with syntax error": "ash-only",
       "eval YSH block with 'break continue return error'": "fail",
-      "eval usage": "fail",
-      "source doesn't crash when targeting a directory": "fail"
+      "eval usage": "fail"
     },
     "builtin-getopts.test.sh": {
       "More Smooshing 1": "ash-only",
@@ -379,9 +377,6 @@
       "simple command that's an alias - redir failure checked": "ash-only",
       "while loop - redirect failure checked": "ash-only"
     },
-    "exit-status.test.sh": {
-      "subshell OverflowError https://github.com/oilshell/oil/issues/996": "fail"
-    },
     "extglob-files.test.sh": {
       "?() matches 0 or 1": "fail",
       "Escaping of pipe (glibc bug, see demo/glibc_fnmatch.c)": "fail",
@@ -442,8 +437,7 @@
       "continue in subshell": "fail",
       "continue in subshell aborts with errexit": "fail",
       "for loop with invalid identifier": "ash-only",
-      "too many args to continue": "fail",
-      "top-level break/continue/return (without strict_control_flow)": "ash-only"
+      "too many args to continue": "fail"
     },
     "nameref.test.sh": {
       "a[@] in nameref": "fail",
@@ -533,9 +527,8 @@
     "strict-options.test.sh": {
       "Control flow must be static in YSH (strict_control_flow)": "fail",
       "errexit and top-level control flow": "ash-only",
-      "return at top level is an error": "ash-only",
-      "shopt -s strict_binding: Persistent prefix bindings not allowed on special builtins": "fail",
-      "top level control flow": "ash-only"
+      "return at top level is an error": "fail",
+      "shopt -s strict_binding: Persistent prefix bindings not allowed on special builtins": "fail"
     },
     "temp-binding.test.sh": {
       "Temp bindings with local": "ash-only",

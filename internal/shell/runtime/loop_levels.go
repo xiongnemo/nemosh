@@ -109,8 +109,11 @@ func (r Runtime) loopControlResult(name string, args []string) lineResult {
 	// busybox ash, dash and bash all continue and all exit 0, bash after printing
 	// a note. Silence follows the primary reference. Before the depth was tracked
 	// there was nothing to test, and the break escaped to the top of the script
-	// instead -- `break; echo after` printed nothing at all.
+	// instead -- `break; echo after` printed nothing at all. Bash mode prints bash's note.
 	if r.loops.depth == 0 {
+		if r.BashMode() {
+			fmt.Fprintf(r.streams.Stderr, "%s%s: only meaningful in a `for', `while', or `until' loop\n", r.diagnosticPrefix(), name)
+		}
 		return lineResult{status: 0}
 	}
 	r.loops.request(count)
