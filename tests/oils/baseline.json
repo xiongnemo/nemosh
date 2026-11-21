@@ -247,10 +247,7 @@
       "literal strings inside (( ))": "fail"
     },
     "errexit.test.sh": {
-      "brace group - redir failure checked": "ash-only",
-      "set -e in function #2": "ash-only",
-      "simple command that's an alias - redir failure checked": "ash-only",
-      "while loop - redirect failure checked": "ash-only"
+      "set -e in function #2": "ash-only"
     },
     "extglob-files.test.sh": {
       "?() matches 0 or 1": "fail",
