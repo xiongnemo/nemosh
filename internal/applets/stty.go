@@ -21,6 +21,7 @@ import (
 //	stty echo        start again
 //	stty sane        put it back the way a shell expects it
 //	stty -a          report what this can say
+//	stty -g          the state as one word, which `stty WORD` puts back (stty_saved.go)
 //
 // Everything else is **refused by name**. A `stty` that accepted `-icanon min 1 time 0` and
 // did nothing would be worse than one that is not there: the script would carry on believing
@@ -31,9 +32,9 @@ import (
 // nearly every real use of stty in a script comes down to.
 func newSttyApplet() Applet {
 	return simpleApplet{name: "stty", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		_, operands, err := parseAppletOptionsInOrder(args, "a", "")
+		_, operands, err := parseAppletOptionsInOrder(args, "ag", "")
 		if err != nil {
-			// -a is the one dashed word getopt should take; the rest are settings and
+			// -a and -g are the dashed words getopt should take; the rest are settings and
 			// are read below, so a parse failure here is a real one.
 			return err
 		}
@@ -44,6 +45,9 @@ func newSttyApplet() Applet {
 		}
 		if len(settings) == 0 || (len(settings) == 1 && settings[0] == "-a") {
 			return writeSttyReport(stdout, handle, len(settings) == 1)
+		}
+		if len(settings) == 1 && settings[0] == "-g" {
+			return writeSttySaved(stdout, handle)
 		}
 		_ = operands
 		return applySttySettings(stdout, handle, settings)
@@ -120,7 +124,13 @@ func applySttySettings(out io.Writer, handle *os.File, settings []string) error 
 				return err
 			}
 		default:
-			return fmt.Errorf("invalid argument '%s': this stty knows size, echo, -echo, sane and -a", strings.TrimSpace(setting))
+			if in, out, hasOut, ok := parseSttySaved(setting); ok {
+				if err := restoreSttySaved(handle, in, out, hasOut); err != nil {
+					return err
+				}
+				continue
+			}
+			return fmt.Errorf("invalid argument '%s': this stty knows size, echo, -echo, sane, -a, -g and what -g prints", strings.TrimSpace(setting))
 		}
 	}
 	return nil

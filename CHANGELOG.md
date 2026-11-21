@@ -12,6 +12,9 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`stty -g`**: the console's state as one word, which `stty WORD` puts back, as atuin's init
+  saves the terminal and restores it around its search.
+
 - **`/dev/tty`**, the console: `CONIN$` read and `CONOUT$` written, handed to a program as the
   console's own handles, so `fzf </dev/tty` has the terminal. Git's bash's `No such device or
   address` where there is no console.

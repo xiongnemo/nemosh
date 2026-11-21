@@ -17,6 +17,23 @@ import (
 // and a raw-mode toggle are nearly the same operation here where on Unix they are not.
 
 // terminalEcho reports whether the console is echoing what is typed.
+// consoleMode is a console handle's whole mode word, which `stty -g` saves.
+func consoleMode(handle *os.File) (uint32, error) {
+	var mode uint32
+	if err := windows.GetConsoleMode(windows.Handle(handle.Fd()), &mode); err != nil {
+		return 0, fmt.Errorf("cannot read the console mode: %s", CauseText(err))
+	}
+	return mode, nil
+}
+
+// setConsoleMode puts a whole mode word back, as `stty WORD` does with what -g printed.
+func setConsoleMode(handle *os.File, mode uint32) error {
+	if err := windows.SetConsoleMode(windows.Handle(handle.Fd()), mode); err != nil {
+		return fmt.Errorf("cannot set the console mode: %s", CauseText(err))
+	}
+	return nil
+}
+
 func terminalEcho(handle *os.File) (bool, error) {
 	var mode uint32
 	if err := windows.GetConsoleMode(windows.Handle(handle.Fd()), &mode); err != nil {

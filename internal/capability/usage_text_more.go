@@ -84,8 +84,8 @@ func appletUsageTextMore() map[string]Usage {
 				"The record counts go to standard error, so dd can still be used in a pipeline. status=none silences them.",
 				"A short read is a whole record unless conv=sync pads it, which is why dd bs=1M on a pipe often copies less than expected.",
 			}},
-		"stty": {Summary: "Report or set terminal settings.", Operands: "[size|echo|-echo|sane]",
-			Options: map[string]string{"a": "report everything this can say"},
+		"stty": {Summary: "Report or set terminal settings.", Operands: "[size|echo|-echo|sane|SAVED]",
+			Options: map[string]string{"a": "report everything this can say", "g": "print the console's state as one word, SAVED, which stty SAVED puts back"},
 			Notes: []string{
 				"Scoped to what a Windows console can answer: the window size and whether it echoes. The rest of stty describes a serial line, which Windows has no equivalent of.",
 				"Anything else is refused by name. An stty that accepted -icanon and did nothing would leave a script believing the terminal had changed.",

@@ -34,7 +34,7 @@ var commands = []Command{
 	{Name: "du", Short: "asdchkmblxHLX", ValueShort: "dX", Long: []string{"all", "apparent-size", "bytes", "total", "max-depth", "human-readable", "count-links", "dereference", "dereference-args", "summarize", "one-file-system", "exclude", "exclude-from"}, ValueLong: []string{"max-depth", "exclude", "exclude-from"}, Operand: AnyPath},
 	{Name: "df", Short: "hkmHBPTtaix", ValueShort: "Btx", Long: []string{"output", "all", "block-size", "human-readable", "si", "inodes", "portability", "type", "print-type", "exclude-type"}, ValueLong: []string{"block-size", "type", "exclude-type"}, Operand: AnyPath},
 	{Name: "dd", Operand: AnyPath},
-	{Name: "stty", Short: "a", Operand: AnyPath},
+	{Name: "stty", Short: "ag", Operand: AnyPath},
 	{Name: "expr", Operand: AnyPath},
 	{Name: "find", Operand: AnyPath},
 	{Name: "grep", Short: "invrRlcqwxFoshHEmaIPzb", ValueShort: "m", Long: []string{"color", "text", "include", "exclude", "exclude-dir", "line-buffered", "null-data", "byte-offset"}, ValueLong: []string{"include", "exclude", "exclude-dir"}, Operand: AnyPath},
