@@ -50,6 +50,9 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 			_ = commandRuntime.fds.closeAll()
 		}()
 	}
+	if line := r.compoundRedirectLine(body, redirects); line > 0 {
+		commandRuntime.enterLine(line)
+	}
 	return commandRuntime.executeWithRedirects(ctx, redirects, savedStatus, func(redirected Runtime) lineResult {
 		// A subshell is a shell of its own, which a write into a pipe no one reads ends, and
 		// the shell goes on; see pipe_stage.go.
@@ -69,6 +72,19 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 		}
 		return lineResult{status: status, control: control}
 	})
+}
+
+// compoundRedirectLine is the line a compound command's redirection is said on when it fails:
+// the line the command begins on, as busybox-w32 says it. It was said on the line of the command
+// run before it. bash says the line the redirection is written on, which for a compound written
+// over several lines, `while ...` and then `done < nofile`, is its last; the parser keeps no
+// line for a redirection after `done`, so bash mode says busybox's there. 0 when there is no
+// redirection, or no line to give.
+func (r Runtime) compoundRedirectLine(body Script, redirects []redirectOperation) int {
+	if len(redirects) == 0 || len(body.program) == 0 {
+		return 0
+	}
+	return statementLine(body.program[0])
 }
 
 func (r Runtime) executeWithRedirects(ctx context.Context, operations []redirectOperation, savedStatus int, run func(Runtime) lineResult) lineResult {
