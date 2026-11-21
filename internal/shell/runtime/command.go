@@ -21,9 +21,22 @@ func (r Runtime) command(ctx context.Context, args []string) int {
 	switch {
 	case len(operands) == 0:
 		return 0
-	case request.describe == 'v' && r.BashMode():
-		// Not found is bash's 1 in bash mode, busybox's 127 otherwise.
-		return min(r.commandV(operands), 1)
+	case request.describe != 0 && r.BashMode():
+		// bash's describes every name, where busybox's stops at the first, and is 0 when it
+		// found any, 1 when none: `command -v ZZZ echo` says echo, 0.
+		status := 1
+		for _, name := range operands {
+			var found int
+			if request.describe == 'v' {
+				found = r.commandV([]string{name})
+			} else {
+				found = r.commandVerbose(name)
+			}
+			if found == 0 {
+				status = 0
+			}
+		}
+		return status
 	case request.describe == 'v':
 		return r.commandV(operands)
 	case request.describe == 'V':
@@ -42,9 +55,14 @@ func (r Runtime) commandV(args []string) int {
 	}
 	name := args[0]
 	// An alias is answered with the definition that makes it and a reserved word with its
-	// name, as busybox answers them: `command -v for` and an alias were not found.
+	// name, as busybox answers them: `command -v for` and an alias were not found. Bash mode
+	// quotes it as bash's alias listing does, `alias a='it'\''s'`.
 	if value, ok := r.aliases[name]; ok {
-		fmt.Fprintf(r.streams.Stdout, "alias %s=%s\n", name, shellquote.Ash(value))
+		quoted := shellquote.Ash(value)
+		if r.BashMode() {
+			quoted = shellquote.SingleQuoted(value)
+		}
+		fmt.Fprintf(r.streams.Stdout, "alias %s=%s\n", name, quoted)
 		return 0
 	}
 	if ReservedWord(name) || r.isKnownCommand(name) {
