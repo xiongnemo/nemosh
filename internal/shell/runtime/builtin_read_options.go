@@ -72,7 +72,7 @@ func parseReadOptions(args []string) (readOptions, error) {
 				} else {
 					index++
 					if index >= len(args) {
-						return readOptions{}, fmt.Errorf("-%c: option requires an argument", letter)
+						return readOptions{}, readUsageError{option: letter, missing: true}
 					}
 					value = args[index]
 				}
@@ -110,13 +110,13 @@ func (o *readOptions) apply(letter byte, value string) error {
 	case 'n', 'N':
 		count, err := strconv.Atoi(value)
 		if err != nil || count < 0 {
-			return fmt.Errorf("%s: invalid number", value)
+			return readValueError{option: letter, value: value}
 		}
 		o.limit, o.exactly = count, letter == 'N'
 	case 'u':
 		descriptor, err := strconv.Atoi(value)
 		if err != nil || descriptor < 0 {
-			return fmt.Errorf("%s: invalid file descriptor", value)
+			return readValueError{option: letter, value: value}
 		}
 		o.descriptor = descriptor
 	case 't':
@@ -124,14 +124,44 @@ func (o *readOptions) apply(letter byte, value string) error {
 		// polls without spinning.
 		seconds, err := strconv.ParseFloat(value, 64)
 		if err != nil || seconds < 0 {
-			return fmt.Errorf("%s: invalid timeout specification", value)
+			return readValueError{option: letter, value: value}
 		}
 		o.timeout, o.hasTimeout = time.Duration(seconds*float64(time.Second)), true
 	default:
 		// busybox's nextopt words, as for every builtin it has: `illegal option -Y`.
-		return fmt.Errorf("illegal option -%c", letter)
+		return readUsageError{option: letter}
 	}
 	return nil
+}
+
+// readValueError is a value -n, -N, -u or -t cannot use, said in bash's words, which nemosh
+// says too; a usage error, 2, as nemosh and sh, and 1 in bash mode, as in bash.
+type readValueError struct {
+	option byte
+	value  string
+}
+
+func (e readValueError) Error() string {
+	switch e.option {
+	case 'u':
+		return e.value + ": invalid file descriptor"
+	case 't':
+		return e.value + ": invalid timeout specification"
+	}
+	return e.value + ": invalid number"
+}
+
+// readUsageError is an option read has not got, or one missing its argument.
+type readUsageError struct {
+	option  byte
+	missing bool
+}
+
+func (e readUsageError) Error() string {
+	if e.missing {
+		return fmt.Sprintf("-%c: option requires an argument", e.option)
+	}
+	return fmt.Sprintf("illegal option -%c", e.option)
 }
 
 // validate checks the names. With -a they are checked and then ignored, as bash 5.3 ignores
@@ -140,17 +170,25 @@ func (o *readOptions) apply(letter byte, value string) error {
 func (o *readOptions) validate() error {
 	for _, name := range o.names {
 		if !isValidVariableName(name) {
-			return readNameError(name + ": not a valid variable name")
+			return readNameError{name: name}
 		}
 	}
 	if o.arrayName != "" && !isValidVariableName(o.arrayName) {
-		return readNameError(o.arrayName + ": not a valid array name")
+		return readNameError{name: o.arrayName, array: true}
 	}
 	return nil
 }
 
 // readNameError is a name read cannot assign. Its status is 1 in both references, where an
 // option read cannot take is a usage error, 2; it was 2 as well.
-type readNameError string
+type readNameError struct {
+	name  string
+	array bool
+}
 
-func (e readNameError) Error() string { return string(e) }
+func (e readNameError) Error() string {
+	if e.array {
+		return e.name + ": not a valid array name"
+	}
+	return e.name + ": not a valid variable name"
+}

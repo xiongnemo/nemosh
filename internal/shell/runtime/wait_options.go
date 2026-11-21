@@ -27,20 +27,21 @@ func (r Runtime) parseWaitOptions(args []string) (waitOptions, []string, int) {
 		}
 		for index := 1; index < len(option); index++ {
 			letter := option[index]
-			if letter == 'n' {
-				options.next = true
+			// -f waits for a job to end rather than stop, where there is job control; there is
+			// none here, and wait waits for the end already. It is bash's alone, and taken under
+			// every name; it was an illegal option.
+			if letter == 'n' || letter == 'f' {
+				options.next = options.next || letter == 'n'
 				continue
 			}
 			if letter != 'p' {
-				fmt.Fprintf(r.streams.Stderr, "%swait: illegal option -%c\n", r.diagnosticPrefix(), letter)
-				return options, nil, 2
+				return options, nil, r.refuseWaitOption(fmt.Sprintf("-%c: invalid option", letter), fmt.Sprintf("illegal option -%c", letter))
 			}
 			// -p's name is the rest of the word, or the next one.
 			name := option[index+1:]
 			if name == "" {
 				if len(args) == 0 {
-					fmt.Fprintln(r.streams.Stderr, r.diagnosticPrefix()+"wait: -p: option requires an argument")
-					return options, nil, 2
+					return options, nil, r.refuseWaitOption("-p: option requires an argument", "-p: option requires an argument")
 				}
 				name, args = args[0], args[1:]
 			}
@@ -53,6 +54,17 @@ func (r Runtime) parseWaitOptions(args []string) (waitOptions, []string, int) {
 		}
 	}
 	return options, args, 0
+}
+
+// refuseWaitOption says an option wait cannot take, status 2: in bash mode in bash's words, with
+// wait's usage after them, and otherwise in busybox's.
+func (r Runtime) refuseWaitOption(bash, busybox string) int {
+	if r.BashMode() {
+		fmt.Fprintf(r.streams.Stderr, "%swait: %s\nwait: usage: wait [-fn] [-p var] [id ...]\n", r.diagnosticPrefix(), bash)
+		return 2
+	}
+	fmt.Fprintf(r.streams.Stderr, "%swait: %s\n", r.diagnosticPrefix(), busybox)
+	return 2
 }
 
 // startWaitVariable unsets -p's variable before the wait, as bash does: a wait that does not
