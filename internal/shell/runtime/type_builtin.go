@@ -147,7 +147,11 @@ type commandKind struct {
 func (r Runtime) commandKinds(name string) []commandKind {
 	var kinds []commandKind
 	if value, ok := r.aliases[name]; ok {
-		kinds = append(kinds, commandKind{word: "alias", description: fmt.Sprintf("%s is an alias for %s", name, value)})
+		description := fmt.Sprintf("%s is an alias for %s", name, value)
+		if r.BashMode() {
+			description = fmt.Sprintf("%s is aliased to `%s'", name, value)
+		}
+		kinds = append(kinds, commandKind{word: "alias", description: description})
 	}
 	if ReservedWord(name) {
 		kinds = append(kinds, commandKind{word: "keyword", description: name + " is a shell keyword"})
@@ -160,8 +164,13 @@ func (r Runtime) commandKinds(name string) []commandKind {
 	// The function dispatch would call, which a name with a slash never is: it is a path, by
 	// busybox's rule and POSIX's. `f/g() { ...; }` was called a function, and running f/g
 	// looked for the file.
-	if _, found := r.calledFunction(name); found {
-		kinds = append(kinds, commandKind{word: "function", description: name + " is a function"})
+	if definition, found := r.calledFunction(name); found {
+		description := name + " is a function"
+		if r.BashMode() {
+			// bash's has the definition after it, as declare -f prints it.
+			description += "\n" + strings.TrimSuffix(printFunction(definition), "\n")
+		}
+		kinds = append(kinds, commandKind{word: "function", description: description})
 	}
 	if isRuntimeBuiltin(name) && !isSpecialBuiltin(name) {
 		description := name + " is a shell builtin"
