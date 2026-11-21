@@ -101,6 +101,10 @@ patch number is the commits since that tag.
   - **getopts in bash mode is bash's**: OPTIND names the word until its last letter is read, a
     flag leaves OPTARG unset, `set --` and shift leave the parse where it was, and the
     diagnostics are bash's, `$0: illegal option -- z`. busybox's getopts stays nemosh's and sh's.
+  - **A bash-mode script with a syntax error later in it runs up to the error**, read a command
+    at a time as bash reads one, the error ending it there, status 2, with its EXIT trap; text after
+    an `exit` is never read, so a self-extracting installer's archive after `exit 0` is no error,
+    nor a file over the parser's 1 MiB. As nemosh and sh such a script is refused whole, as before.
   - **A bash-mode script expands no aliases until `shopt -s expand_aliases`**, as bash's
     non-interactive shell; a session expands them from the start. busybox's expands them
     everywhere, and nemosh and sh still do.
