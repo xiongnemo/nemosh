@@ -3,6 +3,7 @@ package runtime
 import (
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/xiongnemo/nemosh/internal/applets"
@@ -71,6 +72,31 @@ func TestTypeDescription_bashModeIsBashs(t *testing.T) {
 		}
 		rt.RunScript(context.Background(), script)
 		if stdout.String() != test.want {
+			t.Errorf("bash mode %v: %q, want %q; stderr %q", test.bash, stdout.String(), test.want, stderr.String())
+		}
+	}
+}
+
+// type calls a special builtin "a shell builtin" in bash mode, as bash's does outside its POSIX
+// mode, and a POSIX special builtin "a special shell builtin" in it, local not among them.
+// busybox calls POSIX's and its own local and times special, which nemosh and sh keep. Measured
+// 2026-11-22 with Git for Windows' bash 5.3; Oils' builtin-type.test.sh.
+func TestTypeSpecialBuiltin_bashModeIsBashs(t *testing.T) {
+	script := "type eval : local cd; set -o posix; type eval local\n"
+	for _, test := range []struct {
+		bash bool
+		want string
+	}{
+		{bash: true, want: "eval is a shell builtin\n: is a shell builtin\nlocal is a shell builtin\ncd is a shell builtin\neval is a special shell builtin\nlocal is a shell builtin\n"},
+		{bash: false, want: "eval is a special shell builtin\n: is a special shell builtin\nlocal is a special shell builtin\ncd is a shell builtin\n"},
+	} {
+		var stdout, stderr bytes.Buffer
+		rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
+		if test.bash {
+			rt.EnterBashMode()
+		}
+		rt.RunScript(context.Background(), script)
+		if !strings.HasPrefix(stdout.String(), test.want) {
 			t.Errorf("bash mode %v: %q, want %q; stderr %q", test.bash, stdout.String(), test.want, stderr.String())
 		}
 	}
