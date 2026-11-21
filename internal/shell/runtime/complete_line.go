@@ -42,6 +42,13 @@ func (r Runtime) CompleteLine(ctx context.Context, line string, point int) (Prog
 	if strings.TrimSpace(line) == "" {
 		name, offset, ok = "", point-start, true
 	}
+	// In a command's name, `complete -I`'s specification, as bash runs it: it is kept under
+	// _InitialWorD_, which its function is given as the command. Without one the editor
+	// completes the name as it does.
+	if _, initial := r.completions.specs[initialCompletion]; !ok && initial {
+		text := line[start:point]
+		name, offset, ok = initialCompletion, len(text)-len(strings.TrimLeft(text, " \t")), true
+	}
 	if !ok {
 		return ProgrammableCompletion{}, false
 	}
@@ -58,8 +65,12 @@ func (r Runtime) CompleteLine(ctx context.Context, line string, point int) (Prog
 		command: name, word: line[wordStart:point], words: words, cword: cword,
 		line: line[start:end], point: utf8.RuneCountInString(line[start:point]), interactive: true,
 	}
-	if cword > 0 {
+	switch {
+	case cword > 0:
 		request.previous = words[cword-1]
+	case name == initialCompletion:
+		// bash gives the first word itself as the word before it.
+		request.previous = request.word
 	}
 	// A function that answers 124 has loaded a specification, as `complete -D -F
 	// _completion_loader` does, and the lookup starts again: at most 32 times, as in bash.
@@ -84,7 +95,10 @@ func (r Runtime) CompleteLine(ctx context.Context, line string, point int) (Prog
 // path component's, or -D's; and -E's for the empty line.
 func (r Runtime) completionSpecFor(name string) (string, bool) {
 	candidates := []string{emptyCompletion}
-	if name != "" {
+	switch {
+	case name == initialCompletion:
+		candidates = []string{initialCompletion}
+	case name != "":
 		candidates = []string{name}
 		if slash := strings.LastIndexByte(name, '/'); slash >= 0 && slash < len(name)-1 {
 			candidates = append(candidates, name[slash+1:])
