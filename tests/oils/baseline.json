@@ -74,13 +74,6 @@
       "[bash_unset] local-unset for nested tempenvs": "ash-only",
       "[bash_unset] nested context by tempenv-eval": "ash-only"
     },
-    "blog2.test.sh": {
-      "-a -a": "fail",
-      "-a -a -a -a": "fail",
-      "-a -a -a -a -a": "fail",
-      "-a -a -a -a -a -a -a": "fail",
-      "-a -a -a -a -a -a -a -a": "fail"
-    },
     "brace-expansion.test.sh": {
       "Mixed case char expansion is invalid": "fail",
       "Two kinds of tilde expansion": "fail",
@@ -96,12 +89,9 @@
       "help": "fail"
     },
     "builtin-bracket.test.sh": {
-      "-a as unary operator (alias of -e)": "fail",
       "-k for sticky bit": "fail",
       "-ot and -nt": "fail",
       "[ -t invalid ]": "ash-only",
-      "operator/operand ambiguity with -a": "fail",
-      "operator/operand ambiguity with ]": "fail",
       "test -p named pipe": "fail"
     },
     "builtin-cd.test.sh": {

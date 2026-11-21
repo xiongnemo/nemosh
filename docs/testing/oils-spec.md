@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2349 of the 2548 cases bash passes: 92.2%.**
+**nemosh passes 2357 of the 2548 cases bash passes: 92.5%.**
 
-Of the other 199, it does 48 the way the files record of ash, which may be busybox's
-way, and 151 neither way.
+Of the other 191, it does 48 the way the files record of ash, which may be busybox's
+way, and 143 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2116 of them and does 119 the way the
 files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2349 |
+| that nemosh passes of those | 2357 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -70,13 +70,13 @@ busybox does the way the file records of ash.
 | ble-idioms.test.sh | 26 | 26 | 24 | 92.3% | 0 | 21 | 23 |
 | ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 5 | 0 | 5 |
 | blog1.test.sh | 9 | 9 | 9 | 100.0% | 0 | 8 | 8 |
-| blog2.test.sh | 8 | 8 | 3 | 37.5% | 0 | 3 | 2 |
+| blog2.test.sh | 8 | 8 | 8 | 100.0% | 0 | 3 | 2 |
 | bool-parse.test.sh | 8 | 8 | 8 | 100.0% | 0 | 8 | 8 |
 | brace-expansion.test.sh | 55 | 54 | 50 | 92.6% | 3 | 50 | 8 |
 | bugs.test.sh | 28 | 28 | 26 | 92.9% | 1 | 19 | 28 |
 | builtin-bash.test.sh | 13 | 13 | 12 | 92.3% | 0 | 12 | 10 |
 | builtin-bind.test.sh | 9 | 8 | 8 | 100.0% | 0 | 8 | 0 |
-| builtin-bracket.test.sh | 47 | 45 | 40 | 88.9% | 0 | 39 | 36 |
+| builtin-bracket.test.sh | 47 | 45 | 43 | 95.6% | 0 | 39 | 36 |
 | builtin-cd.test.sh | 25 | 22 | 14 | 63.6% | 1 | 12 | 11 |
 | builtin-completion.test.sh | 51 | 50 | 48 | 96.0% | 0 | 43 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 7 | 38.9% | 0 | 7 | 2 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 51 | 96.2% | 1 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 3 | 100.0% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2349 | 92.2% | 48 | 2116 | 1447 |
+| all | 2665 | 2548 | 2357 | 92.5% | 48 | 2116 | 1447 |
