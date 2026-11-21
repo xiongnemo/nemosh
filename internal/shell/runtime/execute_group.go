@@ -53,7 +53,9 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 	if line := r.compoundRedirectLine(body, redirects); line > 0 {
 		commandRuntime.enterLine(line)
 	}
-	return commandRuntime.executeWithRedirects(ctx, redirects, savedStatus, func(redirected Runtime) lineResult {
+	ran := false
+	result := commandRuntime.executeWithRedirects(ctx, redirects, savedStatus, func(redirected Runtime) lineResult {
+		ran = true
 		// A subshell is a shell of its own, which a write into a pipe no one reads ends, and
 		// the shell goes on; see pipe_stage.go.
 		bodyCtx, release := ctx, func() {}
@@ -72,6 +74,20 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 		}
 		return lineResult{status: status, control: control}
 	})
+	// A group's redirections that failed, a loop's, an if's or a case's -- a compound with them
+	// is a group around it -- run the ERR trap and end the script under set -e in bash mode, as
+	// bash 5.2 and later have it; a lone group is passed over where a pipeline's failure is
+	// answered, since its commands answered for themselves. busybox goes on, as nemosh and sh do.
+	// A subshell's are answered with the pipeline it is in.
+	if !ran && !isolated && r.BashMode() && result.control == flowNone && result.status != 0 {
+		if r.errTrapTriggers(result) {
+			r.runTrap(ctx, trapERR, result.status)
+		}
+		if r.errExitTriggers(result) {
+			result.control = flowExit
+		}
+	}
+	return result
 }
 
 // compoundRedirectLine is the line a compound command's redirection is said on when it fails:
