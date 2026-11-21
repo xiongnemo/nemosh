@@ -23,12 +23,23 @@ func TestSemantics_bashModeTakesBashs(t *testing.T) {
 		t.Fatal(err)
 	}
 	lib := filepath.ToSlash(filepath.Join(dir, "lib.sh"))
+	if err := os.WriteFile(filepath.Join(dir, "shifter.sh"), []byte("shift\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	shifter := filepath.ToSlash(filepath.Join(dir, "shifter.sh"))
 	for _, test := range []struct {
 		code, bash, busybox string
 	}{
 		{code: "set -- outer; . '" + lib + "' one two; echo \"after: $@\"", bash: "after: from-lib\n", busybox: "after: outer\n"},
 		{code: "x=2; [[ x+1 -eq 3 ]] && echo arith; [[ \"1+1\" -eq 2 ]] && echo quoted", bash: "arith\nquoted\n", busybox: ""},
 		{code: "trap 'echo x' INT; trap", bash: "trap -- 'echo x' SIGINT\n", busybox: "trap -- 'echo x' INT\n"},
+		// bash quotes a handler in plain single quotes, a newline kept as it is, as Oils'
+		// builtin-trap.test.sh records; ${x@Q}'s $'...' is not how trap writes it.
+		{code: "trap 'echo 1\necho 2' INT; trap", bash: "trap -- 'echo 1\necho 2' SIGINT\n", busybox: "trap -- 'echo 1\necho 2' INT\n"},
+		// alias quotes so too, a newline in its value kept.
+		{code: "alias a=$'x\\ny'; alias a", bash: "alias a='x\ny'\n", busybox: "a='x\ny'\n"},
+		// A file that only shifts the list it was given leaves the caller's to come back.
+		{code: "set -- outer; . '" + shifter + "' one two; echo \"after: $@\"", bash: "after: outer\n", busybox: "after: outer\n"},
 		{code: "f() { echo fn; }; unset f; f 2>/dev/null; echo st=$?", bash: "st=127\n", busybox: "fn\nst=0\n"},
 		{code: "x=1 > /no/such/dir/f; echo \"x=${x-unset}\"", bash: "x=1\n", busybox: "x=unset\n"},
 		{code: "a/b() { echo slash-fn; }; a/b 2>/dev/null; echo st=$?", bash: "slash-fn\nst=0\n", busybox: "st=127\n"},

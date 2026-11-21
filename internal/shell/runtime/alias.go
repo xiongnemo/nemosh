@@ -79,7 +79,7 @@ func isAliasOption(arg string) bool {
 func (r Runtime) printAlias(name string, reusable bool) {
 	quote := shellquote.Ash
 	if r.BashMode() {
-		reusable, quote = true, shellquote.Single
+		reusable, quote = true, shellquote.SingleQuoted
 	}
 	prefix := ""
 	switch {

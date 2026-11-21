@@ -89,8 +89,8 @@ patch number is the commits since that tag.
     `not found` on stderr, 1; kill's usage and `not a pid or valid job spec`; `numeric argument
     required` for exit, return, shift and break, exit going on with the line as bash 5.3's does;
     alias's and unalias's colon; getopts's usage.
-  - **Six of bash's semantics in bash mode**: `. FILE ARGS` keeps the positional parameters FILE
-    set; `[[ A -eq B ]]` evaluates A and B as arithmetic; trap lists `SIGINT`; `unset f`, with no
+  - **Six of bash's semantics in bash mode**: `. FILE ARGS` keeps a list FILE set with `set --`,
+    and gives the caller's back after a shift alone; `[[ A -eq B ]]` evaluates A and B as arithmetic; trap lists `SIGINT`; `unset f`, with no
     variable f, unsets the function; `x=1 >/bad` assigns x though the redirection fails; and a
     function named `a/b` is called by that name. Each is busybox's the other way, and stays so as
     nemosh and sh.
