@@ -518,6 +518,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | return outside a function or a sourced file | ends a script as exit does, and is said at a prompt | `` return: can only `return' from a function or sourced script ``, status 2, and the line goes on |
 | break or continue outside a loop | nothing, status 0 | ``break: only meaningful in a `for', `while', or `until' loop``, status 0 |
 | `. FILE ARGS` whose FILE sets the positional parameters | the caller's come back | a list FILE set with `set --` stays; after a shift alone the caller's come back |
+| a stray `{` in a word with a brace group, `{{a,b}`, `{a,{b,c}` | the word left as written from the stray `{` on, what busybox, with no brace expansion, prints | passed over for the next `{`, bash's: `{a {b`, `{a,b {a,c` |
 | an assignment in front of a special builtin, `x=1 eval ...`, `x=1 export y`, `x=1 local v` | stays after it, as POSIX has it, busybox's | the builtin's alone, seen while it runs and gone after, bash's outside its POSIX mode; under `set -o posix` it stays |
 | a compound command's redirection that fails, `{ cat; } < nofile`, a loop's, an if's | status 1, and the script goes on, busybox's, with no ERR trap | bash 5.2's: the ERR trap runs, and `set -e` ends the script, outside a condition and the left of `&&` and `\|\|` |
 | a tilde in an argument like an assignment, `make PREFIX=~/x` | left as written, as POSIX has it, busybox's | expanded after the `=` and after each `:`, as an assignment's are, bash's outside its POSIX mode; not in `--prefix=~` |
