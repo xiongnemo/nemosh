@@ -387,6 +387,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A compound command's redirection that failed was said on the wrong line**: `{ cat; } <
+  nofile` on line 2 said `line 1`, the line of the command before it. It is said on the line
+  the compound begins on, as busybox-w32 says it.
+
 - **A compound command whose redirection's word failed to expand opened the empty path**:
   `{ echo in; } > ${x?oops}` said `x: oops` and then `cannot create : nonexistent directory`. The
   error is answered alone now, as a simple command's is and as both references answer it.
