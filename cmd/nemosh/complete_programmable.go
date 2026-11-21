@@ -55,7 +55,10 @@ func (e *lineEditor) completeProgrammatically(answer runtime.ProgrammableComplet
 		}
 		return true
 	}
-	if shared := longestSharedPrefix(matches); len(shared) > len(typed) && strings.HasPrefix(shared, typed) {
+	// What they share goes in for the word, as readline puts it in, though it does not begin with
+	// what was typed: a function's `COMPREPLY=(xxone xxtwo)` for `ec` leaves xx, measured with Git
+	// for Windows' bash. Nothing shared leaves the word as it is.
+	if shared := longestSharedPrefix(matches); shared != "" && shared != typed && (len(shared) > len(typed) || !strings.HasPrefix(typed, shared)) {
 		e.replaceWord(typed, insert(shared))
 	}
 	e.listCandidatesAsGiven(matches, prompt)

@@ -403,6 +403,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **Tab kept the typed word when a specification's candidates did not begin with it**: a
+  function's `COMPREPLY=(xxone xxtwo)` for `ec` left `ec` and listed them. What they share goes in
+  for the word now, `xx`, as readline puts it in.
+
 - **`complete -I` was recorded and never asked**: Tab in a command's name now runs it, as bash's
   does, its function given `_InitialWorD_`, the word, and the word again for the one before it.
 
