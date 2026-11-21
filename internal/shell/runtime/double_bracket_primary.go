@@ -129,7 +129,45 @@ func (r Runtime) evaluateBinaryCondition(operator string, left, right conditionT
 // the operand, `x: bad number`, as busybox's [[ does; and `[[ " 3" -eq 3 ]]`, which `[` and
 // both references take, was refused.
 func (r Runtime) evaluateConditionComparison(operator, left, right string) (bool, error) {
+	if r.BashMode() {
+		if compare, numeric := arithmeticComparisons(operator); numeric {
+			return r.compareArithmetic(compare, left, right)
+		}
+	}
 	return applets.EvaluateConditionPrimary(r, r.conditionStreams(), operator, left, right)
+}
+
+// arithmeticComparisons is the comparison a numeric operator of `[[ ]]` makes.
+func arithmeticComparisons(operator string) (func(a, b int64) bool, bool) {
+	switch operator {
+	case "-eq":
+		return func(a, b int64) bool { return a == b }, true
+	case "-ne":
+		return func(a, b int64) bool { return a != b }, true
+	case "-lt":
+		return func(a, b int64) bool { return a < b }, true
+	case "-le":
+		return func(a, b int64) bool { return a <= b }, true
+	case "-gt":
+		return func(a, b int64) bool { return a > b }, true
+	case "-ge":
+		return func(a, b int64) bool { return a >= b }, true
+	}
+	return nil, false
+}
+
+// compareArithmetic is bash's numeric `[[ ]]`, which bash mode takes: each side evaluated as an
+// arithmetic expression, `[[ x+1 -eq 3 ]]`, where busybox's, as `[`'s, wants a number.
+func (r Runtime) compareArithmetic(compare func(a, b int64) bool, left, right string) (bool, error) {
+	a, err := r.evaluateArithmetic(left)
+	if err != nil {
+		return false, err
+	}
+	b, err := r.evaluateArithmetic(right)
+	if err != nil {
+		return false, err
+	}
+	return compare(a, b), nil
 }
 
 // conditionStreams is what `-t` asks of: the shell's standard input, output and error, the

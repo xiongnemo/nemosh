@@ -133,9 +133,9 @@ func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefini
 
 // calledFunction is the function a command word calls, if one is defined by that name. A
 // word with a slash is a path, and calls no function though one may be defined by it --
-// busybox-w32's answer; bash calls the function.
+// busybox-w32's answer; bash calls the function, as bash mode does.
 func (r Runtime) calledFunction(word string) (functionDefinition, bool) {
-	if strings.Contains(word, "/") {
+	if strings.Contains(word, "/") && !r.BashMode() {
 		return functionDefinition{}, false
 	}
 	name, ok := newFunctionName(word)
