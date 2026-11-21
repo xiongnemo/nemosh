@@ -516,6 +516,12 @@ Where bash mode follows bash, one place at a time as each is measured:
 | exit, return, shift, break with an operand that is no number | `Illegal number: x`; exit and return end the script | `x: numeric argument required`, status 2: exit goes on with the line, return returns, shift goes on; break abandons the line |
 | return outside a function or a sourced file | ends a script as exit does, and is said at a prompt | `` return: can only `return' from a function or sourced script ``, status 2, and the line goes on |
 | break or continue outside a loop | nothing, status 0 | ``break: only meaningful in a `for', `while', or `until' loop``, status 0 |
+| `. FILE ARGS` whose FILE sets the positional parameters | the caller's come back | what FILE set stays |
+| `[[ A -eq B ]]` and the other numeric tests | A and B are numbers, `x+1: bad number` | A and B are arithmetic expressions, `[[ x+1 -eq 3 ]]` |
+| `trap` listing a signal | `trap -- 'cmd' INT` | `trap -- 'cmd' SIGINT`, as `trap -p` lists it under both |
+| `unset f` with no variable f | the function f stays | the function f is unset |
+| `x=1 >/no/such/dir/f`, assignments and a redirection that fails | nothing is assigned | x is assigned, status 1 |
+| a function whose name holds a slash, `a/b() { ...; }` | defined, and `a/b` is a path, never the function | `a/b` calls it |
 | a job a subshell, a `$(...)` or a pipeline stage puts in the background, at a prompt | announced, `[1] PID`, as busybox-w32 announces it | not announced, as bash announces only the session's own; atuin backgrounds one before every prompt |
 | what nemosh's rc file changes of bash's | -- | said on one line of stderr: `nemosh: ~/.nemoshrc changed what ~/.bashrc set: PS1, alias ll, function f`, the first five and how many more; a variable only added to, `PATH=$PATH:...`, is not counted |
 
