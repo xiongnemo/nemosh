@@ -281,10 +281,6 @@
     "extglob-match.test.sh": {
       "Turning extglob on changes the meaning of [[ !(str) ]] in bash": "fail"
     },
-    "fatal-errors.test.sh": {
-      "${undef} with nounset": "ash-only",
-      "Unrecoverable: ${undef?message}": "ash-only"
-    },
     "for-expr.test.sh": {
       "Accepts { } syntax too": "fail",
       "Arith lexer mode": "fail"

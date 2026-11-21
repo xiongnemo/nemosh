@@ -142,6 +142,8 @@ patch number is the commits since that tag.
     abandoned, status 2; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **`${x?}` and `set -u` end a bash-mode command string with 127**, as bash 5.3's `-c` exits,
+    and a function it calls; a script, standard input and a subshell still end with 1.
   - **read and wait in bash mode refuse what they cannot take as bash's do**: read's bad `-n`,
     `-u` or `-t` value is status 1, an option it has not got comes with its usage, and a bad name
     is `not a valid identifier`; `wait zzz` is `not a pid or valid job spec`, 1, and a pid that is

@@ -30,10 +30,21 @@ func (r Runtime) reportExpansionErrorAsBash(err error) {
 	r.expansion.shellError = true
 	var absent parameterAbsent
 	if errors.As(err, &absent) {
-		r.expansion.shellErrorStatus = 1
+		r.expansion.shellErrorStatus = r.bashFatalStatus()
 		return
 	}
 	r.expansion.discard = true
+}
+
+// bashFatalStatus is what `${x?}`, or an unset name under set -u, ends a bash-mode shell with:
+// 1, and 127 when it is a `-c` command string's own, outside any subshell, as bash 5.3 exits
+// from its command string, and from a function it calls, where a script, standard input, a
+// subshell and a `$(...)` end with 1.
+func (r Runtime) bashFatalStatus() int {
+	if strings.ContainsRune(r.options.invocation, 'c') && r.subshellDepth == 0 {
+		return 127
+	}
+	return 1
 }
 
 // arithmeticExpansionFailed is the error of a `$((...))` being expanded: in bash mode the rest of
