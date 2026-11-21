@@ -85,6 +85,9 @@ type command struct {
 	// windowSize is the terminal's columns and lines, for COLUMNS and LINES at a prompt; nil
 	// asks stderr's or stdout's console. See window_size.go.
 	windowSize func() (int, int, bool)
+	// beforeProfiles, when a session sets it, runs as startShell is about to read a login
+	// shell's profiles; see session_start.go.
+	beforeProfiles func()
 }
 
 func run(ctx context.Context, args []string) error {

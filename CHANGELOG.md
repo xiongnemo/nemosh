@@ -27,7 +27,9 @@ patch number is the commits since that tag.
   - **A session in bash mode reads bash's startup files and then nemosh's**: `~/.bashrc`, or a
     login's `~/.bash_profile`, `~/.bash_login` or `~/.profile`, and then `$ENV` or
     `~/.nemoshrc`, so one `~/.bashrc` serves Git's bash and this shell. Its history is
-    `~/.bash_history`, and `~/.nemosh_history` is read after it.
+    `~/.bash_history`, and `~/.nemosh_history` is read after it. What nemosh's file changes of
+    what bash's set -- a variable, an alias, a function, an option, a completion -- is said on
+    one line of stderr.
 
 - **`vi`** and **`view`**, busybox-w32's vi with vim's ways where the two differ on a key a
   Debian user knows, every case measured against both; `fc` with no `EDITOR` and `C-x C-e` in

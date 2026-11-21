@@ -221,79 +221,12 @@ func (c command) startShell(ctx context.Context, rt runtime.Runtime, mode string
 		rt.ListShopts(c.invocation.reusableShopt)
 	}
 	if c.invocation.login && !c.invocation.checkOnly && !c.invocation.noprofile {
+		if c.beforeProfiles != nil {
+			c.beforeProfiles()
+		}
 		if status, exited := sourceLoginProfiles(ctx, rt, c.stderr); exited {
 			return startupExit(rt, status)
 		}
 	}
 	return nil
-}
-
-// startSession is startShell for a prompt, followed by $ENV. $0 is the shell's name, as
-// it is in both references, and `-s ARG...` gives the session its positional parameters.
-func (c command) startSession(ctx context.Context, rt runtime.Runtime) error {
-	rt.SetArguments(c.scriptName(), c.invocation.operands)
-	term, aside := rt.SetAsideInheritedTERM()
-	if err := c.startShell(ctx, rt, "is"); err != nil {
-		return err
-	}
-	rt.SetSessionDefaults()
-	if status, exited := c.sourceRCFile(ctx, rt); exited {
-		return startupExit(rt, status)
-	}
-	c.sayTERMSetAside(rt, term, aside)
-	setDefaultHistoryFile(rt, c.stderr)
-	sayOldSpecs(c.stderr, sessionSpecLookup)
-	return nil
-}
-
-// runSessionCommand is `nemosh -i -c COMMAND`, bash's: a session, which reads its rc file, with
-// COMMAND in place of the lines a prompt would read, and then done. An error that ends a line at
-// a prompt ends one of COMMAND's lines, and the lines after it run; see runtime.MarkSession.
-// It was refused, as -i with -c.
-func (c command) runSessionCommand(ctx context.Context, controller *interruptController, script string, args []string) error {
-	rt := c.newRuntime()
-	invocation := commandStringInvocation(c.scriptName(), args)
-	rt.SetArguments(invocation.name, invocation.args)
-	term, aside := rt.SetAsideInheritedTERM()
-	if err := c.startShell(ctx, rt, "ic"); err != nil {
-		return err
-	}
-	rt.SetSessionDefaults()
-	if status, exited := c.sourceRCFile(ctx, rt); exited {
-		return startupExit(rt, status)
-	}
-	c.sayTERMSetAside(rt, term, aside)
-	setDefaultHistoryFile(rt, c.stderr)
-	sayOldSpecs(c.stderr, sessionSpecLookup)
-	rt.MarkSession()
-	return c.runScriptWith(ctx, controller, rt, script)
-}
-
-// sourceRCFile is a session's rc file: $ENV, or bash's --rcfile FILE in its place, or none for
-// --norc. In bash mode an interactive shell that is not a login one reads ~/.bashrc, or the
-// --rcfile, first, and then nemosh's, as the user chose: one ~/.bashrc serves Git's bash and
-// this shell, and nemosh's has the last word. A login one has read bash's profile already.
-func (c command) sourceRCFile(ctx context.Context, rt runtime.Runtime) (int, bool) {
-	switch {
-	case c.invocation.norc:
-		return 0, false
-	case rt.BashMode():
-		if !c.invocation.login {
-			if status, exited := c.sourceBashRC(ctx, rt); exited {
-				return status, true
-			}
-		}
-		return sourceStartupFile(ctx, rt, c.stderr)
-	case c.invocation.rcfile != "":
-		return sourceProfile(ctx, rt, c.stderr, c.invocation.rcfile, rt.ResolvePath(c.invocation.rcfile))
-	}
-	return sourceStartupFile(ctx, rt, c.stderr)
-}
-
-// sourceBashRC is bash's rc file: --rcfile's, or ~/.bashrc.
-func (c command) sourceBashRC(ctx context.Context, rt runtime.Runtime) (int, bool) {
-	if c.invocation.rcfile != "" {
-		return sourceProfile(ctx, rt, c.stderr, c.invocation.rcfile, rt.ResolvePath(c.invocation.rcfile))
-	}
-	return sourceHomeFile(ctx, rt, c.stderr, ".bashrc")
 }

@@ -502,6 +502,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | a session's rc file | `$ENV`, or `~/.nemoshrc` | `~/.bashrc`, or `--rcfile`'s, and then `$ENV` or `~/.nemoshrc` |
 | a login session's profile | `/etc/profile`, `~/.profile` | `/etc/profile`, then the first of `~/.bash_profile`, `~/.bash_login` and `~/.profile`; then nemosh's rc file |
 | history | `~/.nemosh_history` | `~/.bash_history`, which Git's bash shares; `~/.nemosh_history` is read after it before the first prompt, and written to no more |
+| what nemosh's rc file changes of bash's | -- | said on one line of stderr: `nemosh: ~/.nemoshrc changed what ~/.bashrc set: PS1, alias ll, function f`, the first five and how many more; a variable only added to, `PATH=$PATH:...`, is not counted |
 
 `tests/oils/baseline-sh.json` holds the sh name to what it did, so a change made for bash
 mode that moves sh fails the build.
