@@ -2,11 +2,6 @@
   "platform": "windows",
   "cases": {
     "alias.test.sh": {
-      "Loop split across alias in another way": "fail",
-      "Loop split across both iterative and recursive aliases": "fail",
-      "alias for left brace": "fail",
-      "alias for left paren": "fail",
-      "alias with keywords": "fail",
       "alias with word of multiple lines": "fail",
       "here doc inside alias": "ash-only"
     },

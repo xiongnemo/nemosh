@@ -76,22 +76,36 @@ func (r Runtime) ListShopts(reusable bool) { r.listShopts(shoptRequest{print: re
 // profile ended, and let `exit 3` end only the profile. busybox runs the trap at the
 // shell's exit, and exits 3.
 func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, error) {
-	prepared, err := ParseScript(script)
-	if err != nil {
-		return 2, false, err
+	var prepared Script
+	if !r.BashMode() {
+		var err error
+		if prepared, err = ParseScript(script); err != nil {
+			return 2, false, err
+		}
+		r.sayParseWarnings(prepared)
 	}
-	r.sayParseWarnings(prepared)
 	// A startup file is read as `.` reads one, so a `return` at its top level leaves the file
 	// and the shell goes on, as bash and busybox's ash read their rc files. It ended the shell,
 	// and Ubuntu's /etc/bash.bashrc, whose first line is `[ -z "${PS1-}" ] && return`, closed
 	// the session before its first prompt.
 	r.sourceDepth++
 	control := flowNone
+	var readErr error
 	status := r.guardedStatus("running a startup file", func() int {
+		// In bash mode as bash reads it: a command at a time, with the aliases it defines in
+		// force for the lines after; see script_chunks.go.
+		if r.BashMode() {
+			status, flow, err := r.runChunks(ctx, script, 1, 0, false)
+			control, readErr = flow, err
+			return status
+		}
 		status, flow := r.executeRead(ctx, prepared.program, 0)
 		control = flow
 		return status
 	})
+	if readErr != nil && control == flowNone {
+		return 2, false, readErr
+	}
 	switch control {
 	case flowExec:
 		r.lifecycle.exitSuppressed = true

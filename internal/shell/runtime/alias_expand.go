@@ -25,6 +25,10 @@ import (
 //
 // A name is not substituted again inside its own value, nor inside what that value runs, which
 // is what lets `alias ls='ls -F'` mean what it says and stops `alias a=b b=a`.
+//
+// That is nemosh's and sh's way. In bash mode an alias is substituted as the text is read, and
+// one that is syntax is so too (alias_read.go), so nothing is substituted here: `ls -F` read from
+// `ls` would be `ls -F -F`.
 
 // runAlias runs a simple command whose name is an alias as the text it stands for, and answers
 // false, having done nothing, for any other command. A value that does not parse is a syntax
@@ -102,7 +106,7 @@ func (r Runtime) aliasText(command simpleCommand) (string, []string, bool) {
 // one that this command is not already inside.
 func (r Runtime) aliasAt(words []word, index int) (string, string, bool) {
 	aliases := r.aliasesInForce()
-	if !r.options.expandAliases || len(aliases) == 0 || index >= len(words) || !isUnquotedLiteralWord(words[index]) {
+	if r.BashMode() || !r.options.expandAliases || len(aliases) == 0 || index >= len(words) || !isUnquotedLiteralWord(words[index]) {
 		return "", "", false
 	}
 	name := words[index].parts[0].text
