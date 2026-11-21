@@ -74,8 +74,13 @@ func isAliasOption(arg string) bool {
 }
 
 // printAlias lists one alias; reusable is bash's -p form, with `--` before a name that would
-// read as an option.
+// read as an option. Bash mode lists every alias so, quoted as bash quotes, a single quote
+// in the value closing the quotes, escaped with a backslash, and opening them again.
 func (r Runtime) printAlias(name string, reusable bool) {
+	quote := shellquote.Ash
+	if r.BashMode() {
+		reusable, quote = true, shellquote.Single
+	}
 	prefix := ""
 	switch {
 	case reusable && strings.HasPrefix(name, "-"):
@@ -83,7 +88,7 @@ func (r Runtime) printAlias(name string, reusable bool) {
 	case reusable:
 		prefix = "alias "
 	}
-	fmt.Fprintf(r.streams.Stdout, "%s%s=%s\n", prefix, name, shellquote.Ash(r.aliases[name]))
+	fmt.Fprintf(r.streams.Stdout, "%s%s=%s\n", prefix, name, quote(r.aliases[name]))
 }
 
 // unalias removes the aliases it names, as busybox's reads its operands: options up to the
