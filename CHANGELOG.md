@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`/dev/tty`**, the console: `CONIN$` read and `CONOUT$` written, handed to a program as the
+  console's own handles, so `fzf </dev/tty` has the terminal. Git's bash's `No such device or
+  address` where there is no console.
+
 - **`cygpath`**, Git for Windows' -- MSYS2's -- over this shell's path model: `-u` `/c/Users`, `-w`
   `C:\Users`, `-m` `C:/Users`, `-a`, `-p` for a list, each as Git's 3.6 converts it, for a script
   written for Git's bash; zoxide's init calls `cygpath -w` before every prompt.

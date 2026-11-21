@@ -893,11 +893,17 @@ and `ls -l` answer for it.
 | `/dev/zero` | endless zero bytes | discards | as above |
 | `/dev/random`, `/dev/urandom` | random bytes | discards | as above |
 | `/dev/clipboard` | the Windows clipboard as text | sets it; `>>` appends | as above |
+| `/dev/tty` | the console, `CONIN$` | the console, `CONOUT$` | as above |
 | `/dev/stdin`, `/dev/stdout`, `/dev/stderr`, `/dev/fd/N` | this process's own descriptor | same | reported as a device |
 
 `ls -l /dev/null` matches busybox-w32 to the column, including the major and minor
 numbers where a size would be. Both are zero and honestly so: these are provided
 by the shell rather than by a driver.
+
+`/dev/tty` is the console the shell is attached to, opened as the console's own handles, so a
+program given `</dev/tty` or `>/dev/tty` -- fzf, zoxide's interactive pick -- has the terminal
+itself rather than a pipe, as it would in Git's bash. busybox-w32 has none. With no console, a
+service's or a CI runner's, it is Git's bash's `No such device or address`.
 
 `/dev/random` and `/dev/urandom` are the same source. They differ on Linux because
 one can block waiting for entropy; Windows has one source that does not block, so

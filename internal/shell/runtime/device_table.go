@@ -58,6 +58,12 @@ var virtualDevices = []virtualDevice{
 		openWrite: discardWrites,
 	},
 	{
+		// The console; see device_tty.go.
+		name:      "/dev/tty",
+		openRead:  openTerminalReader,
+		openWrite: openTerminalWriter,
+	},
+	{
 		name:      "/dev/urandom",
 		openRead:  openRandomReader,
 		openWrite: discardWrites,
