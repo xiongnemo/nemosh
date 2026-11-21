@@ -111,9 +111,9 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 			if strings.HasPrefix(operator, ":") {
 				message += " or null"
 			}
-			return "", fmt.Errorf("%s: %s", name, message)
+			return "", parameterAbsent(name + ": " + message)
 		}
-		return "", fmt.Errorf("%s: %s", name, r.expandOperand(ctx, word, operandValue, savedStatus))
+		return "", parameterAbsent(name + ": " + r.expandOperand(ctx, word, operandValue, savedStatus))
 	case "=":
 		if !missing {
 			return value, nil
@@ -127,7 +127,11 @@ func (r Runtime) applyDefaultOperator(ctx context.Context, name, operator, word,
 			}
 			return assigned, nil
 		}
-		// busybox's words, from setvar; bash says `$1: cannot assign in this way`.
+		// busybox's words, from setvar; bash says `$1: cannot assign in this way`, as bash
+		// mode does.
+		if !isVariableName(name) && r.BashMode() {
+			return "", fmt.Errorf("$%s: cannot assign in this way", name)
+		}
 		if !isVariableName(name) {
 			return "", fmt.Errorf("%s: bad variable name", name)
 		}

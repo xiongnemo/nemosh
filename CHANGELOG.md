@@ -80,6 +80,10 @@ patch number is the commits since that tag.
     with bash's words and status and the line goes on; return outside a function says so,
     status 2, where it ended the script as exit does; and break or continue outside a loop says
     so. busybox ends the script, or says nothing, and nemosh and sh still do.
+  - **An expansion that fails in bash mode abandons its line, as in bash**, status 1, and the
+    script goes on: an arithmetic error whatever `set -e` says, a bad substitution and `${1:=x}`
+    unless `set -e` ends it there, in bash's words. `${x?}` and `set -u` still end the script,
+    with bash's status 1. busybox ends the script, status 2, and nemosh and sh still do.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
