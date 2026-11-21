@@ -114,7 +114,8 @@ var shoptOptions = []shoptOption{
 	acts("lastpipe", func(o *shellOptions) *bool { return &o.lastPipe }),
 	recorded("lithist", false, func(o *shellOptions) *bool { return &o.litHist }, historyAsTyped),
 	acts("localvar_inherit", func(o *shellOptions) *bool { return &o.localVarInherit }),
-	fixed("localvar_unset", true, "unsetting a caller's local leaves it unset until that function returns, as busybox has it"),
+	// On, busybox's, but in bash mode, which starts it off as bash does; see dynamic_unset.go.
+	actsOn("localvar_unset", func(o *shellOptions) *bool { return &o.localVarUnset }),
 	{name: "login_shell", kind: shoptStartup},
 	recorded("mailwarn", false, func(o *shellOptions) *bool { return &o.mailWarn }, "mail is not watched"),
 	recorded("no_empty_cmd_completion", false, func(o *shellOptions) *bool { return &o.noEmptyCmdCompletion }, noCompletion),

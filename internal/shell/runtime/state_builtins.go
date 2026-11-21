@@ -211,6 +211,10 @@ func (r Runtime) unsetFallingBackToFunction(name string, variables bool) {
 			delete(r.functions, parsed)
 		}
 	}
+	// A caller's local is taken away rather than unset; see dynamic_unset.go.
+	if r.dynamicUnset(name) {
+		return
+	}
 	r.unsetName(name)
 }
 

@@ -4,6 +4,9 @@ package runtime
 // call; a nested call gets its own, so restoring unwinds in the order the calls did.
 type localScope struct {
 	saved map[string]savedVariable
+	// outer is the scope of the call this one's was made from, nil for a call from the top; see
+	// dynamic_unset.go.
+	outer *localScope
 	// options are the `set` options as they stood at `local -`, and target is where
 	// they go back to when the call returns. nil when the call did not ask.
 	options []bool

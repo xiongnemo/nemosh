@@ -518,6 +518,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | return outside a function or a sourced file | ends a script as exit does, and is said at a prompt | `` return: can only `return' from a function or sourced script ``, status 2, and the line goes on |
 | break or continue outside a loop | nothing, status 0 | ``break: only meaningful in a `for', `while', or `until' loop``, status 0 |
 | `. FILE ARGS` whose FILE sets the positional parameters | the caller's come back | a list FILE set with `set --` stays; after a shift alone the caller's come back |
+| unset of a variable a caller made local; `shopt localvar_unset` | left unset until that caller returns, busybox's; the option on, and settable | the caller's local taken away and what it hid the variable's again, bash's with localvar_unset off, which bash mode starts with |
 | `cd nonexistent/..` | the `..` taken away first, and cd goes to where the path ends, busybox's | `No such file or directory`, 1: each directory before a `..` has to be there, bash's |
 | a stray `{` in a word with a brace group, `{{a,b}`, `{a,{b,c}` | the word left as written from the stray `{` on, what busybox, with no brace expansion, prints | passed over for the next `{`, bash's: `{a {b`, `{a,b {a,c` |
 | an assignment in front of a special builtin, `x=1 eval ...`, `x=1 export y`, `x=1 local v` | stays after it, as POSIX has it, busybox's | the builtin's alone, seen while it runs and gone after, bash's outside its POSIX mode; under `set -o posix` it stays |

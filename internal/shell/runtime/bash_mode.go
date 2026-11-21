@@ -25,6 +25,8 @@ func (r Runtime) EnterBashMode() {
 	// Git for Windows' bash starts with a umask of 0022, busybox-w32 with 0002; see
 	// initialFileModeMask. A background job's process is given its shell's mask after this.
 	r.mask.set(0o022)
+	// bash's unset takes a caller's local away; see dynamic_unset.go.
+	r.options.localVarUnset = false
 }
 
 // BashMode is whether the shell is in bash mode.
