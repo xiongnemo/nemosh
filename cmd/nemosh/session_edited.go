@@ -170,7 +170,12 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// which is the path a piped script takes.
 		expanded, outcome := line, historyRun
 		if !edited {
-			expanded, outcome = applyHistoryExpansion(rt, &expander, c.stderr, line)
+			expanded, outcome = applyHistoryExpansionVerifying(rt, &expander, c.stderr, line, rt.HistoryVerify())
+		}
+		if outcome == historyVerify {
+			// histverify: the expanded line comes back to edit at the next prompt, unrun.
+			editor.start = expanded
+			continue
 		}
 		if outcome == historyPrinted && rt.HistoryRecording() {
 			// A :p prints the line and records it, and it does not run.

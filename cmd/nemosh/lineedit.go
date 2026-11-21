@@ -58,7 +58,10 @@ type lineEditor struct {
 	mark        int
 	bashMode    bool
 	buffer      *lineBuffer
-	pending     []byte
+	// start is the text the next line read begins with, the cursor after it: a line history
+	// expansion changed, given back to edit under histverify. Spent on that line.
+	start   string
+	pending []byte
 	// afterCarriageReturn remembers that the last key was Enter from a bare CR, so a line
 	// feed arriving in the next read is that Enter finishing rather than another one.
 	afterCarriageReturn bool
@@ -193,6 +196,11 @@ func (e *lineEditor) readLine(ctx context.Context, prompt string) (string, error
 	e.vi = viState{on: e.vi.on}
 	e.resetDrawState()
 	fmt.Fprint(e.screen, prompt)
+	if e.start != "" {
+		e.buffer.insertText(e.start)
+		e.start = ""
+		e.redraw(prompt)
+	}
 
 	// The terminator of a line the command before this one already consumed. A cooked
 	// console read hands back a line ending CRLF, and what the command did not take is
