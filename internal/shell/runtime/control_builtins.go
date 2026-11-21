@@ -25,6 +25,17 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 	default:
 		return lineResult{}, false
 	}
+	// In bash mode the assignments are the builtin's alone; see special_prefix_bash.go. eval's
+	// text and a sourced file run with them, and what they change otherwise stays.
+	if r.bashTemporaryPrefix() && len(assignments) > 0 {
+		temporary := r.withLocalAssignments(assignments)
+		if temporary == nil {
+			return lineResult{status: 1}, true
+		}
+		result, handled := temporary.controlFlowBuiltin(ctx, args, nil, operations, savedStatus)
+		r.mergeBuiltinMutations(*temporary)
+		return result, handled
+	}
 	if status := r.assignVars(assignments); status != 0 {
 		return lineResult{status: status}, true
 	}
