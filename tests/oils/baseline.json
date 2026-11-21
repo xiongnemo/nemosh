@@ -45,7 +45,6 @@
     "assign.test.sh": {
       "\"declare -a arr\" and \"readonly -a a\" creates an empty array (OSH)": "fail",
       "\"var d = {}; declare -p d\" does not print anything (OSH)": "ash-only",
-      "Env binding in readonly/declare is NOT exported!  (pitfall)": "ash-only",
       "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
       "Test above without 'local' (which is not POSIX)": "fail",
       "Using ${x-default} after unsetting a temp binding shadowing a global": "fail"
@@ -184,8 +183,7 @@
     "builtin-special.test.sh": {
       "Prefix assignments persist after readonly, but NOT exported (set -o posix)": "ash-only",
       "Special builtins can't be redefined as shell functions (set -o posix)": "fail",
-      "bash 'type' gets confused - says 'function', but runs builtin": "fail",
-      "exec without args is a special case of the special case in some shells": "ash-only"
+      "bash 'type' gets confused - says 'function', but runs builtin": "fail"
     },
     "builtin-trap-bash.test.sh": {
       "Combine DEBUG trap and USR1 trap": "fail",
@@ -227,9 +225,6 @@
       "Unset and scope (bug #653)": "ash-only",
       "Unset invalid variable name": "fail",
       "Unset wrong type": "fail"
-    },
-    "command-parsing.test.sh": {
-      "Prefix env on assignment": "ash-only"
     },
     "command-sub.test.sh": {
       "Command Sub trailing newline removed": "fail",
@@ -369,8 +364,7 @@
     },
     "strict-options.test.sh": {
       "errexit and top-level control flow": "ash-only",
-      "return at top level is an error": "fail",
-      "shopt -s strict_binding: Persistent prefix bindings not allowed on special builtins": "fail"
+      "return at top level is an error": "fail"
     },
     "temp-binding.test.sh": {
       "Temp bindings with local": "ash-only",

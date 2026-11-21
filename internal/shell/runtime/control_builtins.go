@@ -12,6 +12,7 @@ import (
 // leading assignments persist after it completes (2.9.1) and are applied here
 // before the transfer leaves.
 func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignments []assignment, operations []redirectOperation, savedStatus int) (lineResult, bool) {
+	written := args
 	named := throughCommandPrefix(args)
 	prefixed := len(named) != len(args)
 	// Under command, eval and . are plain builtins, whose errors end only themselves; see
@@ -24,6 +25,18 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 		return r.fcCommand(ctx, args[1:], assignments, operations, savedStatus), true
 	default:
 		return lineResult{}, false
+	}
+	// In bash mode the assignments are the builtin's alone; see special_prefix_bash.go. eval's
+	// text and a sourced file run with them, and what they change otherwise stays.
+	if r.bashTemporaryPrefix() && len(assignments) > 0 {
+		temporary := r.withLocalAssignments(assignments)
+		if temporary == nil {
+			return lineResult{status: 1}, true
+		}
+		// The words as written, `command` and all, so the builtin under it is still plain.
+		result, handled := temporary.controlFlowBuiltin(ctx, written, nil, operations, savedStatus)
+		r.mergeBuiltinMutations(*temporary)
+		return result, handled
 	}
 	if status := r.assignVars(assignments); status != 0 {
 		return lineResult{status: status}, true
