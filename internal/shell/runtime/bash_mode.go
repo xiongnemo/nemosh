@@ -20,3 +20,10 @@ func (r Runtime) EnterBashMode() {
 func (r Runtime) BashMode() bool {
 	return r.options.bashMode
 }
+
+// announcesJobs is whether a job put in the background is announced, `[1] PID`: at a session's
+// own command line. bash says nothing for one in a subshell, a command substitution or a
+// pipeline stage, and busybox-w32 says it there too.
+func (r Runtime) announcesJobs() bool {
+	return r.interactive.session && (!r.BashMode() || r.subshellDepth == 0 && !r.interactive.stage)
+}

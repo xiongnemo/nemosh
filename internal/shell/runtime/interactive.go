@@ -21,6 +21,8 @@ type interactiveState struct {
 	// launch deeper in an expansion needs -- and read-only after RunInteractive sets it,
 	// so the copying that cost `$?` its status cannot cost this anything.
 	session bool
+	// stage marks a pipeline stage's shell, which is not the session's own; see announcesJobs.
+	stage bool
 	// linesRead is how many lines the session has parsed, which its $LINENO counts on from.
 	linesRead int
 }

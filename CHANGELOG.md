@@ -65,6 +65,9 @@ patch number is the commits since that tag.
     PS0 sets its timer with one -- where busybox, and nemosh and sh, call it a syntax error.
   - **`eval --` ends eval's options in bash mode**, so starship's `eval -- "$(starship init bash
     --print-full-init)"` runs no command named `--`, busybox's answer, which nemosh and sh keep.
+  - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
+    pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
+    printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
 
 - **`vi`** and **`view`**, busybox-w32's vi with vim's ways where the two differ on a key a
   Debian user knows, every case measured against both; `fc` with no `EDITOR` and `C-x C-e` in

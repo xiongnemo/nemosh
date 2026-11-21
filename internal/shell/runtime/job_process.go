@@ -96,7 +96,7 @@ func (r Runtime) launchProcessJob(node programNode) lineResult {
 	record.pid, record.deliver = command.Process.Pid, sender.send
 	r.vars["!"] = strconv.Itoa(record.pid)
 	r.markVarMutation("!")
-	if r.interactive.session {
+	if r.announcesJobs() {
 		fmt.Fprintf(r.streams.Stderr, "[%d] %d\n", record.id, record.pid)
 	}
 	go func() {

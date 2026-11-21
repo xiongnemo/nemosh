@@ -222,7 +222,7 @@ func (r Runtime) launchBackgroundSnapshot(worker Runtime, run func(Runtime) line
 	// works and what to do with it, rather than a pid-shaped lie. On stderr, as busybox
 	// puts it: on stdout it would end up inside `x=$(cmd &)`. A script gets nothing,
 	// because it wants its output rather than a commentary.
-	if r.interactive.session {
+	if r.announcesJobs() {
 		fmt.Fprintf(r.streams.Stderr, "[%d] started; kill %%%d to stop it\n", record.id, record.id)
 	}
 	go func() {

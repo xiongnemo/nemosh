@@ -15,6 +15,7 @@ import "context"
 func (r Runtime) stageRuntime(ctx context.Context, last bool) (Runtime, bool, error) {
 	if !last || !r.options.lastPipe {
 		stage, err := r.snapshot(ctx)
+		stage.interactive.stage = true
 		return stage, false, err
 	}
 	table, err := r.fds.clone()
