@@ -19,15 +19,20 @@ var errHeredocContinued = errors.New("heredoc operator continued on the next lin
 // continuedHeredocDeclarations finds the heredocs the line at index declares, with the lines
 // after it joined on while its operator or word goes on into them, and leaves index at the last
 // line it took. The line it answers is the one it read, which is the output's: one line, whose
-// number is its first's.
-func continuedHeredocDeclarations(lines []string, index *int, startOrder int, scan heredocScan) (string, []pendingHeredoc, heredocScan, error) {
+// number is its first's. Short of the input's end, atEnd false, a continuation into the line not
+// yet read -- the empty one after a session's last newline -- waits for it.
+func continuedHeredocDeclarations(lines []string, index *int, startOrder int, scan heredocScan, atEnd bool) (string, []pendingHeredoc, heredocScan, error) {
 	start, line := *index, lines[*index]
 	for {
 		declarations, next, err := heredocDeclarations(line, start+1, startOrder, scan)
 		if !errors.Is(err, errHeredocContinued) {
 			return line, declarations, next, err
 		}
-		if *index+1 >= len(lines) {
+		following := *index + 1
+		if !atEnd && (following >= len(lines) || following == len(lines)-1 && lines[following] == "") {
+			return line, nil, scan, fmt.Errorf("%w: a here-document's operator goes on into the next line", ErrIncompleteScript)
+		}
+		if following >= len(lines) {
 			return line, nil, scan, fmt.Errorf("syntax error: %w", errMissingRedirectTarget)
 		}
 		*index++

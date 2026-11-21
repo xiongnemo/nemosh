@@ -44,7 +44,7 @@ func collectHeredocs(source string, atEnd bool) (string, []pendingHeredoc, []int
 	var scan heredocScan
 	for index := 0; index < len(lines); index++ {
 		start := index
-		line, declarations, next, err := continuedHeredocDeclarations(lines, &index, len(records)+len(pending), scan)
+		line, declarations, next, err := continuedHeredocDeclarations(lines, &index, len(records)+len(pending), scan, atEnd)
 		if err != nil {
 			return "", nil, nil, nil, err
 		}
