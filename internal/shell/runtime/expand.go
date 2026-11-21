@@ -123,7 +123,7 @@ func (r Runtime) expandWordFields(ctx context.Context, item word, savedStatus in
 			// arithmetic_expand.go.
 			value, err := r.evaluateArithmetic(r.arithmeticExpansionText(ctx, part.text, savedStatus))
 			if err != nil {
-				r.reportExpansionError(err)
+				r.arithmeticExpansionFailed(err)
 				return nil, nil
 			}
 			// Split and globbed when unquoted, as a parameter's value is (POSIX 2.6.5, 2.6.6),

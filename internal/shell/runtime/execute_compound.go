@@ -163,7 +163,13 @@ func (r Runtime) executeTypedCase(ctx context.Context, node caseNode, savedStatu
 	// being tested at all, which is the whole difference between `;&` and `;;&`.
 	runNext := false
 	for _, arm := range node.arms {
-		if !runNext && !r.caseArmMatches(ctx, arm, value, savedStatus) {
+		matched := runNext || r.caseArmMatches(ctx, arm, value, savedStatus)
+		// A pattern's expansion error is the case command's: it was left raised, and the next
+		// command, on another line, was the one abandoned for it.
+		if r.shellErrorRaised() {
+			return r.shellErrorResult()
+		}
+		if !matched {
 			continue
 		}
 		bodyStatus, control := r.executeProgram(ctx, arm.body, savedStatus)

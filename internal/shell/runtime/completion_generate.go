@@ -98,7 +98,9 @@ func (r Runtime) completionFunction(ctx context.Context, name string, request co
 	r.arrays.unset("COMPREPLY")
 	delete(r.vars, "COMPREPLY")
 	result := r.callFunctionResult(ctx, definition, []string{request.command, request.word, request.previous}, savedStatus)
-	if r.expansion.shellError || result.control == flowAbort {
+	// An error that abandons a line, as an arithmetic one does in bash mode, fails compgen as
+	// one that ends a script does.
+	if r.expansion.shellError || result.control == flowAbort || result.control == flowDiscard || result.control == flowSkipLine {
 		r.discardLine()
 		return nil, result.status, false
 	}

@@ -78,7 +78,7 @@ func (r Runtime) expandEmbeddedParametersIn(ctx context.Context, text string, sa
 			if end, ok := arithmeticExpansionEnd(text, index+3); ok {
 				value, err := r.evaluateArithmetic(r.arithmeticExpansionText(ctx, text[index+3:end-1], savedStatus))
 				if err != nil {
-					r.reportExpansionError(err)
+					r.arithmeticExpansionFailed(err)
 				} else {
 					out.WriteString(strconv.FormatInt(value, 10))
 				}
