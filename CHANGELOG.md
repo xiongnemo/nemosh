@@ -136,6 +136,12 @@ patch number is the commits since that tag.
     joins it: in an assignment, a case word, `[[ ]]`, a here-string and an operator's word, so with
     IFS=: `s="$@"` is `x y`. busybox joins it by IFS's first character, as `$*`, and nemosh and sh
     still do.
+  - **A redirection's word in bash mode is expanded as an argument is**, as bash expands it:
+    braces, splitting and globbing too, so `> one-*` writes the one file it matches, and a word
+    that comes to none or several, `> $f` with a blank in f, is `$f: ambiguous redirect`, status 1,
+    and the command does not run. A colon in IFS splits nothing there, so `IFS=:` leaves `> $f`
+    with a drive in it whole, as MSYS's colonless paths are in Git's bash. busybox makes one path
+    of it, and nemosh and sh still do, as bash mode does under `set -o posix`.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
