@@ -74,8 +74,7 @@
       "Mixed case char expansion is invalid": "fail",
       "Two kinds of tilde expansion": "fail",
       "double expansion with literal and simple var": "ash-only",
-      "double expansion with simple var -- bash bug": "ash-only",
-      "{ in expansion": "ash-only"
+      "double expansion with simple var -- bash bug": "ash-only"
     },
     "bugs.test.sh": {
       "Crash after changing $[] to be alias of $(( ))": "ash-only",
