@@ -268,6 +268,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`stty -echo`, `stty` and `stty size` failed on a real console**: `-echo` was read as the
+  options e, c, h and o and refused, and the window was asked of the input handle, which
+  Windows answers Bad file descriptor. Both work now, seen in a console the robot drove.
+
 - **A login profile's alias was replaced by the session's default**: `alias ll='...'` in
   `~/.profile` gave way to Ubuntu's `ll`, which a login session set after its profiles. The
   defaults come before every startup file now, so any of them can redefine one.

@@ -32,10 +32,7 @@ import (
 // nearly every real use of stty in a script comes down to.
 func newSttyApplet() Applet {
 	return simpleApplet{name: "stty", run: func(args []string, _ io.Reader, stdout, _ io.Writer) error {
-		_, operands, err := parseAppletOptionsInOrder(args, "ag", "")
-		if err != nil {
-			// -a and -g are the dashed words getopt should take; the rest are settings and
-			// are read below, so a parse failure here is a real one.
+		if err := checkSttyWords(args); err != nil {
 			return err
 		}
 		settings := sttySettings(args)
@@ -49,9 +46,36 @@ func newSttyApplet() Applet {
 		if len(settings) == 1 && settings[0] == "-g" {
 			return writeSttySaved(stdout, handle)
 		}
-		_ = operands
 		return applySttySettings(stdout, handle, settings)
 	}}
+}
+
+// checkSttyWords refuses a dashed word that is neither an option, -a or -g, nor a setting, -echo.
+// Not getopt, which read -echo as the options e, c, h and o and refused the e, so `stty -echo`
+// failed on every real console.
+func checkSttyWords(words []string) error {
+	for _, word := range words {
+		switch {
+		case !strings.HasPrefix(word, "-"), word == "-a", word == "-g", word == "-echo":
+		default:
+			return fmt.Errorf("unknown option -- %s", strings.TrimPrefix(word, "-"))
+		}
+	}
+	return nil
+}
+
+// sttyWindow is the window's columns and rows, which only a console's output handle answers:
+// asked of the input handle, Windows said Bad file descriptor, and `stty` and `stty size` failed
+// on every real console.
+func sttyWindow(handle *os.File) (int, int, error) {
+	if console, ok := sttyOutputConsole(); ok {
+		handle = console
+	}
+	columns, rows, err := term.GetSize(int(handle.Fd()))
+	if err != nil {
+		return 0, 0, fmt.Errorf("cannot read the terminal size: %s", CauseText(err))
+	}
+	return columns, rows, nil
 }
 
 // sttySettings keeps the arguments in the order they were written, because stty's are
@@ -76,9 +100,9 @@ func sttyTerminal() (*os.File, bool) {
 }
 
 func writeSttyReport(out io.Writer, handle *os.File, verbose bool) error {
-	columns, rows, err := term.GetSize(int(handle.Fd()))
+	columns, rows, err := sttyWindow(handle)
 	if err != nil {
-		return fmt.Errorf("cannot read the terminal size: %s", CauseText(err))
+		return err
 	}
 	echo, err := terminalEcho(handle)
 	if err != nil {
@@ -102,9 +126,9 @@ func applySttySettings(out io.Writer, handle *os.File, settings []string) error 
 	for _, setting := range settings {
 		switch setting {
 		case "size":
-			columns, rows, err := term.GetSize(int(handle.Fd()))
+			columns, rows, err := sttyWindow(handle)
 			if err != nil {
-				return fmt.Errorf("cannot read the terminal size: %s", CauseText(err))
+				return err
 			}
 			if _, err := fmt.Fprintf(out, "%d %d\n", rows, columns); err != nil {
 				return err
