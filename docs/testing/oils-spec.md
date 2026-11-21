@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2293 of the 2548 cases bash passes: 90.0%.**
+**nemosh passes 2307 of the 2548 cases bash passes: 90.5%.**
 
-Of the other 255, it does 73 the way the files record of ash, which may be busybox's
-way, and 182 neither way.
+Of the other 241, it does 73 the way the files record of ash, which may be busybox's
+way, and 168 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2115 of them and does 119 the way the
 files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2293 |
+| that nemosh passes of those | 2307 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -59,7 +59,7 @@ busybox does the way the file records of ash.
 | array-basic.test.sh | 5 | 5 | 5 | 100.0% | 0 | 5 | 0 |
 | array-compat.test.sh | 12 | 12 | 11 | 91.7% | 0 | 11 | 1 |
 | array-literal.test.sh | 19 | 16 | 16 | 100.0% | 0 | 16 | 0 |
-| array-sparse.test.sh | 40 | 40 | 36 | 90.0% | 0 | 25 | 0 |
+| array-sparse.test.sh | 40 | 40 | 40 | 100.0% | 0 | 25 | 0 |
 | array.test.sh | 78 | 78 | 78 | 100.0% | 0 | 71 | 7 |
 | assign-deferred.test.sh | 9 | 9 | 9 | 100.0% | 0 | 7 | 1 |
 | assign-dialects.test.sh | 4 | 4 | 4 | 100.0% | 0 | 4 | 0 |
@@ -81,7 +81,7 @@ busybox does the way the file records of ash.
 | builtin-completion.test.sh | 51 | 50 | 48 | 96.0% | 0 | 43 | 0 |
 | builtin-dirs.test.sh | 18 | 18 | 7 | 38.9% | 0 | 7 | 2 |
 | builtin-echo.test.sh | 27 | 27 | 26 | 96.3% | 1 | 26 | 27 |
-| builtin-eval-source.test.sh | 23 | 21 | 17 | 81.0% | 0 | 14 | 13 |
+| builtin-eval-source.test.sh | 23 | 21 | 18 | 85.7% | 0 | 14 | 13 |
 | builtin-fc.test.sh | 14 | 14 | 14 | 100.0% | 0 | 3 | 2 |
 | builtin-getopts.test.sh | 31 | 31 | 31 | 100.0% | 0 | 24 | 31 |
 | builtin-history.test.sh | 17 | 15 | 12 | 80.0% | 0 | 5 | 1 |
@@ -96,8 +96,8 @@ busybox does the way the file records of ash.
 | builtin-special.test.sh | 12 | 11 | 8 | 72.7% | 2 | 8 | 10 |
 | builtin-times.test.sh | 1 | 1 | 1 | 100.0% | 0 | 1 | 1 |
 | builtin-trap-bash.test.sh | 23 | 23 | 21 | 91.3% | 0 | 21 | 4 |
-| builtin-trap-err.test.sh | 22 | 22 | 19 | 86.4% | 2 | 19 | 22 |
-| builtin-trap.test.sh | 33 | 33 | 23 | 69.7% | 0 | 19 | 25 |
+| builtin-trap-err.test.sh | 22 | 22 | 20 | 90.9% | 2 | 19 | 22 |
+| builtin-trap.test.sh | 33 | 33 | 25 | 75.8% | 0 | 19 | 25 |
 | builtin-type-bash.test.sh | 21 | 21 | 16 | 76.2% | 1 | 14 | 0 |
 | builtin-type.test.sh | 4 | 4 | 3 | 75.0% | 1 | 1 | 4 |
 | builtin-umask.test.sh | 24 | 15 | 7 | 46.7% | 0 | 7 | 2 |
@@ -111,11 +111,11 @@ busybox does the way the file records of ash.
 | divergence.test.sh | 3 | 3 | 3 | 100.0% | 0 | 3 | 3 |
 | dparen.test.sh | 15 | 14 | 13 | 92.9% | 0 | 13 | 0 |
 | empty-bodies.test.sh | 3 | 3 | 3 | 100.0% | 0 | 3 | 1 |
-| errexit-osh.test.sh | 35 | 35 | 32 | 91.4% | 0 | 31 | 35 |
+| errexit-osh.test.sh | 35 | 35 | 35 | 100.0% | 0 | 31 | 35 |
 | errexit.test.sh | 35 | 34 | 31 | 91.2% | 3 | 31 | 35 |
 | exit-status.test.sh | 11 | 11 | 11 | 100.0% | 0 | 10 | 7 |
 | explore-parsing.test.sh | 5 | 5 | 5 | 100.0% | 0 | 4 | 4 |
-| extglob-files.test.sh | 23 | 23 | 18 | 78.3% | 0 | 18 | 0 |
+| extglob-files.test.sh | 23 | 23 | 19 | 82.6% | 0 | 18 | 0 |
 | extglob-match.test.sh | 29 | 29 | 28 | 96.6% | 0 | 28 | 0 |
 | fatal-errors.test.sh | 5 | 5 | 3 | 60.0% | 2 | 0 | 3 |
 | for-expr.test.sh | 9 | 8 | 7 | 87.5% | 0 | 7 | 0 |
@@ -136,7 +136,7 @@ busybox does the way the file records of ash.
 | nocasematch-match.test.sh | 6 | 6 | 6 | 100.0% | 0 | 6 | 3 |
 | nul-bytes.test.sh | 16 | 16 | 14 | 87.5% | 1 | 14 | 12 |
 | paren-ambiguity.test.sh | 8 | 8 | 6 | 75.0% | 2 | 6 | 8 |
-| parse-errors.test.sh | 27 | 25 | 22 | 88.0% | 2 | 19 | 22 |
+| parse-errors.test.sh | 27 | 25 | 23 | 92.0% | 2 | 19 | 22 |
 | pipeline.test.sh | 26 | 26 | 25 | 96.2% | 0 | 25 | 17 |
 | posix.test.sh | 15 | 15 | 14 | 93.3% | 0 | 14 | 14 |
 | print-source-code.test.sh | 4 | 4 | 4 | 100.0% | 0 | 4 | 0 |
@@ -153,7 +153,7 @@ busybox does the way the file records of ash.
 | sh-options.test.sh | 39 | 39 | 37 | 94.9% | 0 | 33 | 12 |
 | sh-usage.test.sh | 23 | 22 | 20 | 90.9% | 0 | 19 | 18 |
 | smoke.test.sh | 18 | 18 | 17 | 94.4% | 0 | 17 | 16 |
-| strict-options.test.sh | 17 | 15 | 13 | 86.7% | 0 | 11 | 7 |
+| strict-options.test.sh | 17 | 15 | 14 | 93.3% | 0 | 11 | 7 |
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 2 | 4 |
 | tilde.test.sh | 14 | 12 | 11 | 91.7% | 1 | 11 | 10 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 47 | 88.7% | 5 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 3 | 100.0% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2293 | 90.0% | 73 | 2115 | 1447 |
+| all | 2665 | 2548 | 2307 | 90.5% | 73 | 2115 | 1447 |

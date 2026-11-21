@@ -46,12 +46,6 @@
       "[k1]=v1 looking like brace expansions (BashArray)": "ash-only",
       "non-index forms of element (BashAssoc)": "fail"
     },
-    "array-sparse.test.sh": {
-      "(YSH) $[bool(a)]": "fail",
-      "(YSH) append v1 v2... (a)": "fail",
-      "Performance demo": "fail",
-      "crash dump": "fail"
-    },
     "assign-extended.test.sh": {
       "declare": "fail",
       "declare -F with shopt -s extdebug and main file": "fail",
@@ -159,7 +153,6 @@
       "Eval in does tilde expansion": "fail",
       "Eval with syntax error": "ash-only",
       "Source with syntax error": "ash-only",
-      "eval YSH block with 'break continue return error'": "fail",
       "eval usage": "fail"
     },
     "builtin-history.test.sh": {
@@ -236,8 +229,7 @@
     },
     "builtin-trap-err.test.sh": {
       "set -o errtrace: trap ERR with \u0026": "ash-only",
-      "trap ERR pipelines without simple commands": "ash-only",
-      "trap ERR with YSH proc": "fail"
+      "trap ERR pipelines without simple commands": "ash-only"
     },
     "builtin-trap.test.sh": {
       "Remove trap with an unsigned integer": "fail",
@@ -245,8 +237,6 @@
       "trap '' sets handler to empty string (SIG_IGN)": "fail",
       "trap '' with multiple signals": "fail",
       "trap 'echo hi' KILL (regression test, caught by smoosh suite)": "fail",
-      "trap EXIT with PARSE error": "fail",
-      "trap EXIT with PARSE error and explicit exit": "fail",
       "trap EXIT, sleep, SIGINT: non-interactively": "fail",
       "trap USR1, sleep, SIGINT: non-interactively": "fail",
       "traps are cleared in subshell (started with \u0026)": "fail"
@@ -304,11 +294,6 @@
       "(( )) with redirect": "fail",
       "literal strings inside (( ))": "fail"
     },
-    "errexit-osh.test.sh": {
-      "Regression": "fail",
-      "command_sub_errexit stops at first error": "fail",
-      "strict_errexit and errexit disabled": "fail"
-    },
     "errexit.test.sh": {
       "brace group - redir failure checked": "ash-only",
       "set -e in function #2": "ash-only",
@@ -319,8 +304,7 @@
       "?() matches 0 or 1": "fail",
       "Escaping of pipe (glibc bug, see demo/glibc_fnmatch.c)": "fail",
       "Glob other punctuation chars (lexer mode)": "fail",
-      "More glob escaping": "fail",
-      "no match": "fail"
+      "More glob escaping": "fail"
     },
     "extglob-match.test.sh": {
       "Turning extglob on changes the meaning of [[ !(str) ]] in bash": "fail"
@@ -388,8 +372,7 @@
       "Invalid for loop variable name": "ash-only",
       "Long Token - 65535 bytes": "fail",
       "Token that's too long for Oils - 65536 bytes": "fail",
-      "array literal inside array is a parse error": "ash-only",
-      "} on the second line": "fail"
+      "array literal inside array is a parse error": "ash-only"
     },
     "pipeline.test.sh": {
       "|\u0026": "flaky"
@@ -445,7 +428,6 @@
       "failed command": "fail"
     },
     "strict-options.test.sh": {
-      "Control flow must be static in YSH (strict_control_flow)": "fail",
       "errexit and top-level control flow": "ash-only",
       "return at top level is an error": "fail",
       "shopt -s strict_binding: Persistent prefix bindings not allowed on special builtins": "fail"
