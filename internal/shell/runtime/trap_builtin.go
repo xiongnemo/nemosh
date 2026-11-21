@@ -61,6 +61,12 @@ func (r Runtime) trap(args []string) int {
 	if len(args) > 1 && !isDigits(args[0]) {
 		action, conditions = args[0], args[1:]
 	}
+	// One operand that names no condition is an action with none to arm, to bash: its usage,
+	// status 2, which bash mode takes. busybox calls it an invalid signal specification.
+	if _, ok := trapConditionName(args[0]); len(args) == 1 && !ok && r.BashMode() {
+		fmt.Fprintln(r.streams.Stderr, "trap: usage: trap [-Plp] [[action] signal_spec ...]")
+		return 2
+	}
 	status := 0
 	for _, condition := range conditions {
 		name, ok := trapConditionName(condition)
@@ -182,7 +188,9 @@ func trapConditionName(operand string) (trapName, bool) {
 			return trapKILL, true
 		}
 	}
-	if _, err := strconv.Atoi(operand); err == nil || slices.Contains(portableSignalNames, name) {
+	// A number is a signal from 1 to 64, which bash knows; any other is none at all, as both
+	// references say. Every number was said to be a signal this shell does not deliver.
+	if number, err := strconv.Atoi(operand); err == nil && number >= 1 && number <= 64 || slices.Contains(portableSignalNames, name) {
 		return "", true
 	}
 	return "", false
