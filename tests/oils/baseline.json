@@ -95,7 +95,6 @@
       "Change directory in non-shell parent process (make or Python)": "fail",
       "Survey of getcwd() syscall": "fail",
       "What happens when inherited $PWD and current dir disagree?": "fail",
-      "cd BAD/..": "ash-only",
       "cd and $PWD": "fail",
       "cd permits double bare dash": "fail",
       "cd with 2 or more args is allowed (strict_arg_parse disabled)": "fail",

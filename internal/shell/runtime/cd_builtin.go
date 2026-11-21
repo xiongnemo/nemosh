@@ -97,6 +97,10 @@ func looksLikeEatenBackslash(target string) bool {
 // tryChangeDirectory is one attempt. quiet suppresses the diagnostics, which is what lets
 // the CDPATH search try several places without narrating each miss.
 func (r Runtime) tryChangeDirectory(as, target string, printResult, quiet, physical bool) int {
+	// bash's directory before a `..` has to be there; see cd_dotdot_bash.go.
+	if r.bashDotDotMissing(target) {
+		return r.cdFailure(as, target, "No such file or directory", quiet)
+	}
 	resolved, err := r.ResolveNemoshPath(target)
 	if err != nil {
 		// A host-only UNC path is not a missing directory, it is not a
