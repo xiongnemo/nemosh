@@ -162,15 +162,6 @@
       "eval YSH block with 'break continue return error'": "fail",
       "eval usage": "fail"
     },
-    "builtin-getopts.test.sh": {
-      "More Smooshing 1": "ash-only",
-      "More Smooshing 2": "ash-only",
-      "OPTARG is empty (not unset) after parsing a flag doesn't take an arg": "ash-only",
-      "OPTIND after multiple getopts with different spec": "ash-only",
-      "OPTIND narrowed down": "ash-only",
-      "getopts with invalid variable name": "ash-only",
-      "two flags: -ab": "ash-only"
-    },
     "builtin-history.test.sh": {
       "HISTFILE unset": "fail",
       "HISTFILESIZE shrinks the history file when changed": "fail",

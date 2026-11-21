@@ -41,7 +41,10 @@ func (r Runtime) set(args []string) int {
 	}
 	if index < len(args) || replacePositional {
 		r.params.values = append(r.params.values[:0], args[index:]...)
-		r.params.getopts = getoptsState{}
+		// bash's set leaves getopts where it was, as it leaves OPTIND; busybox's starts it again.
+		if !r.BashMode() {
+			r.params.getopts = getoptsState{}
+		}
 		r.params.replaced++
 	}
 	return 0
