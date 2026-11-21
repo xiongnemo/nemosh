@@ -344,6 +344,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **printf refused C's length modifiers**: `%ld`, `%zu`, `%hhd`, `%Lf` printed nothing from there on,
+  status 1; they are passed over, as both references pass them over, and j and t with them, as bash
+  does.
+
 - **printf read a floating operand as Go reads a number**: `1_0` was 10, `0x1.8` and `0x10` were no
   number, and `'3.5 '` was 3.5 with status 0. It reads one as C's strtod does, as both references
   read it, and a blank before the end is no number. And a format that ends inside a conversion,
