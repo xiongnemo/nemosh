@@ -280,6 +280,9 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **`bind '"KEYS": ""'` was refused** as an empty key sequence: an empty macro binds the keys to
+  nothing, as atuin's init binds its chain key, three times over at every start.
+
 - **`stty -echo`, `stty` and `stty size` failed on a real console**: `-echo` was read as the
   options e, c, h and o and refused, and the window was asked of the input handle, which
   Windows answers Bad file descriptor. Both work now, seen in a console the robot drove.

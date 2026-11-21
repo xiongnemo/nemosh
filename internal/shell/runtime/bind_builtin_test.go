@@ -30,6 +30,9 @@ func TestBind_asBashsBuiltin(t *testing.T) {
 			stdout: "yank can be invoked via \"\\C-o\\C-s\\C-h\", \"\\C-y\".\nyank can be invoked via \"\\C-y\".\n"},
 		{name: "a macro", script: "bind '\"\\C-y\": \"macro text\"'\nbind -s\nbind -q yank\n",
 			stdout: "\"\\C-y\": \"macro text\"\nyank is not bound to any keys.\n"},
+		// atuin binds its chain key to nothing until a widget wants accept-line.
+		{name: "an empty macro", script: "bind -m emacs '\"\\C-x\\C-_A0\\a\": \"\"'; echo status=$?\nbind -s\n",
+			stdout: "status=0\n\"\\C-x\\C-_A0\\C-g\": \"\"\n"},
 		{name: "-x and -X by keymap", script: "bind -m vi-insert -x '\"\\C-t\": echo vi'\nbind -m vi-insert -X\nbind -X\nbind -x '\"\\C-o\": \"echo quoted\"'\nbind -X\n",
 			stdout: "\"\\C-t\" \"echo vi\"\n\"\\C-o\" \"echo quoted\"\n"},
 		{name: "a variable", script: "bind 'set completion-ignore-case off'\nbind -v | grep completion-ignore-case\n",

@@ -31,8 +31,9 @@ func (r Runtime) bindLine(keymap, prefix, line string) error {
 		if err != nil {
 			return err
 		}
+		// A macro may be empty, `"KEYS": ""`, which types nothing: atuin binds its chain key so.
 		macro, err := parseKeyseq(text)
-		if err != nil {
+		if err != nil && text != "" {
 			return err
 		}
 		r.bindings.set(keymap, keys, KeyBinding{Kind: BindMacro, Text: string(macro)})
