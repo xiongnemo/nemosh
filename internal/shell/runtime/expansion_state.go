@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 )
@@ -112,6 +113,12 @@ func (r Runtime) snapshotExpansionState() *expansionState {
 // `${x%.txt}` used to expand to its own six characters and exit 0.
 func (r Runtime) reportExpansionError(err error) {
 	if r.expansion.shellError {
+		return
+	}
+	// A read-only name an expansion assigned has been said, and in bash mode raised nothing:
+	// the line is abandoned, status 1, as bash's report_error abandons it.
+	if errors.Is(err, errReadonlyTarget) {
+		r.expansion.shellError, r.expansion.discard = true, true
 		return
 	}
 	r.expansion.shellError = true

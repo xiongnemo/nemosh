@@ -140,8 +140,33 @@ func (r Runtime) allExport() bool {
 // subshell that does it ends only the subshell. `read R` is the exception there, and here
 // -- it refuses, and the script goes on. This used to be a status of 1 and the next line.
 func (r Runtime) refuseReadonly(prefix, name string) int {
+	if r.BashMode() {
+		return r.refuseReadonlyAsBash(prefix, name)
+	}
 	fmt.Fprintf(r.streams.Stderr, "%s%s%s: is read only\n", r.diagnosticPrefix(), prefix, name)
 	r.raiseShellError()
+	return 1
+}
+
+// refuseReadonlyAsBash is bash's err_readonly, which bash mode takes: `x: readonly variable`,
+// export's and readonly's without their names and declare's and local's with them, and unset's
+// `cannot unset`. An assignment statement abandons the rest of its line, status 1, as bash's
+// report_error does; anything else answers 1 and the line goes on. Under `set -o posix`, bash's
+// POSIX mode, any of them ends the script with 1.
+func (r Runtime) refuseReadonlyAsBash(prefix, name string) int {
+	switch prefix {
+	case "unset: ":
+		fmt.Fprintf(r.streams.Stderr, "%sunset: %s: cannot unset: readonly variable\n", r.diagnosticPrefix(), name)
+	case "export: ", "readonly: ":
+		fmt.Fprintf(r.streams.Stderr, "%s%s: readonly variable\n", r.diagnosticPrefix(), name)
+	default:
+		fmt.Fprintf(r.streams.Stderr, "%s%s%s: readonly variable\n", r.diagnosticPrefix(), prefix, name)
+	}
+	if r.options.posix {
+		r.raiseShellErrorWith(1)
+		return 1
+	}
+	r.failAssignment()
 	return 1
 }
 

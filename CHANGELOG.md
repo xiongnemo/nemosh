@@ -65,6 +65,11 @@ patch number is the commits since that tag.
     PS0 sets its timer with one -- where busybox, and nemosh and sh, call it a syntax error.
   - **`eval --` ends eval's options in bash mode**, so starship's `eval -- "$(starship init bash
     --print-full-init)"` runs no command named `--`, busybox's answer, which nemosh and sh keep.
+  - **A write to a read-only variable in bash mode is bash's error**, `x: readonly variable`,
+    and no longer ends the script: an assignment statement abandons the rest of its line, status
+    1, a prefix assignment is passed over and its command runs, and export, readonly, declare,
+    local, unset, `for`, `read` and `((...))` answer 1. busybox ends the script, status 2, and
+    nemosh and sh still do.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.

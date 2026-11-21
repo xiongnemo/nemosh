@@ -27,16 +27,18 @@ func (p *arithmeticParser) store(name string, value int64) error {
 	// A readonly name has raised the shell error that ends the expression. A write refused
 	// otherwise -- an element before the front of its array -- has been said, and the
 	// expression goes on with its value, as bash's does: `$((a[-9] = 5))` is 5. It ended
-	// the script as a readonly variable, which it was not.
-	if p.runtime.assignVar(name, strconv.FormatInt(value, 10)) != 0 && p.runtime.expansion.shellError {
+	// the script as a readonly variable, which it was not. In bash mode a readonly name raises
+	// nothing, and is told by its name.
+	refused := p.runtime.assignVar(name, strconv.FormatInt(value, 10)) != 0
+	if refused && (p.runtime.expansion.shellError || p.runtime.BashMode() && p.runtime.isReadonly(name)) {
 		return errReadonlyTarget
 	}
 	return nil
 }
 
 // errReadonlyTarget is an arithmetic assignment assignVar refused. It has said so
-// already and raised the shell error, so a caller reporting arithmetic errors
-// passes over this one rather than saying it twice.
+// already, and raised the shell error except in bash mode, so a caller reporting arithmetic
+// errors passes over this one rather than saying it twice; see reportExpansionError.
 var errReadonlyTarget = errors.New("readonly variable")
 
 // step applies a prefix `++` or `--` and answers with the new value.

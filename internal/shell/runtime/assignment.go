@@ -109,12 +109,33 @@ func (r Runtime) runCommandWithLeadingAssignments(ctx context.Context, args []st
 		return r.runCommandWithRedirects(ctx, commandArgs)
 	}
 	if isSpecialBuiltin(commandArgs[0]) {
-		if status := r.assignVars(assignments); status != 0 {
+		if status := r.assignSpecialPrefix(assignments); status != 0 {
 			return status
 		}
 		return r.runCommandWithRedirects(ctx, commandArgs)
 	}
 	return r.runCommandWithTemporaryAssignments(ctx, commandArgs, assignments)
+}
+
+// assignSpecialPrefix makes the assignments in front of a special builtin, which stay. In bash
+// mode they are not an assignment statement's: a read-only name is said and passed over, and
+// the builtin runs, as `x=2 :` runs in bash.
+func (r Runtime) assignSpecialPrefix(assignments []assignment) int {
+	if !r.BashMode() {
+		return r.assignVars(assignments)
+	}
+	for _, assignment := range assignments {
+		if status := r.assignVar(assignment.name, r.assignedValue(assignment)); status != 0 && !r.prefixRefused(assignment.name) {
+			return status
+		}
+	}
+	return 0
+}
+
+// prefixRefused is whether a prefix assignment's write was refused for a read-only name in bash
+// mode, where the command runs all the same.
+func (r Runtime) prefixRefused(name string) bool {
+	return r.BashMode() && r.isReadonly(name)
 }
 
 func (r Runtime) runCommandWithTemporaryAssignments(ctx context.Context, args []string, assignments []assignment) int {
@@ -139,6 +160,9 @@ func (r Runtime) withLocalAssignments(assignments []assignment) *Runtime {
 		// See array_shadow.go: an array's name is a string for the command.
 		commandRuntime.shadowArray(assignment.name)
 		if status := commandRuntime.assignVar(assignment.name, commandRuntime.assignedValue(assignment)); status != 0 {
+			if commandRuntime.prefixRefused(assignment.name) {
+				continue
+			}
 			r.restoreShadowed(commandRuntime)
 			return nil
 		}
