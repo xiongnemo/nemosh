@@ -346,6 +346,11 @@ patch number is the commits since that tag.
 
 ### Changed
 
+- **`shopt -s histverify` gives an expanded line back to edit**, as bash's readline does: at a
+  prompt, `!! world` Enter puts `echo hello world` on the line, unrun and unechoed, for Enter to
+  run or the keys to change. It was recorded and changed nothing. A piped session runs the line,
+  as bash's, which reads it without readline.
+
 - **A session sets aside a `TERM` it inherits**, as Git's bash exports `xterm-256color`: a
   session is the Windows console's, which sets none, so its programs and nemosh's own vi, nano,
   less and top take the console for what it is. It says so, `nemosh: set aside inherited

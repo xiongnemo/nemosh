@@ -50,6 +50,10 @@ func (r Runtime) HistoryExpansion() bool { return r.options.histExpand }
 // HistoryRecording is `set -o history`, which a session asks before it keeps a line.
 func (r Runtime) HistoryRecording() bool { return r.options.history }
 
+// HistoryVerify is `shopt histverify`, which a session's line editor asks before it runs a line
+// history expansion changed: on, the line is given back to edit instead.
+func (r Runtime) HistoryVerify() bool { return r.options.histVerify }
+
 // MarkLoginShell records that the shell was started as a login shell, which `shopt
 // login_shell` reports. Neither reference puts it in `$-`.
 func (r Runtime) MarkLoginShell() { r.options.login = true }
