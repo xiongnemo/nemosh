@@ -69,6 +69,7 @@ No applet should be marked done without at least Smoke and Negative tests.
 | --- | --- | --- |
 | `winpath` | Nemosh | `/c/foo` to `C:\foo` or `C:/foo`, UNC conversion, invalid paths. |
 | `posixpath` | Nemosh | `C:\foo`/`C:/foo` to `/c/foo`, UNC to `//host/share`, case policy. |
+| `cygpath` | Git for Windows | `-u -w -m -a -p` against Git's cygpath 3.6, relative paths respelled, lists, UNC. |
 | `shares` | Nemosh/Windows | explicit `//host` share enumeration, disabled/config-gated behavior, network errors. |
 | `nmount` | Nemosh extension | post-v0 virtual mount registration, listing, removal, path resolution effects. |
 | `acl` or `nacl` | Windows ACL | inspect owner/ACE summary, permission denied, Unicode paths. Name still open. |

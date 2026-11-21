@@ -12,6 +12,10 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`cygpath`**, Git for Windows' -- MSYS2's -- over this shell's path model: `-u` `/c/Users`, `-w`
+  `C:\Users`, `-m` `C:/Users`, `-a`, `-p` for a list, each as Git's 3.6 converts it, for a script
+  written for Git's bash; zoxide's init calls `cygpath -w` before every prompt.
+
 - **`PROMPT_DIRTRIM`**, bash's: `\w` keeps that many trailing directories and puts `...` for the
   rest, `~/.../d/e`, by bash's own rule for when a path is left whole.
 

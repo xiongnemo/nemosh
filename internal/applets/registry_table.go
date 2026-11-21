@@ -31,6 +31,7 @@ var defaultApplets = [...]appletEntry{
 	{"cpio", newCpioApplet},
 	{"crc32", newCrc32Applet},
 	{"cut", newCutApplet},
+	{"cygpath", newCygpathApplet},
 	{"date", newDateApplet},
 	{"dc", newDcApplet},
 	{"dd", newDdApplet},

@@ -227,7 +227,7 @@ file -- so shadowing them breaks scripts that never asked for this shell. An
 install that changes what a name means is worse than one that makes you type
 `nemosh find`; `scoop shim add` covers the case where someone wants one anyway.
 
-**Applet parity with BusyBox.** 173 applets on Windows against busybox-w32's
+**Applet parity with BusyBox.** 174 applets on Windows against busybox-w32's
 179, 150 of them by the same name, and `flock`, `watch`, `which`, `time`,
 `timeout` and `kill` are builtins. The archivers, the compression formats but
 `lzop` and `compress`'s `.Z`, the text tools, `awk`, `bc` and the whole networking

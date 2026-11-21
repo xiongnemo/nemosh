@@ -49,36 +49,11 @@ func (a pathApplet) Run(ctx context.Context, args []string, _ io.Reader, stdout,
 		return ErrExitFalse
 	}
 	view := ProcessViewFromContext(ctx)
-	_, typed := view.(pathProcessView)
 	model, modelErr := cwdPathModel(view.WorkingDirectory())
 	for _, arg := range args {
 		converted, err := "", modelErr
-		lexical, recognized, lexicalErr := model.ResolveWindowsSpelling(arg)
-		if recognized {
-			err = lexicalErr
-			if err == nil && a.name == "winpath" {
-				converted, err = pathmodel.WindowsPath(lexical)
-			} else if err == nil {
-				converted = string(lexical)
-			}
-		} else if typed {
-			resolved, resolveErr := ResolveProcessPath(view, arg)
-			if resolveErr != nil {
-				err = resolveErr
-			} else if a.name == "winpath" {
-				converted, err = pathmodel.WindowsPath(resolved.Canonical)
-				if err != nil && isTmpPath(resolved.Canonical) && resolved.Native != "" {
-					converted = filepath.ToSlash(resolved.Native)
-					err = nil
-				} else if resolved.Device {
-					err = pathmodel.ErrNoWindowsPath
-				}
-			} else {
-				converted = string(resolved.Canonical)
-				err = nil
-			}
-		} else if err == nil {
-			converted, err = a.convert(model, arg)
+		if err == nil {
+			converted, err = convertedPath(view, model, arg, a.name == "winpath", a.convert)
 		}
 		if err != nil {
 			if _, writeErr := fmt.Fprintln(stderr, err); writeErr != nil {
@@ -91,6 +66,36 @@ func (a pathApplet) Run(ctx context.Context, args []string, _ io.Reader, stdout,
 		}
 	}
 	return nil
+}
+
+// convertedPath is arg as winpath or, with windows false, posixpath answers it: absolute, in the
+// shell's model, the Windows spelling with forward slashes or the Unix one. fallback converts
+// where neither the Windows spelling nor a shell's view can.
+func convertedPath(view ProcessView, model pathmodel.Model, arg string, windows bool, fallback func(pathmodel.Model, string) (string, error)) (string, error) {
+	if lexical, recognized, err := model.ResolveWindowsSpelling(arg); recognized {
+		if err != nil || !windows {
+			return string(lexical), err
+		}
+		return pathmodel.WindowsPath(lexical)
+	}
+	if _, typed := view.(pathProcessView); !typed {
+		return fallback(model, arg)
+	}
+	resolved, err := ResolveProcessPath(view, arg)
+	switch {
+	case err != nil:
+		return "", err
+	case !windows:
+		return string(resolved.Canonical), nil
+	}
+	converted, err := pathmodel.WindowsPath(resolved.Canonical)
+	if err != nil && isTmpPath(resolved.Canonical) && resolved.Native != "" {
+		return filepath.ToSlash(resolved.Native), nil
+	}
+	if resolved.Device {
+		return "", pathmodel.ErrNoWindowsPath
+	}
+	return converted, err
 }
 
 func isTmpPath(path pathmodel.Path) bool {
