@@ -109,10 +109,11 @@ func (r Runtime) executeSelect(ctx context.Context, node loopNode, savedStatus i
 			}
 			status, savedStatus = 0, 0
 		case flowBreak:
+			// The break's own status, as every loop answers it.
 			if !r.loops.consume() {
-				return lineResult{status: 0, control: flowBreak}
+				return lineResult{status: status, control: flowBreak}
 			}
-			return lineResult{status: 0}
+			return lineResult{status: status}
 		default:
 			return lineResult{status: status, control: control}
 		}

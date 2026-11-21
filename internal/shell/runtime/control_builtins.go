@@ -81,27 +81,31 @@ func (r Runtime) transferControl(args []string, savedStatus int) lineResult {
 		}
 		args = append([]string{"exit"}, args[1:]...)
 	}
-	// In bash mode a status that is no number is bash's error: said, status 2, and exit goes on
-	// with the line where busybox's ends the script; return returns with 2.
-	bashBadStatus := r.BashMode() && notANumber(args)
-	if bashBadStatus {
-		fmt.Fprintf(r.streams.Stderr, "%s%s: %s: numeric argument required\n", r.diagnosticPrefix(), args[0], args[1])
+	// Bash mode reads their operands as bash does; see control_operands_bash.go.
+	bash := r.BashMode()
+	if bash && (args[0] == "break" || args[0] == "continue") {
+		return r.bashLoopControl(args[0], args[1:])
+	}
+	if args[0] == "exit" && r.trapStatus != nil && (len(args) == 1 || bash && len(bashControlOperands(args)) == 0) {
+		savedStatus = *r.trapStatus
+	}
+	status := exitStatus(args[1:], savedStatus)
+	if bash && (args[0] == "exit" || args[0] == "return") {
+		var answer *lineResult
+		if status, answer = r.bashStatusOperand(args, savedStatus); answer != nil {
+			return *answer
+		}
 	}
 	switch args[0] {
 	case "exit":
-		if bashBadStatus {
-			return lineResult{status: 2}
+		if !bash {
+			r.badStatus(args)
 		}
-		if len(args) == 1 && r.trapStatus != nil {
-			savedStatus = *r.trapStatus
-		}
-		r.badStatus(args)
-		return lineResult{status: exitStatus(args[1:], savedStatus), control: flowExit}
+		return lineResult{status: status, control: flowExit}
 	case "return":
-		status := exitStatus(args[1:], savedStatus)
 		// A status that is no number ends the script, as busybox's number() raises it; it
 		// went on with 2.
-		if !bashBadStatus && r.badStatus(args) {
+		if !bash && r.badStatus(args) {
 			return lineResult{status: 2, control: flowAbort}
 		}
 		if r.sourceDepth == 0 && r.functionDepth == 0 {
@@ -155,15 +159,6 @@ func (r Runtime) badStatus(args []string) bool {
 	}
 	fmt.Fprintf(r.streams.Stderr, "%s%s: Illegal number: %s\n", r.diagnosticPrefix(), args[0], args[1])
 	return true
-}
-
-// notANumber is whether a builtin's first operand is there and no number.
-func notANumber(args []string) bool {
-	if len(args) < 2 {
-		return false
-	}
-	_, err := strconv.Atoi(args[1])
-	return err != nil
 }
 
 func exitStatus(args []string, savedStatus int) int {
