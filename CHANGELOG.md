@@ -96,6 +96,8 @@ patch number is the commits since that tag.
     nemosh and sh.
   - **`$-`, the `set -o` listing and alias's listing in bash mode are bash's**: `hBc` with bash's
     `-h` and `-B` and in bash's order, `set -o` by name with bash's tab, and `alias a='it'\''s'`.
+  - **type and command -V in bash mode describe an alias and a function as bash's do**: "ll is
+    aliased to `ls -l'", and a function's definition after `is a function`.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.

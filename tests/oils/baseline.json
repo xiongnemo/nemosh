@@ -188,7 +188,6 @@
     "builtin-meta.test.sh": {
       "builtin": "fail",
       "builtin ls not found": "fail",
-      "command -V": "fail",
       "command -v doesn't find executable dir": "fail",
       "command -v executable, builtin": "fail",
       "command -v with multiple names": "ash-only"
@@ -265,12 +264,10 @@
     },
     "builtin-type-bash.test.sh": {
       "type -P does not find directories (regression)": "fail",
-      "type -a -\u003e alias; prints alias definition": "fail",
       "type -t -\u003e file": "fail",
       "type -t -\u003e keyword": "fail",
       "type -t -\u003e not found": "fail",
-      "type -t doesn't find non-executable (like command -v)": "ash-only",
-      "type prints function source code": "fail"
+      "type -t doesn't find non-executable (like command -v)": "ash-only"
     },
     "builtin-type.test.sh": {
       "special builtins are called out": "ash-only"
