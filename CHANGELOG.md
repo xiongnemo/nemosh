@@ -237,6 +237,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A prompt that failed to expand ran nothing typed at it**: with `PS1='${y?boom}> '` every
+  command was abandoned for the error, `PS1=` too, so the session could not be put right; a
+  failing PS0 cost the command it came before. The error is said, the prompt drawn as written,
+  and the command runs, as busybox and bash have it.
+
 - **A quote inside a prompt's `$(...)` was printed**: `PS1='[$(echo "hi")]'` drew `["hi"]`,
   `${y:-"a b"}` kept its quotes and `$(echo ")")` came apart, in PS1, PS2, PS0 and `${x@P}`
   alike. The quote is the substitution's now, as in busybox and bash: `[hi]`.

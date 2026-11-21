@@ -118,6 +118,29 @@ func TestSession_runsPromptCommand(t *testing.T) {
 	}
 }
 
+// An error expanding a prompt is said, the prompt is drawn as written, its escapes decoded,
+// and the command typed after it runs: busybox and bash both do that with PS1, and bash with
+// PS0, measured 2026-11-21. The error was left standing, and the command after it was
+// abandoned for it, so a session whose prompt had a mistake in it ran nothing typed at it.
+func TestSession_anErrorExpandingAPromptDoesNotCostTheCommand(t *testing.T) {
+	t.Setenv("PS1", "")
+	t.Setenv("PS2", "")
+	stdin := `PS1='p${y?boom}> '
+echo ran-1
+PS1=
+PS0='${y?boom}'
+echo ran-2
+`
+	result := runInvocation(t, stdin, "--norc", "-i")
+
+	if result.stdout != "ran-1\nran-2\n" {
+		t.Errorf("stdout %q, want both commands' output", result.stdout)
+	}
+	if strings.Count(result.stderr, "y: boom") < 2 || !strings.Contains(result.stderr, "p${y?boom}> ") || !strings.Contains(result.stderr, "\n${y?boom}") {
+		t.Errorf("stderr %q, want each error said and each prompt drawn as written", result.stderr)
+	}
+}
+
 // PS0 is written to stderr once a command has been read and before it runs: decoded as a
 // prompt and then expanded, bash's order, so an escape that a variable holds stays as it is;
 // \# is the command about to run, \! its history number, $? the command before's. Unset or

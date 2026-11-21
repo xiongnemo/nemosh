@@ -1,6 +1,9 @@
 package runtime
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // RunPromptCommand is bash's PROMPT_COMMAND, run before a session draws its primary prompt:
 // the value, or each element in turn when it is an array, as bash 5.1 has it, run with $? the
@@ -31,12 +34,18 @@ func (r *Runtime) RunPromptCommand(ctx context.Context) InteractiveResult {
 // before it runs it (eval.c): decoded and then expanded, as ${PS0@P} would be and as bash does
 // every prompt, with \# the command about to run, \! its history number and $? the last
 // command's status. Unset or empty, or empty once expanded, it prints nothing. busybox has none.
+// An expansion that fails is said and PS0 is printed as written, its escapes decoded, and the
+// command runs, as bash runs it.
 func (r Runtime) CommandPrompt(ctx context.Context, lastStatus int) string {
 	value := r.vars["PS0"]
 	if value == "" || r.initErr != nil {
 		return ""
 	}
-	return r.promptTransform(ctx, value, lastStatus)
+	expanded := r.promptTransform(ctx, value, lastStatus)
+	if r.promptExpansionFailed() {
+		return decodePrompt(value, time.Now(), r.promptFacts(false), false)
+	}
+	return expanded
 }
 
 func (r Runtime) promptCommands() []string {

@@ -39,8 +39,26 @@ func (r Runtime) ExpandPromptString(ctx context.Context, text string, lastStatus
 // Prompt is PS1 or PS2 as it is drawn: expanded, and then its backslash escapes decoded, which
 // is busybox's order. `\$` comes through the expansion as written for the decoding to make # or
 // $ of it, as busybox's PSSYNTAX keeps it for PS1 and PS2; see decodePrompt for the escapes.
+//
+// An expansion that fails is said, and the prompt is drawn as written, its escapes decoded, as
+// both references draw it; the error goes no further, so the command typed at it runs.
 func (r Runtime) Prompt(ctx context.Context, text string, lastStatus int) string {
-	return decodePrompt(r.expandPromptText(ctx, text, lastStatus, true), time.Now(), r.promptFacts(true), false)
+	expanded := r.expandPromptText(ctx, text, lastStatus, true)
+	if r.promptExpansionFailed() {
+		expanded = text
+	}
+	return decodePrompt(expanded, time.Now(), r.promptFacts(true), false)
+}
+
+// promptExpansionFailed is whether expanding a prompt raised a shell error, and clears it. The
+// error has been said; left standing, it abandoned the command typed next, and at a prompt
+// whose every drawing fails, every command after it.
+func (r Runtime) promptExpansionFailed() bool {
+	if r.expansion == nil || !r.shellErrorRaised() {
+		return false
+	}
+	r.expansion.discard, r.expansion.skipLine, r.expansion.shellErrorStatus = false, false, 0
+	return true
 }
 
 // promptTransform is ${var@P}, bash's: the value decoded as a prompt is, with what each escape
