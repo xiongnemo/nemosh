@@ -29,6 +29,9 @@ type parseBudget struct {
 	// warnings are what the parse has to say of a text it accepts, the heredoc the end of a
 	// script closed; see collectHeredocs.
 	warnings []string
+	// aliases are substituted as the text is read, in bash mode; nil otherwise. See
+	// alias_read.go.
+	aliases map[string]string
 }
 
 func (budget *parseBudget) heredoc(marker string) (pendingHeredoc, bool) {

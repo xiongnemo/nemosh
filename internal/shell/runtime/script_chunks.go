@@ -3,91 +3,121 @@ package runtime
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 )
 
-// A script in bash mode is read a command at a time when it does not parse whole, as bash
-// reads every script: what comes before a syntax error runs, the error ends the script where it
-// is, status 2, and text after an `exit` is never read -- an installer's archive after `exit 0`,
-// or code for another shell after `case $SH in bash) exit;; esac`. A script that parses whole is
-// run as it always was, which is the same thing done faster, the commands being run in order
-// either way. See docs/design/bash-mode-parsing.md.
+// A text in bash mode is read as bash reads one: a command at a time, each read with the aliases
+// in force once the one before it has run, and not read at all past an `exit`. What comes before a
+// syntax error runs, the error ends the text where it is, status 2, and an installer's archive
+// after `exit 0`, or code for another shell after `case $SH in bash) exit;; esac`, is never parsed.
+// See docs/design/bash-mode-parsing.md.
 //
-// The session's parse says whether the lines read so far end in a whole command, and is asked
-// at one line, two, four and so on, rather than at every line: a session asks again from the
-// first line of a command at each line, which for a three-thousand-line loop took six seconds.
-// An error found that way narrows the question to the lines it took; see chunkWithin.
+// Reading it whole is the same thing done faster, the commands running in order either way, and
+// is tried first, at the start and again wherever the text is read again; a command at a time is
+// what a text that does not parse whole is read as from there on. The aliases a text was read
+// with changing as it runs reads the rest of it again, from the next command; see runRead.
+//
+// A command at a time, the session's parse says whether the lines read so far end in a whole
+// command, and is asked at one line, two, four and so on, rather than at every line: a session
+// asks again from the first line of a command at each line, which for a three-thousand-line loop
+// took six seconds. An error found that way narrows the question to the lines it took; see
+// chunkWithin.
 
-// runChunks runs source a command at a time, its first line numbered first, `$?` beginning as
-// savedStatus: a script's as the top level runs it, and eval's text or a sourced file's, topLevel
-// false, as executeRead does. It answers as they do, and the syntax error that ended it, if any.
+// readText is a text being read in bash mode, and the part of it read last.
+type readText struct {
+	lines []string
+	first int // the source line of lines[0]
+	// start and end are the lines read last: start where a command begins, end past the last.
+	start, end int
+	// reading is the aliases they were read with, and print its fingerprint; see alias_reading.go.
+	reading map[string]string
+	print   uint64
+}
+
+// runChunks runs source as bash mode reads a text, its first line numbered first, `$?` beginning
+// as savedStatus: a script's as the top level runs it, and eval's text or a sourced file's,
+// topLevel false, as executeRead does. It answers as they do, 0 when nothing ran, and the syntax
+// error that ended it, if any.
 func (r Runtime) runChunks(ctx context.Context, source string, first, savedStatus int, topLevel bool) (int, flowControl, error) {
 	lines := strings.SplitAfter(source, "\n")
 	if last := len(lines) - 1; last >= 0 && lines[last] == "" {
 		lines = lines[:last]
 	}
-	status := savedStatus
+	status, ran, whole, parsed := savedStatus, false, true, 0
 	for start := 0; start < len(lines); {
-		prepared, end, err := r.nextChunk(lines, start, first)
-		if err != nil {
-			return status, flowNone, err
+		text := &readText{lines: lines, first: first, start: start, end: len(lines), reading: maps.Clone(r.readingAliases()), print: r.aliasReading()}
+		var prepared Script
+		var err error
+		if whole {
+			parsed += len(lines) - start
+			prepared, err = text.parse(start, len(lines))
+			whole = err == nil
+		}
+		if !whole {
+			if prepared, text.end, err = chunkWithin(text, 0, len(lines)-start, nil); err != nil {
+				return status, flowNone, err
+			}
 		}
 		r.sayParseWarnings(prepared)
+		ran = ran || len(prepared.program) > 0
 		var control flowControl
-		status, control = r.executeStatements(ctx, prepared.program, status, topLevel, true)
+		var resume int
+		status, control, resume = r.runRead(ctx, prepared.program, status, topLevel, text)
 		if control != flowNone || r.lifecycle.exitSuppressed {
 			return status, control, nil
 		}
 		if ctx.Err() != nil {
 			return contextStatus(ctx), flowNone, nil
 		}
-		start = end
+		start = text.end
+		if resume > 0 {
+			// Read whole again while the lines parsed stay within a few times the text's: a file
+			// defining alias after alias, each used further on, read the rest again for every one,
+			// and fifty in an rc file of six hundred lines took 114 ms where it had taken 13.
+			start = resume
+			whole = whole && parsed+len(lines)-start <= 3*len(lines)
+		}
+	}
+	if !ran {
+		return 0, flowNone, nil
 	}
 	return status, flowNone, nil
 }
 
-// nextChunk parses the whole command or commands that begin at line start, and answers the line
-// after them; see chunkWithin.
-func (r Runtime) nextChunk(lines []string, start, first int) (Script, int, error) {
-	return chunkWithin(lines, start, first, 0, len(lines)-start, nil)
-}
-
-// chunkWithin finds a whole command at the front of lines[start:], knowing that its first low
-// lines are none and that its first high are the error highErr -- or, highErr nil, the end of the
-// input. It asks at low+1, low+2, low+4 and on: a whole one is the answer, and an error narrows
-// the search to the lines between it and the last that were not yet whole, asked in turn the same
-// way. A whole command before the bad line is so always found, and a long one costs a few dozen
-// parses rather than one for each of its lines.
-func chunkWithin(lines []string, start, first, low, high int, highErr error) (Script, int, error) {
+// chunkWithin finds a whole command at the front of the lines from text.start, knowing that its
+// first low lines are none and that its first high are the error highErr -- or, highErr nil, the
+// end of the input. It asks at low+1, low+2, low+4 and on: a whole one is the answer, and an error
+// narrows the search to the lines between it and the last that were not yet whole, asked in turn
+// the same way. A whole command before the bad line is so always found, and a long one costs a few
+// dozen parses rather than one for each of its lines. It answers the line past what it read.
+func chunkWithin(text *readText, low, high int, highErr error) (Script, int, error) {
+	start := text.start
 	last := low
 	for step := 1; low+step < high; step *= 2 {
 		size := low + step
-		prepared, err := parseChunk(lines, start, start+size, first)
+		prepared, err := text.parse(start, start+size)
 		if err == nil {
 			return prepared, start + size, nil
 		}
 		if !errors.Is(err, ErrIncompleteScript) {
-			return chunkWithin(lines, start, first, last, size, err)
+			return chunkWithin(text, last, size, err)
 		}
 		last = size
 	}
 	if high-last > 1 {
-		return chunkWithin(lines, start, first, last, high, highErr)
+		return chunkWithin(text, last, high, highErr)
 	}
 	if highErr != nil {
 		return Script{}, start + high, highErr
 	}
 	// The end of the input, parsed as a script's end is: a here-document's warning and all.
-	prepared, err := parseChunk(lines, start, start+high, first)
+	prepared, err := text.parse(start, start+high)
 	return prepared, start + high, err
 }
 
-// parseChunk parses lines[start:end] as numbered from first: as a session's lines while more
-// input follows, and as a script's end at the end of the input.
-func parseChunk(lines []string, start, end, first int) (Script, error) {
-	text := strings.Join(lines[start:end], "")
-	if end >= len(lines) {
-		return parseScriptAt(text, first+start)
-	}
-	return parseSessionAt(text, first+start)
+// parse parses lines[start:end] as numbered from where they are, with the aliases text was read
+// with: as a session's lines while more input follows, and as a script's end at the end of it.
+func (t *readText) parse(start, end int) (Script, error) {
+	return parseReading(strings.Join(t.lines[start:end], ""), t.first+start, end < len(t.lines), t.reading)
 }
