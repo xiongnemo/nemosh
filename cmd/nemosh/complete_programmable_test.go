@@ -14,7 +14,8 @@ import (
 // Tab asks the shell's `complete` specifications first, and puts their answer in as readline
 // puts bash's: one candidate whole and a blank after it; as it is unless -o filenames says it
 // is a name, which is then quoted; with no blank under -o nospace; several put in as far as
-// they agree; and nothing answered completes files when -o default asks for it.
+// they agree, the word replaced by what they share though it does not begin with what was typed,
+// as readline's does; and nothing answered completes files when -o default asks for it.
 func TestComplete_asksTheShellsSpecificationsFirst(t *testing.T) {
 	directory := t.TempDir()
 	if err := os.WriteFile(filepath.Join(directory, "notes.txt"), []byte("x"), 0o644); err != nil {
@@ -29,6 +30,10 @@ complete -o filenames -W "'my file'" fn
 none() { COMPREPLY=(); }
 complete -o default -F none d
 complete -F none bare
+other() { COMPREPLY=(xxone xxtwo); }
+complete -F other oth
+apart() { COMPREPLY=(abc xyz); }
+complete -F apart ap
 `
 	if status := rt.RunScript(context.Background(), script); status != 0 {
 		t.Fatalf("setting up: status %d", status)
@@ -41,6 +46,8 @@ complete -F none bare
 		{"fn m", `fn my\ file `},
 		{"d no", "d notes.txt "},
 		{"bare no", "bare no"},
+		{"oth ec", "oth xx"},
+		{"ap q", "ap q"},
 	} {
 		t.Run(test.typed, func(t *testing.T) {
 			_, editor := newStyledEditor(t, 80, "", nil)
