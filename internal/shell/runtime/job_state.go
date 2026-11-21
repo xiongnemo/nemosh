@@ -20,22 +20,24 @@ type jobState struct {
 	Line          int
 	Functions     string
 	FunctionFiles map[string]string
-	Vars          map[string]string
-	Indexed       map[string]jobIndexedArray
-	Associative   map[string]jobAssociativeArray
-	Attributes    map[string]jobAttributes
-	Readonly      []string
-	Aliases       map[string]string
-	Options       map[string]bool
-	Invocation    string
-	Name          string
-	Positional    []string
-	Function      string
-	Frames        []jobFrame
-	ScriptFile    string
-	Traps         map[string]string
-	Umask         uint16
-	DirStack      []string
+	// Traced is the functions with the trace attribute; see declare_trace.go.
+	Traced      []string
+	Vars        map[string]string
+	Indexed     map[string]jobIndexedArray
+	Associative map[string]jobAssociativeArray
+	Attributes  map[string]jobAttributes
+	Readonly    []string
+	Aliases     map[string]string
+	Options     map[string]bool
+	Invocation  string
+	Name        string
+	Positional  []string
+	Function    string
+	Frames      []jobFrame
+	ScriptFile  string
+	Traps       map[string]string
+	Umask       uint16
+	DirStack    []string
 	// AliasChain is the aliases whose text the job is part of, which it does not substitute
 	// again: `alias x='x &'` starts one job, not one after another; see alias_expand.go.
 	AliasChain []string
@@ -81,7 +83,7 @@ type jobAssociativeArray struct {
 }
 
 type jobAttributes struct {
-	Integer, Lower, Upper, Exported, Nameref, Declared bool
+	Integer, Lower, Upper, Exported, Nameref, Declared, Trace bool
 }
 
 type jobFrame struct {
@@ -111,7 +113,7 @@ func (r Runtime) captureJobState(program programNode) jobState {
 		functions.WriteString(printFunction(definition))
 		state.FunctionFiles[name] = definition.file
 	}
-	state.Functions = functions.String()
+	state.Functions, state.Traced = functions.String(), r.tracedFunctionNames()
 	for _, name := range r.arrays.indexedNames() {
 		state.Indexed[name] = jobIndexedArray{Values: r.arrays.liveValues(name), Live: r.arrays.liveIndices(name), Unassigned: r.arrays.unassigned(name)}
 	}
@@ -123,7 +125,7 @@ func (r Runtime) captureJobState(program programNode) jobState {
 		state.Associative[name] = entry
 	}
 	for name, attributes := range r.attributes {
-		state.Attributes[name] = jobAttributes{attributes.integer, attributes.lower, attributes.upper, attributes.exported, attributes.nameref, attributes.declared}
+		state.Attributes[name] = jobAttributes{attributes.integer, attributes.lower, attributes.upper, attributes.exported, attributes.nameref, attributes.declared, attributes.trace}
 	}
 	for name := range r.readonly {
 		state.Readonly = append(state.Readonly, name)
@@ -160,6 +162,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 			r.functions[definition.name] = definition
 		}
 	}
+	r.traceFunctions(state.Traced, true)
 	for name, value := range state.Vars {
 		r.vars[name] = value
 	}
@@ -181,7 +184,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 		restored.unassigned = array.Unassigned
 	}
 	for name, attributes := range state.Attributes {
-		r.attributes[name] = variableAttributes{integer: attributes.Integer, lower: attributes.Lower, upper: attributes.Upper, exported: attributes.Exported, nameref: attributes.Nameref, declared: attributes.Declared}
+		r.attributes[name] = variableAttributes{integer: attributes.Integer, lower: attributes.Lower, upper: attributes.Upper, exported: attributes.Exported, nameref: attributes.Nameref, declared: attributes.Declared, trace: attributes.Trace}
 	}
 	for _, name := range state.Readonly {
 		r.readonly[name] = struct{}{}

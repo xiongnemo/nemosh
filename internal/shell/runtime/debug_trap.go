@@ -77,9 +77,10 @@ func (r Runtime) debugTrapJob(ctx context.Context, value andOr, savedStatus int)
 }
 
 // hideDebugTrap takes the trap away from a function's body or a sourced file, which do not
-// inherit it, and answers with what to put back.
-func (r Runtime) hideDebugTrap() (string, bool) {
-	if r.options.funcTrace {
+// inherit it, and answers with what to put back. traced is a function with the trace
+// attribute, which inherits it; see declare_trace.go.
+func (r Runtime) hideDebugTrap(traced bool) (string, bool) {
+	if r.options.funcTrace || traced {
 		return "", false
 	}
 	action, set := r.traps[trapDEBUG]

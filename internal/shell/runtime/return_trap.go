@@ -13,9 +13,9 @@ import "context"
 // does not fire it, because that one hides it in turn.
 
 // hideReturnTrap takes the trap away from a call that does not inherit it, and answers
-// with what to put back.
-func (r Runtime) hideReturnTrap() (string, bool) {
-	if r.options.funcTrace {
+// with what to put back. traced is a function with the trace attribute, which inherits it.
+func (r Runtime) hideReturnTrap(traced bool) (string, bool) {
+	if r.options.funcTrace || traced {
 		return "", false
 	}
 	action, set := r.traps[trapRETURN]

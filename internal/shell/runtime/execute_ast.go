@@ -110,7 +110,7 @@ func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus 
 		return r.executeTypedList(ctx, value.value, savedStatus)
 	case functionDefinition:
 		value.file, value.aliases = r.currentFile(), r.aliasView
-		r.functions[value.name] = value
+		r.functions[value.name] = r.keepTrace(value)
 		return lineResult{status: 0}
 	case ifNode:
 		return r.executeTypedIf(ctx, value, savedStatus)

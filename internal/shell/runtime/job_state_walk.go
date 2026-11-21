@@ -8,6 +8,7 @@ func jobStateWalk(c *jobCodec, s *jobState) {
 	c.int(&s.Line)
 	c.string(&s.Functions)
 	c.stringMap(&s.FunctionFiles)
+	c.strings(&s.Traced)
 	c.stringMap(&s.Vars)
 	codecMap(c, &s.Indexed, func(c *jobCodec, array *jobIndexedArray) {
 		c.strings(&array.Values)
@@ -21,7 +22,7 @@ func jobStateWalk(c *jobCodec, s *jobState) {
 		c.bool(&array.Unassigned)
 	})
 	codecMap(c, &s.Attributes, func(c *jobCodec, a *jobAttributes) {
-		for _, flag := range []*bool{&a.Integer, &a.Lower, &a.Upper, &a.Exported, &a.Nameref, &a.Declared} {
+		for _, flag := range []*bool{&a.Integer, &a.Lower, &a.Upper, &a.Exported, &a.Nameref, &a.Declared, &a.Trace} {
 			c.bool(flag)
 		}
 	})

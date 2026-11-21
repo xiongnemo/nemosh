@@ -18,7 +18,7 @@ import (
 // by name rather than ignored, because an ignored `-i` leaves a variable that is not
 // an integer and a script that believes it is.
 
-// declareBuiltin is `declare [-aArxp] [name[=value] ...]`.
+// declareBuiltin is `declare [-aAfFgilnprtux] [name[=value] ...]`.
 func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 	options, names, err := parseDeclareOptions(args)
 	if err != nil {
@@ -27,6 +27,9 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 	}
 	if options.functionNames {
 		return r.declareFunctionNames(names)
+	}
+	if options.functionBodies && (options.trace || strings.ContainsRune(options.removed, 't')) {
+		return r.traceFunctions(names, options.trace)
 	}
 	if options.functionBodies {
 		return r.declareFunctionBodies(names)
@@ -75,6 +78,8 @@ type declareOptions struct {
 	global bool
 	// nameref is -n; see nameref.go.
 	nameref bool
+	// trace is -t, bash's trace attribute; see declare_trace.go.
+	trace bool
 }
 
 func parseDeclareOptions(args []string) (declareOptions, []string, error) {
@@ -88,8 +93,8 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 		}
 		if len(argument) >= 2 && argument[0] == '+' {
 			for _, letter := range argument[1:] {
-				if !strings.ContainsRune("ilunx", letter) {
-					return options, nil, fmt.Errorf("+%c: not an attribute this build can take away; it takes +i +l +u +n +x", letter)
+				if !strings.ContainsRune("iluntx", letter) {
+					return options, nil, fmt.Errorf("+%c: not an attribute this build can take away; it takes +i +l +u +n +t +x", letter)
 				}
 			}
 			options.removed += argument[1:]
@@ -124,6 +129,8 @@ func parseDeclareOptions(args []string) (declareOptions, []string, error) {
 				options.global = true
 			case 'n':
 				options.nameref = true
+			case 't':
+				options.trace = true
 			default:
 				// bash's words: declare is bash's, which busybox has not.
 				return options, nil, fmt.Errorf("-%c: invalid option", letter)

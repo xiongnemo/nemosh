@@ -30,6 +30,9 @@ type functionDefinition struct {
 	// the aliases its line was read with, which its body is substituted from; see alias_view.go.
 	file    string
 	aliases map[string]string
+	// traced is `declare -ft`: the function inherits the DEBUG and RETURN traps; see
+	// declare_trace.go.
+	traced bool
 }
 
 func (functionDefinition) programNode() {}

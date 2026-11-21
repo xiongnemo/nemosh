@@ -34,6 +34,9 @@ type variableAttributes struct {
 	// and there all the same, so `declare -p` shows it as bash does, `declare -- x`. It was
 	// not found.
 	declared bool
+	// trace is `declare -t`, which means nothing on a variable and is shown; see
+	// declare_trace.go.
+	trace bool
 }
 
 // markDeclared records that a name was declared, with or without a value to come.
@@ -84,8 +87,13 @@ func (r Runtime) applyDeclaredAttributes(name string, options declareOptions) {
 	if options.lower || options.upper {
 		attributes.lower, attributes.upper = options.lower, options.upper
 	}
+	if options.trace {
+		attributes.trace = true
+	}
 	for _, letter := range options.removed {
 		switch letter {
+		case 't':
+			attributes.trace = false
 		case 'i':
 			attributes.integer = false
 		case 'l':
@@ -104,7 +112,7 @@ func (r Runtime) applyDeclaredAttributes(name string, options declareOptions) {
 }
 
 // declareFlags are a name's attributes in the order `declare -p` prints them, which is
-// bash's table order: a A i n r x l u. "-" when there are none, making `declare --`.
+// bash's table order: a A i n r t x l u. "-" when there are none, making `declare --`.
 func (r Runtime) declareFlags(name string) string {
 	var flags strings.Builder
 	switch {
@@ -122,6 +130,9 @@ func (r Runtime) declareFlags(name string) string {
 	}
 	if r.isReadonly(name) {
 		flags.WriteByte('r')
+	}
+	if attributes.trace {
+		flags.WriteByte('t')
 	}
 	if r.isExported(name) {
 		flags.WriteByte('x')
@@ -151,7 +162,11 @@ func (r Runtime) declareFunctionNames(names []string) int {
 		}
 		sort.Strings(defined)
 		for _, name := range defined {
-			fmt.Fprintf(r.streams.Stdout, "declare -f %s\n", name)
+			flags := "f"
+			if r.functions[functionName{value: name}].traced {
+				flags = "ft"
+			}
+			fmt.Fprintf(r.streams.Stdout, "declare -%s %s\n", flags, name)
 		}
 		return 0
 	}

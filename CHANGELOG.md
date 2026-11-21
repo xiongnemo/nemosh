@@ -12,6 +12,11 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`declare -t`**, bash's trace attribute: `declare -ft f` has f inherit the DEBUG and RETURN
+  traps, as every function does under `set -T`, and keep the attribute when it is defined again;
+  `declare -F` lists it as `declare -ft f`, and on a variable `declare -p` shows it. It was an
+  invalid option, the first thing bash-preexec runs.
+
 - **Bash mode**, the start of following Git for Windows' bash where bash and busybox part:
   the shell run as bash -- `nemosh bash`, a `#!/bin/bash` script, a command named bash -- is in
   it, and so is the nemosh name with **`NEMOSH_COMPAT=bash`** in the environment, so a Windows

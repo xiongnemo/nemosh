@@ -117,8 +117,8 @@ func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefini
 	// The body is substituted from the aliases its definition's line was read with; see
 	// alias_view.go.
 	r.aliasView = definition.aliases
-	hidden, wasSet := r.hideReturnTrap()
-	debug, debugSet := r.hideDebugTrap()
+	hidden, wasSet := r.hideReturnTrap(definition.traced)
+	debug, debugSet := r.hideDebugTrap(definition.traced)
 	result := r.executeCommandNode(ctx, definition.body, savedStatus)
 	r.finishReturnTrap(ctx, hidden, wasSet, result)
 	r.restoreDebugTrap(debug, debugSet)
