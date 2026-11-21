@@ -58,7 +58,6 @@ const (
 	historyOneEntry = "a command of several lines is one entry either way"
 	historyAsTyped  = "a command of several lines is kept as it was typed, its newlines and all, either way"
 	historyNoReedit = "a history expansion that fails is reported and its line dropped, never given back to edit"
-	historyNoVerify = "an expanded line is shown and run at once, never given back to edit first"
 	noCompletion    = "completion here follows nemosh's own specs, which this does not reach"
 	noCompat        = "there is one compatibility level, bash 5.3's where busybox is silent"
 )
@@ -103,7 +102,9 @@ var shoptOptions = []shoptOption{
 	fixed("gnu_errfmt", false, "an error message has one form"),
 	recorded("histappend", false, func(o *shellOptions) *bool { return &o.histAppend }, historyAppends),
 	recorded("histreedit", false, func(o *shellOptions) *bool { return &o.histReedit }, historyNoReedit),
-	recorded("histverify", false, func(o *shellOptions) *bool { return &o.histVerify }, historyNoVerify),
+	// A line history expansion changed is given back to edit at a prompt; see
+	// cmd/nemosh/history_expand.go.
+	acts("histverify", func(o *shellOptions) *bool { return &o.histVerify }),
 	recorded("hostcomplete", true, func(o *shellOptions) *bool { return &o.hostComplete }, noCompletion),
 	recorded("huponexit", false, func(o *shellOptions) *bool { return &o.hupOnExit },
 		"a job is not sent a hangup when the shell exits"),
