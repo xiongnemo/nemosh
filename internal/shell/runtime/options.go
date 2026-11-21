@@ -169,11 +169,19 @@ const busyboxLetters = "efIimnscxvCabuET"
 func (o *shellOptions) letters() string {
 	on := o.invocation
 	for _, spec := range shellOptionSpecs {
-		if spec.letter != 0 && !spec.bash && *spec.field(o) {
+		if spec.letter != 0 && (!spec.bash || o.bashMode) && *spec.field(o) {
 			on += string(spec.letter)
 		}
 	}
 	var enabled strings.Builder
+	if o.bashMode {
+		for index := range len(bashLetters) {
+			if strings.IndexByte(on, bashLetters[index]) >= 0 {
+				enabled.WriteByte(bashLetters[index])
+			}
+		}
+		return enabled.String()
+	}
 	for index := len(busyboxLetters) - 1; index >= 0; index-- {
 		if strings.IndexByte(on, busyboxLetters[index]) >= 0 {
 			enabled.WriteByte(busyboxLetters[index])
@@ -181,3 +189,8 @@ func (o *shellOptions) letters() string {
 	}
 	return enabled.String()
 }
+
+// bashLetters is bash's flag table in its order, with how the shell was started after it, as
+// bash spells `$-` and bash mode does: every short option on, bash's own -h, -B and -H among
+// them, `set -eu` in a script `ehuB`.
+const bashLetters = "abefhikmnptuvxBCEHPTcs"

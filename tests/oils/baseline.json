@@ -2,14 +2,12 @@
   "platform": "windows",
   "cases": {
     "alias.test.sh": {
-      "List aliases by providing names": "fail",
       "Loop split across alias in another way": "fail",
       "Loop split across both iterative and recursive aliases": "fail",
       "alias for left brace": "fail",
       "alias for left paren": "fail",
       "alias with keywords": "fail",
       "alias with word of multiple lines": "fail",
-      "alias without args lists all aliases": "fail",
       "here doc inside alias": "ash-only"
     },
     "arg-parse.test.sh": {
@@ -449,8 +447,6 @@
       "set": "ash-only"
     },
     "sh-options.test.sh": {
-      "$- with -c": "fail",
-      "$- with pipefail": "fail",
       "set without args lists variables": "fail",
       "stubbed out bash options": "fail"
     },
