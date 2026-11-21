@@ -41,9 +41,14 @@ func (r Runtime) export(args []string) int {
 	if len(args) == 0 {
 		return r.listExported()
 	}
+	refused := 0
 	for _, arg := range args {
 		target, value, hasValue := cutAssignment(arg)
 		name, appended := splitAssignmentTarget(target)
+		if !isValidVariableName(name) && r.BashMode() {
+			refused = r.notIdentifier("export", arg)
+			continue
+		}
 		if !isValidVariableName(name) {
 			return r.refuseName("export: ", name)
 		}
@@ -79,7 +84,7 @@ func (r Runtime) export(args []string) int {
 			r.env.Set(name, r.vars[name])
 		}
 	}
-	return 0
+	return refused
 }
 
 // unset removes variables, and array elements when the operand carries a subscript.
@@ -95,7 +100,7 @@ func (r Runtime) export(args []string) int {
 // the function defined, and succeeded. A plain `unset f` does not reach a function either,
 // which is busybox's reading of POSIX; bash falls back to one.
 func (r Runtime) unset(ctx context.Context, args []string) int {
-	functions, nameref := false, false
+	functions, variables, nameref := false, false, false
 	for len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
 		if args[0] == "--" {
 			args = args[1:]
@@ -106,7 +111,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 			case 'f':
 				functions = true
 			case 'v':
-				functions = false
+				functions, variables = false, true
 			case 'n':
 				nameref = true
 			default:
@@ -130,11 +135,20 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 		}
 		return 0
 	}
+	refused := 0
 	for _, name := range args {
 		base, subscript, hasSubscript := splitSubscriptedName(name)
 		// A name no variable can have is busybox's error, and ends the script as a special
-		// builtin's does: `unset a-b` returned 0, having done nothing.
-		if !isValidVariableName(base) {
+		// builtin's does: `unset a-b` returned 0, having done nothing. In bash mode it is
+		// bash's: no error at all with no option, since it may name a function, and with -v
+		// not a valid identifier, status 1.
+		switch {
+		case !isValidVariableName(base) && r.BashMode() && variables:
+			refused = r.notIdentifier("unset", name)
+			continue
+		case !isValidVariableName(base) && r.BashMode():
+			continue
+		case !isValidVariableName(base):
 			return r.refuseName("unset: ", name)
 		}
 		if r.isReadonly(base) {
@@ -189,7 +203,7 @@ func (r Runtime) unset(ctx context.Context, args []string) int {
 		r.arrays.unsetElement(base, index)
 		r.markVarMutation(base)
 	}
-	return 0
+	return refused
 }
 
 // splitSubscriptedName separates `a[1]` into its name and its subscript.

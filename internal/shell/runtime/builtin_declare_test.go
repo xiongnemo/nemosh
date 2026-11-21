@@ -146,7 +146,7 @@ func TestDeclare_refusesWhatItCannotHonour(t *testing.T) {
 	}{
 		{name: "an option bash has not got", script: "declare -Z f\n", fragment: "declare: -Z: invalid option"},
 		{name: "both kinds at once", script: "declare -Aa m\n", fragment: "cannot both be given"},
-		{name: "not a name", script: "declare 9bad=1\n", fragment: "not a valid name"},
+		{name: "not a name", script: "declare 9bad=1\n", fragment: "declare: `9bad=1': not a valid identifier"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

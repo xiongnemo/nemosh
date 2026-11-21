@@ -40,12 +40,18 @@ func (r Runtime) declareBuiltin(ctx context.Context, args []string) int {
 	if options.print {
 		return r.printDeclarations(names)
 	}
+	// Every operand is declared, an earlier one's failure answered in the status, as bash's
+	// declare goes on; one that raised a shell error ends it there.
+	failed := 0
 	for _, name := range names {
 		if status := r.declareInFunction(ctx, options, name); status != 0 {
-			return status
+			if r.expansion.shellError {
+				return status
+			}
+			failed = status
 		}
 	}
-	return 0
+	return failed
 }
 
 // declareInFunction is declare's scope rule, bash's: inside a function a name it declares
@@ -161,8 +167,7 @@ func (r Runtime) declareName(ctx context.Context, options declareOptions, argume
 		return r.assignElementByKind(ctx, reference, value)
 	}
 	if !isValidVariableName(name) {
-		fmt.Fprintf(r.streams.Stderr, "%sdeclare: %s: not a valid name\n", r.diagnosticPrefix(), name)
-		return 1
+		return r.notIdentifier("declare", argument)
 	}
 	if !r.declareArrayKind(name, options) {
 		return 1

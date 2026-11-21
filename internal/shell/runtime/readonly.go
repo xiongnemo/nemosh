@@ -15,9 +15,14 @@ func (r Runtime) readonlyBuiltin(ctx context.Context, args []string) int {
 	case options.indexed || options.associative:
 		return r.readonlyArrays(ctx, options, args)
 	}
+	refused := 0
 	for _, arg := range args {
 		target, value, hasValue := cutAssignment(arg)
 		name, appended := splitAssignmentTarget(target)
+		if !isValidVariableName(name) && r.BashMode() {
+			refused = r.notIdentifier("readonly", arg)
+			continue
+		}
 		if !isValidVariableName(name) {
 			return r.refuseName("readonly: ", name)
 		}
@@ -42,7 +47,7 @@ func (r Runtime) readonlyBuiltin(ctx context.Context, args []string) int {
 		r.readonly[name] = struct{}{}
 		r.markVarMutation(name)
 	}
-	return 0
+	return refused
 }
 
 // assignVar is the one way a variable is written: readonly refused, RANDOM and SECONDS
@@ -178,6 +183,14 @@ func (r Runtime) refuseName(prefix, name string) int {
 	fmt.Fprintf(r.streams.Stderr, "%s%s%s: bad variable name\n", r.diagnosticPrefix(), prefix, name)
 	r.raiseShellError()
 	return 2
+}
+
+// notIdentifier is bash's refusal of an operand that is no name, which bash mode takes:
+// "export: `1x=2': not a valid identifier", the operand as written, status 1, and the builtin
+// goes on with its other operands.
+func (r Runtime) notIdentifier(builtin, operand string) int {
+	fmt.Fprintf(r.streams.Stderr, "%s%s: `%s': not a valid identifier\n", r.diagnosticPrefix(), builtin, operand)
+	return 1
 }
 
 // isReadonly answers for a name, or for the array an element belongs to: `readonly a`

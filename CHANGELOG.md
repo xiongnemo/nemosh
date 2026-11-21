@@ -70,6 +70,11 @@ patch number is the commits since that tag.
     1, a prefix assignment is passed over and its command runs, and export, readonly, declare,
     local, unset, `for`, `read` and `((...))` answer 1. busybox ends the script, status 2, and
     nemosh and sh still do.
+  - **An operand that is no name, in bash mode, is bash's error**, `` export: `1x=2': not a
+    valid identifier ``: the other operands are dealt with, status 1, and the script goes on;
+    `unset 1x` is no error and `unset -v 1x` is. busybox's `bad variable name` ends the script,
+    and still does as nemosh and sh. `declare` says it so under every name, and declares its
+    other operands, where it stopped at the first.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.
