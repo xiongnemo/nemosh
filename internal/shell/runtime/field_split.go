@@ -15,9 +15,19 @@ func (r Runtime) assignedList(part wordPart, values []string) (string, bool) {
 		return strings.Join(values, " "), true
 	}
 	if positionalList(part.text) == "$@" && part.quote != quoteUnquoted {
-		return strings.Join(values, r.starSeparator()), true
+		return strings.Join(values, r.atSeparator()), true
 	}
 	return "", false
+}
+
+// atSeparator is what $@ joins with where nothing splits it -- an assignment, a case word, [[ ]],
+// a here-string: IFS's first character, as $* joins, in busybox, and a space whatever IFS is in
+// bash, which bash mode takes. With IFS=: `s="$@"` over x and y is x:y, or x y.
+func (r Runtime) atSeparator() string {
+	if r.BashMode() {
+		return " "
+	}
+	return r.starSeparator()
 }
 
 // defaultFieldSeparators is IFS as the shell starts with it: space, tab and newline.

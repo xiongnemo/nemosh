@@ -132,6 +132,10 @@ patch number is the commits since that tag.
     IFS=zx; for i in $*` keeps the empty one. busybox splits each parameter on its own, and
     nemosh and sh still do; an array's unquoted `${a[@]}` and `${a[*]}`, being bash's alone, are
     bash's under every name.
+  - **`$@` where nothing splits it is joined by a space in bash mode**, whatever IFS is, as bash
+    joins it: in an assignment, a case word, `[[ ]]`, a here-string and an operator's word, so with
+    IFS=: `s="$@"` is `x y`. busybox joins it by IFS's first character, as `$*`, and nemosh and sh
+    still do.
   - **A session in bash mode announces only its own jobs**: one a subshell, a `$(...)` or a
     pipeline stage puts in the background says nothing, as in bash, where atuin's `(atuin ... &)`
     printed `[1] PID` before every prompt. busybox-w32 announces them, and nemosh and sh still do.

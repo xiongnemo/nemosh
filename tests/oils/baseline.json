@@ -33,9 +33,6 @@
       "set associative array to indexed array literal (very surprising bash behavior)": "fail",
       "setting key to itself (from bash-bug mailing list)": "ash-only"
     },
-    "array-compat.test.sh": {
-      "Array Decay with IFS": "fail"
-    },
     "array-literal.test.sh": {
       "Tilde expansions in RHS of [k]=v (BashAssoc)": "ash-only",
       "[k1]=v1 looking like brace expansions (BashArray)": "ash-only",
@@ -485,7 +482,6 @@
       "whitespace in string to integer conversion": "fail"
     },
     "word-split.test.sh": {
-      "IFS and joining arrays by assignments": "ash-only",
       "IFS empty doesn't do splitting": "fail",
       "IFS unset behaves like $' \\t\\n'": "fail",
       "IFS='' with ${!a[@]} and ${!a[*]} (bug #627)": "fail",

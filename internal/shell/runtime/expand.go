@@ -191,7 +191,11 @@ func (r Runtime) buildParameter(ctx context.Context, build *fieldBuilder, part w
 	// empty one vanishing, or in bash mode, and for an array, which is bash's alone, joined by
 	// IFS and split; see unquotedList.
 	case part.quote == quoteUnquoted && (isArrayAtReference(part.text) || star || list == "$@" || list == "$*"):
-		build.unquotedList(values, r.starSeparator(), r.BashMode() || isArrayAtReference(part.text) || star)
+		joiner := r.starSeparator()
+		if list == "$@" {
+			joiner = r.atSeparator()
+		}
+		build.unquotedList(values, joiner, r.BashMode() || isArrayAtReference(part.text) || star)
 	// `"${a[@]}"` is one word per element, exactly as `"$@"` is -- which is the whole
 	// reason arrays are worth having, since it is the only form that keeps an element
 	// containing a blank intact.
