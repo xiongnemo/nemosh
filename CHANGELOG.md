@@ -142,6 +142,9 @@ patch number is the commits since that tag.
     abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **`set` in bash mode lists as bash's does**: `a=spam` bare, `b='two words'` and `c=$'a\nb'`
+    quoted as bash quotes them, and the functions after the variables, but under `set -o posix`.
+    busybox single-quotes every value and lists no function, and nemosh and sh still do.
   - **A subshell in a function is still in it in bash mode**, as bash's is: `f() { ( local x=2;
     ... ); }` works, and an unset there of the caller's local takes it away in the subshell alone.
     busybox's subshell is in no function, `local: not in a function`, and nemosh and sh keep that.
