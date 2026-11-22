@@ -1,6 +1,11 @@
 package runtime
 
-import "strings"
+import (
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
 
 // Bash mode is this shell run as bash: named bash, as `nemosh bash`, a nemosh called
 // bash.exe, a command named bash and a `#!/bin/bash` script run it, or named nemosh with
@@ -27,6 +32,26 @@ func (r Runtime) EnterBashMode() {
 	r.mask.set(0o022)
 	// bash's unset takes a caller's local away; see dynamic_unset.go.
 	r.options.localVarUnset = false
+	r.setBashStartupVariables()
+}
+
+// setBashStartupVariables sets what bash's start sets and busybox's does not: PPID an integer and
+// read-only, `declare -ir PPID="..."`, and `$_` the path that ran the shell, so `set -u` finds it
+// set. busybox's PPID takes an assignment, and its `$_` is unset until a command has run, as
+// nemosh's and sh's are. Measured against Git for Windows' bash 5.3.
+func (r Runtime) setBashStartupVariables() {
+	if r.special != nil {
+		r.vars["PPID"] = strconv.Itoa(r.special.ppid)
+		r.readonly["PPID"] = struct{}{}
+		attributes := r.attributes["PPID"]
+		attributes.integer = true
+		r.attributes["PPID"] = attributes
+	}
+	if _, set := r.vars["_"]; !set {
+		if path, err := os.Executable(); err == nil {
+			r.vars["_"] = filepath.ToSlash(path)
+		}
+	}
 }
 
 // BashMode is whether the shell is in bash mode.

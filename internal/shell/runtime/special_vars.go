@@ -137,8 +137,9 @@ func (r Runtime) dynamicParameter(name string) (string, bool) {
 // RANDOM reseeds and SECONDS resets, which is what bash does; storing the value
 // instead would make the next read return a constant, and a `$RANDOM` that is
 // always 4 is the kind of thing that gets noticed after the damage. PPID is
-// read-only in bash and is refused here, through the ordinary readonly path so the
-// diagnostic is the same one every other read-only name gets.
+// read-only in bash, and in bash mode, through the ordinary readonly path so the
+// diagnostic is the same one every other read-only name gets (setBashStartupVariables);
+// busybox's takes an assignment, as nemosh's and sh's do.
 func (r Runtime) assignSpecialVar(name, value string) bool {
 	if r.special == nil {
 		return false

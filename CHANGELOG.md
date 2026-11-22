@@ -146,6 +146,10 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **PPID is read-only and `$_` set from the start in bash mode**: `PPID=x` says `PPID: readonly
+    variable`, `declare -p PPID` is `declare -ir`, and `set -u; echo $_` finds the shell's path,
+    as in bash. busybox's PPID takes an assignment and its `$_` is unset at first, and nemosh's and
+    sh's still are.
   - **`time` is a keyword to type and command in bash mode**: `type -t time` says keyword and
     `type time` "time is a shell keyword", as in bash. nemosh and sh call busybox's applet "a
     builtin applet".

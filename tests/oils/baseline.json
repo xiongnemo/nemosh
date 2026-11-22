@@ -367,11 +367,9 @@
     "vars-special.test.sh": {
       "$BASHPID DOES change with subshell and command sub": "fail",
       "$PATH is set if unset at startup": "fail",
-      "$_ is not undefined on first use": "fail",
       "$_ with pipeline and subshell": "fail",
       "BASH_VERSION / OILS_VERSION": "fail",
-      "Some vars are set, even without startup file, or env: PATH, PWD": "fail",
-      "UID EUID PPID can't be changed": "fail"
+      "Some vars are set, even without startup file, or env: PATH, PWD": "fail"
     },
     "whitespace.test.sh": {
       "Default IFS does not include \\r \\v \\f": "fail",
