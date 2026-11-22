@@ -131,8 +131,9 @@ func (r Runtime) clone(ctx context.Context, privateJobs bool) (Runtime, error) {
 		aliasView:  r.aliasView, // the line's, as its other commands have; see alias_view.go
 		// locals belongs to a function call, and a snapshot is not inside
 		// one: a subshell or a background worker that returns has nothing
-		// of the caller's to restore.
-		locals: nil,
+		// of the caller's to restore. Bash mode's is a copy, a bash subshell
+		// being in its function still; see copyLocals.
+		locals: r.copyLocals(),
 		frames: r.frames,
 		// Where `set -e` is ignored -- a condition, the left of `||` -- it is ignored in
 		// a subshell there too, even one that sets -e itself: `(set -e; false; echo x) ||
