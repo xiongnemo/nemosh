@@ -429,6 +429,11 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A subshell's `)` did not end the word after it**: `(cmd)2>/dev/null` sent cmd's output away
+  and kept its errors, the `2` taken for part of the group, and `(cmd)x` ran cmd and dropped the
+  x. The first now redirects standard error and the second is a syntax error, as in both
+  references.
+
 - **set listed environment entries no variable can be**: Windows' hidden `=ExitCode` and `=C:`
   came out as `='C:=C:\work'`, and `ProgramFiles(x86)` with its value. Both references list only
   what a script can name; a child is still handed them.

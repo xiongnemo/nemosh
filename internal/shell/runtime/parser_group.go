@@ -8,8 +8,9 @@ import (
 type parsedGroup struct {
 	brace bool
 	body  Script
-	// width is how long the group was as written, which its placeholder is not.
-	width int
+	// width is how long the group was as written, which its placeholder is not, and masked how
+	// long the placeholder is, with the blank that may follow it.
+	width, masked int
 }
 
 func (g parsedGroup) withRedirects(redirects []redirectOperation) commandNode {
@@ -154,8 +155,15 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		if err != nil {
 			return "", nil, err
 		}
-		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested, width: end + 1 - start}
-		output.WriteString(groupPlaceholder)
+		// The `)` ends a word, as an operator does, and the placeholder is one: `(cmd)2>f`
+		// joined the `2` to it and sent the output to f, and `(cmd)x` dropped the x. A blank
+		// keeps what follows apart, an io-number or the word bash and busybox refuse.
+		placeholder := groupPlaceholder
+		if end+1 < len(line) && strings.IndexByte(" \t\n|&;<>()", line[end+1]) < 0 {
+			placeholder += " "
+		}
+		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested, width: end + 1 - start, masked: len(placeholder)}
+		output.WriteString(placeholder)
 		index = end + 1
 	}
 	return output.String(), groups, nil
