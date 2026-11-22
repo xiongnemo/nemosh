@@ -153,7 +153,8 @@ func (r Runtime) commandKinds(name string) []commandKind {
 		}
 		kinds = append(kinds, commandKind{word: "alias", description: description})
 	}
-	if ReservedWord(name) {
+	// time is one in bash mode, as bash's reserved word; busybox has its applet alone.
+	if ReservedWord(name) || name == timeKeyword && r.BashMode() {
 		kinds = append(kinds, commandKind{word: "keyword", description: name + " is a shell keyword"})
 	}
 	// A special builtin is called one, as busybox calls POSIX's and its own local and times:
