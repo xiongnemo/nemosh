@@ -186,7 +186,9 @@ func parseFunctionBody(source string, simple bool, budget *parseBudget, depth in
 		}
 		return nil, fmt.Errorf("syntax error: function body must be a compound command")
 	}
-	return command[0].group.withRedirects(redirects), nil
+	// A body's redirections are made at each call, and bash says their failure on the line the
+	// definition begins on.
+	return command[0].group.withRedirects(redirects, budget.line()), nil
 }
 
 // cutFunctionKeyword strips a leading `function` keyword, reporting whether there was

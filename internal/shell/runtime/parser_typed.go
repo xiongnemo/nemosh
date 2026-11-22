@@ -128,7 +128,11 @@ func parseAndOr(tokens []shellToken, budget *parseBudget) (andOr, error) {
 				return andOr{}, classifyCommandError(err)
 			}
 			if len(command) == 1 && command[0].group != nil {
-				parsed.commands = append(parsed.commands, command[0].group.withRedirects(redirects))
+				closer := 0
+				if len(redirects) > 0 {
+					closer = budget.commandLine(command[:1]) + command[0].group.breaks
+				}
+				parsed.commands = append(parsed.commands, command[0].group.withRedirects(redirects, closer))
 				continue
 			}
 			// A group anywhere else in a command is a syntax error, as bash has it: `a= (1 2)`,

@@ -9,15 +9,18 @@ type parsedGroup struct {
 	brace bool
 	body  Script
 	// width is how long the group was as written, which its placeholder is not, and masked how
-	// long the placeholder is, with the blank that may follow it.
-	width, masked int
+	// long the placeholder is, with the blank that may follow it; breaks is how many lines it
+	// goes on past its first.
+	width, masked, breaks int
 }
 
-func (g parsedGroup) withRedirects(redirects []redirectOperation) commandNode {
+// withRedirects is the group with its redirections, line where its closer is written, which bash
+// mode says their failure on; see compoundRedirectLine.
+func (g parsedGroup) withRedirects(redirects []redirectOperation, line int) commandNode {
 	if g.brace {
-		return braceGroup{body: g.body, redirects: redirects}
+		return braceGroup{body: g.body, redirects: redirects, line: line}
 	}
-	return subshellCommand{body: g.body, redirects: redirects}
+	return subshellCommand{body: g.body, redirects: redirects, line: line}
 }
 
 func extractGroupCommands(line string, budget *parseBudget, depth int) (string, map[int]parsedGroup, error) {
@@ -156,7 +159,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			return "", nil, err
 		}
 		placeholder := groupMask(line, end)
-		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested, width: end + 1 - start, masked: len(placeholder)}
+		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested, width: end + 1 - start, masked: len(placeholder), breaks: strings.Count(line[start:end], "\n")}
 		output.WriteString(placeholder)
 		index = end + 1
 	}
