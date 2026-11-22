@@ -146,6 +146,9 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **`$@` and `$*` are unset with no positional parameters in bash mode**: `${@-minus}` is
+    minus and `${@+plus}` nothing, as in bash. busybox takes them as always set, and nemosh and
+    sh still do.
   - **A redirection's failure is said in bash's words in bash mode**: `x/y: No such file or
     directory`, `f: cannot overwrite existing file` under set -C and `9: Bad file descriptor`,
     where nemosh and sh keep busybox's `cannot create x/y: nonexistent directory`.

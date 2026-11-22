@@ -357,7 +357,6 @@
       "${array[@]:} vs ${array[@]: }  - bash and zsh inconsistent": "fail"
     },
     "var-op-test.test.sh": {
-      "$@ (empty) and - and +": "fail",
       "array and - and +": "fail",
       "op-test for ${!array} with array=\"a[@]\" or array=\"a[*]\"": "ash-only"
     },
