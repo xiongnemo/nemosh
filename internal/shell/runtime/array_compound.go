@@ -100,7 +100,7 @@ func (r Runtime) writeIndexedElements(name string, elements []arrayElement, next
 		}
 		value, err := r.applyAttributes(name, value)
 		if err != nil {
-			fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
+			fmt.Fprintf(r.streams.Stderr, "%s%s\n", r.diagnosticPrefix(), attributedFault(name, err))
 			return 1
 		}
 		r.arrays.setElement(name, index, value)

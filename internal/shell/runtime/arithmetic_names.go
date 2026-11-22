@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 )
@@ -60,7 +59,7 @@ func (p *arithmeticParser) lookup(name string) (int64, error) {
 		return value, nil
 	}
 	if p.depth >= maxArithmeticNesting || p.nesting >= maxArithmeticNesting {
-		return 0, fmt.Errorf("%s: expression recursion level exceeded", name)
+		return 0, p.fault(name+": expression recursion level exceeded", "expression recursion level exceeded", p.index-1)
 	}
 	return p.runtime.evaluateArithmeticAt(text, p.depth+1, p.nesting+1)
 }
