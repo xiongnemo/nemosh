@@ -29,6 +29,10 @@ type expansionState struct {
 	// skipLine is set with discard by an error `set -e` does not end the script for; see
 	// flowSkipLine.
 	skipLine bool
+	// fatal is set with shellError in bash mode by set -u's unbound variable and `${x?}`, which
+	// end a bash script wherever they happen: a builtin that is not special does not contain
+	// them, as busybox's contains its errors (containedError), nor does `command`.
+	fatal bool
 	// warnedDebugChannels remembers which unknown NEMOSH_DEBUG names have
 	// already been complained about, so the complaint does not bury the
 	// diagnostics it is attached to.
@@ -154,6 +158,7 @@ func (r Runtime) reportUnsetParameter(name string) {
 	if r.BashMode() {
 		// bash's words and status: the script ends with 1, a command string with 127.
 		r.expansion.shellErrorStatus = r.bashFatalStatus()
+		r.expansion.fatal = true
 		fmt.Fprintf(r.streams.Stderr, "%s%s: unbound variable\n", r.diagnosticPrefix(), name)
 		return
 	}
@@ -204,6 +209,7 @@ func (r Runtime) shellErrorResult() lineResult {
 	if r.expansion.shellErrorStatus != 0 {
 		status, r.expansion.shellErrorStatus = r.expansion.shellErrorStatus, 0
 	}
+	r.expansion.fatal = false
 	return lineResult{status: status, control: flowAbort}
 }
 

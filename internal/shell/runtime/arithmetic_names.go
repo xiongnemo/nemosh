@@ -38,7 +38,18 @@ func (p *arithmeticParser) lookup(name string) (int64, error) {
 	if err := checkArithmeticSubscript(name, p.depth); err != nil {
 		return 0, err
 	}
-	text := strings.TrimSpace(p.valueText(name))
+	raw, set := p.valueTextSet(name)
+	// Under set -u an unset name is bash's unbound variable in bash mode, which ends the script at
+	// the next checkpoint; busybox takes it for 0, as nemosh and sh do.
+	if !set && p.runtime.BashMode() && p.runtime.options.noUnset {
+		unset := name
+		if reference, ok := parseArrayReference(name); ok {
+			unset = reference.name
+		}
+		p.runtime.reportUnsetParameter(unset)
+		return 0, nil
+	}
+	text := strings.TrimSpace(raw)
 	if text == "" {
 		return 0, nil
 	}
@@ -112,11 +123,16 @@ func (p *arithmeticParser) once(name string) (string, error) {
 // valueText is the text a name holds: an element for `a[i]`, the name's own value -- a
 // computed one included -- otherwise.
 func (p *arithmeticParser) valueText(name string) string {
+	value, _ := p.valueTextSet(name)
+	return value
+}
+
+// valueTextSet is valueText and whether the name, or the element, is set.
+func (p *arithmeticParser) valueTextSet(name string) (string, bool) {
 	ctx := arithmeticNesting(p.nesting + 1)
 	if reference, ok := parseArrayReference(name); ok {
-		elements, _ := p.runtime.elementsFor(ctx, reference)
-		return strings.Join(elements, " ")
+		elements, exists := p.runtime.elementsFor(ctx, reference)
+		return strings.Join(elements, " "), exists && len(elements) > 0
 	}
-	value, _ := p.runtime.lookupParameter(ctx, name, 0)
-	return value
+	return p.runtime.lookupParameter(ctx, name, 0)
 }

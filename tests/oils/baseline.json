@@ -12,10 +12,7 @@
       "Ambiguous colon in slice": "fail"
     },
     "arith.test.sh": {
-      "Increment undefined variables with nounset": "fail",
-      "Integer constant validation": "fail",
-      "nounset with arithmetic": "fail",
-      "undef[0] with nounset": "fail"
+      "Integer constant validation": "fail"
     },
     "array-assign.test.sh": {
       "Are quotes allowed?": "fail",
