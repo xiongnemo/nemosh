@@ -142,6 +142,9 @@ patch number is the commits since that tag.
     abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **A subshell in a function is still in it in bash mode**, as bash's is: `f() { ( local x=2;
+    ... ); }` works, and an unset there of the caller's local takes it away in the subshell alone.
+    busybox's subshell is in no function, `local: not in a function`, and nemosh and sh keep that.
   - **A special builtin's failed redirection in bash mode no longer ends the script**, as bash's
     outside its POSIX mode: `: > /no/dir/f`, `exec 3> /no/dir/f`, eval's and set's answer 1 and the
     script goes on. And `command` in front of one no longer keeps a script going past set -u's

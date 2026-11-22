@@ -53,7 +53,7 @@
       "wait for N parallel jobs and check failure": "flaky"
     },
     "ble-features.test.sh": {
-      "[bash_unset] function call with tempenv vs tempenv-eval": "ash-only",
+      "[bash_unset] function call with tempenv vs tempenv-eval": "fail",
       "[bash_unset] local-unset / dynamic-unset for localvar (mutated from tempenv)": "fail",
       "[bash_unset] local-unset / dynamic-unset for tempenv": "fail",
       "[bash_unset] localvar-inherit from tempenv": "ash-only"
@@ -65,7 +65,7 @@
     "ble-unset.test.sh": {
       "[bash_unset] dynamic-unset for nested localvars": "fail",
       "[bash_unset] dynamic-unset for nested tempenvs": "fail",
-      "[bash_unset] local-unset / dynamic-unset for localvar on nested-context": "ash-only",
+      "[bash_unset] local-unset / dynamic-unset for localvar on nested-context": "fail",
       "[bash_unset] local-unset for nested tempenvs": "ash-only",
       "[bash_unset] nested context by tempenv-eval": "ash-only"
     },
