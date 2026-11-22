@@ -152,6 +152,8 @@ func (r Runtime) reportRedirectFailure(err error) {
 func redirectHint(err error) string {
 	text := err.Error()
 	switch {
+	case bashWorded(err) && !errors.As(err, new(noSuchDevice)):
+		return ""
 	case strings.Contains(text, "cannot overwrite existing file"):
 		return "`set -C` is on; write with `>|` to truncate anyway, or `>>` to append"
 	case errors.As(err, new(noSuchDevice)):
