@@ -25,7 +25,7 @@ func (r Runtime) executeTypedLoop(ctx context.Context, node loopNode, savedStatu
 	// A variable that is no name, read in bash mode, is refused before the list is expanded, as
 	// bash refuses it; see parser_bash.go.
 	if node.refusedName != "" {
-		return r.refuseLoopName(node.refusedName)
+		return r.refuseIdentifier(node.refusedName)
 	}
 	if node.kind == loopFor {
 		return r.executeTypedFor(ctx, node, savedStatus)

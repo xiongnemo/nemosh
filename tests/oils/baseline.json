@@ -248,8 +248,6 @@
       "Arith lexer mode": "fail"
     },
     "func-parsing.test.sh": {
-      "Function name with $": "ash-only",
-      "Function name with command sub": "ash-only",
       "Unbraced function body.": "ash-only"
     },
     "glob.test.sh": {

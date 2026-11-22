@@ -33,6 +33,11 @@ type functionDefinition struct {
 	// traced is `declare -ft`: the function inherits the DEBUG and RETURN traps; see
 	// declare_trace.go.
 	traced bool
+	// refused is a name with an expansion or quoting in it, read in bash mode and held as
+	// written: the definition is refused when it runs, as bash refuses it, saying the line it
+	// ends on, line. See parser_bash.go.
+	refused bool
+	line    int
 }
 
 func (functionDefinition) programNode() {}
