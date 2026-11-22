@@ -61,13 +61,13 @@ func TestMatchingGroupEnd_enforcesMixedDelimiterDepthBeforeAppend(t *testing.T) 
 
 	// When / Then
 	if source := build(maxParseDepth); func() bool {
-		_, err := matchingGroupEnd(source, 0, source[0])
+		_, err := matchingGroupEnd(source, 0, source[0], false)
 		return err == nil
 	}() == false {
 		t.Fatal("matchingGroupEnd(at limit) rejected mixed nesting")
 	}
 	source := build(maxParseDepth + 1)
-	if _, err := matchingGroupEnd(source, 0, source[0]); !errors.Is(err, errParseLimit) {
+	if _, err := matchingGroupEnd(source, 0, source[0], false); !errors.Is(err, errParseLimit) {
 		t.Fatalf("matchingGroupEnd(over limit) error = %v, want errParseLimit", err)
 	}
 }
