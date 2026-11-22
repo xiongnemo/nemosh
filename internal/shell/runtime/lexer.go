@@ -216,7 +216,7 @@ func scanShellTokensWithPositions(line string, budget *parseBudget, depth int) (
 			// parenthesis still starts a subshell. What is between them is checked
 			// here and lexed into elements when it runs; see array_literal.go.
 			if char == '(' && looksLikeArrayAssignment(buffer.String()) {
-				end, err := arrayLiteralEnd(line, index, depth)
+				end, err := arrayLiteralEnd(line, index, depth, budget.bash)
 				if err != nil {
 					return nil, nil, err
 				}

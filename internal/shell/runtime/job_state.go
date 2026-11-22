@@ -154,7 +154,7 @@ func (r Runtime) captureJobState(program programNode) jobState {
 // restoreJobState puts the state on a runtime the child has just made, and answers with the
 // job's program, parsed.
 func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, error) {
-	definitions, err := parseScriptAt(state.Functions, 1)
+	definitions, err := parseScriptAtMode(state.Functions, 1, state.Options["bashMode"])
 	if err != nil {
 		return Script{}, err
 	}
@@ -222,7 +222,7 @@ func (r *Runtime) restoreJobState(ctx context.Context, state jobState) (Script, 
 	}
 	r.functionDepth, r.sourceDepth, r.errExitSuppressed = state.FunctionDepth, state.SourceDepth, state.ErrExitSuppressed
 	r.subshellDepth = state.SubshellDepth + 1
-	return parseScriptAt(state.Program, max(state.Line, 1))
+	return parseScriptAtMode(state.Program, max(state.Line, 1), state.Options["bashMode"])
 }
 
 // shellOptionFields names every flag in shellOptions, for a codec that has to carry each

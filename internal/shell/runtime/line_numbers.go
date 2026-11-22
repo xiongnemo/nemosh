@@ -96,10 +96,15 @@ func parseNestedScript(text, before string, budget *parseBudget, depth int) (Scr
 
 // parseScriptAt parses text that begins on source line first. ParseScript is this at 1.
 func parseScriptAt(source string, first int) (Script, error) {
+	return parseScriptAtMode(source, first, false)
+}
+
+// parseScriptAtMode is parseScriptAt in bash mode when bash; see parseBudget.bash.
+func parseScriptAtMode(source string, first int, bash bool) (Script, error) {
 	if len(source) > maxParseInputBytes {
 		return Script{}, fmt.Errorf("input bytes: %w", errParseLimit)
 	}
-	return parseScript(source, &parseBudget{numbering: lineNumbering{first: first}}, 0)
+	return parseScript(source, &parseBudget{numbering: lineNumbering{first: first}, bash: bash}, 0)
 }
 
 // parseSessionAt is parseScriptAt for what a session has read so far; see parseBudget.session.
@@ -145,5 +150,5 @@ func (r Runtime) currentLine() int {
 // a substitution met while expanding -- numbered from the running command's line, which is
 // what both references report inside them.
 func (r Runtime) parseHere(text string) (Script, error) {
-	return parseReading(text, r.currentLine(), false, r.readingAliases())
+	return parseReading(text, r.currentLine(), false, r.readingAliases(), r.BashMode())
 }

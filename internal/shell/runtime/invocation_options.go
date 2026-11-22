@@ -124,7 +124,7 @@ func (r Runtime) SourceStartup(ctx context.Context, script string) (int, bool, e
 // and 2 with the parser's diagnostic when it does not -- the status and the words a run
 // would have stopped with, because a run parses the whole script before starting it.
 func (r Runtime) CheckSyntax(script string) int {
-	prepared, err := ParseScript(script)
+	prepared, err := parseScriptAtMode(script, 1, r.BashMode())
 	if err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%s: %v\n", r.diagnosticName(), err)
 		return 2

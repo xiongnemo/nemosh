@@ -33,6 +33,8 @@ type readText struct {
 	// reading is the aliases they were read with, and print its fingerprint; see alias_reading.go.
 	reading map[string]string
 	print   uint64
+	// bash is whether it is read in bash mode; see parseBudget.bash.
+	bash bool
 }
 
 // runChunks runs source as bash mode reads a text, its first line numbered first, `$?` beginning
@@ -46,7 +48,7 @@ func (r Runtime) runChunks(ctx context.Context, source string, first, savedStatu
 	}
 	status, ran, whole, parsed := savedStatus, false, true, 0
 	for start := 0; start < len(lines); {
-		text := &readText{lines: lines, first: first, start: start, end: len(lines), reading: maps.Clone(r.readingAliases()), print: r.aliasReading()}
+		text := &readText{lines: lines, first: first, start: start, end: len(lines), reading: maps.Clone(r.readingAliases()), print: r.aliasReading(), bash: r.BashMode()}
 		var prepared Script
 		var err error
 		if whole {
@@ -119,5 +121,5 @@ func chunkWithin(text *readText, low, high int, highErr error) (Script, int, err
 // parse parses lines[start:end] as numbered from where they are, with the aliases text was read
 // with: as a session's lines while more input follows, and as a script's end at the end of it.
 func (t *readText) parse(start, end int) (Script, error) {
-	return parseReading(strings.Join(t.lines[start:end], ""), t.first+start, end < len(t.lines), t.reading)
+	return parseReading(strings.Join(t.lines[start:end], ""), t.first+start, end < len(t.lines), t.reading, t.bash)
 }

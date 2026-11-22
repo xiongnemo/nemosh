@@ -36,10 +36,10 @@ func (r Runtime) aliasReading() uint64 {
 }
 
 // parseReading parses source beginning on line first, as a session's input still to go on when
-// session, with aliases substituted as it is read.
-func parseReading(source string, first int, session bool, aliases map[string]string) (Script, error) {
+// session, with aliases substituted as it is read, and in bash mode when bash.
+func parseReading(source string, first int, session bool, aliases map[string]string, bash bool) (Script, error) {
 	if len(source) > maxParseInputBytes {
 		return Script{}, fmt.Errorf("input bytes: %w", errParseLimit)
 	}
-	return parseScript(source, &parseBudget{numbering: lineNumbering{first: first}, session: session, aliases: aliases}, 0)
+	return parseScript(source, &parseBudget{numbering: lineNumbering{first: first}, session: session, aliases: aliases, bash: bash}, 0)
 }

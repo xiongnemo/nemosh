@@ -19,12 +19,12 @@ import (
 // is what lets a mistake among them stop the script before it starts. A budget of their
 // own, because counting them twice against the script's would halve the size of the
 // largest literal it can hold.
-func arrayLiteralEnd(line string, open, depth int) (int, error) {
+func arrayLiteralEnd(line string, open, depth int, bash bool) (int, error) {
 	end, ok := matchingParenthesis(line, open)
 	if !ok {
 		return 0, fmt.Errorf("%w: missing ) for array assignment", ErrIncompleteScript)
 	}
-	tokens, err := scanShellTokensWithBudget(line[open+1:end], &parseBudget{}, depth)
+	tokens, err := scanShellTokensWithBudget(line[open+1:end], &parseBudget{bash: bash}, depth)
 	if err != nil {
 		return 0, err
 	}

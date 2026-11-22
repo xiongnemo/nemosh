@@ -32,6 +32,12 @@ type parseBudget struct {
 	// aliases are substituted as the text is read, in bash mode; nil otherwise. See
 	// alias_read.go.
 	aliases map[string]string
+	// bash is whether the text is read in bash mode, which takes a few forms busybox refuses as
+	// it reads them -- a loop variable that is no name, a `$((` that is no arithmetic -- and
+	// refuses them as bash does, when it runs. The zero value is nemosh's, so a budget made
+	// anywhere without it refuses what it always did; nested parses share their text's budget,
+	// and with it the mode. See parser_bash.go.
+	bash bool
 }
 
 func (budget *parseBudget) heredoc(marker string) (pendingHeredoc, bool) {

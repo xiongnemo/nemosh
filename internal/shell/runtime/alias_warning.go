@@ -31,7 +31,7 @@ func (r Runtime) sayAliasSyntax(text string) {
 	if len(aliases) == 0 {
 		return
 	}
-	if _, err := parseReading(text, 1, false, aliases); err != nil {
+	if _, err := parseReading(text, 1, false, aliases, false); err != nil {
 		return
 	}
 	if name, ok := syntaxAlias(text, aliases); ok {
