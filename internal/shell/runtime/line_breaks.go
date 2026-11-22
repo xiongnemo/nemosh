@@ -73,7 +73,7 @@ func unmaskedOffset(offset int, groups map[int]parsedGroup) int {
 	shift := 0
 	for at, group := range groups {
 		if at < offset {
-			shift += group.width - len(groupPlaceholder)
+			shift += group.width - group.masked
 		}
 	}
 	return offset + shift
