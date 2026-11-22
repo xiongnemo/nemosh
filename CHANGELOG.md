@@ -142,6 +142,10 @@ patch number is the commits since that tag.
     abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **A loop whose variable is no name is refused when it runs in bash mode**, as bash refuses it:
+    `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
+    before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
+    script is read, and nemosh and sh still do.
   - **readonly and export in bash mode list as bash's do**: declare's lines, `declare -r q="it's"`
     and `declare -x v="333"`, and under `set -o posix` `readonly q="it's"` and `export v="333"`.
     busybox's single-quote, `readonly q='it'"'"'s'`, and nemosh and sh still do.
