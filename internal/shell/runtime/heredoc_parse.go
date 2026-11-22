@@ -35,13 +35,13 @@ type pendingHeredoc struct {
 // <<EOF; echo "two` then `three"`, as busybox and bash both read them, at the next newline
 // token. The body was taken from the very next line, which refused both as incomplete, and
 // each line was scanned as if no quote were open, so one left open hid the next line's `<<`.
-func collectHeredocs(source string, atEnd bool) (string, []pendingHeredoc, []int, []heredocAtEnd, error) {
+func collectHeredocs(source string, atEnd, bash bool) (string, []pendingHeredoc, []int, []heredocAtEnd, error) {
 	lines := strings.Split(source, "\n")
 	var output strings.Builder
 	var records, pending []pendingHeredoc
 	var origins []int
 	var ended []heredocAtEnd
-	var scan heredocScan
+	scan := heredocScan{bash: bash}
 	for index := 0; index < len(lines); index++ {
 		start := index
 		line, declarations, next, err := continuedHeredocDeclarations(lines, &index, len(records)+len(pending), scan, atEnd)
@@ -96,6 +96,8 @@ func collectHeredocs(source string, atEnd bool) (string, []pendingHeredoc, []int
 type heredocScan struct {
 	quotes []byte
 	joined bool
+	// bash is bash mode, where a word may hold a `$(...)`; see heredocOperandEnd.
+	bash bool
 }
 
 func (scan heredocScan) quote() byte {
@@ -194,7 +196,7 @@ func heredocDeclarations(line string, lineNumber, startOrder int, scan heredocSc
 		for operandStart < len(line) && (line[operandStart] == ' ' || line[operandStart] == '\t') {
 			operandStart++
 		}
-		operandEnd, continued := heredocOperandEnd(line, operandStart)
+		operandEnd, continued := heredocOperandEnd(line, operandStart, scan.bash)
 		if continued {
 			return nil, scan, errHeredocContinued
 		}
@@ -245,8 +247,10 @@ func markHeredocOperands(line string, records []pendingHeredoc) string {
 }
 
 // heredocOperandEnd is where a heredoc's word ends, and whether it ends the line in a backslash
-// that the next line continues it past.
-func heredocOperandEnd(line string, start int) (int, bool) {
+// that the next line continues it past. In bash mode the word goes on past a `$(...)` or a
+// `$((...))`, `cat <<x$(a b)y`, as bash reads it; busybox ends it at the `(`, and so do nemosh
+// and sh.
+func heredocOperandEnd(line string, start int, bash bool) (int, bool) {
 	quote := byte(0)
 	escaped := false
 	for index := start; index < len(line); index++ {
@@ -271,6 +275,10 @@ func heredocOperandEnd(line string, start int) (int, bool) {
 			index = end
 			continue
 		}
+		if end, ok := bashWordSubstitutionEnd(line, index); bash && quote != '\'' && ok {
+			index = end
+			continue
+		}
 		// Where a word ends: at a blank or an operator character. `;`, `(` and `)` among
 		// them, so `cat <<EOF;` is delimited by EOF; the `;` was taken into the delimiter,
 		// no line matched, and the script was refused as incomplete.
@@ -285,6 +293,12 @@ func quoteRemovedDelimiter(delimiter word) (string, bool) {
 	var value strings.Builder
 	quoted := delimiter.quotedEmpty
 	for _, part := range delimiter.parts {
+		// An arithmetic part holds its expression alone, and the word is what was written, as
+		// bash mode reads `cat <<$((1+2))`; see heredocOperandEnd.
+		if part.kind == wordPartArithmetic {
+			value.WriteString("$((" + part.text + "))")
+			continue
+		}
 		value.WriteString(part.text)
 		if part.quote != quoteUnquoted || part.kind == wordPartEscaped {
 			quoted = true
