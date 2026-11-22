@@ -146,6 +146,9 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **A command that cannot be run is said in bash's words in bash mode**: `x: command not found`,
+    `./x: No such file or directory` and `./d: Is a directory`, with no hint after them, as bash
+    says no more. nemosh and sh keep `x: not found` and the hint.
   - **PPID is read-only and `$_` set from the start in bash mode**: `PPID=x` says `PPID: readonly
     variable`, `declare -p PPID` is `declare -ir`, and `set -u; echo $_` finds the shell's path,
     as in bash. busybox's PPID takes an assignment and its `$_` is unset at first, and nemosh's and
