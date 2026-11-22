@@ -146,6 +146,9 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **`$[expr]` is arithmetic in bash mode**, bash's older spelling of `$((expr))`: `echo $[1+2]`
+    says 3, in double quotes and here-documents too. busybox leaves it as text, and nemosh and sh
+    still do.
   - **A here-document's word may hold a `$(...)` in bash mode**: `cat <<$(a)` ends at the line
     `$(a)`, as in bash, and `cat <<$((1+2))` at `$((1+2))`. busybox ends the word at the `(`, a
     syntax error, and nemosh and sh still do.
