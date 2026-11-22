@@ -289,10 +289,6 @@
       "NUL bytes with test -f": "ash-only",
       "printf - literal NUL in format string": "fail"
     },
-    "paren-ambiguity.test.sh": {
-      "$(( closed with ) ) after multiple lines is command - #2337": "ash-only",
-      "$((which example - command sub versus arith sub - gnunet-gtk package": "ash-only"
-    },
     "parse-errors.test.sh": {
       "Long Token - 65535 bytes": "fail",
       "Token that's too long for Oils - 65536 bytes": "fail",
