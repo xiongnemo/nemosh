@@ -146,6 +146,10 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **Prefix assignments are a scope of their own in bash mode**, as bash's temporary
+    environment is: `v=t eval 'local v=x'` leaves the function's v as it was, `x=t unset x` shows
+    the x it hid, an unset of `v=t f`'s binding in f shows what was beneath it, and local over an
+    outer call's prefix starts with its value. nemosh and sh keep busybox's.
   - **Arithmetic errors are said in bash's words in bash mode**: `$(( 1/0 ))` says
     `1/0 : division by 0 (error token is "0 ")` and `$(( 1 2 ))` `1 2 : arithmetic syntax error
     in expression (error token is "2 ")`, the expression and where in it, as bash says them;

@@ -8,21 +8,19 @@ package runtime
 // without (EnterBashMode). It answers whether it took a local away. Measured against Git for
 // Windows' bash 5.3: with x local to f and to g, f calling g and g calling c, c's `unset x` shows
 // f's x, and a second unset the global.
+//
+// A prefix assignment's binding is taken away wherever it is, the running call's too, as bash's
+// unset takes its innermost cell: `v=t f` with f's `unset v` shows the v that t hid, and so does an
+// unset in `v=t eval`; see tempenv_scope.go.
 func (r Runtime) dynamicUnset(name string) bool {
 	if r.options.localVarUnset || r.locals == nil {
 		return false
 	}
-	for scope := r.locals; scope != nil; scope = scope.outer {
-		saved, local := scope.saved[name]
-		if !local {
-			continue
-		}
-		if scope == r.locals {
-			return false
-		}
-		delete(scope.saved, name)
-		r.restoreVariable(name, saved)
-		return true
+	scope, saved, current := r.binding(name)
+	if scope == nil || current && !saved.temporary {
+		return false
 	}
-	return false
+	delete(scope.saved, name)
+	r.restoreVariable(name, saved)
+	return true
 }

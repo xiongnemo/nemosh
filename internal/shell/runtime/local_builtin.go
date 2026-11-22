@@ -45,7 +45,7 @@ func (r Runtime) local(ctx context.Context, args []string) int {
 	refused := 0
 	for _, arg := range names {
 		if arg == "-" {
-			r.locals.saveOptions(r.options)
+			r.callScope().saveOptions(r.options)
 			continue
 		}
 		target, _, _ := cutAssignment(arg)
@@ -71,7 +71,7 @@ func (r Runtime) declareLocal(ctx context.Context, builtin string, options decla
 	target, _, _ := cutAssignment(arg)
 	name, _ := splitAssignmentTarget(target)
 	name = assignedName(name)
-	if _, already := r.locals.saved[name]; !already && r.isReadonly(name) {
+	if _, already := r.callScope().saved[name]; !already && r.isReadonly(name) {
 		return r.refuseReadonly(builtin+": ", name)
 	}
 	r.makeLocal(name)
