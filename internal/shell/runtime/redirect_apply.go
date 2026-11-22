@@ -11,7 +11,17 @@ import (
 	"github.com/xiongnemo/nemosh/internal/pathmodel"
 )
 
+// applyRedirectOperations makes the redirections on table, and says a failure in bash's words in
+// bash mode; see bashRedirectWords.
 func (r Runtime) applyRedirectOperations(table *fdTable, operations []redirectOperation) error {
+	err := r.bindRedirectOperations(table, operations)
+	if err != nil && r.BashMode() {
+		return bashRedirectWords(err)
+	}
+	return err
+}
+
+func (r Runtime) bindRedirectOperations(table *fdTable, operations []redirectOperation) error {
 	for _, operation := range operations {
 		var err error
 		if operation.name != "" {
