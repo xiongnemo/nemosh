@@ -145,8 +145,6 @@
     },
     "builtin-misc.test.sh": {
       "Invalid shift argument": "ash-only",
-      "Print shell strings with normal chars: set and printf %q and ${x@Q}": "fail",
-      "Print shell strings with weird chars: set and printf %q and ${x@Q}": "fail",
       "history builtin usage": "ash-only"
     },
     "builtin-printf.test.sh": {
@@ -173,7 +171,6 @@
       "read bash bug": "fail"
     },
     "builtin-set.test.sh": {
-      "'set' and 'eval' round trip": "fail",
       "A single + is an ignored flag; not an argument": "fail",
       "set - leading single dash is ignored, turns off xtrace verbose (#2364)": "fail"
     },
@@ -283,9 +280,6 @@
       "${BASH_SOURCE[@]} with line numbers": "fail",
       "FUNCNAME with source (scalar or array)": "fail"
     },
-    "known-differences.test.sh": {
-      "`set` output format - ifupdown-ng": "ash-only"
-    },
     "loop.test.sh": {
       "bad arg to break": "fail",
       "continue in subshell": "fail",
@@ -342,11 +336,7 @@
     "regex.test.sh": {
       "Operator chars ; \u0026 but not |": "fail"
     },
-    "serialize.test.sh": {
-      "set": "ash-only"
-    },
     "sh-options.test.sh": {
-      "set without args lists variables": "fail",
       "stubbed out bash options": "fail"
     },
     "sh-usage.test.sh": {
