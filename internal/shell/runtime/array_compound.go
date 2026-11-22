@@ -180,7 +180,8 @@ func (r Runtime) attributedOrAsWritten(name, value string) string {
 // with a tilde at its start. For an associative array, a word without a subscript is the last
 // one expanded, as in bash, where the list stops at it.
 func (r Runtime) compoundElements(ctx context.Context, raw string, associative bool, savedStatus int) []arrayElement {
-	tokens, err := scanShellTokens(strings.TrimSpace(raw))
+	// In the shell's mode, as the literal was read in it; see parseBudget.bash.
+	tokens, err := scanShellTokensWithBudget(strings.TrimSpace(raw), &parseBudget{bash: r.BashMode()}, 0)
 	if err != nil {
 		return nil
 	}
