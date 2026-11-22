@@ -191,5 +191,11 @@ func (r Runtime) mergeBuiltinMutations(commandRuntime Runtime) {
 		if commandRuntime.isReadonly(name) {
 			r.readonly[name] = struct{}{}
 		}
+		// A change merged into a temporary is one of its own for the merge out of it, so a
+		// variable set two calls with assignments down reaches the shell. Recorded without
+		// markVarMutation's side effects, which the inner run has had already.
+		if r.mutatedVars != nil {
+			r.mutatedVars[name] = struct{}{}
+		}
 	}
 }
