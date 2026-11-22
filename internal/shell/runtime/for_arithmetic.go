@@ -143,12 +143,17 @@ func (r Runtime) arithmeticForPart(ctx context.Context, part string, savedStatus
 }
 
 // arithmeticForFailure ends the loop over an error in its header. A counter that
-// is readonly has been reported already, by assignVar, and is a shell error.
+// is readonly has been reported already, by assignVar, and is a shell error. bash puts `((`
+// before its words, as it does an arithmetic command's.
 func (r Runtime) arithmeticForFailure(err error) lineResult {
 	if r.shellErrorRaised() {
 		return r.shellErrorResult()
 	}
-	fmt.Fprintf(r.streams.Stderr, "%sfor: %v\n", r.diagnosticPrefix(), err)
+	name := "for"
+	if isArithmeticFault(err) {
+		name = "(("
+	}
+	fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
 	return lineResult{status: 1}
 }
 

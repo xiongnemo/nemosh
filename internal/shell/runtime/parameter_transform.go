@@ -82,6 +82,10 @@ func (r Runtime) substringNumber(ctx context.Context, text, what string, savedSt
 		return 0, nil
 	}
 	value, err := r.evaluateArithmetic(trimmed)
+	if isArithmeticFault(err) {
+		// In bash's words, which put the parameter's name before them; this is not told it.
+		return 0, err
+	}
 	if err != nil {
 		return 0, fmt.Errorf("bad substitution: %s: %w", what, err)
 	}

@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 )
@@ -29,11 +28,11 @@ func (r Runtime) evaluateArithmeticAt(expression string, depth, nesting int) (in
 	}
 	parser := &arithmeticParser{tokens: arithmeticTokensOf(expression), runtime: r, depth: depth, nesting: nesting}
 	value, err := parser.comma()
-	if err != nil {
-		return 0, err
+	if err == nil && parser.index < len(parser.tokens) {
+		err = parser.leftover()
 	}
-	if parser.index < len(parser.tokens) {
-		return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", parser.tokens[parser.index])
+	if err != nil {
+		return 0, r.locateFault(err, expression, parser.tokens)
 	}
 	return value, nil
 }
@@ -82,6 +81,7 @@ func (p *arithmeticParser) assignment() (int64, error) {
 		return 0, err
 	}
 	if operator != "=" {
+		p.operand = p.lastRead()
 		if value, err = p.apply(current, strings.TrimSuffix(operator, "="), value); err != nil {
 			return 0, err
 		}
@@ -122,6 +122,8 @@ type arithmeticParser struct {
 	// skipping is set while an arm of `?:` that the condition did not pick is read: its
 	// shape is checked, and nothing in it is stored, looked up or refused. See branch.
 	skipping int
+	// operand is the token a division's right side begins at, which bash's error names.
+	operand int
 }
 
 // The binary operators in order of increasing precedence, which is the order C
@@ -152,7 +154,7 @@ func (p *arithmeticParser) ternary() (int64, error) {
 		return 0, err
 	}
 	if p.peek() != ":" {
-		return 0, fmt.Errorf("arithmetic syntax error: expected :")
+		return 0, p.fault("arithmetic syntax error: expected :", "`:' expected for conditional expression", p.lastRead())
 	}
 	p.index++
 	whenFalse, err := p.branch(condition == 0, p.ternary)
@@ -191,12 +193,13 @@ func (p *arithmeticParser) binary(level int) (int64, error) {
 		// assignment it follows is made, as both references read it: `(( a = 3 + 4 # x ))`
 		// leaves a alone. It ended the operand, a was 7, and the # was refused after.
 		if strayArithmeticToken(operator) {
-			return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", operator)
+			return 0, p.strayFault(operator)
 		}
 		if !slices.Contains(arithmeticPrecedence[level], operator) {
 			return left, nil
 		}
 		p.index++
+		operand := p.index
 		// && and || stop early, which matters because the right side may
 		// divide by zero. The right side is read for its shape and not evaluated, as the
 		// untaken arm of ?: is, so `0 && (x = 44)` leaves x alone as C has it and bash does;
@@ -213,6 +216,7 @@ func (p *arithmeticParser) binary(level int) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
+		p.operand = operand
 		if left, err = p.apply(left, operator, right); err != nil {
 			return 0, err
 		}
@@ -251,7 +255,7 @@ func (p *arithmeticParser) unary() (int64, error) {
 func (p *arithmeticParser) primary() (int64, error) {
 	token := p.peek()
 	if token == "" {
-		return 0, fmt.Errorf("arithmetic syntax error: expression ended early")
+		return 0, p.fault("arithmetic syntax error: expression ended early", "arithmetic syntax error: operand expected", len(p.tokens)-1)
 	}
 	p.index++
 	// A whole expression inside parentheses, assignments and commas included: `(x = 22)` and
@@ -262,7 +266,7 @@ func (p *arithmeticParser) primary() (int64, error) {
 			return 0, err
 		}
 		if p.peek() != ")" {
-			return 0, fmt.Errorf("arithmetic syntax error: expected )")
+			return 0, p.fault("arithmetic syntax error: expected )", "missing `)'", p.lastRead())
 		}
 		p.index++
 		return value, nil
@@ -275,7 +279,7 @@ func (p *arithmeticParser) primary() (int64, error) {
 		return value, nil
 	}
 	if !isArithmeticName(token) {
-		return 0, fmt.Errorf("arithmetic syntax error: unexpected %q", token)
+		return 0, p.operandFault(token)
 	}
 	token, err := p.once(token)
 	if err != nil {

@@ -45,7 +45,8 @@ var errReadonlyTarget = errors.New("readonly variable")
 func (p *arithmeticParser) step(operator string, _ bool) (int64, error) {
 	name := p.peek()
 	if !isArithmeticName(name) {
-		return 0, fmt.Errorf("arithmetic syntax error: %s needs a variable, found %q", operator, name)
+		return 0, p.fault(fmt.Sprintf("arithmetic syntax error: %s needs a variable, found %q", operator, name),
+			"identifier expected after pre-increment or pre-decrement", p.lastRead())
 	}
 	p.index++
 	name, err := p.once(name)
@@ -157,17 +158,23 @@ func (p *arithmeticParser) power() (int64, error) {
 	if err != nil && p.skipping > 0 {
 		return 0, nil
 	}
-	return value, err
+	if err != nil {
+		return 0, p.fault(err.Error(), "exponent less than 0", p.lastRead())
+	}
+	return value, nil
 }
 
 // apply is applyArithmetic, except in an arm that is not taken, where a division by zero is
-// not an error because it is not done.
+// not an error because it is not done. bash's names the right side, from where it begins.
 func (p *arithmeticParser) apply(left int64, operator string, right int64) (int64, error) {
 	value, err := applyArithmetic(left, operator, right)
 	if err != nil && p.skipping > 0 {
 		return 0, nil
 	}
-	return value, err
+	if err != nil {
+		return 0, p.fault(err.Error(), "division by 0", p.operand)
+	}
+	return value, nil
 }
 
 // integerPower raises left to right by squaring, as busybox's math.c and bash's ipow do,

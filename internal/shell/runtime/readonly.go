@@ -80,7 +80,7 @@ func (r Runtime) assignVar(name string, value string) int {
 	// `declare -i -l -u`, here so every way a value arrives is treated alike.
 	value, err = r.applyAttributes(name, value)
 	if err != nil {
-		fmt.Fprintf(r.streams.Stderr, "%s%s: %v\n", r.diagnosticPrefix(), name, err)
+		fmt.Fprintf(r.streams.Stderr, "%s%s\n", r.diagnosticPrefix(), attributedFault(name, err))
 		r.failAssignment()
 		return 1
 	}

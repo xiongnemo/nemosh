@@ -50,8 +50,10 @@ func (r Runtime) resolveSubscript(ctx context.Context, subscript string) (int64,
 		// An arithmetic error, which ends the script as one in `$((...))` does, bash's answer
 		// with busybox having no arrays; see reportExpansionError. It was said and passed
 		// over, so `a[1+]=2` went on with status 0 and `${a[1+]}` was empty. The callers
-		// stop at it without saying it again.
-		err = fmt.Errorf("array subscript %q: %w", subscript, err)
+		// stop at it without saying it again. bash's words name the subscript's expression alone.
+		if !isArithmeticFault(err) {
+			err = fmt.Errorf("array subscript %q: %w", subscript, err)
+		}
 		r.reportExpansionError(err)
 		return 0, err
 	}
