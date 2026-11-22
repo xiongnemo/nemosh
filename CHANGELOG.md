@@ -149,6 +149,9 @@ patch number is the commits since that tag.
   - **`$@` and `$*` are unset with no positional parameters in bash mode**: `${@-minus}` is
     minus and `${@+plus}` nothing, as in bash. busybox takes them as always set, and nemosh and
     sh still do.
+  - **A subshell and a pipeline's stage see none of the shell's loops in bash mode**: `( continue
+    )` in a loop says continue means nothing there and the subshell goes on, as in bash. busybox's
+    ends the subshell, and nemosh's and sh's still do.
   - **A redirection's failure is said in bash's words in bash mode**: `x/y: No such file or
     directory`, `f: cannot overwrite existing file` under set -C and `9: Bad file descriptor`,
     where nemosh and sh keep busybox's `cannot create x/y: nonexistent directory`.

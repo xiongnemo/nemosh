@@ -255,9 +255,7 @@
       "FUNCNAME with source (scalar or array)": "fail"
     },
     "loop.test.sh": {
-      "bad arg to break": "fail",
-      "continue in subshell": "fail",
-      "continue in subshell aborts with errexit": "fail"
+      "bad arg to break": "fail"
     },
     "nameref.test.sh": {
       "a[@] in nameref": "fail"
