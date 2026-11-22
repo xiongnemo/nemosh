@@ -287,7 +287,7 @@ func wrapCompoundWithSuffix(node programNode, suffix string, budget *parseBudget
 	if err != nil {
 		return nil, err
 	}
-	group := braceGroup{body: Script{program: []programNode{node}}, redirects: operations}
+	group := braceGroup{body: Script{program: []programNode{node}}, redirects: operations, line: budget.line()}
 	item := listItem{value: andOr{pipelines: []pipeline{{commands: []commandNode{group}}}}}
 	return listNode{value: list{items: []listItem{item}}}, nil
 }

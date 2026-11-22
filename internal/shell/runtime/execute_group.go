@@ -16,15 +16,15 @@ func (r Runtime) executeCommandNode(ctx context.Context, command commandNode, sa
 	case simpleCommand:
 		return r.executeSimpleCommand(ctx, value, savedStatus)
 	case braceGroup:
-		return r.executeCompoundCommand(ctx, value.body, value.redirects, savedStatus, false)
+		return r.executeCompoundCommand(ctx, value.body, value.redirects, savedStatus, false, value.line)
 	case subshellCommand:
-		return r.executeCompoundCommand(ctx, value.body, value.redirects, savedStatus, true)
+		return r.executeCompoundCommand(ctx, value.body, value.redirects, savedStatus, true, value.line)
 	default:
 		return lineResult{status: 2}
 	}
 }
 
-func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redirects []redirectOperation, savedStatus int, isolated bool) lineResult {
+func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redirects []redirectOperation, savedStatus int, isolated bool, closer int) lineResult {
 	commandRuntime := r
 	if isolated {
 		var err error
@@ -50,7 +50,7 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 			_ = commandRuntime.fds.closeAll()
 		}()
 	}
-	if line := r.compoundRedirectLine(body, redirects); line > 0 {
+	if line := r.compoundRedirectLine(body, redirects, closer); line > 0 {
 		commandRuntime.enterLine(line)
 	}
 	ran := false
@@ -93,12 +93,14 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 // compoundRedirectLine is the line a compound command's redirection is said on when it fails:
 // the line the command begins on, as busybox-w32 says it. It was said on the line of the command
 // run before it. bash says the line the redirection is written on, which for a compound written
-// over several lines, `while ...` and then `done < nofile`, is its last; the parser keeps no
-// line for a redirection after `done`, so bash mode says busybox's there. 0 when there is no
-// redirection, or no line to give.
-func (r Runtime) compoundRedirectLine(body Script, redirects []redirectOperation) int {
+// over several lines, `while ...` and then `done < nofile`, is its last, the closer's line the
+// parser kept, and bash mode says that. 0 when there is no redirection, or no line to give.
+func (r Runtime) compoundRedirectLine(body Script, redirects []redirectOperation, closer int) int {
 	if len(redirects) == 0 || len(body.program) == 0 {
 		return 0
+	}
+	if closer > 0 && r.BashMode() {
+		return closer
 	}
 	return statementLine(body.program[0])
 }

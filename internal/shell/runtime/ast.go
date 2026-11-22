@@ -149,6 +149,10 @@ func (simpleCommand) commandNode() {}
 type braceGroup struct {
 	body      Script
 	redirects []redirectOperation
+	// line is where the closer and its redirections are written, `done > f` or `} > f`, which bash
+	// says such a redirection's failure on, and for a function's body where its definition begins;
+	// 0 for none. See compoundRedirectLine.
+	line int
 }
 
 func (braceGroup) commandNode() {}
@@ -156,6 +160,7 @@ func (braceGroup) commandNode() {}
 type subshellCommand struct {
 	body      Script
 	redirects []redirectOperation
+	line      int
 }
 
 func (subshellCommand) commandNode() {}

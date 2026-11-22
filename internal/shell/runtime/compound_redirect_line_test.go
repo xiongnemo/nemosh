@@ -13,7 +13,7 @@ import (
 // begins on, as busybox-w32 says it, and as bash says it for a compound written on one line.
 // It was said on the line of the command run before it, `line 1` for every one below. bash says
 // the line a redirection is written on, the last for `while` over several lines and `done <
-// nofile`, which is not kept; busybox's first is said there under both names. Measured
+// nofile`, and bash mode says that; see compound_closer_line_bash_mode_test.go. Measured
 // 2026-11-22, a script per case.
 func TestCompoundRedirectionLine_isTheCommandsOwn(t *testing.T) {
 	script := "echo one\n" +
@@ -25,7 +25,7 @@ func TestCompoundRedirectionLine_isTheCommandsOwn(t *testing.T) {
 		want []string
 	}{
 		{bash: false, want: []string{"line 2: ", "line 3: ", "line 7: "}},
-		{bash: true, want: []string{"line 2: ", "line 3: ", "line 7: "}},
+		{bash: true, want: []string{"line 2: ", "line 6: ", "line 7: "}},
 	} {
 		var stdout, stderr bytes.Buffer
 		rt := New(applets.DefaultRegistry, Streams{Stdout: &stdout, Stderr: &stderr})
