@@ -31,6 +31,7 @@ func (r Runtime) reportExpansionErrorAsBash(err error) {
 	var absent parameterAbsent
 	if errors.As(err, &absent) {
 		r.expansion.shellErrorStatus = r.bashFatalStatus()
+		r.expansion.fatal = true
 		return
 	}
 	r.expansion.discard = true

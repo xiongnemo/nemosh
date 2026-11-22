@@ -15,7 +15,9 @@ package runtime
 // 1; the rest take busybox's 2. bash's discard is left to take the rest of the line, as it does
 // after any command: `declare -a m=([-1]=x); echo no` says nothing more.
 func (r Runtime) containedError(name string, status int) int {
-	if errorEndsShell(name) || r.expansion.discard || !r.shellErrorRaised() {
+	// bash contains no unbound variable and no `${x?}`, which end its script wherever they
+	// happen; left raised for the checkpoint after the command.
+	if errorEndsShell(name) || r.expansion.discard || r.expansion.fatal || !r.shellErrorRaised() {
 		return status
 	}
 	contained := r.shellErrorResult().status

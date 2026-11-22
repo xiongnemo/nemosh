@@ -75,7 +75,7 @@ func (r Runtime) promptExpansionFailed() bool {
 	if r.expansion == nil || !r.shellErrorRaised() {
 		return false
 	}
-	r.expansion.discard, r.expansion.skipLine, r.expansion.shellErrorStatus = false, false, 0
+	r.expansion.discard, r.expansion.skipLine, r.expansion.shellErrorStatus, r.expansion.fatal = false, false, 0, false
 	return true
 }
 
