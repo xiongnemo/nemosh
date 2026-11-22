@@ -11,8 +11,8 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 
 **nemosh passes 2373 of the 2548 cases bash passes: 93.1%.**
 
-Of the other 175, it does 32 the way the files record of ash, which may be busybox's
-way, and 143 neither way.
+Of the other 175, it does 30 the way the files record of ash, which may be busybox's
+way, and 145 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2116 of them and does 119 the way the
 files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
@@ -66,9 +66,9 @@ busybox does the way the file records of ash.
 | assign-extended.test.sh | 39 | 34 | 32 | 94.1% | 0 | 24 | 0 |
 | assign.test.sh | 48 | 45 | 43 | 95.6% | 0 | 36 | 28 |
 | background.test.sh | 27 | 25 | 25 | 100.0% | 0 | 22 | 18 |
-| ble-features.test.sh | 9 | 9 | 5 | 55.6% | 2 | 4 | 9 |
+| ble-features.test.sh | 9 | 9 | 5 | 55.6% | 1 | 4 | 9 |
 | ble-idioms.test.sh | 26 | 26 | 24 | 92.3% | 0 | 21 | 23 |
-| ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 3 | 0 | 5 |
+| ble-unset.test.sh | 5 | 5 | 0 | 0.0% | 2 | 0 | 5 |
 | blog1.test.sh | 9 | 9 | 9 | 100.0% | 0 | 8 | 8 |
 | blog2.test.sh | 8 | 8 | 8 | 100.0% | 0 | 3 | 2 |
 | bool-parse.test.sh | 8 | 8 | 8 | 100.0% | 0 | 8 | 8 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 51 | 96.2% | 1 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 3 | 100.0% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2373 | 93.1% | 32 | 2116 | 1447 |
+| all | 2665 | 2548 | 2373 | 93.1% | 30 | 2116 | 1447 |

@@ -37,6 +37,38 @@ type callRecord struct {
 	scope  localScope
 }
 
+// copyLocals is the chain of call scopes a subshell takes in bash mode, where a subshell in a
+// function is still in it, as bash's is: `local` works there, and an unset there of a caller's
+// local takes it away, in the copy alone. Each scope's saved names are copied, an array among
+// them too, so nothing the subshell does reaches the caller's; the options target is dropped,
+// a subshell's `local -` having no call of the caller's to give options back to. nil outside a
+// function, and outside bash mode, where busybox's subshell is in no function.
+func (r Runtime) copyLocals() *localScope {
+	if !r.BashMode() || r.locals == nil {
+		return nil
+	}
+	var head, tail *localScope
+	for scope := r.locals; scope != nil; scope = scope.outer {
+		copied := &localScope{}
+		for name, saved := range scope.saved {
+			if saved.array != nil {
+				saved.array = saved.array.clone()
+			}
+			if saved.keys != nil {
+				saved.keys = saved.keys.clone()
+			}
+			copied.save(name, saved)
+		}
+		if head == nil {
+			head = copied
+		} else {
+			tail.outer = copied
+		}
+		tail = copied
+	}
+	return head
+}
+
 // save keeps what name was before the call made it its own, making the map the first time.
 func (s *localScope) save(name string, saved savedVariable) {
 	if s.saved == nil {
