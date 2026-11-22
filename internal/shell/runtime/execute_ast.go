@@ -113,6 +113,10 @@ func (r Runtime) executeNode(ctx context.Context, node programNode, savedStatus 
 	case listNode:
 		return r.executeTypedList(ctx, value.value, savedStatus)
 	case functionDefinition:
+		if value.refused {
+			r.enterLine(value.line)
+			return r.refuseIdentifier(value.name.value)
+		}
 		value.file, value.aliases = r.currentFile(), r.aliasView
 		r.functions[value.name] = r.keepTrace(value)
 		return lineResult{status: 0}

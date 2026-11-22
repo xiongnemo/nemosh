@@ -146,6 +146,9 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **A function whose name has an expansion in it is refused when defined in bash mode**:
+    `$foo-bar() { ls; }` says `` `$foo-bar': not a valid identifier ``, 1, on the line it ends
+    on, and the script goes on, as in bash. nemosh and sh still refuse it as the script is read.
   - **A `$((` that is no arithmetic is a command substitution in bash mode**, as bash reads
     `$((which x || echo y)2>/dev/null)`: a command beginning with a subshell. busybox calls it an
     unterminated arithmetic expansion and runs none of the script, and nemosh and sh still do.

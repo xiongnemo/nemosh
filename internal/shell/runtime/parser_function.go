@@ -37,6 +37,10 @@ func parseFunctionDefinition(line string, budget *parseBudget, depth int) (funct
 	rawName := strings.TrimSpace(line[:nameEnd])
 	name, ok := newFunctionName(rawName)
 	if !ok {
+		if refused, remainder, found := bashRefusedFunctionHeader(line); found && budget.bash && !hasKeyword {
+			body, err := parseFunctionBody(remainder, true, budget, depth)
+			return functionDefinition{name: functionName{value: refused}, body: body, refused: true, line: budget.line() + strings.Count(line, "\n")}, true, err
+		}
 		return functionDefinition{}, false, nil
 	}
 	index := nameEnd + 1
