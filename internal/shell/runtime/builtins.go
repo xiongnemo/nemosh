@@ -83,6 +83,10 @@ func (r Runtime) evalResult(ctx context.Context, args []string, savedStatus int)
 	// busybox's runs a command named --.
 	if r.BashMode() && len(args) > 0 && args[0] == "--" {
 		args = args[1:]
+	} else if r.BashMode() && len(args) > 0 && len(args[0]) > 1 && args[0][0] == '-' {
+		// And takes none, so `eval -z` is bash's invalid option, 2, where busybox runs -z.
+		fmt.Fprintf(r.streams.Stderr, "%seval: %s: invalid option\neval: usage: eval [arg ...]\n", r.diagnosticPrefix(), args[0])
+		return lineResult{status: 2}
 	}
 	if len(args) == 0 {
 		return lineResult{}
