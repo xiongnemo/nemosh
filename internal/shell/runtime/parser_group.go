@@ -31,7 +31,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		// paren and would stop at the first of the two that end an arithmetic
 		// expansion, leaving the second to be reported as unexpected.
 		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' && !escaped {
-			end, ok := arithmeticExpansionEnd(line, index+3)
+			end, ok := doubleParenExpansionEnd(line, index, budget.bash)
 			if !ok {
 				return "", nil, fmt.Errorf("%w: unterminated arithmetic expansion", ErrIncompleteScript)
 			}
@@ -146,7 +146,7 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 			index++
 			continue
 		}
-		end, err := matchingGroupEnd(line, start, opener)
+		end, err := matchingGroupEnd(line, start, opener, budget.bash)
 		if err != nil {
 			return "", nil, err
 		}
@@ -216,7 +216,7 @@ func groupOpenerAt(line string, index int) (int, byte, bool) {
 //
 // bash, dash, and busybox ash agree on every case above.
 
-func matchingGroupEnd(line string, start int, opener byte) (int, error) {
+func matchingGroupEnd(line string, start int, opener byte, bash bool) (int, error) {
 	closers := []byte{closerFor(opener)}
 	quote := byte(0)
 	escaped := false
@@ -225,7 +225,7 @@ func matchingGroupEnd(line string, start int, opener byte) (int, error) {
 	for index := start + 1; index < len(line); index++ {
 		char := line[index]
 		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' && !escaped {
-			end, ok := arithmeticExpansionEnd(line, index+3)
+			end, ok := doubleParenExpansionEnd(line, index, bash)
 			if !ok {
 				return 0, fmt.Errorf("%w: unterminated arithmetic expansion", ErrIncompleteScript)
 			}

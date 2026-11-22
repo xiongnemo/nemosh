@@ -49,6 +49,12 @@ func readSubstitutionEnd(text string, index int) int {
 		if end, ok := arithmeticExpansionEnd(text, index+3); ok {
 			return end + 1
 		}
+		// A command substitution beginning with a subshell, as bash mode reads one (see
+		// doubleParenExpansionEnd); taking the rest of the text for it hid every alias after it.
+		// The parser still refuses it in sh, which asks with the mode this reader is not told.
+		if end, ok := commandSubstitutionEnd(text, index+2); ok {
+			return end + 1
+		}
 	case strings.HasPrefix(text[index:], "$("):
 		if end, ok := commandSubstitutionEnd(text, index+2); ok {
 			return end + 1
