@@ -146,6 +146,10 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **A pattern's matches follow the locale in bash mode**: with `LC_COLLATE=en_US.UTF-8`, or
+    LC_ALL or LANG, `echo *` lists `_x a B hello hello.py hello-test.sh` in the order Git bash
+    does, which Windows collates, and by byte with no locale or C. busybox sorts by byte whatever
+    the locale, and nemosh and sh still do.
   - **`$[expr]` is arithmetic in bash mode**, bash's older spelling of `$((expr))`: `echo $[1+2]`
     says 3, in double quotes and here-documents too. busybox leaves it as text, and nemosh and sh
     still do.

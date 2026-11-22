@@ -57,7 +57,7 @@ func (r Runtime) expandPathnames(field string) []string {
 	if len(matches) == 0 {
 		return nil
 	}
-	slices.Sort(matches)
+	r.sortMatches(matches)
 	return slices.Compact(matches)
 }
 
