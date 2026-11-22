@@ -76,7 +76,7 @@ func defaultForm(text string) (string, string, string, bool) {
 // form with IFS's first character, so `"${*:-x}"` of two empty parameters under an empty
 // IFS is x, and anything else as `$@` is, where two empty words are something. The
 // positional parameters are always set, as busybox has it; bash calls them unset when there
-// are none.
+// are none, `${@-minus}` minus, and bash mode does.
 //
 // One answer here is bash's alone: under an empty IFS, unquoted `${*:+y}` of two empty
 // parameters is y. busybox-w32 gives nothing there while taking the same parameters as set
@@ -90,7 +90,7 @@ func (r Runtime) defaultMissing(ctx context.Context, name, operator string, quot
 		case colon:
 			return strings.Join(elements, " ") == "", true
 		case name == "@" || name == "*":
-			return false, true
+			return r.BashMode() && len(elements) == 0, true
 		}
 		return len(elements) == 0, true
 	}
