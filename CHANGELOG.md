@@ -413,6 +413,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **A variable set two calls with assignments down was lost**: `f(){ g=1; }; h(){ x=1 f; }; y=1
+  h` left g unset. A change merged back into a call's temporary is now merged on out of it too, as
+  both references keep g.
+
 - **Tab kept the typed word when a specification's candidates did not begin with it**: a
   function's `COMPREPLY=(xxone xxtwo)` for `ec` left `ec` and listed them. What they share goes in
   for the word now, `xx`, as readline puts it in.
