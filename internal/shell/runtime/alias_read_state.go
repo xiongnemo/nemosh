@@ -168,7 +168,7 @@ func (a *aliasReader) heredocsOf(value string) string {
 	if a.heredocs == nil || !strings.Contains(value, "<<") {
 		return value
 	}
-	cleaned, records, _, _, err := collectHeredocs(normalizeLineEndings(value), true)
+	cleaned, records, _, _, err := collectHeredocs(normalizeLineEndings(value), true, false)
 	if err != nil || len(records) == 0 {
 		return value
 	}

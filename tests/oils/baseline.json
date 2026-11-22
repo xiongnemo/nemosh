@@ -261,9 +261,6 @@
       "Ignore .:..": "fail",
       "Ignore globs with char patterns like [!ab]": "fail"
     },
-    "here-doc.test.sh": {
-      "Here doc with bad comsub delimiter": "ash-only"
-    },
     "interactive.test.sh": {
       "Error message with bad oshrc file (currently ignored)": "fail",
       "HISTFILE is written in interactive shell": "fail",
