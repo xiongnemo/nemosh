@@ -19,6 +19,10 @@ import (
 // Sorted by name, so two runs of the same script produce the same output and a
 // difference between them means something.
 func (r Runtime) listExported() int {
+	// Bash mode's is bash's; see attribute_listing_bash.go.
+	if r.BashMode() {
+		return r.bashAttributeListing("export", r.bashExportedNames())
+	}
 	entries := r.env.Environ()
 	sort.Strings(entries)
 	for _, entry := range entries {
