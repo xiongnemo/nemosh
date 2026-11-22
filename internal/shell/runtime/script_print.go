@@ -129,14 +129,19 @@ func (p *scriptPrinter) loopHeader(node loopNode) string {
 	if node.kind == loopSelect {
 		keyword = "select "
 	}
+	name := node.name
+	if node.refusedName != "" {
+		// As written, so it is refused again where it is read back, as a job's function is.
+		name = node.refusedName
+	}
 	if node.overArguments {
-		return keyword + node.name
+		return keyword + name
 	}
 	words := make([]string, len(node.values))
 	for index, value := range node.values {
 		words[index] = printWord(value)
 	}
-	return keyword + node.name + " in " + strings.Join(words, " ")
+	return keyword + name + " in " + strings.Join(words, " ")
 }
 
 func (p *scriptPrinter) casePatterns(arm caseArmNode) string {

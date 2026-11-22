@@ -78,6 +78,9 @@ type loopNode struct {
 	// overArguments is `for name` with no `in`: the list is the positional
 	// parameters, which POSIX 2.9.4.2 specifies.
 	overArguments bool
+	// refusedName is a for or select loop's variable as written, read in bash mode, when it is
+	// no name: refused when the loop runs, as bash refuses it. See parser_bash.go.
+	refusedName string
 	// line is the header's source line, for what the header expands; see line_numbers.go.
 	line int
 }
