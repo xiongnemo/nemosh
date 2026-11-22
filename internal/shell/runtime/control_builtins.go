@@ -27,15 +27,16 @@ func (r Runtime) controlFlowBuiltin(ctx context.Context, args []string, assignme
 		return lineResult{}, false
 	}
 	// In bash mode the assignments are the builtin's alone; see special_prefix_bash.go. eval's
-	// text and a sourced file run with them, and what they change otherwise stays.
+	// text and a sourced file run with them in a layer of their own, and what they change
+	// otherwise stays; see tempenv_scope.go.
 	if r.bashTemporaryPrefix() && len(assignments) > 0 {
-		temporary := r.withLocalAssignments(assignments)
-		if temporary == nil {
+		layered, layer, ok := r.pushTempenv(assignments)
+		if !ok {
 			return lineResult{status: 1}, true
 		}
 		// The words as written, `command` and all, so the builtin under it is still plain.
-		result, handled := temporary.controlFlowBuiltin(ctx, written, nil, operations, savedStatus)
-		r.mergeBuiltinMutations(*temporary)
+		result, handled := layered.controlFlowBuiltin(ctx, written, nil, operations, savedStatus)
+		r.popTempenv(layer)
 		return result, handled
 	}
 	if status := r.assignVars(assignments); status != 0 {

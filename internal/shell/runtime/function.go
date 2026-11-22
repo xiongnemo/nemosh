@@ -38,6 +38,18 @@ func (r Runtime) functionCommand(ctx context.Context, args []string, assignments
 	if !found {
 		return lineResult{}, false
 	}
+	// In bash mode the call's scope holds what each name was beneath its prefix binding, which an
+	// unset of the binding shows again, as bash's does; see tempenv_scope.go.
+	bound := make([]prefixBinding, 0, len(assignments))
+	for _, assignment := range assignments {
+		binding := prefixBinding{name: assignment.name}
+		if r.BashMode() {
+			below := r.variableAsItIs(assignment.name)
+			below.temporary = true
+			binding.below = &below
+		}
+		bound = append(bound, binding)
+	}
 	caller := r
 	var temporary *Runtime
 	if len(assignments) > 0 {
@@ -46,12 +58,8 @@ func (r Runtime) functionCommand(ctx context.Context, args []string, assignments
 		}
 		caller = *temporary
 	}
-	names := make([]string, 0, len(assignments))
-	for _, assignment := range assignments {
-		names = append(names, assignment.name)
-	}
 	result := caller.withAppliedRedirects(operations, func(redirected Runtime) lineResult {
-		return redirected.callFunctionWith(ctx, definition, args[1:], savedStatus, names)
+		return redirected.callFunctionWith(ctx, definition, args[1:], savedStatus, bound)
 	})
 	if temporary != nil {
 		for _, assignment := range assignments {
@@ -63,6 +71,14 @@ func (r Runtime) functionCommand(ctx context.Context, args []string, assignments
 		result.status = contextStatus(ctx)
 	}
 	return result, true
+}
+
+// prefixBinding is a name a call's own prefix assignment binds, `v=1 f`, and in bash mode what
+// the name was beneath it; nil there, and the call's scope keeps the prefix's value, as ash's
+// evalfun does.
+type prefixBinding struct {
+	name  string
+	below *savedVariable
 }
 
 func (r Runtime) callFunction(ctx context.Context, definition functionDefinition, args []string) int {
@@ -80,7 +96,7 @@ func (r Runtime) callFunctionResult(ctx context.Context, definition functionDefi
 // are the call's locals, as ash's evalfun makes them, so a `local v` in the body declares v
 // again and keeps its value, as both references have it; it was unset. A call the body makes
 // gets none of them: there `local v` is a local of its own, as busybox has it.
-func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefinition, args []string, savedStatus int, assigned []string) lineResult {
+func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefinition, args []string, savedStatus int, assigned []prefixBinding) lineResult {
 	if err := ctx.Err(); err != nil {
 		fmt.Fprintf(r.streams.Stderr, "%sfunction call: %v\n", r.diagnosticPrefix(), err)
 		return lineResult{status: 1}
@@ -108,8 +124,12 @@ func (r Runtime) callFunctionWith(ctx context.Context, definition functionDefini
 	// over, as busybox has it.
 	scope := &record.scope
 	scope.outer = r.locals
-	for _, name := range assigned {
-		scope.save(name, r.variableAsItIs(name))
+	for _, binding := range assigned {
+		if binding.below != nil {
+			scope.save(binding.name, *binding.below)
+		} else {
+			scope.save(binding.name, r.variableAsItIs(binding.name))
+		}
 	}
 	r.locals = scope
 	restoring := r

@@ -40,28 +40,14 @@
       "\"declare -a arr\" and \"readonly -a a\" creates an empty array (OSH)": "fail",
       "\"var d = {}; declare -p d\" does not print anything (OSH)": "ash-only",
       "Reveal existence of \"temp frame\" (All shells disagree here!!!)": "fail",
-      "Test above without 'local' (which is not POSIX)": "fail",
       "Using ${x-default} after unsetting a temp binding shadowing a global": "fail"
     },
     "background.test.sh": {
       "wait for N parallel jobs and check failure": "flaky"
     },
-    "ble-features.test.sh": {
-      "[bash_unset] function call with tempenv vs tempenv-eval": "fail",
-      "[bash_unset] local-unset / dynamic-unset for localvar (mutated from tempenv)": "fail",
-      "[bash_unset] local-unset / dynamic-unset for tempenv": "fail",
-      "[bash_unset] localvar-inherit from tempenv": "ash-only"
-    },
     "ble-idioms.test.sh": {
       "Issue #1069 [56] BUG: declare -p unset does not print any error message": "fail",
       "recursive arith: recursion": "fail"
-    },
-    "ble-unset.test.sh": {
-      "[bash_unset] dynamic-unset for nested localvars": "fail",
-      "[bash_unset] dynamic-unset for nested tempenvs": "fail",
-      "[bash_unset] local-unset / dynamic-unset for localvar on nested-context": "fail",
-      "[bash_unset] local-unset for nested tempenvs": "ash-only",
-      "[bash_unset] nested context by tempenv-eval": "ash-only"
     },
     "brace-expansion.test.sh": {
       "Mixed case char expansion is invalid": "fail",
@@ -334,8 +320,7 @@
       "return at top level is an error": "fail"
     },
     "temp-binding.test.sh": {
-      "Temp bindings with local": "ash-only",
-      "Temp bindings with unset": "ash-only"
+      "Temp bindings with unset": "fail"
     },
     "tilde.test.sh": {
       "${x//~/~root}": "fail",
