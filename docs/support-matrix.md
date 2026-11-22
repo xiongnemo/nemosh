@@ -520,6 +520,7 @@ Where bash mode follows bash, one place at a time as each is measured:
 | break or continue outside a loop | nothing, status 0 | ``break: only meaningful in a `for', `while', or `until' loop``, status 0 |
 | `. FILE ARGS` whose FILE sets the positional parameters | the caller's come back | a list FILE set with `set --` stays; after a shift alone the caller's come back |
 | a `$((` that does not close as arithmetic, `$((which x \|\| echo y)2>/dev/null)` | `unterminated arithmetic expansion`, none of the script run, busybox's | a command substitution whose command begins with a subshell, bash's |
+| PPID and `$_` as the shell starts | PPID takes an assignment, `$_` unset until a command has run, busybox's | PPID an integer and read-only, `declare -ir PPID`, `$_` the path that ran the shell, bash's |
 | `type time`, `type -t time`, `command -V time` | `time is a builtin applet`, `builtin`, busybox's | `time is a shell keyword`, `keyword`, bash's reserved word |
 | `${@-word}`, `${*+word}` with no positional parameters | `$@` and `$*` set, `${@-minus}` nothing, busybox's | unset, `${@-minus}` minus and `${@+plus}` nothing, bash's; one empty parameter is set in both |
 | break and continue in a subshell, `( continue )`, or a pipeline's stage | the shell's loop's, ending the subshell, busybox's | no loop's, `continue: only meaningful in a ... loop`, and the subshell goes on, bash's; a `$(...)` sees the loops in both |
