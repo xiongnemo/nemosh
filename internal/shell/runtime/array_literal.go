@@ -110,8 +110,9 @@ func refuseArrayLiteral(item word) error {
 }
 
 // checkLoopName refuses a loop variable that cannot be a name, `for i.j in`, as busybox-w32
-// does; bash runs such a loop as if nothing were wrong with it. A quoted one is refused when
-// the loop runs, as it was.
+// does, as the script is read. bash refuses it when the loop runs, `not a valid identifier`,
+// and so does bash mode (bashRefusedLoopName); it was said here that bash ran such a loop,
+// which bash 5.3 does not.
 func checkLoopName(tokens []shellToken) error {
 	if len(tokens) == 0 || tokens[0].parsed == nil || !isUnquotedLiteralWord(*tokens[0].parsed) {
 		return nil

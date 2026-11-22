@@ -1,0 +1,35 @@
+package runtime
+
+import "fmt"
+
+// The forms bash mode's parser takes where nemosh's refuses them as it reads them, each refused
+// as bash refuses it when it runs; see parseBudget.bash.
+
+// bashRefusedLoopName is a for or select loop's variable as written when it is no name, in bash
+// mode: `i.j`, `-`, `1x`, and a quoted or expanded one, `"q"` and `$x`, which bash refuses too,
+// though they come to a name. Empty for one that is a name. busybox's parser refuses the
+// unquoted ones (checkLoopName), and nemosh's still does.
+func bashRefusedLoopName(tokens []shellToken) string {
+	if len(tokens) == 0 || tokens[0].kind != tokenWord {
+		return ""
+	}
+	first := tokens[0]
+	if first.parsed != nil && isUnquotedLiteralWord(*first.parsed) && isValidVariableName(first.value) {
+		return ""
+	}
+	if first.raw != "" {
+		return first.raw
+	}
+	return first.value
+}
+
+// refuseLoopName answers a loop whose variable is no name as bash does: the name as written,
+// that it is not a valid identifier, status 1, and the script goes on; in bash's POSIX mode it
+// ends, 2. Measured against Git for Windows' bash 5.3.
+func (r Runtime) refuseLoopName(name string) lineResult {
+	fmt.Fprintf(r.streams.Stderr, "%s`%s': not a valid identifier\n", r.diagnosticPrefix(), name)
+	if r.options.posix {
+		return lineResult{status: 2, control: flowAbort}
+	}
+	return lineResult{status: 1}
+}

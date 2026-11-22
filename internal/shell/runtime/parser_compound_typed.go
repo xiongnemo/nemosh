@@ -173,7 +173,12 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 		return loopNode{kind: loopArithmetic, arith: loop, body: body}, nil
 	}
 	tokens, err := scanShellTokensWithBudget(header, budget, depth)
-	if err == nil {
+	refused := ""
+	switch {
+	case err == nil && budget.bash:
+		// Bash mode's is refused when the loop runs; see parser_bash.go.
+		refused = bashRefusedLoopName(tokens)
+	case err == nil:
 		err = checkLoopName(tokens)
 	}
 	if err != nil {
@@ -182,7 +187,7 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 	// `for name` with no list is `for name in "$@"`, which POSIX 2.9.4.2 specifies and
 	// which is how a function loops over its arguments. It reported the usage instead.
 	if len(tokens) == 1 && tokens[0].kind == tokenWord {
-		return loopNode{kind: loopFor, name: tokens[0].value, overArguments: true, body: body}, nil
+		return loopNode{kind: loopFor, name: tokens[0].value, overArguments: true, body: body, refusedName: refused}, nil
 	}
 	if len(tokens) < 2 || tokens[1].value != "in" {
 		return nil, fmt.Errorf("expected: for name in words, or for ((init; condition; step))")
@@ -190,7 +195,7 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 	// `for name in` with nothing after it loops zero times. Not an error: it is what a
 	// generated list that came out empty looks like.
 	if len(tokens) == 2 {
-		return loopNode{kind: loopFor, name: tokens[0].value, body: body}, nil
+		return loopNode{kind: loopFor, name: tokens[0].value, body: body, refusedName: refused}, nil
 	}
 	values := make([]word, len(tokens)-2)
 	for index, token := range tokens[2:] {
@@ -198,7 +203,7 @@ func parseTypedFor(header string, body []programNode, budget *parseBudget, depth
 			return nil, err
 		}
 	}
-	return loopNode{kind: loopFor, name: tokens[0].value, values: values, body: body}, nil
+	return loopNode{kind: loopFor, name: tokens[0].value, values: values, body: body, refusedName: refused}, nil
 }
 
 func parseTypedCase(lines []string, spans []compoundSpan, byStart map[int]int, span compoundSpan, budget *parseBudget, depth int) (programNode, error) {
