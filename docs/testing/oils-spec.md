@@ -9,10 +9,10 @@ Measured on Windows, with the cases of Oils `15de8fd` (2026-05-30), against
 - bash: GNU bash, version 5.3.15(2)-release (x86_64-pc-cygwin)
 - busybox: BusyBox v1.38.0-FRP-6075-g169694ebd (2026-05-06 12:57:04 UTC)
 
-**nemosh passes 2371 of the 2548 cases bash passes: 93.1%.**
+**nemosh passes 2373 of the 2548 cases bash passes: 93.1%.**
 
-Of the other 177, it does 32 the way the files record of ash, which may be busybox's
-way, and 145 neither way.
+Of the other 175, it does 32 the way the files record of ash, which may be busybox's
+way, and 143 neither way.
 
 Run as sh, busybox's name for its ash, it passes 2116 of them and does 119 the way the
 files record of ash: `tests/oils/baseline-sh.json`, which `NEMOSH_OILS_AS=sh` compares
@@ -26,7 +26,7 @@ references part.
 | left out on Windows | 70 |
 | measured | 2665 |
 | that bash passes | 2548 |
-| that nemosh passes of those | 2371 |
+| that nemosh passes of those | 2373 |
 
 Left out on Windows, as cases no shell can be measured on there, for the reasons
 `tests/oils/exclusions.json` gives:
@@ -145,7 +145,7 @@ busybox does the way the file records of ash.
 | quote.test.sh | 35 | 35 | 35 | 100.0% | 0 | 35 | 35 |
 | redirect-command.test.sh | 23 | 23 | 22 | 95.7% | 0 | 21 | 22 |
 | redirect-multi.test.sh | 13 | 13 | 8 | 61.5% | 1 | 4 | 7 |
-| redirect.test.sh | 39 | 37 | 33 | 89.2% | 1 | 33 | 28 |
+| redirect.test.sh | 39 | 37 | 34 | 91.9% | 1 | 33 | 28 |
 | regex.test.sh | 37 | 36 | 36 | 100.0% | 0 | 36 | 10 |
 | serialize.test.sh | 10 | 9 | 8 | 88.9% | 1 | 8 | 10 |
 | sh-func.test.sh | 12 | 12 | 12 | 100.0% | 0 | 10 | 10 |
@@ -157,7 +157,7 @@ busybox does the way the file records of ash.
 | subshell.test.sh | 2 | 2 | 2 | 100.0% | 0 | 2 | 2 |
 | temp-binding.test.sh | 4 | 3 | 2 | 66.7% | 1 | 2 | 4 |
 | tilde.test.sh | 14 | 12 | 12 | 100.0% | 0 | 11 | 10 |
-| toysh-posix.test.sh | 22 | 22 | 21 | 95.5% | 0 | 14 | 22 |
+| toysh-posix.test.sh | 22 | 22 | 22 | 100.0% | 0 | 14 | 22 |
 | toysh.test.sh | 8 | 7 | 6 | 85.7% | 0 | 6 | 1 |
 | type-compat.test.sh | 7 | 5 | 4 | 80.0% | 0 | 4 | 0 |
 | unicode.test.sh | 7 | 2 | 1 | 50.0% | 0 | 1 | 2 |
@@ -178,4 +178,4 @@ busybox does the way the file records of ash.
 | word-split.test.sh | 55 | 53 | 51 | 96.2% | 1 | 47 | 53 |
 | xtrace.test.sh | 19 | 17 | 12 | 70.6% | 0 | 12 | 9 |
 | zsh-idioms.test.sh | 3 | 3 | 3 | 100.0% | 0 | 2 | 2 |
-| all | 2665 | 2548 | 2371 | 93.1% | 32 | 2116 | 1447 |
+| all | 2665 | 2548 | 2373 | 93.1% | 32 | 2116 | 1447 |

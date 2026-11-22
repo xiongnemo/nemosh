@@ -335,7 +335,6 @@
     },
     "redirect.test.sh": {
       "2\u0026\u003e1 (is it a redirect or is it like a\u0026\u003e1)": "fail",
-      ": \u003e/dev/null 2\u003e / (OSH regression: fail to pop fd frame)": "fail",
       "\u003c\u003e for read/write named pipes": "fail",
       "Descriptor redirect with filename": "ash-only",
       "Parsing of x={myvar} and related cases": "fail"
@@ -369,9 +368,6 @@
     "tilde.test.sh": {
       "${x//~/~root}": "fail",
       "temp assignment x=~ env": "fail"
-    },
-    "toysh-posix.test.sh": {
-      "Failed redirect in assignment, vs. export": "fail"
     },
     "toysh.test.sh": {
       "Brace Expansion": "fail",

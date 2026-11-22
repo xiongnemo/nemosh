@@ -35,8 +35,11 @@ func errorEndsShell(name string) bool {
 // error that would have ended the script ends the builtin, with its status. `command eval
 // 'echo in; r=2; echo out'` on a readonly r says in, and the script goes on with 2, as in
 // busybox.
+//
+// Bash mode's special builtins end no script outside bash's POSIX mode, so what still ends one
+// there -- set -u, `${x?}` -- is a shell error `command` does not contain, as in bash.
 func (r Runtime) plainResult(plain bool, result lineResult) lineResult {
-	if plain && result.control == flowAbort {
+	if plain && result.control == flowAbort && r.specialErrorsEndScript() {
 		r.shellErrorRaised()
 		result.control = flowNone
 	}
