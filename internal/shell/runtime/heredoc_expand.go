@@ -57,17 +57,15 @@ func (r Runtime) expandHeredocBody(ctx context.Context, body string, savedStatus
 		}
 		// `$((...))` before `$(...)`, which took it for a command in a subshell: `$((1+1))`
 		// ran a command named 1+1 and printed its not-found, where busybox prints 2.
-		if strings.HasPrefix(body[index:], "$((") {
-			if end, ok := arithmeticExpansionEnd(body, index+3); ok {
-				value, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, body[index+3:end-1], savedStatus))
-				if err != nil {
-					r.arithmeticExpansionFailed(err)
-				} else {
-					expanded.WriteString(strconv.FormatInt(value, 10))
-				}
-				index = end + 1
-				continue
+		if expression, end, ok := arithmeticSpanAt(body, index, r.BashMode()); ok {
+			value, err := r.evaluateArithmetic(r.expandArithmeticText(ctx, expression, savedStatus))
+			if err != nil {
+				r.arithmeticExpansionFailed(err)
+			} else {
+				expanded.WriteString(strconv.FormatInt(value, 10))
 			}
+			index = end + 1
+			continue
 		}
 		if index+1 < len(body) && body[index+1] == '(' {
 			end, ok := commandSubstitutionEnd(body, index+2)

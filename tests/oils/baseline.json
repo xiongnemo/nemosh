@@ -6,9 +6,6 @@
       "here doc inside alias": "ash-only"
     },
     "arith-context.test.sh": {
-      "$[ is a synonym for $((": "fail",
-      "$[$undefined] is a synonym for $(($undefined (#2566)": "fail",
-      "$[$var is a synonym for $(($var (#2426)": "fail",
       "Ambiguous colon in slice": "fail"
     },
     "arith.test.sh": {
@@ -73,7 +70,6 @@
       "double expansion with simple var -- bash bug": "ash-only"
     },
     "bugs.test.sh": {
-      "Crash after changing $[] to be alias of $(( ))": "ash-only",
       "file with NUL byte": "fail"
     },
     "builtin-bash.test.sh": {
