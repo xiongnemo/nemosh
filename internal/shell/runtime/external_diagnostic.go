@@ -18,6 +18,9 @@ import (
 // one line that matters and would leak host paths into output that behaviour
 // cases compare byte for byte.
 func (r Runtime) reportLookupFailure(name string, err error) int {
+	if r.BashMode() {
+		return r.reportLookupFailureAsBash(name, err)
+	}
 	switch {
 	case errors.Is(err, errExternalNotFound):
 		r.report(name, shellDiagnostic{
@@ -44,6 +47,31 @@ func (r Runtime) reportLookupFailure(name string, err error) int {
 		})
 		return 1
 	}
+}
+
+// reportLookupFailureAsBash is bash mode's, in bash's words and with no hint after them, as bash
+// says no more: `x: command not found` for a name, `./x: No such file or directory` for a path,
+// `./d: Is a directory`, and `Permission denied` for a file Windows will not start. The status is
+// the same, and so are the details NEMOSH_DEBUG asks for. Measured against Git for Windows' bash
+// 5.3.
+func (r Runtime) reportLookupFailureAsBash(name string, err error) int {
+	message, status := err.Error(), 1
+	switch {
+	case errors.Is(err, errExternalNotFound) && hasPathSeparator(name):
+		message, status = "No such file or directory", 127
+	case errors.Is(err, errExternalNotFound):
+		message, status = "command not found", 127
+	case errors.Is(err, errExternalIsDirectory):
+		message, status = "Is a directory", 126
+	case errors.Is(err, errExternalNotExecutable):
+		message, status = "Permission denied", 126
+	}
+	r.report(name, shellDiagnostic{
+		message: message,
+		channel: debugExec,
+		details: r.debugDetails(debugExec, func() []string { return r.lookupDetails(name) }),
+	})
+	return status
 }
 
 // notFoundHint says the useful thing rather than restating the failure. A name

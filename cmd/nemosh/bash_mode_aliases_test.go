@@ -33,7 +33,7 @@ func TestBashMode_expandsAliasesOnlyInASessionUnlessAsked(t *testing.T) {
 	t.Setenv("PS1", "")
 	t.Setenv("PS2", "")
 	script := "alias e=echo\ne x\n"
-	if got := runInvocation(t, "", "bash", "-c", script); got.status != 127 || got.stdout != "" || !strings.Contains(got.stderr, "e: not found") {
+	if got := runInvocation(t, "", "bash", "-c", script); got.status != 127 || got.stdout != "" || !strings.Contains(got.stderr, "e: command not found") {
 		t.Errorf("bash -c: status %d, stdout %q, stderr %q; want e not found, 127", got.status, got.stdout, got.stderr)
 	}
 	if got := runInvocation(t, "", "bash", "-c", "shopt -s expand_aliases\n"+script); got.stdout != "x\n" {
