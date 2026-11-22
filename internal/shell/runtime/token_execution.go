@@ -307,6 +307,17 @@ func (r Runtime) runTokensWithAssignments(ctx context.Context, assignments []ass
 		}
 		return r.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)
 	}
+	// unset's in a layer, so `x=t unset x` takes away its own x and leaves the one it hid, as
+	// bash's does; see tempenv_scope.go.
+	if commandTokens[0].value == "unset" && r.bashTemporaryPrefix() {
+		layered, layer, ok := r.pushTempenv(assignments)
+		if !ok {
+			return 1
+		}
+		status := layered.runTokensWithRedirectOperations(ctx, commandTokens, args, operations)
+		r.popTempenv(layer)
+		return status
+	}
 	commandRuntime := r.withProgramPATH(commandTokens[0].value, assignments).withLocalAssignments(assignments)
 	if commandRuntime == nil {
 		return 1

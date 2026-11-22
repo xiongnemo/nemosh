@@ -7,6 +7,9 @@ type localScope struct {
 	// outer is the scope of the call this one's was made from, nil for a call from the top; see
 	// dynamic_unset.go.
 	outer *localScope
+	// tempenv marks a layer of prefix assignments over a call's scope, bash mode's for eval, `.`,
+	// source and unset; see tempenv_scope.go.
+	tempenv bool
 	// options are the `set` options as they stood at `local -`, and target is where
 	// they go back to when the call returns. nil when the call did not ask.
 	options []bool
@@ -25,6 +28,9 @@ type savedVariable struct {
 	keys       *associativeArray
 	attributes variableAttributes
 	readonly   bool
+	// temporary is a name bound above this by a prefix assignment, in bash mode, and not yet made
+	// local; see tempenv_scope.go.
+	temporary bool
 }
 
 // callRecord is what a function call has of its own: the frame FUNCNAME and caller read, its
@@ -49,7 +55,7 @@ func (r Runtime) copyLocals() *localScope {
 	}
 	var head, tail *localScope
 	for scope := r.locals; scope != nil; scope = scope.outer {
-		copied := &localScope{}
+		copied := &localScope{tempenv: scope.tempenv}
 		for name, saved := range scope.saved {
 			if saved.array != nil {
 				saved.array = saved.array.clone()
@@ -81,13 +87,23 @@ func (s *localScope) save(name string, saved savedVariable) {
 // and the name is cleared: no value, no array, no attributes. The export flag stays, the
 // rule in both references, so the local reaches a child once it has a value -- and until
 // then nothing does. A name the call has already made local is left as it is, as both
-// references leave it: `local x=1; local x` keeps 1.
+// references leave it: `local x=1; local x` keeps 1. The call's own scope is the one, under any
+// layer of prefix assignments, and in bash mode such a binding counts; see bashLocal.
 func (r Runtime) makeLocal(name string) {
-	if _, already := r.locals.saved[name]; already {
+	call := r.callScope()
+	if r.BashMode() && r.bashLocal(call, name) {
 		return
 	}
+	if _, already := call.saved[name]; already {
+		return
+	}
+	r.newLocal(call, name)
+}
+
+// newLocal saves what name is in the call's scope and clears it.
+func (r Runtime) newLocal(call *localScope, name string) {
 	saved := r.variableAsItIs(name)
-	r.locals.save(name, saved)
+	call.save(name, saved)
 	exported := r.isExported(name)
 	delete(r.vars, name)
 	r.arrays.unset(name)
