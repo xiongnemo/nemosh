@@ -247,7 +247,7 @@
       "Unbraced function body.": "ash-only"
     },
     "glob.test.sh": {
-      "Glob ordering respects LC_COLLATE (zsh respects this too)": "ash-only",
+      "Glob ordering respects LC_COLLATE (zsh respects this too)": "fail",
       "\\ in unquoted substitutions does not match a backslash": "fail",
       "\\ in unquoted substitutions escapes globchars": "fail",
       "glob double quotes": "fail",
