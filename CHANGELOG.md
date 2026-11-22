@@ -142,6 +142,9 @@ patch number is the commits since that tag.
     abandoned, status 2, and a `-c` command string ended, 1; `break 0` leaves every loop, status 1; `shift -1` is out of range,
     status 1; and break or continue in a function no longer reaches its caller's loop. busybox
     reads them otherwise, and nemosh and sh still do.
+  - **readonly and export in bash mode list as bash's do**: declare's lines, `declare -r q="it's"`
+    and `declare -x v="333"`, and under `set -o posix` `readonly q="it's"` and `export v="333"`.
+    busybox's single-quote, `readonly q='it'"'"'s'`, and nemosh and sh still do.
   - **Arithmetic in bash mode under `set -u` refuses an unset name**, as bash's does: `$((x+1))`,
     `((y++))` and `$((a[0]))` are `x: unbound variable`, and the script ends, `let` and `((`
     containing it no more than any command. busybox takes the name for 0, and nemosh and sh still do.

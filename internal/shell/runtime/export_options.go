@@ -74,6 +74,10 @@ func (r Runtime) readonlyOptions(args []string) (declareOptions, []string, bool)
 // listReadonly writes every read-only name as busybox does: `readonly NAME='value'`, or
 // `readonly NAME` for one with no value; an array in declare's form.
 func (r Runtime) listReadonly() int {
+	// Bash mode's is bash's; see attribute_listing_bash.go.
+	if r.BashMode() {
+		return r.bashAttributeListing("readonly", slices.Sorted(maps.Keys(r.readonly)))
+	}
 	for _, name := range slices.Sorted(maps.Keys(r.readonly)) {
 		if r.arrays.isAssociative(name) || r.hasIndexedArray(name) {
 			if text, ok := r.declarationText(name); ok {
