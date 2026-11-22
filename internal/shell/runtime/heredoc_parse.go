@@ -142,12 +142,10 @@ func heredocDeclarations(line string, lineNumber, startOrder int, scan heredocSc
 			continue
 		}
 		// An arithmetic expansion is stepped over whole, because `$((1<<4))`
-		// carries a `<<` that is a shift and not a heredoc.
-		if char == '$' && index+2 < len(line) && line[index+1] == '(' && line[index+2] == '(' && quote != '\'' {
-			if end, ok := arithmeticExpansionEnd(line, index+3); ok {
-				index = end
-				continue
-			}
+		// carries a `<<` that is a shift and not a heredoc; so does bash mode's `$[1<<4]`.
+		if _, end, ok := arithmeticSpanAt(line, index, scan.bash); ok && quote != '\'' {
+			index = end
+			continue
 		}
 		// So is an arithmetic command, `(( x << 2 ))`, which went looking for a heredoc
 		// delimited by 2.

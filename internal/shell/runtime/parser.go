@@ -41,6 +41,9 @@ func parseScript(source string, budget *parseBudget, depth int) (Script, error) 
 	if depth == 0 && len(budget.aliases) > 0 {
 		source = readAliases(source, budget.aliases, budget.heredocs)
 	}
+	if budget.bash {
+		source = respellLegacyArithmetic(source)
+	}
 	// After heredocs are collected, so a quoted-delimiter body keeps its
 	// backquotes as the literal text it is promised to be.
 	source, err := rewriteBackquotes(source)
