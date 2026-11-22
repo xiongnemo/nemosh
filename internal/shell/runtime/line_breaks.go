@@ -68,12 +68,23 @@ func (budget *parseBudget) commandLine(tokens []shellToken) int {
 // groupPlaceholder stands for a group extractGroupCommands has taken out of a line and parsed.
 const groupPlaceholder = "__nemosh_group__"
 
+// groupMask is what stands in the line for the group whose closer is at end. The `)` ends a
+// word, as an operator does, and the placeholder is one: `(cmd)2>f` joined the `2` to it and sent
+// the output to f, and `(cmd)x` dropped the x. A blank keeps what follows apart, an io-number or
+// the word bash and busybox refuse.
+func groupMask(line string, end int) string {
+	if end+1 < len(line) && strings.IndexByte(" \t\n|&;<>()", line[end+1]) < 0 {
+		return groupPlaceholder + " "
+	}
+	return groupPlaceholder
+}
+
 // unmaskedOffset is where offset in a line with its groups taken out is in the line as it was.
 func unmaskedOffset(offset int, groups map[int]parsedGroup) int {
 	shift := 0
 	for at, group := range groups {
 		if at < offset {
-			shift += group.width - len(groupPlaceholder)
+			shift += group.width - group.masked
 		}
 	}
 	return offset + shift

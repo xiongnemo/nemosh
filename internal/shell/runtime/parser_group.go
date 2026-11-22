@@ -8,8 +8,9 @@ import (
 type parsedGroup struct {
 	brace bool
 	body  Script
-	// width is how long the group was as written, which its placeholder is not.
-	width int
+	// width is how long the group was as written, which its placeholder is not, and masked how
+	// long the placeholder is, with the blank that may follow it.
+	width, masked int
 }
 
 func (g parsedGroup) withRedirects(redirects []redirectOperation) commandNode {
@@ -154,8 +155,9 @@ func extractGroupCommands(line string, budget *parseBudget, depth int) (string, 
 		if err != nil {
 			return "", nil, err
 		}
-		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested, width: end + 1 - start}
-		output.WriteString(groupPlaceholder)
+		placeholder := groupMask(line, end)
+		groups[output.Len()] = parsedGroup{brace: opener == '{', body: nested, width: end + 1 - start, masked: len(placeholder)}
+		output.WriteString(placeholder)
 		index = end + 1
 	}
 	return output.String(), groups, nil
