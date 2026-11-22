@@ -33,6 +33,7 @@ func (r Runtime) executeCompoundCommand(ctx context.Context, body Script, redire
 			fmt.Fprintf(r.streams.Stderr, "%s%v\n", r.diagnosticPrefix(), err)
 			return lineResult{status: 1}
 		}
+		commandRuntime.seeNoLoopsAsBash()
 		// A subshell's job table is its own, and starts empty: `( jobs )` lists nothing in
 		// both references. See listedJobs. It is under the shell's job scope rather than this
 		// command's context, which ends with the run, since a job it starts runs on once it
