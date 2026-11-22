@@ -178,7 +178,6 @@
     "builtin-type-bash.test.sh": {
       "type -P does not find directories (regression)": "fail",
       "type -t -\u003e file": "fail",
-      "type -t -\u003e keyword": "fail",
       "type -t -\u003e not found": "fail",
       "type -t doesn't find non-executable (like command -v)": "ash-only"
     },

@@ -146,6 +146,9 @@ patch number is the commits since that tag.
     `for i.j in a b` says `` `i.j': not a valid identifier ``, 1, and the script goes on, what came
     before it having run; `for "q" in` and `for $x in` too. busybox refuses the unquoted ones as the
     script is read, and nemosh and sh still do.
+  - **`time` is a keyword to type and command in bash mode**: `type -t time` says keyword and
+    `type time` "time is a shell keyword", as in bash. nemosh and sh call busybox's applet "a
+    builtin applet".
   - **`$@` and `$*` are unset with no positional parameters in bash mode**: `${@-minus}` is
     minus and `${@+plus}` nothing, as in bash. busybox takes them as always set, and nemosh and
     sh still do.
