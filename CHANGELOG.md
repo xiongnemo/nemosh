@@ -419,6 +419,10 @@ patch number is the commits since that tag.
 
 ### Fixed
 
+- **set listed environment entries no variable can be**: Windows' hidden `=ExitCode` and `=C:`
+  came out as `='C:=C:\work'`, and `ProgramFiles(x86)` with its value. Both references list only
+  what a script can name; a child is still handed them.
+
 - **A variable set two calls with assignments down was lost**: `f(){ g=1; }; h(){ x=1 f; }; y=1
   h` left g unset. A change merged back into a call's temporary is now merged on out of it too, as
   both references keep g.

@@ -284,6 +284,11 @@ func (r Runtime) listShellVariables() int {
 		quote = shellquote.Reusable
 	}
 	for _, name := range slices.Compact(names) {
+		// An environment entry no variable can be, Windows' `=ExitCode` and `=C:` and
+		// `ProgramFiles(x86)`, is a child's still and listed by neither reference.
+		if !isValidVariableName(name) {
+			continue
+		}
 		if list, ok := r.arrayLiteralText(name); ok {
 			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, list)
 			continue
