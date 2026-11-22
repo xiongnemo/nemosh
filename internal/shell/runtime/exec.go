@@ -22,10 +22,13 @@ func (r Runtime) execRedirect(operations []redirectOperation) int {
 		return 0
 	}
 	// A special builtin's failed redirection ends the script, as busybox has it: `exec >log`
-	// with no such directory went on writing where it had been. See withAppliedRedirectsFor.
+	// with no such directory went on writing where it had been. See withAppliedRedirectsFor; bash
+	// mode's goes on, status 1, as bash's outside its POSIX mode.
 	if err := r.applyRedirectOperations(r.fds, operations); err != nil {
 		r.reportFailedRedirection(err)
-		r.raiseShellErrorWith(1)
+		if r.specialErrorsEndScript() {
+			r.raiseShellErrorWith(1)
+		}
 		return 1
 	}
 	return 0

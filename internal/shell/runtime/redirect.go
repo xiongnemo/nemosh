@@ -99,7 +99,7 @@ func (r Runtime) withAppliedRedirectsFor(special bool, operations []redirectOper
 	if err := r.applyRedirectOperations(table, operations); err != nil {
 		cleanupErr := table.closeAll()
 		r.reportFailedRedirection(errors.Join(err, cleanupErr))
-		if special {
+		if special && r.specialErrorsEndScript() {
 			r.raiseShellErrorWith(1)
 		}
 		return lineResult{status: 1}

@@ -8,3 +8,12 @@ package runtime
 func (r Runtime) bashTemporaryPrefix() bool {
 	return r.BashMode() && !r.options.posix
 }
+
+// specialErrorsEndScript is whether a special builtin's own error -- its redirection that fails
+// -- ends a script that is not a session, as POSIX 2.8.1 and busybox have it, and bash only in
+// its POSIX mode: outside it bash's builtin answers 1 and the script goes on, `: > /no/dir/f`,
+// `exec 3> /no/dir/f` and eval's, `.`'s, export's and set's alike. Measured against Git for
+// Windows' bash 5.3.
+func (r Runtime) specialErrorsEndScript() bool {
+	return !r.bashTemporaryPrefix()
+}
