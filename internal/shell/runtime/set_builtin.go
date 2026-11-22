@@ -277,12 +277,21 @@ func (r Runtime) listShellVariables() int {
 		}
 	}
 	slices.Sort(names)
+	// Bash mode's is bash's: a value bare when it reads back as itself, quoted as bash quotes it
+	// otherwise, and the functions after, as declare -f prints them, but under set -o posix.
+	quote := shellquote.Ash
+	if r.BashMode() {
+		quote = shellquote.Reusable
+	}
 	for _, name := range slices.Compact(names) {
 		if list, ok := r.arrayLiteralText(name); ok {
 			fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, list)
 			continue
 		}
-		fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, shellquote.Ash(r.vars[name]))
+		fmt.Fprintf(r.streams.Stdout, "%s=%s\n", name, quote(r.vars[name]))
+	}
+	if r.BashMode() && !r.options.posix {
+		r.declareFunctionBodies(nil)
 	}
 	return 0
 }
