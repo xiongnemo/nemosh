@@ -180,6 +180,9 @@ var commands = []Command{
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,
 	// and there is no kind for "one fixed word".
 	{Name: "su", Short: "cstWN", ValueShort: "cs", Operand: AnyPath},
+	{Name: "drop", Short: "cs", ValueShort: "cs", Operand: AnyPath},
+	{Name: "cdrop", Short: "c", ValueShort: "c", Operand: AnyPath},
+	{Name: "pdrop", Short: "c", ValueShort: "c", Operand: AnyPath},
 	// Windows only, as su is. chattr's letters after a dash are the attributes it clears, and R.
 	{Name: "lsattr", Short: "Radl", Operand: AnyPath},
 	{Name: "chattr", Short: "Rahnrst", Operand: AnyPath},

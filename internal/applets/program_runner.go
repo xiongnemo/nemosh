@@ -47,6 +47,21 @@ func DetachedLaunch(ctx context.Context) bool {
 	return detached
 }
 
+type unelevatedLaunchKey struct{}
+
+// WithUnelevatedLaunch asks the shell to launch the program run under ctx with this process's token
+// made unelevated, as drop asks: the Administrators group and the local administrator's group used
+// only to deny, no privilege but bypassing traverse checks, and medium integrity.
+func WithUnelevatedLaunch(ctx context.Context) context.Context {
+	return context.WithValue(ctx, unelevatedLaunchKey{}, true)
+}
+
+// UnelevatedLaunch is whether ctx asks for the launch WithUnelevatedLaunch does.
+func UnelevatedLaunch(ctx context.Context) bool {
+	unelevated, _ := ctx.Value(unelevatedLaunchKey{}).(bool)
+	return unelevated
+}
+
 // commandFor is what a command an applet runs names: an applet, as busybox-w32 prefers one, or
 // else a program.
 func commandFor(ctx context.Context, name string) (Applet, bool) {

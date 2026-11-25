@@ -84,6 +84,13 @@ func (r Runtime) runProgram(ctx context.Context, name string, args []string, vie
 	if errors.Is(err, errExternalNotFound) {
 		return fail(127, err)
 	}
+	give, releaseToken := func(*exec.Cmd) {}, func() {}
+	if err == nil && applets.UnelevatedLaunch(ctx) {
+		if give, releaseToken, err = unelevatedLauncher(); err != nil {
+			return fail(126, fmt.Errorf("cannot drop elevated privileges: %w", err))
+		}
+	}
+	defer releaseToken()
 	leased, release := externalStdin(ctx, stdin)
 	defer release()
 	detached := applets.DetachedLaunch(ctx)
@@ -94,6 +101,7 @@ func (r Runtime) runProgram(ctx context.Context, name string, args []string, vie
 		}
 		cmd.Dir, cmd.Env = directory, r.programEnvironment(view)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = leased, programStream(stdout), programStream(stderr)
+		give(cmd)
 		if detached {
 			detachFromSession(cmd, leave)
 		}

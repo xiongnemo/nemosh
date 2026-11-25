@@ -12,6 +12,13 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`drop`, `cdrop` and `pdrop`**, busybox-w32's: a command, this shell, cmd.exe or PowerShell
+  run without administrator rights, in the same console with the same streams. Windows calls
+  the token unelevated, where it still called busybox's elevated, because busybox leaves the
+  local administrators group (S-1-5-114) enabled. So a program that refuses to run elevated,
+  as Codex's app server does, runs under it. Options end at the command, so `drop ls -l` runs
+  ls -l.
+
 - **`nohup`**, busybox's, which busybox-w32 does not build. A terminal on stdin becomes the
   null device, one on stdout `nohup.out`, and one on stderr stdout. On Windows the command leaves
   the session's Job Object and runs on a console of its own, so `nohup server &` over ssh

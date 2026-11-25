@@ -355,9 +355,34 @@ split, building `suw32` under `PLATFORM_MINGW32` alone.
 
 Not `sudo`: Windows 11 24H2 ships a real `sudo.exe`, and the name promises one
 command in the current console with its streams intact — which is precisely what
-this cannot deliver. busybox also ships the complement, `drop`/`cdrop`/`pdrop`,
-for running with the Administrators group disabled; those are not implemented
-here.
+this cannot deliver.
+
+#### The other way: `drop`, `cdrop` and `pdrop`
+
+busybox-w32 ships the complement, `drop` (`miscutils/drop.c`), with `cdrop` and
+`pdrop` for cmd.exe and PowerShell, and so does this shell. `drop COMMAND` runs a
+command without administrator rights. `drop` alone runs this shell that way, and
+`drop -c CMD` runs CMD in it; `-s SHELL` names another shell, and cmd.exe is given
+`/c`. The command keeps the console and the streams, since no elevation boundary
+is crossed: the shell starts it itself, with a restricted copy of its own token.
+
+**Windows calls this token unelevated, and it called busybox's elevated.**
+busybox computes SAFER's normal-user token at medium integrity. Over an sshd
+session, whose token is elevated and has no linked token to fall back on, that
+left `NT AUTHORITY\Local account and member of Administrators group` (S-1-5-114)
+enabled, and `TokenElevation` still read 1. A program that refuses to run
+elevated, as Codex's app server does, refused it too. Here both administrators
+groups are kept only to deny, every privilege but traversal goes, and the
+integrity falls to medium: `TokenElevation` reads 0, measured on 2026-11-25.
+
+What such a token's processes make is owned by the user, under a default DACL
+that lets the user and SYSTEM in. An elevated token's objects belong to the
+Administrators group, which the restricted token may no longer use, so without
+this a dropped command could not start a program of its own (access denied).
+
+`USER` and `LOGNAME` become the account's name where they are unset or `root`,
+as busybox's `setenv_name`. Options end at the command, so `drop ls -l` runs `ls
+-l`. busybox's read on past the command and refused `-l` as one of its own.
 
 ### Beyond POSIX, on purpose
 
@@ -1196,6 +1221,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `stat` | `-c -t -L -f`: busybox's layout, its terse line, and every letter of its `-c` and `-f` formats, each with printf's flags, width and precision. On Windows the values are busybox-w32's: the volume's serial number for the device, the file's index for the inode, 4095 for the account's own files and 0 for a system account's, the mode made up as `chmod` makes it up, and the creation time for the change time | refused by name |
 | `split` | `-l -b -a`, `-b` with `b k m g`; the bytes as they come, and as many letters as `-a` asks, `aa` upwards by default | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
+| `drop`, `cdrop`, `pdrop` | `-c`, and `-s` for `drop`; a command, or a shell, run with a token Windows calls unelevated, in this console with these streams; options end at the command; Windows only, see **Elevation** | refused by name |
 | `lsattr` | `-R -a -d -l`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `chattr` | `-R`, and `-` or `+` with `r h s a t n`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `tac` | none | refused by name |

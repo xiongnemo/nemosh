@@ -8,7 +8,7 @@ import "strings"
 // built before main runs; see the init ceiling in product.yml.
 func isCommandWrapper(name string) bool {
 	switch name {
-	case "builtin", "command", "env", "exec", "nohup", "sudo", "time", "type", "watch", "which", "xargs":
+	case "builtin", "cdrop", "command", "drop", "env", "exec", "nohup", "pdrop", "sudo", "time", "type", "watch", "which", "xargs":
 		return true
 	}
 	return false

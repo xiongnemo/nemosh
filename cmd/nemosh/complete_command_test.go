@@ -58,8 +58,10 @@ func TestCompleteCommand_offersEachNameOnce(t *testing.T) {
 	if !slices.Equal(got, []string{"wc"}) {
 		t.Fatalf("completeCommand(wc) = %v, want one entry", got)
 	}
-	if got := completeCommand("cd", commands.candidates()); !slices.Equal(got, []string{"cd"}) {
-		t.Fatalf("completeCommand(cd) = %v, want one entry", got)
+	// cdrop is an applet that starts the same way, and is another name.
+	got = completeCommand("cd", commands.candidates())
+	if count := len(slices.DeleteFunc(slices.Clone(got), func(name string) bool { return name != "cd" })); count != 1 {
+		t.Fatalf("completeCommand(cd) = %v, want cd once", got)
 	}
 }
 
