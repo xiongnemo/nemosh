@@ -20,6 +20,10 @@ patch number is the commits since that tag.
   takes them as its answer: the same paste takes 130 milliseconds, and a thousand lines 1.3
   seconds. The terminal is not put in bracketed-paste mode for it.
 
+- **vi drew a frame for every key of a paste**: the same hundred lines took 9 seconds. Keys
+  already waiting are now handled first and drawn once after: 23 milliseconds, and a thousand
+  lines 0.4 seconds.
+
 ## v1.7.0 - 2026-11-25
 
 ChatGPT's and Codex's SSH remote connections reach a Windows machine whose default SSH shell is

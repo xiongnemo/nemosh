@@ -28,10 +28,16 @@ func runVi(ctx context.Context, screen tcell.Screen, e *viEditor) error {
 		}
 	}()
 	for !e.quit {
-		e.draw()
-		if e.ready != nil {
-			close(e.ready)
-			e.ready = nil
+		// Drawn when no key is waiting. A paste is a key a character, and a frame for each
+		// took 9 seconds for 4,580 of them in conhost, measured 2026-11-26; the keys already
+		// queued are handled first and the frame after them shows what theirs would have
+		// ended on. vi reads tcell's queue itself, so what is waiting there is all there is.
+		if !screen.HasPendingEvent() {
+			e.draw()
+			if e.ready != nil {
+				close(e.ready)
+				e.ready = nil
+			}
 		}
 		event := screen.PollEvent()
 		if event == nil {
