@@ -8,7 +8,21 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
-## Unreleased
+## v1.7.0 - 2026-11-25
+
+ChatGPT's and Codex's SSH remote connections reach a Windows machine whose default SSH shell is
+nemosh, and the shell run as bash follows Git for Windows' bash. Windows's sshd gives an
+administrator's session the elevated token, which Codex's app server refuses. A nemosh that sshd
+starts elevated now runs the session unelevated, with the token the new `drop` gives; Windows
+calls that token unelevated, where it still calls busybox-w32's elevated. It lends the rights back
+through `sudo`, with no password, since the session's key was it. `nohup`, which the client's
+bootstrap starts its server with, keeps a command running past the session's end. Run as bash
+(`nemosh bash`, a `#!/bin/bash` script, or `NEMOSH_COMPAT=bash`), the shell reads bash's startup
+files, inputrc and history. It parses, expands, reports errors and lists what it holds as Git's
+bash 5.3 does where bash and busybox part; run as sh it keeps busybox's way. Bash's `bind` came
+with it, and so did `zip`, `man`, `pstree`, `column`, `ping`, `ss`, `ip`, `tree` and `hostname`.
+Oils: 2412 of the 2548 cases bash passes, 94.7%, where v1.6.0 passed 2152, 84.5%; run as sh,
+2116.
 
 ### Added
 
