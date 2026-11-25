@@ -84,18 +84,38 @@ func (r Runtime) runProgram(ctx context.Context, name string, args []string, vie
 	if errors.Is(err, errExternalNotFound) {
 		return fail(127, err)
 	}
+	leased, release := externalStdin(ctx, stdin)
+	defer release()
+	detached := applets.DetachedLaunch(ctx)
+	prepare := func(leave bool) (*exec.Cmd, error) {
+		cmd, err := r.externalCommand(ctx, executable, launchArgs)
+		if err != nil {
+			return nil, err
+		}
+		cmd.Dir, cmd.Env = directory, r.programEnvironment(view)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = leased, programStream(stdout), programStream(stderr)
+		if detached {
+			detachFromSession(cmd, leave)
+		}
+		return cmd, nil
+	}
 	var cmd *exec.Cmd
 	if err == nil {
-		cmd, err = r.externalCommand(ctx, executable, launchArgs)
+		cmd, err = prepare(true)
 	}
 	if err != nil {
 		return fail(126, err)
 	}
-	cmd.Dir, cmd.Env = directory, r.programEnvironment(view)
-	leased, release := externalStdin(ctx, stdin)
-	defer release()
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = leased, programStream(stdout), programStream(stderr)
-	if err = r.startChild(cmd); err == nil {
+	err = r.startChild(cmd)
+	if detached && breakawayRefused(err) {
+		// Started all the same, off the console, as nohup's is: only the end of the session
+		// will end it, and that is said.
+		fmt.Fprintf(stderr, "%s: cannot leave this session's Job Object, which will end it\n", name)
+		if cmd, err = prepare(false); err == nil {
+			err = r.startChild(cmd)
+		}
+	}
+	if err == nil {
 		err = cmd.Wait()
 	}
 	r.recordChildCPU(cmd)

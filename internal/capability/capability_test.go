@@ -156,6 +156,8 @@ func TestUndeclaredOptionsAreRefused(t *testing.T) {
 		"ttysize": true,
 		// reset reads no arguments, as busybox's reads none, and nor does pipe_progress.
 		"reset": true, "pipe_progress": true,
+		// nohup reads no options, as busybox's reads none: `-Z` is the command, not found.
+		"nohup": true,
 	}
 	for _, name := range appletNames(t) {
 		if noOptionParsing[name] || launchesSomething[name] {

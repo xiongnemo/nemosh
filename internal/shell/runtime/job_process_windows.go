@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -49,6 +50,11 @@ func inheritedFile(handle, name string) (*os.File, error) {
 // jobTree is a job process's Job Object, which the programs it starts join too, so KILL
 // can end them all -- busybox ends only the one process. The object does not kill on
 // close: a job started at the top outlives the shell, as it does in both references.
+//
+// A program may leave it when it asks to, which only nohup's does: a child can leave the Job
+// Objects it is in only if every one of them allows it, and `nohup server &` over ssh has to
+// leave the session's, whose closing would end it. So KILL of such a job ends nohup, as it does,
+// and not the program nohup was asked to keep going.
 type jobTree struct {
 	mu     sync.Mutex
 	handle windows.Handle
@@ -62,6 +68,10 @@ func (t *jobTree) attach(pid int) {
 	if err != nil {
 		return
 	}
+	var limits windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+	limits.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_BREAKAWAY_OK
+	_, _ = windows.SetInformationJobObject(job, windows.JobObjectExtendedLimitInformation,
+		uintptr(unsafe.Pointer(&limits)), uint32(unsafe.Sizeof(limits)))
 	process, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(pid))
 	if err == nil {
 		err = windows.AssignProcessToJobObject(job, process)

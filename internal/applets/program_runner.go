@@ -32,6 +32,21 @@ func programFor(ctx context.Context, name string) (Applet, bool) {
 	return runner.Program(ctx, name)
 }
 
+type detachedLaunchKey struct{}
+
+// WithDetachedLaunch asks the shell to launch the program run under ctx out of the session the
+// shell is in, as nohup asks: out of every Job Object that allows it to leave, which is how an
+// sshd session ends what it started, and off the console, whose closing ends what is on it.
+func WithDetachedLaunch(ctx context.Context) context.Context {
+	return context.WithValue(ctx, detachedLaunchKey{}, true)
+}
+
+// DetachedLaunch is whether ctx asks for the launch WithDetachedLaunch does.
+func DetachedLaunch(ctx context.Context) bool {
+	detached, _ := ctx.Value(detachedLaunchKey{}).(bool)
+	return detached
+}
+
 // commandFor is what a command an applet runs names: an applet, as busybox-w32 prefers one, or
 // else a program.
 func commandFor(ctx context.Context, name string) (Applet, bool) {

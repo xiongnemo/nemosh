@@ -12,6 +12,13 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **`nohup`**, busybox's, which busybox-w32 does not build. A terminal on stdin becomes the
+  null device, one on stdout `nohup.out`, and one on stderr stdout. On Windows the command leaves
+  the session's Job Object and runs on a console of its own, so `nohup server &` over ssh
+  outlives the ssh command: an sshd session ends everything in its Job Object when it closes. A
+  ChatGPT or Codex client connecting over SSH starts its app server that way. A Job Object that
+  lets nothing leave is said, and the command runs all the same.
+
 - **`bind`**, bash's: `bind '"\C-o": beginning-of-line'`, macros, `bind -x` with `READLINE_LINE`
   and `READLINE_POINT`, as fzf's Ctrl-T uses it, `-m KEYMAP`, `-r`, `-u`, `-q`,
   `-f FILE`, `set VARIABLE VALUE`, and `-l -p -P -s -S -v -V -X` printing what bash prints. The

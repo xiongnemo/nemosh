@@ -17,13 +17,17 @@ import (
 //
 // The handle is kept open on purpose. Closing it is what this process's exit does, and
 // that is the moment everything in it should go.
+//
+// A child may leave it when it asks to, as one may leave an sshd session's: that is what nohup
+// asks, and TestNohup_outlivesTheJobThatEndsItsSession measures it in a session of its own, which
+// nests in this one. Nothing else asks, so nothing else leaves.
 func endJobsWithTheTestBinary() {
 	job, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
 		return
 	}
 	var info windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION
-	info.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+	info.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | windows.JOB_OBJECT_LIMIT_BREAKAWAY_OK
 	if _, err := windows.SetInformationJobObject(job, windows.JobObjectExtendedLimitInformation,
 		uintptr(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info))); err != nil {
 		_ = windows.CloseHandle(job)

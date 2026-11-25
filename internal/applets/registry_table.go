@@ -91,6 +91,7 @@ var defaultApplets = [...]appletEntry{
 	{"nano", newNanoApplet},
 	{"nc", newNcApplet},
 	{"nl", newNlApplet},
+	{"nohup", newNohupApplet},
 	{"nproc", newNprocApplet},
 	{"od", newOdApplet},
 	{"paste", newPasteApplet},
