@@ -173,9 +173,11 @@ func runEditor(ctx context.Context, session *editorSession, keys editorKeyMap, s
 // from tview's own goroutine.
 func runEditorApplication(ctx context.Context, session *editorSession, keys editorKeyMap,
 	screen tcell.Screen, ready chan<- *tview.Application) error {
-	application := tview.NewApplication().SetScreen(screen)
+	// Typed keys that arrive together are a paste, drawn once rather than once a key; see
+	// editor_burst.go. Paste is on so that tview takes them as one.
+	application := tview.NewApplication().SetScreen(newTypingBursts(screen)).EnablePaste(true)
 	view := newEditorView(session, keys, application)
-	application.SetRoot(view.layout, true).SetFocus(view.area)
+	application.SetRoot(typedAsKeys{view.layout}, true).SetFocus(view.area)
 	// tview stops an application on Ctrl-C unless something before it takes the key, and
 	// tcell makes the Windows console's Ctrl and c the same KeyCtrlC: ^C left the editor at
 	// once and the buffer with it, unasked. The view has it instead, where it cancels a

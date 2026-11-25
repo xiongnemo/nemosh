@@ -42,6 +42,7 @@ func (a *highlightedArea) showLineNumbers(show bool) { a.numbers = show }
 // tview's Flex calls this every frame with the outer rect, so the subtraction cannot
 // accumulate -- the width handed in is always the full one.
 func (a *highlightedArea) SetRect(x, y, width, height int) {
+	a.relexIfStale()
 	a.outer = [4]int{x, y, width, height}
 	gutter := a.gutterWidth()
 	a.TextArea.SetRect(x+gutter, y, width-gutter, height)

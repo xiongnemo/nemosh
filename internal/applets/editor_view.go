@@ -66,13 +66,13 @@ func newEditorView(session *editorSession, keys editorKeyMap, application *tview
 	// unlike one that differs in what a key does.
 	view.area.showLineNumbers(true)
 	view.area.SetText(session.text, false)
-	// Lexed once for the file as opened, and again on every change. Not on scroll:
-	// scrolling cannot change what a line means, and re-lexing on it would make
+	// Lexed once for the file as opened, and again in the frame after a change. Not on
+	// scroll: scrolling cannot change what a line means, and re-lexing on it would make
 	// paging through a large file cost a full pass per keystroke.
 	view.area.relex()
 	view.area.SetChangedFunc(func() {
 		view.modified = true
-		view.area.relex()
+		view.area.stale = true
 		view.refreshTitle()
 	})
 	view.title = tview.NewTextView().SetDynamicColors(true)

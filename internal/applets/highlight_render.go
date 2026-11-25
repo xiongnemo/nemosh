@@ -38,6 +38,12 @@ type highlightedArea struct {
 	// whose name matches no language still has line numbers.
 	lines []string
 	spans [][]highlightSpan
+	// stale says the text changed since it was lexed. A change marks it and the next frame
+	// lexes it, so the keys of a paste, which are handled between two frames, are lexed once
+	// together rather than once each: the whole buffer for every character was what made a
+	// paste take time by the square of its length. lexes counts the passes, for the test of it.
+	stale bool
+	lexes int
 	// numbers and outer belong to the gutter; see editor_gutter.go. outer is the rect
 	// the layout gave this widget, which is wider than the one the text area gets.
 	numbers bool
@@ -53,16 +59,27 @@ func newHighlightedArea(syntax *highlightSyntax) *highlightedArea {
 	return area
 }
 
-// relex re-reads the buffer. Called when the text changes.
+// relex re-reads the buffer: when it is opened, and in the first frame after the text changes.
 //
 // The lines are counted whichever way that goes: a file with no syntax still needs them
 // for the gutter, and only the span pass depends on there being a language.
 func (a *highlightedArea) relex() {
+	a.stale = false
+	a.lexes++
 	a.lines = editorLines(a.GetText())
 	if a.syntax == nil {
 		return
 	}
 	a.spans = highlightBuffer(a.syntax, a.lines)
+}
+
+// relexIfStale is relex for a frame: only when the text has changed since the last one.
+// Called from SetRect as well as Draw, because the gutter's width is the line count and the
+// layout asks for it before it draws.
+func (a *highlightedArea) relexIfStale() {
+	if a.stale {
+		a.relex()
+	}
 }
 
 // Draw lays the text out through the widget, then draws the gutter and re-colours what
@@ -71,6 +88,7 @@ func (a *highlightedArea) relex() {
 // The gutter goes after TextArea.Draw for the scroll offset, and the colours after both
 // because they read cells back off the screen.
 func (a *highlightedArea) Draw(screen tcell.Screen) {
+	a.relexIfStale()
 	a.TextArea.Draw(screen)
 	a.drawGutter(screen)
 	if a.syntax == nil || len(a.spans) == 0 {

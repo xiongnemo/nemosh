@@ -8,6 +8,18 @@ Versions follow `AGENTS.md`: an exact `vMAJOR.MINOR.PATCH` tag is a release, and
 every push to `master` publishes a `vX.Y.Z-master-<commit>` prerelease whose
 patch number is the commits since that tag.
 
+## Unreleased
+
+### Fixed
+
+- **Pasting into nano and micro took seconds a screenful**: a hundred lines of Python, 4,580
+  characters, took 21 seconds to appear in conhost. A console delivers a paste as a key a
+  character, and the editor drew the screen and lexed the whole buffer for each one, so the
+  time grew with the square of the paste. Typed keys that arrive within a few milliseconds of
+  each other are now handled together and drawn once, as the keys they were, so a prompt still
+  takes them as its answer: the same paste takes 130 milliseconds, and a thousand lines 1.3
+  seconds. The terminal is not put in bracketed-paste mode for it.
+
 ## v1.7.0 - 2026-11-25
 
 ChatGPT's and Codex's SSH remote connections reach a Windows machine whose default SSH shell is

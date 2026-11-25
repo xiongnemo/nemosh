@@ -52,12 +52,13 @@ func (v *editorView) showHelp() {
 		panel.SetText(v.helpPanel(describeKeyEvent(event)))
 		return nil
 	})
-	v.application.SetRoot(panel, true)
+	// A paste is keys here too, each named in turn; see editor_burst.go.
+	v.application.SetRoot(typedAsKeys{panel}, true)
 }
 
 // hideHelp puts the buffer back.
 func (v *editorView) hideHelp() {
-	v.application.SetRoot(v.layout, true)
+	v.application.SetRoot(typedAsKeys{v.layout}, true)
 	v.application.SetFocus(v.area)
 }
 
