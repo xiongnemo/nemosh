@@ -353,9 +353,44 @@ util-linux, and an applet of that name would shadow it while doing none of what
 it does — no setuid, no user database, no password. busybox-w32 makes the same
 split, building `suw32` under `PLATFORM_MINGW32` alone.
 
-Not `sudo`: Windows 11 24H2 ships a real `sudo.exe`, and the name promises one
-command in the current console with its streams intact — which is precisely what
-this cannot deliver.
+`su` is not `sudo`: Windows 11 24H2 ships a real `sudo.exe`, and the name
+promises one command in the current console with its streams intact — which is
+precisely what `su` cannot deliver. An SSH session can, below, and there `sudo`
+is this shell's; elsewhere `sudo` is the PATH's, `sudo.exe`, given every argument
+as it came.
+
+#### SSH sessions: unelevated, with `sudo`
+
+Windows's sshd gives an administrator's session the elevated token, and no linked
+unelevated one, so everything typed over ssh ran as administrator. A program that
+refuses to run elevated refused to run at all: a ChatGPT or Codex client's app
+server checks both ends of its control socket (`codex-rs/uds/src/windows_peer.rs`)
+and refuses a token Windows calls elevated.
+
+So a nemosh that sshd starts elevated runs the session as a child of its own, with
+the token `drop` gives, and stays behind, elevated, to lend it back. It knows the
+session by sshd's `SSH_CONNECTION` or `SSH_CLIENT`.
+
+| Form | Behaviour |
+| --- | --- |
+| any session, `ssh host`, `ssh host command`, scp, sftp | runs unelevated: all of them pass through the default shell, so a file only an administrator may write is refused, as for any other user |
+| an interactive session | says so once, on stderr; a command's stderr is the client's, so `ssh host command` says nothing |
+| `sudo COMMAND` | the session's elevated nemosh runs `COMMAND` through `exec "$@"`, with sudo's stdin, stdout and stderr, its directory and its environment, and sudo exits with its status |
+| `sudo`, `sudo -s`, `sudo -i` | an elevated nemosh, named as the session's was, so bash mode carries over; it reads sudo's stdin, a terminal or not |
+| `sudo -E`, `sudo -n` | taken, and change nothing: the environment always goes, and there is no password to ask for |
+| `sudo -u root` | taken; any other user refused, `root` being the name this shell gives an elevated token |
+| `NEMOSH_SSH_ADMIN=keep` | in the user's environment, keeps every session elevated, with no lender. Windows's sshd takes no variable from the client (`AcceptEnv` is not in Microsoft's build), so the switch lives on the server |
+
+There is no password because the session's key was it, and **this is not a
+security boundary**: any process in the session can ask, as any can under sudo
+with `NOPASSWD`. What it guards against is a mistake, and a program that will not
+run elevated. The request goes over a named pipe whose name is in `NEMOSH_SUDO`.
+It lets in this logon session alone, by its logon SID, at medium integrity so the
+session's unelevated processes may write to it, and refuses remote clients.
+
+`sudo` asks the lender to take its standard handles from it. Inside the shell an
+applet's streams are the shell's, not handles, so sudo runs itself once more as a
+process of its own, and that process asks. The command ends if that sudo does.
 
 #### The other way: `drop`, `cdrop` and `pdrop`
 
@@ -1221,6 +1256,7 @@ first operand when `POSIXLY_CORRECT` is set. The applets busybox reads in order 
 | `stat` | `-c -t -L -f`: busybox's layout, its terse line, and every letter of its `-c` and `-f` formats, each with printf's flags, width and precision. On Windows the values are busybox-w32's: the volume's serial number for the device, the file's index for the inode, 4095 for the account's own files and 0 for a system account's, the mode made up as `chmod` makes it up, and the creation time for the change time | refused by name |
 | `split` | `-l -b -a`, `-b` with `b k m g`; the bytes as they come, and as many letters as `-a` asks, `aa` upwards by default | refused by name |
 | `su` | `-c -s -t -W -N`; Windows only, see **Elevation** | refused by name |
+| `sudo` | `-s -i -E -n -u root`; in an SSH session this shell runs unelevated, the command run elevated by the session's own nemosh, with sudo's streams; elsewhere the PATH's sudo, given every argument. Windows only, see **Elevation** | refused by name where a session lends; elsewhere the PATH's sudo's to refuse |
 | `drop`, `cdrop`, `pdrop` | `-c`, and `-s` for `drop`; a command, or a shell, run with a token Windows calls unelevated, in this console with these streams; options end at the command; Windows only, see **Elevation** | refused by name |
 | `lsattr` | `-R -a -d -l`; Windows only, see **`lsattr` and `chattr`** | refused by name |
 | `chattr` | `-R`, and `-` or `+` with `r h s a t n`; Windows only, see **`lsattr` and `chattr`** | refused by name |

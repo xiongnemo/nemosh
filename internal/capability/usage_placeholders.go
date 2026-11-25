@@ -42,6 +42,7 @@ var valuePlaceholderTable = [...]placeholderRow{
 	{"getoptshell", "SHELL"},
 	{"sus", "SHELL"},
 	{"drops", "SHELL"},
+	{"sudou", "USER"},
 	{"dropc", "CMD_STRING"},
 	{"cdropc", "CMD_STRING"},
 	{"pdropc", "CMD_STRING"},

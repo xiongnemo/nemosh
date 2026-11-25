@@ -180,6 +180,7 @@ var commands = []Command{
 	// is `root`. AnyPath anyway: completion offering a file there is harmless,
 	// and there is no kind for "one fixed word".
 	{Name: "su", Short: "cstWN", ValueShort: "cs", Operand: AnyPath},
+	{Name: "sudo", Short: "iEnsu", ValueShort: "u", Operand: AnyPath},
 	{Name: "drop", Short: "cs", ValueShort: "cs", Operand: AnyPath},
 	{Name: "cdrop", Short: "c", ValueShort: "c", Operand: AnyPath},
 	{Name: "pdrop", Short: "c", ValueShort: "c", Operand: AnyPath},

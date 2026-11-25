@@ -13,6 +13,14 @@ package capability
 // sees every entry without knowing there was a split at all.
 func appletUsageTextMore() map[string]Usage {
 	return map[string]Usage{
+		"drop": {Summary: "Run a command, or a shell, without administrator rights.", Operands: "[COMMAND [ARG]... | [-s SHELL] -c CMD_STRING [ARG]...]",
+			Options: map[string]string{"c": "run this command in the shell rather than an interactive one", "s": "use this shell rather than nemosh; cmd.exe is given /c"},
+			Notes:   []string{"Windows calls the command's token unelevated: the Administrators groups only deny, the privileges are gone and the integrity is medium. USER and LOGNAME become the account's name where they are unset or root.", "Options end at the command, so `drop ls -l` runs ls -l."}},
+		"sudo": {Summary: "Run a command with administrator rights, in an SSH session this shell runs without them.", Operands: "[COMMAND [ARG]...]",
+			Options: map[string]string{"s": "run a shell rather than a command", "i": "the same as -s", "E": "taken: the environment always goes with the command", "n": "taken: there is no password to ask for", "u": "the user, which can only be root"},
+			Notes:   []string{"An SSH session that sshd starts with an administrator's elevated token runs without it, and the nemosh that started it runs sudo's command elevated, with sudo's streams, directory and environment. NEMOSH_SSH_ADMIN=keep in the user's environment keeps the session elevated.", "Where no session lends, sudo is the one on PATH, Windows's own sudo.exe, given every argument."}},
+		"cdrop": {Summary: "Run a command, or cmd.exe, without administrator rights.", Operands: "[COMMAND [ARG]... | -c CMD_STRING [ARG]...]", Options: map[string]string{"c": "run this command in cmd.exe, as /c"}},
+		"pdrop": {Summary: "Run a command, or PowerShell, without administrator rights.", Operands: "[COMMAND [ARG]... | -c CMD_STRING [ARG]...]", Options: map[string]string{"c": "run this command in powershell.exe"}},
 		"bc": {Summary: "An arbitrary-precision calculator language.", Operands: "[FILE]...",
 			Options: map[string]string{"s": "the POSIX language, which is what this is", "q": "no banner, which there never is",
 				"w": "warn about non-POSIX constructs", "standard": "the POSIX language, which is what this is",

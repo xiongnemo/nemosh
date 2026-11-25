@@ -112,7 +112,11 @@ var runsUntilStopped = map[string]bool{"xargs -p": true, "tail -F": true}
 // and served until the 10-minute test timeout killed the package. Its options are
 // held instead by TestHttpd_acceptsItsDeclaredOptions in internal/applets, which
 // runs the same code against a context that is already cancelled.
-var launchesSomething = map[string]bool{"su": true, "httpd": true}
+//
+// sudo launches Windows's sudo.exe where no SSH session lends elevation, given every argument, -Z
+// among them, and itself where one does. Its options are held instead by TestSudo_* in
+// internal/applets, against a runner that launches nothing.
+var launchesSomething = map[string]bool{"su": true, "httpd": true, "sudo": true}
 
 // And an option the table does not claim must be refused, or the claim is not
 // saying anything. An applet that accepts everything would pass the test above

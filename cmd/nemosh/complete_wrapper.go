@@ -19,8 +19,7 @@ func isCommandWrapper(name string) bool {
 // options. `sudo gi` completes `git`, and so do `env FOO=1 gi` and `xargs -n 1 gi`.
 //
 // A wrapper's options are stepped over with the values they take, which the capability table
-// knows for the wrappers this shell ships; for sudo, which it does not ship, every word with a
-// dash is taken for an option without a value.
+// knows for the wrappers this shell ships, sudo among them.
 func (e *lineEditor) completesCommandName(prefix string) bool {
 	if completesCommand(prefix) {
 		return true

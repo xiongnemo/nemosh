@@ -22,6 +22,12 @@ func main() {
 	// editor, terminal restoration. A defect in any of those used to print a
 	// goroutine dump, which tells the reader nothing they can act on.
 	defer guardMain()
+	// An SSH session that sshd started with an administrator's elevated token runs as a child of
+	// this process with the token made unelevated, and this one stays to lend it sudo; see
+	// runtime.DropSSHSession. Before anything else, since the child does everything else.
+	if status, dropped := runtime.DropSSHSession(); dropped {
+		os.Exit(status)
+	}
 	// This binary answers `--job` (job.go), so a background job can be a copy of it.
 	runtime.AllowJobProcesses()
 	signals, stopSignals := notifyInterrupts()

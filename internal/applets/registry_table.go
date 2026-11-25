@@ -134,6 +134,7 @@ var defaultApplets = [...]appletEntry{
 	{"strings", newStringsApplet},
 	{"stty", newSttyApplet},
 	{"su", newSuApplet},
+	{"sudo", newSudoApplet},
 	{"sum", newSumApplet},
 	{"sync", newSyncApplet},
 	{"tac", newTacApplet},

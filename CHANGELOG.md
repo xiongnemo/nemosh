@@ -12,6 +12,17 @@ patch number is the commits since that tag.
 
 ### Added
 
+- **An SSH session runs without administrator rights, and `sudo` lends them back.** Windows's
+  sshd gives an administrator's session the elevated token with no unelevated one, so every
+  command over ssh ran as administrator. A program that refuses to run elevated, as a ChatGPT
+  or Codex client's app server does, could not run at all. A nemosh that sshd starts elevated
+  now runs the session (interactive, `ssh host command`, scp and sftp alike) as a child with
+  the token `drop` gives. It stays behind, elevated: `sudo COMMAND` runs COMMAND elevated with
+  sudo's streams, directory and environment, and `sudo -s` runs a shell. It asks no password,
+  as with NOPASSWD, since the session's key was it, and it is not a security boundary. An
+  interactive session says so once. `NEMOSH_SSH_ADMIN=keep` in the user's environment keeps
+  sessions elevated. Outside such a session `sudo` is the PATH's, Windows's `sudo.exe`.
+
 - **`drop`, `cdrop` and `pdrop`**, busybox-w32's: a command, this shell, cmd.exe or PowerShell
   run without administrator rights, in the same console with the same streams. Windows calls
   the token unelevated, where it still called busybox's elevated, because busybox leaves the
