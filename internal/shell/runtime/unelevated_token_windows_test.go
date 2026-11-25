@@ -74,20 +74,19 @@ func TestDrop_runsACommandThatCanStartPrograms(t *testing.T) {
 
 func tokenIntegrityLevel(t *testing.T, token windows.Token) uint32 {
 	t.Helper()
-	buffer := make([]byte, 64)
-	var size uint32
-	if err := windows.GetTokenInformation(token, windows.TokenIntegrityLevel, &buffer[0], uint32(len(buffer)), &size); err != nil {
+	label, err := tokenIntegrityLabel(token)
+	if err != nil {
 		t.Fatal(err)
 	}
-	label := (*windows.Tokenmandatorylabel)(unsafe.Pointer(&buffer[0]))
 	return integrityRID(label.Label.Sid)
 }
 
+// tokenOwner reads into words, so the pointer at the buffer's head is aligned for checkptr.
 func tokenOwner(t *testing.T, token windows.Token) *windows.SID {
 	t.Helper()
-	buffer := make([]byte, 128)
+	buffer := make([]uint64, 16)
 	var size uint32
-	if err := windows.GetTokenInformation(token, windows.TokenOwner, &buffer[0], uint32(len(buffer)), &size); err != nil {
+	if err := windows.GetTokenInformation(token, windows.TokenOwner, (*byte)(unsafe.Pointer(&buffer[0])), uint32(len(buffer)*8), &size); err != nil {
 		t.Fatal(err)
 	}
 	owner := (*struct{ Owner *windows.SID })(unsafe.Pointer(&buffer[0]))

@@ -42,8 +42,13 @@ func unelevatedToken() (windows.Token, error) {
 		return 0, err
 	}
 	disabled := []windows.SIDAndAttributes{{Sid: administrators}, {Sid: localAdministrators}}
+	// Looked up here, not at every start of the shell: see the init ceiling in product.yml.
+	restrict := windows.NewLazySystemDLL("advapi32.dll").NewProc("CreateRestrictedToken")
+	if err := restrict.Find(); err != nil {
+		return 0, err
+	}
 	var token windows.Token
-	if result, _, err := syscall.SyscallN(procCreateRestrictedToken.Addr(), uintptr(self), disableMaxPrivilege,
+	if result, _, err := syscall.SyscallN(restrict.Addr(), uintptr(self), disableMaxPrivilege,
 		uintptr(len(disabled)), uintptr(unsafe.Pointer(&disabled[0])), 0, 0, 0, 0, uintptr(unsafe.Pointer(&token))); result == 0 {
 		return 0, fmt.Errorf("restrict this process's token: %w", err)
 	}
@@ -75,8 +80,6 @@ func unelevatedLauncher() (give func(*exec.Cmd), release func(), err error) {
 	return give, func() { _ = token.Close() }, nil
 }
 
-var procCreateRestrictedToken = windows.NewLazySystemDLL("advapi32.dll").NewProc("CreateRestrictedToken")
-
 const (
 	// disableMaxPrivilege is CreateRestrictedToken's DISABLE_MAX_PRIVILEGE: every privilege but
 	// SeChangeNotifyPrivilege goes.
@@ -90,12 +93,10 @@ const (
 // lowerToMedium gives the token medium integrity, where it had more; one that had less keeps it,
 // since raising it is not this process's to do.
 func lowerToMedium(token windows.Token) error {
-	buffer := make([]byte, 64)
-	var size uint32
-	if err := windows.GetTokenInformation(token, windows.TokenIntegrityLevel, &buffer[0], uint32(len(buffer)), &size); err != nil {
+	current, err := tokenIntegrityLabel(token)
+	if err != nil {
 		return fmt.Errorf("read the token's integrity level: %w", err)
 	}
-	current := (*windows.Tokenmandatorylabel)(unsafe.Pointer(&buffer[0]))
 	if integrityRID(current.Label.Sid) <= mediumIntegrity {
 		return nil
 	}
@@ -108,6 +109,18 @@ func lowerToMedium(token windows.Token) error {
 		return fmt.Errorf("lower the token to medium integrity: %w", err)
 	}
 	return nil
+}
+
+// tokenIntegrityLabel is the token's mandatory label. It is read into words, not bytes, so the
+// pointer at its head is aligned: checkptr refuses a byte buffer taken for the struct under -race,
+// as CI's windows-latest job runs it.
+func tokenIntegrityLabel(token windows.Token) (*windows.Tokenmandatorylabel, error) {
+	buffer := make([]uint64, 16)
+	var size uint32
+	if err := windows.GetTokenInformation(token, windows.TokenIntegrityLevel, (*byte)(unsafe.Pointer(&buffer[0])), uint32(len(buffer)*8), &size); err != nil {
+		return nil, err
+	}
+	return (*windows.Tokenmandatorylabel)(unsafe.Pointer(&buffer[0])), nil
 }
 
 // integrityRID is a mandatory label's level, its last sub-authority, read from its string: the
