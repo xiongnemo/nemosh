@@ -27,6 +27,8 @@ import (
 //     commands want it too -- it is what makes colour work at all.
 //   - **stty_windows.go** changes it because somebody typed `stty`. That is the applet's
 //     whole purpose.
+//   - **console_modes_windows.go** puts back, before each prompt, the modes the last line
+//     found, which a program that crashed had left changed; what stty set it keeps.
 //
 // Anything else that needs to read keys goes through tcell, which saves the mode it finds
 // and restores it on the way out: the editors, `top`, and `less`. An applet reading keys by
@@ -37,6 +39,7 @@ func TestTerminalState_isChangedOnlyWhereItIsOwned(t *testing.T) {
 		"cmd/nemosh/interactive_lineedit.go":     "borrows raw mode for one line read",
 		"cmd/nemosh/hold_option.go":              "one key at exit, returned in the same function",
 		"cmd/nemosh/virtual_terminal_windows.go": "an output mode the whole session wants",
+		"cmd/nemosh/console_modes_windows.go":    "puts back after a line what its programs left",
 		"internal/applets/stty_windows.go":       "stty was asked for",
 	}
 	// The calls that mean "take the terminal over".

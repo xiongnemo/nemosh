@@ -33,6 +33,13 @@ patch number is the commits since that tag.
   `reset` runs, now sets the output's mode as well: a line feed that returns, set again even
   where it already reads so.
 
+- **A program that changed the console's modes and died left the session broken after it**:
+  btop4win's crash also left the input raw, with no echo, no lines and no Ctrl-C, so the next
+  program could not be interrupted -- `sleep 20` and Ctrl-C hung the session over ssh. The
+  interactive shell now puts the console's input and output modes back after each command
+  line, as cmd.exe does after each command and Git for Windows' bash after each program it
+  did not build; what `stty` or `reset` set on the line is kept.
+
 ## v1.7.0 - 2026-11-25
 
 ChatGPT's and Codex's SSH remote connections reach a Windows machine whose default SSH shell is

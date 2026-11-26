@@ -71,8 +71,15 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 	var input strings.Builder
 	var expander historyExpander
 	var marks shellMarks
+	// The console's modes as the last line read found them, which go back before the next
+	// prompt; see console_modes_windows.go.
+	var modes consoleModes
+	defer func() { modes.putBack() }()
 
 	for {
+		// Before anything is written, so the jobs reported and the prompt have a line feed
+		// that returns.
+		modes.putBack()
 		// Completion follows `cd`, so the directory is refreshed each round
 		// rather than captured once when the editor was built. It is asked for
 		// in native form: WorkingDirectory answers in the shell's view, which
@@ -128,6 +135,7 @@ func (c command) runInteractiveEdited(ctx context.Context, controller *interrupt
 		// `set -o vi` takes effect at the next line, as busybox reads its flag for each one.
 		editor.vi.on = rt.ShellOptionIsOn("vi")
 		line, err := readLineInRawMode(ctx, terminal, editor, prompt)
+		modes = holdConsoleModes(terminal, c.stdout, c.stderr)
 		if ctx.Err() != nil {
 			rt.CloseInteractive(ctx)
 			return ctx.Err()

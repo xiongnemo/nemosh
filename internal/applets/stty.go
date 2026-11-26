@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"golang.org/x/term"
@@ -123,6 +124,12 @@ func writeSttyReport(out io.Writer, handle *os.File, verbose bool) error {
 }
 
 func applySttySettings(out io.Writer, handle *os.File, settings []string) error {
+	// Whatever was set before a setting failed is set, and kept.
+	defer func() {
+		if slices.ContainsFunc(settings, func(setting string) bool { return setting != "size" }) {
+			noteSttySet(handle)
+		}
+	}()
 	for _, setting := range settings {
 		switch setting {
 		case "size":

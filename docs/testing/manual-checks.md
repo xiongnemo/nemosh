@@ -24,6 +24,12 @@ Measured, not assumed:
   `go test ./cmd/nemosh/` already covers it here.
 - **Who is allowed to touch terminal state**, by `terminal_ownership_test.go`, and
   **for how long**, by `raw_mode_scope_test.go`.
+- **A program that leaves the console's modes changed**, as btop4win does when it crashes
+  over ssh. `console_modes_windows_test.go` runs the shell in a hidden console of its own,
+  runs a program there that leaves the input raw and a line feed without its return, and
+  checks the next prompt has the input the session had and lines at the left edge, and that
+  `stty -echo` on a line of its own is kept; `stty_sane_console_windows_test.go` checks
+  `reset` mends the line feed. Checked against a built binary over ssh too, 2026-11-27.
 - **Streaming through a pipe.** Verified by timestamping arrivals: `awk`, `tr`,
   `grep` and `cat` each emit a line per second from a one-line-per-second source
   rather than holding it all to the end. A console and a pipe take the same branch

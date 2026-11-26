@@ -15,6 +15,7 @@ func newResetApplet() Applet {
 			return err
 		}
 		if handle, ok := sttyTerminal(); ok {
+			defer noteSttySet(handle)
 			return makeTerminalSane(handle)
 		}
 		return nil
