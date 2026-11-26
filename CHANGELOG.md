@@ -24,6 +24,15 @@ patch number is the commits since that tag.
   already waiting are now handled first and drawn once after: 23 milliseconds, and a thousand
   lines 0.4 seconds.
 
+- **`reset` and `stty sane` did not give a line feed its return back**: after btop4win crashed,
+  as it does over ssh, every line feed went down without going back to the start of the line,
+  so each prompt began where the last line ended, and neither `reset` nor `clear` mended it.
+  Windows 10's console keeps whether a line feed returns once for the whole console, from the
+  mode last given any of its screen buffers, and a program that gave its own buffer no return
+  and died takes it from the shell's too, whose mode still reads as it did. `stty sane`, which
+  `reset` runs, now sets the output's mode as well: a line feed that returns, set again even
+  where it already reads so.
+
 ## v1.7.0 - 2026-11-25
 
 ChatGPT's and Codex's SSH remote connections reach a Windows machine whose default SSH shell is

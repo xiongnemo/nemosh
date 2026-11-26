@@ -60,7 +60,8 @@ func setTerminalEcho(handle *os.File, on bool) error {
 	return nil
 }
 
-// makeTerminalSane puts back the three bits a shell expects to find.
+// makeTerminalSane puts back the three bits a shell expects to find in the input, and in the
+// output a line feed that returns, as termios's sane has onlcr.
 //
 // Not the whole mode word: something else may have turned on virtual-terminal processing or
 // mouse input deliberately, and `stty sane` is asked for when the *typing* has stopped
@@ -72,6 +73,27 @@ func makeTerminalSane(handle *os.File) error {
 	}
 	mode |= windows.ENABLE_ECHO_INPUT | windows.ENABLE_LINE_INPUT | windows.ENABLE_PROCESSED_INPUT
 	if err := windows.SetConsoleMode(windows.Handle(handle.Fd()), mode); err != nil {
+		return fmt.Errorf("cannot set the console mode: %s", CauseText(err))
+	}
+	if output, ok := sttyOutputConsole(); ok {
+		return makeOutputSane(output)
+	}
+	return nil
+}
+
+// makeOutputSane sets the output's mode, and sets it even when the word already reads right.
+// Windows 10's conhost keeps whether a line feed returns once for the whole console, from the
+// mode last given any screen buffer, so a program that gave its own buffer
+// DISABLE_NEWLINE_AUTO_RETURN and died -- btop4win, crashing over ssh, 2026-11-27 -- left every
+// line feed going straight down while this buffer's word still read 0x7. Setting it again is
+// what gives the return back; reset's escapes did not.
+func makeOutputSane(output *os.File) error {
+	var mode uint32
+	if err := windows.GetConsoleMode(windows.Handle(output.Fd()), &mode); err != nil {
+		return fmt.Errorf("cannot read the console mode: %s", CauseText(err))
+	}
+	mode = (mode | windows.ENABLE_PROCESSED_OUTPUT | windows.ENABLE_WRAP_AT_EOL_OUTPUT) &^ windows.DISABLE_NEWLINE_AUTO_RETURN
+	if err := windows.SetConsoleMode(windows.Handle(output.Fd()), mode); err != nil {
 		return fmt.Errorf("cannot set the console mode: %s", CauseText(err))
 	}
 	return nil
