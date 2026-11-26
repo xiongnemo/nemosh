@@ -20,9 +20,10 @@ import (
 // root replays it as the keys it was (typedAsKeys). Nothing behaves differently but the
 // drawing: a prompt still takes the keys as an answer, and Enter in them still answers it.
 //
-// The terminal is not asked for bracketed paste. Finding the burst works in a console that
-// cannot bracket one, and a terminal left in that mode by an editor that died would wrap
-// every paste at the shell's prompt in markers its line editor does not read.
+// The terminal is not asked for bracketed paste: finding the burst works in a console that
+// cannot bracket one as well. (This said once that the shell's line editor does not read the
+// markers. It does, and turns the mode on for each line it reads and off after;
+// cmd/nemosh's lineedit_paste_test.go.)
 
 // typingBurstGap is how long after a typed key the next must come to be in the same burst.
 // It is also how long a key typed alone waits before it is handled, which is why it is short.
