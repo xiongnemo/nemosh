@@ -10,6 +10,13 @@ patch number is the commits since that tag.
 
 ## Unreleased
 
+### Added
+
+- **nemosh.exe says its version in Explorer**: Properties, Details shows the product, the
+  version it was built as -- `v1.7.5-master-<commit>` for a nightly, flagged a prerelease --
+  and the description and copyright. Each release build writes the resource from the same
+  version `nemosh --version` reports, and CI reads it back from the built binary.
+
 ### Fixed
 
 - **Pasting into nano and micro took seconds a screenful**: a hundred lines of Python, 4,580

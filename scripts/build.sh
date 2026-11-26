@@ -61,6 +61,15 @@ if [ "$strip" = true ]; then
   ldflags="-s -w $ldflags"
 fi
 
+# The version resource Explorer shows, from the same version (scripts/winres.sh), and gone
+# again after: a .syso left in cmd/nemosh is linked into every build that follows. go-winres
+# is fetched the first time; a machine that cannot fetch it builds without the resource.
+arch="${GOARCH:-$(go env GOARCH)}"
+trap 'rm -f "cmd/nemosh/rsrc_windows_${arch}.syso"' EXIT
+if ! bash scripts/winres.sh "$arch" >/dev/null; then
+  echo "build.sh: no version resource, as go-winres could not be run" >&2
+fi
+
 # CGO_ENABLED=0 keeps the result a single file with no runtime sidecars, which
 # is what the release target is (AGENTS.md, Builds And Packaging). The tags are
 # every release build's; see releaseTags in cmd/nemosh/release_deps_test.go.

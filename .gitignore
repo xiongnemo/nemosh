@@ -9,3 +9,5 @@ references/
 # committed once by `git add -A`; 5.7 MB of it is still in history.
 *.exe
 /nemosh
+# The version resource scripts/winres.sh writes for a build.
+/cmd/nemosh/rsrc_windows_*.syso

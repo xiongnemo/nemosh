@@ -234,11 +234,15 @@ jobs:
         run: |
           mkdir -p dist
           binary="dist/nemosh.exe"
+          # With the version resource the release links, so the size below is the
+          # shipped binary's; see scripts/winres.sh.
+          bash scripts/winres.sh amd64
           # -tags tcell_minimal, as every release build: see releaseTags in
           # cmd/nemosh/release_deps_test.go, which holds every build to it.
           CGO_ENABLED=0 go build -trimpath -tags tcell_minimal \
             -ldflags "-s -w $(bash scripts/version.sh --ldflags)" \
             -o "$binary" ./cmd/nemosh
+          bash scripts/winres.sh --check "$binary"
           version=$("$binary" --version)
           echo "$version"
           case "$version" in

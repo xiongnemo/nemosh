@@ -62,6 +62,14 @@ tags and a shallow clone silently yields the fallback.
 
 - The release target is one executable, `CGO_ENABLED=0`, no runtime sidecars.
 - Release builds use `-trimpath` and `-ldflags="-s -w ${VERSION_LDFLAGS}"`.
+- **nemosh.exe carries a Windows version resource**, what Explorer's Properties, Details
+  shows, as the user's other tools do. `scripts/winres.sh ARCH` writes
+  `cmd/nemosh/rsrc_windows_ARCH.syso` from `scripts/version.sh`'s version just before a
+  release build, with go-winres v0.3.3 through `go run` (nothing in go.mod), and
+  `scripts/winres.sh --check BINARY` reads it back as Explorer does; release.yml and
+  product.yml run both. A `.syso` left in `cmd/nemosh` is linked into every build after it,
+  with its stale version, so git ignores them and `scripts/build.sh` removes its own once it
+  has built. RT_VERSION only: no manifest, no icon.
 - Generated artifacts go under `dist/`, with checksums.
 - `third_party/gdamore-encoding` is a fork of the module tcell imports, which go.mod's
   `replace` links in place of upstream: its character sets are generated data rather
